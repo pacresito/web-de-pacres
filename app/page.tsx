@@ -1,65 +1,132 @@
-import Image from "next/image";
-
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className="min-h-screen bg-white text-gray-900 font-sans">
+      {/* Hero */}
+      <section className="max-w-3xl mx-auto px-6 pt-20 pb-16">
+        <h1 className="text-4xl font-bold tracking-tight">Pablo Crespo Velasco</h1>
+        <p className="mt-2 text-lg text-gray-500">Director de Operaciones · Senior Product Manager · Troubleshooter</p>
+        <p className="mt-6 text-gray-700 leading-relaxed max-w-2xl">
+          Ingeniero Industrial con más de 10 años en posiciones clave. Me mueven los retos complejos: organizar el caos, solucionar lo imposible, gestionar lo inmanejable. Directo, positivo y siempre orientado a resultados.
+        </p>
+        <a
+          href="mailto:crespovelasco@gmail.com"
+          className="mt-6 inline-block bg-gray-900 text-white px-5 py-2.5 rounded-full text-sm font-medium hover:bg-gray-700 transition-colors"
+        >
+          Contactar
+        </a>
+      </section>
+
+      <hr className="border-gray-100 max-w-3xl mx-auto" />
+
+      {/* Experiencia */}
+      <section className="max-w-3xl mx-auto px-6 py-14">
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-8">Experiencia</h2>
+        <div className="space-y-10">
+          <Job
+            title="Partner"
+            company="CARPA Financieros"
+            period="2023 — actualidad"
+            description="Plataforma de inversión inmobiliaria. Gestión del negocio y estrategia de producto."
+          />
+          <Job
+            title="Launch Manager · Senior Product Manager"
+            company="Letgo"
+            period="2015 — 2023"
+            description="8 años en una de las startups de segunda mano más grandes del mundo. Lideré equipos de Growth, Platform, B2B, Search & Discovery. Expansión a 23 países, implementación de IA para reconocimiento de imágenes, Trust & Safety y Customer Care."
+          />
+          <Job
+            title="Co-founder"
+            company="Makai — Make an impact"
+            period="2018 — 2022"
+            description="Marca de moda femenina con impacto social: por cada prenda vendida, un mes de alimentación para un niño en su escuela."
+          />
+          <Job
+            title="Director de Operaciones"
+            company="Nonabox"
+            period="2012 — 2015"
+            description="Gestión de más de 100.000 envíos en 6 países. Internacionalización, centralización de operaciones, Scrum Master de un equipo de 30 personas."
+          />
+          <Job
+            title="Operaciones y Logística"
+            company="GLOSSYBOX"
+            period="2011 — 2012"
+            description="Gestión logística, relación con proveedores y optimización del CRM."
+          />
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </section>
+
+      <hr className="border-gray-100 max-w-3xl mx-auto" />
+
+      {/* Educación */}
+      <section className="max-w-3xl mx-auto px-6 py-14">
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-8">Educación</h2>
+        <div className="space-y-4">
+          <div>
+            <p className="font-medium">Ingeniería Industrial</p>
+            <p className="text-sm text-gray-500">Universidad Pontificia Comillas ICAI-ICADE · 2004 – 2012</p>
+          </div>
         </div>
-      </main>
+      </section>
+
+      <hr className="border-gray-100 max-w-3xl mx-auto" />
+
+      {/* Certificaciones */}
+      <section className="max-w-3xl mx-auto px-6 py-14">
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-8">Certificaciones</h2>
+        <div className="flex flex-wrap gap-2">
+          {[
+            "Product Executive Certificate — Product School",
+            "Certified Scrum Product Owner — Agilar",
+            "Certified Scrum Master — Agilar",
+            "Retention + Engagement — Reforge",
+            "Certified Mentor — Mentorloop",
+            "First Certificate — Cambridge",
+            "DELF — Ministère de l'Éducation nationale",
+          ].map((cert) => (
+            <span key={cert} className="text-sm bg-gray-100 text-gray-700 px-3 py-1 rounded-full">
+              {cert}
+            </span>
+          ))}
+        </div>
+      </section>
+
+      <hr className="border-gray-100 max-w-3xl mx-auto" />
+
+      {/* Footer */}
+      <footer className="max-w-3xl mx-auto px-6 py-10 flex items-center justify-between text-sm text-gray-400">
+        <span>pacr.es</span>
+        <a
+          href="https://www.linkedin.com/in/pacres/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:text-gray-700 transition-colors"
+        >
+          LinkedIn →
+        </a>
+      </footer>
+    </main>
+  );
+}
+
+function Job({
+  title,
+  company,
+  period,
+  description,
+}: {
+  title: string;
+  company: string;
+  period: string;
+  description: string;
+}) {
+  return (
+    <div className="grid grid-cols-[1fr_auto] gap-x-6 gap-y-1">
+      <div>
+        <p className="font-medium">{title}</p>
+        <p className="text-sm text-gray-500">{company}</p>
+        <p className="mt-2 text-sm text-gray-600 leading-relaxed">{description}</p>
+      </div>
+      <p className="text-sm text-gray-400 whitespace-nowrap pt-0.5">{period}</p>
     </div>
   );
 }
