@@ -94,7 +94,7 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="max-w-3xl mx-auto px-6 py-10 flex items-center justify-between text-sm text-white/30">
-        <span>pacr.es</span>
+        <a href="/juegos/espiral" className="w-1.5 h-1.5 rounded-full bg-white/20 block" />
         <a
           href="https://www.linkedin.com/in/pacres/"
           target="_blank"
