@@ -138,6 +138,7 @@ function useBoard(
   const stateRef = useRef<BoardState>({ pos: { x: 0, y: 0 }, vel: { x: 0, y: 0 }, segIdx: 0, gameState: "idle" });
   const animRef = useRef(0);
   const [gameState, setGameState] = useState<GameState>("idle");
+  const [startCount, setStartCount] = useState(0);
 
   const goalCell = path[path.length - 1];
 
@@ -194,11 +195,11 @@ function useBoard(
 
   function start() {
     const origin = originRef.current;
+    cancelAnimationFrame(animRef.current);
     stateRef.current = initBoard(path, origin, initialVel);
     stateRef.current.gameState = "playing";
     setGameState("playing");
-    cancelAnimationFrame(animRef.current);
-    animRef.current = requestAnimationFrame(loop);
+    setStartCount((c) => c + 1);
   }
 
   function turn() {
@@ -232,7 +233,7 @@ function useBoard(
       animRef.current = requestAnimationFrame(loop);
     }
     return () => cancelAnimationFrame(animRef.current);
-  }, [gameState]);
+  }, [gameState, startCount]);
 
   return { gameState, press };
 }
