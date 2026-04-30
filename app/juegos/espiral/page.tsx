@@ -329,8 +329,8 @@ export default function Espiral() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "q") { left.cheat(); return; }
-      if (e.key === "p") { right.cheat(); return; }
+      if (process.env.NODE_ENV === "development" && e.key === "q") { left.cheat(); return; }
+      if (process.env.NODE_ENV === "development" && e.key === "p") { right.cheat(); return; }
       if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
       e.preventDefault();
       if (bothWin) { left.start(); right.start(); return; }
