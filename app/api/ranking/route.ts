@@ -43,8 +43,6 @@ export async function POST(request: Request) {
 
   const normalizedName = name.trim().slice(0, 20);
   const existing = await findExistingMember(normalizedName);
-  const isRecord = !existing || score < existing.score;
-
   if (existing) {
     if (score >= existing.score) {
       return Response.json({ skipped: true });
@@ -64,11 +62,11 @@ export async function POST(request: Request) {
     await redis.zremrangebyrank(KEY, TOP, -1);
   }
 
-  if (isRecord && process.env.NODE_ENV !== "development") {
+  if (process.env.NODE_ENV !== "development") {
     resend.emails.send({
-      from: "Espiral <onboarding@resend.dev>",
+      from: "Web de Pacres <onboarding@resend.dev>",
       to: "pacres.g@gmail.com",
-      subject: `Nuevo récord en Espiral: ${normalizedName} — ${score.toFixed(1)}s`,
+      subject: `${normalizedName} ha jugado al Espiral — ${score.toFixed(1)}s`,
       text: `${normalizedName} ha conseguido ${score.toFixed(1)}s en el juego Espiral.\n\nVer ranking: https://pacr.es/juegos/espiral/ranking`,
     });
   }
