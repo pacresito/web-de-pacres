@@ -64,7 +64,7 @@ export async function POST(request: Request) {
 
   if (process.env.NODE_ENV !== "development") {
     resend.emails.send({
-      from: "Web de Pacres <onboarding@resend.dev>",
+      from: "Web de Pacres <hola@pacr.es>",
       to: "pacres.g@gmail.com",
       subject: `${normalizedName} ha jugado al Espiral — ${score.toFixed(1)}s`,
       text: `${normalizedName} ha conseguido ${score.toFixed(1)}s en el juego Espiral.\n\nVer ranking: https://pacr.es/juegos/espiral/ranking`,
