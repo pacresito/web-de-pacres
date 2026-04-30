@@ -235,7 +235,7 @@ function useBoard(
     return () => cancelAnimationFrame(animRef.current);
   }, [gameState, startCount]);
 
-  return { gameState, press };
+  return { gameState, press, start };
 }
 
 export default function Espiral() {
@@ -255,16 +255,45 @@ export default function Espiral() {
     (left.gameState === "win" && right.gameState !== "win") ||
     (right.gameState === "win" && left.gameState !== "win");
 
+  const [firstWin, setFirstWin] = useState<"left" | "right" | null>(null);
+
+  useEffect(() => {
+    if (left.gameState === "win" && right.gameState !== "win" && firstWin === null) {
+      setFirstWin("left");
+    } else if (right.gameState === "win" && left.gameState !== "win" && firstWin === null) {
+      setFirstWin("right");
+    }
+    if (left.gameState !== "win" && right.gameState !== "win") {
+      setFirstWin(null);
+    }
+  }, [left.gameState, right.gameState]);
+
+  const STORAGE_KEY = "espiral_start_time";
+
   const [elapsed, setElapsed] = useState(0);
+  const [finalTime, setFinalTime] = useState<number | null>(null);
   const startTimeRef = useRef<number | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Recuperar tiempo guardado al montar
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const savedStart = parseInt(saved, 10);
+      startTimeRef.current = savedStart;
+      setElapsed(Math.floor((Date.now() - savedStart) / 1000));
+    }
+  }, []);
 
   useEffect(() => {
     const isActive = left.gameState === "playing" || right.gameState === "playing";
     const hasStarted = left.gameState !== "idle" || right.gameState !== "idle";
 
     if (hasStarted && !bothWin && startTimeRef.current === null) {
-      startTimeRef.current = Date.now() - elapsed * 1000;
+      setElapsed(0);
+      const newStart = Date.now();
+      startTimeRef.current = newStart;
+      localStorage.setItem(STORAGE_KEY, String(newStart));
     }
 
     if (isActive && !timerRef.current) {
@@ -277,6 +306,9 @@ export default function Espiral() {
     if (bothWin && timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
+      localStorage.removeItem(STORAGE_KEY);
+      setFinalTime(elapsed);
+      startTimeRef.current = null;
     }
 
     // Reset al reiniciar ambos
@@ -285,17 +317,27 @@ export default function Espiral() {
       timerRef.current = null;
       startTimeRef.current = null;
       setElapsed(0);
+      setFinalTime(null);
     }
   }, [left.gameState, right.gameState, bothWin]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "ArrowLeft") { e.preventDefault(); left.press(); }
-      if (e.key === "ArrowRight") { e.preventDefault(); right.press(); }
+      if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+        e.preventDefault();
+        if (bothWin) {
+          left.start();
+          right.start();
+        } else if (e.key === "ArrowLeft" && left.gameState !== "win") {
+          left.press();
+        } else if (e.key === "ArrowRight" && right.gameState !== "win") {
+          right.press();
+        }
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [left, right]);
+  }, [left, right, bothWin]);
 
   return (
     <div
@@ -308,12 +350,15 @@ export default function Espiral() {
       </div>
 
       {bothWin && (
-        <p style={{ color: "#3b82f6", fontSize: "1.1rem", fontWeight: 600 }}>¡Enhorabuena! {elapsed}s</p>
+        <div style={{ textAlign: "center" }}>
+          <p style={{ color: "#3b82f6", fontSize: "1.1rem", fontWeight: 600 }}>¡Enhorabuena!</p>
+          <p style={{ color: "#3b82f6", fontSize: "1.1rem", fontWeight: 600 }}>{finalTime}s</p>
+        </div>
       )}
 
       <div className="flex gap-6 items-start">
-        <Board canvasRef={canvasL} gameState={left.gameState} label="←" />
-        <Board canvasRef={canvasR} gameState={right.gameState} label="→" />
+        <Board canvasRef={canvasL} gameState={left.gameState} label="←" bothWin={bothWin} isFirst={firstWin === "left"} />
+        <Board canvasRef={canvasR} gameState={right.gameState} label="→" bothWin={bothWin} isFirst={firstWin === "right"} />
       </div>
 
       <a
@@ -336,10 +381,14 @@ function Board({
   canvasRef,
   gameState,
   label,
+  bothWin,
+  isFirst,
 }: {
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
   gameState: GameState;
   label: string;
+  bothWin: boolean;
+  isFirst: boolean;
 }) {
   return (
     <div className="flex flex-col items-center gap-2">
@@ -357,8 +406,12 @@ function Board({
         )}
         {gameState === "win" && (
           <Overlay>
-            <p style={{ color: "#3b82f6", fontSize: "1.1rem", fontWeight: 600 }}>¡Enhorabuena!</p>
-            <p style={{ color: "#9ca3af", fontSize: "0.72rem", marginTop: "0.25rem" }}>Pulsa {label} para repetir</p>
+            <p style={{ color: "#3b82f6", fontSize: "1.1rem", fontWeight: 600 }}>
+              {bothWin ? "¡Listo!" : isFirst ? "Ya falta poco..." : "¡Listo!"}
+            </p>
+            {bothWin && (
+              <p style={{ color: "#9ca3af", fontSize: "0.72rem", marginTop: "0.25rem" }}>Pulsa cualquier tecla para repetir</p>
+            )}
           </Overlay>
         )}
       </div>
