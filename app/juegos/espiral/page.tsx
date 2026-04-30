@@ -234,7 +234,21 @@ function useBoard(
     return () => cancelAnimationFrame(animRef.current);
   }, [gameState, startCount]);
 
-  return { gameState, press, start };
+  function cheat() {
+    const s = stateRef.current;
+    if (s.gameState === "win") return;
+    cancelAnimationFrame(animRef.current);
+    s.gameState = "win";
+    s.pos = cellToPixel(goalCell, originRef.current, cellRef.current);
+    setGameState("win");
+    const canvas = canvasRef.current;
+    if (canvas) {
+      const ctx = canvas.getContext("2d")!;
+      drawBoard(ctx, canvas.width, path, originRef.current, s, goalCell, cellRef.current);
+    }
+  }
+
+  return { gameState, press, start, cheat };
 }
 
 export default function Espiral() {
@@ -315,6 +329,8 @@ export default function Espiral() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (e.key === "q") { left.cheat(); return; }
+      if (e.key === "p") { right.cheat(); return; }
       if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
       e.preventDefault();
       if (bothWin) { left.start(); right.start(); return; }
