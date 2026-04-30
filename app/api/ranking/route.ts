@@ -1,7 +1,9 @@
+import { Resend } from "resend";
 import redis from "@/lib/redis";
 
 const KEY = process.env.NODE_ENV === "development" ? "espiral-dev:ranking" : "espiral:ranking";
 const TOP = 10;
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 function parseEntry(member: string, score: number) {
   try {
@@ -41,6 +43,7 @@ export async function POST(request: Request) {
 
   const normalizedName = name.trim().slice(0, 20);
   const existing = await findExistingMember(normalizedName);
+  const isRecord = !existing || score < existing.score;
 
   if (existing) {
     if (score >= existing.score) {
@@ -59,6 +62,15 @@ export async function POST(request: Request) {
   const count = await redis.zcard(KEY);
   if (count > TOP) {
     await redis.zremrangebyrank(KEY, TOP, -1);
+  }
+
+  if (isRecord && process.env.NODE_ENV !== "development") {
+    resend.emails.send({
+      from: "Espiral <onboarding@resend.dev>",
+      to: "pacres.g@gmail.com",
+      subject: `Nuevo récord en Espiral: ${normalizedName} — ${score.toFixed(1)}s`,
+      text: `${normalizedName} ha conseguido ${score.toFixed(1)}s en el juego Espiral.\n\nVer ranking: https://pacr.es/juegos/espiral/ranking`,
+    });
   }
 
   const entries = await redis.zrange(KEY, 0, TOP - 1, "WITHSCORES");
