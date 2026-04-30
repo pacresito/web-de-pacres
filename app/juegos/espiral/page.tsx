@@ -274,7 +274,7 @@ export default function Espiral() {
     if (saved) {
       const savedStart = parseInt(saved, 10);
       startTimeRef.current = savedStart;
-      setElapsed(Math.floor((Date.now() - savedStart) / 1000));
+      setElapsed(Math.round((Date.now() - savedStart) / 100) / 10);
     }
   }, []);
 
@@ -291,14 +291,15 @@ export default function Espiral() {
     if (isActive && !timerRef.current) {
       timerRef.current = setInterval(() => {
         if (startTimeRef.current !== null)
-          setElapsed(Math.floor((Date.now() - startTimeRef.current) / 1000));
+          setElapsed(Math.round((Date.now() - startTimeRef.current) / 100) / 10);
       }, 100);
     }
     if (bothWin && timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
       localStorage.removeItem(STORAGE_KEY);
-      setFinalTime(elapsed);
+      if (startTimeRef.current !== null)
+        setFinalTime(Math.round((Date.now() - startTimeRef.current) / 100) / 10);
       startTimeRef.current = null;
     }
     if (left.gameState === "idle" && right.gameState === "idle") {

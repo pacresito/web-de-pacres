@@ -5,12 +5,8 @@ import Link from "next/link";
 
 interface Entry {
   name: string;
+  date: string | null;
   score: number;
-}
-
-function formatTime(s: number) {
-  if (s < 60) return `${s}s`;
-  return `${Math.floor(s / 60)}m ${s % 60}s`;
 }
 
 export default function Ranking() {
@@ -53,12 +49,13 @@ export default function Ranking() {
       ) : entries.length === 0 ? (
         <p style={{ color: "#9ca3af", fontSize: "0.85rem" }}>Sin entradas aún</p>
       ) : (
-        <table style={{ borderCollapse: "collapse", width: "100%", maxWidth: "360px" }}>
+        <table style={{ borderCollapse: "collapse", width: "100%", maxWidth: "480px" }}>
           <thead>
             <tr>
               <th style={thStyle}>#</th>
               <th style={{ ...thStyle, textAlign: "left" }}>Nombre</th>
               <th style={{ ...thStyle, textAlign: "right" }}>Tiempo</th>
+              <th style={{ ...thStyle, textAlign: "right" }}>Fecha</th>
             </tr>
           </thead>
           <tbody>
@@ -69,7 +66,10 @@ export default function Ranking() {
                 </td>
                 <td style={{ ...tdStyle, color: "#111827" }}>{e.name}</td>
                 <td style={{ ...tdStyle, textAlign: "right", color: "#6b7280", fontFamily: "var(--font-geist-mono, monospace)" }}>
-                  {formatTime(e.score)}
+                  {e.score.toFixed(1)}s
+                </td>
+                <td style={{ ...tdStyle, textAlign: "right", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", fontSize: "0.78rem" }}>
+                  {e.date ?? "—"}
                 </td>
               </tr>
             ))}
