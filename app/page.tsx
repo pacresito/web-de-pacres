@@ -309,14 +309,14 @@ function RecsSlider() {
           ))}
         </div>
         <div style={{ display: "flex", gap: "0.4rem" }}>
-          {[["←", prev], ["→", next]].map(([label, fn]) => (
-            <button key={label as string} onClick={fn as () => void} style={{
+          {([["←", prev], ["→", next]] as [string, () => void][]).map(([label, fn]) => (
+            <button key={label} onClick={fn} style={{
               background: "none", border: "1px solid rgba(96,165,250,0.25)",
               color: "#6b7280", width: 32, height: 32, cursor: "pointer",
               fontSize: "0.75rem", borderRadius: "2px", transition: "border-color 0.2s, color 0.2s",
             }}
-              onMouseEnter={e => { (e.currentTarget).style.borderColor = "var(--blue-accent)"; (e.currentTarget).style.color = "var(--blue-accent)"; }}
-              onMouseLeave={e => { (e.currentTarget).style.borderColor = "rgba(96,165,250,0.25)"; (e.currentTarget).style.color = "#6b7280"; }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--blue-accent)"; e.currentTarget.style.color = "var(--blue-accent)"; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(96,165,250,0.25)"; e.currentTarget.style.color = "#6b7280"; }}
             >{label}</button>
           ))}
         </div>
