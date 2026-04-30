@@ -1,6 +1,14 @@
 export default function Home() {
   return (
-    <main className="min-h-screen text-white font-sans" style={{background: "linear-gradient(135deg, #0f0c29 0%, #302b63 30%, #24243e 55%, #0f3460 75%, #16213e 100%)"}}>
+    <main className="min-h-screen text-white font-sans" style={{background: "linear-gradient(135deg, #020d05 0%, #041408 15%, #072010 28%, #0a2c14 40%, #062218 52%, #082616 62%, #051c10 72%, #0b2a14 82%, #030e06 100%)", position: "relative", overflow: "hidden"}}>
+      {/* Aurora halos */}
+      <div style={{position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0}}>
+        <div style={{position: "absolute", width: "70%", height: "40%", top: "-10%", left: "-10%", background: "radial-gradient(ellipse, rgba(30,180,80,0.10) 0%, transparent 70%)", borderRadius: "50%"}} />
+        <div style={{position: "absolute", width: "60%", height: "50%", top: "5%", right: "-5%", background: "radial-gradient(ellipse, rgba(20,160,70,0.07) 0%, transparent 70%)", borderRadius: "50%"}} />
+        <div style={{position: "absolute", width: "50%", height: "35%", top: "20%", left: "20%", background: "radial-gradient(ellipse, rgba(60,200,90,0.06) 0%, transparent 70%)", borderRadius: "50%"}} />
+      </div>
+      {/* Content */}
+      <div style={{position: "relative", zIndex: 1}}>
       {/* Hero */}
       <section className="max-w-3xl mx-auto px-6 pt-20 pb-16">
         <h1 className="text-4xl font-bold tracking-tight">Pablo Crespo Velasco</h1>
@@ -104,6 +112,7 @@ export default function Home() {
           LinkedIn →
         </a>
       </footer>
+      </div>
     </main>
   );
 }
