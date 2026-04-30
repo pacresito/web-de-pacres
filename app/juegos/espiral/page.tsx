@@ -274,7 +274,7 @@ export default function Espiral() {
     if (saved) {
       const savedStart = parseInt(saved, 10);
       startTimeRef.current = savedStart;
-      setElapsed(Math.round((Date.now() - savedStart) / 100) / 10);
+      setElapsed(Math.floor((Date.now() - savedStart) / 1000));
     }
   }, []);
 
@@ -291,8 +291,8 @@ export default function Espiral() {
     if (isActive && !timerRef.current) {
       timerRef.current = setInterval(() => {
         if (startTimeRef.current !== null)
-          setElapsed(Math.round((Date.now() - startTimeRef.current) / 100) / 10);
-      }, 100);
+          setElapsed(Math.floor((Date.now() - startTimeRef.current) / 1000));
+      }, 500);
     }
     if (bothWin && timerRef.current) {
       clearInterval(timerRef.current);
@@ -365,7 +365,7 @@ export default function Espiral() {
 
       {bothWin && (
         <div style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem" }}>
-          <p style={{ color: "#3b82f6", fontSize: "1.1rem", fontWeight: 600 }}>¡Enhorabuena! — {finalTime}s</p>
+          <p style={{ color: "#3b82f6", fontSize: "1.1rem", fontWeight: 600 }}>¡Enhorabuena! — {finalTime?.toFixed(1)}s</p>
 
           {!submitted ? (
             <form onSubmit={submitScore} style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
