@@ -90,11 +90,11 @@ function drawBoard(
   ctx.clearRect(0, 0, size, size);
 
   // Fondo
-  ctx.fillStyle = "#0f0c29";
+  ctx.fillStyle = "#f0f6ff";
   ctx.fillRect(0, 0, size, size);
 
   // Paredes del camino
-  ctx.strokeStyle = "rgba(120,80,255,0.25)";
+  ctx.strokeStyle = "rgba(96,165,250,0.22)";
   ctx.lineWidth = CELL - 2;
   ctx.lineCap = "square";
   ctx.lineJoin = "miter";
@@ -110,8 +110,8 @@ function drawBoard(
   const goal = cellToPixel(goalCell, origin);
   ctx.beginPath();
   ctx.arc(goal.x, goal.y, 6, 0, Math.PI * 2);
-  ctx.fillStyle = "#a78bfa";
-  ctx.shadowColor = "#a78bfa";
+  ctx.fillStyle = "#3b82f6";
+  ctx.shadowColor = "#3b82f6";
   ctx.shadowBlur = 12;
   ctx.fill();
   ctx.shadowBlur = 0;
@@ -120,8 +120,8 @@ function drawBoard(
   if (state.gameState !== "idle") {
     ctx.beginPath();
     ctx.arc(state.pos.x, state.pos.y, 8, 0, Math.PI * 2);
-    ctx.fillStyle = "#fff";
-    ctx.shadowColor = "#a78bfa";
+    ctx.fillStyle = "#1e40af";
+    ctx.shadowColor = "#3b82f6";
     ctx.shadowBlur = 16;
     ctx.fill();
     ctx.shadowBlur = 0;
@@ -299,15 +299,15 @@ export default function Espiral() {
   return (
     <div
       className="min-h-screen flex flex-col items-center justify-center gap-6 px-4"
-      style={{ background: "linear-gradient(135deg, #0f0c29 0%, #302b63 30%, #24243e 55%, #0f3460 75%, #16213e 100%)" }}
+      style={{ background: "#ffffff", position: "relative" }}
     >
       <div className="flex items-center gap-6">
-        <h1 className="text-white text-2xl font-bold tracking-tight">Espiral</h1>
-        <span className="text-white/40 text-sm tabular-nums">{elapsed}s</span>
+        <h1 style={{ color: "#111827", fontSize: "1.5rem", fontWeight: 800, letterSpacing: "-0.03em" }}>Espiral</h1>
+        <span style={{ color: "#9ca3af", fontSize: "0.85rem", fontVariantNumeric: "tabular-nums", fontFamily: "var(--font-geist-mono, monospace)" }}>{elapsed}s</span>
       </div>
 
       {bothWin && (
-        <p className="text-white text-lg font-semibold">¡Enhorabuena! {elapsed}s</p>
+        <p style={{ color: "#3b82f6", fontSize: "1.1rem", fontWeight: 600 }}>¡Enhorabuena! {elapsed}s</p>
       )}
 
       <div className="flex gap-6 items-start">
@@ -315,7 +315,18 @@ export default function Espiral() {
         <Board canvasRef={canvasR} gameState={right.gameState} label="→" />
       </div>
 
-      <p className="text-white/30 text-xs">← izquierda · → derecha</p>
+      <a
+        href="/"
+        style={{
+          position: "absolute", bottom: "1.5rem", left: "50%", transform: "translateX(-50%)",
+          fontSize: "0.75rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)",
+          textDecoration: "none", transition: "color 0.2s",
+        }}
+        onMouseEnter={e => (e.currentTarget.style.color = "#3b82f6")}
+        onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}
+      >
+        pacr.es
+      </a>
     </div>
   );
 }
@@ -333,20 +344,20 @@ function Board({
     <div className="flex flex-col items-center gap-2">
       <p className="text-white/30 text-xs">{label}</p>
       <div className="relative">
-        <canvas ref={canvasRef} className="rounded-xl" style={{ display: "block" }} />
+        <canvas ref={canvasRef} style={{ display: "block", borderRadius: "8px", border: "1px solid rgba(96,165,250,0.2)" }} />
         {gameState === "idle" && (
-          <Overlay><p className="text-white/50 text-sm">Pulsa {label}</p></Overlay>
+          <Overlay><p style={{ color: "#9ca3af", fontSize: "0.85rem" }}>Pulsa {label}</p></Overlay>
         )}
         {gameState === "dead" && (
           <Overlay>
-            <p className="text-white text-base font-semibold">Fuera</p>
-            <p className="text-white/40 text-xs mt-1">Pulsa {label} para reintentar</p>
+            <p style={{ color: "#111827", fontSize: "1rem", fontWeight: 600 }}>Fuera</p>
+            <p style={{ color: "#9ca3af", fontSize: "0.72rem", marginTop: "0.25rem" }}>Pulsa {label} para reintentar</p>
           </Overlay>
         )}
         {gameState === "win" && (
           <Overlay>
-            <p className="text-white text-lg font-semibold">¡Enhorabuena!</p>
-            <p className="text-white/50 text-xs mt-1">Pulsa {label} para repetir</p>
+            <p style={{ color: "#3b82f6", fontSize: "1.1rem", fontWeight: 600 }}>¡Enhorabuena!</p>
+            <p style={{ color: "#9ca3af", fontSize: "0.72rem", marginTop: "0.25rem" }}>Pulsa {label} para repetir</p>
           </Overlay>
         )}
       </div>
@@ -356,7 +367,7 @@ function Board({
 
 function Overlay({ children }: { children: React.ReactNode }) {
   return (
-    <div className="absolute inset-0 flex flex-col items-center justify-center rounded-xl bg-black/50 backdrop-blur-sm">
+    <div className="absolute inset-0 flex flex-col items-center justify-center" style={{ borderRadius: "8px", background: "rgba(255,255,255,0.85)", backdropFilter: "blur(4px)" }}>
       {children}
     </div>
   );
