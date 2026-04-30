@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 
 function calcSize() {
   const isLandscape = window.innerWidth > window.innerHeight;
   if (isLandscape) {
-    return Math.min(Math.floor((window.innerWidth - 96) / 2), window.innerHeight - 80);
+    return Math.min(Math.floor((window.innerWidth - 96) / 2), window.innerHeight - 80, 420);
   }
-  return Math.min(Math.floor(window.innerWidth - 32), Math.floor((window.innerHeight - 120) / 2));
+  return Math.min(Math.floor(window.innerWidth - 32), Math.floor((window.innerHeight - 120) / 2), 420);
 }
 
 function useCanvasSize() {
@@ -239,6 +240,7 @@ function useBoard(
 export default function Espiral() {
   const canvasL = useRef<HTMLCanvasElement>(null);
   const canvasR = useRef<HTMLCanvasElement>(null);
+  const router = useRouter();
 
   const r0 = PATH_RIGHT[0], r1 = PATH_RIGHT[1];
   const rlen = Math.hypot(r1.x - r0.x, r1.y - r0.y);
@@ -262,6 +264,10 @@ export default function Espiral() {
   const [finalTime, setFinalTime] = useState<number | null>(null);
   const startTimeRef = useRef<number | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const [alias, setAlias] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -301,6 +307,8 @@ export default function Espiral() {
       startTimeRef.current = null;
       setElapsed(0);
       setFinalTime(null);
+      setSubmitted(false);
+      setAlias("");
     }
   }, [left.gameState, right.gameState, bothWin]);
 
@@ -316,6 +324,26 @@ export default function Espiral() {
     return () => window.removeEventListener("keydown", onKey);
   }, [left, right, bothWin]);
 
+  async function submitScore(e: React.FormEvent) {
+    e.preventDefault();
+    if (!alias.trim() || finalTime === null) return;
+    setSubmitting(true);
+    await fetch("/api/ranking", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: alias.trim(), score: finalTime }),
+    });
+    setSubmitted(true);
+    setSubmitting(false);
+  }
+
+  function replay() {
+    left.start();
+    right.start();
+    setSubmitted(false);
+    setAlias("");
+  }
+
   return (
     <div
       className="flex flex-col items-center justify-center gap-4 py-8"
@@ -324,18 +352,79 @@ export default function Espiral() {
       <div className="flex items-center gap-6">
         <h1 style={{ color: "#111827", fontSize: "1.5rem", fontWeight: 800, letterSpacing: "-0.03em" }}>Espiral</h1>
         <span style={{ color: "#9ca3af", fontSize: "0.85rem", fontVariantNumeric: "tabular-nums", fontFamily: "var(--font-geist-mono, monospace)" }}>{elapsed}s</span>
+        <a
+          href="/juegos/espiral/ranking"
+          style={{ fontSize: "0.75rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", textDecoration: "none", transition: "color 0.2s" }}
+          onMouseEnter={e => (e.currentTarget.style.color = "#3b82f6")}
+          onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}
+        >
+          ranking
+        </a>
       </div>
 
       {bothWin && (
-        <div style={{ textAlign: "center" }}>
-          <p style={{ color: "#3b82f6", fontSize: "1.1rem", fontWeight: 600 }}>¡Enhorabuena!</p>
-          <p style={{ color: "#3b82f6", fontSize: "1.1rem", fontWeight: 600 }}>{finalTime}s</p>
+        <div style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem" }}>
+          <p style={{ color: "#3b82f6", fontSize: "1.1rem", fontWeight: 600 }}>¡Enhorabuena! — {finalTime}s</p>
+
+          {!submitted ? (
+            <form onSubmit={submitScore} style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+              <input
+                type="text"
+                value={alias}
+                onChange={e => setAlias(e.target.value)}
+                placeholder="Tu nombre"
+                maxLength={20}
+                style={{
+                  padding: "0.35rem 0.65rem",
+                  border: "1px solid rgba(96,165,250,0.4)",
+                  borderRadius: "6px",
+                  fontSize: "0.85rem",
+                  outline: "none",
+                  color: "#111827",
+                  background: "#f8faff",
+                  fontFamily: "var(--font-geist-mono, monospace)",
+                }}
+              />
+              <button
+                type="submit"
+                disabled={submitting || !alias.trim()}
+                style={{
+                  padding: "0.35rem 0.85rem",
+                  background: "#3b82f6",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "6px",
+                  fontSize: "0.85rem",
+                  cursor: alias.trim() ? "pointer" : "default",
+                  opacity: alias.trim() ? 1 : 0.4,
+                  fontFamily: "var(--font-geist-mono, monospace)",
+                }}
+              >
+                {submitting ? "..." : "Guardar"}
+              </button>
+            </form>
+          ) : (
+            <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
+              <button
+                onClick={() => router.push("/juegos/espiral/ranking")}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "#3b82f6", fontSize: "0.85rem", fontFamily: "var(--font-geist-mono, monospace)" }}
+              >
+                Ver ranking →
+              </button>
+              <button
+                onClick={replay}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", fontSize: "0.85rem", fontFamily: "var(--font-geist-mono, monospace)" }}
+              >
+                Repetir
+              </button>
+            </div>
+          )}
         </div>
       )}
 
       <div className="flex flex-col gap-6 items-center landscape:flex-row landscape:justify-center landscape:items-start">
-        <Board canvasRef={canvasL} gameState={left.gameState} label="←" bothWin={bothWin} isFirst={firstWin === "left"} onPress={() => { if (bothWin) { left.start(); right.start(); } else if (left.gameState !== "win") left.press(); }} />
-        <Board canvasRef={canvasR} gameState={right.gameState} label="→" bothWin={bothWin} isFirst={firstWin === "right"} onPress={() => { if (bothWin) { left.start(); right.start(); } else if (right.gameState !== "win") right.press(); }} />
+        <Board canvasRef={canvasL} gameState={left.gameState} label="←" bothWin={bothWin} isFirst={firstWin === "left"} onPress={() => { if (bothWin) { replay(); } else if (left.gameState !== "win") left.press(); }} />
+        <Board canvasRef={canvasR} gameState={right.gameState} label="→" bothWin={bothWin} isFirst={firstWin === "right"} onPress={() => { if (bothWin) { replay(); } else if (right.gameState !== "win") right.press(); }} />
       </div>
 
       <a
