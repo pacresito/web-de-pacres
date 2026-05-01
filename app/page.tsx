@@ -440,6 +440,10 @@ export default function Home() {
           font-size: 0.72rem; color: var(--text-muted); white-space: nowrap;
           font-family: var(--font-geist-mono), monospace; padding-top: 0.25rem; flex-shrink: 0;
         }
+        @media (max-width: 600px) {
+          .job-item { flex-direction: column; gap: 0.3rem; }
+          .job-period { padding-top: 0; order: -1; }
+        }
 
         .cert-tag {
           display: inline-block; font-size: 0.74rem; color: var(--text-dim);
