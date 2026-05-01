@@ -336,6 +336,11 @@ function RecsSlider() {
 
 export default function Home() {
   const cursorGlowRef = useRef<HTMLDivElement>(null);
+  const pressHaloRef = useRef<HTMLDivElement>(null);
+  const holdTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const holdSecsRef = useRef(0);
+  const [transformed, setTransformed] = useState(false);
+  const transformedRef = useRef(false);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -343,9 +348,58 @@ export default function Home() {
         cursorGlowRef.current.style.left = `${e.clientX}px`;
         cursorGlowRef.current.style.top = `${e.clientY}px`;
       }
+      if (pressHaloRef.current) {
+        pressHaloRef.current.style.left = `${e.clientX}px`;
+        pressHaloRef.current.style.top = `${e.clientY}px`;
+      }
     };
     window.addEventListener("mousemove", handleMouseMove);
     return () => window.removeEventListener("mousemove", handleMouseMove);
+  }, []);
+
+  useEffect(() => {
+    const handleMouseDown = () => {
+      holdSecsRef.current = 0;
+      holdTimerRef.current = setInterval(() => {
+        holdSecsRef.current += 0.05;
+        const secs = holdSecsRef.current;
+        const isBlue = transformedRef.current;
+        if (secs >= 5) {
+          setTransformed(!isBlue);
+          if (holdTimerRef.current) clearInterval(holdTimerRef.current);
+          if (pressHaloRef.current) { pressHaloRef.current.style.opacity = "0"; }
+          return;
+        }
+        if (pressHaloRef.current) {
+          // 0–1s: nada. 1–5s: crece
+          const progress = secs < 1 ? 0 : (secs - 1) / 4;
+          const size = 80 + progress * 800;
+          const opacity = progress * 0.55;
+          pressHaloRef.current.style.width = `${size}px`;
+          pressHaloRef.current.style.height = `${size}px`;
+          pressHaloRef.current.style.opacity = `${opacity}`;
+          // Color del halo según estado actual
+          const color = isBlue ? "255,255,255" : "59,130,246";
+          pressHaloRef.current.style.background = `radial-gradient(circle, rgba(${color},0.7) 0%, rgba(${color},0.3) 40%, transparent 70%)`;
+        }
+      }, 50);
+    };
+    const handleMouseUp = () => {
+      if (holdTimerRef.current) clearInterval(holdTimerRef.current);
+      holdSecsRef.current = 0;
+      if (pressHaloRef.current) {
+        pressHaloRef.current.style.width = "80px";
+        pressHaloRef.current.style.height = "80px";
+        pressHaloRef.current.style.opacity = "0";
+      }
+    };
+    window.addEventListener("mousedown", handleMouseDown);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      window.removeEventListener("mousedown", handleMouseDown);
+      window.removeEventListener("mouseup", handleMouseUp);
+      if (holdTimerRef.current) clearInterval(holdTimerRef.current);
+    };
   }, []);
 
   useEffect(() => {
@@ -356,6 +410,15 @@ export default function Home() {
     document.querySelectorAll(".reveal").forEach((el) => observer.observe(el));
     return () => observer.disconnect();
   }, []);
+
+  useEffect(() => {
+    transformedRef.current = transformed;
+    if (transformed) {
+      document.body.classList.add("page-transformed");
+    } else {
+      document.body.classList.remove("page-transformed");
+    }
+  }, [transformed]);
 
   return (
     <>
@@ -371,6 +434,32 @@ export default function Home() {
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { background: var(--bg); color: var(--text); font-family: var(--font-geist-sans), sans-serif; }
+
+        .press-halo {
+          position: fixed; border-radius: 50%;
+          background: radial-gradient(circle, rgba(59,130,246,0.7) 0%, rgba(59,130,246,0.3) 40%, transparent 70%);
+          transform: translate(-50%,-50%); pointer-events: none; z-index: 9999;
+          width: 80px; height: 80px; opacity: 0;
+          transition: width 0.08s ease, height 0.08s ease, opacity 0.15s ease;
+          filter: blur(18px);
+        }
+
+        body.page-transformed {
+          background: #1e40af !important;
+          transition: background 0.6s ease;
+        }
+        body.page-transformed * { color: #ffffff !important; border-color: rgba(255,255,255,0.2) !important; }
+        body.page-transformed .hero-name span.gradient {
+          background: linear-gradient(135deg, #93c5fd 0%, #ffffff 100%) !important;
+          -webkit-background-clip: text !important; background-clip: text !important;
+        }
+        body.page-transformed .cursor-glow { background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%) !important; }
+        body.page-transformed .skill-tag,
+        body.page-transformed .cert-tag {
+          background: rgba(255,255,255,0.15) !important;
+          border-color: rgba(255,255,255,0.35) !important;
+          color: #ffffff !important;
+        }
 
         .cursor-glow {
           position: fixed; width: 480px; height: 480px; border-radius: 50%;
@@ -499,6 +588,7 @@ export default function Home() {
       `}</style>
 
       <div ref={cursorGlowRef} className="cursor-glow" />
+      <div ref={pressHaloRef} className="press-halo" />
       <div className="bg-blobs">
         <div className="blob" style={{width:"55vw",height:"45vh",top:"-10%",right:"-10%",background:"radial-gradient(ellipse, rgba(96,165,250,0.07) 0%, transparent 70%)"}} />
         <div className="blob" style={{width:"40vw",height:"40vh",bottom:"5%",left:"-5%",background:"radial-gradient(ellipse, rgba(147,197,253,0.06) 0%, transparent 70%)"}} />
