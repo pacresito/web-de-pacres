@@ -348,8 +348,22 @@ export default function Home() {
     if (physicsActiveRef.current) return;
     physicsActiveRef.current = true;
 
-    const Matter = await import("matter-js");
-    const { Engine, Bodies, Body, World, Runner } = Matter;
+    let Engine: typeof import("matter-js").Engine,
+        Bodies: typeof import("matter-js").Bodies,
+        Body: typeof import("matter-js").Body,
+        World: typeof import("matter-js").World,
+        Runner: typeof import("matter-js").Runner;
+    try {
+      const mod = await import("matter-js");
+      // matter-js es CJS — en producción puede venir bajo .default
+      const M = (mod as any).default ?? mod;
+      Engine = M.Engine; Bodies = M.Bodies; Body = M.Body; World = M.World; Runner = M.Runner;
+      if (!Engine) throw new Error("matter-js no cargó");
+    } catch (e) {
+      console.error("Error cargando matter-js:", e);
+      physicsActiveRef.current = false;
+      return;
+    }
 
     const overlay = document.createElement("div");
     overlay.style.cssText = "position:fixed;inset:0;pointer-events:none;z-index:99999;overflow:hidden;";
