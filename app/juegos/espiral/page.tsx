@@ -287,8 +287,12 @@ export default function Espiral() {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       const savedStart = parseInt(saved, 10);
-      startTimeRef.current = savedStart;
-      setElapsed(Math.floor((Date.now() - savedStart) / 1000));
+      if (Date.now() - savedStart > 10 * 60 * 1000) {
+        localStorage.removeItem(STORAGE_KEY);
+      } else {
+        startTimeRef.current = savedStart;
+        setElapsed(Math.floor((Date.now() - savedStart) / 1000));
+      }
     }
   }, []);
 

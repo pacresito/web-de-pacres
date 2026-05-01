@@ -99,10 +99,8 @@ function resolveCollisions(
 export default function Laberinto() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const boardRef = useRef<HTMLDivElement>(null);
-  const timerRef = useRef<HTMLSpanElement>(null);
   const loopRef = useRef<(t: number) => void>(() => {});
   const [won, setWon] = useState(false);
-  const [elapsed, setElapsed] = useState(0);
 
   const g = useRef({
     maze: generateMaze(),
@@ -283,13 +281,7 @@ export default function Laberinto() {
       const dx = state.bx - GOAL_X, dy = state.by - GOAL_Y;
       if (Math.sqrt(dx * dx + dy * dy) < CELL * 0.3) {
         state.won = true;
-        setElapsed((time - state.startTime) / 1000);
         setWon(true);
-      }
-
-      // Timer: segundos enteros mientras corre
-      if (timerRef.current) {
-        timerRef.current.textContent = `${Math.floor((time - state.startTime) / 1000)}s`;
       }
 
       draw();
@@ -314,9 +306,7 @@ export default function Laberinto() {
     state.idle = true;
     state.won = false;
     if (boardRef.current) boardRef.current.style.transform = "";
-    if (timerRef.current) timerRef.current.textContent = "0s";
     setWon(false);
-    setElapsed(0);
     startLoop();
   }
 
@@ -372,9 +362,6 @@ export default function Laberinto() {
     <main style={{ background: "#ffffff", minHeight: "100dvh", position: "relative" }} className="flex flex-col items-center justify-start px-4 py-8 gap-6 overflow-x-auto">
       <div className="flex items-center gap-6">
         <h1 style={{ color: "#111827", fontSize: "1.5rem", fontWeight: 800, letterSpacing: "-0.03em" }}>Laberinto</h1>
-        <span style={{ color: "#9ca3af", fontSize: "0.85rem", fontVariantNumeric: "tabular-nums", fontFamily: "var(--font-geist-mono, monospace)" }}>
-          {won ? `${elapsed.toFixed(2)}s` : <span ref={timerRef}>0s</span>}
-        </span>
       </div>
 
       {/* 3D board */}
@@ -423,7 +410,7 @@ export default function Laberinto() {
       </div>
 
       {won && (
-        <p style={{ color: "#3b82f6", fontSize: "1.1rem", fontWeight: 600 }}>¡Enhorabuena! — {elapsed.toFixed(2)}s</p>
+        <p style={{ color: "#3b82f6", fontSize: "1.1rem", fontWeight: 600 }}>¡Enhorabuena!</p>
       )}
       <button
         onClick={restart}
