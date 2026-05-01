@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 
 const COLS = 9;
 const ROWS = 9;
@@ -14,7 +14,7 @@ const GOAL_Y = (ROWS - 1) * CELL + CELL / 2 + WALL_W / 2;
 const START_X = CELL / 2 + WALL_W / 2;
 const START_Y = CELL / 2 + WALL_W / 2;
 
-const MAX_TILT = 22;
+const MAX_TILT = 14;
 const TILT_SPEED = 2.0;
 const GRAVITY = 1400;
 const FRICTION = 0.983;
@@ -102,12 +102,18 @@ export default function Laberinto() {
   const loopRef = useRef<(t: number) => void>(() => {});
   const [won, setWon] = useState(false);
 
+  const [orientState, setOrientState] = useState<"off" | "needs-permission" | "on">("off");
+  const [scale, setScale] = useState(1);
+
   const g = useRef({
     maze: generateMaze(),
     segs: [] as Seg[],
     bx: START_X, by: START_Y,
     vx: 0, vy: 0,
     tiltX: 0, tiltY: 0,
+    mouseX: 0, mouseY: 0, hasMouse: false,
+    orientX: 0, orientY: 0, hasOrient: false,
+    orientRefBeta: 0,
     keys: { up: false, down: false, left: false, right: false },
     idle: true,
     won: false,
@@ -233,10 +239,11 @@ export default function Laberinto() {
       if (state.won) { draw(); return; }
 
       const anyKey = state.keys.up || state.keys.down || state.keys.left || state.keys.right;
+      const started = state.hasMouse || anyKey;
 
-      // Idle: esperar primera tecla
+      // Idle: esperar movimiento de ratón o D-pad táctil
       if (state.idle) {
-        if (anyKey) {
+        if (started) {
           state.idle = false;
           state.startTime = time;
           state.lastTime = time;
@@ -250,14 +257,28 @@ export default function Laberinto() {
       const dt = Math.min((time - state.lastTime) / 1000, 0.033);
       state.lastTime = time;
 
-      // Tilt: derecha/abajo aumentan, izquierda/arriba disminuyen
-      if (state.keys.right) state.tiltY = Math.min(state.tiltY + TILT_SPEED, MAX_TILT);
-      else if (state.keys.left) state.tiltY = Math.max(state.tiltY - TILT_SPEED, -MAX_TILT);
-      else state.tiltY *= 0.85;
-
-      if (state.keys.down) state.tiltX = Math.min(state.tiltX + TILT_SPEED, MAX_TILT);
-      else if (state.keys.up) state.tiltX = Math.max(state.tiltX - TILT_SPEED, -MAX_TILT);
-      else state.tiltX *= 0.85;
+      // Tilt: giroscopio > ratón > D-pad
+      if (state.hasOrient) {
+        const targetY = Math.max(-MAX_TILT, Math.min(MAX_TILT, state.orientY));
+        const targetX = Math.max(-MAX_TILT, Math.min(MAX_TILT, state.orientX));
+        state.tiltY += (targetY - state.tiltY) * 0.15;
+        state.tiltX += (targetX - state.tiltX) * 0.15;
+      } else if (state.hasMouse) {
+        const cx = window.innerWidth / 2;
+        const cy = window.innerHeight / 2;
+        const range = Math.min(window.innerWidth, window.innerHeight) * 0.22;
+        const targetY = Math.max(-MAX_TILT, Math.min(MAX_TILT, (state.mouseX - cx) / range * MAX_TILT));
+        const targetX = Math.max(-MAX_TILT, Math.min(MAX_TILT, (state.mouseY - cy) / range * MAX_TILT));
+        state.tiltY += (targetY - state.tiltY) * 0.1;
+        state.tiltX += (targetX - state.tiltX) * 0.1;
+      } else {
+        if (state.keys.right) state.tiltY = Math.min(state.tiltY + TILT_SPEED, MAX_TILT);
+        else if (state.keys.left) state.tiltY = Math.max(state.tiltY - TILT_SPEED, -MAX_TILT);
+        else state.tiltY *= 0.85;
+        if (state.keys.down) state.tiltX = Math.min(state.tiltX + TILT_SPEED, MAX_TILT);
+        else if (state.keys.up) state.tiltX = Math.max(state.tiltX - TILT_SPEED, -MAX_TILT);
+        else state.tiltX *= 0.85;
+      }
 
       if (boardRef.current) {
         boardRef.current.style.transform = `rotateX(${-state.tiltX}deg) rotateY(${state.tiltY}deg)`;
@@ -303,6 +324,8 @@ export default function Laberinto() {
     state.vx = 0; state.vy = 0;
     state.tiltX = 0; state.tiltY = 0;
     Object.assign(state.keys, { up: false, down: false, left: false, right: false });
+    state.hasMouse = false;
+    state.orientX = 0; state.orientY = 0;
     state.idle = true;
     state.won = false;
     if (boardRef.current) boardRef.current.style.transform = "";
@@ -310,36 +333,86 @@ export default function Laberinto() {
     startLoop();
   }
 
+  const attachOrientListener = useCallback(() => {
+    const state = g.current;
+    let calibrated = false;
+
+    const onOrient = (e: DeviceOrientationEvent) => {
+      if (e.gamma === null || e.beta === null) return;
+      if (!calibrated) {
+        state.orientRefBeta = e.beta;
+        calibrated = true;
+      }
+      // gamma: inclinación izquierda/derecha (-90..90), beta: adelante/atrás
+      const ORIENT_SCALE = MAX_TILT / 25; // 25° de inclinación = tilt máximo
+      state.orientY = e.gamma * ORIENT_SCALE;
+      state.orientX = (e.beta - state.orientRefBeta) * ORIENT_SCALE;
+      state.hasOrient = true;
+    };
+
+    window.addEventListener("deviceorientation", onOrient);
+    return () => window.removeEventListener("deviceorientation", onOrient);
+  }, []);
+
   useEffect(() => {
     const state = g.current;
     state.segs = buildSegs(state.maze);
 
-    const onDown = (e: KeyboardEvent) => {
-      if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) e.preventDefault();
-      if (e.key === "ArrowUp") state.keys.up = true;
-      if (e.key === "ArrowDown") state.keys.down = true;
-      if (e.key === "ArrowLeft") state.keys.left = true;
-      if (e.key === "ArrowRight") state.keys.right = true;
-    };
-    const onUp = (e: KeyboardEvent) => {
-      if (e.key === "ArrowUp") state.keys.up = false;
-      if (e.key === "ArrowDown") state.keys.down = false;
-      if (e.key === "ArrowLeft") state.keys.left = false;
-      if (e.key === "ArrowRight") state.keys.right = false;
+    const onMouseMove = (e: MouseEvent) => {
+      state.mouseX = e.clientX;
+      state.mouseY = e.clientY;
+      state.hasMouse = true;
     };
 
-    window.addEventListener("keydown", onDown);
-    window.addEventListener("keyup", onUp);
+    window.addEventListener("mousemove", onMouseMove);
+
+    const updateScale = () => {
+      const padding = 32;
+      const available = Math.min(window.innerWidth - padding, window.innerHeight * 0.7);
+      setScale(Math.min(1, available / BOARD_W));
+    };
+    updateScale();
+    window.addEventListener("resize", updateScale);
+
+    // Detectar si el dispositivo tiene giroscopio
+    const isIOS = typeof (DeviceOrientationEvent as unknown as { requestPermission?: unknown }).requestPermission === "function";
+    if (!isIOS && window.DeviceOrientationEvent) {
+      // Android y otros: no requiere permiso
+      const cleanup = attachOrientListener();
+      setOrientState("on");
+      draw();
+      startLoop();
+      return () => {
+        cancelAnimationFrame(state.animId);
+        window.removeEventListener("mousemove", onMouseMove);
+        window.removeEventListener("resize", updateScale);
+        cleanup();
+      };
+    } else if (isIOS) {
+      setOrientState("needs-permission");
+    }
 
     draw();
     startLoop();
 
     return () => {
       cancelAnimationFrame(state.animId);
-      window.removeEventListener("keydown", onDown);
-      window.removeEventListener("keyup", onUp);
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("resize", updateScale);
     };
   }, []);
+
+  const requestOrientPermission = useCallback(async () => {
+    try {
+      const perm = await (DeviceOrientationEvent as unknown as { requestPermission: () => Promise<string> }).requestPermission();
+      if (perm === "granted") {
+        attachOrientListener();
+        setOrientState("on");
+      }
+    } catch {
+      setOrientState("off");
+    }
+  }, [attachOrientListener]);
 
   function touchKey(key: "up" | "down" | "left" | "right", val: boolean) {
     g.current.keys[key] = val;
@@ -365,7 +438,15 @@ export default function Laberinto() {
       </div>
 
       {/* 3D board */}
-      <div style={{ perspective: "480px" }} className="touch-none flex-shrink-0">
+      <div
+        style={{
+          width: BOARD_W * scale,
+          height: BOARD_H * scale,
+          flexShrink: 0,
+        }}
+        className="touch-none"
+      >
+      <div style={{ perspective: "600px", transform: `scale(${scale})`, transformOrigin: "top left" }}>
         <div
           ref={boardRef}
           style={{
@@ -384,29 +465,30 @@ export default function Laberinto() {
           />
           {/* Cara superior */}
           <div style={{
-            position: "absolute", top: 0, left: 0, width: "100%", height: 10,
-            background: "linear-gradient(to bottom, #8fa4b5, #a8bfcc)",
+            position: "absolute", top: 0, left: 0, width: "100%", height: 20,
+            background: "linear-gradient(to bottom, #1d4ed8, #3b82f6)",
             transformOrigin: "top center", transform: "rotateX(90deg)",
           }} />
           {/* Cara inferior */}
           <div style={{
-            position: "absolute", bottom: 0, left: 0, width: "100%", height: 10,
-            background: "linear-gradient(to top, #8fa4b5, #a8bfcc)",
+            position: "absolute", bottom: 0, left: 0, width: "100%", height: 20,
+            background: "linear-gradient(to top, #1d4ed8, #3b82f6)",
             transformOrigin: "bottom center", transform: "rotateX(-90deg)",
           }} />
           {/* Cara izquierda */}
           <div style={{
-            position: "absolute", top: 0, left: 0, width: 10, height: "100%",
-            background: "linear-gradient(to right, #8fa4b5, #a8bfcc)",
+            position: "absolute", top: 0, left: 0, width: 20, height: "100%",
+            background: "linear-gradient(to right, #1d4ed8, #3b82f6)",
             transformOrigin: "left center", transform: "rotateY(-90deg)",
           }} />
           {/* Cara derecha */}
           <div style={{
-            position: "absolute", top: 0, right: 0, width: 10, height: "100%",
-            background: "linear-gradient(to left, #8fa4b5, #a8bfcc)",
+            position: "absolute", top: 0, right: 0, width: 20, height: "100%",
+            background: "linear-gradient(to left, #1d4ed8, #3b82f6)",
             transformOrigin: "right center", transform: "rotateY(90deg)",
           }} />
         </div>
+      </div>
       </div>
 
       {won && (
@@ -419,18 +501,32 @@ export default function Laberinto() {
         nuevo laberinto
       </button>
 
-      {/* Touch D-pad */}
-      <div className="flex flex-col items-center gap-1 md:hidden">
-        <ArrowBtn dir="up" label="↑" />
-        <div className="flex gap-1">
-          <ArrowBtn dir="left" label="←" />
-          <ArrowBtn dir="down" label="↓" />
-          <ArrowBtn dir="right" label="→" />
+      {/* Touch D-pad (solo si no hay giroscopio activo) */}
+      {orientState !== "on" && (
+        <div className="flex flex-col items-center gap-1 md:hidden">
+          <ArrowBtn dir="up" label="↑" />
+          <div className="flex gap-1">
+            <ArrowBtn dir="left" label="←" />
+            <ArrowBtn dir="down" label="↓" />
+            <ArrowBtn dir="right" label="→" />
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Botón permiso giroscopio iOS */}
+      {orientState === "needs-permission" && (
+        <button
+          onClick={requestOrientPermission}
+          className="px-4 py-2 rounded-xl bg-blue-500 text-white text-sm font-semibold"
+        >
+          Usar giroscopio
+        </button>
+      )}
 
       <div className="mt-auto flex flex-col items-center gap-2 pb-6">
-        <p style={{ fontSize: "0.75rem", color: "#d1d5db" }}>Flechas del teclado para inclinar el tablero</p>
+        <p style={{ fontSize: "0.75rem", color: "#d1d5db" }}>
+          {orientState === "on" ? "Inclina el móvil para mover la bola" : "Mueve el ratón para inclinar el tablero"}
+        </p>
         <a
           href="/"
           style={{
