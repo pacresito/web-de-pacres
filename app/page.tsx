@@ -551,6 +551,31 @@ export default function Home() {
         }
         .skill-tag:hover { border-color: rgba(96,165,250,0.4); color: var(--blue-accent); background: rgba(96,165,250,0.05); }
 
+        .skill-tag-shine {
+          position: relative; overflow: hidden;
+        }
+        .skill-tag-shine::after {
+          content: "";
+          position: absolute;
+          top: -50%; left: -75%;
+          width: 50%; height: 200%;
+          background: linear-gradient(
+            120deg,
+            transparent 0%,
+            rgba(251,191,36,0.15) 40%,
+            rgba(253,224,71,0.55) 50%,
+            rgba(251,191,36,0.15) 60%,
+            transparent 100%
+          );
+          transform: skewX(-20deg);
+          animation: goldSweep 10s ease-in-out infinite;
+        }
+        @keyframes goldSweep {
+          0%, 88%  { left: -75%; opacity: 1; }
+          97%      { left: 150%; opacity: 1; }
+          98%, 100%{ left: 150%; opacity: 0; }
+        }
+
         .lang-row {
           display: flex; justify-content: space-between; align-items: baseline;
           padding: 0.9rem 0; border-bottom: 1px solid var(--border);
@@ -732,7 +757,7 @@ export default function Home() {
             ].map((skill) => (
               <span key={skill} className="skill-tag">{skill}</span>
             ))}
-            <a href="/juegos/espiral" className="skill-tag" style={{ textDecoration: "none" }}>Resolución de problemas</a>
+            <a href="/juegos/espiral" className="skill-tag skill-tag-shine" style={{ textDecoration: "none" }}>Resolución de problemas</a>
           </div>
         </section>
 
