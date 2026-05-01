@@ -507,7 +507,7 @@ export default function Home() {
           <h1 className="hero-name reveal reveal-delay-1">
             <span className="gradient">Pablo</span>
             <span className="plain">Crespo</span>
-            <span className="plain">Velasco!</span>
+            <span className="plain">Velasco</span>
           </h1>
           <p className="reveal reveal-delay-2" style={{marginTop:"1.8rem",fontSize:"0.88rem",color:"var(--text-muted)",fontFamily:"var(--font-geist-mono),monospace",letterSpacing:"0.05em"}}>
             Director de Operaciones · Senior Product Manager · Troubleshooter
