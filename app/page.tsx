@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import Image from "next/image";
-import Matter from "matter-js";
 
 const JOBS = [
   {
@@ -345,10 +344,11 @@ export default function Home() {
   const physicsActiveRef = useRef(false);
   const restoreRef = useRef<(() => void) | null>(null);
 
-  const triggerLetterPhysics = useCallback(() => {
+  const triggerLetterPhysics = useCallback(async () => {
     if (physicsActiveRef.current) return;
     physicsActiveRef.current = true;
 
+    const Matter = await import("matter-js");
     const { Engine, Bodies, Body, World, Runner } = Matter;
 
     const overlay = document.createElement("div");
