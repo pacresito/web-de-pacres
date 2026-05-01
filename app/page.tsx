@@ -364,17 +364,17 @@ export default function Home() {
         holdSecsRef.current += 0.05;
         const secs = holdSecsRef.current;
         const isBlue = transformedRef.current;
-        if (secs >= 5) {
+        if (secs >= 5.5) {
           setTransformed(!isBlue);
           if (holdTimerRef.current) clearInterval(holdTimerRef.current);
           if (pressHaloRef.current) { pressHaloRef.current.style.opacity = "0"; }
           return;
         }
         if (pressHaloRef.current) {
-          // 0–1s: nada. 1–5s: crece
-          const progress = secs < 1 ? 0 : (secs - 1) / 4;
-          const size = 80 + progress * 800;
-          const opacity = progress * 0.55;
+          // 0–1s: nada. 1–5s: crece. 5–5.5s: máximo
+          const progress = secs < 1 ? 0 : Math.min((secs - 1) / 4, 1);
+          const size = 80 + progress * 1000;
+          const opacity = progress * 0.85;
           pressHaloRef.current.style.width = `${size}px`;
           pressHaloRef.current.style.height = `${size}px`;
           pressHaloRef.current.style.opacity = `${opacity}`;
@@ -463,7 +463,7 @@ export default function Home() {
 
         .cursor-glow {
           position: fixed; width: 480px; height: 480px; border-radius: 50%;
-          background: radial-gradient(circle, rgba(96,165,250,0.10) 0%, rgba(96,165,250,0.03) 40%, transparent 70%);
+          background: radial-gradient(circle, rgba(96,165,250,0.18) 0%, rgba(96,165,250,0.07) 40%, transparent 70%);
           transform: translate(-50%,-50%); pointer-events: none; z-index: 0;
           transition: left 0.12s ease, top 0.12s ease;
         }
