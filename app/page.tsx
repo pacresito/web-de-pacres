@@ -919,8 +919,8 @@ export default function Home() {
             ].map((skill) => (
               <span key={skill} className="skill-tag">{skill}</span>
             ))}
-            <a href="/juegos/laberinto" className="skill-tag" style={{ textDecoration: "none" }}>Trabajo en equipo</a>
-            <a href="/juegos/espiral" className="skill-tag skill-tag-shine" style={{ textDecoration: "none" }}>Resolución de problemas</a>
+            <span className="skill-tag">Trabajo en equipo</span>
+            <a href="/extras" className="skill-tag skill-tag-shine" style={{ textDecoration: "none" }}>Resolución de problemas</a>
           </div>
         </section>
 
