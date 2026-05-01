@@ -915,10 +915,11 @@ export default function Home() {
               "Analítica de datos","Análisis de negocio","Toma de decisiones basadas en datos",
               "Experiencia de usuario","Diseño de la interfaz de usuario","Investigación de mercado",
               "Comportamiento del usuario","Requisitos de productos","Lanzamiento de productos",
-              "Para empresas (B2B)","Negociación","Trabajo en equipo",
+              "Para empresas (B2B)","Negociación",
             ].map((skill) => (
               <span key={skill} className="skill-tag">{skill}</span>
             ))}
+            <a href="/juegos/laberinto" className="skill-tag" style={{ textDecoration: "none" }}>Trabajo en equipo</a>
             <a href="/juegos/espiral" className="skill-tag skill-tag-shine" style={{ textDecoration: "none" }}>Resolución de problemas</a>
           </div>
         </section>
