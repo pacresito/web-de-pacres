@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import Image from "next/image";
+import Matter from "matter-js";
 
 const JOBS = [
   {
@@ -341,6 +342,153 @@ export default function Home() {
   const holdSecsRef = useRef(0);
   const [transformed, setTransformed] = useState(false);
   const transformedRef = useRef(false);
+  const physicsActiveRef = useRef(false);
+  const restoreRef = useRef<(() => void) | null>(null);
+
+  const triggerLetterPhysics = useCallback(() => {
+    if (physicsActiveRef.current) return;
+    physicsActiveRef.current = true;
+
+    const { Engine, Bodies, Body, World, Runner } = Matter;
+
+    const overlay = document.createElement("div");
+    overlay.style.cssText = "position:fixed;inset:0;pointer-events:none;z-index:99999;overflow:hidden;";
+    document.body.appendChild(overlay);
+
+    // Identificar el span de pacr.es para tratarlo como cuerpo único
+    const pacrEl = document.querySelector("footer span") as HTMLElement | null;
+    const pacrRect = pacrEl?.getBoundingClientRect();
+
+    // Recopilar caracteres (excluyendo pacr.es)
+    const letterData: { char: string; cx: number; cy: number; w: number; h: number; fontSize: string; fontFamily: string; fontWeight: string; color: string; isGradient: boolean }[] = [];
+
+    const walk = (node: Node) => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        const parent = node.parentElement;
+        if (!parent || parent === pacrEl) return;
+        const tag = parent.tagName.toLowerCase();
+        if (["script", "style", "noscript"].includes(tag)) return;
+        const cs = window.getComputedStyle(parent);
+        if (cs.display === "none" || cs.visibility === "hidden" || cs.opacity === "0") return;
+        if (parent.closest("[data-no-physics]")) return;
+        const text = node.textContent || "";
+        for (let i = 0; i < text.length; i++) {
+          if (!text[i].trim()) continue;
+          const range = document.createRange();
+          range.setStart(node, i);
+          range.setEnd(node, i + 1);
+          const rect = range.getBoundingClientRect();
+          if (rect.width > 0) {
+            const isGradient = parent.classList.contains("gradient");
+            letterData.push({ char: text[i], cx: rect.left + rect.width / 2, cy: rect.top + rect.height / 2, w: rect.width, h: rect.height, fontSize: cs.fontSize, fontFamily: cs.fontFamily, fontWeight: cs.fontWeight, color: cs.color, isGradient });
+          }
+        }
+      } else {
+        node.childNodes.forEach(walk);
+      }
+    };
+    walk(document.body);
+
+    // Spans de letras
+    const letterSpans: HTMLSpanElement[] = [];
+    for (const d of letterData) {
+      const span = document.createElement("span");
+      span.textContent = d.char;
+      span.style.cssText = `position:fixed;left:${d.cx}px;top:${d.cy}px;font-size:${d.fontSize};font-family:${d.fontFamily};font-weight:${d.fontWeight};color:${d.color};transform:translate(-50%,-50%);transform-origin:center center;pointer-events:none;white-space:pre;${d.isGradient ? "background:linear-gradient(135deg,#1e40af 0%,#3b82f6 50%,#93c5fd 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;" : ""}`;
+      overlay.appendChild(span);
+      letterSpans.push(span);
+    }
+
+    // Ocultar contenido original
+    const main = document.querySelector("main") as HTMLElement | null;
+    if (main) { main.style.transition = "opacity 0.15s"; main.style.opacity = "0"; }
+
+    // Motor de físicas
+    const engine = Engine.create({ gravity: { x: 0, y: 2 } });
+    const floor = Bodies.rectangle(window.innerWidth / 2, window.innerHeight + 30, window.innerWidth * 3, 60, { isStatic: true });
+    const wallL = Bodies.rectangle(-30, window.innerHeight / 2, 60, window.innerHeight * 3, { isStatic: true });
+    const wallR = Bodies.rectangle(window.innerWidth + 30, window.innerHeight / 2, 60, window.innerHeight * 3, { isStatic: true });
+    World.add(engine.world, [floor, wallL, wallR]);
+
+    const bodies: Matter.Body[] = [];
+    for (const d of letterData) {
+      const body = Bodies.rectangle(d.cx, d.cy, Math.max(d.w, 4), Math.max(d.h, 4), { restitution: 0.35, friction: 0.5, frictionAir: 0.008 });
+      Body.setVelocity(body, { x: (Math.random() - 0.5) * 5, y: (Math.random() - 0.5) * 2 });
+      Body.setAngularVelocity(body, (Math.random() - 0.5) * 0.25);
+      World.add(engine.world, body);
+      bodies.push(body);
+    }
+
+    // pacr.es como cuerpo único y clickable
+    let pacrSpan: HTMLSpanElement | null = null;
+    let pacrBody: Matter.Body | null = null;
+    if (pacrEl && pacrRect) {
+      const cs = window.getComputedStyle(pacrEl);
+      pacrSpan = document.createElement("span");
+      pacrSpan.textContent = "pacr.es";
+      pacrSpan.style.cssText = `position:fixed;left:${pacrRect.left + pacrRect.width / 2}px;top:${pacrRect.top + pacrRect.height / 2}px;font-size:${cs.fontSize};font-family:${cs.fontFamily};font-weight:${cs.fontWeight};color:${cs.color};transform:translate(-50%,-50%);transform-origin:center center;white-space:pre;cursor:pointer;pointer-events:auto;`;
+      overlay.appendChild(pacrSpan);
+      pacrBody = Bodies.rectangle(pacrRect.left + pacrRect.width / 2, pacrRect.top + pacrRect.height / 2, pacrRect.width, Math.max(pacrRect.height, 8), { restitution: 0.4, friction: 0.5, frictionAir: 0.008 });
+      World.add(engine.world, pacrBody);
+    }
+
+    const runner = Runner.create();
+    Runner.run(runner, engine);
+
+    let stopped = false;
+    let animFrame: number;
+    const animate = () => {
+      if (stopped) return;
+      for (let i = 0; i < letterSpans.length; i++) {
+        const { x, y } = bodies[i].position;
+        letterSpans[i].style.left = `${x}px`;
+        letterSpans[i].style.top = `${y}px`;
+        letterSpans[i].style.transform = `translate(-50%,-50%) rotate(${bodies[i].angle}rad)`;
+      }
+      if (pacrSpan && pacrBody) {
+        const { x, y } = pacrBody.position;
+        pacrSpan.style.left = `${x}px`;
+        pacrSpan.style.top = `${y}px`;
+        pacrSpan.style.transform = `translate(-50%,-50%) rotate(${pacrBody.angle}rad)`;
+      }
+      animFrame = requestAnimationFrame(animate);
+    };
+    animate();
+
+    // Click en pacr.es → letras vuelven a su sitio y se restaura la página
+    const restore = () => {
+      stopped = true;
+      cancelAnimationFrame(animFrame);
+      Runner.stop(runner);
+      Engine.clear(engine);
+
+      const t = "left 0.7s cubic-bezier(0.4,0,0.2,1), top 0.7s cubic-bezier(0.4,0,0.2,1), transform 0.7s";
+      letterSpans.forEach((span, i) => {
+        span.style.transition = t;
+        span.style.left = `${letterData[i].cx}px`;
+        span.style.top = `${letterData[i].cy}px`;
+        span.style.transform = "translate(-50%,-50%) rotate(0rad)";
+      });
+      if (pacrSpan && pacrRect) {
+        pacrSpan.style.transition = t;
+        pacrSpan.style.left = `${pacrRect.left + pacrRect.width / 2}px`;
+        pacrSpan.style.top = `${pacrRect.top + pacrRect.height / 2}px`;
+        pacrSpan.style.transform = "translate(-50%,-50%) rotate(0rad)";
+      }
+
+      setTimeout(() => {
+        overlay.remove();
+        if (main) main.style.opacity = "1";
+        physicsActiveRef.current = false;
+      }, 750);
+    };
+
+    // Clic en cualquier parte del overlay → restaurar
+    overlay.style.pointerEvents = "auto";
+    overlay.style.cursor = "pointer";
+    overlay.addEventListener("click", restore, { once: true });
+    restoreRef.current = restore;
+  }, []);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -631,7 +779,7 @@ export default function Home() {
           <p className="reveal reveal-delay-2" style={{marginTop:"1.8rem",fontSize:"0.88rem",color:"var(--text-muted)",fontFamily:"var(--font-geist-mono),monospace",letterSpacing:"0.05em"}}>
             Director de Operaciones · Senior Product Manager · Troubleshooter
           </p>
-          <p className="reveal reveal-delay-3" style={{marginTop:"1.5rem",maxWidth:"52ch",fontSize:"1rem",lineHeight:"1.8",color:"var(--text-dim)"}}>
+          <p data-no-physics className="reveal reveal-delay-3" style={{marginTop:"1.5rem",maxWidth:"52ch",fontSize:"1rem",lineHeight:"1.8",color:"var(--text-dim)"}}>
             Ingeniero Industrial con curiosidad por el funcionamiento de todo y gran capacidad para comprender y resolver cualquier problema que se presente. Siempre con una sonrisa, los grandes retos me hacen feliz: organizar el caos, solucionar lo imposible, gestionar lo inmanejable.
           </p>
           <div className="reveal reveal-delay-4">
@@ -666,7 +814,7 @@ export default function Home() {
         {/* Recomendaciones */}
         <section style={{padding:"5rem 0"}}>
           <p className="reveal section-label">Recomendaciones</p>
-          <div className="reveal reveal-delay-1">
+          <div data-no-physics className="reveal reveal-delay-1">
             <RecsSlider />
           </div>
         </section>
@@ -765,7 +913,7 @@ export default function Home() {
 
         {/* Footer */}
         <footer style={{padding:"2.5rem 0",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-          <span style={{fontSize:"0.78rem",color:"var(--text-muted)",fontFamily:"var(--font-geist-mono),monospace"}}>
+          <span onClick={triggerLetterPhysics} style={{fontSize:"0.78rem",color:"var(--text-muted)",fontFamily:"var(--font-geist-mono),monospace",cursor:"pointer",userSelect:"none"}}>
             pacr.es
           </span>
           <a href="https://www.linkedin.com/in/pacres/" target="_blank" rel="noopener noreferrer"
