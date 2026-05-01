@@ -158,10 +158,21 @@ export default function Laberinto() {
     ctx.textBaseline = "middle";
     ctx.fillText("✓", GOAL_X, GOAL_Y + 1);
 
-    // Walls
+    // Sombra de paredes (simula grosor)
     ctx.save();
-    ctx.shadowColor = "#3b82f630";
-    ctx.shadowBlur = 4;
+    ctx.strokeStyle = "rgba(0,0,0,0.13)";
+    ctx.lineWidth = WALL_W;
+    ctx.lineCap = "square";
+    for (const seg of segs) {
+      ctx.beginPath();
+      ctx.moveTo(seg.x1 + 2.5, seg.y1 + 3);
+      ctx.lineTo(seg.x2 + 2.5, seg.y2 + 3);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // Paredes
+    ctx.save();
     ctx.strokeStyle = "#3b82f6";
     ctx.lineWidth = WALL_W;
     ctx.lineCap = "square";
@@ -173,16 +184,43 @@ export default function Laberinto() {
     }
     ctx.restore();
 
-    // Ball
+    // Bola
     if (!gameWon) {
+      // Sombra de contacto en el suelo
       ctx.save();
-      ctx.shadowColor = "#3b82f680";
-      ctx.shadowBlur = 14;
-      const bg = ctx.createRadialGradient(bx - 3, by - 3, 1, bx, by, BALL_R);
-      bg.addColorStop(0, "#dbeafe");
-      bg.addColorStop(0.4, "#3b82f6");
+      ctx.globalAlpha = 0.18;
+      ctx.fillStyle = "#1e3a8a";
+      ctx.beginPath();
+      ctx.ellipse(bx + 2, by + 3, BALL_R * 1.0, BALL_R * 0.42, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // Cuerpo esférico (gradiente con foco arriba-izquierda)
+      ctx.save();
+      ctx.shadowColor = "#3b82f650";
+      ctx.shadowBlur = 10;
+      const bg = ctx.createRadialGradient(
+        bx - BALL_R * 0.35, by - BALL_R * 0.35, BALL_R * 0.05,
+        bx, by, BALL_R
+      );
+      bg.addColorStop(0, "#93c5fd");
+      bg.addColorStop(0.35, "#3b82f6");
       bg.addColorStop(1, "#1e3a8a");
       ctx.fillStyle = bg;
+      ctx.beginPath();
+      ctx.arc(bx, by, BALL_R, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Brillo especular
+      const spec = ctx.createRadialGradient(
+        bx - BALL_R * 0.4, by - BALL_R * 0.4, 0,
+        bx - BALL_R * 0.35, by - BALL_R * 0.35, BALL_R * 0.45
+      );
+      spec.addColorStop(0, "rgba(255,255,255,0.88)");
+      spec.addColorStop(0.5, "rgba(255,255,255,0.25)");
+      spec.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = spec;
       ctx.beginPath();
       ctx.arc(bx, by, BALL_R, 0, Math.PI * 2);
       ctx.fill();
@@ -340,25 +378,47 @@ export default function Laberinto() {
       </div>
 
       {/* 3D board */}
-      <div style={{ perspective: "700px" }} className="touch-none flex-shrink-0">
+      <div style={{ perspective: "480px" }} className="touch-none flex-shrink-0">
         <div
           ref={boardRef}
           style={{
             width: BOARD_W,
             height: BOARD_H,
+            position: "relative",
             transformStyle: "preserve-3d",
-            borderRadius: 6,
-            boxShadow: "0 4px 24px #0000001a, 0 12px 40px #0000000d",
-            outline: "3px solid #e2e8f0",
-            outlineOffset: "2px",
+            boxShadow: "0 8px 32px #00000025, 0 20px 60px #00000018",
           }}
         >
           <canvas
             ref={canvasRef}
             width={BOARD_W}
             height={BOARD_H}
-            style={{ display: "block", borderRadius: 6 }}
+            style={{ display: "block" }}
           />
+          {/* Cara superior */}
+          <div style={{
+            position: "absolute", top: 0, left: 0, width: "100%", height: 10,
+            background: "linear-gradient(to bottom, #8fa4b5, #a8bfcc)",
+            transformOrigin: "top center", transform: "rotateX(90deg)",
+          }} />
+          {/* Cara inferior */}
+          <div style={{
+            position: "absolute", bottom: 0, left: 0, width: "100%", height: 10,
+            background: "linear-gradient(to top, #8fa4b5, #a8bfcc)",
+            transformOrigin: "bottom center", transform: "rotateX(-90deg)",
+          }} />
+          {/* Cara izquierda */}
+          <div style={{
+            position: "absolute", top: 0, left: 0, width: 10, height: "100%",
+            background: "linear-gradient(to right, #8fa4b5, #a8bfcc)",
+            transformOrigin: "left center", transform: "rotateY(-90deg)",
+          }} />
+          {/* Cara derecha */}
+          <div style={{
+            position: "absolute", top: 0, right: 0, width: 10, height: "100%",
+            background: "linear-gradient(to left, #8fa4b5, #a8bfcc)",
+            transformOrigin: "right center", transform: "rotateY(90deg)",
+          }} />
         </div>
       </div>
 

@@ -317,6 +317,7 @@ export default function Espiral() {
       startTimeRef.current = null;
     }
     if (left.gameState === "idle" && right.gameState === "idle") {
+      if (localStorage.getItem(STORAGE_KEY)) return;
       if (timerRef.current) clearInterval(timerRef.current);
       timerRef.current = null;
       startTimeRef.current = null;
@@ -476,12 +477,12 @@ function Board({
       <div className="relative" onClick={onPress} style={{ cursor: "pointer" }}>
         <canvas ref={canvasRef} style={{ display: "block", borderRadius: "8px", border: "1px solid rgba(96,165,250,0.2)" }} />
         {gameState === "idle" && (
-          <Overlay><p style={{ color: "#9ca3af", fontSize: "0.85rem" }}>Toca para empezar</p></Overlay>
+          <Overlay><p style={{ color: "#9ca3af", fontSize: "0.85rem" }}>Toca {label} para empezar</p></Overlay>
         )}
         {gameState === "dead" && (
           <Overlay>
             <p style={{ color: "#111827", fontSize: "1rem", fontWeight: 600 }}>Fuera</p>
-            <p style={{ color: "#9ca3af", fontSize: "0.72rem", marginTop: "0.25rem" }}>Toca para reintentar</p>
+            <p style={{ color: "#9ca3af", fontSize: "0.72rem", marginTop: "0.25rem" }}>Toca {label} para reintentar</p>
           </Overlay>
         )}
         {gameState === "win" && (
