@@ -2,6 +2,13 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 
+// Cambio 3: Bloquear landscape en móvil — estilos globales inyectados en <head> via <style>
+const LANDSCAPE_BLOCK_CSS = `
+@media (orientation: landscape) and (max-width: 1024px) {
+  #landscape-overlay { display: flex !important; }
+}
+`;
+
 const COLS = 9;
 const ROWS = 9;
 const CELL = 54;
@@ -114,6 +121,7 @@ export default function Laberinto() {
     mouseX: 0, mouseY: 0, hasMouse: false,
     orientX: 0, orientY: 0, hasOrient: false,
     orientRefBeta: 0,
+    orientRefGamma: 0,
     keys: { up: false, down: false, left: false, right: false },
     idle: true,
     won: false,
@@ -326,6 +334,8 @@ export default function Laberinto() {
     Object.assign(state.keys, { up: false, down: false, left: false, right: false });
     state.hasMouse = false;
     state.orientX = 0; state.orientY = 0;
+    state.hasOrient = false;
+    state.orientRefBeta = 0; state.orientRefGamma = 0;
     state.idle = true;
     state.won = false;
     if (boardRef.current) boardRef.current.style.transform = "";
@@ -333,25 +343,34 @@ export default function Laberinto() {
     startLoop();
   }
 
+  // Cambio 2: attachOrientListener ya no calibra en el primer evento.
+  // La calibración se hace en el touchstart del canvas (calibrateOrientation).
   const attachOrientListener = useCallback(() => {
     const state = g.current;
-    let calibrated = false;
 
     const onOrient = (e: DeviceOrientationEvent) => {
       if (e.gamma === null || e.beta === null) return;
-      if (!calibrated) {
-        state.orientRefBeta = e.beta;
-        calibrated = true;
-      }
       // gamma: inclinación izquierda/derecha (-90..90), beta: adelante/atrás
       const ORIENT_SCALE = MAX_TILT / 25; // 25° de inclinación = tilt máximo
-      state.orientY = e.gamma * ORIENT_SCALE;
+      state.orientY = (e.gamma - state.orientRefGamma) * ORIENT_SCALE;
       state.orientX = (e.beta - state.orientRefBeta) * ORIENT_SCALE;
       state.hasOrient = true;
     };
 
     window.addEventListener("deviceorientation", onOrient);
     return () => window.removeEventListener("deviceorientation", onOrient);
+  }, []);
+
+  // Cambio 2: captura la orientación actual como referencia neutra al tocar el canvas
+  const calibrateOrientation = useCallback(() => {
+    // Pedimos un único evento de orientación y guardamos esos valores como referencia
+    const onFirst = (e: DeviceOrientationEvent) => {
+      if (e.gamma === null || e.beta === null) return;
+      g.current.orientRefBeta = e.beta;
+      g.current.orientRefGamma = e.gamma;
+      window.removeEventListener("deviceorientation", onFirst);
+    };
+    window.addEventListener("deviceorientation", onFirst);
   }, []);
 
   useEffect(() => {
@@ -374,10 +393,17 @@ export default function Laberinto() {
     updateScale();
     window.addEventListener("resize", updateScale);
 
+    // Cambio 3: intentar bloquear orientación portrait en móvil via JS
+    if (typeof screen !== "undefined" && screen.orientation && typeof (screen.orientation as unknown as { lock?: (o: string) => Promise<void> }).lock === "function") {
+      (screen.orientation as unknown as { lock: (o: string) => Promise<void> }).lock("portrait").catch(() => {
+        // silenciar error — no todos los navegadores lo soportan
+      });
+    }
+
     // Detectar si el dispositivo tiene giroscopio
     const isIOS = typeof (DeviceOrientationEvent as unknown as { requestPermission?: unknown }).requestPermission === "function";
     if (!isIOS && window.DeviceOrientationEvent) {
-      // Android y otros: no requiere permiso
+      // Android y otros: no requiere permiso — el giroscopio se activa al tocar (calibración en touchstart)
       const cleanup = attachOrientListener();
       setOrientState("on");
       draw();
@@ -408,11 +434,13 @@ export default function Laberinto() {
       if (perm === "granted") {
         attachOrientListener();
         setOrientState("on");
+        // Cambio 2: calibrar inmediatamente tras conceder permiso en iOS
+        calibrateOrientation();
       }
     } catch {
       setOrientState("off");
     }
-  }, [attachOrientListener]);
+  }, [attachOrientListener, calibrateOrientation]);
 
   function touchKey(key: "up" | "down" | "left" | "right", val: boolean) {
     g.current.keys[key] = val;
@@ -433,6 +461,29 @@ export default function Laberinto() {
 
   return (
     <main style={{ background: "#ffffff", minHeight: "100dvh", position: "relative" }} className="flex flex-col items-center justify-start px-4 py-8 gap-6 overflow-x-auto">
+      {/* Cambio 3: Inyectar CSS para bloquear landscape */}
+      <style>{LANDSCAPE_BLOCK_CSS}</style>
+
+      {/* Cambio 3: Overlay "gira el móvil" — oculto por defecto, visible con media query landscape */}
+      <div
+        id="landscape-overlay"
+        style={{
+          display: "none",
+          position: "fixed",
+          inset: 0,
+          zIndex: 9999,
+          background: "#ffffff",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "1rem",
+        }}
+      >
+        <span style={{ fontSize: "3rem" }}>🔄</span>
+        <p style={{ fontSize: "1.1rem", fontWeight: 700, color: "#111827", textAlign: "center", padding: "0 2rem" }}>
+          Por favor, gira el móvil a modo vertical
+        </p>
+      </div>
       <div className="flex items-center gap-6">
         <h1 style={{ color: "#111827", fontSize: "1.5rem", fontWeight: 800, letterSpacing: "-0.03em" }}>Laberinto</h1>
       </div>
@@ -457,11 +508,20 @@ export default function Laberinto() {
             boxShadow: "0 8px 32px #00000025, 0 20px 60px #00000018",
           }}
         >
+          {/* Cambio 2: touchstart en el canvas calibra el giroscopio */}
           <canvas
             ref={canvasRef}
             width={BOARD_W}
             height={BOARD_H}
             style={{ display: "block" }}
+            onTouchStart={() => {
+              if (orientState === "on") {
+                calibrateOrientation();
+              } else if (orientState === "needs-permission") {
+                // iOS: pedir permiso al tocar el canvas
+                requestOrientPermission();
+              }
+            }}
           />
           {/* Cara superior */}
           <div style={{
@@ -525,7 +585,9 @@ export default function Laberinto() {
 
       <div className="mt-auto flex flex-col items-center gap-2 pb-6">
         <p style={{ fontSize: "0.75rem", color: "#d1d5db" }}>
-          {orientState === "on" ? "Inclina el móvil para mover la bola" : "Mueve el ratón para inclinar el tablero"}
+          {orientState === "on"
+            ? "Toca el tablero para calibrar · Inclina el móvil para mover la bola"
+            : "Mueve el ratón para inclinar el tablero"}
         </p>
         <a
           href="/"
