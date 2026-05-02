@@ -353,8 +353,8 @@ export default function Laberinto() {
         state.orientX = e.gamma * ORIENT_SCALE;
       } else {
         // Portrait normal
-        state.orientX = e.gamma * ORIENT_SCALE;
-        state.orientY = (e.beta - state.orientRefBeta) * ORIENT_SCALE;
+        state.orientY = -e.gamma * ORIENT_SCALE;
+        state.orientX = (e.beta - state.orientRefBeta) * ORIENT_SCALE;
       }
       state.hasOrient = true;
     };
