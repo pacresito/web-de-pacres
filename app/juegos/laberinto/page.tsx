@@ -347,13 +347,10 @@ export default function Laberinto() {
       const ORIENT_SCALE = MAX_TILT / 25; // 25° de inclinación = tilt máximo
       const landscape = window.innerWidth > window.innerHeight;
       if (landscape) {
-        // En landscape (móvil girado 90° hacia la derecha):
-        // gamma controla arriba/abajo, beta controla izquierda/derecha
-        state.orientY = -(e.beta - state.orientRefBeta) * ORIENT_SCALE;
+        state.orientY = (e.beta - state.orientRefBeta) * ORIENT_SCALE;
         state.orientX = e.gamma * ORIENT_SCALE;
       } else {
-        // Portrait normal
-        state.orientY = -e.gamma * ORIENT_SCALE;
+        state.orientY = e.gamma * ORIENT_SCALE;
         state.orientX = (e.beta - state.orientRefBeta) * ORIENT_SCALE;
       }
       state.hasOrient = true;
