@@ -225,7 +225,7 @@ function JobItem({ job, index }: { job: typeof JOBS[0]; index: number }) {
           }}>▶</span>
         </div>
         <p className="job-company">{job.company}</p>
-        <div className="job-desc" style={{
+        <div className="job-desc" data-no-physics style={{
           maxHeight: open ? "700px" : "0",
           overflow: "hidden",
           transition: "max-height 0.4s ease, opacity 0.3s ease",
