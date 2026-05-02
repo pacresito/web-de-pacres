@@ -105,6 +105,7 @@ export default function Laberinto() {
   const [orientState, setOrientState] = useState<"off" | "needs-permission" | "on">("off");
   const [scale, setScale] = useState(1);
   const [isLandscape, setIsLandscape] = useState(false);
+  const landscapeRef = useRef(false);
 
   const g = useRef({
     maze: generateMaze(),
@@ -344,10 +345,17 @@ export default function Laberinto() {
 
     const onOrient = (e: DeviceOrientationEvent) => {
       if (e.gamma === null || e.beta === null) return;
-      // gamma: inclinación izquierda/derecha (-90..90), beta: adelante/atrás
-      const ORIENT_SCALE = MAX_TILT / 25; // 25° de inclinación = tilt máximo
-      state.orientY = (e.gamma - state.orientRefGamma) * ORIENT_SCALE;
-      state.orientX = (e.beta - state.orientRefBeta) * ORIENT_SCALE;
+      const ORIENT_SCALE = MAX_TILT / 25;
+      const dBeta = e.beta - state.orientRefBeta;
+      const dGamma = e.gamma - state.orientRefGamma;
+      if (landscapeRef.current) {
+        // En landscape los ejes físicos están girados 90°: swap + invertir beta
+        state.orientY = -dBeta * ORIENT_SCALE;
+        state.orientX = dGamma * ORIENT_SCALE;
+      } else {
+        state.orientY = dGamma * ORIENT_SCALE;
+        state.orientX = dBeta * ORIENT_SCALE;
+      }
       state.hasOrient = true;
     };
 
@@ -383,6 +391,7 @@ export default function Laberinto() {
       const padding = 32;
       const landscape = window.innerWidth > window.innerHeight && window.innerWidth < 1024;
       setIsLandscape(landscape);
+      landscapeRef.current = landscape;
       if (landscape) {
         const sideWidth = 140;
         const availH = window.innerHeight - padding;
