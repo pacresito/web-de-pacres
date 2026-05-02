@@ -2,13 +2,6 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 
-// Cambio 3: Bloquear landscape en móvil — estilos globales inyectados en <head> via <style>
-const LANDSCAPE_BLOCK_CSS = `
-@media (orientation: landscape) and (max-width: 1024px) {
-  #landscape-overlay { display: flex !important; }
-}
-`;
-
 const COLS = 9;
 const ROWS = 9;
 const CELL = 54;
@@ -111,6 +104,7 @@ export default function Laberinto() {
 
   const [orientState, setOrientState] = useState<"off" | "needs-permission" | "on">("off");
   const [scale, setScale] = useState(1);
+  const [isLandscape, setIsLandscape] = useState(false);
 
   const g = useRef({
     maze: generateMaze(),
@@ -387,18 +381,20 @@ export default function Laberinto() {
 
     const updateScale = () => {
       const padding = 32;
-      const available = Math.min(window.innerWidth - padding, window.innerHeight * 0.7);
-      setScale(Math.min(1, available / BOARD_W));
+      const landscape = window.innerWidth > window.innerHeight && window.innerWidth < 1024;
+      setIsLandscape(landscape);
+      if (landscape) {
+        const sideWidth = 140;
+        const availH = window.innerHeight - padding;
+        const availW = window.innerWidth - sideWidth * 2 - padding;
+        setScale(Math.min(1, Math.min(availH, availW) / BOARD_W));
+      } else {
+        const available = Math.min(window.innerWidth - padding, window.innerHeight * 0.7);
+        setScale(Math.min(1, available / BOARD_W));
+      }
     };
     updateScale();
     window.addEventListener("resize", updateScale);
-
-    // Cambio 3: intentar bloquear orientación portrait en móvil via JS
-    if (typeof screen !== "undefined" && screen.orientation && typeof (screen.orientation as unknown as { lock?: (o: string) => Promise<void> }).lock === "function") {
-      (screen.orientation as unknown as { lock: (o: string) => Promise<void> }).lock("portrait").catch(() => {
-        // silenciar error — no todos los navegadores lo soportan
-      });
-    }
 
     // Detectar si el dispositivo tiene giroscopio
     const isIOS = typeof (DeviceOrientationEvent as unknown as { requestPermission?: unknown }).requestPermission === "function";
@@ -459,44 +455,11 @@ export default function Laberinto() {
     );
   }
 
-  return (
-    <main style={{ background: "#ffffff", minHeight: "100dvh", position: "relative" }} className="flex flex-col items-center justify-start px-4 py-8 gap-6 overflow-x-auto">
-      {/* Cambio 3: Inyectar CSS para bloquear landscape */}
-      <style>{LANDSCAPE_BLOCK_CSS}</style>
-
-      {/* Cambio 3: Overlay "gira el móvil" — oculto por defecto, visible con media query landscape */}
-      <div
-        id="landscape-overlay"
-        style={{
-          display: "none",
-          position: "fixed",
-          inset: 0,
-          zIndex: 9999,
-          background: "#ffffff",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: "1rem",
-        }}
-      >
-        <span style={{ fontSize: "3rem" }}>🔄</span>
-        <p style={{ fontSize: "1.1rem", fontWeight: 700, color: "#111827", textAlign: "center", padding: "0 2rem" }}>
-          Por favor, gira el móvil a modo vertical
-        </p>
-      </div>
-      <div className="flex items-center gap-6">
-        <h1 style={{ color: "#111827", fontSize: "1.5rem", fontWeight: 800, letterSpacing: "-0.03em" }}>Laberinto</h1>
-      </div>
-
-      {/* 3D board */}
-      <div
-        style={{
-          width: BOARD_W * scale,
-          height: BOARD_H * scale,
-          flexShrink: 0,
-        }}
-        className="touch-none"
-      >
+  const boardEl = (
+    <div
+      style={{ width: BOARD_W * scale, height: BOARD_H * scale, flexShrink: 0 }}
+      className="touch-none"
+    >
       <div style={{ perspective: "600px", transform: `scale(${scale})`, transformOrigin: "top left" }}>
         <div
           ref={boardRef}
@@ -508,7 +471,6 @@ export default function Laberinto() {
             boxShadow: "0 8px 32px #00000025, 0 20px 60px #00000018",
           }}
         >
-          {/* Cambio 2: touchstart en el canvas calibra el giroscopio */}
           <canvas
             ref={canvasRef}
             width={BOARD_W}
@@ -518,50 +480,84 @@ export default function Laberinto() {
               if (orientState === "on") {
                 calibrateOrientation();
               } else if (orientState === "needs-permission") {
-                // iOS: pedir permiso al tocar el canvas
                 requestOrientPermission();
               }
             }}
           />
-          {/* Cara superior */}
-          <div style={{
-            position: "absolute", top: 0, left: 0, width: "100%", height: 20,
-            background: "linear-gradient(to bottom, #1d4ed8, #3b82f6)",
-            transformOrigin: "top center", transform: "rotateX(90deg)",
-          }} />
-          {/* Cara inferior */}
-          <div style={{
-            position: "absolute", bottom: 0, left: 0, width: "100%", height: 20,
-            background: "linear-gradient(to top, #1d4ed8, #3b82f6)",
-            transformOrigin: "bottom center", transform: "rotateX(-90deg)",
-          }} />
-          {/* Cara izquierda */}
-          <div style={{
-            position: "absolute", top: 0, left: 0, width: 20, height: "100%",
-            background: "linear-gradient(to right, #1d4ed8, #3b82f6)",
-            transformOrigin: "left center", transform: "rotateY(-90deg)",
-          }} />
-          {/* Cara derecha */}
-          <div style={{
-            position: "absolute", top: 0, right: 0, width: 20, height: "100%",
-            background: "linear-gradient(to left, #1d4ed8, #3b82f6)",
-            transformOrigin: "right center", transform: "rotateY(90deg)",
-          }} />
+          <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: 20, background: "linear-gradient(to bottom, #1d4ed8, #3b82f6)", transformOrigin: "top center", transform: "rotateX(90deg)" }} />
+          <div style={{ position: "absolute", bottom: 0, left: 0, width: "100%", height: 20, background: "linear-gradient(to top, #1d4ed8, #3b82f6)", transformOrigin: "bottom center", transform: "rotateX(-90deg)" }} />
+          <div style={{ position: "absolute", top: 0, left: 0, width: 20, height: "100%", background: "linear-gradient(to right, #1d4ed8, #3b82f6)", transformOrigin: "left center", transform: "rotateY(-90deg)" }} />
+          <div style={{ position: "absolute", top: 0, right: 0, width: 20, height: "100%", background: "linear-gradient(to left, #1d4ed8, #3b82f6)", transformOrigin: "right center", transform: "rotateY(90deg)" }} />
         </div>
       </div>
+    </div>
+  );
+
+  if (isLandscape) {
+    return (
+      <main style={{ background: "#ffffff", height: "100dvh", overflow: "hidden" }} className="flex flex-row items-center justify-center gap-2 px-2">
+        {/* Panel izquierdo */}
+        <div style={{ width: 120, flexShrink: 0 }} className="flex flex-col items-center justify-center gap-3 h-full">
+          <h1 style={{ color: "#111827", fontSize: "1.1rem", fontWeight: 800, letterSpacing: "-0.03em", textAlign: "center" }}>Laberinto</h1>
+          <p style={{ fontSize: "0.65rem", color: "#d1d5db", textAlign: "center", lineHeight: 1.4 }}>
+            {orientState === "on"
+              ? "Toca el tablero para calibrar · Inclina el móvil"
+              : "Mueve el ratón para inclinar el tablero"}
+          </p>
+          <a
+            href="/"
+            style={{ fontSize: "0.7rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", textDecoration: "none", transition: "color 0.2s" }}
+            onMouseEnter={e => (e.currentTarget.style.color = "#3b82f6")}
+            onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}
+          >
+            pacr.es
+          </a>
+        </div>
+
+        {/* Tablero */}
+        {boardEl}
+
+        {/* Panel derecho */}
+        <div style={{ width: 120, flexShrink: 0 }} className="flex flex-col items-center justify-center gap-3 h-full">
+          {won && <p style={{ color: "#3b82f6", fontSize: "0.9rem", fontWeight: 600, textAlign: "center" }}>¡Enhorabuena!</p>}
+          <button onClick={restart} className="text-gray-400 hover:text-gray-600 text-xs transition-colors">
+            nuevo laberinto
+          </button>
+          {orientState !== "on" && (
+            <div className="flex flex-col items-center gap-1">
+              <ArrowBtn dir="up" label="↑" />
+              <div className="flex gap-1">
+                <ArrowBtn dir="left" label="←" />
+                <ArrowBtn dir="down" label="↓" />
+                <ArrowBtn dir="right" label="→" />
+              </div>
+            </div>
+          )}
+          {orientState === "needs-permission" && (
+            <button onClick={requestOrientPermission} className="px-3 py-1.5 rounded-xl bg-blue-500 text-white text-xs font-semibold">
+              Usar giroscopio
+            </button>
+          )}
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main style={{ background: "#ffffff", minHeight: "100dvh", position: "relative" }} className="flex flex-col items-center justify-start px-4 py-8 gap-6 overflow-x-auto">
+      <div className="flex items-center gap-6">
+        <h1 style={{ color: "#111827", fontSize: "1.5rem", fontWeight: 800, letterSpacing: "-0.03em" }}>Laberinto</h1>
       </div>
+
+      {boardEl}
 
       {won && (
         <p style={{ color: "#3b82f6", fontSize: "1.1rem", fontWeight: 600 }}>¡Enhorabuena!</p>
       )}
-      <button
-        onClick={restart}
-        className="text-gray-400 hover:text-gray-600 text-sm transition-colors"
-      >
+      <button onClick={restart} className="text-gray-400 hover:text-gray-600 text-sm transition-colors">
         nuevo laberinto
       </button>
 
-      {/* Touch D-pad (solo si no hay giroscopio activo) */}
       {orientState !== "on" && (
         <div className="flex flex-col items-center gap-1 md:hidden">
           <ArrowBtn dir="up" label="↑" />
@@ -573,12 +569,8 @@ export default function Laberinto() {
         </div>
       )}
 
-      {/* Botón permiso giroscopio iOS */}
       {orientState === "needs-permission" && (
-        <button
-          onClick={requestOrientPermission}
-          className="px-4 py-2 rounded-xl bg-blue-500 text-white text-sm font-semibold"
-        >
+        <button onClick={requestOrientPermission} className="px-4 py-2 rounded-xl bg-blue-500 text-white text-sm font-semibold">
           Usar giroscopio
         </button>
       )}
@@ -591,10 +583,7 @@ export default function Laberinto() {
         </p>
         <a
           href="/"
-          style={{
-            fontSize: "0.75rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)",
-            textDecoration: "none", transition: "color 0.2s",
-          }}
+          style={{ fontSize: "0.75rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", textDecoration: "none", transition: "color 0.2s" }}
           onMouseEnter={e => (e.currentTarget.style.color = "#3b82f6")}
           onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}
         >
