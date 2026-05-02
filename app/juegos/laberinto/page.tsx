@@ -9,14 +9,12 @@ const WALL_W = 6;
 const BALL_R = 10;
 const BOARD_W = COLS * CELL + WALL_W;
 const BOARD_H = ROWS * CELL + WALL_W;
-const GOAL_X = (COLS - 1) * CELL + CELL / 2 + WALL_W / 2;
-const GOAL_Y = (ROWS - 1) * CELL + CELL / 2 + WALL_W / 2;
 const START_X = CELL / 2 + WALL_W / 2;
 const START_Y = CELL / 2 + WALL_W / 2;
 
 const MAX_TILT = 14;
 const TILT_SPEED = 2.0;
-const GRAVITY = 1400;
+const GRAVITY = 1680;
 const FRICTION = 0.983;
 const RESTITUTION = 0.2;
 
@@ -25,6 +23,7 @@ const MN = 1, MS = 2, ME = 4, MW = 8;
 type MazeCell = { walls: number };
 type Seg = { x1: number; y1: number; x2: number; y2: number };
 
+// Standard DFS maze — unchanged
 function generateMaze(): MazeCell[][] {
   const grid: MazeCell[][] = Array.from({ length: ROWS }, () =>
     Array.from({ length: COLS }, () => ({ walls: MN | MS | ME | MW }))
@@ -49,6 +48,55 @@ function generateMaze(): MazeCell[][] {
   }
   carve(0, 0);
   return grid;
+}
+
+// Single winding corridor through all cells (Warnsdorff's heuristic)
+function generateCircuit(): { maze: MazeCell[][], goalRow: number, goalCol: number } {
+  const grid: MazeCell[][] = Array.from({ length: ROWS }, () =>
+    Array.from({ length: COLS }, () => ({ walls: MN | MS | ME | MW }))
+  );
+  const dirs = [
+    { dr: -1, dc: 0, a: MN, b: MS },
+    { dr: 1, dc: 0, a: MS, b: MN },
+    { dr: 0, dc: 1, a: ME, b: MW },
+    { dr: 0, dc: -1, a: MW, b: ME },
+  ];
+  const vis = Array.from({ length: ROWS }, () => Array(COLS).fill(false));
+
+  function degree(r: number, c: number): number {
+    return dirs.filter(({ dr, dc }) => {
+      const nr = r + dr, nc = c + dc;
+      return nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && !vis[nr][nc];
+    }).length;
+  }
+
+  let cr = 0, cc = 0;
+  vis[0][0] = true;
+  let count = 1;
+
+  while (count < ROWS * COLS) {
+    const avail = dirs
+      .filter(({ dr, dc }) => {
+        const nr = cr + dr, nc = cc + dc;
+        return nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && !vis[nr][nc];
+      })
+      .sort((x, y) => {
+        const da = degree(cr + x.dr, cc + x.dc);
+        const db = degree(cr + y.dr, cc + y.dc);
+        return da !== db ? da - db : Math.random() - 0.5;
+      });
+
+    if (avail.length === 0) break;
+    const { dr, dc, a, b } = avail[0];
+    const nr = cr + dr, nc = cc + dc;
+    grid[cr][cc].walls &= ~a;
+    grid[nr][nc].walls &= ~b;
+    vis[nr][nc] = true;
+    cr = nr; cc = nc;
+    count++;
+  }
+
+  return { maze: grid, goalRow: cr, goalCol: cc };
 }
 
 function buildSegs(maze: MazeCell[][]): Seg[] {
@@ -96,19 +144,40 @@ function resolveCollisions(
   return [bx, by, vx, vy];
 }
 
+function goalCoords(row: number, col: number) {
+  return {
+    gx: col * CELL + CELL / 2 + WALL_W / 2,
+    gy: row * CELL + CELL / 2 + WALL_W / 2,
+  };
+}
+
 export default function Laberinto() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const boardRef = useRef<HTMLDivElement>(null);
   const loopRef = useRef<(t: number) => void>(() => {});
   const [won, setWon] = useState(false);
+  const [mode, setMode] = useState<"laberinto" | "circuito">("laberinto");
 
   const [orientState, setOrientState] = useState<"off" | "needs-permission" | "on">("off");
   const [scale, setScale] = useState(1);
   const [isLandscape, setIsLandscape] = useState(false);
   const landscapeRef = useRef(false);
 
+  function initState(m: "laberinto" | "circuito") {
+    if (m === "circuito") {
+      const { maze, goalRow, goalCol } = generateCircuit();
+      const { gx, gy } = goalCoords(goalRow, goalCol);
+      return { maze, goalX: gx, goalY: gy };
+    }
+    const maze = generateMaze();
+    const { gx, gy } = goalCoords(ROWS - 1, COLS - 1);
+    return { maze, goalX: gx, goalY: gy };
+  }
+
+  const initial = initState("laberinto");
+
   const g = useRef({
-    maze: generateMaze(),
+    ...initial,
     segs: [] as Seg[],
     bx: START_X, by: START_Y,
     vx: 0, vy: 0,
@@ -130,7 +199,7 @@ export default function Laberinto() {
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    const { bx, by, segs, won: gameWon } = g.current;
+    const { bx, by, segs, won: gameWon, goalX, goalY } = g.current;
 
     ctx.clearRect(0, 0, BOARD_W, BOARD_H);
 
@@ -149,13 +218,13 @@ export default function Laberinto() {
     ctx.stroke();
 
     // Goal glow
-    const gg = ctx.createRadialGradient(GOAL_X, GOAL_Y, 0, GOAL_X, GOAL_Y, CELL * 0.42);
+    const gg = ctx.createRadialGradient(goalX, goalY, 0, goalX, goalY, CELL * 0.42);
     gg.addColorStop(0, gameWon ? "#16a34a" : "#22c55e");
     gg.addColorStop(0.45, "#22c55e40");
     gg.addColorStop(1, "transparent");
     ctx.fillStyle = gg;
     ctx.beginPath();
-    ctx.arc(GOAL_X, GOAL_Y, CELL * 0.42, 0, Math.PI * 2);
+    ctx.arc(goalX, goalY, CELL * 0.42, 0, Math.PI * 2);
     ctx.fill();
 
     // Goal label
@@ -163,7 +232,7 @@ export default function Laberinto() {
     ctx.font = `bold ${Math.round(CELL * 0.3)}px sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText("✓", GOAL_X, GOAL_Y + 1);
+    ctx.fillText("✓", goalX, goalY + 1);
 
     // Sombra de paredes (simula grosor)
     ctx.save();
@@ -302,7 +371,7 @@ export default function Laberinto() {
       );
 
       // Win
-      const dx = state.bx - GOAL_X, dy = state.by - GOAL_Y;
+      const dx = state.bx - state.goalX, dy = state.by - state.goalY;
       if (Math.sqrt(dx * dx + dy * dy) < CELL * 0.3) {
         state.won = true;
         setWon(true);
@@ -318,10 +387,13 @@ export default function Laberinto() {
     });
   }
 
-  function restart() {
+  function restart(m: "laberinto" | "circuito") {
     const state = g.current;
     cancelAnimationFrame(state.animId);
-    state.maze = generateMaze();
+    const { maze, goalX, goalY } = initState(m);
+    state.maze = maze;
+    state.goalX = goalX;
+    state.goalY = goalY;
     state.segs = buildSegs(state.maze);
     state.bx = START_X; state.by = START_Y;
     state.vx = 0; state.vy = 0;
@@ -338,8 +410,6 @@ export default function Laberinto() {
     startLoop();
   }
 
-  // Cambio 2: attachOrientListener ya no calibra en el primer evento.
-  // La calibración se hace en el touchstart del canvas (calibrateOrientation).
   const attachOrientListener = useCallback(() => {
     const state = g.current;
 
@@ -349,7 +419,6 @@ export default function Laberinto() {
       const dBeta = e.beta - state.orientRefBeta;
       const dGamma = e.gamma - state.orientRefGamma;
       if (landscapeRef.current) {
-        // En landscape los ejes físicos están girados 90°: swap + invertir ambos
         state.orientY = dBeta * ORIENT_SCALE;
         state.orientX = -dGamma * ORIENT_SCALE;
       } else {
@@ -363,9 +432,7 @@ export default function Laberinto() {
     return () => window.removeEventListener("deviceorientation", onOrient);
   }, []);
 
-  // Cambio 2: captura la orientación actual como referencia neutra al tocar el canvas
   const calibrateOrientation = useCallback(() => {
-    // Pedimos un único evento de orientación y guardamos esos valores como referencia
     const onFirst = (e: DeviceOrientationEvent) => {
       if (e.gamma === null || e.beta === null) return;
       g.current.orientRefBeta = e.beta;
@@ -405,10 +472,8 @@ export default function Laberinto() {
     updateScale();
     window.addEventListener("resize", updateScale);
 
-    // Detectar si el dispositivo tiene giroscopio
     const isIOS = typeof (DeviceOrientationEvent as unknown as { requestPermission?: unknown }).requestPermission === "function";
     if (!isIOS && window.DeviceOrientationEvent) {
-      // Android y otros: no requiere permiso — el giroscopio se activa al tocar (calibración en touchstart)
       const cleanup = attachOrientListener();
       setOrientState("on");
       draw();
@@ -439,7 +504,6 @@ export default function Laberinto() {
       if (perm === "granted") {
         attachOrientListener();
         setOrientState("on");
-        // Cambio 2: calibrar inmediatamente tras conceder permiso en iOS
         calibrateOrientation();
       }
     } catch {
@@ -461,6 +525,33 @@ export default function Laberinto() {
       >
         {label}
       </button>
+    );
+  }
+
+  function ModeSelector() {
+    return (
+      <div className="flex gap-1 rounded-lg bg-gray-100 p-0.5">
+        {(["laberinto", "circuito"] as const).map((m) => (
+          <button
+            key={m}
+            onClick={() => { setMode(m); restart(m); }}
+            style={{
+              fontSize: "0.72rem",
+              fontWeight: mode === m ? 600 : 400,
+              color: mode === m ? "#1d4ed8" : "#9ca3af",
+              background: mode === m ? "#ffffff" : "transparent",
+              border: "none",
+              borderRadius: "0.4rem",
+              padding: "0.25rem 0.6rem",
+              cursor: "pointer",
+              boxShadow: mode === m ? "0 1px 3px #0000001a" : "none",
+              transition: "all 0.15s",
+            }}
+          >
+            {m}
+          </button>
+        ))}
+      </div>
     );
   }
 
@@ -508,6 +599,7 @@ export default function Laberinto() {
         {/* Panel izquierdo */}
         <div style={{ width: 120, flexShrink: 0 }} className="flex flex-col items-center justify-center gap-3 h-full">
           <h1 style={{ color: "#111827", fontSize: "1.1rem", fontWeight: 800, letterSpacing: "-0.03em", textAlign: "center" }}>Laberinto</h1>
+          <ModeSelector />
           <p style={{ fontSize: "0.65rem", color: "#d1d5db", textAlign: "center", lineHeight: 1.4 }}>
             {orientState === "on"
               ? "Toca el tablero para calibrar · Inclina el móvil"
@@ -529,8 +621,8 @@ export default function Laberinto() {
         {/* Panel derecho */}
         <div style={{ width: 120, flexShrink: 0 }} className="flex flex-col items-center justify-center gap-3 h-full">
           {won && <p style={{ color: "#3b82f6", fontSize: "0.9rem", fontWeight: 600, textAlign: "center" }}>¡Enhorabuena!</p>}
-          <button onClick={restart} className="text-gray-400 hover:text-gray-600 text-xs transition-colors">
-            nuevo laberinto
+          <button onClick={() => restart(mode)} className="text-gray-400 hover:text-gray-600 text-xs transition-colors">
+            nuevo {mode}
           </button>
           {orientState !== "on" && (
             <div className="flex flex-col items-center gap-1">
@@ -553,9 +645,10 @@ export default function Laberinto() {
   }
 
   return (
-    <main style={{ background: "#ffffff", minHeight: "100dvh", position: "relative" }} className="flex flex-col items-center justify-start px-4 py-8 gap-6 overflow-x-auto">
+    <main style={{ background: "#ffffff", minHeight: "100dvh", position: "relative" }} className="flex flex-col items-center justify-start px-4 py-12 gap-10 overflow-x-auto">
       <div className="flex items-center gap-6">
         <h1 style={{ color: "#111827", fontSize: "1.5rem", fontWeight: 800, letterSpacing: "-0.03em" }}>Laberinto</h1>
+        <ModeSelector />
       </div>
 
       {boardEl}
@@ -563,8 +656,8 @@ export default function Laberinto() {
       {won && (
         <p style={{ color: "#3b82f6", fontSize: "1.1rem", fontWeight: 600 }}>¡Enhorabuena!</p>
       )}
-      <button onClick={restart} className="text-gray-400 hover:text-gray-600 text-sm transition-colors">
-        nuevo laberinto
+      <button onClick={() => restart(mode)} className="text-gray-400 hover:text-gray-600 text-sm transition-colors">
+        nuevo {mode}
       </button>
 
       {orientState !== "on" && (
@@ -584,7 +677,7 @@ export default function Laberinto() {
         </button>
       )}
 
-      <div className="mt-auto flex flex-col items-center gap-2 pb-6">
+      <div className="mt-auto flex flex-col items-center gap-2 pb-10">
         <p style={{ fontSize: "0.75rem", color: "#d1d5db" }}>
           {orientState === "on"
             ? "Toca el tablero para calibrar · Inclina el móvil para mover la bola"
