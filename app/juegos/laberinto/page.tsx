@@ -274,23 +274,41 @@ export default function Laberinto() {
 
     ctx.clearRect(0, 0, BOARD_W, BOARD_H);
 
-    // Floor
-    const fg = ctx.createRadialGradient(BOARD_W / 2, BOARD_H / 2, 30, BOARD_W / 2, BOARD_H / 2, BOARD_W);
-    fg.addColorStop(0, "#dde3ea");
-    fg.addColorStop(1, "#c8d3de");
+    // Floor — viñeta con luz cenital arriba-izquierda
+    const fg = ctx.createRadialGradient(
+      BOARD_W * 0.32, BOARD_H * 0.28, 20,
+      BOARD_W * 0.5, BOARD_H * 0.55, BOARD_W * 0.85
+    );
+    fg.addColorStop(0, "#eef2f7");
+    fg.addColorStop(0.55, "#d3dae3");
+    fg.addColorStop(1, "#9aa8b8");
     ctx.fillStyle = fg;
     ctx.fillRect(0, 0, BOARD_W, BOARD_H);
 
-    // Black holes
+    // Black holes — luz cenital desde arriba-izquierda
     for (const hole of holes) {
-      const pulse = 0.88 + 0.12 * Math.sin(Date.now() / 300 + hole.col);
-      const grad = ctx.createRadialGradient(hole.cx, hole.cy, 0, hole.cx, hole.cy, CELL * 0.44 * pulse);
-      grad.addColorStop(0, "#000000");
-      grad.addColorStop(0.55, "#0d0010");
-      grad.addColorStop(1, "transparent");
-      ctx.fillStyle = grad;
+      const r = CELL * 0.4;
+
+      // 1. Oclusión ambiental en el suelo (halo oscuro alrededor del agujero)
+      const ao = ctx.createRadialGradient(hole.cx, hole.cy, r * 0.95, hole.cx, hole.cy, r * 1.5);
+      ao.addColorStop(0, "rgba(0,0,0,0.32)");
+      ao.addColorStop(0.6, "rgba(0,0,0,0.08)");
+      ao.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = ao;
       ctx.beginPath();
-      ctx.arc(hole.cx, hole.cy, CELL * 0.44 * pulse, 0, Math.PI * 2);
+      ctx.arc(hole.cx, hole.cy, r * 1.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 2. Cuerpo del pozo: gradiente concéntrico — borde gris oscuro,
+      //    centro negro absoluto. Sugiere profundidad sin direccionalidad.
+      const body = ctx.createRadialGradient(hole.cx, hole.cy, 0, hole.cx, hole.cy, r);
+      body.addColorStop(0, "#000000");
+      body.addColorStop(0.55, "#000000");
+      body.addColorStop(0.88, "#0a0810");
+      body.addColorStop(1, "#1c1a26");
+      ctx.fillStyle = body;
+      ctx.beginPath();
+      ctx.arc(hole.cx, hole.cy, r, 0, Math.PI * 2);
       ctx.fill();
     }
 
@@ -316,28 +334,52 @@ export default function Laberinto() {
     ctx.textBaseline = "middle";
     ctx.fillText("✓", goalX, goalY + 1);
 
-    // Wall shadows
+    // Wall shadows — un único path para que los solapamientos no acumulen alpha
     ctx.save();
-    ctx.strokeStyle = "rgba(0,0,0,0.13)";
-    ctx.lineWidth = WALL_W;
+    ctx.strokeStyle = "rgba(15,23,42,0.22)";
+    ctx.lineWidth = WALL_W + 1;
     ctx.lineCap = "square";
+    ctx.lineJoin = "miter";
+    ctx.beginPath();
     for (const seg of segs) {
-      ctx.beginPath();
-      ctx.moveTo(seg.x1 + 2.5, seg.y1 + 3);
-      ctx.lineTo(seg.x2 + 2.5, seg.y2 + 3);
-      ctx.stroke();
+      ctx.moveTo(seg.x1 + 3.5, seg.y1 + 4.5);
+      ctx.lineTo(seg.x2 + 3.5, seg.y2 + 4.5);
     }
+    ctx.stroke();
     ctx.restore();
 
-    // Walls
+    // Walls — gradiente perpendicular al segmento (cara superior/izquierda más clara)
     ctx.save();
-    ctx.strokeStyle = "#3b82f6";
     ctx.lineWidth = WALL_W;
     ctx.lineCap = "square";
+    const halfW = WALL_W / 2;
     for (const seg of segs) {
+      const isHoriz = Math.abs(seg.y2 - seg.y1) < 0.001;
+      const grad = isHoriz
+        ? ctx.createLinearGradient(0, seg.y1 - halfW, 0, seg.y1 + halfW)
+        : ctx.createLinearGradient(seg.x1 - halfW, 0, seg.x1 + halfW, 0);
+      grad.addColorStop(0, "#7dade8");
+      grad.addColorStop(0.45, "#3b82f6");
+      grad.addColorStop(1, "#1e3a8a");
+      ctx.strokeStyle = grad;
       ctx.beginPath();
       ctx.moveTo(seg.x1, seg.y1);
       ctx.lineTo(seg.x2, seg.y2);
+      ctx.stroke();
+    }
+    // Highlight fino en la arista superior/izquierda — el filo iluminado del prisma
+    ctx.strokeStyle = "rgba(255,255,255,0.55)";
+    ctx.lineWidth = 1;
+    for (const seg of segs) {
+      const isHoriz = Math.abs(seg.y2 - seg.y1) < 0.001;
+      ctx.beginPath();
+      if (isHoriz) {
+        ctx.moveTo(seg.x1, seg.y1 - halfW + 0.5);
+        ctx.lineTo(seg.x2, seg.y2 - halfW + 0.5);
+      } else {
+        ctx.moveTo(seg.x1 - halfW + 0.5, seg.y1);
+        ctx.lineTo(seg.x2 - halfW + 0.5, seg.y2);
+      }
       ctx.stroke();
     }
     ctx.restore();
@@ -357,44 +399,60 @@ export default function Laberinto() {
     if (!gameWon) {
       const r = falling ? BALL_R * (1 - fallingT) : BALL_R;
       if (r > 0.5) {
-        ctx.save();
-        ctx.globalAlpha = falling ? 1 - fallingT * 0.6 : 0.18;
+        // Sombra proyectada en el suelo (elipse aplanada, dos capas: dura y blur)
         if (!falling) {
-          ctx.fillStyle = "#1e3a8a";
+          ctx.save();
+          const sh = ctx.createRadialGradient(
+            bx + 4, by + 5, BALL_R * 0.2,
+            bx + 4, by + 5, BALL_R * 1.7
+          );
+          sh.addColorStop(0, "rgba(0,0,0,0.38)");
+          sh.addColorStop(0.6, "rgba(0,0,0,0.12)");
+          sh.addColorStop(1, "rgba(0,0,0,0)");
+          ctx.fillStyle = sh;
           ctx.beginPath();
-          ctx.ellipse(bx + 2, by + 3, BALL_R * 1.0, BALL_R * 0.42, 0, 0, Math.PI * 2);
+          ctx.ellipse(bx + 4, by + 5, BALL_R * 1.7, BALL_R * 0.7, 0, 0, Math.PI * 2);
           ctx.fill();
+          ctx.restore();
         }
-        ctx.restore();
 
         ctx.save();
-        ctx.shadowColor = "#3b82f650";
-        ctx.shadowBlur = 10;
-        const bg = ctx.createRadialGradient(
-          bx - r * 0.35, by - r * 0.35, r * 0.05,
-          bx, by, r
-        );
-        bg.addColorStop(0, "#93c5fd");
-        bg.addColorStop(0.35, "#3b82f6");
-        bg.addColorStop(1, "#1e3a8a");
-        ctx.fillStyle = bg;
         ctx.globalAlpha = falling ? 1 - fallingT * 0.5 : 1;
+
+        // Cuerpo: gradiente con más rango — desde casi blanco en el highlight hasta navy profundo en sombra
+        const bg = ctx.createRadialGradient(
+          bx - r * 0.4, by - r * 0.5, r * 0.05,
+          bx + r * 0.1, by + r * 0.15, r * 1.15
+        );
+        bg.addColorStop(0, "#dbeafe");
+        bg.addColorStop(0.18, "#93c5fd");
+        bg.addColorStop(0.5, "#3b82f6");
+        bg.addColorStop(0.85, "#1e40af");
+        bg.addColorStop(1, "#0c1e57");
+        ctx.fillStyle = bg;
         ctx.beginPath();
         ctx.arc(bx, by, r, 0, Math.PI * 2);
         ctx.fill();
 
+        // Especular grande (suave)
         const spec = ctx.createRadialGradient(
-          bx - r * 0.4, by - r * 0.4, 0,
-          bx - r * 0.35, by - r * 0.35, r * 0.45
+          bx - r * 0.42, by - r * 0.45, 0,
+          bx - r * 0.42, by - r * 0.45, r * 0.55
         );
-        spec.addColorStop(0, "rgba(255,255,255,0.88)");
-        spec.addColorStop(0.5, "rgba(255,255,255,0.25)");
+        spec.addColorStop(0, "rgba(255,255,255,0.85)");
+        spec.addColorStop(0.4, "rgba(255,255,255,0.3)");
         spec.addColorStop(1, "rgba(255,255,255,0)");
-        ctx.shadowBlur = 0;
         ctx.fillStyle = spec;
         ctx.beginPath();
         ctx.arc(bx, by, r, 0, Math.PI * 2);
         ctx.fill();
+
+        // Punto especular nítido (hot spot)
+        ctx.fillStyle = "rgba(255,255,255,0.95)";
+        ctx.beginPath();
+        ctx.arc(bx - r * 0.42, by - r * 0.48, r * 0.13, 0, Math.PI * 2);
+        ctx.fill();
+
         ctx.restore();
       }
     }
@@ -669,7 +727,7 @@ export default function Laberinto() {
             height: BOARD_H,
             position: "relative",
             transformStyle: "preserve-3d",
-            boxShadow: "0 8px 32px #00000025, 0 20px 60px #00000018",
+            boxShadow: "0 4px 8px #00000020, 0 16px 40px #00000030, 0 32px 80px #00000022",
           }}
         >
           <canvas
@@ -682,10 +740,10 @@ export default function Laberinto() {
               else if (orientState === "needs-permission") requestOrientPermission();
             }}
           />
-          <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: 20, background: "linear-gradient(to bottom, #1d4ed8, #3b82f6)", transformOrigin: "top center", transform: "rotateX(90deg)" }} />
-          <div style={{ position: "absolute", bottom: 0, left: 0, width: "100%", height: 20, background: "linear-gradient(to top, #1d4ed8, #3b82f6)", transformOrigin: "bottom center", transform: "rotateX(-90deg)" }} />
-          <div style={{ position: "absolute", top: 0, left: 0, width: 20, height: "100%", background: "linear-gradient(to right, #1d4ed8, #3b82f6)", transformOrigin: "left center", transform: "rotateY(-90deg)" }} />
-          <div style={{ position: "absolute", top: 0, right: 0, width: 20, height: "100%", background: "linear-gradient(to left, #1d4ed8, #3b82f6)", transformOrigin: "right center", transform: "rotateY(90deg)" }} />
+          <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: 28, background: "linear-gradient(to bottom, #1e3a8a, #2563eb 45%, #3b82f6)", transformOrigin: "top center", transform: "rotateX(90deg)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.3)" }} />
+          <div style={{ position: "absolute", bottom: 0, left: 0, width: "100%", height: 28, background: "linear-gradient(to top, #0f1f5c, #1e3a8a 45%, #2563eb)", transformOrigin: "bottom center", transform: "rotateX(-90deg)" }} />
+          <div style={{ position: "absolute", top: 0, left: 0, width: 28, height: "100%", background: "linear-gradient(to right, #1e3a8a, #2563eb 45%, #3b82f6)", transformOrigin: "left center", transform: "rotateY(-90deg)", boxShadow: "inset 1px 0 0 rgba(255,255,255,0.3)" }} />
+          <div style={{ position: "absolute", top: 0, right: 0, width: 28, height: "100%", background: "linear-gradient(to left, #0f1f5c, #1e3a8a 45%, #2563eb)", transformOrigin: "right center", transform: "rotateY(90deg)" }} />
         </div>
       </div>
     </div>
