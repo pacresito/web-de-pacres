@@ -449,6 +449,18 @@ export default function Home() {
     const runner = Runner.create();
     Runner.run(runner, engine);
 
+    // Giroscopio: actualizar gravedad según orientación del móvil
+    const handleOrientation = (e: DeviceOrientationEvent) => {
+      if (e.gamma === null || e.beta === null) return;
+      // gamma: inclinación izq/der (-90..90), beta: adelante/atrás (-180..180)
+      const maxTilt = 45;
+      const gx = Math.max(-1, Math.min(1, e.gamma / maxTilt));
+      const gy = Math.max(-1, Math.min(1, e.beta / maxTilt));
+      engine.gravity.x = gx * 2;
+      engine.gravity.y = gy * 2;
+    };
+    window.addEventListener("deviceorientation", handleOrientation);
+
     let stopped = false;
     let animFrame: number;
     const animate = () => {
@@ -500,7 +512,10 @@ export default function Home() {
     // Clic en cualquier parte del overlay → restaurar
     overlay.style.pointerEvents = "auto";
     overlay.style.cursor = "pointer";
-    overlay.addEventListener("click", restore, { once: true });
+    overlay.addEventListener("click", () => {
+      window.removeEventListener("deviceorientation", handleOrientation);
+      restore();
+    }, { once: true });
     restoreRef.current = restore;
   }, []);
 
