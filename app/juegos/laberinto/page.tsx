@@ -121,34 +121,34 @@ function generateCircuit(): { maze: MazeCell[][]; goalRow: number; goalCol: numb
   return { maze: generateMaze(), goalRow: ROWS - 1, goalCol: COLS - 1 };
 }
 
-// Desafío: 78-cell corridor + 3 black holes.
-// Strategy: pick 3 random interior cells as holes, generate the real path
-// directly (no scout), then verify the path's own turns point at each hole
-// 2+ times. Opens both wall sides (like mazeFromPath) to fix south/east holes.
-function generateDesafio(): {
+// Desafío: corridor with nHoles black holes.
+// Picks random interior cells, generates the real path directly (no scout),
+// verifies the path's own turns point at each hole 2+ times, opens both
+// wall sides of each hole passage (like mazeFromPath).
+function tryDesafio(nHoles: number, maxAttempts: number): {
   maze: MazeCell[][];
   goalRow: number;
   goalCol: number;
   holes: Hole[];
-} {
+} | null {
   const candidates: { r: number; c: number }[] = [];
   for (let r = 1; r < ROWS - 1; r++)
     for (let c = 1; c < COLS - 1; c++)
       candidates.push({ r, c });
 
-  for (let attempt = 0; attempt < 2000; attempt++) {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const shuffled = candidates.slice().sort(() => Math.random() - 0.5);
     const holeList: { r: number; c: number }[] = [];
     for (const cell of shuffled) {
-      if (holeList.length === 3) break;
+      if (holeList.length === nHoles) break;
       if (holeList.some(h => Math.abs(h.r - cell.r) + Math.abs(h.c - cell.c) < 3)) continue;
       holeList.push(cell);
     }
-    if (holeList.length < 3) continue;
+    if (holeList.length < nHoles) continue;
 
     const holeSet = new Set(holeList.map(h => `${h.r},${h.c}`));
     const path = warnsdorffPath(holeSet);
-    if (!path || path.length !== ROWS * COLS - 3) continue;
+    if (!path || path.length !== ROWS * COLS - nHoles) continue;
 
     const grid = mazeFromPath(path);
     const hitCount = new Map<string, number>();
@@ -185,7 +185,12 @@ function generateDesafio(): {
       })),
     };
   }
+  return null;
+}
 
+function generateDesafio(): { maze: MazeCell[][]; goalRow: number; goalCol: number; holes: Hole[] } {
+  const result = tryDesafio(4, 2000) ?? tryDesafio(3, 500);
+  if (result) return result;
   const { maze, goalRow, goalCol } = generateCircuit();
   return { maze, goalRow, goalCol, holes: [] };
 }
