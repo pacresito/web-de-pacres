@@ -5,6 +5,15 @@ import Link from "next/link";
 
 const EXTRAS = [
   {
+    id: "lucas",
+    label: "Web",
+    title: "Dr. Lucas Crespo",
+    description: "El perfil profesional de un ingeniero de cohetes de 6 años.",
+    status: "available" as const,
+    href: "/webs/lucas",
+    cta: "Ver perfil →",
+  },
+  {
     id: "espiral",
     label: "Juego",
     title: "Espiral",
@@ -163,6 +172,14 @@ export default function EasterEggs() {
           -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
         }
 
+        .page-subtitle {
+          margin-top: 1rem;
+          font-size: 0.9rem;
+          color: var(--text-muted);
+          line-height: 1.6;
+          max-width: 520px;
+        }
+
         .divider { border: none; border-top: 1px solid var(--border); }
 
         .pacres-link {
@@ -179,6 +196,9 @@ export default function EasterEggs() {
           <h1 className="page-title reveal">
             <span>Extras</span>
           </h1>
+          <p className="page-subtitle reveal reveal-delay-1">
+            Esta web es mi laboratorio personal. Aquí están algunos de los experimentos.
+          </p>
         </div>
 
         <hr className="divider reveal reveal-delay-1" style={{ marginBottom: "2.5rem" }} />
