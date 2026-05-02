@@ -346,7 +346,7 @@ export default function Laberinto() {
     if (gameWon) {
       ctx.fillStyle = "rgba(255,255,255,0.72)";
       ctx.fillRect(0, 0, BOARD_W, BOARD_H);
-      ctx.fillStyle = "#16a34a";
+      ctx.fillStyle = "#3b82f6";
       ctx.font = `bold ${Math.round(CELL * 0.52)}px sans-serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
