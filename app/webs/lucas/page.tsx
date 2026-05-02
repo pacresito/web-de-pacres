@@ -1,4 +1,11 @@
+function calcularEdad(nacimiento: Date): number {
+  const hoy = new Date();
+  const cumpleEsteAño = new Date(hoy.getFullYear(), nacimiento.getMonth(), nacimiento.getDate());
+  return hoy.getFullYear() - nacimiento.getFullYear() - (hoy < cumpleEsteAño ? 1 : 0);
+}
+
 export default function Lucas() {
+  const edad = calcularEdad(new Date(2020, 2, 30));
   return (
     <>
       <style>{`
@@ -388,7 +395,7 @@ export default function Lucas() {
           <p className="lc-title">Ingeniero de Propulsión Avanzada & Doctor en Juegos de Mesa</p>
           <div className="lc-badges">
             <span className="lc-badge"><span className="lc-dot" />Boca Chica, Texas</span>
-            <span className="lc-badge">5 años de experiencia (y de vida)</span>
+            <span className="lc-badge">{edad} años de experiencia (y de vida)</span>
             <span className="lc-badge">Open to snacks</span>
           </div>
           <p className="lc-scroll-hint">↓ ver perfil completo</p>
@@ -410,7 +417,7 @@ export default function Lucas() {
           <p className="lc-section-label">Sobre mí</p>
           <div className="lc-bio">
             <p>
-              Soy <strong>Dr. Lucas Crespo</strong>, ingeniero de propulsión en el programa Starship de SpaceX con <strong>5 años de experiencia</strong> en el sector aeroespacial (coincidentemente, los mismos que llevo vivo).
+              Soy <strong>Dr. Lucas Crespo</strong>, ingeniero de propulsión en el programa Starship de SpaceX con <strong>{edad} años de experiencia</strong> en el sector aeroespacial (coincidentemente, los mismos que llevo vivo).
               Mi trabajo consiste en supervisar el correcto funcionamiento de los <strong>33 motores Raptor</strong> del Super Heavy, asegurarme de que el cohete no se vaya torcido, y gestionar la logística de la merienda en Boca Chica.
             </p>
             <p>
