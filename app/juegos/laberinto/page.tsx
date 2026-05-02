@@ -26,32 +26,6 @@ type Hole = { row: number; col: number; cx: number; cy: number };
 
 // ─── Maze generators ─────────────────────────────────────────────────────────
 
-function generateMaze(): MazeCell[][] {
-  const grid: MazeCell[][] = Array.from({ length: ROWS }, () =>
-    Array.from({ length: COLS }, () => ({ walls: MN | MS | ME | MW }))
-  );
-  const vis = Array.from({ length: ROWS }, () => Array(COLS).fill(false));
-  function carve(r: number, c: number) {
-    vis[r][c] = true;
-    const dirs = [
-      { dr: -1, dc: 0, a: MN, b: MS },
-      { dr: 1, dc: 0, a: MS, b: MN },
-      { dr: 0, dc: 1, a: ME, b: MW },
-      { dr: 0, dc: -1, a: MW, b: ME },
-    ].sort(() => Math.random() - 0.5);
-    for (const { dr, dc, a, b } of dirs) {
-      const nr = r + dr, nc = c + dc;
-      if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && !vis[nr][nc]) {
-        grid[r][c].walls &= ~a;
-        grid[nr][nc].walls &= ~b;
-        carve(nr, nc);
-      }
-    }
-  }
-  carve(0, 0);
-  return grid;
-}
-
 const DIRS4 = [
   { dr: -1, dc: 0, a: MN, b: MS },
   { dr: 1,  dc: 0, a: MS, b: MN },
@@ -118,7 +92,7 @@ function generateCircuit(): { maze: MazeCell[][]; goalRow: number; goalCol: numb
     const last = path[path.length - 1];
     return { maze: mazeFromPath(path), goalRow: last.r, goalCol: last.c };
   }
-  return { maze: generateMaze(), goalRow: ROWS - 1, goalCol: COLS - 1 };
+  return { maze: mazeFromPath([{ r: 0, c: 0 }]), goalRow: ROWS - 1, goalCol: COLS - 1 };
 }
 
 // Desafío: corridor with nHoles black holes.
@@ -251,22 +225,10 @@ function goalCoords(row: number, col: number) {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-type Mode = "laberinto" | "circuito" | "desafío";
-
-function initState(m: Mode) {
-  if (m === "desafío") {
-    const { maze, goalRow, goalCol, holes } = generateDesafio();
-    const { gx, gy } = goalCoords(goalRow, goalCol);
-    return { maze, goalX: gx, goalY: gy, holes };
-  }
-  if (m === "circuito") {
-    const { maze, goalRow, goalCol } = generateCircuit();
-    const { gx, gy } = goalCoords(goalRow, goalCol);
-    return { maze, goalX: gx, goalY: gy, holes: [] as Hole[] };
-  }
-  const maze = generateMaze();
-  const { gx, gy } = goalCoords(ROWS - 1, COLS - 1);
-  return { maze, goalX: gx, goalY: gy, holes: [] as Hole[] };
+function initState() {
+  const { maze, goalRow, goalCol, holes } = generateDesafio();
+  const { gx, gy } = goalCoords(goalRow, goalCol);
+  return { maze, goalX: gx, goalY: gy, holes };
 }
 
 export default function Laberinto() {
@@ -274,14 +236,13 @@ export default function Laberinto() {
   const boardRef = useRef<HTMLDivElement>(null);
   const loopRef = useRef<(t: number) => void>(() => {});
   const [won, setWon] = useState(false);
-  const [mode, setMode] = useState<Mode>("laberinto");
 
   const [orientState, setOrientState] = useState<"off" | "needs-permission" | "on">("off");
   const [scale, setScale] = useState(1);
   const [isLandscape, setIsLandscape] = useState(false);
   const landscapeRef = useRef(false);
 
-  const initial = initState("laberinto");
+  const initial = initState();
   const g = useRef({
     ...initial,
     segs: [] as Seg[],
@@ -380,6 +341,17 @@ export default function Laberinto() {
       ctx.stroke();
     }
     ctx.restore();
+
+    // Win overlay
+    if (gameWon) {
+      ctx.fillStyle = "rgba(255,255,255,0.72)";
+      ctx.fillRect(0, 0, BOARD_W, BOARD_H);
+      ctx.fillStyle = "#16a34a";
+      ctx.font = `bold ${Math.round(CELL * 0.52)}px sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("¡Enhorabuena!", BOARD_W / 2, BOARD_H / 2);
+    }
 
     // Ball
     if (!gameWon) {
@@ -544,10 +516,10 @@ export default function Laberinto() {
     });
   }
 
-  function restart(m: Mode) {
+  function restart() {
     const state = g.current;
     cancelAnimationFrame(state.animId);
-    const { maze, goalX, goalY, holes } = initState(m);
+    const { maze, goalX, goalY, holes } = initState();
     state.maze = maze;
     state.goalX = goalX;
     state.goalY = goalY;
@@ -684,36 +656,6 @@ export default function Laberinto() {
     );
   }
 
-  function ModeSelector() {
-    const modes: Mode[] = ["laberinto", "circuito", "desafío"];
-    return (
-      <div className="flex gap-1 rounded-lg bg-gray-100 p-0.5">
-        {modes.map((m) => (
-          <button
-            key={m}
-            onClick={() => { setMode(m); restart(m); }}
-            style={{
-              fontSize: "0.72rem",
-              fontWeight: mode === m ? 600 : 400,
-              color: mode === m ? (m === "desafío" ? "#b91c1c" : "#1d4ed8") : "#9ca3af",
-              background: mode === m ? "#ffffff" : "transparent",
-              border: "none",
-              borderRadius: "0.4rem",
-              padding: "0.25rem 0.6rem",
-              cursor: "pointer",
-              boxShadow: mode === m ? "0 1px 3px #0000001a" : "none",
-              transition: "all 0.15s",
-            }}
-          >
-            {m}
-          </button>
-        ))}
-      </div>
-    );
-  }
-
-  const buttonLabel = `nuevo ${mode}`;
-
   const boardEl = (
     <div
       style={{ width: BOARD_W * scale, height: BOARD_H * scale, flexShrink: 0 }}
@@ -754,7 +696,6 @@ export default function Laberinto() {
       <main style={{ background: "#ffffff", height: "100dvh", overflow: "hidden" }} className="flex flex-row items-center justify-center gap-2 px-2">
         <div style={{ width: 120, flexShrink: 0 }} className="flex flex-col items-center justify-center gap-3 h-full">
           <h1 style={{ color: "#111827", fontSize: "1.1rem", fontWeight: 800, letterSpacing: "-0.03em", textAlign: "center" }}>Laberinto</h1>
-          <ModeSelector />
           <p style={{ fontSize: "0.65rem", color: "#d1d5db", textAlign: "center", lineHeight: 1.4 }}>
             {orientState === "on"
               ? "Toca el tablero para calibrar · Inclina el móvil"
@@ -770,9 +711,8 @@ export default function Laberinto() {
         {boardEl}
 
         <div style={{ width: 120, flexShrink: 0 }} className="flex flex-col items-center justify-center gap-3 h-full">
-          {won && <p style={{ color: "#3b82f6", fontSize: "0.9rem", fontWeight: 600, textAlign: "center" }}>¡Enhorabuena!</p>}
-          <button onClick={() => restart(mode)} className="text-gray-400 hover:text-gray-600 text-xs transition-colors">
-            {buttonLabel}
+          <button onClick={() => restart()} className="text-gray-400 hover:text-gray-600 text-xs transition-colors">
+            nuevo laberinto
           </button>
           {orientState !== "on" && (
             <div className="flex flex-col items-center gap-1">
@@ -796,16 +736,12 @@ export default function Laberinto() {
 
   return (
     <main style={{ background: "#ffffff", minHeight: "100dvh", position: "relative" }} className="flex flex-col items-center justify-start px-4 py-12 gap-10 overflow-x-auto">
-      <div className="flex items-center gap-6">
-        <h1 style={{ color: "#111827", fontSize: "1.5rem", fontWeight: 800, letterSpacing: "-0.03em" }}>Laberinto</h1>
-        <ModeSelector />
-      </div>
+      <h1 style={{ color: "#111827", fontSize: "1.5rem", fontWeight: 800, letterSpacing: "-0.03em" }}>Laberinto</h1>
 
       {boardEl}
 
-      {won && <p style={{ color: "#3b82f6", fontSize: "1.1rem", fontWeight: 600 }}>¡Enhorabuena!</p>}
-      <button onClick={() => restart(mode)} className="text-gray-400 hover:text-gray-600 text-sm transition-colors">
-        {buttonLabel}
+      <button onClick={() => restart()} className="text-gray-400 hover:text-gray-600 text-sm transition-colors">
+        nuevo laberinto
       </button>
 
       {orientState !== "on" && (
