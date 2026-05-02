@@ -349,9 +349,9 @@ export default function Laberinto() {
       const dBeta = e.beta - state.orientRefBeta;
       const dGamma = e.gamma - state.orientRefGamma;
       if (landscapeRef.current) {
-        // En landscape los ejes físicos están girados 90°: swap + invertir beta
-        state.orientY = -dBeta * ORIENT_SCALE;
-        state.orientX = dGamma * ORIENT_SCALE;
+        // En landscape los ejes físicos están girados 90°: swap + invertir ambos
+        state.orientY = dBeta * ORIENT_SCALE;
+        state.orientX = -dGamma * ORIENT_SCALE;
       } else {
         state.orientY = dGamma * ORIENT_SCALE;
         state.orientX = dBeta * ORIENT_SCALE;
