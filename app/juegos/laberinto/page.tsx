@@ -104,6 +104,7 @@ export default function Laberinto() {
 
   const [orientState, setOrientState] = useState<"off" | "needs-permission" | "on">("off");
   const [scale, setScale] = useState(1);
+  const [isLandscape, setIsLandscape] = useState(false);
 
   const g = useRef({
     maze: generateMaze(),
@@ -343,10 +344,18 @@ export default function Laberinto() {
         state.orientRefBeta = e.beta;
         calibrated = true;
       }
-      // gamma: inclinación izquierda/derecha (-90..90), beta: adelante/atrás
       const ORIENT_SCALE = MAX_TILT / 25; // 25° de inclinación = tilt máximo
-      state.orientY = e.gamma * ORIENT_SCALE;
-      state.orientX = (e.beta - state.orientRefBeta) * ORIENT_SCALE;
+      const landscape = window.innerWidth > window.innerHeight;
+      if (landscape) {
+        // En landscape (móvil girado 90° hacia la derecha):
+        // gamma controla arriba/abajo, beta controla izquierda/derecha
+        state.orientY = -(e.beta - state.orientRefBeta) * ORIENT_SCALE;
+        state.orientX = e.gamma * ORIENT_SCALE;
+      } else {
+        // Portrait normal
+        state.orientY = e.gamma * ORIENT_SCALE;
+        state.orientX = (e.beta - state.orientRefBeta) * ORIENT_SCALE;
+      }
       state.hasOrient = true;
     };
 
@@ -367,9 +376,17 @@ export default function Laberinto() {
     window.addEventListener("mousemove", onMouseMove);
 
     const updateScale = () => {
+      const landscape = window.innerWidth > window.innerHeight;
+      setIsLandscape(landscape);
       const padding = 32;
-      const available = Math.min(window.innerWidth - padding, window.innerHeight * 0.7);
-      setScale(Math.min(1, available / BOARD_W));
+      if (landscape) {
+        // En landscape, el tablero ocupa el alto disponible
+        const available = Math.min(window.innerHeight - padding, window.innerWidth * 0.7);
+        setScale(Math.min(1, available / BOARD_W));
+      } else {
+        const available = Math.min(window.innerWidth - padding, window.innerHeight * 0.7);
+        setScale(Math.min(1, available / BOARD_W));
+      }
     };
     updateScale();
     window.addEventListener("resize", updateScale);
@@ -431,21 +448,16 @@ export default function Laberinto() {
     );
   }
 
-  return (
-    <main style={{ background: "#ffffff", minHeight: "100dvh", position: "relative" }} className="flex flex-col items-center justify-start px-4 py-8 gap-6 overflow-x-auto">
-      <div className="flex items-center gap-6">
-        <h1 style={{ color: "#111827", fontSize: "1.5rem", fontWeight: 800, letterSpacing: "-0.03em" }}>Laberinto</h1>
-      </div>
-
-      {/* 3D board */}
-      <div
-        style={{
-          width: BOARD_W * scale,
-          height: BOARD_H * scale,
-          flexShrink: 0,
-        }}
-        className="touch-none"
-      >
+  // El tablero 3D, reutilizable en ambos layouts
+  const boardEl = (
+    <div
+      style={{
+        width: BOARD_W * scale,
+        height: BOARD_H * scale,
+        flexShrink: 0,
+      }}
+      className="touch-none"
+    >
       <div style={{ perspective: "600px", transform: `scale(${scale})`, transformOrigin: "top left" }}>
         <div
           ref={boardRef}
@@ -463,47 +475,23 @@ export default function Laberinto() {
             height={BOARD_H}
             style={{ display: "block" }}
           />
-          {/* Cara superior */}
-          <div style={{
-            position: "absolute", top: 0, left: 0, width: "100%", height: 20,
-            background: "linear-gradient(to bottom, #1d4ed8, #3b82f6)",
-            transformOrigin: "top center", transform: "rotateX(90deg)",
-          }} />
-          {/* Cara inferior */}
-          <div style={{
-            position: "absolute", bottom: 0, left: 0, width: "100%", height: 20,
-            background: "linear-gradient(to top, #1d4ed8, #3b82f6)",
-            transformOrigin: "bottom center", transform: "rotateX(-90deg)",
-          }} />
-          {/* Cara izquierda */}
-          <div style={{
-            position: "absolute", top: 0, left: 0, width: 20, height: "100%",
-            background: "linear-gradient(to right, #1d4ed8, #3b82f6)",
-            transformOrigin: "left center", transform: "rotateY(-90deg)",
-          }} />
-          {/* Cara derecha */}
-          <div style={{
-            position: "absolute", top: 0, right: 0, width: 20, height: "100%",
-            background: "linear-gradient(to left, #1d4ed8, #3b82f6)",
-            transformOrigin: "right center", transform: "rotateY(90deg)",
-          }} />
+          <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: 20, background: "linear-gradient(to bottom, #1d4ed8, #3b82f6)", transformOrigin: "top center", transform: "rotateX(90deg)" }} />
+          <div style={{ position: "absolute", bottom: 0, left: 0, width: "100%", height: 20, background: "linear-gradient(to top, #1d4ed8, #3b82f6)", transformOrigin: "bottom center", transform: "rotateX(-90deg)" }} />
+          <div style={{ position: "absolute", top: 0, left: 0, width: 20, height: "100%", background: "linear-gradient(to right, #1d4ed8, #3b82f6)", transformOrigin: "left center", transform: "rotateY(-90deg)" }} />
+          <div style={{ position: "absolute", top: 0, right: 0, width: 20, height: "100%", background: "linear-gradient(to left, #1d4ed8, #3b82f6)", transformOrigin: "right center", transform: "rotateY(90deg)" }} />
         </div>
       </div>
-      </div>
+    </div>
+  );
 
-      {won && (
-        <p style={{ color: "#3b82f6", fontSize: "1.1rem", fontWeight: 600 }}>¡Enhorabuena!</p>
-      )}
-      <button
-        onClick={restart}
-        className="text-gray-400 hover:text-gray-600 text-sm transition-colors"
-      >
+  const controls = (
+    <>
+      {won && <p style={{ color: "#3b82f6", fontSize: "1.1rem", fontWeight: 600 }}>¡Enhorabuena!</p>}
+      <button onClick={restart} className="text-gray-400 hover:text-gray-600 text-sm transition-colors">
         nuevo laberinto
       </button>
-
-      {/* Touch D-pad (solo si no hay giroscopio activo) */}
       {orientState !== "on" && (
-        <div className="flex flex-col items-center gap-1 md:hidden">
+        <div className="flex flex-col items-center gap-1">
           <ArrowBtn dir="up" label="↑" />
           <div className="flex gap-1">
             <ArrowBtn dir="left" label="←" />
@@ -512,33 +500,44 @@ export default function Laberinto() {
           </div>
         </div>
       )}
-
-      {/* Botón permiso giroscopio iOS */}
       {orientState === "needs-permission" && (
-        <button
-          onClick={requestOrientPermission}
-          className="px-4 py-2 rounded-xl bg-blue-500 text-white text-sm font-semibold"
-        >
+        <button onClick={requestOrientPermission} className="px-4 py-2 rounded-xl bg-blue-500 text-white text-sm font-semibold">
           Usar giroscopio
         </button>
       )}
+      <p style={{ fontSize: "0.75rem", color: "#d1d5db" }}>
+        {orientState === "on" ? "Inclina el móvil" : "Mueve el ratón o usa las flechas"}
+      </p>
+      <a
+        href="/"
+        style={{ fontSize: "0.75rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", textDecoration: "none", transition: "color 0.2s" }}
+        onMouseEnter={e => (e.currentTarget.style.color = "#3b82f6")}
+        onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}
+      >
+        pacr.es
+      </a>
+    </>
+  );
 
-      <div className="mt-auto flex flex-col items-center gap-2 pb-6">
-        <p style={{ fontSize: "0.75rem", color: "#d1d5db" }}>
-          {orientState === "on" ? "Inclina el móvil para mover la bola" : "Mueve el ratón para inclinar el tablero"}
-        </p>
-        <a
-          href="/"
-          style={{
-            fontSize: "0.75rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)",
-            textDecoration: "none", transition: "color 0.2s",
-          }}
-          onMouseEnter={e => (e.currentTarget.style.color = "#3b82f6")}
-          onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}
-        >
-          pacr.es
-        </a>
+  if (isLandscape) {
+    return (
+      <main style={{ background: "#ffffff", width: "100dvw", height: "100dvh", display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 24, padding: "12px 20px", overflow: "hidden" }}>
+        {boardEl}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, flexShrink: 0 }}>
+          <h1 style={{ color: "#111827", fontSize: "1.2rem", fontWeight: 800, letterSpacing: "-0.03em" }}>Laberinto</h1>
+          {controls}
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main style={{ background: "#ffffff", minHeight: "100dvh", position: "relative" }} className="flex flex-col items-center justify-start px-4 py-8 gap-6 overflow-x-auto">
+      <div className="flex items-center gap-6">
+        <h1 style={{ color: "#111827", fontSize: "1.5rem", fontWeight: 800, letterSpacing: "-0.03em" }}>Laberinto</h1>
       </div>
+      {boardEl}
+      {controls}
     </main>
   );
 }
