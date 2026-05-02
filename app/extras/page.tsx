@@ -17,7 +17,7 @@ const EXTRAS = [
     id: "espiral",
     label: "Juego",
     title: "Espiral",
-    description: "Un juego de coordinación. Dos espirales, un objetivo.",
+    description: "Dos espirales, dos destinos, una sola mente.",
     status: "available" as const,
     href: "/juegos/espiral",
     cta: "Jugar →",
