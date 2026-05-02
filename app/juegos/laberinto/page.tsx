@@ -14,7 +14,7 @@ const START_Y = CELL / 2 + WALL_W / 2;
 
 const MAX_TILT = 14;
 const TILT_SPEED = 2.0;
-const GRAVITY = 1680;
+const GRAVITY = 1750;
 const FRICTION = 0.983;
 const RESTITUTION = 0.2;
 
@@ -22,8 +22,10 @@ const MN = 1, MS = 2, ME = 4, MW = 8;
 
 type MazeCell = { walls: number };
 type Seg = { x1: number; y1: number; x2: number; y2: number };
+type Hole = { row: number; col: number; cx: number; cy: number };
 
-// Standard DFS maze — unchanged
+// ─── Maze generators ─────────────────────────────────────────────────────────
+
 function generateMaze(): MazeCell[][] {
   const grid: MazeCell[][] = Array.from({ length: ROWS }, () =>
     Array.from({ length: COLS }, () => ({ walls: MN | MS | ME | MW }))
@@ -50,32 +52,33 @@ function generateMaze(): MazeCell[][] {
   return grid;
 }
 
-// Single winding corridor through all cells (Warnsdorff's heuristic)
-function generateCircuit(): { maze: MazeCell[][], goalRow: number, goalCol: number } {
-  const grid: MazeCell[][] = Array.from({ length: ROWS }, () =>
-    Array.from({ length: COLS }, () => ({ walls: MN | MS | ME | MW }))
-  );
-  const dirs = [
-    { dr: -1, dc: 0, a: MN, b: MS },
-    { dr: 1, dc: 0, a: MS, b: MN },
-    { dr: 0, dc: 1, a: ME, b: MW },
-    { dr: 0, dc: -1, a: MW, b: ME },
-  ];
-  const vis = Array.from({ length: ROWS }, () => Array(COLS).fill(false));
+const DIRS4 = [
+  { dr: -1, dc: 0, a: MN, b: MS },
+  { dr: 1,  dc: 0, a: MS, b: MN },
+  { dr: 0,  dc: 1, a: ME, b: MW },
+  { dr: 0,  dc: -1, a: MW, b: ME },
+];
 
-  function degree(r: number, c: number): number {
-    return dirs.filter(({ dr, dc }) => {
+// Warnsdorff Hamiltonian path. forbidden = Set of "r,c" strings to skip.
+function warnsdorffPath(forbidden: Set<string>): { r: number; c: number }[] | null {
+  if (forbidden.has("0,0")) return null;
+  const target = ROWS * COLS - forbidden.size;
+  const vis = Array.from({ length: ROWS }, () => Array(COLS).fill(false));
+  forbidden.forEach(k => { const [r, c] = k.split(",").map(Number); vis[r][c] = true; });
+
+  function degree(r: number, c: number) {
+    return DIRS4.filter(({ dr, dc }) => {
       const nr = r + dr, nc = c + dc;
       return nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && !vis[nr][nc];
     }).length;
   }
 
+  const path: { r: number; c: number }[] = [{ r: 0, c: 0 }];
   let cr = 0, cc = 0;
   vis[0][0] = true;
-  let count = 1;
 
-  while (count < ROWS * COLS) {
-    const avail = dirs
+  while (path.length < target) {
+    const avail = DIRS4
       .filter(({ dr, dc }) => {
         const nr = cr + dr, nc = cc + dc;
         return nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && !vis[nr][nc];
@@ -85,19 +88,109 @@ function generateCircuit(): { maze: MazeCell[][], goalRow: number, goalCol: numb
         const db = degree(cr + y.dr, cc + y.dc);
         return da !== db ? da - db : Math.random() - 0.5;
       });
+    if (avail.length === 0) return null;
+    const { dr, dc } = avail[0];
+    cr += dr; cc += dc;
+    vis[cr][cc] = true;
+    path.push({ r: cr, c: cc });
+  }
+  return path;
+}
 
-    if (avail.length === 0) break;
-    const { dr, dc, a, b } = avail[0];
-    const nr = cr + dr, nc = cc + dc;
-    grid[cr][cc].walls &= ~a;
-    grid[nr][nc].walls &= ~b;
-    vis[nr][nc] = true;
-    cr = nr; cc = nc;
-    count++;
+function mazeFromPath(path: { r: number; c: number }[]): MazeCell[][] {
+  const grid: MazeCell[][] = Array.from({ length: ROWS }, () =>
+    Array.from({ length: COLS }, () => ({ walls: MN | MS | ME | MW }))
+  );
+  for (let i = 0; i < path.length - 1; i++) {
+    const { r: r1, c: c1 } = path[i];
+    const { r: r2, c: c2 } = path[i + 1];
+    const dir = DIRS4.find(d => d.dr === r2 - r1 && d.dc === c2 - c1)!;
+    grid[r1][c1].walls &= ~dir.a;
+    grid[r2][c2].walls &= ~dir.b;
+  }
+  return grid;
+}
+
+function generateCircuit(): { maze: MazeCell[][]; goalRow: number; goalCol: number } {
+  for (let i = 0; i < 50; i++) {
+    const path = warnsdorffPath(new Set());
+    if (!path || path.length !== ROWS * COLS) continue;
+    const last = path[path.length - 1];
+    return { maze: mazeFromPath(path), goalRow: last.r, goalCol: last.c };
+  }
+  return { maze: generateMaze(), goalRow: ROWS - 1, goalCol: COLS - 1 };
+}
+
+// Desafío: 78-cell corridor + 3 black holes.
+// Strategy: pick 3 random interior cells as holes, generate the real path
+// directly (no scout), then verify the path's own turns point at each hole
+// 2+ times. Opens both wall sides (like mazeFromPath) to fix south/east holes.
+function generateDesafio(): {
+  maze: MazeCell[][];
+  goalRow: number;
+  goalCol: number;
+  holes: Hole[];
+} {
+  const candidates: { r: number; c: number }[] = [];
+  for (let r = 1; r < ROWS - 1; r++)
+    for (let c = 1; c < COLS - 1; c++)
+      candidates.push({ r, c });
+
+  for (let attempt = 0; attempt < 2000; attempt++) {
+    const shuffled = candidates.slice().sort(() => Math.random() - 0.5);
+    const holeList: { r: number; c: number }[] = [];
+    for (const cell of shuffled) {
+      if (holeList.length === 3) break;
+      if (holeList.some(h => Math.abs(h.r - cell.r) + Math.abs(h.c - cell.c) < 3)) continue;
+      holeList.push(cell);
+    }
+    if (holeList.length < 3) continue;
+
+    const holeSet = new Set(holeList.map(h => `${h.r},${h.c}`));
+    const path = warnsdorffPath(holeSet);
+    if (!path || path.length !== ROWS * COLS - 3) continue;
+
+    const grid = mazeFromPath(path);
+    const hitCount = new Map<string, number>();
+
+    for (let i = 1; i < path.length - 1; i++) {
+      const prevDr = path[i].r - path[i - 1].r;
+      const prevDc = path[i].c - path[i - 1].c;
+      const nextDr = path[i + 1].r - path[i].r;
+      const nextDc = path[i + 1].c - path[i].c;
+      if (prevDr === nextDr && prevDc === nextDc) continue;
+      const hr = path[i].r + prevDr;
+      const hc = path[i].c + prevDc;
+      if (hr < 0 || hr >= ROWS || hc < 0 || hc >= COLS) continue;
+      const key = `${hr},${hc}`;
+      if (!holeSet.has(key)) continue;
+      const dir = DIRS4.find(d => d.dr === prevDr && d.dc === prevDc)!;
+      grid[path[i].r][path[i].c].walls &= ~dir.a;
+      grid[hr][hc].walls &= ~dir.b;
+      hitCount.set(key, (hitCount.get(key) ?? 0) + 1);
+    }
+
+    if (!holeList.every(h => (hitCount.get(`${h.r},${h.c}`) ?? 0) >= 2)) continue;
+
+    const last = path[path.length - 1];
+    return {
+      maze: grid,
+      goalRow: last.r,
+      goalCol: last.c,
+      holes: holeList.map(h => ({
+        row: h.r,
+        col: h.c,
+        cx: h.c * CELL + CELL / 2 + WALL_W / 2,
+        cy: h.r * CELL + CELL / 2 + WALL_W / 2,
+      })),
+    };
   }
 
-  return { maze: grid, goalRow: cr, goalCol: cc };
+  const { maze, goalRow, goalCol } = generateCircuit();
+  return { maze, goalRow, goalCol, holes: [] };
 }
+
+// ─── Shared helpers ───────────────────────────────────────────────────────────
 
 function buildSegs(maze: MazeCell[][]): Seg[] {
   const segs: Seg[] = [];
@@ -151,31 +244,39 @@ function goalCoords(row: number, col: number) {
   };
 }
 
+// ─── Component ────────────────────────────────────────────────────────────────
+
+type Mode = "laberinto" | "circuito" | "desafío";
+
+function initState(m: Mode) {
+  if (m === "desafío") {
+    const { maze, goalRow, goalCol, holes } = generateDesafio();
+    const { gx, gy } = goalCoords(goalRow, goalCol);
+    return { maze, goalX: gx, goalY: gy, holes };
+  }
+  if (m === "circuito") {
+    const { maze, goalRow, goalCol } = generateCircuit();
+    const { gx, gy } = goalCoords(goalRow, goalCol);
+    return { maze, goalX: gx, goalY: gy, holes: [] as Hole[] };
+  }
+  const maze = generateMaze();
+  const { gx, gy } = goalCoords(ROWS - 1, COLS - 1);
+  return { maze, goalX: gx, goalY: gy, holes: [] as Hole[] };
+}
+
 export default function Laberinto() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const boardRef = useRef<HTMLDivElement>(null);
   const loopRef = useRef<(t: number) => void>(() => {});
   const [won, setWon] = useState(false);
-  const [mode, setMode] = useState<"laberinto" | "circuito">("laberinto");
+  const [mode, setMode] = useState<Mode>("laberinto");
 
   const [orientState, setOrientState] = useState<"off" | "needs-permission" | "on">("off");
   const [scale, setScale] = useState(1);
   const [isLandscape, setIsLandscape] = useState(false);
   const landscapeRef = useRef(false);
 
-  function initState(m: "laberinto" | "circuito") {
-    if (m === "circuito") {
-      const { maze, goalRow, goalCol } = generateCircuit();
-      const { gx, gy } = goalCoords(goalRow, goalCol);
-      return { maze, goalX: gx, goalY: gy };
-    }
-    const maze = generateMaze();
-    const { gx, gy } = goalCoords(ROWS - 1, COLS - 1);
-    return { maze, goalX: gx, goalY: gy };
-  }
-
   const initial = initState("laberinto");
-
   const g = useRef({
     ...initial,
     segs: [] as Seg[],
@@ -184,14 +285,18 @@ export default function Laberinto() {
     tiltX: 0, tiltY: 0,
     mouseX: 0, mouseY: 0, hasMouse: false,
     orientX: 0, orientY: 0, hasOrient: false,
-    orientRefBeta: 0,
-    orientRefGamma: 0,
+    orientRefBeta: 0, orientRefGamma: 0,
     keys: { up: false, down: false, left: false, right: false },
     idle: true,
     won: false,
     startTime: 0,
     lastTime: 0,
     animId: 0,
+    falling: false,
+    fallTime: 0,
+    fallingT: 0,
+    holeTargetX: 0,
+    holeTargetY: 0,
   });
 
   function draw() {
@@ -199,16 +304,29 @@ export default function Laberinto() {
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    const { bx, by, segs, won: gameWon, goalX, goalY } = g.current;
+    const { bx, by, segs, won: gameWon, goalX, goalY, holes, falling, fallingT } = g.current;
 
     ctx.clearRect(0, 0, BOARD_W, BOARD_H);
 
-    // Floor (claro)
+    // Floor
     const fg = ctx.createRadialGradient(BOARD_W / 2, BOARD_H / 2, 30, BOARD_W / 2, BOARD_H / 2, BOARD_W);
     fg.addColorStop(0, "#dde3ea");
     fg.addColorStop(1, "#c8d3de");
     ctx.fillStyle = fg;
     ctx.fillRect(0, 0, BOARD_W, BOARD_H);
+
+    // Black holes
+    for (const hole of holes) {
+      const pulse = 0.88 + 0.12 * Math.sin(Date.now() / 300 + hole.col);
+      const grad = ctx.createRadialGradient(hole.cx, hole.cy, 0, hole.cx, hole.cy, CELL * 0.44 * pulse);
+      grad.addColorStop(0, "#000000");
+      grad.addColorStop(0.55, "#0d0010");
+      grad.addColorStop(1, "transparent");
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(hole.cx, hole.cy, CELL * 0.44 * pulse, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
     // Start marker
     ctx.strokeStyle = "#3b82f625";
@@ -226,15 +344,13 @@ export default function Laberinto() {
     ctx.beginPath();
     ctx.arc(goalX, goalY, CELL * 0.42, 0, Math.PI * 2);
     ctx.fill();
-
-    // Goal label
     ctx.fillStyle = gameWon ? "#16a34a" : "#22c55e";
     ctx.font = `bold ${Math.round(CELL * 0.3)}px sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText("✓", goalX, goalY + 1);
 
-    // Sombra de paredes (simula grosor)
+    // Wall shadows
     ctx.save();
     ctx.strokeStyle = "rgba(0,0,0,0.13)";
     ctx.lineWidth = WALL_W;
@@ -247,7 +363,7 @@ export default function Laberinto() {
     }
     ctx.restore();
 
-    // Paredes
+    // Walls
     ctx.save();
     ctx.strokeStyle = "#3b82f6";
     ctx.lineWidth = WALL_W;
@@ -260,47 +376,50 @@ export default function Laberinto() {
     }
     ctx.restore();
 
-    // Bola
+    // Ball
     if (!gameWon) {
-      // Sombra de contacto en el suelo
-      ctx.save();
-      ctx.globalAlpha = 0.18;
-      ctx.fillStyle = "#1e3a8a";
-      ctx.beginPath();
-      ctx.ellipse(bx + 2, by + 3, BALL_R * 1.0, BALL_R * 0.42, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
+      const r = falling ? BALL_R * (1 - fallingT) : BALL_R;
+      if (r > 0.5) {
+        ctx.save();
+        ctx.globalAlpha = falling ? 1 - fallingT * 0.6 : 0.18;
+        if (!falling) {
+          ctx.fillStyle = "#1e3a8a";
+          ctx.beginPath();
+          ctx.ellipse(bx + 2, by + 3, BALL_R * 1.0, BALL_R * 0.42, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
 
-      // Cuerpo esférico (gradiente con foco arriba-izquierda)
-      ctx.save();
-      ctx.shadowColor = "#3b82f650";
-      ctx.shadowBlur = 10;
-      const bg = ctx.createRadialGradient(
-        bx - BALL_R * 0.35, by - BALL_R * 0.35, BALL_R * 0.05,
-        bx, by, BALL_R
-      );
-      bg.addColorStop(0, "#93c5fd");
-      bg.addColorStop(0.35, "#3b82f6");
-      bg.addColorStop(1, "#1e3a8a");
-      ctx.fillStyle = bg;
-      ctx.beginPath();
-      ctx.arc(bx, by, BALL_R, 0, Math.PI * 2);
-      ctx.fill();
+        ctx.save();
+        ctx.shadowColor = "#3b82f650";
+        ctx.shadowBlur = 10;
+        const bg = ctx.createRadialGradient(
+          bx - r * 0.35, by - r * 0.35, r * 0.05,
+          bx, by, r
+        );
+        bg.addColorStop(0, "#93c5fd");
+        bg.addColorStop(0.35, "#3b82f6");
+        bg.addColorStop(1, "#1e3a8a");
+        ctx.fillStyle = bg;
+        ctx.globalAlpha = falling ? 1 - fallingT * 0.5 : 1;
+        ctx.beginPath();
+        ctx.arc(bx, by, r, 0, Math.PI * 2);
+        ctx.fill();
 
-      // Brillo especular
-      const spec = ctx.createRadialGradient(
-        bx - BALL_R * 0.4, by - BALL_R * 0.4, 0,
-        bx - BALL_R * 0.35, by - BALL_R * 0.35, BALL_R * 0.45
-      );
-      spec.addColorStop(0, "rgba(255,255,255,0.88)");
-      spec.addColorStop(0.5, "rgba(255,255,255,0.25)");
-      spec.addColorStop(1, "rgba(255,255,255,0)");
-      ctx.shadowBlur = 0;
-      ctx.fillStyle = spec;
-      ctx.beginPath();
-      ctx.arc(bx, by, BALL_R, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
+        const spec = ctx.createRadialGradient(
+          bx - r * 0.4, by - r * 0.4, 0,
+          bx - r * 0.35, by - r * 0.35, r * 0.45
+        );
+        spec.addColorStop(0, "rgba(255,255,255,0.88)");
+        spec.addColorStop(0.5, "rgba(255,255,255,0.25)");
+        spec.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = spec;
+        ctx.beginPath();
+        ctx.arc(bx, by, r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
     }
   }
 
@@ -310,10 +429,28 @@ export default function Laberinto() {
     loopRef.current = function loop(time: number) {
       if (state.won) { draw(); return; }
 
+      // Fall animation
+      if (state.falling) {
+        const t = Math.min((time - state.fallTime) / 500, 1);
+        state.fallingT = t;
+        state.bx += (state.holeTargetX - state.bx) * 0.12;
+        state.by += (state.holeTargetY - state.by) * 0.12;
+        if (t >= 1) {
+          state.falling = false;
+          state.bx = START_X; state.by = START_Y;
+          state.vx = 0; state.vy = 0;
+          state.tiltX = 0; state.tiltY = 0;
+          state.idle = true;
+          if (boardRef.current) boardRef.current.style.transform = "";
+        }
+        draw();
+        state.animId = requestAnimationFrame(loopRef.current);
+        return;
+      }
+
       const anyKey = state.keys.up || state.keys.down || state.keys.left || state.keys.right;
       const started = state.hasMouse || anyKey;
 
-      // Idle: esperar movimiento de ratón o D-pad táctil
       if (state.idle) {
         if (started) {
           state.idle = false;
@@ -370,11 +507,26 @@ export default function Laberinto() {
         state.bx, state.by, state.vx, state.vy, state.segs
       );
 
+      // Hole detection
+      for (const hole of state.holes) {
+        const dx = state.bx - hole.cx, dy = state.by - hole.cy;
+        if (Math.sqrt(dx * dx + dy * dy) < CELL * 0.38) {
+          state.falling = true;
+          state.fallTime = time;
+          state.fallingT = 0;
+          state.holeTargetX = hole.cx;
+          state.holeTargetY = hole.cy;
+          break;
+        }
+      }
+
       // Win
-      const dx = state.bx - state.goalX, dy = state.by - state.goalY;
-      if (Math.sqrt(dx * dx + dy * dy) < CELL * 0.3) {
-        state.won = true;
-        setWon(true);
+      if (!state.falling) {
+        const dx = state.bx - state.goalX, dy = state.by - state.goalY;
+        if (Math.sqrt(dx * dx + dy * dy) < CELL * 0.3) {
+          state.won = true;
+          setWon(true);
+        }
       }
 
       draw();
@@ -387,13 +539,14 @@ export default function Laberinto() {
     });
   }
 
-  function restart(m: "laberinto" | "circuito") {
+  function restart(m: Mode) {
     const state = g.current;
     cancelAnimationFrame(state.animId);
-    const { maze, goalX, goalY } = initState(m);
+    const { maze, goalX, goalY, holes } = initState(m);
     state.maze = maze;
     state.goalX = goalX;
     state.goalY = goalY;
+    state.holes = holes;
     state.segs = buildSegs(state.maze);
     state.bx = START_X; state.by = START_Y;
     state.vx = 0; state.vy = 0;
@@ -405,6 +558,7 @@ export default function Laberinto() {
     state.orientRefBeta = 0; state.orientRefGamma = 0;
     state.idle = true;
     state.won = false;
+    state.falling = false;
     if (boardRef.current) boardRef.current.style.transform = "";
     setWon(false);
     startLoop();
@@ -412,7 +566,6 @@ export default function Laberinto() {
 
   const attachOrientListener = useCallback(() => {
     const state = g.current;
-
     const onOrient = (e: DeviceOrientationEvent) => {
       if (e.gamma === null || e.beta === null) return;
       const ORIENT_SCALE = MAX_TILT / 25;
@@ -427,7 +580,6 @@ export default function Laberinto() {
       }
       state.hasOrient = true;
     };
-
     window.addEventListener("deviceorientation", onOrient);
     return () => window.removeEventListener("deviceorientation", onOrient);
   }, []);
@@ -451,7 +603,6 @@ export default function Laberinto() {
       state.mouseY = e.clientY;
       state.hasMouse = true;
     };
-
     window.addEventListener("mousemove", onMouseMove);
 
     const updateScale = () => {
@@ -529,16 +680,17 @@ export default function Laberinto() {
   }
 
   function ModeSelector() {
+    const modes: Mode[] = ["laberinto", "circuito", "desafío"];
     return (
       <div className="flex gap-1 rounded-lg bg-gray-100 p-0.5">
-        {(["laberinto", "circuito"] as const).map((m) => (
+        {modes.map((m) => (
           <button
             key={m}
             onClick={() => { setMode(m); restart(m); }}
             style={{
               fontSize: "0.72rem",
               fontWeight: mode === m ? 600 : 400,
-              color: mode === m ? "#1d4ed8" : "#9ca3af",
+              color: mode === m ? (m === "desafío" ? "#b91c1c" : "#1d4ed8") : "#9ca3af",
               background: mode === m ? "#ffffff" : "transparent",
               border: "none",
               borderRadius: "0.4rem",
@@ -554,6 +706,8 @@ export default function Laberinto() {
       </div>
     );
   }
+
+  const buttonLabel = `nuevo ${mode}`;
 
   const boardEl = (
     <div
@@ -577,11 +731,8 @@ export default function Laberinto() {
             height={BOARD_H}
             style={{ display: "block" }}
             onTouchStart={() => {
-              if (orientState === "on") {
-                calibrateOrientation();
-              } else if (orientState === "needs-permission") {
-                requestOrientPermission();
-              }
+              if (orientState === "on") calibrateOrientation();
+              else if (orientState === "needs-permission") requestOrientPermission();
             }}
           />
           <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: 20, background: "linear-gradient(to bottom, #1d4ed8, #3b82f6)", transformOrigin: "top center", transform: "rotateX(90deg)" }} />
@@ -596,7 +747,6 @@ export default function Laberinto() {
   if (isLandscape) {
     return (
       <main style={{ background: "#ffffff", height: "100dvh", overflow: "hidden" }} className="flex flex-row items-center justify-center gap-2 px-2">
-        {/* Panel izquierdo */}
         <div style={{ width: 120, flexShrink: 0 }} className="flex flex-col items-center justify-center gap-3 h-full">
           <h1 style={{ color: "#111827", fontSize: "1.1rem", fontWeight: 800, letterSpacing: "-0.03em", textAlign: "center" }}>Laberinto</h1>
           <ModeSelector />
@@ -605,24 +755,19 @@ export default function Laberinto() {
               ? "Toca el tablero para calibrar · Inclina el móvil"
               : "Mueve el ratón para inclinar el tablero"}
           </p>
-          <a
-            href="/"
-            style={{ fontSize: "0.7rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", textDecoration: "none", transition: "color 0.2s" }}
+          <a href="/" style={{ fontSize: "0.7rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", textDecoration: "none", transition: "color 0.2s" }}
             onMouseEnter={e => (e.currentTarget.style.color = "#3b82f6")}
-            onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}
-          >
+            onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}>
             pacr.es
           </a>
         </div>
 
-        {/* Tablero */}
         {boardEl}
 
-        {/* Panel derecho */}
         <div style={{ width: 120, flexShrink: 0 }} className="flex flex-col items-center justify-center gap-3 h-full">
           {won && <p style={{ color: "#3b82f6", fontSize: "0.9rem", fontWeight: 600, textAlign: "center" }}>¡Enhorabuena!</p>}
           <button onClick={() => restart(mode)} className="text-gray-400 hover:text-gray-600 text-xs transition-colors">
-            nuevo {mode}
+            {buttonLabel}
           </button>
           {orientState !== "on" && (
             <div className="flex flex-col items-center gap-1">
@@ -653,11 +798,9 @@ export default function Laberinto() {
 
       {boardEl}
 
-      {won && (
-        <p style={{ color: "#3b82f6", fontSize: "1.1rem", fontWeight: 600 }}>¡Enhorabuena!</p>
-      )}
+      {won && <p style={{ color: "#3b82f6", fontSize: "1.1rem", fontWeight: 600 }}>¡Enhorabuena!</p>}
       <button onClick={() => restart(mode)} className="text-gray-400 hover:text-gray-600 text-sm transition-colors">
-        nuevo {mode}
+        {buttonLabel}
       </button>
 
       {orientState !== "on" && (
@@ -683,12 +826,9 @@ export default function Laberinto() {
             ? "Toca el tablero para calibrar · Inclina el móvil para mover la bola"
             : "Mueve el ratón para inclinar el tablero"}
         </p>
-        <a
-          href="/"
-          style={{ fontSize: "0.75rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", textDecoration: "none", transition: "color 0.2s" }}
+        <a href="/" style={{ fontSize: "0.75rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", textDecoration: "none", transition: "color 0.2s" }}
           onMouseEnter={e => (e.currentTarget.style.color = "#3b82f6")}
-          onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}
-        >
+          onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}>
           pacr.es
         </a>
       </div>
