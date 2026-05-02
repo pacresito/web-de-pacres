@@ -388,7 +388,7 @@ export default function Lucas() {
           <p className="lc-title">Ingeniero de Propulsión Avanzada & Doctor en Juegos de Mesa</p>
           <div className="lc-badges">
             <span className="lc-badge"><span className="lc-dot" />Boca Chica, Texas</span>
-            <span className="lc-badge">6 años de experiencia (y de vida)</span>
+            <span className="lc-badge">5 años de experiencia (y de vida)</span>
             <span className="lc-badge">Open to snacks</span>
           </div>
           <p className="lc-scroll-hint">↓ ver perfil completo</p>
@@ -410,7 +410,7 @@ export default function Lucas() {
           <p className="lc-section-label">Sobre mí</p>
           <div className="lc-bio">
             <p>
-              Soy <strong>Dr. Lucas Crespo</strong>, ingeniero de propulsión en el programa Starship de SpaceX con <strong>6 años de experiencia</strong> en el sector aeroespacial (coincidentemente, los mismos que llevo vivo).
+              Soy <strong>Dr. Lucas Crespo</strong>, ingeniero de propulsión en el programa Starship de SpaceX con <strong>5 años de experiencia</strong> en el sector aeroespacial (coincidentemente, los mismos que llevo vivo).
               Mi trabajo consiste en supervisar el correcto funcionamiento de los <strong>33 motores Raptor</strong> del Super Heavy, asegurarme de que el cohete no se vaya torcido, y gestionar la logística de la merienda en Boca Chica.
             </p>
             <p>
@@ -418,7 +418,7 @@ export default function Lucas() {
               Completé mi <strong>Doctorado en Juegos de Mesa</strong> por la Universidad de La Manga del Mar Menor con una tesis titulada <em>"El parchís como sistema dinámico no lineal: estrategias óptimas cuando te toca el 6"</em>.
             </p>
             <p>
-              Actualmente resido entre Boca Chica y el sofá de casa, y estoy disponible para conferencias, partidas de UNO y visitas al parque.
+              Actualmente resido entre Boca Chica y el sofá de casa, y estoy disponible para conferencias, partidas de Castle Combo y visitas al parque.
             </p>
             <span className="lc-disclaimer">* Algunos datos pueden ser ligeramente exagerados</span>
           </div>
@@ -437,13 +437,13 @@ export default function Lucas() {
             <div className="lc-edu-item">
               <p className="lc-edu-school">Wisdom School · Madrid</p>
               <p className="lc-edu-degree">Grado en Ingeniería de Bloques de Construcción y Recreo Aplicado</p>
-              <p className="lc-edu-year">2019 – presente · Matrícula de Honor en Siesta</p>
+              <p className="lc-edu-year">2021 – presente · Matrícula de Honor en Castle Combo</p>
               <p className="lc-edu-note">Premio al mejor proyecto de fin de curso: torre de LEGO de 47 cm que se mantuvo en pie durante casi dos minutos antes de ser derribada por un perro.</p>
             </div>
             <div className="lc-edu-item">
               <p className="lc-edu-school">Hospital Universitario · Madrid</p>
               <p className="lc-edu-degree">Acceso al mundo laboral (nacimiento)</p>
-              <p className="lc-edu-year">2018 · Primera aparición pública</p>
+              <p className="lc-edu-year">2020 · Primera aparición pública</p>
               <p className="lc-edu-note">Llegó antes de lo esperado, lo cual ya demuestra cierta iniciativa propia y espíritu emprendedor.</p>
             </div>
           </div>
@@ -458,7 +458,7 @@ export default function Lucas() {
               { icon: "🎲", name: "Juegos de mesa", level: "Doctorado", pct: 100 },
               { icon: "🧱", name: "Construcción con LEGO", level: "Arquitecto certificado", pct: 95 },
               { icon: "🍪", name: "Gestión de snacks", level: "Director ejecutivo", pct: 100 },
-              { icon: "💤", name: "Siestas de precisión", level: "Experto", pct: 92 },
+              { icon: "🏰", name: "Castle Combo", level: "Experto", pct: 92 },
               { icon: "🎨", name: "Dibujo técnico (pinturas)", level: "Avanzado", pct: 88 },
               { icon: "🐾", name: "Negociación con mascotas", level: "Intermedio", pct: 74 },
               { icon: "⚡", name: "Velocidad en pijama", level: "Récord no oficial", pct: 97 },
@@ -487,7 +487,7 @@ export default function Lucas() {
               },
               {
                 year: "2024",
-                title: "Análisis termodinámico del UNO: por qué +4 siempre te toca a ti y nunca a los demás",
+                title: "Análisis estratégico del Castle Combo: cómo construir el castillo perfecto antes de que te lo destruyan",
                 journal: "Proceedings of the Annual Snack & Strategy Conference, La Manga 2024",
               },
               {
@@ -518,7 +518,7 @@ export default function Lucas() {
           <div className="lc-awards-grid">
             {[
               { icon: "🏆", name: "Premio Nobel de Snacks", org: "Comité Noruego del Bocadillo · 2024" },
-              { icon: "🌟", name: "Mejor Ingeniero Sub-7-años", org: "SpaceX Internal Awards · 3 años consecutivos" },
+              { icon: "🌟", name: "Mejor Ingeniero Sub-6-años", org: "SpaceX Internal Awards · 3 años consecutivos" },
               { icon: "🎖️", name: "Medalla al Recreo Estratégico", org: "Wisdom School · Promoción 2023" },
               { icon: "🥇", name: "Campeón Nacional de Parchís (categoría familiar)", org: "Liga Doméstica Crespo · Temporada 2024" },
               { icon: "🚀", name: "Astronauta Honorífico", org: "Autoproclamado · Madrid, 2022" },
@@ -536,7 +536,7 @@ export default function Lucas() {
         {/* ── CONTACTO ── */}
         <section className="lc-contact">
           <p className="lc-contact-name">Dr. Lucas Crespo</p>
-          <p className="lc-contact-sub">Disponible para proyectos, misiones espaciales y partidas de UNO</p>
+          <p className="lc-contact-sub">Disponible para proyectos, misiones espaciales y partidas de Castle Combo</p>
           <a href="mailto:lucas@cohete.space" className="lc-contact-btn">Contactar</a>
           <p className="lc-footer" style={{ marginTop: "3rem" }}>
             <a href="/">pacr.es</a> · © {new Date().getFullYear()} Dr. Lucas Crespo · Todos los derechos reservados (excepto el último trozo de pizza)
