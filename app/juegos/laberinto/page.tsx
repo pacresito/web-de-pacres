@@ -328,25 +328,27 @@ export default function Laberinto() {
     ctx.beginPath();
     ctx.arc(goalX, goalY, CELL * 0.42, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = gameWon ? "#16a34a" : "#22c55e";
-    ctx.font = `bold ${Math.round(CELL * 0.3)}px sans-serif`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText("✓", goalX, goalY + 1);
 
-    // Wall shadows — un único path para que los solapamientos no acumulen alpha
-    ctx.save();
-    ctx.strokeStyle = "rgba(15,23,42,0.22)";
-    ctx.lineWidth = WALL_W + 1;
-    ctx.lineCap = "square";
-    ctx.lineJoin = "miter";
-    ctx.beginPath();
-    for (const seg of segs) {
-      ctx.moveTo(seg.x1 + 3.5, seg.y1 + 4.5);
-      ctx.lineTo(seg.x2 + 3.5, seg.y2 + 4.5);
+    // Wall shadows — offscreen canvas a opacidad plena, luego blit con alpha para evitar acumulación
+    {
+      const sc = document.createElement("canvas");
+      sc.width = BOARD_W; sc.height = BOARD_H;
+      const sctx = sc.getContext("2d")!;
+      sctx.strokeStyle = "#0f172a";
+      sctx.lineWidth = WALL_W + 1;
+      sctx.lineCap = "square";
+      sctx.lineJoin = "miter";
+      sctx.beginPath();
+      for (const seg of segs) {
+        sctx.moveTo(seg.x1 + 3.5, seg.y1 + 4.5);
+        sctx.lineTo(seg.x2 + 3.5, seg.y2 + 4.5);
+      }
+      sctx.stroke();
+      ctx.save();
+      ctx.globalAlpha = 0.22;
+      ctx.drawImage(sc, 0, 0);
+      ctx.restore();
     }
-    ctx.stroke();
-    ctx.restore();
 
     // Walls — gradiente perpendicular al segmento (cara superior/izquierda más clara)
     ctx.save();
@@ -367,20 +369,15 @@ export default function Laberinto() {
       ctx.lineTo(seg.x2, seg.y2);
       ctx.stroke();
     }
-    // Highlight fino en la arista superior/izquierda — el filo iluminado del prisma
-    ctx.strokeStyle = "rgba(255,255,255,0.55)";
-    ctx.lineWidth = 1;
+    // Highlight: fillRect solo en el cuerpo del segmento, sin cubrir las esquinas
+    ctx.fillStyle = "rgba(255,255,255,0.55)";
     for (const seg of segs) {
       const isHoriz = Math.abs(seg.y2 - seg.y1) < 0.001;
-      ctx.beginPath();
       if (isHoriz) {
-        ctx.moveTo(seg.x1, seg.y1 - halfW + 0.5);
-        ctx.lineTo(seg.x2, seg.y2 - halfW + 0.5);
+        ctx.fillRect(seg.x1, seg.y1 - halfW + 0.5, seg.x2 - seg.x1, 1);
       } else {
-        ctx.moveTo(seg.x1 - halfW + 0.5, seg.y1);
-        ctx.lineTo(seg.x2 - halfW + 0.5, seg.y2);
+        ctx.fillRect(seg.x1 - halfW + 0.5, seg.y1, 1, seg.y2 - seg.y1);
       }
-      ctx.stroke();
     }
     ctx.restore();
 
