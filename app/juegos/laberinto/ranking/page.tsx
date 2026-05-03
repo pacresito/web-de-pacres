@@ -69,7 +69,7 @@ export default function RankingLaberinto() {
           </section>
 
           <section>
-            <p style={sectionLabel}>Los más cazados</p>
+            <p style={sectionLabel}>Bottom 5</p>
             {data.bottom.length === 0 ? (
               <p style={{ color: "#9ca3af", fontSize: "0.85rem", textAlign: "center", padding: "1rem 0" }}>Sin entradas aún</p>
             ) : (

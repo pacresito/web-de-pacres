@@ -331,7 +331,7 @@ export default function Laberinto() {
     ctx.stroke();
 
     // Goal — pulsing glow
-    const pulse = 1 + Math.sin(t / 1600) * 0.1;
+    const pulse = 1 + Math.sin(t * Math.PI / 1000) * 0.1;
     const goalR = CELL * 0.42 * pulse;
     const gg = ctx.createRadialGradient(goalX, goalY, 0, goalX, goalY, goalR);
     gg.addColorStop(0, "#22c55e");
@@ -555,6 +555,7 @@ export default function Laberinto() {
       }
       if (state.timeLeft <= 0) {
         state.gameOver = true;
+        if (boardRef.current) boardRef.current.style.transform = "";
         setScore(state.score);
         setGameOver(true);
         draw(time);
@@ -623,7 +624,7 @@ export default function Laberinto() {
           if (hole.fallCount >= 5) {
             state.holes = state.holes.filter((_, i) => i !== hi);
           } else if (hole.fallCount >= 3) {
-            hole.radius *= 0.7;
+            hole.radius *= 0.85;
           }
           state.falling = true;
           state.fallTime = time;
@@ -824,7 +825,7 @@ export default function Laberinto() {
       display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
       gap: "1rem", zIndex: 10,
     }}>
-      <p style={{ color: "#111827", fontSize: "1rem", fontWeight: 700, letterSpacing: "-0.02em" }}>
+      <p style={{ color: "#3b82f6", fontSize: "1.1rem", fontWeight: 600 }}>
         ¡Tiempo!
       </p>
       <p style={{ color: scoreColor, fontSize: "2rem", fontWeight: 800, fontFamily: "var(--font-geist-mono, monospace)", lineHeight: 1 }}>
@@ -842,6 +843,7 @@ export default function Laberinto() {
               placeholder="Tu nombre"
               maxLength={20}
               autoFocus
+              autoComplete="off"
               style={{
                 padding: "0.35rem 0.65rem",
                 border: "1px solid rgba(96,165,250,0.4)",
