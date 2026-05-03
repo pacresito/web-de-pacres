@@ -420,10 +420,9 @@ export default function Home() {
     // Motor de físicas
     const engine = Engine.create({ gravity: { x: 0, y: 2 } });
     const floor = Bodies.rectangle(window.innerWidth / 2, window.innerHeight + 30, window.innerWidth * 3, 60, { isStatic: true });
-    const ceiling = Bodies.rectangle(window.innerWidth / 2, -30, window.innerWidth * 3, 60, { isStatic: true });
     const wallL = Bodies.rectangle(-30, window.innerHeight / 2, 60, window.innerHeight * 3, { isStatic: true });
     const wallR = Bodies.rectangle(window.innerWidth + 30, window.innerHeight / 2, 60, window.innerHeight * 3, { isStatic: true });
-    World.add(engine.world, [floor, ceiling, wallL, wallR]);
+    World.add(engine.world, [floor, wallL, wallR]);
 
     const bodies: Matter.Body[] = [];
     for (const d of letterData) {
@@ -476,10 +475,15 @@ export default function Home() {
     const animate = () => {
       if (stopped) return;
       for (let i = 0; i < letterSpans.length; i++) {
-        const { x, y } = bodies[i].position;
+        const b = bodies[i];
+        // Rebote en techo: solo si sale hacia arriba (permite entrar desde arriba)
+        if (b.position.y < 0 && b.velocity.y < 0) {
+          Body.setVelocity(b, { x: b.velocity.x * 0.9, y: -b.velocity.y * 0.5 });
+        }
+        const { x, y } = b.position;
         letterSpans[i].style.left = `${x}px`;
         letterSpans[i].style.top = `${y}px`;
-        letterSpans[i].style.transform = `translate(-50%,-50%) rotate(${bodies[i].angle}rad)`;
+        letterSpans[i].style.transform = `translate(-50%,-50%) rotate(${b.angle}rad)`;
       }
       if (pacrSpan && pacrBody) {
         const { x, y } = pacrBody.position;
