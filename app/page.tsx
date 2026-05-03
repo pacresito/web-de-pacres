@@ -420,14 +420,15 @@ export default function Home() {
     // Motor de físicas
     const engine = Engine.create({ gravity: { x: 0, y: 2 } });
     const floor = Bodies.rectangle(window.innerWidth / 2, window.innerHeight + 30, window.innerWidth * 3, 60, { isStatic: true });
+    const ceiling = Bodies.rectangle(window.innerWidth / 2, -30, window.innerWidth * 3, 60, { isStatic: true });
     const wallL = Bodies.rectangle(-30, window.innerHeight / 2, 60, window.innerHeight * 3, { isStatic: true });
     const wallR = Bodies.rectangle(window.innerWidth + 30, window.innerHeight / 2, 60, window.innerHeight * 3, { isStatic: true });
-    World.add(engine.world, [floor, wallL, wallR]);
+    World.add(engine.world, [floor, ceiling, wallL, wallR]);
 
     const bodies: Matter.Body[] = [];
     for (const d of letterData) {
       const body = Bodies.rectangle(d.cx, d.cy, Math.max(d.w, 4), Math.max(d.h, 4), { restitution: 0.35, friction: 0.5, frictionAir: 0.008 });
-      Body.setVelocity(body, { x: (Math.random() - 0.5) * 5, y: (Math.random() - 0.5) * 2 });
+      Body.setVelocity(body, { x: (Math.random() - 0.5) * 5, y: Math.random() * 2 });
       Body.setAngularVelocity(body, (Math.random() - 0.5) * 0.25);
       World.add(engine.world, body);
       bodies.push(body);
@@ -460,6 +461,15 @@ export default function Home() {
       engine.gravity.y = gy * 2;
     };
     window.addEventListener("deviceorientation", handleOrientation);
+
+    // Mouse: gravedad según posición relativa al centro (desktop)
+    const handleMouseGravity = (e: MouseEvent) => {
+      const gx = ((e.clientX - window.innerWidth / 2) / (window.innerWidth / 2));
+      const gy = ((e.clientY - window.innerHeight / 2) / (window.innerHeight / 2));
+      engine.gravity.x = gx * 2;
+      engine.gravity.y = gy * 2;
+    };
+    window.addEventListener("mousemove", handleMouseGravity);
 
     let stopped = false;
     let animFrame: number;
@@ -514,6 +524,7 @@ export default function Home() {
     overlay.style.cursor = "pointer";
     overlay.addEventListener("click", () => {
       window.removeEventListener("deviceorientation", handleOrientation);
+      window.removeEventListener("mousemove", handleMouseGravity);
       restore();
     }, { once: true });
     restoreRef.current = restore;
