@@ -17,12 +17,18 @@ const TILT_SPEED = 2.0;
 const GRAVITY = 1750;
 const FRICTION = 0.983;
 const RESTITUTION = 0.2;
+const GAME_DURATION = 60;
 
 const MN = 1, MS = 2, ME = 4, MW = 8;
 
 type MazeCell = { walls: number };
 type Seg = { x1: number; y1: number; x2: number; y2: number };
-type Hole = { row: number; col: number; cx: number; cy: number };
+type Hole = { row: number; col: number; cx: number; cy: number; radius: number; fallCount: number };
+
+interface RankingData {
+  top: { name: string; score: number; date: string | null }[];
+  bottom: { name: string; score: number; date: string | null }[];
+}
 
 // ─── Maze generators ─────────────────────────────────────────────────────────
 
@@ -33,7 +39,6 @@ const DIRS4 = [
   { dr: 0,  dc: -1, a: MW, b: ME },
 ];
 
-// Warnsdorff Hamiltonian path. forbidden = Set of "r,c" strings to skip.
 function warnsdorffPath(forbidden: Set<string>): { r: number; c: number }[] | null {
   if (forbidden.has("0,0")) return null;
   const target = ROWS * COLS - forbidden.size;
@@ -95,10 +100,6 @@ function generateCircuit(): { maze: MazeCell[][]; goalRow: number; goalCol: numb
   return { maze: mazeFromPath([{ r: 0, c: 0 }]), goalRow: ROWS - 1, goalCol: COLS - 1 };
 }
 
-// Desafío: corridor with nHoles black holes.
-// Picks random interior cells, generates the real path directly (no scout),
-// verifies the path's own turns point at each hole 2+ times, opens both
-// wall sides of each hole passage (like mazeFromPath).
 function tryDesafio(nHoles: number, maxAttempts: number): {
   maze: MazeCell[][];
   goalRow: number;
@@ -156,6 +157,8 @@ function tryDesafio(nHoles: number, maxAttempts: number): {
         col: h.c,
         cx: h.c * CELL + CELL / 2 + WALL_W / 2,
         cy: h.r * CELL + CELL / 2 + WALL_W / 2,
+        radius: CELL * 0.4,
+        fallCount: 0,
       })),
     };
   }
@@ -225,7 +228,7 @@ function goalCoords(row: number, col: number) {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-function initState() {
+function initMaze() {
   const { maze, goalRow, goalCol, holes } = generateDesafio();
   const { gx, gy } = goalCoords(goalRow, goalCol);
   return { maze, goalX: gx, goalY: gy, holes };
@@ -235,14 +238,21 @@ export default function Laberinto() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const boardRef = useRef<HTMLDivElement>(null);
   const loopRef = useRef<(t: number) => void>(() => {});
-  const [won, setWon] = useState(false);
+
+  const [score, setScore] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(GAME_DURATION);
+  const [gameOver, setGameOver] = useState(false);
+  const [alias, setAlias] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [ranking, setRanking] = useState<RankingData | null>(null);
 
   const [orientState, setOrientState] = useState<"off" | "needs-permission" | "on">("off");
   const [scale, setScale] = useState(1);
   const [isLandscape, setIsLandscape] = useState(false);
   const landscapeRef = useRef(false);
 
-  const initial = initState();
+  const initial = initMaze();
   const g = useRef({
     ...initial,
     segs: [] as Seg[],
@@ -254,7 +264,14 @@ export default function Laberinto() {
     orientRefBeta: 0, orientRefGamma: 0,
     keys: { up: false, down: false, left: false, right: false },
     idle: true,
-    won: false,
+    score: 0,
+    timeLeft: GAME_DURATION,
+    lastTimerInt: GAME_DURATION,
+    gameOver: false,
+    celebrating: false,
+    celebrateStartTime: 0,
+    holeCountThisMaze: 0,
+    trail: [] as { x: number; y: number }[],
     startTime: 0,
     lastTime: 0,
     animId: 0,
@@ -265,31 +282,27 @@ export default function Laberinto() {
     holeTargetY: 0,
   });
 
-  function draw() {
+  function draw(time?: number) {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    const { bx, by, segs, won: gameWon, goalX, goalY, holes, falling, fallingT } = g.current;
+    const t = time ?? Date.now();
+    const { bx, by, segs, goalX, goalY, holes, falling, fallingT, trail, celebrating, celebrateStartTime, gameOver: go } = g.current;
 
     ctx.clearRect(0, 0, BOARD_W, BOARD_H);
 
-    // Floor — viñeta con luz cenital arriba-izquierda
-    const fg = ctx.createRadialGradient(
-      BOARD_W * 0.32, BOARD_H * 0.28, 20,
-      BOARD_W * 0.5, BOARD_H * 0.55, BOARD_W * 0.85
-    );
+    // Floor
+    const fg = ctx.createRadialGradient(BOARD_W * 0.32, BOARD_H * 0.28, 20, BOARD_W * 0.5, BOARD_H * 0.55, BOARD_W * 0.85);
     fg.addColorStop(0, "#eef2f7");
     fg.addColorStop(0.55, "#d3dae3");
     fg.addColorStop(1, "#9aa8b8");
     ctx.fillStyle = fg;
     ctx.fillRect(0, 0, BOARD_W, BOARD_H);
 
-    // Black holes — luz cenital desde arriba-izquierda
+    // Black holes
     for (const hole of holes) {
-      const r = CELL * 0.4;
-
-      // 1. Oclusión ambiental en el suelo (halo oscuro alrededor del agujero)
+      const r = hole.radius;
       const ao = ctx.createRadialGradient(hole.cx, hole.cy, r * 0.95, hole.cx, hole.cy, r * 1.5);
       ao.addColorStop(0, "rgba(0,0,0,0.32)");
       ao.addColorStop(0.6, "rgba(0,0,0,0.08)");
@@ -299,8 +312,6 @@ export default function Laberinto() {
       ctx.arc(hole.cx, hole.cy, r * 1.5, 0, Math.PI * 2);
       ctx.fill();
 
-      // 2. Cuerpo del pozo: gradiente concéntrico — borde gris oscuro,
-      //    centro negro absoluto. Sugiere profundidad sin direccionalidad.
       const body = ctx.createRadialGradient(hole.cx, hole.cy, 0, hole.cx, hole.cy, r);
       body.addColorStop(0, "#000000");
       body.addColorStop(0.55, "#000000");
@@ -319,17 +330,19 @@ export default function Laberinto() {
     ctx.arc(START_X, START_Y, CELL * 0.32, 0, Math.PI * 2);
     ctx.stroke();
 
-    // Goal glow
-    const gg = ctx.createRadialGradient(goalX, goalY, 0, goalX, goalY, CELL * 0.42);
-    gg.addColorStop(0, gameWon ? "#16a34a" : "#22c55e");
+    // Goal — pulsing glow
+    const pulse = 1 + Math.sin(t / 1600) * 0.1;
+    const goalR = CELL * 0.42 * pulse;
+    const gg = ctx.createRadialGradient(goalX, goalY, 0, goalX, goalY, goalR);
+    gg.addColorStop(0, "#22c55e");
     gg.addColorStop(0.45, "#22c55e40");
     gg.addColorStop(1, "transparent");
     ctx.fillStyle = gg;
     ctx.beginPath();
-    ctx.arc(goalX, goalY, CELL * 0.42, 0, Math.PI * 2);
+    ctx.arc(goalX, goalY, goalR, 0, Math.PI * 2);
     ctx.fill();
 
-    // Wall shadows — offscreen canvas a opacidad plena, luego blit con alpha para evitar acumulación
+    // Wall shadows — offscreen canvas para evitar acumulación de alpha
     {
       const sc = document.createElement("canvas");
       sc.width = BOARD_W; sc.height = BOARD_H;
@@ -350,7 +363,7 @@ export default function Laberinto() {
       ctx.restore();
     }
 
-    // Walls — gradiente perpendicular al segmento (cara superior/izquierda más clara)
+    // Walls
     ctx.save();
     ctx.lineWidth = WALL_W;
     ctx.lineCap = "square";
@@ -369,7 +382,7 @@ export default function Laberinto() {
       ctx.lineTo(seg.x2, seg.y2);
       ctx.stroke();
     }
-    // Highlight: fillRect solo en el cuerpo del segmento, sin cubrir las esquinas
+    // Highlights — fillRect evita solapamiento en esquinas
     ctx.fillStyle = "rgba(255,255,255,0.55)";
     for (const seg of segs) {
       const isHoriz = Math.abs(seg.y2 - seg.y1) < 0.001;
@@ -381,28 +394,24 @@ export default function Laberinto() {
     }
     ctx.restore();
 
-    // Win overlay
-    if (gameWon) {
-      ctx.fillStyle = "rgba(255,255,255,0.72)";
-      ctx.fillRect(0, 0, BOARD_W, BOARD_H);
-      ctx.fillStyle = "#3b82f6";
-      ctx.font = `bold ${Math.round(CELL * 0.52)}px sans-serif`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText("¡Enhorabuena!", BOARD_W / 2, BOARD_H / 2);
+    // Ball trail
+    for (let i = 0; i < trail.length; i++) {
+      const frac = i / trail.length;
+      const r = BALL_R * 0.45 * frac;
+      if (r < 0.5) continue;
+      ctx.fillStyle = `rgba(59,130,246,${frac * 0.2})`;
+      ctx.beginPath();
+      ctx.arc(trail[i].x, trail[i].y, r, 0, Math.PI * 2);
+      ctx.fill();
     }
 
     // Ball
-    if (!gameWon) {
+    if (!go) {
       const r = falling ? BALL_R * (1 - fallingT) : BALL_R;
       if (r > 0.5) {
-        // Sombra proyectada en el suelo (elipse aplanada, dos capas: dura y blur)
         if (!falling) {
           ctx.save();
-          const sh = ctx.createRadialGradient(
-            bx + 4, by + 5, BALL_R * 0.2,
-            bx + 4, by + 5, BALL_R * 1.7
-          );
+          const sh = ctx.createRadialGradient(bx + 4, by + 5, BALL_R * 0.2, bx + 4, by + 5, BALL_R * 1.7);
           sh.addColorStop(0, "rgba(0,0,0,0.38)");
           sh.addColorStop(0.6, "rgba(0,0,0,0.12)");
           sh.addColorStop(1, "rgba(0,0,0,0)");
@@ -416,11 +425,7 @@ export default function Laberinto() {
         ctx.save();
         ctx.globalAlpha = falling ? 1 - fallingT * 0.5 : 1;
 
-        // Cuerpo: gradiente con más rango — desde casi blanco en el highlight hasta navy profundo en sombra
-        const bg = ctx.createRadialGradient(
-          bx - r * 0.4, by - r * 0.5, r * 0.05,
-          bx + r * 0.1, by + r * 0.15, r * 1.15
-        );
+        const bg = ctx.createRadialGradient(bx - r * 0.4, by - r * 0.5, r * 0.05, bx + r * 0.1, by + r * 0.15, r * 1.15);
         bg.addColorStop(0, "#dbeafe");
         bg.addColorStop(0.18, "#93c5fd");
         bg.addColorStop(0.5, "#3b82f6");
@@ -431,11 +436,7 @@ export default function Laberinto() {
         ctx.arc(bx, by, r, 0, Math.PI * 2);
         ctx.fill();
 
-        // Especular grande (suave)
-        const spec = ctx.createRadialGradient(
-          bx - r * 0.42, by - r * 0.45, 0,
-          bx - r * 0.42, by - r * 0.45, r * 0.55
-        );
+        const spec = ctx.createRadialGradient(bx - r * 0.42, by - r * 0.45, 0, bx - r * 0.42, by - r * 0.45, r * 0.55);
         spec.addColorStop(0, "rgba(255,255,255,0.85)");
         spec.addColorStop(0.4, "rgba(255,255,255,0.3)");
         spec.addColorStop(1, "rgba(255,255,255,0)");
@@ -444,7 +445,6 @@ export default function Laberinto() {
         ctx.arc(bx, by, r, 0, Math.PI * 2);
         ctx.fill();
 
-        // Punto especular nítido (hot spot)
         ctx.fillStyle = "rgba(255,255,255,0.95)";
         ctx.beginPath();
         ctx.arc(bx - r * 0.42, by - r * 0.48, r * 0.13, 0, Math.PI * 2);
@@ -453,21 +453,69 @@ export default function Laberinto() {
         ctx.restore();
       }
     }
+
+    // Celebrating overlay (+10)
+    if (celebrating) {
+      const elapsed = t - celebrateStartTime;
+      const fadeIn = Math.min(1, elapsed / 150);
+      const fadeOut = elapsed > 550 ? Math.max(0, 1 - (elapsed - 550) / 200) : 1;
+      const alpha = fadeIn * fadeOut;
+      ctx.fillStyle = `rgba(255,255,255,${alpha * 0.55})`;
+      ctx.fillRect(0, 0, BOARD_W, BOARD_H);
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = "#3b82f6";
+      ctx.font = `bold ${Math.round(CELL * 0.55)}px sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("+10", BOARD_W / 2, BOARD_H / 2);
+      ctx.restore();
+    }
+  }
+
+  function resetMazeState() {
+    const state = g.current;
+    const { maze, goalX, goalY, holes } = initMaze();
+    state.maze = maze;
+    state.goalX = goalX;
+    state.goalY = goalY;
+    state.holes = holes;
+    state.segs = buildSegs(state.maze);
+    state.bx = START_X; state.by = START_Y;
+    state.vx = 0; state.vy = 0;
+    state.tiltX = 0; state.tiltY = 0;
+    state.trail = [];
+    state.holeCountThisMaze = 0;
+    state.falling = false;
+    state.celebrating = false;
+    state.idle = true;
+    if (boardRef.current) boardRef.current.style.transform = "";
   }
 
   function startLoop() {
     const state = g.current;
 
     loopRef.current = function loop(time: number) {
-      if (state.won) { draw(); return; }
+      // Celebrating — breve pausa entre laberintos
+      if (state.celebrating) {
+        if (time - state.celebrateStartTime > 900) {
+          state.celebrating = false;
+          resetMazeState();
+        }
+        draw(time);
+        state.animId = requestAnimationFrame(loopRef.current);
+        return;
+      }
+
+      if (state.gameOver) { draw(time); return; }
 
       // Fall animation
       if (state.falling) {
-        const t = Math.min((time - state.fallTime) / 500, 1);
-        state.fallingT = t;
+        const ft = Math.min((time - state.fallTime) / 500, 1);
+        state.fallingT = ft;
         state.bx += (state.holeTargetX - state.bx) * 0.12;
         state.by += (state.holeTargetY - state.by) * 0.12;
-        if (t >= 1) {
+        if (ft >= 1) {
           state.falling = false;
           state.bx = START_X; state.by = START_Y;
           state.vx = 0; state.vy = 0;
@@ -475,7 +523,7 @@ export default function Laberinto() {
           state.idle = true;
           if (boardRef.current) boardRef.current.style.transform = "";
         }
-        draw();
+        draw(time);
         state.animId = requestAnimationFrame(loopRef.current);
         return;
       }
@@ -489,7 +537,7 @@ export default function Laberinto() {
           state.startTime = time;
           state.lastTime = time;
         } else {
-          draw();
+          draw(time);
           state.animId = requestAnimationFrame(loopRef.current);
           return;
         }
@@ -498,7 +546,22 @@ export default function Laberinto() {
       const dt = Math.min((time - state.lastTime) / 1000, 0.033);
       state.lastTime = time;
 
-      // Tilt: giroscopio > ratón > D-pad
+      // Timer
+      state.timeLeft = Math.max(0, state.timeLeft - dt);
+      const newInt = Math.ceil(state.timeLeft);
+      if (newInt !== state.lastTimerInt) {
+        state.lastTimerInt = newInt;
+        setTimeLeft(newInt);
+      }
+      if (state.timeLeft <= 0) {
+        state.gameOver = true;
+        setScore(state.score);
+        setGameOver(true);
+        draw(time);
+        return;
+      }
+
+      // Tilt
       if (state.hasOrient) {
         const targetY = Math.max(-MAX_TILT, Math.min(MAX_TILT, state.orientY));
         const targetX = Math.max(-MAX_TILT, Math.min(MAX_TILT, state.orientX));
@@ -539,10 +602,29 @@ export default function Laberinto() {
         state.bx, state.by, state.vx, state.vy, state.segs
       );
 
+      // Trail
+      const lastT = state.trail[state.trail.length - 1];
+      if (!lastT || Math.hypot(state.bx - lastT.x, state.by - lastT.y) > 4) {
+        state.trail.push({ x: state.bx, y: state.by });
+        if (state.trail.length > 30) state.trail.shift();
+      }
+
       // Hole detection
-      for (const hole of state.holes) {
+      for (let hi = 0; hi < state.holes.length; hi++) {
+        const hole = state.holes[hi];
         const dx = state.bx - hole.cx, dy = state.by - hole.cy;
-        if (Math.sqrt(dx * dx + dy * dy) < CELL * 0.38) {
+        if (Math.sqrt(dx * dx + dy * dy) < hole.radius * 0.95) {
+          hole.fallCount++;
+          const penalties = [3, 2, 1, 0, 0];
+          const penalty = penalties[hole.fallCount - 1] ?? 0;
+          state.score -= penalty;
+          state.trail = [];
+          setScore(state.score);
+          if (hole.fallCount >= 5) {
+            state.holes = state.holes.filter((_, i) => i !== hi);
+          } else if (hole.fallCount >= 3) {
+            hole.radius *= 0.7;
+          }
           state.falling = true;
           state.fallTime = time;
           state.fallingT = 0;
@@ -553,15 +635,18 @@ export default function Laberinto() {
       }
 
       // Win
-      if (!state.falling) {
+      if (!state.falling && !state.celebrating) {
         const dx = state.bx - state.goalX, dy = state.by - state.goalY;
         if (Math.sqrt(dx * dx + dy * dy) < CELL * 0.3) {
-          state.won = true;
-          setWon(true);
+          state.score += 10;
+          state.celebrating = true;
+          state.celebrateStartTime = time;
+          state.holeCountThisMaze = 0;
+          setScore(state.score);
         }
       }
 
-      draw();
+      draw(time);
       state.animId = requestAnimationFrame(loopRef.current);
     };
 
@@ -571,29 +656,47 @@ export default function Laberinto() {
     });
   }
 
-  function restart() {
+  function fullRestart() {
     const state = g.current;
     cancelAnimationFrame(state.animId);
-    const { maze, goalX, goalY, holes } = initState();
-    state.maze = maze;
-    state.goalX = goalX;
-    state.goalY = goalY;
-    state.holes = holes;
-    state.segs = buildSegs(state.maze);
-    state.bx = START_X; state.by = START_Y;
-    state.vx = 0; state.vy = 0;
-    state.tiltX = 0; state.tiltY = 0;
+    resetMazeState();
+    state.score = 0;
+    state.timeLeft = GAME_DURATION;
+    state.lastTimerInt = GAME_DURATION;
+    state.gameOver = false;
     Object.assign(state.keys, { up: false, down: false, left: false, right: false });
     state.hasMouse = false;
     state.orientX = 0; state.orientY = 0;
     state.hasOrient = false;
     state.orientRefBeta = 0; state.orientRefGamma = 0;
-    state.idle = true;
-    state.won = false;
-    state.falling = false;
-    if (boardRef.current) boardRef.current.style.transform = "";
-    setWon(false);
+    setScore(0);
+    setTimeLeft(GAME_DURATION);
+    setGameOver(false);
+    setSubmitted(false);
+    setAlias("");
+    setRanking(null);
     startLoop();
+  }
+
+  useEffect(() => {
+    if (!gameOver) return;
+    fetch("/api/ranking/laberinto")
+      .then(r => r.json())
+      .then(data => setRanking(data));
+  }, [gameOver]);
+
+  async function submitScore(e: React.FormEvent) {
+    e.preventDefault();
+    if (!alias.trim()) return;
+    setSubmitting(true);
+    const data = await fetch("/api/ranking/laberinto", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: alias.trim(), score: g.current.score }),
+    }).then(r => r.json());
+    setRanking(data);
+    setSubmitted(true);
+    setSubmitting(false);
   }
 
   const attachOrientListener = useCallback(() => {
@@ -711,11 +814,123 @@ export default function Laberinto() {
     );
   }
 
+  const scoreColor = score < 0 ? "#ef4444" : "#3b82f6";
+  const timerColor = timeLeft <= 10 ? "#ef4444" : "#9ca3af";
+
+  const gameOverOverlay = gameOver ? (
+    <div style={{
+      position: "absolute", inset: 0,
+      background: "rgba(255,255,255,0.93)",
+      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+      gap: "1rem", zIndex: 10,
+    }}>
+      <p style={{ color: "#111827", fontSize: "1rem", fontWeight: 700, letterSpacing: "-0.02em" }}>
+        ¡Tiempo!
+      </p>
+      <p style={{ color: scoreColor, fontSize: "2rem", fontWeight: 800, fontFamily: "var(--font-geist-mono, monospace)", lineHeight: 1 }}>
+        {score >= 0 ? "+" : ""}{score}
+        <span style={{ fontSize: "1rem", fontWeight: 400, color: "#9ca3af", marginLeft: "0.4rem" }}>pts</span>
+      </p>
+
+      {!submitted ? (
+        <>
+          <form onSubmit={submitScore} style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+            <input
+              type="text"
+              value={alias}
+              onChange={e => setAlias(e.target.value)}
+              placeholder="Tu nombre"
+              maxLength={20}
+              autoFocus
+              style={{
+                padding: "0.35rem 0.65rem",
+                border: "1px solid rgba(96,165,250,0.4)",
+                borderRadius: "6px",
+                fontSize: "0.85rem",
+                outline: "none",
+                color: "#111827",
+                background: "#f8faff",
+                fontFamily: "var(--font-geist-mono, monospace)",
+                width: "130px",
+              }}
+            />
+            <button
+              type="submit"
+              disabled={submitting || !alias.trim()}
+              style={{
+                padding: "0.35rem 0.85rem",
+                background: "#3b82f6",
+                color: "#fff",
+                border: "none",
+                borderRadius: "6px",
+                fontSize: "0.85rem",
+                cursor: alias.trim() && !submitting ? "pointer" : "default",
+                opacity: alias.trim() && !submitting ? 1 : 0.4,
+                fontFamily: "var(--font-geist-mono, monospace)",
+              }}
+            >
+              {submitting ? "..." : "Guardar"}
+            </button>
+          </form>
+          <button
+            onClick={fullRestart}
+            style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", fontSize: "0.8rem", fontFamily: "var(--font-geist-mono, monospace)" }}
+          >
+            Jugar de nuevo
+          </button>
+        </>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.6rem" }}>
+          {ranking && (
+            <p style={{ color: "#9ca3af", fontSize: "0.75rem", fontFamily: "var(--font-geist-mono, monospace)" }}>
+              Top: {ranking.top[0]?.name ?? "—"} ({ranking.top[0]?.score ?? 0} pts)
+            </p>
+          )}
+          <div style={{ display: "flex", gap: "1rem" }}>
+            <a
+              href="/juegos/laberinto/ranking"
+              style={{ color: "#3b82f6", fontSize: "0.85rem", fontFamily: "var(--font-geist-mono, monospace)", textDecoration: "none" }}
+            >
+              Ver ranking →
+            </a>
+            <button
+              onClick={fullRestart}
+              style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", fontSize: "0.85rem", fontFamily: "var(--font-geist-mono, monospace)" }}
+            >
+              Repetir
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  ) : null;
+
+  const header = (
+    <div style={{ display: "flex", alignItems: "center", gap: "1.25rem" }}>
+      <h1 style={{ color: "#111827", fontSize: "1.5rem", fontWeight: 800, letterSpacing: "-0.03em" }}>Laberinto</h1>
+      <span style={{ color: timerColor, fontSize: "0.85rem", fontVariantNumeric: "tabular-nums", fontFamily: "var(--font-geist-mono, monospace)", minWidth: "2.5rem" }}>
+        {timeLeft}s
+      </span>
+      <span style={{ color: scoreColor, fontSize: "0.85rem", fontFamily: "var(--font-geist-mono, monospace)", fontWeight: 600 }}>
+        {score >= 0 ? "+" : ""}{score}
+      </span>
+      <a
+        href="/juegos/laberinto/ranking"
+        style={{ fontSize: "0.75rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", textDecoration: "none", transition: "color 0.2s" }}
+        onMouseEnter={e => (e.currentTarget.style.color = "#3b82f6")}
+        onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}
+      >
+        ranking
+      </a>
+    </div>
+  );
+
   const boardEl = (
     <div
-      style={{ width: BOARD_W * scale, height: BOARD_H * scale, flexShrink: 0 }}
+      style={{ width: BOARD_W * scale, height: BOARD_H * scale, flexShrink: 0, position: "relative" }}
       className="touch-none"
     >
+      {gameOverOverlay}
       <div style={{ perspective: "600px", transform: `scale(${scale})`, transformOrigin: "top left" }}>
         <div
           ref={boardRef}
@@ -751,12 +966,22 @@ export default function Laberinto() {
       <main style={{ background: "#ffffff", height: "100dvh", overflow: "hidden" }} className="flex flex-row items-center justify-center gap-2 px-2">
         <div style={{ width: 120, flexShrink: 0 }} className="flex flex-col items-center justify-center gap-3 h-full">
           <h1 style={{ color: "#111827", fontSize: "1.1rem", fontWeight: 800, letterSpacing: "-0.03em", textAlign: "center" }}>Laberinto</h1>
+          <div style={{ display: "flex", gap: "0.6rem", alignItems: "center" }}>
+            <span style={{ color: timerColor, fontSize: "0.8rem", fontFamily: "var(--font-geist-mono, monospace)" }}>{timeLeft}s</span>
+            <span style={{ color: scoreColor, fontSize: "0.8rem", fontFamily: "var(--font-geist-mono, monospace)", fontWeight: 600 }}>{score >= 0 ? "+" : ""}{score}</span>
+          </div>
+          <a
+            href="/juegos/laberinto/ranking"
+            style={{ fontSize: "0.65rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", textDecoration: "none", transition: "color 0.2s" }}
+            onMouseEnter={e => (e.currentTarget.style.color = "#3b82f6")}
+            onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}
+          >
+            ranking
+          </a>
           <p style={{ fontSize: "0.65rem", color: "#d1d5db", textAlign: "center", lineHeight: 1.4 }}>
-            {orientState === "on"
-              ? "Toca el tablero para calibrar · Inclina el móvil"
-              : "Mueve el ratón para inclinar el tablero"}
+            {orientState === "on" ? "Toca para calibrar · Inclina el móvil" : "Mueve el ratón para inclinar"}
           </p>
-          <a href="/" style={{ fontSize: "0.7rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", textDecoration: "none", transition: "color 0.2s" }}
+          <a href="/" style={{ fontSize: "0.7rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", textDecoration: "none" }}
             onMouseEnter={e => (e.currentTarget.style.color = "#3b82f6")}
             onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}>
             pacr.es
@@ -766,7 +991,7 @@ export default function Laberinto() {
         {boardEl}
 
         <div style={{ width: 120, flexShrink: 0 }} className="flex flex-col items-center justify-center gap-3 h-full">
-          <button onClick={() => restart()} className="text-gray-400 hover:text-gray-600 text-xs transition-colors">
+          <button onClick={fullRestart} className="text-gray-400 hover:text-gray-600 text-xs transition-colors">
             nuevo laberinto
           </button>
           {orientState !== "on" && (
@@ -790,12 +1015,12 @@ export default function Laberinto() {
   }
 
   return (
-    <main style={{ background: "#ffffff", minHeight: "100dvh", position: "relative" }} className="flex flex-col items-center justify-start px-4 py-12 gap-10 overflow-x-auto">
-      <h1 style={{ color: "#111827", fontSize: "1.5rem", fontWeight: 800, letterSpacing: "-0.03em" }}>Laberinto</h1>
+    <main style={{ background: "#ffffff", minHeight: "100dvh", position: "relative" }} className="flex flex-col items-center justify-start px-4 py-12 gap-8 overflow-x-auto">
+      {header}
 
       {boardEl}
 
-      <button onClick={() => restart()} className="text-gray-400 hover:text-gray-600 text-sm transition-colors">
+      <button onClick={fullRestart} className="text-gray-400 hover:text-gray-600 text-sm transition-colors">
         nuevo laberinto
       </button>
 
