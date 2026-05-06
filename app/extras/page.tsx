@@ -14,7 +14,7 @@ type Extra = {
   cta: string;
 };
 
-// Orden: Webs → Juegos → Trucos → Easter eggs
+// Orden: Webs → Juegos → Bromas → Easter eggs
 const BASE_EXTRAS: Extra[] = [
   {
     id: "lucas",
@@ -45,16 +45,16 @@ const BASE_EXTRAS: Extra[] = [
   },
   {
     id: "circulo",
-    label: "Truco",
+    label: "Broma",
     title: "Círculo perfecto",
     description: "Dibuja el círculo más perfecto que puedas. A ver qué pasa.",
     status: "available",
-    href: "/trucos/circulo",
+    href: "/bromas/circulo",
     cta: "Intentarlo →",
   },
   {
     id: "cursores",
-    label: "Truco",
+    label: "Broma",
     title: "Cuatro cursores",
     description: "Algo no cuadra en esta pantalla.",
     status: "available",

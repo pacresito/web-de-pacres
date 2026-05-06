@@ -450,7 +450,7 @@ export default function Espiral() {
       </div>
 
       <a
-        href="/"
+        href="/extras"
         style={{
           marginTop: "auto",
           paddingTop: "1.5rem",

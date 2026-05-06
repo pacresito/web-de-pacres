@@ -986,7 +986,7 @@ export default function Laberinto() {
           <p style={{ fontSize: "0.65rem", color: "#d1d5db", textAlign: "center", lineHeight: 1.4 }}>
             {orientState === "on" ? "Toca para calibrar · Inclina el móvil" : "Mueve el ratón para inclinar"}
           </p>
-          <a href="/" style={{ fontSize: "0.7rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", textDecoration: "none" }}
+          <a href="/extras" style={{ fontSize: "0.7rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", textDecoration: "none" }}
             onMouseEnter={e => (e.currentTarget.style.color = "#3b82f6")}
             onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}>
             pacr.es
@@ -1052,7 +1052,7 @@ export default function Laberinto() {
             ? "Toca el tablero para calibrar · Inclina el móvil para mover la bola"
             : "Mueve el ratón para inclinar el tablero"}
         </p>
-        <a href="/" style={{ fontSize: "0.75rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", textDecoration: "none", transition: "color 0.2s" }}
+        <a href="/extras" style={{ fontSize: "0.75rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", textDecoration: "none", transition: "color 0.2s" }}
           onMouseEnter={e => (e.currentTarget.style.color = "#3b82f6")}
           onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}>
           pacr.es
