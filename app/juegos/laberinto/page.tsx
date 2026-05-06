@@ -952,9 +952,26 @@ export default function Laberinto() {
             width={BOARD_W}
             height={BOARD_H}
             style={{ display: "block" }}
-            onTouchStart={() => {
-              if (orientState === "on") calibrateOrientation();
-              else if (orientState === "needs-permission") requestOrientPermission();
+            onTouchStart={(e) => {
+              if (orientState === "on") { calibrateOrientation(); return; }
+              if (orientState === "needs-permission") { requestOrientPermission(); return; }
+              const touch = e.touches[0];
+              if (!touch) return;
+              g.current.mouseX = touch.clientX;
+              g.current.mouseY = touch.clientY;
+              g.current.hasMouse = true;
+            }}
+            onTouchMove={(e) => {
+              if (orientState === "on") return;
+              const touch = e.touches[0];
+              if (!touch) return;
+              g.current.mouseX = touch.clientX;
+              g.current.mouseY = touch.clientY;
+              g.current.hasMouse = true;
+            }}
+            onTouchEnd={() => {
+              if (orientState === "on") return;
+              g.current.hasMouse = false;
             }}
           />
           <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: 28, background: "linear-gradient(to bottom, #1e3a8a, #2563eb 45%, #3b82f6)", transformOrigin: "top center", transform: "rotateX(90deg)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.3)" }} />
@@ -984,7 +1001,7 @@ export default function Laberinto() {
             ranking
           </a>
           <p style={{ fontSize: "0.65rem", color: "#d1d5db", textAlign: "center", lineHeight: 1.4 }}>
-            {orientState === "on" ? "Toca para calibrar · Inclina el móvil" : "Mueve el ratón para inclinar"}
+            {orientState === "on" ? "Toca para calibrar · Inclina el móvil" : "Mueve el ratón o toca para inclinar"}
           </p>
           <a href="/extras" style={{ fontSize: "0.7rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", textDecoration: "none" }}
             onMouseEnter={e => (e.currentTarget.style.color = "#3b82f6")}
@@ -1050,7 +1067,7 @@ export default function Laberinto() {
         <p style={{ fontSize: "0.75rem", color: "#d1d5db" }}>
           {orientState === "on"
             ? "Toca el tablero para calibrar · Inclina el móvil para mover la bola"
-            : "Mueve el ratón para inclinar el tablero"}
+            : "Mueve el ratón o toca el tablero para inclinar"}
         </p>
         <a href="/extras" style={{ fontSize: "0.75rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", textDecoration: "none", transition: "color 0.2s" }}
           onMouseEnter={e => (e.currentTarget.style.color = "#3b82f6")}
