@@ -31,8 +31,10 @@ async function getAll() {
     all.push(parseEntry(entries[i], Number(entries[i + 1])));
   }
   all.sort((a, b) => b.score - a.score);
-  const top = all.slice(0, 5);
-  const bottom = all.length > 5 ? all.slice(-5).reverse() : [...all].reverse().slice(0, 5);
+  const positiveAll = all.filter(e => e.score > 0);
+  const negativeAll = all.filter(e => e.score < 0);
+  const top = positiveAll.slice(0, 5);
+  const bottom = negativeAll.slice(-5).reverse();
   return { top, bottom };
 }
 

@@ -271,6 +271,8 @@ export default function Laberinto() {
     celebrating: false,
     celebrateStartTime: 0,
     holeCountThisMaze: 0,
+    holeDisappearedThisMaze: false,
+    lastMazePoints: 10,
     trail: [] as { x: number; y: number }[],
     startTime: 0,
     lastTime: 0,
@@ -288,7 +290,7 @@ export default function Laberinto() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     const t = time ?? Date.now();
-    const { bx, by, segs, goalX, goalY, holes, falling, fallingT, trail, celebrating, celebrateStartTime, gameOver: go } = g.current;
+    const { bx, by, segs, goalX, goalY, holes, falling, fallingT, trail, celebrating, celebrateStartTime, lastMazePoints, gameOver: go } = g.current;
 
     ctx.clearRect(0, 0, BOARD_W, BOARD_H);
 
@@ -468,7 +470,7 @@ export default function Laberinto() {
       ctx.font = `bold ${Math.round(CELL * 0.55)}px sans-serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText("+10", BOARD_W / 2, BOARD_H / 2);
+      ctx.fillText(`+${lastMazePoints}`, BOARD_W / 2, BOARD_H / 2);
       ctx.restore();
     }
   }
@@ -486,6 +488,8 @@ export default function Laberinto() {
     state.tiltX = 0; state.tiltY = 0;
     state.trail = [];
     state.holeCountThisMaze = 0;
+    state.holeDisappearedThisMaze = false;
+    state.lastMazePoints = 10;
     state.falling = false;
     state.celebrating = false;
     state.idle = true;
@@ -616,15 +620,17 @@ export default function Laberinto() {
         const dx = state.bx - hole.cx, dy = state.by - hole.cy;
         if (Math.sqrt(dx * dx + dy * dy) < hole.radius * 0.95) {
           hole.fallCount++;
-          const penalties = [3, 2, 1, 0, 0];
+          // 1ª: -3 · 2ª: -2 · 3ª: -1 (+ encoge al 70%) · 4ª: desaparece (0 pts)
+          const penalties = [3, 2, 1, 0];
           const penalty = penalties[hole.fallCount - 1] ?? 0;
           state.score -= penalty;
           state.trail = [];
           setScore(state.score);
-          if (hole.fallCount >= 5) {
+          if (hole.fallCount >= 4) {
             state.holes = state.holes.filter((_, i) => i !== hi);
-          } else if (hole.fallCount >= 3) {
-            hole.radius *= 0.85;
+            state.holeDisappearedThisMaze = true;
+          } else if (hole.fallCount === 3) {
+            hole.radius *= 0.7;
           }
           state.falling = true;
           state.fallTime = time;
@@ -639,7 +645,9 @@ export default function Laberinto() {
       if (!state.falling && !state.celebrating) {
         const dx = state.bx - state.goalX, dy = state.by - state.goalY;
         if (Math.sqrt(dx * dx + dy * dy) < CELL * 0.3) {
-          state.score += 10;
+          const pts = state.holeDisappearedThisMaze ? 0 : 10;
+          state.score += pts;
+          state.lastMazePoints = pts;
           state.celebrating = true;
           state.celebrateStartTime = time;
           state.holeCountThisMaze = 0;

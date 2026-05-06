@@ -368,7 +368,7 @@ export default function Espiral() {
 
   return (
     <div
-      className="flex flex-col items-center justify-center gap-4 py-8"
+      className="flex flex-col items-center justify-start gap-4 py-8"
       style={{ background: "#ffffff", position: "relative", minHeight: "100dvh" }}
     >
       <div className="flex items-center gap-6">
@@ -452,7 +452,9 @@ export default function Espiral() {
       <a
         href="/"
         style={{
-          position: "absolute", bottom: "1.5rem", left: "50%", transform: "translateX(-50%)",
+          marginTop: "auto",
+          paddingTop: "1.5rem",
+          paddingBottom: "0.5rem",
           fontSize: "0.75rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)",
           textDecoration: "none", transition: "color 0.2s",
         }}
@@ -504,7 +506,7 @@ function Board({
 
 function Overlay({ children }: { children: React.ReactNode }) {
   return (
-    <div className="absolute inset-0 flex flex-col items-center justify-center" style={{ borderRadius: "8px", background: "rgba(255,255,255,0.85)", backdropFilter: "blur(4px)" }}>
+    <div className="absolute inset-0 flex flex-col items-center justify-center" style={{ borderRadius: "8px", background: "rgba(255,255,255,0.75)", backdropFilter: "blur(4px)" }}>
       {children}
     </div>
   );

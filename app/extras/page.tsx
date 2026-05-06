@@ -1,42 +1,36 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
-const EXTRAS = [
+type Extra = {
+  id: string;
+  label: string;
+  title: string;
+  description: string;
+  hint?: string;
+  status: "available" | "hidden";
+  href: string | null;
+  cta: string;
+};
+
+// Orden: Webs → Juegos → Trucos → Easter eggs
+const BASE_EXTRAS: Extra[] = [
   {
     id: "lucas",
     label: "Web",
     title: "Dr. Lucas Crespo",
     description: "El perfil profesional de un ingeniero de cohetes de 6 años.",
-    status: "available" as const,
+    status: "available",
     href: "/webs/lucas",
     cta: "Ver perfil →",
-  },
-  {
-    id: "circulo",
-    label: "Truco",
-    title: "Círculo perfecto",
-    description: "Dibuja el círculo más perfecto que puedas. A ver qué pasa.",
-    status: "available" as const,
-    href: "/trucos/circulo",
-    cta: "Intentarlo →",
-  },
-  {
-    id: "cursores",
-    label: "Truco",
-    title: "Cuatro cursores",
-    description: "Algo no cuadra en esta pantalla.",
-    status: "available" as const,
-    href: "/trucos/cursores",
-    cta: "Descubrirlo →",
   },
   {
     id: "espiral",
     label: "Juego",
     title: "Espiral",
     description: "Dos espirales, dos destinos, una sola mente.",
-    status: "available" as const,
+    status: "available",
     href: "/juegos/espiral",
     cta: "Jugar →",
   },
@@ -45,9 +39,27 @@ const EXTRAS = [
     label: "Juego",
     title: "Laberinto",
     description: "Navega el laberinto. Inclina el móvil o usa el ratón.",
-    status: "available" as const,
+    status: "available",
     href: "/juegos/laberinto",
     cta: "Jugar →",
+  },
+  {
+    id: "circulo",
+    label: "Truco",
+    title: "Círculo perfecto",
+    description: "Dibuja el círculo más perfecto que puedas. A ver qué pasa.",
+    status: "available",
+    href: "/trucos/circulo",
+    cta: "Intentarlo →",
+  },
+  {
+    id: "cursores",
+    label: "Truco",
+    title: "Cuatro cursores",
+    description: "Algo no cuadra en esta pantalla.",
+    status: "available",
+    href: "/trucos/cursores",
+    cta: "Descubrirlo →",
   },
   {
     id: "color",
@@ -55,7 +67,7 @@ const EXTRAS = [
     title: "Cambio de tema",
     description: "Algo cambia si aguantas suficiente tiempo.",
     hint: "Deja el botón del ratón pulsado en la página principal durante unos segundos.",
-    status: "hidden" as const,
+    status: "hidden",
     href: "/",
     cta: "Ir a probarlo →",
   },
@@ -65,14 +77,39 @@ const EXTRAS = [
     title: "Las letras caen",
     description: "La página entera se desintegra si sabes dónde pinchar.",
     hint: "Haz clic en «pacr.es» en el footer de la página principal.",
-    status: "hidden" as const,
+    status: "hidden",
     href: "/",
     cta: "Ir a probarlo →",
   },
 ];
 
+const PLACEHOLDER: Extra = {
+  id: "placeholder",
+  label: "Web",
+  title: "¿Y aquí qué va?",
+  description: "Buena pregunta. Hay algo en el horno, pero todavía no ha salido. O igual sí y no me he enterado.",
+  status: "available",
+  href: null,
+  cta: "En construcción",
+};
+
 export default function EasterEggs() {
   const observerRef = useRef<IntersectionObserver | null>(null);
+  const [twoColumns, setTwoColumns] = useState(false);
+
+  // Detectar si el grid usa 2 columnas (≥640px)
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 640px)");
+    setTwoColumns(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setTwoColumns(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+
+  // Placeholder solo si 2 columnas y número impar de elementos
+  const displayExtras = twoColumns && BASE_EXTRAS.length % 2 !== 0
+    ? [BASE_EXTRAS[0], PLACEHOLDER, ...BASE_EXTRAS.slice(1)]
+    : BASE_EXTRAS;
 
   useEffect(() => {
     observerRef.current = new IntersectionObserver(
@@ -223,7 +260,7 @@ export default function EasterEggs() {
 
         {/* Grid */}
         <div className="egg-grid">
-          {EXTRAS.map((egg, i) => (
+          {displayExtras.map((egg, i) => (
             <div
               key={egg.id}
               className={`egg-card reveal reveal-delay-${(i % 4) + 1}`}
@@ -242,9 +279,15 @@ export default function EasterEggs() {
                 <p className="egg-hint">{egg.hint}</p>
               )}
 
-              <Link href={egg.href} className="egg-cta">
-                {egg.cta}
-              </Link>
+              {egg.href !== null ? (
+                <Link href={egg.href} className="egg-cta">
+                  {egg.cta}
+                </Link>
+              ) : (
+                <span className="egg-cta" style={{ opacity: 0.45, cursor: "default" }}>
+                  {egg.cta}
+                </span>
+              )}
             </div>
           ))}
         </div>

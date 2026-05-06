@@ -5,7 +5,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 type GameState = "idle" | "playing" | "lost" | "won";
 
 const TARGET_R = 28;
-const LERP_ALPHAS = [0.07, 0.04, 0.02];
+const LERP_ALPHAS = [0.10, 0.07, 0.04];
+// Si alguna réplica está a menos de esta distancia del cursor real al hacer clic → fallo
+const FAKE_PROXIMITY = 38;
 
 function CursorIcon() {
   return (
@@ -42,6 +44,8 @@ export default function CuatroCursores() {
   const winkingIdxRef = useRef(-1);
   const [winkingIdx, setWinkingIdx] = useState(-1);
 
+  const celebrationEmojiEl = useRef<HTMLDivElement>(null);
+
   const targetEl = useRef<HTMLDivElement>(null);
   const targetAngle = useRef(0);
   const targetPos = useRef({ x: 0, y: 0 });
@@ -64,21 +68,42 @@ export default function CuatroCursores() {
 
   const loop = useCallback(() => {
     const s = stateRef.current;
-    if (s === "won") return;
 
-    // Real cursor
+    // Real cursor always tracks mouse
     if (cursorRealEl.current) {
       cursorRealEl.current.style.left = mouse.current.x + "px";
       cursorRealEl.current.style.top = mouse.current.y + "px";
     }
 
+    // Celebration emoji follows real cursor in won state
+    if (s === "won") {
+      if (celebrationEmojiEl.current) {
+        celebrationEmojiEl.current.style.left = mouse.current.x + 18 + "px";
+        celebrationEmojiEl.current.style.top = mouse.current.y - 8 + "px";
+      }
+      animRef.current = requestAnimationFrame(loop);
+      return;
+    }
+
     if (s === "playing" || s === "idle") {
-      // Lerp fakes
+      const t = Date.now() / 1000;
+      // Lerp fakes — fakes 0 and 1 follow faster and add a small oscillation
       fakes.current.forEach((f, i) => {
         f.x += (mouse.current.x - f.x) * LERP_ALPHAS[i];
         f.y += (mouse.current.y - f.y) * LERP_ALPHAS[i];
         const el = fakeEls[i].current;
-        if (el) { el.style.left = f.x + "px"; el.style.top = f.y + "px"; }
+        if (el) {
+          let ox = 0, oy = 0;
+          if (i === 0) {
+            ox = Math.sin(t * 1.5) * 20;
+            oy = Math.cos(t * 1.1 + 0.8) * 20;
+          } else if (i === 1) {
+            ox = Math.sin(t * 0.9 + 1.0) * 20;
+            oy = Math.cos(t * 1.4) * 20;
+          }
+          el.style.left = (f.x + ox) + "px";
+          el.style.top = (f.y + oy) + "px";
+        }
       });
 
       // Move target along lissajous (figure-8)
@@ -183,13 +208,39 @@ export default function CuatroCursores() {
       const realDist = Math.hypot(src.clientX - tx, src.clientY - ty);
 
       if (realDist <= TARGET_R) {
+        // 2.1: solo ganas si ninguna réplica está cerca del cursor real
+        const fakeTooClose = fakes.current.some(
+          f => Math.hypot(f.x - src.clientX, f.y - src.clientY) < FAKE_PROXIMITY
+        );
+        if (fakeTooClose) {
+          // Wink en la réplica más cercana al cursor real
+          let closest = -1, closestD = Infinity;
+          fakes.current.forEach((f, i) => {
+            const d = Math.hypot(f.x - src.clientX, f.y - src.clientY);
+            if (d < closestD) { closestD = d; closest = i; }
+          });
+          if (closest >= 0) {
+            winkingIdxRef.current = closest;
+            setWinkingIdx(closest);
+            setAttempts(n => n + 1);
+            go("lost");
+            setTimeout(() => {
+              winkingIdxRef.current = -1;
+              setWinkingIdx(-1);
+              go("playing");
+            }, 2000);
+          }
+          return;
+        }
+        // 2.2: cancelamos el loop PERO lo reiniciamos para seguir el cursor en won
         cancelAnimationFrame(animRef.current);
         fakes.current.forEach(f => explodeAt(f.x, f.y));
         go("won");
+        animRef.current = requestAnimationFrame(loop);
         return;
       }
 
-      // Check if user clicked thinking a fake was the real cursor on target
+      // Si una réplica está sobre el objetivo cuando el usuario hace clic → wink
       let closestIdx = -1;
       let closestDist = Infinity;
       fakes.current.forEach((f, i) => {
@@ -267,14 +318,30 @@ export default function CuatroCursores() {
         </div>
       )}
 
-      {/* Cursors */}
+      {/* Real cursor — always visible */}
+      <div ref={cursorRealEl} style={{ position: "fixed", left: -200, top: -200, pointerEvents: "none", zIndex: 9998 }}><CursorIcon /></div>
+
+      {/* Fakes — hidden during celebration */}
       {gameState !== "won" && (
         <>
-          <div ref={cursorRealEl} style={{ position: "fixed", left: -200, top: -200, pointerEvents: "none", zIndex: 9998 }}><CursorIcon /></div>
-          <div ref={fake1El}      style={{ position: "fixed", left: -200, top: -200, pointerEvents: "none", zIndex: 9997 }}><CursorIcon /></div>
-          <div ref={fake2El}      style={{ position: "fixed", left: -200, top: -200, pointerEvents: "none", zIndex: 9996 }}><CursorIcon /></div>
-          <div ref={fake3El}      style={{ position: "fixed", left: -200, top: -200, pointerEvents: "none", zIndex: 9995 }}><CursorIcon /></div>
+          <div ref={fake1El} style={{ position: "fixed", left: -200, top: -200, pointerEvents: "none", zIndex: 9997 }}><CursorIcon /></div>
+          <div ref={fake2El} style={{ position: "fixed", left: -200, top: -200, pointerEvents: "none", zIndex: 9996 }}><CursorIcon /></div>
+          <div ref={fake3El} style={{ position: "fixed", left: -200, top: -200, pointerEvents: "none", zIndex: 9995 }}><CursorIcon /></div>
         </>
+      )}
+
+      {/* Celebration emoji on the real cursor when won */}
+      {gameState === "won" && (
+        <div
+          ref={celebrationEmojiEl}
+          style={{
+            position: "fixed", left: -200, top: -200,
+            fontSize: "1.4rem", pointerEvents: "none", zIndex: 9999,
+            animation: "winkFade 0.15s ease",
+          }}
+        >
+          😎
+        </div>
       )}
 
       {/* Wink emoji on the fake that fooled the user */}
@@ -305,9 +372,9 @@ export default function CuatroCursores() {
           <p style={{ fontSize: "0.78rem", color: "#d1d5db", fontFamily: "var(--font-geist-mono, monospace)" }}>
             Haz clic en el objetivo con el cursor correcto
           </p>
-          {attempts === 1 && <p style={{ fontSize: "0.68rem", color: "#d1d5db", fontFamily: "var(--font-geist-mono, monospace)" }}>Hay uno que siempre va un paso por delante...</p>}
-          {attempts === 2 && <p style={{ fontSize: "0.68rem", color: "#d1d5db", fontFamily: "var(--font-geist-mono, monospace)" }}>Mueve el ratón rápido y observa.</p>}
-          {attempts >= 3 && <p style={{ fontSize: "0.68rem", color: "#d1d5db", fontFamily: "var(--font-geist-mono, monospace)" }}>Uno responde al instante. Los otros, no.</p>}
+          {attempts === 1 && <p style={{ fontSize: "0.68rem", color: "#d1d5db", fontFamily: "var(--font-geist-mono, monospace)" }}>Tienes que estar solo en el objetivo...</p>}
+          {attempts === 2 && <p style={{ fontSize: "0.68rem", color: "#d1d5db", fontFamily: "var(--font-geist-mono, monospace)" }}>Muévete rápido. Deja a las réplicas atrás.</p>}
+          {attempts >= 3 && <p style={{ fontSize: "0.68rem", color: "#d1d5db", fontFamily: "var(--font-geist-mono, monospace)" }}>El cursor real debe llegar solo al objetivo.</p>}
         </div>
       )}
 

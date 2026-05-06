@@ -422,7 +422,12 @@ export default function Home() {
     const floor = Bodies.rectangle(window.innerWidth / 2, window.innerHeight + 30, window.innerWidth * 3, 60, { isStatic: true });
     const wallL = Bodies.rectangle(-30, window.innerHeight / 2, 60, window.innerHeight * 3, { isStatic: true });
     const wallR = Bodies.rectangle(window.innerWidth + 30, window.innerHeight / 2, 60, window.innerHeight * 3, { isStatic: true });
-    World.add(engine.world, [floor, wallL, wallR]);
+    // Techo duro por encima de todo el contenido de la página (encima de "Pablo Crespo Velasco")
+    const hardCeilingY = -(window.scrollY + 200);
+    const ceiling = Bodies.rectangle(window.innerWidth / 2, hardCeilingY - 30, window.innerWidth * 3, 60, { isStatic: true, restitution: 0.3, friction: 0.5 });
+    World.add(engine.world, [floor, wallL, wallR, ceiling]);
+    // Techo del fold: valor en px sobre el viewport — las letras pueden entrar desde arriba pero no volver a subir
+    const FOLD_CEILING_Y = -100;
 
     const bodies: Matter.Body[] = [];
     for (const d of letterData) {
@@ -476,8 +481,8 @@ export default function Home() {
       if (stopped) return;
       for (let i = 0; i < letterSpans.length; i++) {
         const b = bodies[i];
-        // Rebote en techo: solo si sale hacia arriba (permite entrar desde arriba)
-        if (b.position.y < 0 && b.velocity.y < 0) {
+        // Fold ceiling: letras pueden entrar desde arriba pero no escapar por encima de esta línea
+        if (b.position.y < FOLD_CEILING_Y && b.velocity.y < 0) {
           Body.setVelocity(b, { x: b.velocity.x * 0.9, y: -b.velocity.y * 0.5 });
         }
         const { x, y } = b.position;
