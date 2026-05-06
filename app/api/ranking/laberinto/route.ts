@@ -1,17 +1,9 @@
 import { Resend } from "resend";
 import redis from "@/lib/redis";
+import { parseEntry } from "@/lib/ranking";
 
 const KEY = process.env.NODE_ENV === "development" ? "laberinto-dev:ranking" : "laberinto:ranking";
 const resend = new Resend(process.env.RESEND_API_KEY);
-
-function parseEntry(member: string, score: number) {
-  try {
-    const parsed = JSON.parse(member);
-    return { name: parsed.name ?? member, date: parsed.date ?? null, score };
-  } catch {
-    return { name: member, date: null, score };
-  }
-}
 
 async function findExisting(normalizedName: string): Promise<{ member: string; score: number } | null> {
   const entries = await redis.zrange(KEY, 0, -1, "WITHSCORES");
@@ -68,7 +60,7 @@ export async function POST(request: Request) {
       to: "pacres.g@gmail.com",
       subject: `${normalizedName} ha jugado al Laberinto — ${score} pts`,
       text: `${normalizedName} ha conseguido ${score} puntos en el Laberinto.\n\nVer ranking: https://pacr.es/juegos/laberinto/ranking`,
-    });
+    }).catch((err) => console.error("Resend error (laberinto):", err));
   }
 
   return Response.json(await getAll());

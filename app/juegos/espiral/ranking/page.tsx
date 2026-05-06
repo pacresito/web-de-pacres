@@ -12,11 +12,13 @@ interface Entry {
 export default function Ranking() {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
-    fetch("/api/ranking")
+    fetch("/api/ranking/espiral")
       .then((r) => r.json())
-      .then((data) => { setEntries(data); setLoading(false); });
+      .then((data) => { setEntries(data); setLoading(false); })
+      .catch(() => { setError(true); setLoading(false); });
   }, []);
 
   return (
@@ -46,6 +48,8 @@ export default function Ranking() {
 
       {loading ? (
         <p style={{ color: "#9ca3af", fontSize: "0.85rem" }}>Cargando...</p>
+      ) : error ? (
+        <p style={{ color: "#9ca3af", fontSize: "0.85rem" }}>Error al cargar</p>
       ) : entries.length === 0 ? (
         <p style={{ color: "#9ca3af", fontSize: "0.85rem" }}>Sin entradas aún</p>
       ) : (

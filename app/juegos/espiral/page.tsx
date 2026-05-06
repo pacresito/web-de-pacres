@@ -350,7 +350,7 @@ export default function Espiral() {
     e.preventDefault();
     if (!alias.trim() || finalTime === null) return;
     setSubmitting(true);
-    await fetch("/api/ranking", {
+    await fetch("/api/ranking/espiral", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: alias.trim(), score: finalTime }),

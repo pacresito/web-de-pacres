@@ -21,7 +21,8 @@ export default function RankingLaberinto() {
   useEffect(() => {
     fetch("/api/ranking/laberinto")
       .then((r) => r.json())
-      .then((d) => { setData(d); setLoading(false); });
+      .then((d) => { setData(d); setLoading(false); })
+      .catch(() => setLoading(false));
   }, []);
 
   return (
