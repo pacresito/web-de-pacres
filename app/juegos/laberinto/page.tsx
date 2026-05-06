@@ -851,7 +851,7 @@ export default function Laberinto() {
               placeholder="Tu nombre"
               maxLength={20}
               autoFocus
-              autoComplete="off"
+              autoComplete="new-password"
               style={{
                 padding: "0.35rem 0.65rem",
                 border: "1px solid rgba(96,165,250,0.4)",
@@ -891,11 +891,6 @@ export default function Laberinto() {
         </>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.6rem" }}>
-          {ranking && (
-            <p style={{ color: "#9ca3af", fontSize: "0.75rem", fontFamily: "var(--font-geist-mono, monospace)" }}>
-              Top: {ranking.top[0]?.name ?? "—"} ({ranking.top[0]?.score ?? 0} pts)
-            </p>
-          )}
           <div style={{ display: "flex", gap: "1rem" }}>
             <a
               href="/juegos/laberinto/ranking"

@@ -5,9 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 type GameState = "idle" | "playing" | "lost" | "won";
 
 const TARGET_R = 28;
-const LERP_ALPHAS = [0.10, 0.07, 0.04];
-// Si alguna réplica está a menos de esta distancia del cursor real al hacer clic → fallo
-const FAKE_PROXIMITY = 38;
+const LERP_ALPHAS = [0.08, 0.06, 0.04];
 
 function CursorIcon() {
   return (
@@ -100,6 +98,9 @@ export default function CuatroCursores() {
           } else if (i === 1) {
             ox = Math.sin(t * 0.9 + 1.0) * 20;
             oy = Math.cos(t * 1.4) * 20;
+          } else {
+            ox = Math.sin(t * 1.2 + 2.1) * 20;
+            oy = Math.cos(t * 0.8 + 0.5) * 20;
           }
           el.style.left = (f.x + ox) + "px";
           el.style.top = (f.y + oy) + "px";
@@ -208,15 +209,15 @@ export default function CuatroCursores() {
       const realDist = Math.hypot(src.clientX - tx, src.clientY - ty);
 
       if (realDist <= TARGET_R) {
-        // 2.1: solo ganas si ninguna réplica está cerca del cursor real
-        const fakeTooClose = fakes.current.some(
-          f => Math.hypot(f.x - src.clientX, f.y - src.clientY) < FAKE_PROXIMITY
+        // Ganas solo si ninguna réplica está dentro de la diana en el momento del clic
+        const fakeOnTarget = fakes.current.some(
+          f => Math.hypot(f.x - tx, f.y - ty) < TARGET_R * 0.8
         );
-        if (fakeTooClose) {
-          // Wink en la réplica más cercana al cursor real
+        if (fakeOnTarget) {
+          // Wink en la réplica más cercana a la diana
           let closest = -1, closestD = Infinity;
           fakes.current.forEach((f, i) => {
-            const d = Math.hypot(f.x - src.clientX, f.y - src.clientY);
+            const d = Math.hypot(f.x - tx, f.y - ty);
             if (d < closestD) { closestD = d; closest = i; }
           });
           if (closest >= 0) {
@@ -274,6 +275,7 @@ export default function CuatroCursores() {
   }, [loop]);
 
   function playAgain() {
+    cancelAnimationFrame(animRef.current);
     fakes.current = fakes.current.map(() => ({ ...mouse.current }));
     setAttempts(0);
     winkingIdxRef.current = -1;
@@ -295,6 +297,10 @@ export default function CuatroCursores() {
         @keyframes winkFade {
           from { opacity: 0; transform: translateY(4px) scale(0.8); }
           to   { opacity: 1; transform: translateY(0)   scale(1);   }
+        }
+        @keyframes emojiFadeOut {
+          from { opacity: 1; }
+          to   { opacity: 0; }
         }
       `}</style>
 
@@ -337,7 +343,7 @@ export default function CuatroCursores() {
           style={{
             position: "fixed", left: -200, top: -200,
             fontSize: "1.4rem", pointerEvents: "none", zIndex: 9999,
-            animation: "winkFade 0.15s ease",
+            animation: "winkFade 0.15s ease, emojiFadeOut 0.3s 1s ease forwards",
           }}
         >
           😎

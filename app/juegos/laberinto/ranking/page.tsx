@@ -85,7 +85,7 @@ export default function RankingLaberinto() {
                 <tbody>
                   {data.bottom.map((e, i) => (
                     <tr key={i} style={{ borderBottom: "1px solid rgba(96,165,250,0.12)" }}>
-                      <td style={{ ...tdStyle, color: "#9ca3af" }}>{i + 1}</td>
+                      <td style={{ ...tdStyle, color: i === 0 ? "#ef4444" : "#9ca3af", fontWeight: i === 0 ? 700 : 400 }}>{i + 1}</td>
                       <td style={{ ...tdStyle, color: "#111827" }}>{e.name}</td>
                       <td style={{ ...tdStyle, textAlign: "right", color: e.score < 0 ? "#ef4444" : "#6b7280", fontFamily: "var(--font-geist-mono, monospace)", fontWeight: 600 }}>
                         {e.score >= 0 ? "+" : ""}{e.score}

@@ -9,7 +9,7 @@ type Extra = {
   title: string;
   description: string;
   hint?: string;
-  status: "available" | "hidden";
+  status: "available" | "hidden" | "soon";
   href: string | null;
   cta: string;
 };
@@ -88,7 +88,7 @@ const PLACEHOLDER: Extra = {
   label: "Web",
   title: "¿Y aquí qué va?",
   description: "Buena pregunta. Hay algo en el horno, pero todavía no ha salido. O igual sí y no me he enterado.",
-  status: "available",
+  status: "soon",
   href: null,
   cta: "En construcción",
 };
@@ -112,6 +112,7 @@ export default function EasterEggs() {
     : BASE_EXTRAS;
 
   useEffect(() => {
+    observerRef.current?.disconnect();
     observerRef.current = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -122,7 +123,7 @@ export default function EasterEggs() {
     );
     document.querySelectorAll(".reveal").forEach((el) => observerRef.current!.observe(el));
     return () => observerRef.current?.disconnect();
-  }, []);
+  }, [twoColumns]);
 
   return (
     <>
@@ -191,6 +192,18 @@ export default function EasterEggs() {
           letter-spacing: 0.12em; text-transform: uppercase;
           color: var(--text-muted); border: 1px solid var(--border);
           padding: 0.15rem 0.5rem; border-radius: 2px;
+        }
+        .egg-status-soon {
+          font-size: 0.6rem; font-family: var(--font-geist-mono), monospace;
+          letter-spacing: 0.12em; text-transform: uppercase;
+          color: #9ca3af; border: 1px solid rgba(156,163,175,0.35);
+          padding: 0.15rem 0.5rem; border-radius: 2px;
+        }
+        .egg-cta-soon {
+          margin-top: auto;
+          font-size: 0.78rem; font-weight: 600; font-family: var(--font-geist-mono), monospace;
+          color: var(--text-muted); display: inline-flex; align-items: center; gap: 0.3rem;
+          cursor: default;
         }
 
         .egg-title {
@@ -267,8 +280,8 @@ export default function EasterEggs() {
             >
               <div className="egg-card-header">
                 <span className="egg-label">{egg.label}</span>
-                <span className={egg.status === "available" ? "egg-status-available" : "egg-status-hidden"}>
-                  {egg.status === "available" ? "disponible" : "oculto"}
+                <span className={egg.status === "available" ? "egg-status-available" : egg.status === "soon" ? "egg-status-soon" : "egg-status-hidden"}>
+                  {egg.status === "available" ? "disponible" : egg.status === "soon" ? "próximamente" : "oculto"}
                 </span>
               </div>
 
@@ -283,6 +296,10 @@ export default function EasterEggs() {
                 <Link href={egg.href} className="egg-cta">
                   {egg.cta}
                 </Link>
+              ) : egg.status === "soon" ? (
+                <span className="egg-cta-soon">
+                  {egg.cta}
+                </span>
               ) : (
                 <span className="egg-cta" style={{ opacity: 0.45, cursor: "default" }}>
                   {egg.cta}
