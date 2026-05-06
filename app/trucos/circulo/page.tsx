@@ -119,7 +119,7 @@ export default function CirculoPerfecto() {
     ctx.fillStyle = "rgba(59,130,246,0.8)";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText("ATRÁPAME", x, y - r * 0.38);
+    ctx.fillText("ATRÁPAME", x, y);
   }
 
   const aliveLoop = useCallback(() => {
@@ -149,6 +149,18 @@ export default function CirculoPerfecto() {
     if (c.x > canvas.width - m2) { c.x = canvas.width - m2; c.vx = -Math.abs(c.vx); }
     if (c.y < m2) { c.y = m2; c.vy = Math.abs(c.vy); }
     if (c.y > canvas.height - m2) { c.y = canvas.height - m2; c.vy = -Math.abs(c.vy); }
+
+    // Corner avoidance: push toward center when trapped near two walls
+    const cm = c.r * 1.8;
+    const nearH = c.x < cm || c.x > canvas.width - cm;
+    const nearV = c.y < cm || c.y > canvas.height - cm;
+    if (nearH && nearV) {
+      const toCx = canvas.width / 2 - c.x;
+      const toCy = canvas.height / 2 - c.y;
+      const d = Math.hypot(toCx, toCy) || 1;
+      c.vx += (toCx / d) * 1.2;
+      c.vy += (toCy / d) * 1.2;
+    }
 
     drawAliveFrame(canvas);
     animRef.current = requestAnimationFrame(aliveLoop);
@@ -301,11 +313,11 @@ export default function CirculoPerfecto() {
 
         {phase === "score" && (
           <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "rgba(255,255,255,0.9)", backdropFilter: "blur(6px)", borderRadius: "8px" }}>
-            <p style={{ fontSize: "4.5rem", fontWeight: 800, fontFamily: "var(--font-geist-mono, monospace)", color: pct >= 88 ? "#3b82f6" : "#111827", lineHeight: 1 }}>
+            <p style={{ fontSize: "4.5rem", fontWeight: 800, fontFamily: "var(--font-geist-mono, monospace)", color: displayScore >= THRESHOLD ? "#3b82f6" : "#111827", lineHeight: 1 }}>
               {pct}%
             </p>
             <p style={{ marginTop: "0.75rem", fontSize: "0.85rem", color: "#9ca3af" }}>
-              {pct >= 88 ? "Un momento..." : pct >= 65 ? "Casi, casi..." : "Inténtalo de nuevo"}
+              {displayScore >= THRESHOLD ? "Un momento..." : pct >= 65 ? "Casi, casi..." : "Inténtalo de nuevo"}
             </p>
           </div>
         )}
@@ -321,9 +333,9 @@ export default function CirculoPerfecto() {
                 Círculo Perfecto
               </p>
               <p style={{ fontSize: "0.68rem", color: "#6b7280", margin: "0.75rem 0 1.25rem", lineHeight: 2.0, fontFamily: "var(--font-geist-mono, monospace)" }}>
-                Se certifica<br />
-                que el portador ha trazado<br />
-                un círculo de calidad excepcional
+                Se certifica que el portador<br />
+                ha trazado un círculo<br />
+                de precisión extraordinaria
               </p>
               <div style={{ borderTop: "1px solid rgba(96,165,250,0.25)", paddingTop: "0.9rem", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
                 <p style={{ fontSize: "0.58rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)" }}>
@@ -335,7 +347,7 @@ export default function CirculoPerfecto() {
                   </p>
                   <div style={{ width: 76, height: 1, background: "rgba(0,0,0,0.15)", margin: "0.15rem 0 0 auto" }} />
                   <p style={{ fontSize: "0.52rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", marginTop: "0.15rem" }}>
-                    Maestro de la geometría
+                    Autoridad certificadora
                   </p>
                 </div>
               </div>
@@ -347,7 +359,7 @@ export default function CirculoPerfecto() {
         )}
       </div>
 
-      {phase === "score" && pct < 88 && (
+      {phase === "score" && displayScore < THRESHOLD && (
         <button onClick={reset} style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", fontSize: "0.78rem", fontFamily: "var(--font-geist-mono, monospace)" }}>
           Reintentar →
         </button>

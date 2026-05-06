@@ -86,8 +86,8 @@ const BASE_EXTRAS: Extra[] = [
 const PLACEHOLDER: Extra = {
   id: "placeholder",
   label: "Web",
-  title: "¿Y aquí qué va?",
-  description: "Buena pregunta. Hay algo en el horno, pero todavía no ha salido. O igual sí y no me he enterado.",
+  title: "Aquí va lo importante",
+  description: "De momento hay este texto.\nEs temporal. Eso creo.",
   status: "soon",
   href: null,
   cta: "En construcción",
@@ -212,7 +212,7 @@ export default function EasterEggs() {
         }
 
         .egg-desc {
-          font-size: 0.85rem; color: var(--text-dim); line-height: 1.65;
+          font-size: 0.85rem; color: var(--text-dim); line-height: 1.65; white-space: pre-line;
         }
 
         .egg-hint {

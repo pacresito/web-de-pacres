@@ -389,7 +389,7 @@ export default function CuatroCursores() {
         <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "1rem" }}>
           <p style={{ fontSize: "1.5rem", fontWeight: 800, color: "#3b82f6", letterSpacing: "-0.03em" }}>¡Lo encontraste!</p>
           <p style={{ fontSize: "0.85rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", textAlign: "center", maxWidth: "32ch", lineHeight: 1.65 }}>
-            El cursor real siempre va un paso por delante.
+            Sabías cuál era. Lo difícil era llegar solo.
           </p>
           <button onClick={playAgain} style={{ marginTop: "0.5rem", background: "none", border: "none", cursor: "pointer", color: "#3b82f6", fontSize: "0.85rem", fontFamily: "var(--font-geist-mono, monospace)" }}>
             Otra vez →
