@@ -122,18 +122,20 @@ export default function Fluidos() {
         if (type === SAND) {
           if (y < H - 1) {
             const bi = (y + 1) * W + x;
-            if (grid[bi] === EMPTY) {
+            if (grid[bi] === EMPTY || grid[bi] === WATER) {
+              const was = grid[bi];
               grid[bi] = SAND; upd[bi] = 1;
-              grid[i] = EMPTY; continue;
+              grid[i] = was; continue;
             }
             const dirs = Math.random() > 0.5 ? [-1, 1] : [1, -1];
             for (const d of dirs) {
               const nx = x + d;
               if (nx < 0 || nx >= W) continue;
               const ni = (y + 1) * W + nx;
-              if (grid[ni] === EMPTY) {
+              if (grid[ni] === EMPTY || grid[ni] === WATER) {
+                const was = grid[ni];
                 grid[ni] = SAND; upd[ni] = 1;
-                grid[i] = EMPTY; break;
+                grid[i] = was; break;
               }
             }
           }
@@ -245,24 +247,40 @@ export default function Fluidos() {
         let color: string;
 
         if (type === SAND) {
-          const v = ((x * 17 + y * 13) & 0xff) % 28;
-          color = `rgb(${188 + v},${160 + Math.floor(v * 0.55)},${102 + Math.floor(v * 0.25)})`;
+          // Stable per-grain hash → consistent texture across frames
+          const h = ((x * 374761393 + y * 668265263) >>> 0) & 0xff;
+          const v1 = h % 38, v2 = (h >> 5) % 18;
+          color = `rgb(${178 + v1},${146 + Math.floor(v1 * 0.5)},${82 + Math.floor(v1 * 0.15) - v2})`;
 
         } else if (type === WATER) {
-          const wave = Math.sin((x * 0.4 + t / 400)) * 6;
-          const w    = Math.floor(wave);
-          color = `rgb(${45 + w},${115 + w},${235})`;
+          // Darker, deeper blue with gentle shimmer
+          const wave = Math.sin((x * 0.35 + t / 500)) * 4;
+          const depth = Math.min(y / H, 1);
+          const w = Math.floor(wave);
+          color = `rgb(${Math.max(18, 32 - Math.floor(depth * 12) + w)},${Math.max(70, 105 - Math.floor(depth * 25) + w)},${215 + w})`;
 
         } else if (type === FIRE) {
-          const ratio = ages[i] / 140;
-          const flick = ((x * 7 + y * 11 + Math.floor(t / 60)) & 0xf) / 15;
-          const g     = Math.floor((ratio * 0.65 + flick * 0.35) * 175);
-          color = `rgb(255,${g},0)`;
+          // Yellow-white core → orange → dark red as age drops
+          const flick = ((x * 7 + y * 11 + Math.floor(t / 50)) & 0x1f) / 31;
+          const age_r = Math.min(1, ages[i] / 140) * 0.72 + flick * 0.28;
+          let fr: number, fg: number, fb: number;
+          if (age_r > 0.6) {
+            const p = (age_r - 0.6) / 0.4;
+            fr = 255; fg = Math.floor(140 + p * 115); fb = Math.floor(p * 55);
+          } else if (age_r > 0.28) {
+            const p = (age_r - 0.28) / 0.32;
+            fr = 255; fg = Math.floor(40 + p * 100); fb = 0;
+          } else {
+            const p = age_r / 0.28;
+            fr = Math.floor(120 + p * 135); fg = Math.floor(p * 40); fb = 0;
+          }
+          color = `rgb(${fr},${fg},${fb})`;
 
         } else {
-          // WALL
-          const v = ((x * 3 + y * 5) & 0xff) % 12;
-          color = `rgb(${52 + v},${63 + v},${73 + v})`;
+          // WALL — stone texture
+          const h = ((x * 1664525 + y * 1013904223) >>> 0) & 0xff;
+          const v = h % 22;
+          color = `rgb(${56 + v},${63 + v},${70 + v})`;
         }
 
         ctx.fillStyle = color;
@@ -482,7 +500,8 @@ export default function Fluidos() {
         maxWidth: 900,
         margin: "0 auto",
         padding: "0 clamp(1.25rem, 4vw, 2rem)",
-        minHeight: "100dvh",
+        height: "100dvh",
+        overflow: "hidden",
         display: "flex",
         flexDirection: "column",
       }}>
