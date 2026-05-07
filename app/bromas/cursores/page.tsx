@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 type GameState = "idle" | "playing" | "lost" | "confessing" | "certificate";
 
 const TARGET_R = 28;
-const LERP_ALPHAS = [0.08, 0.06, 0.04];
+const LERP_ALPHAS = [0.12, 0.09, 0.06];
 const FLEE_RADIUS = 180;
 const FLEE_FORCE = 14;
 const HOLD_MS = 1000;
@@ -309,7 +309,7 @@ export default function CuatroCursores() {
           }
         });
 
-        targetAngle.current += 0.007 * dt * 60;
+        targetAngle.current += 0.010 * dt * 60;
         const a = targetAngle.current;
         const rx = Math.min(window.innerWidth * 0.28, 220);
         const ry = Math.min(window.innerHeight * 0.22, 160);
@@ -325,7 +325,8 @@ export default function CuatroCursores() {
     const wi = winkingIdxRef.current;
     if (wi >= 0 && winkEl.current) {
       const f = fakes.current[wi];
-      winkEl.current.style.transform = `translate(${f.x + 18}px, ${f.y - 8}px)`;
+      winkEl.current.style.left = f.x + 18 + "px";
+      winkEl.current.style.top = f.y - 8 + "px";
     }
 
     animRef.current = requestAnimationFrame(loop);
@@ -646,8 +647,7 @@ export default function CuatroCursores() {
         <div
           ref={winkEl}
           style={{
-            position: "fixed", left: 0, top: 0,
-            transform: "translate(-9999px,-9999px)", willChange: "transform",
+            position: "fixed", left: -200, top: -200,
             fontSize: "1.4rem", pointerEvents: "none", zIndex: 9999,
             animation: "winkBounce 0.25s ease infinite alternate, winkFade 0.15s ease",
           }}
