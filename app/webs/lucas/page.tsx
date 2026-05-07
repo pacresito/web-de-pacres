@@ -1,3 +1,5 @@
+import StarField from './StarField';
+
 function calcularEdad(nacimiento: Date): number {
   const hoy = new Date();
   const cumpleEsteAño = new Date(hoy.getFullYear(), nacimiento.getMonth(), nacimiento.getDate());
@@ -13,7 +15,7 @@ export default function Lucas() {
         body { background: #050a14; }
 
         .lc-page {
-          background: #050a14;
+          background: transparent;
           color: #e2eaf4;
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
           min-height: 100dvh;
@@ -30,32 +32,6 @@ export default function Lucas() {
           position: relative;
           overflow: hidden;
           text-align: center;
-        }
-        .lc-stars {
-          position: absolute;
-          inset: 0;
-          background-image:
-            radial-gradient(1px 1px at 10% 15%, rgba(180,210,240,0.6) 0%, transparent 100%),
-            radial-gradient(1px 1px at 25% 40%, rgba(180,210,240,0.4) 0%, transparent 100%),
-            radial-gradient(1.2px 1.2px at 40% 10%, rgba(180,210,240,0.7) 0%, transparent 100%),
-            radial-gradient(0.8px 0.8px at 55% 30%, rgba(180,210,240,0.5) 0%, transparent 100%),
-            radial-gradient(1px 1px at 70% 20%, rgba(180,210,240,0.6) 0%, transparent 100%),
-            radial-gradient(0.9px 0.9px at 80% 50%, rgba(180,210,240,0.4) 0%, transparent 100%),
-            radial-gradient(1px 1px at 90% 10%, rgba(180,210,240,0.5) 0%, transparent 100%),
-            radial-gradient(0.7px 0.7px at 15% 70%, rgba(180,210,240,0.3) 0%, transparent 100%),
-            radial-gradient(1px 1px at 35% 60%, rgba(180,210,240,0.4) 0%, transparent 100%),
-            radial-gradient(0.8px 0.8px at 60% 75%, rgba(180,210,240,0.3) 0%, transparent 100%),
-            radial-gradient(1.1px 1.1px at 75% 65%, rgba(180,210,240,0.5) 0%, transparent 100%),
-            radial-gradient(0.9px 0.9px at 88% 80%, rgba(180,210,240,0.35) 0%, transparent 100%),
-            radial-gradient(1px 1px at 5% 85%, rgba(180,210,240,0.4) 0%, transparent 100%),
-            radial-gradient(0.8px 0.8px at 48% 88%, rgba(180,210,240,0.3) 0%, transparent 100%),
-            radial-gradient(1px 1px at 92% 45%, rgba(180,210,240,0.5) 0%, transparent 100%),
-            radial-gradient(0.7px 0.7px at 20% 55%, rgba(180,210,240,0.3) 0%, transparent 100%),
-            radial-gradient(1px 1px at 65% 5%, rgba(180,210,240,0.6) 0%, transparent 100%),
-            radial-gradient(0.9px 0.9px at 82% 28%, rgba(180,210,240,0.45) 0%, transparent 100%),
-            radial-gradient(1.2px 1.2px at 50% 50%, rgba(180,210,240,0.25) 0%, transparent 100%),
-            radial-gradient(0.8px 0.8px at 30% 22%, rgba(180,210,240,0.5) 0%, transparent 100%);
-          pointer-events: none;
         }
         .lc-eyebrow {
           font-size: 0.7rem;
@@ -158,6 +134,7 @@ export default function Lucas() {
           width: 100%;
           display: block;
           object-fit: cover;
+          object-position: top center;
           max-height: 420px;
         }
         .lc-photo-caption {
@@ -385,11 +362,11 @@ export default function Lucas() {
         .lc-footer a:hover { color: #378ADD; }
       `}</style>
 
-      <div className="lc-page">
+      <StarField />
+      <div className="lc-page" style={{ position: 'relative', zIndex: 1 }}>
 
         {/* ── HERO ── */}
         <section className="lc-hero">
-          <div className="lc-stars" />
           <p className="lc-eyebrow">Ingeniero Senior · SpaceX Starship Program</p>
           <h1 className="lc-name">Dr. Lucas Crespo</h1>
           <p className="lc-title">Ingeniero de Propulsión Avanzada & Doctor en Juegos de Mesa</p>
