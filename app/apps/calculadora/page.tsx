@@ -133,307 +133,388 @@ export default function CalculadoraRPN() {
   return (
     <>
       <style>{`
-        :root {
-          --blue: #3b82f6;
-          --blue-dim: rgba(59,130,246,0.12);
-          --blue-dark: #1d4ed8;
-          --purple: #7c3aed;
-          --red: #ef4444;
-          --green: #10b981;
-          --bg: #0f0f0f;
-          --surface: #1a1a1a;
-          --surface2: #222222;
-          --border: rgba(255,255,255,0.07);
-          --border-strong: rgba(255,255,255,0.13);
-          --text: #f3f4f6;
-          --text-muted: #6b7280;
-          --text-dim: #9ca3af;
-        }
-
         * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: #ffffff; }
 
+        /* ── Page layout (igual que extras) ── */
         .calc-page {
+          max-width: 900px;
+          margin: 0 auto;
+          padding: clamp(2rem, 5vw, 4rem) clamp(1.25rem, 4vw, 2rem);
           min-height: 100dvh;
-          background: var(--bg);
           display: flex;
           flex-direction: column;
-          align-items: center;
-          justify-content: flex-start;
-          padding: clamp(2rem, 6vw, 4rem) clamp(1rem, 4vw, 2rem);
-        }
-
-        .calc-inner {
-          width: 100%;
-          max-width: 420px;
-          display: flex;
-          flex-direction: column;
-          gap: 0;
-        }
-
-        /* Header */
-        .header {
-          margin-bottom: 2rem;
-        }
-
-        .badge {
-          display: inline-block;
-          font-size: 0.6rem;
-          font-family: var(--font-geist-mono, monospace);
-          letter-spacing: 0.16em;
-          text-transform: uppercase;
-          color: var(--blue);
-          border: 1px solid rgba(59,130,246,0.3);
-          padding: 0.2rem 0.55rem;
-          border-radius: 2px;
-          margin-bottom: 0.8rem;
-          background: rgba(59,130,246,0.06);
         }
 
         .page-title {
-          font-size: clamp(2rem, 6vw, 3rem);
+          font-size: clamp(2rem, 6vw, 3.5rem);
           font-weight: 800;
-          letter-spacing: -0.04em;
+          letter-spacing: -0.03em;
           line-height: 1;
-          color: var(--text);
-          margin-bottom: 0.6rem;
+          color: #111827;
         }
-
-        .page-title em {
-          font-style: normal;
-          background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 40%, #8b5cf6 100%);
+        .page-title span {
+          background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #93c5fd 100%);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
           background-clip: text;
         }
 
-        .antonio-text {
-          font-size: 0.78rem;
-          color: var(--text-muted);
-          font-family: var(--font-geist-mono, monospace);
-          line-height: 1.6;
-          max-width: 360px;
-          padding-top: 0.5rem;
-          border-top: 1px solid var(--border);
-          margin-top: 0.75rem;
+        .page-subtitle {
+          margin-top: 1rem;
+          font-size: 0.9rem;
+          color: #9ca3af;
+          line-height: 1.65;
+          max-width: 560px;
         }
 
-        .antonio-text strong {
-          color: var(--text-dim);
-          font-weight: 600;
+        .divider {
+          border: none;
+          border-top: 1px solid rgba(0,0,0,0.07);
         }
 
-        /* Calculator card */
-        .calc-card {
-          background: var(--surface);
-          border: 1px solid var(--border-strong);
-          border-radius: 8px;
-          overflow: hidden;
-        }
-
-        /* Stack */
-        .stack-area {
-          min-height: 180px;
+        /* ── HP 49G body ── */
+        .hp-wrap {
           display: flex;
-          flex-direction: column;
-          justify-content: flex-end;
-          padding: 1rem 1.25rem 0.5rem;
-          border-bottom: 1px solid var(--border);
-          background: var(--bg);
+          justify-content: center;
+        }
+
+        .hp-body {
+          width: 100%;
+          max-width: 340px;
+          background: linear-gradient(170deg, #26223a 0%, #1a1628 60%, #14111f 100%);
+          border-radius: 12px 12px 20px 20px;
+          padding: 18px 16px 22px;
+          box-shadow:
+            0 0 0 1px rgba(255,255,255,0.07),
+            0 4px 6px rgba(0,0,0,0.25),
+            0 20px 60px rgba(0,0,0,0.45),
+            inset 0 1px 0 rgba(255,255,255,0.09);
           position: relative;
         }
 
-        .stack-empty-msg {
-          color: var(--text-muted);
-          font-family: var(--font-geist-mono, monospace);
-          font-size: 0.7rem;
-          letter-spacing: 0.1em;
-          text-align: center;
+        /* Top stripe — same purple-gray */
+        .hp-body::before {
+          content: '';
+          position: absolute;
+          top: 0; left: 0; right: 0;
+          height: 6px;
+          background: linear-gradient(90deg, #3b2f6e, #5a3fa0, #3b2f6e);
+          border-radius: 12px 12px 0 0;
+          opacity: 0.7;
+        }
+
+        /* ── Brand bar ── */
+        .hp-brand {
+          display: flex;
+          align-items: baseline;
+          justify-content: space-between;
+          margin-bottom: 12px;
+          padding: 0 2px;
+        }
+
+        .hp-logo {
+          font-size: 1.1rem;
+          font-weight: 900;
+          font-family: var(--font-geist-sans), Arial, sans-serif;
+          color: #c8bfea;
+          letter-spacing: -0.05em;
+          font-style: italic;
+        }
+
+        .hp-model {
+          font-size: 0.55rem;
+          font-family: var(--font-geist-mono), monospace;
+          letter-spacing: 0.18em;
+          text-transform: uppercase;
+          color: rgba(200,191,234,0.45);
+        }
+
+        /* ── Screen bezel ── */
+        .hp-screen-bezel {
+          background: #0d0b16;
+          border-radius: 4px;
+          padding: 8px;
+          margin-bottom: 14px;
+          box-shadow:
+            inset 0 2px 6px rgba(0,0,0,0.6),
+            0 1px 0 rgba(255,255,255,0.05);
+        }
+
+        /* ── LCD ── */
+        .hp-lcd {
+          background: #b8ccaa;
+          border-radius: 2px;
+          min-height: 160px;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+          box-shadow: inset 0 1px 3px rgba(0,0,0,0.3);
+          position: relative;
+          transition: background 0.15s;
+        }
+
+        .hp-lcd.flash {
+          background: #cce0b0;
+        }
+
+        /* Subtle LCD scanline texture */
+        .hp-lcd::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: repeating-linear-gradient(
+            0deg,
+            transparent,
+            transparent 2px,
+            rgba(0,0,0,0.03) 2px,
+            rgba(0,0,0,0.03) 3px
+          );
+          pointer-events: none;
+        }
+
+        /* ── Stack area ── */
+        .hp-stack {
+          flex: 1;
+          min-height: 108px;
+          display: flex;
+          flex-direction: column;
+          justify-content: flex-end;
+          padding: 6px 8px 4px;
+          border-bottom: 1px solid rgba(0,0,0,0.15);
+          position: relative;
+        }
+
+        .hp-stack-empty {
           position: absolute;
           inset: 0;
           display: flex;
           align-items: center;
           justify-content: center;
-          opacity: 0.4;
+          font-size: 0.6rem;
+          font-family: var(--font-geist-mono), monospace;
+          letter-spacing: 0.12em;
+          color: rgba(30,50,10,0.35);
+          text-transform: uppercase;
         }
 
-        .stack-row {
+        .hp-stack-row {
           display: flex;
           align-items: baseline;
           justify-content: space-between;
-          padding: 0.2rem 0;
+          padding: 1px 0;
         }
 
-        .stack-idx {
-          font-size: 0.55rem;
-          font-family: var(--font-geist-mono, monospace);
-          color: var(--text-muted);
-          opacity: 0.45;
-          letter-spacing: 0.12em;
-          min-width: 1.8rem;
+        .hp-stack-idx {
+          font-size: 0.5rem;
+          font-family: var(--font-geist-mono), monospace;
+          color: rgba(30,50,10,0.4);
+          min-width: 1.5rem;
+          letter-spacing: 0.08em;
         }
 
-        .stack-val {
-          font-size: 0.95rem;
-          font-family: var(--font-geist-mono, monospace);
-          font-weight: 500;
-          color: var(--text-dim);
+        .hp-stack-val {
+          font-size: 0.82rem;
+          font-family: var(--font-geist-mono), monospace;
+          font-weight: 600;
+          color: #1a320a;
           text-align: right;
           flex: 1;
         }
 
-        .stack-val.is-top {
-          font-size: 1.4rem;
+        .hp-stack-val.is-top {
+          font-size: 1.1rem;
           font-weight: 700;
-          color: var(--text);
+          color: #0d2205;
         }
 
-        /* Input display */
-        .display-area {
-          padding: 0.6rem 1.25rem;
-          border-bottom: 1px solid var(--border);
+        /* ── Input display ── */
+        .hp-input {
+          padding: 5px 8px 6px;
           display: flex;
           align-items: center;
           justify-content: flex-end;
-          min-height: 52px;
-          background: var(--surface);
-          transition: background 0.15s;
+          min-height: 36px;
         }
 
-        .display-area.flash {
-          background: rgba(59,130,246,0.08);
-        }
-
-        .display-num {
-          font-size: 1.8rem;
-          font-family: var(--font-geist-mono, monospace);
+        .hp-input-num {
+          font-size: 1.35rem;
+          font-family: var(--font-geist-mono), monospace;
           font-weight: 700;
-          color: var(--blue);
+          color: #0d2205;
           letter-spacing: -0.02em;
         }
 
-        .display-placeholder {
-          font-size: 0.78rem;
-          font-family: var(--font-geist-mono, monospace);
-          color: var(--text-muted);
-          opacity: 0.45;
-          letter-spacing: 0.05em;
+        .hp-input-placeholder {
+          font-size: 0.65rem;
+          font-family: var(--font-geist-mono), monospace;
+          color: rgba(30,50,10,0.3);
+          letter-spacing: 0.1em;
         }
 
-        .cursor {
+        .hp-cursor {
           display: inline-block;
           width: 2px;
-          height: 1.1em;
-          background: var(--blue);
-          margin-left: 2px;
+          height: 1em;
+          background: #1a320a;
+          margin-left: 1px;
           vertical-align: text-bottom;
           animation: blink 0.9s step-end infinite;
         }
         @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
 
-        /* Error */
-        .error-strip {
-          padding: 0.4rem 1.25rem;
-          background: rgba(239,68,68,0.06);
-          border-bottom: 1px solid rgba(239,68,68,0.15);
-          font-size: 0.68rem;
-          font-family: var(--font-geist-mono, monospace);
-          color: #f87171;
+        /* ── Error strip ── */
+        .hp-error {
+          padding: 3px 8px;
+          background: rgba(180,0,0,0.15);
+          border-top: 1px solid rgba(180,0,0,0.25);
+          font-size: 0.58rem;
+          font-family: var(--font-geist-mono), monospace;
+          color: #7a1010;
           letter-spacing: 0.04em;
         }
 
-        /* Button grid */
-        .btn-grid {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 1px;
-          background: var(--border);
+        /* ── Soft-menu strip (decorative, like HP) ── */
+        .hp-softmenu {
+          display: flex;
+          gap: 2px;
+          margin-bottom: 10px;
         }
 
-        .btn {
-          background: var(--surface2);
+        .hp-softkey {
+          flex: 1;
+          height: 14px;
+          background: #1e1a30;
+          border-radius: 2px;
+          box-shadow:
+            0 1px 0 rgba(255,255,255,0.06),
+            inset 0 1px 2px rgba(0,0,0,0.4);
+        }
+
+        /* ── Button grid ── */
+        .hp-btns {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 5px;
+        }
+
+        .hp-btn {
+          background: linear-gradient(180deg, #2e2848 0%, #231f38 100%);
           border: none;
-          padding: 1.15rem 0.5rem;
-          font-size: 1.05rem;
-          font-family: var(--font-geist-mono, monospace);
-          font-weight: 500;
-          color: var(--text);
+          border-radius: 4px;
+          padding: 0.9rem 0.3rem 0.7rem;
+          font-size: 0.9rem;
+          font-family: var(--font-geist-mono), monospace;
+          font-weight: 600;
+          color: #ddd8f0;
           cursor: pointer;
-          transition: background 0.1s, color 0.1s, transform 0.08s;
           user-select: none;
           -webkit-tap-highlight-color: transparent;
           touch-action: manipulation;
+          box-shadow:
+            0 3px 0 #0f0d1a,
+            0 4px 6px rgba(0,0,0,0.4),
+            inset 0 1px 0 rgba(255,255,255,0.1);
+          transition: transform 0.07s, box-shadow 0.07s;
+          position: relative;
         }
 
-        .btn:hover { background: #2a2a2a; }
-        .btn:active { background: #333; transform: scale(0.97); }
-
-        .btn-op {
-          color: #60a5fa;
-          font-weight: 700;
-          font-size: 1.15rem;
-          background: rgba(59,130,246,0.05);
+        .hp-btn:active {
+          transform: translateY(2px);
+          box-shadow:
+            0 1px 0 #0f0d1a,
+            0 2px 3px rgba(0,0,0,0.3),
+            inset 0 1px 0 rgba(255,255,255,0.06);
         }
-        .btn-op:hover { background: rgba(59,130,246,0.1); }
-        .btn-op:active { background: rgba(59,130,246,0.18); }
 
-        .btn-enter {
-          background: var(--blue);
-          color: #fff;
-          font-weight: 700;
-          font-size: 0.75rem;
-          letter-spacing: 0.12em;
+        /* Operator buttons — amber/orange (HP right-shift color) */
+        .hp-btn-op {
+          background: linear-gradient(180deg, #8b3a00 0%, #6e2d00 100%);
+          color: #ffd090;
+          box-shadow:
+            0 3px 0 #2a0d00,
+            0 4px 6px rgba(0,0,0,0.4),
+            inset 0 1px 0 rgba(255,200,100,0.15);
+        }
+        .hp-btn-op:active {
+          box-shadow:
+            0 1px 0 #2a0d00,
+            0 2px 3px rgba(0,0,0,0.3),
+            inset 0 1px 0 rgba(255,200,100,0.08);
+        }
+
+        /* ENTER — blue (HP left-shift color) */
+        .hp-btn-enter {
+          background: linear-gradient(180deg, #1a4080 0%, #122e5e 100%);
+          color: #90c8ff;
+          font-size: 0.62rem;
+          letter-spacing: 0.1em;
           grid-column: span 2;
+          box-shadow:
+            0 3px 0 #060f20,
+            0 4px 6px rgba(0,0,0,0.4),
+            inset 0 1px 0 rgba(144,200,255,0.12);
         }
-        .btn-enter:hover { background: #2563eb; }
-        .btn-enter:active { background: var(--blue-dark); }
-
-        .btn-clear {
-          color: #f87171;
-          font-weight: 700;
-          background: rgba(239,68,68,0.05);
-        }
-        .btn-clear:hover { background: rgba(239,68,68,0.1); }
-        .btn-clear:active { background: rgba(239,68,68,0.18); }
-
-        .btn-del {
-          color: var(--text-dim);
-          font-size: 0.75rem;
-          letter-spacing: 0.04em;
+        .hp-btn-enter:active {
+          box-shadow:
+            0 1px 0 #060f20,
+            0 2px 3px rgba(0,0,0,0.3),
+            inset 0 1px 0 rgba(144,200,255,0.06);
         }
 
-        .btn-swap {
-          color: #a78bfa;
-          font-size: 0.7rem;
-          font-weight: 700;
-          letter-spacing: 0.08em;
-          background: rgba(124,58,237,0.04);
+        /* Clear — dark red */
+        .hp-btn-clear {
+          background: linear-gradient(180deg, #5a1010 0%, #440c0c 100%);
+          color: #ff9090;
+          box-shadow:
+            0 3px 0 #1a0404,
+            0 4px 6px rgba(0,0,0,0.4),
+            inset 0 1px 0 rgba(255,150,150,0.1);
         }
-        .btn-swap:hover { background: rgba(124,58,237,0.1); }
-        .btn-swap:active { background: rgba(124,58,237,0.18); }
+        .hp-btn-clear:active {
+          box-shadow:
+            0 1px 0 #1a0404,
+            0 2px 3px rgba(0,0,0,0.3);
+        }
 
-        /* Legend */
+        /* DEL and SWAP — slightly muted */
+        .hp-btn-util {
+          background: linear-gradient(180deg, #1e1c2c 0%, #171522 100%);
+          color: #a090d0;
+          font-size: 0.62rem;
+          letter-spacing: 0.06em;
+          box-shadow:
+            0 3px 0 #09080f,
+            0 4px 6px rgba(0,0,0,0.4),
+            inset 0 1px 0 rgba(255,255,255,0.07);
+        }
+        .hp-btn-util:active {
+          box-shadow:
+            0 1px 0 #09080f,
+            0 2px 3px rgba(0,0,0,0.3);
+        }
+
+        /* ── Legend (page level, white bg) ── */
         .legend {
-          margin-top: 1.5rem;
           padding: 0.75rem 1rem;
-          border: 1px solid var(--border);
+          border: 1px solid rgba(0,0,0,0.07);
           border-radius: 6px;
-          background: var(--surface);
+          background: #ffffff;
         }
 
         .legend-title {
           font-size: 0.55rem;
-          font-family: var(--font-geist-mono, monospace);
+          font-family: var(--font-geist-mono), monospace;
           letter-spacing: 0.2em;
           text-transform: uppercase;
-          color: var(--text-muted);
-          opacity: 0.6;
+          color: #9ca3af;
           margin-bottom: 0.5rem;
         }
 
         .legend-keys {
           font-size: 0.7rem;
-          font-family: var(--font-geist-mono, monospace);
-          color: var(--text-muted);
+          font-family: var(--font-geist-mono), monospace;
+          color: #9ca3af;
           line-height: 1.9;
           display: flex;
           flex-wrap: wrap;
@@ -442,124 +523,142 @@ export default function CalculadoraRPN() {
 
         .key {
           display: inline-block;
-          border: 1px solid var(--border-strong);
+          border: 1px solid rgba(0,0,0,0.12);
           padding: 0 0.35rem;
           border-radius: 3px;
           font-size: 0.6rem;
-          color: var(--text-dim);
-          background: var(--surface2);
+          color: #374151;
+          background: #f9fafb;
           margin-right: 0.15rem;
         }
 
-        .back-link {
-          display: inline-block;
-          margin-top: 1.75rem;
-          font-size: 0.7rem;
-          font-family: var(--font-geist-mono, monospace);
-          color: var(--text-muted);
+        .pacres-link {
+          font-size: 0.75rem;
+          color: #9ca3af;
+          font-family: var(--font-geist-mono), monospace;
           text-decoration: none;
-          letter-spacing: 0.04em;
           transition: color 0.2s;
         }
-        .back-link:hover { color: var(--blue); }
+        .pacres-link:hover { color: #3b82f6; }
       `}</style>
 
-      <div className="calc-page">
-        <div className="calc-inner">
+      <main className="calc-page">
 
-          {/* Header */}
-          <header className="header">
-            <div className="badge">app · calculadora</div>
-            <h1 className="page-title">
-              <em>RPN</em> Calc
-            </h1>
-            <p className="antonio-text">
-              Cumpliendo el sueño de <strong>Antonio</strong> (ingeniero industrial):<br />
-              una calculadora con modo RPN. Porque introducir el operador<br />
-              al final no es una excentricidad — es superioridad cognitiva.
-            </p>
-          </header>
+        {/* Header — igual que extras */}
+        <div style={{ marginBottom: "3.5rem" }}>
+          <h1 className="page-title">
+            Calculadora <span>RPN</span>
+          </h1>
+          <p className="page-subtitle">
+            Hecha para Antonio y para toda persona que alguna vez pensó: «esto iría más rápido con una pila y menos paréntesis». Porque introducir el operador al final no es una excentricidad — es superioridad cognitiva.
+          </p>
+        </div>
 
-          {/* Calc */}
-          <div className="calc-card">
+        <hr className="divider" style={{ marginBottom: "2.5rem" }} />
 
-            {/* Stack */}
-            <div className="stack-area">
-              {stack.length === 0 ? (
-                <p className="stack-empty-msg">pila vacía · ingresa números</p>
-              ) : (
-                stack.map((val, i) => {
-                  const isTop = i === stack.length - 1;
-                  const label = stack.length - i;
-                  return (
-                    <div key={i} className="stack-row">
-                      <span className="stack-idx">{label}</span>
-                      <span className={`stack-val ${isTop ? "is-top" : ""}`}>
-                        {formatNum(val)}
-                      </span>
-                    </div>
-                  );
-                })
-              )}
+        {/* HP 49G Calculator */}
+        <div className="hp-wrap" style={{ marginBottom: "2.5rem" }}>
+          <div className="hp-body">
+
+            {/* Brand */}
+            <div className="hp-brand">
+              <span className="hp-logo">hp</span>
+              <span className="hp-model">49g+  ·  RPN</span>
             </div>
 
-            {/* Input display */}
-            <div className={`display-area${lastFlash ? " flash" : ""}`}>
-              {input === "" ? (
-                <span className="display-placeholder">_ _ _</span>
-              ) : (
-                <span className="display-num">
-                  {input}<span className="cursor" />
-                </span>
-              )}
+            {/* Screen */}
+            <div className="hp-screen-bezel">
+              <div className={`hp-lcd${lastFlash ? " flash" : ""}`}>
+
+                {/* Stack */}
+                <div className="hp-stack">
+                  {displayStack.length === 0 ? (
+                    <p className="hp-stack-empty">stack empty</p>
+                  ) : (
+                    displayStack.map((val, i) => {
+                      const isTop = i === displayStack.length - 1;
+                      const label = displayStack.length - i;
+                      return (
+                        <div key={i} className="hp-stack-row">
+                          <span className="hp-stack-idx">{label}:</span>
+                          <span className={`hp-stack-val${isTop ? " is-top" : ""}`}>
+                            {formatNum(val)}
+                          </span>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+
+                {/* Input */}
+                <div className="hp-input">
+                  {input === "" ? (
+                    <span className="hp-input-placeholder">_ _ _</span>
+                  ) : (
+                    <span className="hp-input-num">
+                      {input}<span className="hp-cursor" />
+                    </span>
+                  )}
+                </div>
+
+                {/* Error */}
+                {error && <div className="hp-error">{error}</div>}
+              </div>
             </div>
 
-            {/* Error */}
-            {error && <div className="error-strip">{error}</div>}
+            {/* Soft-menu strip (decorativo) */}
+            <div className="hp-softmenu">
+              {[0,1,2,3,4,5].map(i => <div key={i} className="hp-softkey" />)}
+            </div>
 
             {/* Buttons */}
-            <div className="btn-grid">
-              <button className="btn btn-clear" onClick={pressClear}>C</button>
-              <button className="btn btn-del" onClick={pressDel}>DEL</button>
-              <button className="btn btn-swap" onClick={pressSwap}>SWAP</button>
-              <button className="btn btn-op" onClick={() => pressOp("/")}>÷</button>
+            <div className="hp-btns">
+              <button className="hp-btn hp-btn-clear" onClick={pressClear}>C</button>
+              <button className="hp-btn hp-btn-util" onClick={pressDel}>DEL</button>
+              <button className="hp-btn hp-btn-util" onClick={pressSwap}>SWAP</button>
+              <button className="hp-btn hp-btn-op" onClick={() => pressOp("/")}>÷</button>
 
-              <button className="btn" onClick={() => pressDigit("7")}>7</button>
-              <button className="btn" onClick={() => pressDigit("8")}>8</button>
-              <button className="btn" onClick={() => pressDigit("9")}>9</button>
-              <button className="btn btn-op" onClick={() => pressOp("*")}>×</button>
+              <button className="hp-btn" onClick={() => pressDigit("7")}>7</button>
+              <button className="hp-btn" onClick={() => pressDigit("8")}>8</button>
+              <button className="hp-btn" onClick={() => pressDigit("9")}>9</button>
+              <button className="hp-btn hp-btn-op" onClick={() => pressOp("*")}>×</button>
 
-              <button className="btn" onClick={() => pressDigit("4")}>4</button>
-              <button className="btn" onClick={() => pressDigit("5")}>5</button>
-              <button className="btn" onClick={() => pressDigit("6")}>6</button>
-              <button className="btn btn-op" onClick={() => pressOp("-")}>−</button>
+              <button className="hp-btn" onClick={() => pressDigit("4")}>4</button>
+              <button className="hp-btn" onClick={() => pressDigit("5")}>5</button>
+              <button className="hp-btn" onClick={() => pressDigit("6")}>6</button>
+              <button className="hp-btn hp-btn-op" onClick={() => pressOp("-")}>−</button>
 
-              <button className="btn" onClick={() => pressDigit("1")}>1</button>
-              <button className="btn" onClick={() => pressDigit("2")}>2</button>
-              <button className="btn" onClick={() => pressDigit("3")}>3</button>
-              <button className="btn btn-op" onClick={() => pressOp("+")}>+</button>
+              <button className="hp-btn" onClick={() => pressDigit("1")}>1</button>
+              <button className="hp-btn" onClick={() => pressDigit("2")}>2</button>
+              <button className="hp-btn" onClick={() => pressDigit("3")}>3</button>
+              <button className="hp-btn hp-btn-op" onClick={() => pressOp("+")}>+</button>
 
-              <button className="btn" onClick={() => pressDigit("0")}>0</button>
-              <button className="btn" onClick={() => pressDigit(".")}>.</button>
-              <button className="btn btn-enter" onClick={pressEnter}>ENTER</button>
+              <button className="hp-btn" onClick={() => pressDigit("0")}>0</button>
+              <button className="hp-btn" onClick={() => pressDigit(".")}>.</button>
+              <button className="hp-btn hp-btn-enter" onClick={pressEnter}>ENTER</button>
             </div>
-          </div>
 
-          {/* Legend */}
-          <div className="legend">
-            <p className="legend-title">Teclado</p>
-            <p className="legend-keys">
-              <span><span className="key">0–9</span> dígitos</span>
-              <span><span className="key">Enter</span> apilar</span>
-              <span><span className="key">+ − * /</span> operar</span>
-              <span><span className="key">Backspace</span> borrar</span>
-              <span><span className="key">Esc</span> limpiar</span>
-            </p>
           </div>
-
-          <Link href="/extras" className="back-link">← extras</Link>
         </div>
-      </div>
+
+        {/* Legend */}
+        <div className="legend" style={{ marginBottom: "2rem" }}>
+          <p className="legend-title">Teclado</p>
+          <p className="legend-keys">
+            <span><span className="key">0–9</span> dígitos</span>
+            <span><span className="key">Enter</span> apilar</span>
+            <span><span className="key">+ − * /</span> operar</span>
+            <span><span className="key">Backspace</span> borrar</span>
+            <span><span className="key">Esc</span> limpiar</span>
+          </p>
+        </div>
+
+        {/* Footer */}
+        <footer style={{ marginTop: "auto", paddingTop: "2rem", paddingBottom: "1.5rem", display: "flex", justifyContent: "center" }}>
+          <Link href="/extras" className="pacres-link">pacr.es</Link>
+        </footer>
+
+      </main>
     </>
   );
 }
