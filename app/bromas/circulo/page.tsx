@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 type Phase = "idle" | "drawing" | "score" | "alive" | "caught";
 
 const THRESHOLD = 0.88;
-const CIRCLE_HOLD_MS = 500;
+const CIRCLE_HOLD_MS = 1000;
 
 function computeScore(pts: { x: number; y: number }[]): number {
   if (pts.length < 20) return 0;
@@ -160,22 +160,24 @@ export default function CirculoPerfecto() {
     c.x += c.vx;
     c.y += c.vy;
 
-    const m2 = c.r + 80;
+    // Hard clamp (original margin)
+    const m2 = c.r + 5;
     if (c.x < m2) { c.x = m2; c.vx = Math.abs(c.vx); }
     if (c.x > canvas.width - m2) { c.x = canvas.width - m2; c.vx = -Math.abs(c.vx); }
     if (c.y < m2) { c.y = m2; c.vy = Math.abs(c.vy); }
     if (c.y > canvas.height - m2) { c.y = canvas.height - m2; c.vy = -Math.abs(c.vy); }
 
-    // Corner avoidance: push toward center when trapped near two walls
-    const cm = c.r * 1.8;
-    const nearH = c.x < cm || c.x > canvas.width - cm;
-    const nearV = c.y < cm || c.y > canvas.height - cm;
-    if (nearH && nearV) {
-      const toCx = canvas.width / 2 - c.x;
-      const toCy = canvas.height / 2 - c.y;
-      const d = Math.hypot(toCx, toCy) || 1;
-      c.vx += (toCx / d) * 1.2;
-      c.vy += (toCy / d) * 1.2;
+    // Corner bounce at 50px from circle edge — only when near two walls at once
+    const cm = c.r + 50;
+    const nearL = c.x < cm;
+    const nearR = c.x > canvas.width - cm;
+    const nearT = c.y < cm;
+    const nearB = c.y > canvas.height - cm;
+    if ((nearL || nearR) && (nearT || nearB)) {
+      if (nearL && c.vx < 0) { c.x = cm; c.vx = Math.abs(c.vx); }
+      if (nearR && c.vx > 0) { c.x = canvas.width - cm; c.vx = -Math.abs(c.vx); }
+      if (nearT && c.vy < 0) { c.y = cm; c.vy = Math.abs(c.vy); }
+      if (nearB && c.vy > 0) { c.y = canvas.height - cm; c.vy = -Math.abs(c.vy); }
     }
 
     drawAliveFrame(canvas);
