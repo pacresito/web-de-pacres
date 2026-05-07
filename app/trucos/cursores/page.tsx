@@ -8,7 +8,7 @@ const TARGET_R = 28;
 const LERP_ALPHAS = [0.08, 0.06, 0.04];
 const FLEE_RADIUS = 180;
 const FLEE_FORCE = 14;
-const HOLD_MS = 500;
+const HOLD_MS = 250;
 const ARC_C = 2 * Math.PI * (TARGET_R - 4);
 
 function CursorIcon() {
@@ -116,20 +116,20 @@ export default function CuatroCursores() {
           // No touch: drift back to center
           const cx = window.innerWidth / 2;
           const cy = window.innerHeight / 2;
-          targetVel.current.x += (cx - targetPos.current.x) * 0.004;
-          targetVel.current.y += (cy - targetPos.current.y) * 0.004;
+          targetVel.current.x += (cx - targetPos.current.x) * 0.018;
+          targetVel.current.y += (cy - targetPos.current.y) * 0.018;
         }
         targetVel.current.x *= 0.87;
         targetVel.current.y *= 0.87;
         targetPos.current.x += targetVel.current.x;
         targetPos.current.y += targetVel.current.y;
 
-        // Bounce off walls
+        // Bounce off walls (full restitution for snappy feel)
         const margin = TARGET_R + 8;
-        if (targetPos.current.x < margin) { targetPos.current.x = margin; targetVel.current.x = Math.abs(targetVel.current.x) * 0.8; }
-        if (targetPos.current.x > window.innerWidth - margin) { targetPos.current.x = window.innerWidth - margin; targetVel.current.x = -Math.abs(targetVel.current.x) * 0.8; }
-        if (targetPos.current.y < margin) { targetPos.current.y = margin; targetVel.current.y = Math.abs(targetVel.current.y) * 0.8; }
-        if (targetPos.current.y > window.innerHeight - margin) { targetPos.current.y = window.innerHeight - margin; targetVel.current.y = -Math.abs(targetVel.current.y) * 0.8; }
+        if (targetPos.current.x < margin) { targetPos.current.x = margin; targetVel.current.x = Math.abs(targetVel.current.x); }
+        if (targetPos.current.x > window.innerWidth - margin) { targetPos.current.x = window.innerWidth - margin; targetVel.current.x = -Math.abs(targetVel.current.x); }
+        if (targetPos.current.y < margin) { targetPos.current.y = margin; targetVel.current.y = Math.abs(targetVel.current.y); }
+        if (targetPos.current.y > window.innerHeight - margin) { targetPos.current.y = window.innerHeight - margin; targetVel.current.y = -Math.abs(targetVel.current.y); }
 
         if (targetEl.current) {
           targetEl.current.style.left = targetPos.current.x + "px";
@@ -366,13 +366,16 @@ export default function CuatroCursores() {
 
   function playAgain() {
     cancelAnimationFrame(animRef.current);
+    const cx = window.innerWidth / 2;
+    const cy = window.innerHeight / 2;
+    targetPos.current = { x: cx, y: cy };
+    targetVel.current = { x: 0, y: 0 };
     fakes.current = fakes.current.map(() => ({ ...mouse.current }));
     setAttempts(0);
     winkingIdxRef.current = -1;
     setWinkingIdx(-1);
     touchPos.current = null;
     holdStart.current = null;
-    targetVel.current = { x: 0, y: 0 };
     if (holdArcEl.current) holdArcEl.current.style.strokeDasharray = `0 ${ARC_C}`;
     go("playing");
     animRef.current = requestAnimationFrame(loop);
@@ -450,8 +453,8 @@ export default function CuatroCursores() {
         </>
       )}
 
-      {/* Celebration emoji on the real cursor when won */}
-      {gameState === "won" && (
+      {/* Celebration emoji on the real cursor when won — desktop only */}
+      {gameState === "won" && !isMobile && (
         <div
           ref={celebrationEmojiEl}
           style={{
