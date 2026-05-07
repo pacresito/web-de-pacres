@@ -8,7 +8,7 @@ const TARGET_R = 28;
 const LERP_ALPHAS = [0.08, 0.06, 0.04];
 const FLEE_RADIUS = 180;
 const FLEE_FORCE = 14;
-const HOLD_MS = 750;
+const HOLD_MS = 1000;
 const ARC_C = 2 * Math.PI * (TARGET_R - 4);
 
 function CursorIcon() {
@@ -56,6 +56,7 @@ export default function CuatroCursores() {
 
   // Mobile-specific
   const touchPos = useRef<{ x: number; y: number } | null>(null);
+  const lastTouchTime = useRef(0);
   const targetVel = useRef({ x: 0, y: 0 });
   const holdStart = useRef<number | null>(null);
   const holdArcEl = useRef<SVGCircleElement>(null);
@@ -101,6 +102,11 @@ export default function CuatroCursores() {
 
     if (s === "playing" || s === "idle") {
       if (isMobileRef.current) {
+        // Safety: clear stale touchPos if no touch activity in 600ms
+        if (touchPos.current && Date.now() - lastTouchTime.current > 600) {
+          touchPos.current = null;
+        }
+
         // Target flees from finger
         const tp = touchPos.current;
         if (tp) {
@@ -124,12 +130,25 @@ export default function CuatroCursores() {
         targetPos.current.x += targetVel.current.x;
         targetPos.current.y += targetVel.current.y;
 
-        // Bounce off walls (full restitution for snappy feel)
-        const margin = TARGET_R + 50;
-        if (targetPos.current.x < margin) { targetPos.current.x = margin; targetVel.current.x = Math.abs(targetVel.current.x); }
-        if (targetPos.current.x > window.innerWidth - margin) { targetPos.current.x = window.innerWidth - margin; targetVel.current.x = -Math.abs(targetVel.current.x); }
-        if (targetPos.current.y < margin) { targetPos.current.y = margin; targetVel.current.y = Math.abs(targetVel.current.y); }
-        if (targetPos.current.y > window.innerHeight - margin) { targetPos.current.y = window.innerHeight - margin; targetVel.current.y = -Math.abs(targetVel.current.y); }
+        // Hard clamp to keep diana on screen
+        const hard = TARGET_R + 4;
+        if (targetPos.current.x < hard) { targetPos.current.x = hard; if (targetVel.current.x < 0) targetVel.current.x *= 0.2; }
+        if (targetPos.current.x > window.innerWidth - hard) { targetPos.current.x = window.innerWidth - hard; if (targetVel.current.x > 0) targetVel.current.x *= 0.2; }
+        if (targetPos.current.y < hard) { targetPos.current.y = hard; if (targetVel.current.y < 0) targetVel.current.y *= 0.2; }
+        if (targetPos.current.y > window.innerHeight - hard) { targetPos.current.y = window.innerHeight - hard; if (targetVel.current.y > 0) targetVel.current.y *= 0.2; }
+
+        // Corner bounce at 50px — only when near two walls at once
+        const cm = 50;
+        const nearL = targetPos.current.x < cm;
+        const nearR = targetPos.current.x > window.innerWidth - cm;
+        const nearT = targetPos.current.y < cm;
+        const nearB = targetPos.current.y > window.innerHeight - cm;
+        if ((nearL || nearR) && (nearT || nearB)) {
+          if (nearL && targetVel.current.x < 0) { targetPos.current.x = cm; targetVel.current.x = Math.abs(targetVel.current.x); }
+          if (nearR && targetVel.current.x > 0) { targetPos.current.x = window.innerWidth - cm; targetVel.current.x = -Math.abs(targetVel.current.x); }
+          if (nearT && targetVel.current.y < 0) { targetPos.current.y = cm; targetVel.current.y = Math.abs(targetVel.current.y); }
+          if (nearB && targetVel.current.y > 0) { targetPos.current.y = window.innerHeight - cm; targetVel.current.y = -Math.abs(targetVel.current.y); }
+        }
 
         if (targetEl.current) {
           targetEl.current.style.left = targetPos.current.x + "px";
@@ -274,7 +293,10 @@ export default function CuatroCursores() {
       const src = e instanceof MouseEvent ? e : e.touches[0];
       if (!src) return;
       mouse.current = { x: src.clientX, y: src.clientY };
-      if (isMobileRef.current) touchPos.current = { x: src.clientX, y: src.clientY };
+      if (isMobileRef.current) {
+        touchPos.current = { x: src.clientX, y: src.clientY };
+        lastTouchTime.current = Date.now();
+      }
       if (stateRef.current === "idle") go("playing");
     }
 
@@ -283,6 +305,7 @@ export default function CuatroCursores() {
       if (!src) return;
       mouse.current = { x: src.clientX, y: src.clientY };
       touchPos.current = { x: src.clientX, y: src.clientY };
+      lastTouchTime.current = Date.now();
       if (stateRef.current === "idle") go("playing");
     }
 

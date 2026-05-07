@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 type Phase = "idle" | "drawing" | "score" | "alive" | "caught";
 
 const THRESHOLD = 0.88;
+const CIRCLE_HOLD_MS = 500;
 
 function computeScore(pts: { x: number; y: number }[]): number {
   if (pts.length < 20) return 0;
@@ -33,6 +34,7 @@ export default function CirculoPerfecto() {
   const mouseScreenRef = useRef({ x: -9999, y: -9999 });
   const animRef = useRef(0);
   const aliveOverlayRef = useRef<HTMLCanvasElement | null>(null);
+  const circleHoldStartRef = useRef<number | null>(null);
 
   const [sz, setSz] = useState(0);
 
@@ -120,6 +122,20 @@ export default function CirculoPerfecto() {
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText("ATRÁPAME", x, y);
+
+    // Hold progress arc (mobile only)
+    const hs = circleHoldStartRef.current;
+    if (hs !== null) {
+      const prog = Math.min((Date.now() - hs) / CIRCLE_HOLD_MS, 1);
+      if (prog > 0) {
+        ctx.beginPath();
+        ctx.arc(x, y, r + 7, -Math.PI / 2, -Math.PI / 2 + prog * Math.PI * 2);
+        ctx.strokeStyle = "#3b82f6";
+        ctx.lineWidth = 3;
+        ctx.lineCap = "round";
+        ctx.stroke();
+      }
+    }
   }
 
   const aliveLoop = useCallback(() => {
@@ -144,7 +160,7 @@ export default function CirculoPerfecto() {
     c.x += c.vx;
     c.y += c.vy;
 
-    const m2 = c.r + 5;
+    const m2 = c.r + 80;
     if (c.x < m2) { c.x = m2; c.vx = Math.abs(c.vx); }
     if (c.x > canvas.width - m2) { c.x = canvas.width - m2; c.vx = -Math.abs(c.vx); }
     if (c.y < m2) { c.y = m2; c.vy = Math.abs(c.vy); }
@@ -200,18 +216,26 @@ export default function CirculoPerfecto() {
         const c = circRef.current;
         holdTouchPos = { x: t.clientX, y: t.clientY };
         if (Math.hypot(t.clientX - c.x, t.clientY - c.y) <= c.r + 14) {
+          circleHoldStartRef.current = Date.now();
           holdTimer = setTimeout(() => {
+            holdTimer = null;
             const cc = circRef.current;
             if (Math.hypot(holdTouchPos.x - cc.x, holdTouchPos.y - cc.y) <= cc.r + 14) {
+              circleHoldStartRef.current = null;
               cancelAnimationFrame(animRef.current);
               overlay.remove();
               aliveOverlayRef.current = null;
               go("caught");
+            } else {
+              circleHoldStartRef.current = null;
             }
-          }, 500);
+          }, CIRCLE_HOLD_MS);
         }
       };
-      const cancelHold = () => { if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; } };
+      const cancelHold = () => {
+        if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
+        circleHoldStartRef.current = null;
+      };
       const onTouchMove = (e: TouchEvent) => {
         const t = e.touches[0];
         if (!t) return;
