@@ -12,7 +12,7 @@ const TOOL_DEFS: { id: Tool; label: string; key: string; color: string; border: 
   { id: WATER as Tool, label: "Agua",  key: "1", color: "#3b82f6", border: "rgba(59,130,246,0.4)" },
   { id: SAND  as Tool, label: "Arena", key: "2", color: "#c2a96e", border: "rgba(194,169,110,0.4)" },
   { id: FIRE  as Tool, label: "Fuego", key: "3", color: "#f97316", border: "rgba(249,115,22,0.4)" },
-  { id: WALL  as Tool, label: "Pared", key: "4", color: "#6b7280", border: "rgba(107,114,128,0.4)" },
+  { id: WALL  as Tool, label: "Madera",key: "4", color: "#8b5e3c", border: "rgba(139,94,60,0.4)" },
   { id: 99    as Tool, label: "Borrar",key: "5", color: "#374151", border: "rgba(55,65,81,0.3)" },
 ];
 
@@ -196,6 +196,16 @@ export default function Fluidos() {
           ages[i] = Math.max(0, ages[i] - 1 - (Math.random() > 0.6 ? 1 : 0));
           if (ages[i] === 0) { grid[i] = EMPTY; continue; }
 
+          // Ignite adjacent wood
+          for (const [dx, dy] of [[0,1],[0,-1],[1,0],[-1,0]]) {
+            const nx = x+dx, ny2 = y+dy;
+            if (nx < 0 || nx >= W || ny2 < 0 || ny2 >= H) continue;
+            const ni = ny2*W+nx;
+            if (grid[ni] === WALL && ages[ni] === 0 && Math.random() > 0.94) {
+              ages[ni] = 100 + Math.floor(Math.random() * 80);
+            }
+          }
+
           // Rise upward
           if (y > 0) {
             const ai = (y - 1) * W + x;
@@ -217,6 +227,34 @@ export default function Fluidos() {
                 grid[ni] = FIRE;
                 ages[ni] = Math.floor(ages[i] * 0.5);
                 upd[ni] = 1;
+              }
+            }
+          }
+        }
+
+        // WALL (wood) — burns when ignited
+        if (type === WALL && ages[i] > 0) {
+          ages[i] = Math.max(0, ages[i] - 1 - (Math.random() > 0.7 ? 1 : 0));
+          if (ages[i] === 0) { grid[i] = EMPTY; continue; }
+
+          // Emit fire upward
+          if (y > 0 && Math.random() > 0.45) {
+            const ai = (y - 1) * W + x;
+            if (grid[ai] === EMPTY) {
+              grid[ai] = FIRE; ages[ai] = Math.floor(ages[i] * 0.5); upd[ai] = 1;
+            }
+          }
+
+          // Spread fire to adjacent wood
+          if (Math.random() > 0.96) {
+            const d = Math.random() > 0.5 ? -1 : 1;
+            for (const [dx, dy] of [[d, 0], [0, 1], [-d, 0]]) {
+              const nx = x+dx, ny2 = y+dy;
+              if (nx < 0 || nx >= W || ny2 < 0 || ny2 >= H) continue;
+              const ni = ny2*W+nx;
+              if (grid[ni] === WALL && ages[ni] === 0) {
+                ages[ni] = Math.floor(ages[i] * 0.75 + Math.random() * 30);
+                break;
               }
             }
           }
@@ -277,10 +315,19 @@ export default function Fluidos() {
           color = `rgb(${fr},${fg},${fb})`;
 
         } else {
-          // WALL — stone texture
+          // WALL — wood grain
+          const grain = ((y * 4 + (x >> 3)) & 0xff) % 4;
           const h = ((x * 1664525 + y * 1013904223) >>> 0) & 0xff;
-          const v = h % 22;
-          color = `rgb(${56 + v},${63 + v},${70 + v})`;
+          const v = h % 20;
+          const g = grain < 2 ? 10 : 0;
+          if (ages[i] > 0) {
+            // Burning: charred wood with orange glow
+            const ratio = ages[i] / 180;
+            const glow = Math.floor(ratio * 110);
+            color = `rgb(${38 + glow},${18 + Math.floor(glow * 0.25)},${8})`;
+          } else {
+            color = `rgb(${130 + v + g},${80 + Math.floor(v * 0.7) + g},${38 + Math.floor(v * 0.3)})`;
+          }
         }
 
         ctx.fillStyle = color;
@@ -563,6 +610,7 @@ export default function Fluidos() {
           <span className="hint-item"><span className="hint-key">C</span> limpiar</span>
           <span className="hint-item">El agua apaga el fuego</span>
           <span className="hint-item">La arena se hunde en el agua</span>
+          <span className="hint-item">El fuego quema la madera</span>
         </div>
 
         {/* Footer */}
