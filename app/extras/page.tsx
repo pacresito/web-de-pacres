@@ -35,6 +35,15 @@ const BASE_EXTRAS: Extra[] = [
     cta: "Abrir →",
   },
   {
+    id: "fluidos",
+    label: "App",
+    title: "Fluidos",
+    description: "Arena, agua y fuego. Dibuja con el ratón o el dedo y mira qué pasa.",
+    status: "available",
+    href: "/apps/fluidos",
+    cta: "Jugar →",
+  },
+  {
     id: "espiral",
     label: "Juego",
     title: "Espiral",
