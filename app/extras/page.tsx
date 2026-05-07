@@ -106,10 +106,9 @@ export default function EasterEggs() {
     return () => mq.removeEventListener("change", handler);
   }, []);
 
-  // Placeholder solo si 2 columnas y número impar de elementos
-  const displayExtras = twoColumns && BASE_EXTRAS.length % 2 !== 0
-    ? [BASE_EXTRAS[0], PLACEHOLDER, ...BASE_EXTRAS.slice(1)]
-    : BASE_EXTRAS;
+  // Placeholder siempre en 1 columna; en 2 columnas solo si hay impar de elementos base
+  const showPlaceholder = !twoColumns || BASE_EXTRAS.length % 2 !== 0;
+  const displayExtras = showPlaceholder ? [...BASE_EXTRAS, PLACEHOLDER] : BASE_EXTRAS;
 
   useEffect(() => {
     observerRef.current?.disconnect();
