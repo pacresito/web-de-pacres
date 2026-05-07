@@ -58,7 +58,7 @@ const BASE_EXTRAS: Extra[] = [
     title: "Cuatro cursores",
     description: "Algo no cuadra en esta pantalla.",
     status: "available",
-    href: "/trucos/cursores",
+    href: "/bromas/cursores",
     cta: "Descubrirlo →",
   },
   {
