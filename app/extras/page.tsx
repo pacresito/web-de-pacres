@@ -108,7 +108,11 @@ export default function EasterEggs() {
 
   // Placeholder siempre en 1 columna; en 2 columnas solo si hay impar de elementos base
   const showPlaceholder = !twoColumns || BASE_EXTRAS.length % 2 !== 0;
-  const displayExtras = showPlaceholder ? [...BASE_EXTRAS, PLACEHOLDER] : BASE_EXTRAS;
+  const lastWebIndex = BASE_EXTRAS.reduce((last, item, i) => item.label === "Web" ? i : last, -1);
+  const insertAt = lastWebIndex + 1;
+  const displayExtras = showPlaceholder
+    ? [...BASE_EXTRAS.slice(0, insertAt), PLACEHOLDER, ...BASE_EXTRAS.slice(insertAt)]
+    : BASE_EXTRAS;
 
   useEffect(() => {
     observerRef.current?.disconnect();
