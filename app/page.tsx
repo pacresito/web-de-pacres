@@ -585,12 +585,25 @@ export default function Home() {
         pressHaloRef.current.style.top = `${e.clientY}px`;
       }
     };
+    const handleTouchMove = (e: TouchEvent) => {
+      const touch = e.touches[0];
+      if (!touch) return;
+      if (pressHaloRef.current) {
+        pressHaloRef.current.style.left = `${touch.clientX}px`;
+        pressHaloRef.current.style.top = `${touch.clientY}px`;
+      }
+      if (holdSecsRef.current > 0) e.preventDefault();
+    };
     window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
+    window.addEventListener("touchmove", handleTouchMove, { passive: false });
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("touchmove", handleTouchMove);
+    };
   }, []);
 
   useEffect(() => {
-    const handleMouseDown = () => {
+    const startHold = () => {
       holdSecsRef.current = 0;
       hueRef.current = 217;
       holdTimerRef.current = setInterval(() => {
@@ -616,7 +629,7 @@ export default function Home() {
         }
       }, 50);
     };
-    const handleMouseUp = () => {
+    const endHold = () => {
       const secs = holdSecsRef.current;
       if (holdTimerRef.current) clearInterval(holdTimerRef.current);
       holdSecsRef.current = 0;
@@ -630,11 +643,29 @@ export default function Home() {
         setTransformed(!transformedRef.current);
       }
     };
+    const handleMouseDown = () => startHold();
+    const handleMouseUp = () => endHold();
+    const handleTouchStart = (e: TouchEvent) => {
+      const touch = e.touches[0];
+      if (!touch) return;
+      if (pressHaloRef.current) {
+        pressHaloRef.current.style.left = `${touch.clientX}px`;
+        pressHaloRef.current.style.top = `${touch.clientY}px`;
+      }
+      startHold();
+    };
+    const handleTouchEnd = () => endHold();
     window.addEventListener("mousedown", handleMouseDown);
     window.addEventListener("mouseup", handleMouseUp);
+    window.addEventListener("touchstart", handleTouchStart);
+    window.addEventListener("touchend", handleTouchEnd);
+    window.addEventListener("touchcancel", handleTouchEnd);
     return () => {
       window.removeEventListener("mousedown", handleMouseDown);
       window.removeEventListener("mouseup", handleMouseUp);
+      window.removeEventListener("touchstart", handleTouchStart);
+      window.removeEventListener("touchend", handleTouchEnd);
+      window.removeEventListener("touchcancel", handleTouchEnd);
       if (holdTimerRef.current) clearInterval(holdTimerRef.current);
     };
   }, []);
