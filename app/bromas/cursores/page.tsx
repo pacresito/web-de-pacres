@@ -69,6 +69,7 @@ export default function CuatroCursores() {
   const holdArcEl = useRef<SVGCircleElement>(null);
 
   const animRef = useRef(0);
+  const lastFrameTimeRef = useRef(performance.now());
   const [attempts, setAttempts] = useState(0);
 
   // Certificate
@@ -115,9 +116,8 @@ export default function CuatroCursores() {
         holdArcEl.current.style.strokeDasharray = `0 ${ARC_C}`;
       }
       if (targetEl.current) {
-        targetEl.current.style.transition = "left 0.6s ease, top 0.6s ease";
-        targetEl.current.style.left = cx + "px";
-        targetEl.current.style.top = cy + "px";
+        targetEl.current.style.transition = "transform 0.6s ease";
+        targetEl.current.style.transform = `translate(${cx - TARGET_R}px, ${cy - TARGET_R}px)`;
       }
       // Show text once target has arrived
       const t1 = setTimeout(() => setMobileCaughtVisible(true), 700);
@@ -125,7 +125,7 @@ export default function CuatroCursores() {
       const t2 = setTimeout(() => {
         explodeAt(cx, cy);
         if (targetEl.current) {
-          targetEl.current.style.transition = "left 0.6s ease, top 0.6s ease, opacity 0.15s ease";
+          targetEl.current.style.transition = "transform 0.6s ease, opacity 0.15s ease";
           targetEl.current.style.opacity = "0";
         }
       }, 1000);
@@ -152,9 +152,8 @@ export default function CuatroCursores() {
       const el = ref.current;
       if (!el) return;
       const dur = MOVE_DURATIONS[i];
-      el.style.transition = `left ${dur}s ease, top ${dur}s ease, opacity 2s ease`;
-      el.style.left = confessionDestinations.current[i].x + "px";
-      el.style.top = confessionDestinations.current[i].y + "px";
+      el.style.transition = `transform ${dur}s ease, opacity 2s ease`;
+      el.style.transform = `translate(${confessionDestinations.current[i].x}px, ${confessionDestinations.current[i].y}px)`;
     });
 
     // Phrase 1 at t=1000ms
@@ -193,11 +192,15 @@ export default function CuatroCursores() {
   }, [gameState]);
 
   const loop = useCallback(() => {
+    const now = performance.now();
+    const dt = Math.min((now - lastFrameTimeRef.current) / 1000, 0.1);
+    lastFrameTimeRef.current = now;
+    const dtAlphas = LERP_ALPHAS.map(a => 1 - Math.pow(1 - a, dt * 60));
+
     const s = stateRef.current;
 
     if (cursorRealEl.current) {
-      cursorRealEl.current.style.left = mouse.current.x + "px";
-      cursorRealEl.current.style.top = mouse.current.y + "px";
+      cursorRealEl.current.style.transform = `translate(${mouse.current.x}px, ${mouse.current.y}px)`;
     }
 
     if (s === "confessing" || s === "certificate") {
@@ -251,8 +254,7 @@ export default function CuatroCursores() {
         }
 
         if (targetEl.current) {
-          targetEl.current.style.left = targetPos.current.x + "px";
-          targetEl.current.style.top = targetPos.current.y + "px";
+          targetEl.current.style.transform = `translate(${targetPos.current.x - TARGET_R}px, ${targetPos.current.y - TARGET_R}px)`;
         }
 
         if (tp && s === "playing") {
@@ -288,8 +290,8 @@ export default function CuatroCursores() {
       } else {
         const t = Date.now() / 1000;
         fakes.current.forEach((f, i) => {
-          f.x += (mouse.current.x - f.x) * LERP_ALPHAS[i];
-          f.y += (mouse.current.y - f.y) * LERP_ALPHAS[i];
+          f.x += (mouse.current.x - f.x) * dtAlphas[i];
+          f.y += (mouse.current.y - f.y) * dtAlphas[i];
           const el = fakeEls[i].current;
           if (el) {
             let ox = 0, oy = 0;
@@ -303,12 +305,11 @@ export default function CuatroCursores() {
               ox = Math.sin(t * 1.2 + 2.1) * 20;
               oy = Math.cos(t * 0.8 + 0.5) * 20;
             }
-            el.style.left = (f.x + ox) + "px";
-            el.style.top = (f.y + oy) + "px";
+            el.style.transform = `translate(${f.x + ox}px, ${f.y + oy}px)`;
           }
         });
 
-        targetAngle.current += 0.007;
+        targetAngle.current += 0.007 * dt * 60;
         const a = targetAngle.current;
         const rx = Math.min(window.innerWidth * 0.28, 220);
         const ry = Math.min(window.innerHeight * 0.22, 160);
@@ -316,8 +317,7 @@ export default function CuatroCursores() {
         const ty = window.innerHeight / 2 + Math.sin(a * 2) * ry;
         targetPos.current = { x: tx, y: ty };
         if (targetEl.current) {
-          targetEl.current.style.left = tx + "px";
-          targetEl.current.style.top = ty + "px";
+          targetEl.current.style.transform = `translate(${tx - TARGET_R}px, ${ty - TARGET_R}px)`;
         }
       }
     }
@@ -325,8 +325,7 @@ export default function CuatroCursores() {
     const wi = winkingIdxRef.current;
     if (wi >= 0 && winkEl.current) {
       const f = fakes.current[wi];
-      winkEl.current.style.left = f.x + 18 + "px";
-      winkEl.current.style.top = f.y - 8 + "px";
+      winkEl.current.style.transform = `translate(${f.x + 18}px, ${f.y - 8}px)`;
     }
 
     animRef.current = requestAnimationFrame(loop);
@@ -455,13 +454,7 @@ export default function CuatroCursores() {
           return;
         }
         // Win: freeze fake positions from DOM and start confession
-        frozenFakePositions.current = fakeEls.map(ref => {
-          if (!ref.current) return { x: -200, y: -200 };
-          return {
-            x: parseFloat(ref.current.style.left),
-            y: parseFloat(ref.current.style.top),
-          };
-        });
+        frozenFakePositions.current = fakes.current.map(f => ({ x: f.x, y: f.y }));
         go("confessing");
         return;
       }
@@ -559,8 +552,9 @@ export default function CuatroCursores() {
         <div
           ref={targetEl}
           style={{
-            position: "fixed", left: -200, top: -200,
-            transform: "translate(-50%, -50%)",
+            position: "fixed", left: 0, top: 0,
+            transform: "translate(-9999px, -9999px)",
+            willChange: "transform",
             width: TARGET_R * 2, height: TARGET_R * 2,
             borderRadius: "50%",
             border: "2px solid rgba(96,165,250,0.55)",
@@ -594,14 +588,14 @@ export default function CuatroCursores() {
 
       {/* Real cursor — desktop only */}
       {!isMobile && (
-        <div ref={cursorRealEl} style={{ position: "fixed", left: -200, top: -200, pointerEvents: "none", zIndex: 9998 }}><CursorIcon /></div>
+        <div ref={cursorRealEl} style={{ position: "fixed", left: 0, top: 0, transform: "translate(-9999px,-9999px)", willChange: "transform", pointerEvents: "none", zIndex: 9998 }}><CursorIcon /></div>
       )}
 
       {/* Fakes — desktop only, hidden during certificate. Tooltips embedded so they follow. */}
       {gameState !== "certificate" && !isMobile && (
         <>
           {([fake1El, fake2El, fake3El] as const).map((ref, i) => (
-            <div key={i} ref={ref} style={{ position: "fixed", left: -200, top: -200, pointerEvents: "none", zIndex: 9997 - i }}>
+            <div key={i} ref={ref} style={{ position: "fixed", left: 0, top: 0, transform: "translate(-9999px,-9999px)", willChange: "transform", pointerEvents: "none", zIndex: 9997 - i }}>
               <CursorIcon />
               <div style={{
                 position: "absolute",
@@ -652,7 +646,8 @@ export default function CuatroCursores() {
         <div
           ref={winkEl}
           style={{
-            position: "fixed", left: -200, top: -200,
+            position: "fixed", left: 0, top: 0,
+            transform: "translate(-9999px,-9999px)", willChange: "transform",
             fontSize: "1.4rem", pointerEvents: "none", zIndex: 9999,
             animation: "winkBounce 0.25s ease infinite alternate, winkFade 0.15s ease",
           }}

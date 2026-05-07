@@ -455,9 +455,10 @@ export default function Home() {
     Runner.run(runner, engine);
 
     // Giroscopio: actualizar gravedad según orientación del móvil
+    let gyroFired = false;
     const handleOrientation = (e: DeviceOrientationEvent) => {
       if (e.gamma === null || e.beta === null) return;
-      // gamma: inclinación izq/der (-90..90), beta: adelante/atrás (-180..180)
+      gyroFired = true;
       const maxTilt = 45;
       const gx = Math.max(-1, Math.min(1, e.gamma / maxTilt));
       const gy = Math.max(-1, Math.min(1, e.beta / maxTilt));
@@ -465,6 +466,18 @@ export default function Home() {
       engine.gravity.y = gy * 2;
     };
     window.addEventListener("deviceorientation", handleOrientation);
+
+    // Fallback táctil: cuando no hay giróscopo, el dedo controla la gravedad
+    const handleTouchGravity = (e: TouchEvent) => {
+      if (gyroFired) return;
+      const touch = e.touches[0];
+      if (!touch) return;
+      const gx = (touch.clientX - window.innerWidth / 2) / (window.innerWidth / 2);
+      const gy = (touch.clientY - window.innerHeight / 2) / (window.innerHeight / 2);
+      engine.gravity.x = gx * 2;
+      engine.gravity.y = gy * 2;
+    };
+    window.addEventListener("touchmove", handleTouchGravity, { passive: true });
 
     // Mouse: gravedad según posición relativa al centro (desktop)
     const handleMouseGravity = (e: MouseEvent) => {
@@ -528,14 +541,34 @@ export default function Home() {
       }, 750);
     };
 
-    // Clic en cualquier parte del overlay → restaurar
-    overlay.style.pointerEvents = "auto";
-    overlay.style.cursor = "pointer";
-    overlay.addEventListener("click", () => {
+    const cleanupListeners = () => {
       window.removeEventListener("deviceorientation", handleOrientation);
       window.removeEventListener("mousemove", handleMouseGravity);
-      restore();
-    }, { once: true });
+      window.removeEventListener("touchmove", handleTouchGravity);
+    };
+
+    overlay.style.pointerEvents = "auto";
+    const isTouchDevice = "ontouchstart" in window;
+    if (isTouchDevice) {
+      // Doble tap para restaurar en móvil
+      let lastTapTime = 0;
+      const handleDoubleTap = () => {
+        const now = Date.now();
+        if (now - lastTapTime < 350) {
+          overlay.removeEventListener("touchend", handleDoubleTap);
+          cleanupListeners();
+          restore();
+        }
+        lastTapTime = now;
+      };
+      overlay.addEventListener("touchend", handleDoubleTap);
+    } else {
+      overlay.style.cursor = "pointer";
+      overlay.addEventListener("click", () => {
+        cleanupListeners();
+        restore();
+      }, { once: true });
+    }
     restoreRef.current = restore;
   }, []);
 
