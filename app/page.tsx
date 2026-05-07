@@ -467,7 +467,18 @@ export default function Home() {
       engine.gravity.x = gx * 2;
       engine.gravity.y = gy * 2;
     };
-    window.addEventListener("deviceorientation", handleOrientation);
+    // iOS 13+ requiere permiso explícito; sin él el evento puede llegar con valores 0
+    // (no null), lo que pone gyroFired=true y la gravedad a cero bloqueando el fallback táctil
+    if (typeof DeviceOrientationEvent !== "undefined" &&
+        typeof (DeviceOrientationEvent as any).requestPermission === "function") {
+      (DeviceOrientationEvent as any).requestPermission()
+        .then((state: string) => {
+          if (state === "granted") window.addEventListener("deviceorientation", handleOrientation);
+        })
+        .catch(() => {});
+    } else {
+      window.addEventListener("deviceorientation", handleOrientation);
+    }
 
     // Fallback táctil: cuando no hay giróscopo, el dedo controla la gravedad
     const handleTouchGravity = (e: TouchEvent) => {
