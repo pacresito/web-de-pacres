@@ -550,7 +550,9 @@ export default function CalculadoraRPN() {
             Calculadora <span>RPN</span>
           </h1>
           <p className="page-subtitle">
-            Hecha para Antonio y para toda persona que alguna vez pensó: «esto iría más rápido con una pila y menos paréntesis». Porque introducir el operador al final no es una excentricidad — es superioridad cognitiva.
+            Hecha para Antonio y para toda persona que alguna vez pensó:<br/>
+            «esto iría más rápido con una pila y menos paréntesis».<br/>
+            Porque introducir el operador al final no es una excentricidad — es superioridad cognitiva.
           </p>
         </div>
 
