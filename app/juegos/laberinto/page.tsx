@@ -251,6 +251,20 @@ export default function Laberinto() {
   const [scale, setScale] = useState(1);
   const [isLandscape, setIsLandscape] = useState(false);
   const landscapeRef = useRef(false);
+  const wakeLockRef = useRef<{ release: () => Promise<void> } | null>(null);
+
+  function acquireWakeLock() {
+    const nav = navigator as Navigator & { wakeLock?: { request: (type: string) => Promise<{ release: () => Promise<void> }> } };
+    if (!nav.wakeLock) return;
+    nav.wakeLock.request("screen").then(lock => { wakeLockRef.current = lock; }).catch(() => {});
+  }
+
+  function releaseWakeLock() {
+    if (wakeLockRef.current) {
+      wakeLockRef.current.release().catch(() => {});
+      wakeLockRef.current = null;
+    }
+  }
 
   const initial = initMaze();
   const g = useRef({
@@ -540,6 +554,7 @@ export default function Laberinto() {
           state.idle = false;
           state.startTime = time;
           state.lastTime = time;
+          acquireWakeLock();
         } else {
           draw(time);
           state.animId = requestAnimationFrame(loopRef.current);
@@ -559,6 +574,7 @@ export default function Laberinto() {
       }
       if (state.timeLeft <= 0) {
         state.gameOver = true;
+        releaseWakeLock();
         if (boardRef.current) boardRef.current.style.transform = "";
         setScore(state.score);
         setGameOver(true);
@@ -666,6 +682,7 @@ export default function Laberinto() {
   }
 
   function fullRestart() {
+    releaseWakeLock();
     const state = g.current;
     cancelAnimationFrame(state.animId);
     resetMazeState();
@@ -777,6 +794,7 @@ export default function Laberinto() {
         cancelAnimationFrame(state.animId);
         window.removeEventListener("mousemove", onMouseMove);
         window.removeEventListener("resize", updateScale);
+        releaseWakeLock();
         cleanup();
       };
     } else if (isIOS) {
@@ -790,6 +808,7 @@ export default function Laberinto() {
       cancelAnimationFrame(state.animId);
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("resize", updateScale);
+      releaseWakeLock();
     };
   }, []);
 
@@ -805,23 +824,6 @@ export default function Laberinto() {
       setOrientState("off");
     }
   }, [attachOrientListener, calibrateOrientation]);
-
-  function touchKey(key: "up" | "down" | "left" | "right", val: boolean) {
-    g.current.keys[key] = val;
-  }
-
-  function ArrowBtn({ dir, label }: { dir: "up" | "down" | "left" | "right"; label: string }) {
-    return (
-      <button
-        className="w-14 h-14 flex items-center justify-center rounded-xl text-xl select-none touch-none bg-gray-100 active:bg-blue-500 active:text-white text-gray-600 border border-gray-200 transition-colors"
-        onPointerDown={() => touchKey(dir, true)}
-        onPointerUp={() => touchKey(dir, false)}
-        onPointerLeave={() => touchKey(dir, false)}
-      >
-        {label}
-      </button>
-    );
-  }
 
   const scoreColor = score < 0 ? "#ef4444" : "#3b82f6";
   const timerColor = timeLeft <= 10 ? "#ef4444" : "#9ca3af";
@@ -985,7 +987,7 @@ export default function Laberinto() {
 
   if (isLandscape) {
     return (
-      <main style={{ background: "#ffffff", height: "100dvh", overflow: "hidden" }} className="flex flex-row items-center justify-center gap-2 px-2">
+      <main style={{ background: "#ffffff", height: "100dvh", overflow: "hidden", userSelect: "none" }} className="flex flex-row items-center justify-center gap-2 px-2">
         <div style={{ width: 120, flexShrink: 0 }} className="flex flex-col items-center justify-center gap-3 h-full">
           <h1 style={{ color: "#111827", fontSize: "1.1rem", fontWeight: 800, letterSpacing: "-0.03em", textAlign: "center" }}>Laberinto</h1>
           <div style={{ display: "flex", gap: "0.6rem", alignItems: "center" }}>
@@ -1001,7 +1003,7 @@ export default function Laberinto() {
             ranking
           </a>
           <p style={{ fontSize: "0.65rem", color: "#d1d5db", textAlign: "center", lineHeight: 1.4 }}>
-            {orientState === "on" ? "Toca para calibrar · Inclina el móvil" : "Mueve el ratón o toca para inclinar"}
+            {orientState === "on" ? "Toca para calibrar · Inclina el móvil" : orientState === "needs-permission" ? "Toca el tablero para activar el giroscopio" : "Mueve el ratón o toca para inclinar"}
           </p>
           <a href="/extras" style={{ fontSize: "0.7rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", textDecoration: "none" }}
             onMouseEnter={e => (e.currentTarget.style.color = "#3b82f6")}
@@ -1016,16 +1018,6 @@ export default function Laberinto() {
           <button onClick={fullRestart} className="text-gray-400 hover:text-gray-600 text-xs transition-colors">
             nuevo laberinto
           </button>
-          {orientState !== "on" && (
-            <div className="flex flex-col items-center gap-1">
-              <ArrowBtn dir="up" label="↑" />
-              <div className="flex gap-1">
-                <ArrowBtn dir="left" label="←" />
-                <ArrowBtn dir="down" label="↓" />
-                <ArrowBtn dir="right" label="→" />
-              </div>
-            </div>
-          )}
           {orientState === "needs-permission" && (
             <button onClick={requestOrientPermission} className="px-3 py-1.5 rounded-xl bg-blue-500 text-white text-xs font-semibold">
               Usar giroscopio
@@ -1037,7 +1029,7 @@ export default function Laberinto() {
   }
 
   return (
-    <main style={{ background: "#ffffff", minHeight: "100dvh", position: "relative" }} className="flex flex-col items-center justify-start px-4 py-12 gap-8 overflow-x-auto">
+    <main style={{ background: "#ffffff", minHeight: "100dvh", position: "relative", userSelect: "none" }} className="flex flex-col items-center justify-start px-4 py-12 gap-8 overflow-x-auto">
       {header}
 
       {boardEl}
@@ -1045,17 +1037,6 @@ export default function Laberinto() {
       <button onClick={fullRestart} className="text-gray-400 hover:text-gray-600 text-sm transition-colors">
         nuevo laberinto
       </button>
-
-      {orientState !== "on" && (
-        <div className="flex flex-col items-center gap-1 md:hidden">
-          <ArrowBtn dir="up" label="↑" />
-          <div className="flex gap-1">
-            <ArrowBtn dir="left" label="←" />
-            <ArrowBtn dir="down" label="↓" />
-            <ArrowBtn dir="right" label="→" />
-          </div>
-        </div>
-      )}
 
       {orientState === "needs-permission" && (
         <button onClick={requestOrientPermission} className="px-4 py-2 rounded-xl bg-blue-500 text-white text-sm font-semibold">
@@ -1067,6 +1048,8 @@ export default function Laberinto() {
         <p style={{ fontSize: "0.75rem", color: "#d1d5db" }}>
           {orientState === "on"
             ? "Toca el tablero para calibrar · Inclina el móvil para mover la bola"
+            : orientState === "needs-permission"
+            ? "Toca el tablero para activar el giroscopio"
             : "Mueve el ratón o toca el tablero para inclinar"}
         </p>
         <a href="/extras" style={{ fontSize: "0.75rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", textDecoration: "none", transition: "color 0.2s" }}
