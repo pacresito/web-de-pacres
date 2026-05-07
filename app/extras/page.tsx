@@ -26,6 +26,15 @@ const BASE_EXTRAS: Extra[] = [
     cta: "Ver perfil →",
   },
   {
+    id: "rpncalc",
+    label: "App",
+    title: "Calculadora RPN",
+    description: "HP 49G en el navegador. Para los que piensan en pila.",
+    status: "available",
+    href: "/apps/RPNcalc",
+    cta: "Abrir →",
+  },
+  {
     id: "espiral",
     label: "Juego",
     title: "Espiral",
