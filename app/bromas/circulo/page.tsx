@@ -188,15 +188,53 @@ export default function CirculoPerfecto() {
     document.body.appendChild(overlay);
     aliveOverlayRef.current = overlay;
 
-    overlay.addEventListener("click", (e) => {
-      const c = circRef.current;
-      if (Math.hypot(e.clientX - c.x, e.clientY - c.y) <= c.r + 14) {
-        cancelAnimationFrame(animRef.current);
-        overlay.remove();
-        aliveOverlayRef.current = null;
-        go("caught");
-      }
-    });
+    const isMobileDevice = "ontouchstart" in window && window.matchMedia("(pointer: coarse)").matches;
+
+    if (isMobileDevice) {
+      let holdTimer: ReturnType<typeof setTimeout> | null = null;
+      let holdTouchPos = { x: 0, y: 0 };
+
+      const onTouchStart = (e: TouchEvent) => {
+        const t = e.touches[0];
+        if (!t) return;
+        const c = circRef.current;
+        holdTouchPos = { x: t.clientX, y: t.clientY };
+        if (Math.hypot(t.clientX - c.x, t.clientY - c.y) <= c.r + 14) {
+          holdTimer = setTimeout(() => {
+            const cc = circRef.current;
+            if (Math.hypot(holdTouchPos.x - cc.x, holdTouchPos.y - cc.y) <= cc.r + 14) {
+              cancelAnimationFrame(animRef.current);
+              overlay.remove();
+              aliveOverlayRef.current = null;
+              go("caught");
+            }
+          }, 500);
+        }
+      };
+      const cancelHold = () => { if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; } };
+      const onTouchMove = (e: TouchEvent) => {
+        const t = e.touches[0];
+        if (!t) return;
+        holdTouchPos = { x: t.clientX, y: t.clientY };
+        const c = circRef.current;
+        if (holdTimer && Math.hypot(t.clientX - c.x, t.clientY - c.y) > c.r + 14) cancelHold();
+      };
+
+      overlay.addEventListener("touchstart", onTouchStart, { passive: true });
+      overlay.addEventListener("touchmove", onTouchMove, { passive: true });
+      overlay.addEventListener("touchend", cancelHold);
+      overlay.addEventListener("touchcancel", cancelHold);
+    } else {
+      overlay.addEventListener("click", (e) => {
+        const c = circRef.current;
+        if (Math.hypot(e.clientX - c.x, e.clientY - c.y) <= c.r + 14) {
+          cancelAnimationFrame(animRef.current);
+          overlay.remove();
+          aliveOverlayRef.current = null;
+          go("caught");
+        }
+      });
+    }
 
     go("alive");
     animRef.current = requestAnimationFrame(aliveLoop);

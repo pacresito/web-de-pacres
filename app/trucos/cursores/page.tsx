@@ -8,7 +8,7 @@ const TARGET_R = 28;
 const LERP_ALPHAS = [0.08, 0.06, 0.04];
 const FLEE_RADIUS = 180;
 const FLEE_FORCE = 14;
-const HOLD_MS = 250;
+const HOLD_MS = 750;
 const ARC_C = 2 * Math.PI * (TARGET_R - 4);
 
 function CursorIcon() {
@@ -116,8 +116,8 @@ export default function CuatroCursores() {
           // No touch: drift back to center
           const cx = window.innerWidth / 2;
           const cy = window.innerHeight / 2;
-          targetVel.current.x += (cx - targetPos.current.x) * 0.018;
-          targetVel.current.y += (cy - targetPos.current.y) * 0.018;
+          targetVel.current.x += (cx - targetPos.current.x) * 0.005;
+          targetVel.current.y += (cy - targetPos.current.y) * 0.005;
         }
         targetVel.current.x *= 0.87;
         targetVel.current.y *= 0.87;
@@ -125,7 +125,7 @@ export default function CuatroCursores() {
         targetPos.current.y += targetVel.current.y;
 
         // Bounce off walls (full restitution for snappy feel)
-        const margin = TARGET_R + 8;
+        const margin = TARGET_R + 50;
         if (targetPos.current.x < margin) { targetPos.current.x = margin; targetVel.current.x = Math.abs(targetVel.current.x); }
         if (targetPos.current.x > window.innerWidth - margin) { targetPos.current.x = window.innerWidth - margin; targetVel.current.x = -Math.abs(targetVel.current.x); }
         if (targetPos.current.y < margin) { targetPos.current.y = margin; targetVel.current.y = Math.abs(targetVel.current.y); }
@@ -355,12 +355,14 @@ export default function CuatroCursores() {
     window.addEventListener("touchmove", onMove, { passive: true });
     window.addEventListener("touchstart", onTouchStart, { passive: true });
     window.addEventListener("touchend", onTouchEnd);
+    window.addEventListener("touchcancel", onTouchEnd);
     return () => {
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("click", onClick);
       window.removeEventListener("touchmove", onMove);
       window.removeEventListener("touchstart", onTouchStart);
       window.removeEventListener("touchend", onTouchEnd);
+      window.removeEventListener("touchcancel", onTouchEnd);
     };
   }, [loop]);
 
