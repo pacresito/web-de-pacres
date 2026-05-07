@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-type GameState = "idle" | "playing" | "lost" | "won";
+type GameState = "idle" | "playing" | "lost" | "confessing" | "certificate";
 
 const TARGET_R = 28;
 const LERP_ALPHAS = [0.08, 0.06, 0.04];
@@ -10,6 +10,15 @@ const FLEE_RADIUS = 180;
 const FLEE_FORCE = 14;
 const HOLD_MS = 1000;
 const ARC_C = 2 * Math.PI * (TARGET_R - 4);
+
+const CONFESSIONS = [
+  "Yo tampoco sabía cuál era el real",
+  "Llevo aquí desde 2024",
+  "Oye, ¿y ahora qué hago yo?",
+];
+
+// Travel durations (seconds): fastest → slowest
+const MOVE_DURATIONS = [3, 6, 9];
 
 function CursorIcon() {
   return (
@@ -48,8 +57,6 @@ export default function CuatroCursores() {
   const winkingIdxRef = useRef(-1);
   const [winkingIdx, setWinkingIdx] = useState(-1);
 
-  const celebrationEmojiEl = useRef<HTMLDivElement>(null);
-
   const targetEl = useRef<HTMLDivElement>(null);
   const targetAngle = useRef(0);
   const targetPos = useRef({ x: 0, y: 0 });
@@ -63,6 +70,18 @@ export default function CuatroCursores() {
 
   const animRef = useRef(0);
   const [attempts, setAttempts] = useState(0);
+
+  // Certificate
+  const certNumRef = useRef(Math.floor(Math.random() * 900000) + 100000);
+
+  // Desktop confession state
+  const frozenFakePositions = useRef<{ x: number; y: number }[]>([]);
+  const confessionDestinations = useRef<{ x: number; y: number }[]>([]);
+  const [confessionVisible, setConfessionVisible] = useState([false, false, false]);
+
+  // Mobile catch state
+  const capturedTargetPos = useRef({ x: 0, y: 0 });
+  const [mobileCaughtVisible, setMobileCaughtVisible] = useState(false);
 
   useEffect(() => {
     const mobile = "ontouchstart" in window && window.matchMedia("(pointer: coarse)").matches;
@@ -83,6 +102,96 @@ export default function CuatroCursores() {
     setGameState(s);
   }
 
+  // Confession animation sequence
+  useEffect(() => {
+    if (gameState !== "confessing") return;
+
+    if (isMobileRef.current) {
+      const cx = window.innerWidth / 2;
+      const cy = window.innerHeight / 2;
+      // Hide arc, move target to center
+      if (holdArcEl.current) {
+        holdArcEl.current.style.opacity = "0";
+        holdArcEl.current.style.strokeDasharray = `0 ${ARC_C}`;
+      }
+      if (targetEl.current) {
+        targetEl.current.style.transition = "left 0.6s ease, top 0.6s ease";
+        targetEl.current.style.left = cx + "px";
+        targetEl.current.style.top = cy + "px";
+      }
+      // Show text once target has arrived
+      const t1 = setTimeout(() => setMobileCaughtVisible(true), 700);
+      // Confetti + hide target simultaneously (target "explodes" into confetti)
+      const t2 = setTimeout(() => {
+        explodeAt(cx, cy);
+        if (targetEl.current) {
+          targetEl.current.style.transition = "left 0.6s ease, top 0.6s ease, opacity 0.15s ease";
+          targetEl.current.style.opacity = "0";
+        }
+      }, 1000);
+      // Hide text
+      const t3 = setTimeout(() => setMobileCaughtVisible(false), 2400);
+      // Certificate
+      const t4 = setTimeout(() => go("certificate"), 2900);
+      return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); };
+    }
+
+    // Desktop sequence — cursor x offset so cursor+tooltip appears centered
+    const cx = window.innerWidth / 2 - 110;
+    confessionDestinations.current = [
+      { x: cx, y: window.innerHeight * 0.22 },
+      { x: cx, y: window.innerHeight * 0.50 },
+      { x: cx, y: window.innerHeight * 0.78 },
+    ];
+
+    // Confetti on all 3 frozen fakes
+    frozenFakePositions.current.forEach(pos => explodeAt(pos.x, pos.y));
+
+    // Movement starts immediately (t=0)
+    fakeEls.forEach((ref, i) => {
+      const el = ref.current;
+      if (!el) return;
+      const dur = MOVE_DURATIONS[i];
+      el.style.transition = `left ${dur}s ease, top ${dur}s ease, opacity 2s ease`;
+      el.style.left = confessionDestinations.current[i].x + "px";
+      el.style.top = confessionDestinations.current[i].y + "px";
+    });
+
+    // Phrase 1 at t=1000ms
+    const tP1Show = setTimeout(() => setConfessionVisible([true, false, false]), 1000);
+    // Phrase 1 ends + fake 1 fades at t=2500ms
+    const tP1Hide = setTimeout(() => {
+      setConfessionVisible([false, false, false]);
+      if (fake1El.current) fake1El.current.style.opacity = "0";
+    }, 2500);
+
+    // Phrase 2 at t=2800ms
+    const tP2Show = setTimeout(() => setConfessionVisible([false, true, false]), 2800);
+    // Phrase 2 ends + fake 2 fades at t=4300ms
+    const tP2Hide = setTimeout(() => {
+      setConfessionVisible([false, false, false]);
+      if (fake2El.current) fake2El.current.style.opacity = "0";
+    }, 4300);
+
+    // Phrase 3 at t=4600ms
+    const tP3Show = setTimeout(() => setConfessionVisible([false, false, true]), 4600);
+    // Phrase 3 ends + fake 3 fades at t=6100ms
+    const tP3Hide = setTimeout(() => {
+      setConfessionVisible([false, false, false]);
+      if (fake3El.current) fake3El.current.style.opacity = "0";
+    }, 6100);
+
+    // Certificate at t=8100ms
+    const tCert = setTimeout(() => go("certificate"), 8100);
+
+    return () => {
+      clearTimeout(tP1Show); clearTimeout(tP1Hide);
+      clearTimeout(tP2Show); clearTimeout(tP2Hide);
+      clearTimeout(tP3Show); clearTimeout(tP3Hide);
+      clearTimeout(tCert);
+    };
+  }, [gameState]);
+
   const loop = useCallback(() => {
     const s = stateRef.current;
 
@@ -91,23 +200,17 @@ export default function CuatroCursores() {
       cursorRealEl.current.style.top = mouse.current.y + "px";
     }
 
-    if (s === "won") {
-      if (celebrationEmojiEl.current) {
-        celebrationEmojiEl.current.style.left = mouse.current.x + 18 + "px";
-        celebrationEmojiEl.current.style.top = mouse.current.y - 8 + "px";
-      }
+    if (s === "confessing" || s === "certificate") {
       animRef.current = requestAnimationFrame(loop);
       return;
     }
 
     if (s === "playing" || s === "idle") {
       if (isMobileRef.current) {
-        // Safety: clear stale touchPos if no touch activity in 600ms
         if (touchPos.current && Date.now() - lastTouchTime.current > 600) {
           touchPos.current = null;
         }
 
-        // Target flees from finger
         const tp = touchPos.current;
         if (tp) {
           const dx = targetPos.current.x - tp.x;
@@ -119,7 +222,6 @@ export default function CuatroCursores() {
             targetVel.current.y += (dy / dist) * strength;
           }
         } else {
-          // No touch: drift back to center
           const cx = window.innerWidth / 2;
           const cy = window.innerHeight / 2;
           targetVel.current.x += (cx - targetPos.current.x) * 0.005;
@@ -130,14 +232,12 @@ export default function CuatroCursores() {
         targetPos.current.x += targetVel.current.x;
         targetPos.current.y += targetVel.current.y;
 
-        // Hard clamp to keep diana on screen
         const hard = TARGET_R + 4;
         if (targetPos.current.x < hard) { targetPos.current.x = hard; if (targetVel.current.x < 0) targetVel.current.x *= 0.2; }
         if (targetPos.current.x > window.innerWidth - hard) { targetPos.current.x = window.innerWidth - hard; if (targetVel.current.x > 0) targetVel.current.x *= 0.2; }
         if (targetPos.current.y < hard) { targetPos.current.y = hard; if (targetVel.current.y < 0) targetVel.current.y *= 0.2; }
         if (targetPos.current.y > window.innerHeight - hard) { targetPos.current.y = window.innerHeight - hard; if (targetVel.current.y > 0) targetVel.current.y *= 0.2; }
 
-        // Corner bounce at 50px — only when near two walls at once
         const cm = 50;
         const nearL = targetPos.current.x < cm;
         const nearR = targetPos.current.x > window.innerWidth - cm;
@@ -155,31 +255,37 @@ export default function CuatroCursores() {
           targetEl.current.style.top = targetPos.current.y + "px";
         }
 
-        // Hold detection
         if (tp && s === "playing") {
           const onTarget = Math.hypot(tp.x - targetPos.current.x, tp.y - targetPos.current.y) < TARGET_R;
           if (onTarget) {
             if (!holdStart.current) holdStart.current = Date.now();
             const progress = Math.min((Date.now() - holdStart.current) / HOLD_MS, 1);
-            if (holdArcEl.current) holdArcEl.current.style.strokeDasharray = `${progress * ARC_C} ${ARC_C}`;
+            if (holdArcEl.current) {
+              holdArcEl.current.style.opacity = "1";
+              holdArcEl.current.style.strokeDasharray = `${progress * ARC_C} ${ARC_C}`;
+            }
             if (progress >= 1) {
               touchPos.current = null;
               holdStart.current = null;
-              explodeAt(targetPos.current.x, targetPos.current.y);
-              go("won");
+              go("confessing");
               animRef.current = requestAnimationFrame(loop);
               return;
             }
           } else {
             holdStart.current = null;
-            if (holdArcEl.current) holdArcEl.current.style.strokeDasharray = `0 ${ARC_C}`;
+            if (holdArcEl.current) {
+              holdArcEl.current.style.opacity = "0";
+              holdArcEl.current.style.strokeDasharray = `0 ${ARC_C}`;
+            }
           }
         } else {
           holdStart.current = null;
-          if (holdArcEl.current) holdArcEl.current.style.strokeDasharray = `0 ${ARC_C}`;
+          if (holdArcEl.current) {
+            holdArcEl.current.style.opacity = "0";
+            holdArcEl.current.style.strokeDasharray = `0 ${ARC_C}`;
+          }
         }
       } else {
-        // Desktop: lerp fakes + lissajous target
         const t = Date.now() / 1000;
         fakes.current.forEach((f, i) => {
           f.x += (mouse.current.x - f.x) * LERP_ALPHAS[i];
@@ -216,7 +322,6 @@ export default function CuatroCursores() {
       }
     }
 
-    // Wink tooltip follows the winking fake
     const wi = winkingIdxRef.current;
     if (wi >= 0 && winkEl.current) {
       const f = fakes.current[wi];
@@ -312,7 +417,10 @@ export default function CuatroCursores() {
     function onTouchEnd() {
       touchPos.current = null;
       holdStart.current = null;
-      if (holdArcEl.current) holdArcEl.current.style.strokeDasharray = `0 ${ARC_C}`;
+      if (holdArcEl.current) {
+        holdArcEl.current.style.opacity = "0";
+        holdArcEl.current.style.strokeDasharray = `0 ${ARC_C}`;
+      }
     }
 
     function onClick(e: MouseEvent | TouchEvent) {
@@ -346,10 +454,15 @@ export default function CuatroCursores() {
           }
           return;
         }
-        cancelAnimationFrame(animRef.current);
-        fakes.current.forEach(f => explodeAt(f.x, f.y));
-        go("won");
-        animRef.current = requestAnimationFrame(loop);
+        // Win: freeze fake positions from DOM and start confession
+        frozenFakePositions.current = fakeEls.map(ref => {
+          if (!ref.current) return { x: -200, y: -200 };
+          return {
+            x: parseFloat(ref.current.style.left),
+            y: parseFloat(ref.current.style.top),
+          };
+        });
+        go("confessing");
         return;
       }
 
@@ -391,6 +504,16 @@ export default function CuatroCursores() {
 
   function playAgain() {
     cancelAnimationFrame(animRef.current);
+    fakeEls.forEach(ref => {
+      const el = ref.current;
+      if (!el) return;
+      el.style.transition = "";
+      el.style.opacity = "";
+    });
+    if (targetEl.current) {
+      targetEl.current.style.transition = "";
+      targetEl.current.style.opacity = "";
+    }
     const cx = window.innerWidth / 2;
     const cy = window.innerHeight / 2;
     targetPos.current = { x: cx, y: cy };
@@ -401,7 +524,12 @@ export default function CuatroCursores() {
     setWinkingIdx(-1);
     touchPos.current = null;
     holdStart.current = null;
-    if (holdArcEl.current) holdArcEl.current.style.strokeDasharray = `0 ${ARC_C}`;
+    if (holdArcEl.current) {
+      holdArcEl.current.style.opacity = "0";
+      holdArcEl.current.style.strokeDasharray = `0 ${ARC_C}`;
+    }
+    setConfessionVisible([false, false, false]);
+    setMobileCaughtVisible(false);
     go("playing");
     animRef.current = requestAnimationFrame(loop);
   }
@@ -420,14 +548,14 @@ export default function CuatroCursores() {
           from { opacity: 0; transform: translateY(4px) scale(0.8); }
           to   { opacity: 1; transform: translateY(0)   scale(1);   }
         }
-        @keyframes emojiFadeOut {
-          from { opacity: 1; }
-          to   { opacity: 0; }
+        @keyframes certAppear {
+          from { opacity: 0; transform: translateY(10px); }
+          to   { opacity: 1; transform: translateY(0); }
         }
       `}</style>
 
       {/* Moving target */}
-      {(gameState === "playing" || gameState === "lost") && (
+      {(gameState === "playing" || gameState === "lost" || (gameState === "confessing" && isMobile)) && (
         <div
           ref={targetEl}
           style={{
@@ -443,7 +571,6 @@ export default function CuatroCursores() {
           <div style={{ position: "absolute", left: "50%", bottom: 0, width: 1, height: "28%", background: "rgba(96,165,250,0.45)", transform: "translateX(-50%)" }} />
           <div style={{ position: "absolute", top: "50%", left: 0, height: 1, width: "28%", background: "rgba(96,165,250,0.45)", transform: "translateY(-50%)" }} />
           <div style={{ position: "absolute", top: "50%", right: 0, height: 1, width: "28%", background: "rgba(96,165,250,0.45)", transform: "translateY(-50%)" }} />
-          {/* Hold arc — mobile only */}
           <svg
             style={{ position: "absolute", inset: 0, width: "100%", height: "100%", overflow: "visible" }}
             viewBox={`0 0 ${TARGET_R * 2} ${TARGET_R * 2}`}
@@ -459,6 +586,7 @@ export default function CuatroCursores() {
               strokeDasharray={`0 ${ARC_C}`}
               strokeLinecap="round"
               transform={`rotate(-90 ${TARGET_R} ${TARGET_R})`}
+              style={{ opacity: 0 }}
             />
           </svg>
         </div>
@@ -469,26 +597,53 @@ export default function CuatroCursores() {
         <div ref={cursorRealEl} style={{ position: "fixed", left: -200, top: -200, pointerEvents: "none", zIndex: 9998 }}><CursorIcon /></div>
       )}
 
-      {/* Fakes — hidden during celebration, desktop only */}
-      {gameState !== "won" && !isMobile && (
+      {/* Fakes — desktop only, hidden during certificate. Tooltips embedded so they follow. */}
+      {gameState !== "certificate" && !isMobile && (
         <>
-          <div ref={fake1El} style={{ position: "fixed", left: -200, top: -200, pointerEvents: "none", zIndex: 9997 }}><CursorIcon /></div>
-          <div ref={fake2El} style={{ position: "fixed", left: -200, top: -200, pointerEvents: "none", zIndex: 9996 }}><CursorIcon /></div>
-          <div ref={fake3El} style={{ position: "fixed", left: -200, top: -200, pointerEvents: "none", zIndex: 9995 }}><CursorIcon /></div>
+          {([fake1El, fake2El, fake3El] as const).map((ref, i) => (
+            <div key={i} ref={ref} style={{ position: "fixed", left: -200, top: -200, pointerEvents: "none", zIndex: 9997 - i }}>
+              <CursorIcon />
+              <div style={{
+                position: "absolute",
+                left: 20,
+                top: -32,
+                background: "#111827",
+                color: "#fff",
+                fontSize: "0.72rem",
+                fontFamily: "var(--font-geist-mono, monospace)",
+                padding: "0.35rem 0.65rem",
+                borderRadius: "4px",
+                whiteSpace: "nowrap",
+                opacity: confessionVisible[i] ? 1 : 0,
+                transition: "opacity 0.3s ease",
+                pointerEvents: "none",
+              }}>
+                {CONFESSIONS[i]}
+              </div>
+            </div>
+          ))}
         </>
       )}
 
-      {/* Celebration emoji on the real cursor when won — desktop only */}
-      {gameState === "won" && !isMobile && (
+      {/* Mobile caught text */}
+      {gameState === "confessing" && isMobile && (
         <div
-          ref={celebrationEmojiEl}
           style={{
-            position: "fixed", left: -200, top: -200,
-            fontSize: "1.4rem", pointerEvents: "none", zIndex: 9999,
-            animation: "winkFade 0.15s ease, emojiFadeOut 0.3s 1s ease forwards",
+            position: "fixed",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, calc(-50% - 55px))",
+            color: "#3b82f6",
+            fontSize: "0.82rem",
+            fontFamily: "var(--font-geist-mono, monospace)",
+            pointerEvents: "none",
+            zIndex: 9999,
+            whiteSpace: "nowrap",
+            opacity: mobileCaughtVisible ? 1 : 0,
+            transition: mobileCaughtVisible ? "opacity 0.3s ease" : "opacity 0.5s ease",
           }}
         >
-          😎
+          Vale, me has pillado
         </div>
       )}
 
@@ -536,18 +691,38 @@ export default function CuatroCursores() {
         </div>
       )}
 
-      {/* Won */}
-      {gameState === "won" && (
-        <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "1rem" }}>
-          <p style={{ fontSize: "1.5rem", fontWeight: 800, color: "#3b82f6", letterSpacing: "-0.03em" }}>
-            {isMobile ? "¡La atrapaste!" : "¡Lo encontraste!"}
-          </p>
-          <p style={{ fontSize: "0.85rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", textAlign: "center", maxWidth: "32ch", lineHeight: 1.65 }}>
-            {isMobile
-              ? "Sabías que tenías que aguantarla. Lo difícil era que no escapara."
-              : "Sabías cuál era. Lo difícil era llegar solo."}
-          </p>
-          <button onClick={playAgain} style={{ marginTop: "0.5rem", background: "none", border: "none", cursor: "pointer", color: "#3b82f6", fontSize: "0.85rem", fontFamily: "var(--font-geist-mono, monospace)" }}>
+      {/* Certificate */}
+      {gameState === "certificate" && (
+        <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "1rem", animation: "certAppear 0.4s ease" }}>
+          <div style={{ border: "2px solid #3b82f6", borderRadius: "4px", padding: "1.75rem 2rem", width: "82%", maxWidth: "300px", textAlign: "center", position: "relative" }}>
+            <div style={{ position: "absolute", inset: 5, border: "1px solid rgba(96,165,250,0.3)", borderRadius: "3px", pointerEvents: "none" }} />
+            <p style={{ fontSize: "0.55rem", letterSpacing: "0.22em", textTransform: "uppercase", fontFamily: "var(--font-geist-mono, monospace)", color: "#3b82f6", marginBottom: "0.75rem" }}>
+              Certificado oficial
+            </p>
+            <p style={{ fontSize: "1.15rem", fontWeight: 800, letterSpacing: "-0.02em", color: "#111827" }}>
+              Percepción privilegiada
+            </p>
+            <p style={{ fontSize: "0.68rem", color: "#6b7280", margin: "0.75rem 0 1.25rem", lineHeight: 2.0, fontFamily: "var(--font-geist-mono, monospace)" }}>
+              Se certifica que el portador<br />
+              distingue lo real de lo falso.<br />
+              Habilidad rara en internet.
+            </p>
+            <div style={{ borderTop: "1px solid rgba(96,165,250,0.25)", paddingTop: "0.9rem", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+              <p style={{ fontSize: "0.58rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)" }}>
+                Nº {certNumRef.current}
+              </p>
+              <div style={{ textAlign: "right" }}>
+                <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: "0.88rem", color: "#374151" }}>
+                  Pablo Crespo
+                </p>
+                <div style={{ width: 76, height: 1, background: "rgba(0,0,0,0.15)", margin: "0.15rem 0 0 auto" }} />
+                <p style={{ fontSize: "0.52rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", marginTop: "0.15rem" }}>
+                  Autoridad certificadora
+                </p>
+              </div>
+            </div>
+          </div>
+          <button onClick={playAgain} style={{ background: "none", border: "none", cursor: "pointer", color: "#3b82f6", fontSize: "0.85rem", fontFamily: "var(--font-geist-mono, monospace)" }}>
             Otra vez →
           </button>
         </div>
