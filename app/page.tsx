@@ -683,7 +683,7 @@ export default function Home() {
     transformedRef.current = transformed;
     if (transformed) {
       const h = chosenHueRef.current;
-      document.body.style.setProperty("--transform-bg-color", `hsl(${h}, 70%, 25%)`);
+      document.body.style.setProperty("--transform-bg-color", `hsl(${h}, 80%, 42%)`);
       document.body.classList.add("page-transformed");
     } else {
       document.body.style.removeProperty("--transform-bg-color");
