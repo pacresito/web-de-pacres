@@ -341,6 +341,8 @@ export default function Home() {
   const holdSecsRef = useRef(0);
   const [transformed, setTransformed] = useState(false);
   const transformedRef = useRef(false);
+  const hueRef = useRef(217);
+  const chosenHueRef = useRef(217);
   const physicsActiveRef = useRef(false);
   const restoreRef = useRef<(() => void) | null>(null);
 
@@ -590,6 +592,7 @@ export default function Home() {
   useEffect(() => {
     const handleMouseDown = () => {
       holdSecsRef.current = 0;
+      hueRef.current = 217;
       holdTimerRef.current = setInterval(() => {
         holdSecsRef.current += 0.05;
         const secs = holdSecsRef.current;
@@ -602,8 +605,14 @@ export default function Home() {
           pressHaloRef.current.style.width = `${size}px`;
           pressHaloRef.current.style.height = `${size}px`;
           pressHaloRef.current.style.opacity = `${opacity}`;
-          const color = isBlue ? "255,255,255" : "59,130,246";
-          pressHaloRef.current.style.background = `radial-gradient(circle, rgba(${color},0.7) 0%, rgba(${color},0.3) 40%, transparent 70%)`;
+          if (!isBlue && progress >= 1) {
+            hueRef.current = (hueRef.current + 1.8) % 360;
+            const h = hueRef.current;
+            pressHaloRef.current.style.background = `radial-gradient(circle, hsla(${h},90%,60%,0.7) 0%, hsla(${h},90%,60%,0.3) 40%, transparent 70%)`;
+          } else {
+            const color = isBlue ? "255,255,255" : "59,130,246";
+            pressHaloRef.current.style.background = `radial-gradient(circle, rgba(${color},0.7) 0%, rgba(${color},0.3) 40%, transparent 70%)`;
+          }
         }
       }, 50);
     };
@@ -616,7 +625,10 @@ export default function Home() {
         pressHaloRef.current.style.height = "80px";
         pressHaloRef.current.style.opacity = "0";
       }
-      if (secs >= 5) setTransformed(!transformedRef.current);
+      if (secs >= 5) {
+        if (!transformedRef.current) chosenHueRef.current = hueRef.current;
+        setTransformed(!transformedRef.current);
+      }
     };
     window.addEventListener("mousedown", handleMouseDown);
     window.addEventListener("mouseup", handleMouseUp);
@@ -639,8 +651,11 @@ export default function Home() {
   useEffect(() => {
     transformedRef.current = transformed;
     if (transformed) {
+      const h = chosenHueRef.current;
+      document.body.style.setProperty("--transform-bg-color", `hsl(${h}, 70%, 25%)`);
       document.body.classList.add("page-transformed");
     } else {
+      document.body.style.removeProperty("--transform-bg-color");
       document.body.classList.remove("page-transformed");
     }
   }, [transformed]);
@@ -670,7 +685,7 @@ export default function Home() {
         }
 
         body.page-transformed {
-          background: #1e40af !important;
+          background: var(--transform-bg-color, #1e40af) !important;
           transition: background 0.6s ease;
         }
         body.page-transformed * { color: #ffffff !important; border-color: rgba(255,255,255,0.2) !important; }
