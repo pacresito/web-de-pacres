@@ -10,8 +10,8 @@ type Tool = Mat | 99;
 
 const TOOL_DEFS: { id: Tool; label: string; key: string; color: string; border: string }[] = [
   { id: WATER as Tool, label: "Agua",  key: "1", color: "#3b82f6", border: "rgba(59,130,246,0.4)" },
-  { id: SAND  as Tool, label: "Arena", key: "2", color: "#c2a96e", border: "rgba(194,169,110,0.4)" },
-  { id: FIRE  as Tool, label: "Fuego", key: "3", color: "#f97316", border: "rgba(249,115,22,0.4)" },
+  { id: FIRE  as Tool, label: "Fuego", key: "2", color: "#f97316", border: "rgba(249,115,22,0.4)" },
+  { id: SAND  as Tool, label: "Tierra",key: "3", color: "#c2a96e", border: "rgba(194,169,110,0.4)" },
   { id: WALL  as Tool, label: "Madera",key: "4", color: "#8b5e3c", border: "rgba(139,94,60,0.4)" },
   { id: 99    as Tool, label: "Borrar",key: "5", color: "#374151", border: "rgba(55,65,81,0.3)" },
 ];
@@ -71,7 +71,7 @@ export default function Fluidos() {
     return () => ro.disconnect();
   }, [initGrid]);
 
-  // Paint cells at canvas pixel position
+  // Paint cells at canvas pixel position — with material interaction rules
   const paintAt = useCallback((px: number, py: number) => {
     const { W, H } = dimRef.current;
     const grid = gridRef.current;
@@ -89,11 +89,38 @@ export default function Fluidos() {
         const nx = gx + dx, ny = gy + dy;
         if (nx < 0 || nx >= W || ny < 0 || ny >= H) continue;
         const i = ny * W + nx;
-        if (t === 99) {
-          grid[i] = EMPTY; ages[i] = 0;
-        } else {
+        const existing = grid[i];
+
+        // Eraser: always clears
+        if (t === 99) { grid[i] = EMPTY; ages[i] = 0; continue; }
+
+        if (existing === EMPTY || existing === FIRE) {
+          // Empty or fire: place anything
           grid[i] = t as Mat;
-          ages[i] = t === FIRE ? 60 + Math.floor(Math.random() * 80) : 0;
+          ages[i] = t === FIRE ? 60 + Math.floor(Math.random() * 80)
+                  : t === WALL ? 0
+                  : 0;
+
+        } else if (existing === WALL) {
+          // Wood: only fire can interact (ignites it)
+          if (t === FIRE && ages[i] === 0) {
+            ages[i] = 600 + Math.floor(Math.random() * 200);
+          }
+          // water and sand: blocked
+
+        } else if (existing === WATER) {
+          // Water: sand and wood can be placed (physics handles displacement)
+          // Fire: blocked (extinguished by water, no-op)
+          if (t === SAND || t === WALL) {
+            grid[i] = t as Mat; ages[i] = 0;
+          }
+
+        } else if (existing === SAND) {
+          // Sand: more sand or wood can be placed (sand falls around wood); water and fire blocked
+          if (t === SAND || t === WALL) {
+            grid[i] = t as Mat; ages[i] = 0;
+          }
+          // water: blocked · fire: smothered, blocked
         }
       }
     }
@@ -116,16 +143,18 @@ export default function Fluidos() {
         const i = y * W + x;
         if (upd[i]) continue;
         const type = grid[i];
-        if (type === EMPTY || type === WALL) continue;
+        if (type === EMPTY) continue;
+        if (type === WALL && ages[i] === 0) continue; // skip non-burning wood
 
-        // SAND
+        // SAND (Tierra)
         if (type === SAND) {
           if (y < H - 1) {
             const bi = (y + 1) * W + x;
             if (grid[bi] === EMPTY || grid[bi] === WATER) {
               const was = grid[bi];
               grid[bi] = SAND; upd[bi] = 1;
-              grid[i] = was; continue;
+              grid[i] = was;  upd[i] = 1; // mark both so no re-processing this frame
+              continue;
             }
             const dirs = Math.random() > 0.5 ? [-1, 1] : [1, -1];
             for (const d of dirs) {
@@ -135,7 +164,8 @@ export default function Fluidos() {
               if (grid[ni] === EMPTY || grid[ni] === WATER) {
                 const was = grid[ni];
                 grid[ni] = SAND; upd[ni] = 1;
-                grid[i] = was; break;
+                grid[i] = was;  upd[i] = 1;
+                break;
               }
             }
           }
@@ -150,11 +180,7 @@ export default function Fluidos() {
               grid[bi] = WATER; upd[bi] = 1;
               grid[i] = EMPTY; continue;
             }
-            // Sand sinks through water
-            if (grid[bi] === SAND) {
-              grid[bi] = WATER; upd[bi] = 1;
-              grid[i] = SAND; upd[i] = 1; continue;
-            }
+
             const dirs = Math.random() > 0.5 ? [-1, 1] : [1, -1];
             let moved = false;
             for (const d of dirs) {
@@ -201,8 +227,8 @@ export default function Fluidos() {
             const nx = x+dx, ny2 = y+dy;
             if (nx < 0 || nx >= W || ny2 < 0 || ny2 >= H) continue;
             const ni = ny2*W+nx;
-            if (grid[ni] === WALL && ages[ni] === 0 && Math.random() > 0.94) {
-              ages[ni] = 100 + Math.floor(Math.random() * 80);
+            if (grid[ni] === WALL && ages[ni] === 0 && Math.random() > 0.82) {
+              ages[ni] = 600 + Math.floor(Math.random() * 200);
             }
           }
 
@@ -232,9 +258,18 @@ export default function Fluidos() {
           }
         }
 
-        // WALL (wood) — burns when ignited
+        // WALL (wood) — burns when ignited, only water stops it
         if (type === WALL && ages[i] > 0) {
-          ages[i] = Math.max(0, ages[i] - 1 - (Math.random() > 0.7 ? 1 : 0));
+          // Extinguish if water adjacent
+          let wet = false;
+          for (const [dx, dy] of [[0,1],[0,-1],[1,0],[-1,0]]) {
+            const nx = x+dx, ny2 = y+dy;
+            if (nx < 0 || nx >= W || ny2 < 0 || ny2 >= H) continue;
+            if (grid[ny2*W+nx] === WATER) { wet = true; break; }
+          }
+          if (wet) { grid[i] = EMPTY; ages[i] = 0; continue; }
+          // Consume slowly — disappears when fully burnt
+          ages[i] = Math.max(0, ages[i] - 1);
           if (ages[i] === 0) { grid[i] = EMPTY; continue; }
 
           // Emit fire upward
@@ -245,17 +280,13 @@ export default function Fluidos() {
             }
           }
 
-          // Spread fire to adjacent wood
-          if (Math.random() > 0.96) {
-            const d = Math.random() > 0.5 ? -1 : 1;
-            for (const [dx, dy] of [[d, 0], [0, 1], [-d, 0]]) {
-              const nx = x+dx, ny2 = y+dy;
-              if (nx < 0 || nx >= W || ny2 < 0 || ny2 >= H) continue;
-              const ni = ny2*W+nx;
-              if (grid[ni] === WALL && ages[ni] === 0) {
-                ages[ni] = Math.floor(ages[i] * 0.75 + Math.random() * 30);
-                break;
-              }
+          // Spread fire to all adjacent wood cells independently
+          for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+            const nx = x+dx, ny2 = y+dy;
+            if (nx < 0 || nx >= W || ny2 < 0 || ny2 >= H) continue;
+            const ni = ny2*W+nx;
+            if (grid[ni] === WALL && ages[ni] === 0 && Math.random() > 0.90) {
+              ages[ni] = 600 + Math.floor(Math.random() * 200);
             }
           }
         }
@@ -556,7 +587,7 @@ export default function Fluidos() {
         {/* Header */}
         <div className="sim-header">
           <h1 className="sim-title"><span>Fluidos</span></h1>
-          <p className="sim-sub">Arena, agua, fuego. Dibuja con el ratón o el dedo.</p>
+          <p className="sim-sub">Agua, fuego, tierra. Controla los elementos.</p>
         </div>
 
         {/* Toolbar */}
@@ -604,13 +635,15 @@ export default function Fluidos() {
         </div>
 
         {/* Hints */}
-        <div className="hint-row">
-          <span className="hint-item"><span className="hint-key">1–5</span> material</span>
-          <span className="hint-item"><span className="hint-key">[ ]</span> tamaño pincel</span>
-          <span className="hint-item"><span className="hint-key">C</span> limpiar</span>
-          <span className="hint-item">El agua apaga el fuego</span>
-          <span className="hint-item">La arena se hunde en el agua</span>
-          <span className="hint-item">El fuego quema la madera</span>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem", padding: "0.45rem 0 0" }}>
+          <div className="hint-row" style={{ flexWrap: "nowrap", whiteSpace: "nowrap" }}>
+            <span className="hint-item">La tierra se hunde en el agua · El agua apaga el fuego · El fuego quema la madera</span>
+          </div>
+          <div className="hint-row">
+            <span className="hint-item"><span className="hint-key">1–5</span> material</span>
+            <span className="hint-item"><span className="hint-key">[ ]</span> pincel</span>
+            <span className="hint-item"><span className="hint-key">C</span> limpiar</span>
+          </div>
         </div>
 
         {/* Footer */}
