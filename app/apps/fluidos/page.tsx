@@ -464,9 +464,10 @@ export default function Fluidos() {
           --sim-bg:  #0f1117;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { height: 100%; overflow: hidden; }
         body { background: var(--bg); color: var(--text); font-family: var(--font-geist-sans), sans-serif; }
 
-        .sim-header { padding: 2rem 0 1.25rem; }
+        .sim-header { padding: 1rem 0 0.6rem; }
         .sim-title {
           font-size: clamp(1.8rem, 5vw, 3rem);
           font-weight: 800; letter-spacing: -0.03em; line-height: 1;
