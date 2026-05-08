@@ -658,7 +658,7 @@ export default function Home() {
               halo.style.height = `${fromSize + (targetSize - fromSize) * t}px`;
             }
             if (t < 1) haloRafRef.current = requestAnimationFrame(fade);
-            else { halo.style.opacity = "0"; halo.style.width = "80px"; halo.style.height = "80px"; }
+            else { halo.style.opacity = "0"; halo.style.width = "80px"; halo.style.height = "80px"; halo.style.left = "-9999px"; halo.style.top = "-9999px"; }
           };
           haloRafRef.current = requestAnimationFrame(fade);
         }
@@ -736,7 +736,6 @@ export default function Home() {
           background: radial-gradient(circle, rgba(59,130,246,0.7) 0%, rgba(59,130,246,0.3) 40%, transparent 70%);
           transform: translate(-50%,-50%); pointer-events: none; z-index: 9999;
           width: 80px; height: 80px; opacity: 0; left: -9999px; top: -9999px;
-          transition: width 0.08s ease, height 0.08s ease, opacity 0.15s ease;
           filter: blur(18px);
         }
 
