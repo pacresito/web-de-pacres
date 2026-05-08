@@ -5,15 +5,17 @@ import Link from "next/link";
 
 const CELL = 4;
 const EMPTY = 0, SAND = 1, WATER = 2, FIRE = 3, WALL = 4;
+const MOVE = 98;
 type Mat = 0 | 1 | 2 | 3 | 4;
-type Tool = Mat | 99;
+type Tool = Mat | 98 | 99;
 
 const TOOL_DEFS: { id: Tool; label: string; key: string; color: string; border: string }[] = [
   { id: WATER as Tool, label: "Agua",  key: "1", color: "#3b82f6", border: "rgba(59,130,246,0.4)" },
   { id: FIRE  as Tool, label: "Fuego", key: "2", color: "#f97316", border: "rgba(249,115,22,0.4)" },
   { id: SAND  as Tool, label: "Tierra",key: "3", color: "#c2a96e", border: "rgba(194,169,110,0.4)" },
   { id: WALL  as Tool, label: "Madera",key: "4", color: "#8b5e3c", border: "rgba(139,94,60,0.4)" },
-  { id: 99    as Tool, label: "Borrar",key: "5", color: "#374151", border: "rgba(55,65,81,0.3)" },
+  { id: MOVE  as Tool, label: "Mover", key: "5", color: "#a78bfa", border: "rgba(167,139,250,0.4)" },
+  { id: 99    as Tool, label: "Borrar",key: "6", color: "#374151", border: "rgba(55,65,81,0.3)" },
 ];
 
 export default function Fluidos() {
@@ -26,6 +28,7 @@ export default function Fluidos() {
   const toolRef    = useRef<Tool>(WATER as Tool);
   const brushRef   = useRef(4);
   const paintRef   = useRef(false);
+  const lastPosRef = useRef<{ x: number; y: number } | null>(null);
   const rafRef     = useRef(0);
 
   const [tool, setTool] = useState<Tool>(WATER as Tool);
@@ -122,6 +125,47 @@ export default function Fluidos() {
           }
           // water: blocked · fire: smothered, blocked
         }
+      }
+    }
+  }, []);
+
+  // Push cells in the direction of mouse movement
+  const moveAt = useCallback((px: number, py: number, dpx: number, dpy: number) => {
+    const { W, H } = dimRef.current;
+    const grid = gridRef.current;
+    const ages = agesRef.current;
+    if (!grid || !ages) return;
+
+    const gx  = Math.floor(px / CELL);
+    const gy  = Math.floor(py / CELL);
+    const r   = brushRef.current;
+    const dirX = dpx === 0 ? 0 : (dpx > 0 ? 1 : -1);
+    const dirY = dpy === 0 ? 0 : (dpy > 0 ? 1 : -1);
+    if (dirX === 0 && dirY === 0) return;
+
+    const cells: { cx: number; cy: number }[] = [];
+    for (let dy = -r; dy <= r; dy++) {
+      for (let dx = -r; dx <= r; dx++) {
+        if (dx * dx + dy * dy > r * r) continue;
+        const nx = gx + dx, ny = gy + dy;
+        if (nx < 0 || nx >= W || ny < 0 || ny >= H) continue;
+        if (grid[ny * W + nx] !== EMPTY) cells.push({ cx: nx, cy: ny });
+      }
+    }
+
+    // Process in push direction so we don't re-move a cell in the same pass
+    cells.sort((a, b) =>
+      dirX !== 0 ? (dirX > 0 ? b.cx - a.cx : a.cx - b.cx)
+                 : (dirY > 0 ? b.cy - a.cy : a.cy - b.cy)
+    );
+
+    for (const { cx, cy } of cells) {
+      const nx = cx + dirX, ny = cy + dirY;
+      if (nx < 0 || nx >= W || ny < 0 || ny >= H) continue;
+      const si = cy * W + cx, di = ny * W + nx;
+      if (grid[di] === EMPTY) {
+        grid[di] = grid[si]; ages[di] = ages[si];
+        grid[si] = EMPTY;    ages[si] = 0;
       }
     }
   }, []);
@@ -385,7 +429,8 @@ export default function Fluidos() {
       if (e.key === "2") setToolSync(SAND  as Tool);
       if (e.key === "3") setToolSync(FIRE  as Tool);
       if (e.key === "4") setToolSync(WALL  as Tool);
-      if (e.key === "5" || e.key === "e") setToolSync(99 as Tool);
+      if (e.key === "5") setToolSync(MOVE  as Tool);
+      if (e.key === "6" || e.key === "e") setToolSync(99 as Tool);
       if (e.key === "c" || e.key === "C") {
         gridRef.current?.fill(0);
         agesRef.current?.fill(0);
@@ -420,15 +465,24 @@ export default function Fluidos() {
       e.preventDefault();
       paintRef.current = true;
       const pos = getCanvasPos(e);
-      if (pos) paintAt(pos.x, pos.y);
+      if (!pos) return;
+      lastPosRef.current = pos;
+      if (toolRef.current !== MOVE) paintAt(pos.x, pos.y);
     };
     const onMove = (e: MouseEvent | TouchEvent) => {
       e.preventDefault();
       if (!paintRef.current) return;
       const pos = getCanvasPos(e);
-      if (pos) paintAt(pos.x, pos.y);
+      if (!pos) return;
+      const last = lastPosRef.current;
+      if (toolRef.current === MOVE && last) {
+        moveAt(pos.x, pos.y, pos.x - last.x, pos.y - last.y);
+      } else {
+        paintAt(pos.x, pos.y);
+      }
+      lastPosRef.current = pos;
     };
-    const onUp = () => { paintRef.current = false; };
+    const onUp = () => { paintRef.current = false; lastPosRef.current = null; };
 
     canvas.addEventListener("mousedown",  onDown);
     canvas.addEventListener("mousemove",  onMove);
@@ -549,6 +603,8 @@ export default function Fluidos() {
           cursor: crosshair;
           touch-action: none;
         }
+        .sim-canvas.tool-move { cursor: grab; }
+        .sim-canvas.tool-move:active { cursor: grabbing; }
 
         .hint-row {
           padding: 0.55rem 0 0;
@@ -637,7 +693,7 @@ export default function Fluidos() {
 
         {/* Canvas */}
         <div className="sim-wrap" ref={wrapRef}>
-          <canvas className="sim-canvas" ref={canvasRef} />
+          <canvas className={`sim-canvas${tool === MOVE ? " tool-move" : ""}`} ref={canvasRef} />
         </div>
 
         {/* Hints */}
@@ -646,7 +702,7 @@ export default function Fluidos() {
             <span className="hint-item" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>La tierra se hunde en el agua · El agua apaga el fuego · El fuego quema la madera</span>
           </div>
           <div className="hint-row">
-            <span className="hint-item"><span className="hint-key">1–5</span> material</span>
+            <span className="hint-item"><span className="hint-key">1–6</span> material</span>
             <span className="hint-item"><span className="hint-key">[ ]</span> pincel</span>
             <span className="hint-item"><span className="hint-key">C</span> limpiar</span>
           </div>
