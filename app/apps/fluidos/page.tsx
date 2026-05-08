@@ -32,17 +32,10 @@ export default function Fluidos() {
   const rafRef     = useRef(0);
 
   const [tool, setTool] = useState<Tool>(WATER as Tool);
-  const [brush, setBrush] = useState(4);
 
   const setToolSync = useCallback((t: Tool) => {
     toolRef.current = t;
     setTool(t);
-  }, []);
-
-  const setBrushSync = useCallback((b: number) => {
-    const clamped = Math.max(1, Math.min(10, b));
-    brushRef.current = clamped;
-    setBrush(clamped);
   }, []);
 
   // Init grid
@@ -143,12 +136,12 @@ export default function Fluidos() {
     const dirY = dpy === 0 ? 0 : (dpy > 0 ? 1 : -1);
     if (dirX === 0 && dirY === 0) return;
 
-    // Scale push strength by drag speed so fast drags overcome gravity
     const steps = Math.min(8, Math.max(1, Math.ceil(Math.hypot(dpx, dpy) / CELL)));
 
-    // Collect non-empty cells in brush; expand wood cells to their connected component
+    // Collect non-empty cells in brush; expand wood to its connected component
     const visited = new Set<number>();
-    const cells: { cx: number; cy: number }[] = [];
+    const woodCells: { cx: number; cy: number }[] = [];
+    const otherCells: { cx: number; cy: number }[] = [];
 
     for (let dy = -r; dy <= r; dy++) {
       for (let dx = -r; dx <= r; dx++) {
@@ -158,9 +151,8 @@ export default function Fluidos() {
         const ni = ny * W + nx;
         if (grid[ni] === EMPTY || visited.has(ni)) continue;
         visited.add(ni);
-        cells.push({ cx: nx, cy: ny });
-
         if (grid[ni] === WALL) {
+          woodCells.push({ cx: nx, cy: ny });
           const queue = [{ cx: nx, cy: ny }];
           for (let qi = 0; qi < queue.length; qi++) {
             const { cx: qx, cy: qy } = queue[qi];
@@ -170,41 +162,76 @@ export default function Fluidos() {
               const ai = ay * W + ax;
               if (visited.has(ai) || grid[ai] !== WALL) continue;
               visited.add(ai);
-              cells.push({ cx: ax, cy: ay });
+              woodCells.push({ cx: ax, cy: ay });
               queue.push({ cx: ax, cy: ay });
             }
           }
+        } else {
+          otherCells.push({ cx: nx, cy: ny });
         }
       }
     }
 
-    // Process furthest in push direction first to avoid re-moving
-    cells.sort((a, b) =>
+    const sortFn = (a: {cx:number;cy:number}, b: {cx:number;cy:number}) =>
       dirX !== 0 ? (dirX > 0 ? b.cx - a.cx : a.cx - b.cx)
-                 : (dirY > 0 ? b.cy - a.cy : a.cy - b.cy)
-    );
+                 : (dirY > 0 ? b.cy - a.cy : a.cy - b.cy);
+    woodCells.sort(sortFn);
+    otherCells.sort(sortFn);
 
-    for (const cell of cells) {
-      let { cx, cy } = cell;
-      for (let s = 0; s < steps; s++) {
-        if (grid[cy * W + cx] === EMPTY) break;
+    // Find first empty reachable by material (wood pushes water; sand/water stop at foreign material)
+    const findEnd = (cx: number, cy: number, mat: number): { ex: number; ey: number } | null => {
+      let ex = cx + dirX, ey = cy + dirY;
+      while (ex >= 0 && ex < W && ey >= 0 && ey < H) {
+        const obs = grid[ey * W + ex];
+        if (obs === EMPTY) return { ex, ey };
+        const canPass = mat === WALL ? (obs === WATER || obs === WALL) : obs === mat;
+        if (!canPass) return null;
+        ex += dirX; ey += dirY;
+      }
+      return null;
+    };
 
-        let ex = cx + dirX, ey = cy + dirY;
-        while (ex >= 0 && ex < W && ey >= 0 && ey < H && grid[ey * W + ex] !== EMPTY) {
-          ex += dirX; ey += dirY;
+    const shiftChain = (cx: number, cy: number, ex: number, ey: number) => {
+      let tx = ex, ty = ey;
+      while (tx !== cx || ty !== cy) {
+        const bx = tx - dirX, by = ty - dirY;
+        grid[ty * W + tx] = grid[by * W + bx];
+        ages[ty * W + tx]  = ages[by * W + bx];
+        tx = bx; ty = by;
+      }
+      grid[cy * W + cx] = EMPTY;
+      ages[cy * W + cx] = 0;
+    };
+
+    for (let s = 0; s < steps; s++) {
+      // Wood: all-or-nothing — if any cell in the component is blocked, none move
+      if (woodCells.length > 0) {
+        let woodCanMove = true;
+        const woodEnds: Array<{ ex: number; ey: number } | null> = woodCells.map(({ cx, cy }) => {
+          if (grid[cy * W + cx] === EMPTY) { woodCanMove = false; return null; }
+          const end = findEnd(cx, cy, WALL);
+          if (!end) woodCanMove = false;
+          return end;
+        });
+        if (woodCanMove) {
+          for (let i = 0; i < woodCells.length; i++) {
+            const { cx, cy } = woodCells[i];
+            if (grid[cy * W + cx] === EMPTY) continue;
+            shiftChain(cx, cy, woodEnds[i]!.ex, woodEnds[i]!.ey);
+            woodCells[i] = { cx: cx + dirX, cy: cy + dirY };
+          }
         }
-        if (ex < 0 || ex >= W || ey < 0 || ey >= H) break;
+      }
 
-        let tx = ex, ty = ey;
-        while (tx !== cx || ty !== cy) {
-          const bx = tx - dirX, by = ty - dirY;
-          grid[ty * W + tx] = grid[by * W + bx];
-          ages[ty * W + tx]  = ages[by * W + bx];
-          tx = bx; ty = by;
-        }
-        grid[cy * W + cx] = EMPTY;
-        ages[cy * W + cx] = 0;
-        cx += dirX; cy += dirY;
+      // Sand / water: independent chains, stop at foreign material
+      for (let i = 0; i < otherCells.length; i++) {
+        const { cx, cy } = otherCells[i];
+        const mat = grid[cy * W + cx];
+        if (mat === EMPTY) continue;
+        const end = findEnd(cx, cy, mat);
+        if (!end) continue;
+        shiftChain(cx, cy, end.ex, end.ey);
+        otherCells[i] = { cx: cx + dirX, cy: cy + dirY };
       }
     }
   }, []);
@@ -474,12 +501,10 @@ export default function Fluidos() {
         gridRef.current?.fill(0);
         agesRef.current?.fill(0);
       }
-      if (e.key === "[") setBrushSync(brushRef.current - 1);
-      if (e.key === "]") setBrushSync(brushRef.current + 1);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [setToolSync, setBrushSync]);
+  }, [setToolSync]);
 
   // Canvas input events (mouse + touch, native to avoid passive issues)
   const getCanvasPos = useCallback((e: MouseEvent | TouchEvent) => {
@@ -601,22 +626,6 @@ export default function Fluidos() {
           padding: 0.05rem 0.3rem; margin-left: 0.1rem;
         }
 
-        .brush-group {
-          display: flex; align-items: center; gap: 0.3rem;
-          margin-left: auto;
-          font-size: 0.72rem; color: var(--muted);
-          font-family: var(--font-geist-mono), monospace;
-        }
-        .brush-btn {
-          width: 24px; height: 24px; border-radius: 3px;
-          border: 1px solid var(--border); background: transparent;
-          cursor: pointer; font-size: 0.9rem; color: var(--text);
-          display: flex; align-items: center; justify-content: center;
-          transition: border-color 0.15s;
-        }
-        .brush-btn:hover { border-color: var(--blue); }
-        .brush-val { min-width: 20px; text-align: center; }
-
         .clear-btn {
           padding: 0.4rem 0.75rem; border-radius: 4px;
           border: 1px solid var(--border); background: transparent;
@@ -668,7 +677,6 @@ export default function Fluidos() {
           .tool-label { display: none; }
           .toolbar { gap: 0.25rem; }
           .tool-btn { padding: 0.4rem 0.45rem; gap: 0.25rem; }
-          .brush-group { display: none; }
           .hint-row { gap: 0.8rem; }
           .sim-sub { display: none; }
         }
@@ -719,13 +727,6 @@ export default function Fluidos() {
           <button className="clear-btn" onClick={clearAll}>
             <span className="tool-label">Limpiar </span><span className="tool-key">C</span>
           </button>
-
-          {/* Brush size */}
-          <div className="brush-group">
-            <button className="brush-btn" onClick={() => setBrushSync(brush - 1)}>−</button>
-            <span className="brush-val">{brush}</span>
-            <button className="brush-btn" onClick={() => setBrushSync(brush + 1)}>+</button>
-          </div>
         </div>
 
         {/* Canvas */}
@@ -734,12 +735,7 @@ export default function Fluidos() {
         </div>
 
         {/* Hints */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem", padding: "0.45rem 0 0" }}>
-          <div className="hint-row">
-            <span className="hint-item"><span className="hint-key">1–6</span> material</span>
-            <span className="hint-item"><span className="hint-key">[ ]</span> pincel</span>
-            <span className="hint-item"><span className="hint-key">C</span> limpiar</span>
-          </div>
+        <div style={{ padding: "0.45rem 0 0" }}>
           <div className="hint-row">
             <span className="hint-item">La tierra se hunde en el agua · El agua apaga el fuego · El fuego quema la madera</span>
           </div>
