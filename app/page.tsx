@@ -339,6 +339,7 @@ export default function Home() {
   const pressHaloRef = useRef<HTMLDivElement>(null);
   const holdTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const holdSecsRef = useRef(0);
+  const haloRafRef = useRef<number>(0);
   const [transformed, setTransformed] = useState(false);
   const transformedRef = useRef(false);
   const hueRef = useRef(217);
@@ -600,18 +601,28 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    const startHold = () => {
+    const startHold = (isMobile = false) => {
+      cancelAnimationFrame(haloRafRef.current);
       holdSecsRef.current = 0;
       hueRef.current = 217;
+      if (holdTimerRef.current) clearInterval(holdTimerRef.current);
       holdTimerRef.current = setInterval(() => {
         holdSecsRef.current += 0.05;
         const secs = holdSecsRef.current;
         const isBlue = transformedRef.current;
         if (pressHaloRef.current) {
-          // 0–1s: nada. 1–5s: crece. ≥5s: máximo
-          const progress = secs < 1 ? 0 : Math.min((secs - 1) / 4, 1);
-          const size = 80 + progress * 1000;
-          const opacity = progress * 0.85;
+          let progress, size, opacity;
+          if (isMobile) {
+            // mobile: visible desde el primer tick, crece de 480→1080px en 4s
+            progress = Math.min(secs / 4, 1);
+            size = 480 + progress * 600;
+            opacity = 0.25 + progress * 0.6;
+          } else {
+            // desktop: 1s de espera, luego crece
+            progress = secs < 1 ? 0 : Math.min((secs - 1) / 4, 1);
+            size = 80 + progress * 1000;
+            opacity = progress * 0.85;
+          }
           pressHaloRef.current.style.width = `${size}px`;
           pressHaloRef.current.style.height = `${size}px`;
           pressHaloRef.current.style.opacity = `${opacity}`;
@@ -629,40 +640,29 @@ export default function Home() {
     const endHold = (secs: number) => {
       if (holdTimerRef.current) clearInterval(holdTimerRef.current);
       holdSecsRef.current = 0;
-      if (pressHaloRef.current) {
-        pressHaloRef.current.style.width = "80px";
-        pressHaloRef.current.style.height = "80px";
-        pressHaloRef.current.style.opacity = "0";
+      const halo = pressHaloRef.current;
+      if (halo) {
+        const fromOpacity = parseFloat(halo.style.opacity || "0");
+        if (fromOpacity > 0) {
+          const duration = 420;
+          const startTime = performance.now();
+          cancelAnimationFrame(haloRafRef.current);
+          const fade = (now: number) => {
+            const t = Math.min((now - startTime) / duration, 1);
+            halo.style.opacity = `${fromOpacity * (1 - t)}`;
+            if (t < 1) haloRafRef.current = requestAnimationFrame(fade);
+            else halo.style.opacity = "0";
+          };
+          haloRafRef.current = requestAnimationFrame(fade);
+        }
       }
       if (secs >= 5) {
         if (!transformedRef.current) chosenHueRef.current = hueRef.current;
         setTransformed(!transformedRef.current);
       }
     };
-    const animateTap = (x: number, y: number) => {
-      const halo = pressHaloRef.current;
-      if (!halo) return;
-      const duration = 900;
-      const startTime = performance.now();
-      const color = transformedRef.current ? "255,255,255" : "59,130,246";
-      halo.style.left = `${x}px`;
-      halo.style.top = `${y}px`;
-      halo.style.background = `radial-gradient(circle, rgba(${color},0.7) 0%, rgba(${color},0.3) 40%, transparent 70%)`;
-      const step = (now: number) => {
-        const t = Math.min((now - startTime) / duration, 1);
-        const size = 80 + t * 300;
-        // sube rápido (15%), baja despacio el resto
-        const opacity = t < 0.15 ? (t / 0.15) * 0.55 : 0.55 * (1 - (t - 0.15) / 0.85);
-        halo.style.width = `${size}px`;
-        halo.style.height = `${size}px`;
-        halo.style.opacity = `${Math.max(0, opacity)}`;
-        if (t < 1) requestAnimationFrame(step);
-        else halo.style.opacity = "0";
-      };
-      requestAnimationFrame(step);
-    };
     const handleMouseDown = () => startHold();
-    const handleMouseUp = () => { const secs = holdSecsRef.current; endHold(secs); };
+    const handleMouseUp = () => endHold(holdSecsRef.current);
     const handleTouchStart = (e: TouchEvent) => {
       const touch = e.touches[0];
       if (!touch) return;
@@ -670,19 +670,9 @@ export default function Home() {
         pressHaloRef.current.style.left = `${touch.clientX}px`;
         pressHaloRef.current.style.top = `${touch.clientY}px`;
       }
-      startHold();
+      startHold(true);
     };
-    const handleTouchEnd = (e: TouchEvent) => {
-      const secs = holdSecsRef.current;
-      if (secs < 1) {
-        if (holdTimerRef.current) clearInterval(holdTimerRef.current);
-        holdSecsRef.current = 0;
-        const touch = e.changedTouches[0];
-        if (touch) animateTap(touch.clientX, touch.clientY);
-        return;
-      }
-      endHold(secs);
-    };
+    const handleTouchEnd = () => endHold(holdSecsRef.current);
     window.addEventListener("mousedown", handleMouseDown);
     window.addEventListener("mouseup", handleMouseUp);
     window.addEventListener("touchstart", handleTouchStart);
