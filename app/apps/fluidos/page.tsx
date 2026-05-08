@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 
-const CELL = 4;
+const CELL = 2;
 const EMPTY = 0, SAND = 1, WATER = 2, FIRE = 3, WALL = 4;
 const MOVE = 98;
 type Mat = 0 | 1 | 2 | 3 | 4;
