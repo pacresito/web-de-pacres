@@ -570,8 +570,12 @@ export default function Fluidos() {
         .pacres-link:hover { color: var(--blue); }
 
         @media (max-width: 500px) {
-          .brush-group { margin-left: 0; width: 100%; justify-content: flex-end; }
+          .tool-label { display: none; }
+          .toolbar { gap: 0.25rem; }
+          .tool-btn { padding: 0.4rem 0.45rem; gap: 0.25rem; }
+          .brush-group { display: none; }
           .hint-row { gap: 0.8rem; }
+          .sim-sub { display: none; }
         }
       `}</style>
 
@@ -613,14 +617,14 @@ export default function Fluidos() {
                     style={{ background: color, boxShadow: isActive ? `0 0 6px ${color}88` : "none" }}
                   />
                 )}
-                {label}
+                <span className="tool-label">{label}</span>
                 <span className="tool-key">{key}</span>
               </button>
             );
           })}
 
           <button className="clear-btn" onClick={clearAll}>
-            Limpiar <span className="tool-key">C</span>
+            <span className="tool-label">Limpiar </span><span className="tool-key">C</span>
           </button>
 
           {/* Brush size */}
