@@ -15,7 +15,7 @@ const TOOL_DEFS: { id: Tool; label: string; key: string; color: string; border: 
   { id: SAND  as Tool, label: "Tierra",key: "3", color: "#c2a96e", border: "rgba(194,169,110,0.4)" },
   { id: WALL  as Tool, label: "Madera",key: "4", color: "#8b5e3c", border: "rgba(139,94,60,0.4)" },
   { id: MOVE  as Tool, label: "Mover", key: "5", color: "#a78bfa", border: "rgba(167,139,250,0.4)" },
-  { id: 99    as Tool, label: "Borrar",key: "6", color: "#374151", border: "rgba(55,65,81,0.3)" },
+  { id: 99    as Tool, label: "Borrar",key: "6", color: "#111827", border: "rgba(17,24,39,0.4)" },
 ];
 
 export default function Fluidos() {
@@ -631,7 +631,6 @@ export default function Fluidos() {
           .tool-btn { padding: 0.4rem 0.45rem; gap: 0.25rem; }
           .brush-group { display: none; }
           .hint-row { gap: 0.8rem; }
-          .sim-sub { display: none; }
         }
       `}</style>
 
@@ -667,12 +666,10 @@ export default function Fluidos() {
                 } as React.CSSProperties : {}}
                 onClick={() => setToolSync(id)}
               >
-                {id !== 99 && (
-                  <span
-                    className="tool-dot"
-                    style={{ background: color, boxShadow: isActive ? `0 0 6px ${color}88` : "none" }}
-                  />
-                )}
+                <span
+                  className="tool-dot"
+                  style={{ background: color, boxShadow: isActive ? `0 0 6px ${color}88` : "none" }}
+                />
                 <span className="tool-label">{label}</span>
                 <span className="tool-key">{key}</span>
               </button>
@@ -698,8 +695,8 @@ export default function Fluidos() {
 
         {/* Hints */}
         <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem", padding: "0.45rem 0 0" }}>
-          <div className="hint-row" style={{ overflow: "hidden" }}>
-            <span className="hint-item" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>La tierra se hunde en el agua · El agua apaga el fuego · El fuego quema la madera</span>
+          <div className="hint-row">
+            <span className="hint-item">La tierra se hunde en el agua · El agua apaga el fuego · El fuego quema la madera</span>
           </div>
           <div className="hint-row">
             <span className="hint-item"><span className="hint-key">1–6</span> material</span>
