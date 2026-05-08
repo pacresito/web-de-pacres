@@ -707,9 +707,13 @@ export default function Home() {
           position: fixed; border-radius: 50%;
           background: radial-gradient(circle, rgba(59,130,246,0.7) 0%, rgba(59,130,246,0.3) 40%, transparent 70%);
           transform: translate(-50%,-50%); pointer-events: none; z-index: 9999;
-          width: 80px; height: 80px; opacity: 0;
+          width: 80px; height: 80px; opacity: 0; left: -9999px; top: -9999px;
           transition: width 0.08s ease, height 0.08s ease, opacity 0.15s ease;
           filter: blur(18px);
+        }
+
+        @media (pointer: coarse) {
+          .cursor-glow { display: none !important; }
         }
 
         body.page-transformed {
