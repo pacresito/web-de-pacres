@@ -575,8 +575,7 @@ export default function Home() {
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (cursorGlowRef.current) {
-        cursorGlowRef.current.style.left = `${e.clientX}px`;
-        cursorGlowRef.current.style.top = `${e.clientY}px`;
+        cursorGlowRef.current.style.transform = `translate(${e.clientX - 240}px,${e.clientY - 240}px)`;
       }
       if (pressHaloRef.current) {
         pressHaloRef.current.style.left = `${e.clientX}px`;
@@ -763,8 +762,9 @@ export default function Home() {
         .cursor-glow {
           position: fixed; width: 480px; height: 480px; border-radius: 50%;
           background: radial-gradient(circle, rgba(96,165,250,0.18) 0%, rgba(96,165,250,0.07) 40%, transparent 70%);
-          transform: translate(-50%,-50%); pointer-events: none; z-index: 0;
-          transition: left 0.12s ease, top 0.12s ease;
+          left: 0; top: 0; transform: translate(-9999px,-9999px);
+          pointer-events: none; z-index: 0;
+          transition: transform 0.12s ease;
         }
 
         .reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.6s ease, transform 0.6s ease; }
