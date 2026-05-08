@@ -86,6 +86,35 @@ export default function Fluidos() {
     const r  = brushRef.current;
     const t  = toolRef.current;
 
+    // Union-find: assign compId to new wood cell, merging any adjacent components
+    const assignWoodComp = (idx: number, nx: number, ny: number) => {
+      if (!comp) return;
+      const adjCids: number[] = [];
+      for (const [ddx, ddy] of [[1,0],[-1,0],[0,1],[0,-1]] as const) {
+        const ax = nx + ddx, ay = ny + ddy;
+        if (ax < 0 || ax >= W || ay < 0 || ay >= H) continue;
+        if (grid[ay * W + ax] === WALL) {
+          const cid = comp[ay * W + ax];
+          if (cid && !adjCids.includes(cid)) adjCids.push(cid);
+        }
+      }
+      let finalCid: number;
+      if (adjCids.length === 0) {
+        finalCid = nextCompRef.current;
+        if (++nextCompRef.current > 65534) nextCompRef.current = 1;
+      } else {
+        finalCid = adjCids[0];
+        // Merge all other adjacent compIds into finalCid
+        for (let j = 1; j < adjCids.length; j++) {
+          const oldCid = adjCids[j];
+          for (let k = 0; k < W * H; k++) {
+            if (comp[k] === oldCid) comp[k] = finalCid;
+          }
+        }
+      }
+      comp[idx] = finalCid;
+    };
+
     for (let dy = -r; dy <= r; dy++) {
       for (let dx = -r; dx <= r; dx++) {
         if (dx * dx + dy * dy > r * r) continue;
@@ -100,17 +129,7 @@ export default function Fluidos() {
         if (existing === EMPTY || existing === FIRE) {
           grid[i] = t as Mat;
           ages[i] = t === FIRE ? 60 + Math.floor(Math.random() * 80) : 0;
-          if (comp && t === WALL) {
-            // Inherit adjacent component ID, or start a new one
-            let cid = 0;
-            for (const [ddx, ddy] of [[1,0],[-1,0],[0,1],[0,-1]] as const) {
-              const ax = nx + ddx, ay = ny + ddy;
-              if (ax < 0 || ax >= W || ay < 0 || ay >= H) continue;
-              if (grid[ay * W + ax] === WALL) { cid = comp[ay * W + ax]; break; }
-            }
-            if (!cid) { cid = nextCompRef.current; if (++nextCompRef.current > 65534) nextCompRef.current = 1; }
-            comp[i] = cid;
-          }
+          if (t === WALL) assignWoodComp(i, nx, ny);
 
         } else if (existing === WALL) {
           if (t === FIRE && ages[i] === 0) ages[i] = 600 + Math.floor(Math.random() * 200);
@@ -118,31 +137,13 @@ export default function Fluidos() {
         } else if (existing === WATER) {
           if (t === SAND || t === WALL) {
             grid[i] = t as Mat; ages[i] = 0;
-            if (comp && t === WALL) {
-              let cid = 0;
-              for (const [ddx, ddy] of [[1,0],[-1,0],[0,1],[0,-1]] as const) {
-                const ax = nx + ddx, ay = ny + ddy;
-                if (ax < 0 || ax >= W || ay < 0 || ay >= H) continue;
-                if (grid[ay * W + ax] === WALL) { cid = comp[ay * W + ax]; break; }
-              }
-              if (!cid) { cid = nextCompRef.current; if (++nextCompRef.current > 65534) nextCompRef.current = 1; }
-              comp[i] = cid;
-            }
+            if (t === WALL) assignWoodComp(i, nx, ny);
           }
 
         } else if (existing === SAND) {
           if (t === SAND || t === WALL) {
             grid[i] = t as Mat; ages[i] = 0;
-            if (comp && t === WALL) {
-              let cid = 0;
-              for (const [ddx, ddy] of [[1,0],[-1,0],[0,1],[0,-1]] as const) {
-                const ax = nx + ddx, ay = ny + ddy;
-                if (ax < 0 || ax >= W || ay < 0 || ay >= H) continue;
-                if (grid[ay * W + ax] === WALL) { cid = comp[ay * W + ax]; break; }
-              }
-              if (!cid) { cid = nextCompRef.current; if (++nextCompRef.current > 65534) nextCompRef.current = 1; }
-              comp[i] = cid;
-            }
+            if (t === WALL) assignWoodComp(i, nx, ny);
           }
         }
       }
