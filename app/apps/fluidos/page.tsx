@@ -129,7 +129,7 @@ export default function Fluidos() {
     }
   }, []);
 
-  // Push cells in the direction of mouse movement
+  // Push cells in the direction of mouse movement, cascading into chains
   const moveAt = useCallback((px: number, py: number, dpx: number, dpy: number) => {
     const { W, H } = dimRef.current;
     const grid = gridRef.current;
@@ -143,29 +143,68 @@ export default function Fluidos() {
     const dirY = dpy === 0 ? 0 : (dpy > 0 ? 1 : -1);
     if (dirX === 0 && dirY === 0) return;
 
+    // Scale push strength by drag speed so fast drags overcome gravity
+    const steps = Math.min(8, Math.max(1, Math.ceil(Math.hypot(dpx, dpy) / CELL)));
+
+    // Collect non-empty cells in brush; expand wood cells to their connected component
+    const visited = new Set<number>();
     const cells: { cx: number; cy: number }[] = [];
+
     for (let dy = -r; dy <= r; dy++) {
       for (let dx = -r; dx <= r; dx++) {
         if (dx * dx + dy * dy > r * r) continue;
         const nx = gx + dx, ny = gy + dy;
         if (nx < 0 || nx >= W || ny < 0 || ny >= H) continue;
-        if (grid[ny * W + nx] !== EMPTY) cells.push({ cx: nx, cy: ny });
+        const ni = ny * W + nx;
+        if (grid[ni] === EMPTY || visited.has(ni)) continue;
+        visited.add(ni);
+        cells.push({ cx: nx, cy: ny });
+
+        if (grid[ni] === WALL) {
+          const queue = [{ cx: nx, cy: ny }];
+          for (let qi = 0; qi < queue.length; qi++) {
+            const { cx: qx, cy: qy } = queue[qi];
+            for (const [ddx, ddy] of [[1,0],[-1,0],[0,1],[0,-1]] as const) {
+              const ax = qx + ddx, ay = qy + ddy;
+              if (ax < 0 || ax >= W || ay < 0 || ay >= H) continue;
+              const ai = ay * W + ax;
+              if (visited.has(ai) || grid[ai] !== WALL) continue;
+              visited.add(ai);
+              cells.push({ cx: ax, cy: ay });
+              queue.push({ cx: ax, cy: ay });
+            }
+          }
+        }
       }
     }
 
-    // Process in push direction so we don't re-move a cell in the same pass
+    // Process furthest in push direction first to avoid re-moving
     cells.sort((a, b) =>
       dirX !== 0 ? (dirX > 0 ? b.cx - a.cx : a.cx - b.cx)
                  : (dirY > 0 ? b.cy - a.cy : a.cy - b.cy)
     );
 
-    for (const { cx, cy } of cells) {
-      const nx = cx + dirX, ny = cy + dirY;
-      if (nx < 0 || nx >= W || ny < 0 || ny >= H) continue;
-      const si = cy * W + cx, di = ny * W + nx;
-      if (grid[di] === EMPTY) {
-        grid[di] = grid[si]; ages[di] = ages[si];
-        grid[si] = EMPTY;    ages[si] = 0;
+    for (const cell of cells) {
+      let { cx, cy } = cell;
+      for (let s = 0; s < steps; s++) {
+        if (grid[cy * W + cx] === EMPTY) break;
+
+        let ex = cx + dirX, ey = cy + dirY;
+        while (ex >= 0 && ex < W && ey >= 0 && ey < H && grid[ey * W + ex] !== EMPTY) {
+          ex += dirX; ey += dirY;
+        }
+        if (ex < 0 || ex >= W || ey < 0 || ey >= H) break;
+
+        let tx = ex, ty = ey;
+        while (tx !== cx || ty !== cy) {
+          const bx = tx - dirX, by = ty - dirY;
+          grid[ty * W + tx] = grid[by * W + bx];
+          ages[ty * W + tx]  = ages[by * W + bx];
+          tx = bx; ty = by;
+        }
+        grid[cy * W + cx] = EMPTY;
+        ages[cy * W + cx] = 0;
+        cx += dirX; cy += dirY;
       }
     }
   }, []);
