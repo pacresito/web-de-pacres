@@ -138,7 +138,7 @@ export default function Fluidos() {
 
     const steps = Math.min(8, Math.max(1, Math.ceil(Math.hypot(dpx, dpy) / CELL)));
 
-    // Collect non-empty cells in brush; expand wood to its connected component
+    // Collect brush cells; expand wood to its connected component
     const visited = new Set<number>();
     const woodCells: { cx: number; cy: number }[] = [];
     const otherCells: { cx: number; cy: number }[] = [];
@@ -175,17 +175,15 @@ export default function Fluidos() {
     const sortFn = (a: {cx:number;cy:number}, b: {cx:number;cy:number}) =>
       dirX !== 0 ? (dirX > 0 ? b.cx - a.cx : a.cx - b.cx)
                  : (dirY > 0 ? b.cy - a.cy : a.cy - b.cy);
-    woodCells.sort(sortFn);
     otherCells.sort(sortFn);
 
-    // Find first empty reachable by material (wood pushes water; sand/water stop at foreign material)
+    // Sand/water: cascade through same material, stop at foreign
     const findEnd = (cx: number, cy: number, mat: number): { ex: number; ey: number } | null => {
       let ex = cx + dirX, ey = cy + dirY;
       while (ex >= 0 && ex < W && ey >= 0 && ey < H) {
         const obs = grid[ey * W + ex];
         if (obs === EMPTY) return { ex, ey };
-        const canPass = mat === WALL ? (obs === WATER || obs === WALL) : obs === mat;
-        if (!canPass) return null;
+        if (obs !== mat) return null;
         ex += dirX; ey += dirY;
       }
       return null;
@@ -203,27 +201,40 @@ export default function Fluidos() {
       ages[cy * W + cx] = 0;
     };
 
+    // Index set of wood cell positions — lets canMove check skip intra-component cells
+    const woodIdxSet = new Set<number>(woodCells.map(c => c.cy * W + c.cx));
+
     for (let s = 0; s < steps; s++) {
-      // Wood: all-or-nothing — if any cell in the component is blocked, none move
+      // Wood: rigid body — snapshot → clear → write (simultaneous move, no chain artifacts)
       if (woodCells.length > 0) {
         let woodCanMove = true;
-        const woodEnds: Array<{ ex: number; ey: number } | null> = woodCells.map(({ cx, cy }) => {
-          if (grid[cy * W + cx] === EMPTY) { woodCanMove = false; return null; }
-          const end = findEnd(cx, cy, WALL);
-          if (!end) woodCanMove = false;
-          return end;
-        });
+        for (const { cx, cy } of woodCells) {
+          const nx = cx + dirX, ny = cy + dirY;
+          if (nx < 0 || nx >= W || ny < 0 || ny >= H) { woodCanMove = false; break; }
+          const obs = grid[ny * W + nx];
+          // Blocked by sand or any non-component wood; water/fire/empty are passable
+          if (obs === SAND || (obs === WALL && !woodIdxSet.has(ny * W + nx))) {
+            woodCanMove = false; break;
+          }
+        }
         if (woodCanMove) {
+          const snap = woodCells.map(({ cx, cy }) => ({
+            cx, cy, val: grid[cy * W + cx], age: ages[cy * W + cx],
+          }));
+          for (const { cx, cy } of snap) { grid[cy * W + cx] = EMPTY; ages[cy * W + cx] = 0; }
+          for (const { cx, cy, val, age } of snap) {
+            grid[(cy + dirY) * W + (cx + dirX)] = val;
+            ages[(cy + dirY) * W + (cx + dirX)] = age;
+          }
+          woodIdxSet.clear();
           for (let i = 0; i < woodCells.length; i++) {
-            const { cx, cy } = woodCells[i];
-            if (grid[cy * W + cx] === EMPTY) continue;
-            shiftChain(cx, cy, woodEnds[i]!.ex, woodEnds[i]!.ey);
-            woodCells[i] = { cx: cx + dirX, cy: cy + dirY };
+            woodCells[i] = { cx: woodCells[i].cx + dirX, cy: woodCells[i].cy + dirY };
+            woodIdxSet.add(woodCells[i].cy * W + woodCells[i].cx);
           }
         }
       }
 
-      // Sand / water: independent chains, stop at foreign material
+      // Sand / water: independent, stop at foreign material
       for (let i = 0; i < otherCells.length; i++) {
         const { cx, cy } = otherCells[i];
         const mat = grid[cy * W + cx];
