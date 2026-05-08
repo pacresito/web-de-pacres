@@ -71,12 +71,12 @@ const BASE_EXTRAS: Extra[] = [
     cta: "Intentarlo →",
   },
   {
-    id: "cursores",
+    id: "objetivo",
     label: "Broma",
-    title: "Cuatro cursores",
-    description: "Algo no cuadra en esta pantalla.",
+    title: "Sigue tus sueños",
+    description: "El objetivo está justo ahí. Solo tienes que llegar.",
     status: "available",
-    href: "/bromas/cursores",
+    href: "/bromas/objetivo",
     cta: "Intentarlo →",
   },
   {

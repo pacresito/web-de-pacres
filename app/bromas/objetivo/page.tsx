@@ -34,7 +34,7 @@ function CursorIcon() {
   );
 }
 
-export default function CuatroCursores() {
+export default function SigueTusSuenos() {
   const [gameState, setGameState] = useState<GameState>("idle");
   const stateRef = useRef<GameState>("idle");
   const [isMobile, setIsMobile] = useState(false);
@@ -659,7 +659,7 @@ export default function CuatroCursores() {
       {/* Idle */}
       {gameState === "idle" && (
         <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "0.75rem", pointerEvents: "none" }}>
-          <p style={{ fontSize: "1.5rem", fontWeight: 800, color: "#111827", letterSpacing: "-0.03em" }}>Cuatro cursores</p>
+          <p style={{ fontSize: "1.5rem", fontWeight: 800, color: "#111827", letterSpacing: "-0.03em" }}>Sigue tus sueños</p>
           <p style={{ fontSize: "0.85rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)" }}>
             {isMobile ? "Toca la pantalla para empezar" : "Mueve el ratón para empezar"}
           </p>
@@ -695,12 +695,12 @@ export default function CuatroCursores() {
               Certificado oficial
             </p>
             <p style={{ fontSize: "1.15rem", fontWeight: 800, letterSpacing: "-0.02em", color: "#111827" }}>
-              Percepción privilegiada
+              Perseverancia certificada
             </p>
             <p style={{ fontSize: "0.68rem", color: "#6b7280", margin: "0.75rem 0 1.25rem", lineHeight: 2.0, fontFamily: "var(--font-geist-mono, monospace)" }}>
               Se certifica que el portador<br />
-              distingue lo real de lo falso.<br />
-              Habilidad rara en internet.
+              consiguió lo que se propuso.<br />
+              Eso no le pasa a todo el mundo.
             </p>
             <div style={{ borderTop: "1px solid rgba(96,165,250,0.25)", paddingTop: "0.9rem", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
               <p style={{ fontSize: "0.58rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)" }}>
