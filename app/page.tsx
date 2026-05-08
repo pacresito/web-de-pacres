@@ -613,8 +613,8 @@ export default function Home() {
         if (pressHaloRef.current) {
           let progress, size, opacity;
           if (isMobile) {
-            // mobile: visible desde el primer tick, crece de 480→1080px en 4s
-            progress = Math.min(secs / 4, 1);
+            // mobile: 1s en mínimo (como desktop), luego crece de 480→1080px
+            progress = secs < 1 ? 0 : Math.min((secs - 1) / 3, 1);
             size = 480 + progress * 600;
             opacity = 0.25 + progress * 0.6;
           } else {
@@ -637,21 +637,27 @@ export default function Home() {
         }
       }, 50);
     };
-    const endHold = (secs: number) => {
+    const endHold = (secs: number, isMobile = false) => {
       if (holdTimerRef.current) clearInterval(holdTimerRef.current);
       holdSecsRef.current = 0;
       const halo = pressHaloRef.current;
       if (halo) {
         const fromOpacity = parseFloat(halo.style.opacity || "0");
+        const fromSize = parseFloat(halo.style.width || "80");
         if (fromOpacity > 0) {
-          const duration = 420;
+          const duration = isMobile ? 420 : 500;
           const startTime = performance.now();
           cancelAnimationFrame(haloRafRef.current);
           const fade = (now: number) => {
             const t = Math.min((now - startTime) / duration, 1);
             halo.style.opacity = `${fromOpacity * (1 - t)}`;
+            if (!isMobile) {
+              // desktop: contrae de vuelta al tamaño inicial mientras desaparece
+              halo.style.width = `${fromSize + (80 - fromSize) * t}px`;
+              halo.style.height = `${fromSize + (80 - fromSize) * t}px`;
+            }
             if (t < 1) haloRafRef.current = requestAnimationFrame(fade);
-            else halo.style.opacity = "0";
+            else { halo.style.opacity = "0"; halo.style.width = "80px"; halo.style.height = "80px"; }
           };
           haloRafRef.current = requestAnimationFrame(fade);
         }
@@ -662,7 +668,7 @@ export default function Home() {
       }
     };
     const handleMouseDown = () => startHold();
-    const handleMouseUp = () => endHold(holdSecsRef.current);
+    const handleMouseUp = () => endHold(holdSecsRef.current, false);
     const handleTouchStart = (e: TouchEvent) => {
       const touch = e.touches[0];
       if (!touch) return;
@@ -672,7 +678,7 @@ export default function Home() {
       }
       startHold(true);
     };
-    const handleTouchEnd = () => endHold(holdSecsRef.current);
+    const handleTouchEnd = () => endHold(holdSecsRef.current, true);
     window.addEventListener("mousedown", handleMouseDown);
     window.addEventListener("mouseup", handleMouseUp);
     window.addEventListener("touchstart", handleTouchStart);
