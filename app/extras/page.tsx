@@ -41,7 +41,7 @@ const BASE_EXTRAS: Extra[] = [
     description: "Agua, fuego, tierra. Controla los elementos.",
     status: "available",
     href: "/apps/fluidos",
-    cta: "Jugar →",
+    cta: "Abrir →",
   },
   {
     id: "espiral",
@@ -77,7 +77,7 @@ const BASE_EXTRAS: Extra[] = [
     description: "Algo no cuadra en esta pantalla.",
     status: "available",
     href: "/bromas/cursores",
-    cta: "Descubrirlo →",
+    cta: "Intentarlo →",
   },
   {
     id: "color",
