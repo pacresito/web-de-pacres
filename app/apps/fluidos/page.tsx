@@ -581,6 +581,7 @@ export default function Fluidos() {
         padding: "0 clamp(1.25rem, 4vw, 2rem)",
         height: "100dvh",
         overflow: "hidden",
+        overflowX: "hidden",
         display: "flex",
         flexDirection: "column",
       }}>
@@ -637,8 +638,8 @@ export default function Fluidos() {
 
         {/* Hints */}
         <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem", padding: "0.45rem 0 0" }}>
-          <div className="hint-row" style={{ flexWrap: "nowrap", whiteSpace: "nowrap" }}>
-            <span className="hint-item">La tierra se hunde en el agua · El agua apaga el fuego · El fuego quema la madera</span>
+          <div className="hint-row" style={{ overflow: "hidden" }}>
+            <span className="hint-item" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>La tierra se hunde en el agua · El agua apaga el fuego · El fuego quema la madera</span>
           </div>
           <div className="hint-row">
             <span className="hint-item"><span className="hint-key">1–5</span> material</span>
