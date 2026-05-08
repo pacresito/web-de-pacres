@@ -35,6 +35,8 @@ export default function Fluidos() {
   const woodAnchorRef  = useRef<{ x: number; y: number } | null>(null); // pixel anchor for grab
   const woodMovedRef   = useRef({ x: 0, y: 0 });                        // cells moved since grab start
   const woodGrabRef    = useRef(false);                                   // whether wood is grabbed
+  const carriedRef     = useRef<{dx: number; dy: number; type: Mat; age: number}[]>([]);
+  const carryPosRef    = useRef<{ x: number; y: number } | null>(null);
 
   const [tool, setTool] = useState<Tool>(WATER as Tool);
 
@@ -574,6 +576,46 @@ export default function Fluidos() {
         ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
       }
     }
+
+    // Carried cells overlay
+    const carried = carriedRef.current;
+    const carryPos = carryPosRef.current;
+    if (carried.length > 0 && carryPos) {
+      ctx.globalAlpha = 0.88;
+      for (const { dx, dy, type, age } of carried) {
+        const cx = carryPos.x + dx, cy = carryPos.y + dy;
+        if (cx < 0 || cx >= W || cy < 0 || cy >= H) continue;
+        let overlayColor: string;
+        if (type === SAND) {
+          const h = ((cx * 374761393 + cy * 668265263) >>> 0) & 0xff;
+          const v1 = h % 38, v2 = (h >> 5) % 18;
+          overlayColor = `rgb(${178 + v1},${146 + Math.floor(v1 * 0.5)},${82 + Math.floor(v1 * 0.15) - v2})`;
+        } else if (type === WATER) {
+          const wave = Math.sin((cx * 0.35 + t / 500)) * 4;
+          const depth = Math.min(cy / H, 1);
+          const w = Math.floor(wave);
+          overlayColor = `rgb(${Math.max(18, 32 - Math.floor(depth * 12) + w)},${Math.max(70, 105 - Math.floor(depth * 25) + w)},${215 + w})`;
+        } else {
+          const flick = ((cx * 7 + cy * 11 + Math.floor(t / 50)) & 0x1f) / 31;
+          const age_r = Math.min(1, age / 140) * 0.72 + flick * 0.28;
+          let fr: number, fg: number, fb: number;
+          if (age_r > 0.6) {
+            const p = (age_r - 0.6) / 0.4;
+            fr = 255; fg = Math.floor(140 + p * 115); fb = Math.floor(p * 55);
+          } else if (age_r > 0.28) {
+            const p = (age_r - 0.28) / 0.32;
+            fr = 255; fg = Math.floor(40 + p * 100); fb = 0;
+          } else {
+            const p = age_r / 0.28;
+            fr = Math.floor(120 + p * 135); fg = Math.floor(p * 40); fb = 0;
+          }
+          overlayColor = `rgb(${fr},${fg},${fb})`;
+        }
+        ctx.fillStyle = overlayColor;
+        ctx.fillRect(cx * CELL, cy * CELL, CELL, CELL);
+      }
+      ctx.globalAlpha = 1;
+    }
   }, []);
 
   // Animation loop
@@ -649,6 +691,27 @@ export default function Fluidos() {
         woodGrabRef.current = found;
         woodAnchorRef.current = pos;
         woodMovedRef.current = { x: 0, y: 0 };
+        // Pick up non-wood cells in brush radius
+        if (gridRef.current && agesRef.current) {
+          const { W: pW, H: pH } = dimRef.current;
+          const pgx = Math.floor(pos.x / CELL), pgy = Math.floor(pos.y / CELL);
+          const pr = brushRef.current;
+          const picked: {dx: number; dy: number; type: Mat; age: number}[] = [];
+          for (let ddy = -pr; ddy <= pr; ddy++) {
+            for (let ddx = -pr; ddx <= pr; ddx++) {
+              if (ddx*ddx + ddy*ddy > pr*pr) continue;
+              const nx = pgx+ddx, ny = pgy+ddy;
+              if (nx < 0 || nx >= pW || ny < 0 || ny >= pH) continue;
+              const pi = ny*pW+nx;
+              if (gridRef.current[pi] !== EMPTY && gridRef.current[pi] !== WALL) {
+                picked.push({ dx: ddx, dy: ddy, type: gridRef.current[pi] as Mat, age: agesRef.current[pi] });
+                gridRef.current[pi] = EMPTY; agesRef.current[pi] = 0;
+              }
+            }
+          }
+          carriedRef.current = picked;
+          carryPosRef.current = { x: pgx, y: pgy };
+        }
       } else {
         paintAt(pos.x, pos.y);
       }
@@ -659,6 +722,7 @@ export default function Fluidos() {
       const pos = getCanvasPos(e);
       if (!pos) return;
       if (toolRef.current === MOVE) {
+        carryPosRef.current = { x: Math.floor(pos.x / CELL), y: Math.floor(pos.y / CELL) };
         const anchor = woodAnchorRef.current;
         if (anchor) {
           if (woodGrabRef.current) {
@@ -685,6 +749,22 @@ export default function Fluidos() {
       lastPosRef.current = pos;
     };
     const onUp = () => {
+      if (carriedRef.current.length > 0 && carryPosRef.current) {
+        const { W: dW, H: dH } = dimRef.current;
+        const dgrid = gridRef.current;
+        const dages = agesRef.current;
+        if (dgrid && dages) {
+          const { x: dpx, y: dpy } = carryPosRef.current;
+          for (const { dx, dy, type, age } of carriedRef.current) {
+            const nx = dpx + dx, ny = dpy + dy;
+            if (nx < 0 || nx >= dW || ny < 0 || ny >= dH) continue;
+            const di = ny*dW+nx;
+            if (dgrid[di] === EMPTY) { dgrid[di] = type; dages[di] = age; }
+          }
+        }
+      }
+      carriedRef.current = [];
+      carryPosRef.current = null;
       paintRef.current = false;
       lastPosRef.current = null;
       woodAnchorRef.current = null;
