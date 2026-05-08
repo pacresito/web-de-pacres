@@ -652,9 +652,10 @@ export default function Home() {
             const t = Math.min((now - startTime) / duration, 1);
             halo.style.opacity = `${fromOpacity * (1 - t)}`;
             if (!isMobile) {
-              // desktop: contrae de vuelta al tamaño inicial mientras desaparece
-              halo.style.width = `${fromSize + (80 - fromSize) * t}px`;
-              halo.style.height = `${fromSize + (80 - fromSize) * t}px`;
+              // desktop: contrae hacia 480px (tamaño del cursor-glow) mientras desaparece
+              const targetSize = Math.min(fromSize, 480);
+              halo.style.width = `${fromSize + (targetSize - fromSize) * t}px`;
+              halo.style.height = `${fromSize + (targetSize - fromSize) * t}px`;
             }
             if (t < 1) haloRafRef.current = requestAnimationFrame(fade);
             else { halo.style.opacity = "0"; halo.style.width = "80px"; halo.style.height = "80px"; }
