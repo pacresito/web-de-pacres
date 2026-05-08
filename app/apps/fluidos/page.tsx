@@ -19,17 +19,22 @@ const TOOL_DEFS: { id: Tool; label: string; key: string; color: string; border: 
 ];
 
 export default function Fluidos() {
-  const canvasRef  = useRef<HTMLCanvasElement>(null);
-  const wrapRef    = useRef<HTMLDivElement>(null);
-  const gridRef    = useRef<Uint8Array | null>(null);
-  const agesRef    = useRef<Uint8Array | null>(null);
-  const updRef     = useRef<Uint8Array | null>(null);
-  const dimRef     = useRef({ W: 0, H: 0 });
-  const toolRef    = useRef<Tool>(WATER as Tool);
-  const brushRef   = useRef(4);
-  const paintRef   = useRef(false);
-  const lastPosRef = useRef<{ x: number; y: number } | null>(null);
-  const rafRef     = useRef(0);
+  const canvasRef      = useRef<HTMLCanvasElement>(null);
+  const wrapRef        = useRef<HTMLDivElement>(null);
+  const gridRef        = useRef<Uint8Array | null>(null);
+  const agesRef        = useRef<Uint8Array | null>(null);
+  const updRef         = useRef<Uint8Array | null>(null);
+  const compRef        = useRef<Uint16Array | null>(null); // wood component IDs
+  const nextCompRef    = useRef(1);                        // next component ID counter
+  const dimRef         = useRef({ W: 0, H: 0 });
+  const toolRef        = useRef<Tool>(WATER as Tool);
+  const brushRef       = useRef(4);
+  const paintRef       = useRef(false);
+  const lastPosRef     = useRef<{ x: number; y: number } | null>(null);
+  const rafRef         = useRef(0);
+  const woodAnchorRef  = useRef<{ x: number; y: number } | null>(null); // pixel anchor for grab
+  const woodMovedRef   = useRef({ x: 0, y: 0 });                        // cells moved since grab start
+  const woodGrabRef    = useRef(false);                                   // whether wood is grabbed
 
   const [tool, setTool] = useState<Tool>(WATER as Tool);
 
@@ -44,6 +49,7 @@ export default function Fluidos() {
     gridRef.current = new Uint8Array(W * H);
     agesRef.current = new Uint8Array(W * H);
     updRef.current  = new Uint8Array(W * H);
+    compRef.current  = new Uint16Array(W * H);
   }, []);
 
   // Resize observer
@@ -72,6 +78,7 @@ export default function Fluidos() {
     const { W, H } = dimRef.current;
     const grid = gridRef.current;
     const ages = agesRef.current;
+    const comp = compRef.current;
     if (!grid || !ages) return;
 
     const gx = Math.floor(px / CELL);
@@ -88,35 +95,55 @@ export default function Fluidos() {
         const existing = grid[i];
 
         // Eraser: always clears
-        if (t === 99) { grid[i] = EMPTY; ages[i] = 0; continue; }
+        if (t === 99) { grid[i] = EMPTY; ages[i] = 0; if (comp) comp[i] = 0; continue; }
 
         if (existing === EMPTY || existing === FIRE) {
-          // Empty or fire: place anything
           grid[i] = t as Mat;
-          ages[i] = t === FIRE ? 60 + Math.floor(Math.random() * 80)
-                  : t === WALL ? 0
-                  : 0;
+          ages[i] = t === FIRE ? 60 + Math.floor(Math.random() * 80) : 0;
+          if (comp && t === WALL) {
+            // Inherit adjacent component ID, or start a new one
+            let cid = 0;
+            for (const [ddx, ddy] of [[1,0],[-1,0],[0,1],[0,-1]] as const) {
+              const ax = nx + ddx, ay = ny + ddy;
+              if (ax < 0 || ax >= W || ay < 0 || ay >= H) continue;
+              if (grid[ay * W + ax] === WALL) { cid = comp[ay * W + ax]; break; }
+            }
+            if (!cid) { cid = nextCompRef.current; if (++nextCompRef.current > 65534) nextCompRef.current = 1; }
+            comp[i] = cid;
+          }
 
         } else if (existing === WALL) {
-          // Wood: only fire can interact (ignites it)
-          if (t === FIRE && ages[i] === 0) {
-            ages[i] = 600 + Math.floor(Math.random() * 200);
-          }
-          // water and sand: blocked
+          if (t === FIRE && ages[i] === 0) ages[i] = 600 + Math.floor(Math.random() * 200);
 
         } else if (existing === WATER) {
-          // Water: sand and wood can be placed (physics handles displacement)
-          // Fire: blocked (extinguished by water, no-op)
           if (t === SAND || t === WALL) {
             grid[i] = t as Mat; ages[i] = 0;
+            if (comp && t === WALL) {
+              let cid = 0;
+              for (const [ddx, ddy] of [[1,0],[-1,0],[0,1],[0,-1]] as const) {
+                const ax = nx + ddx, ay = ny + ddy;
+                if (ax < 0 || ax >= W || ay < 0 || ay >= H) continue;
+                if (grid[ay * W + ax] === WALL) { cid = comp[ay * W + ax]; break; }
+              }
+              if (!cid) { cid = nextCompRef.current; if (++nextCompRef.current > 65534) nextCompRef.current = 1; }
+              comp[i] = cid;
+            }
           }
 
         } else if (existing === SAND) {
-          // Sand: more sand or wood can be placed (sand falls around wood); water and fire blocked
           if (t === SAND || t === WALL) {
             grid[i] = t as Mat; ages[i] = 0;
+            if (comp && t === WALL) {
+              let cid = 0;
+              for (const [ddx, ddy] of [[1,0],[-1,0],[0,1],[0,-1]] as const) {
+                const ax = nx + ddx, ay = ny + ddy;
+                if (ax < 0 || ax >= W || ay < 0 || ay >= H) continue;
+                if (grid[ay * W + ax] === WALL) { cid = comp[ay * W + ax]; break; }
+              }
+              if (!cid) { cid = nextCompRef.current; if (++nextCompRef.current > 65534) nextCompRef.current = 1; }
+              comp[i] = cid;
+            }
           }
-          // water: blocked · fire: smothered, blocked
         }
       }
     }
@@ -127,6 +154,7 @@ export default function Fluidos() {
     const { W, H } = dimRef.current;
     const grid = gridRef.current;
     const ages = agesRef.current;
+    const comp = compRef.current;
     if (!grid || !ages) return;
 
     const gx  = Math.floor(px / CELL);
@@ -136,12 +164,126 @@ export default function Fluidos() {
     const dirY = dpy === 0 ? 0 : (dpy > 0 ? 1 : -1);
     if (dirX === 0 && dirY === 0) return;
 
-    const steps = Math.min(8, Math.max(1, Math.ceil(Math.hypot(dpx, dpy) / CELL)));
+    // max(ceil|dpx|, ceil|dpy|) — preserves fluid responsiveness, fixes diagonal doubling
+    const steps = Math.min(8, Math.max(1, Math.max(Math.ceil(Math.abs(dpx) / CELL), Math.ceil(Math.abs(dpy) / CELL))));
 
-    // Collect brush cells; expand wood to its connected component
+    // Shift a chain from (cx,cy) into the empty at (ex,ey), moving in direction (ddx,ddy)
+    const shiftInDir = (cx: number, cy: number, ex: number, ey: number, ddx: number, ddy: number) => {
+      let tx = ex, ty = ey;
+      while (tx !== cx || ty !== cy) {
+        const bx = tx - ddx, by = ty - ddy;
+        grid[ty * W + tx] = grid[by * W + bx];
+        ages[ty * W + tx]  = ages[by * W + bx];
+        tx = bx; ty = by;
+      }
+      grid[cy * W + cx] = EMPTY; ages[cy * W + cx] = 0;
+    };
+
+    // Find first empty in direction (ddx,ddy), cascading through same material
+    // Sand also cascades through water (it sinks)
+    const findEndInDir = (cx: number, cy: number, mat: number, ddx: number, ddy: number): {ex: number; ey: number} | null => {
+      let ex = cx + ddx, ey = cy + ddy;
+      while (ex >= 0 && ex < W && ey >= 0 && ey < H) {
+        const obs = grid[ey * W + ex];
+        if (obs === EMPTY) return { ex, ey };
+        if (obs !== mat && !(mat === SAND && obs === WATER)) return null;
+        ex += ddx; ey += ddy;
+      }
+      return null;
+    };
+
+    // Try push direction first, then perpendiculars — lets sand/water escape sideways
+    const perps: [number, number][] = dirX !== 0 ? [[0, 1], [0, -1]] : [[1, 0], [-1, 0]];
+    const allDirs: [number, number][] = [[dirX, dirY], ...perps];
+
+    const findEndAny = (cx: number, cy: number, mat: number): {ex: number; ey: number; ddx: number; ddy: number} | null => {
+      for (const [ddx, ddy] of allDirs) {
+        const end = findEndInDir(cx, cy, mat, ddx, ddy);
+        if (end) return { ...end, ddx, ddy };
+      }
+      return null;
+    };
+
+    // BFS: collect connected wood component from (sx,sy) with same compId, excluding excludeSet
+    const collectWood = (sx: number, sy: number, excludeSet: Set<number>): {cells: {cx: number; cy: number}[]; idxSet: Set<number>} => {
+      const targetCid = comp ? comp[sy * W + sx] : 0;
+      const cells: {cx: number; cy: number}[] = [];
+      const idxSet = new Set<number>();
+      const queue = [{ cx: sx, cy: sy }];
+      idxSet.add(sy * W + sx); cells.push({ cx: sx, cy: sy });
+      for (let qi = 0; qi < queue.length; qi++) {
+        const { cx: qx, cy: qy } = queue[qi];
+        for (const [ddx, ddy] of [[1,0],[-1,0],[0,1],[0,-1]] as const) {
+          const ax = qx + ddx, ay = qy + ddy;
+          if (ax < 0 || ax >= W || ay < 0 || ay >= H) continue;
+          const ai = ay * W + ax;
+          if (idxSet.has(ai) || excludeSet.has(ai) || grid[ai] !== WALL || (comp && comp[ai] !== targetCid)) continue;
+          idxSet.add(ai); cells.push({ cx: ax, cy: ay }); queue.push({ cx: ax, cy: ay });
+        }
+      }
+      return { cells, idxSet };
+    };
+
+    // Try to move a wood component one step in (dirX,dirY).
+    // Billiard: if front face has another wood piece, recursively push it first.
+    // Water never blocks; sand blocks only if it has no escape route.
+    const tryMoveWood = (wCells: {cx: number; cy: number}[], wIdxSet: Set<number>, depth = 0): boolean => {
+      if (depth > 5) return false;
+      const face: {cx: number; cy: number}[] = [];
+      const faceSet = new Set<number>();
+
+      for (const { cx, cy } of wCells) {
+        const nx = cx + dirX, ny = cy + dirY;
+        if (nx < 0 || nx >= W || ny < 0 || ny >= H) return false;
+        const ni = ny * W + nx;
+        if (wIdxSet.has(ni)) continue;
+        const obs = grid[ni];
+        if (obs === EMPTY || obs === FIRE) continue;
+        if (obs === WALL) {
+          // Billiard: try to push the other piece out of the way
+          const { cells: bCells, idxSet: bIdxSet } = collectWood(nx, ny, wIdxSet);
+          if (!tryMoveWood(bCells, bIdxSet, depth + 1)) return false;
+          continue;
+        }
+        if (!faceSet.has(ni)) { faceSet.add(ni); face.push({ cx: nx, cy: ny }); }
+      }
+
+      // Sand must have an escape route; water is always passable
+      for (const { cx, cy } of face) {
+        const mat = grid[cy * W + cx];
+        if (mat !== WATER && !findEndAny(cx, cy, mat)) return false;
+      }
+
+      // Push face material first (furthest first), then move wood
+      face.sort((a, b) => dirX !== 0 ? (dirX > 0 ? b.cx - a.cx : a.cx - b.cx) : (dirY > 0 ? b.cy - a.cy : a.cy - b.cy));
+      for (const { cx, cy } of face) {
+        const mat = grid[cy * W + cx];
+        if (mat === EMPTY) continue;
+        const end = findEndAny(cx, cy, mat);
+        if (end) shiftInDir(cx, cy, end.ex, end.ey, end.ddx, end.ddy);
+        // water with no space: gets overwritten — rare, flows naturally afterward
+      }
+
+      // Rigid-body move: snapshot → clear → write (carry component ID)
+      const snap = wCells.map(({ cx, cy }) => ({ cx, cy, val: grid[cy * W + cx], age: ages[cy * W + cx], cid: comp ? comp[cy * W + cx] : 0 }));
+      for (const { cx, cy } of snap) { grid[cy * W + cx] = EMPTY; ages[cy * W + cx] = 0; if (comp) comp[cy * W + cx] = 0; }
+      for (const { cx, cy, val, age, cid } of snap) {
+        grid[(cy + dirY) * W + (cx + dirX)] = val;
+        ages[(cy + dirY) * W + (cx + dirX)] = age;
+        if (comp) comp[(cy + dirY) * W + (cx + dirX)] = cid;
+      }
+      wIdxSet.clear();
+      for (let i = 0; i < wCells.length; i++) {
+        wCells[i] = { cx: wCells[i].cx + dirX, cy: wCells[i].cy + dirY };
+        wIdxSet.add(wCells[i].cy * W + wCells[i].cx);
+      }
+      return true;
+    };
+
+    // Collect brush cells; expand any touched wood to its full connected component (grab)
     const visited = new Set<number>();
-    const woodCells: { cx: number; cy: number }[] = [];
-    const otherCells: { cx: number; cy: number }[] = [];
+    const woodCells: {cx: number; cy: number}[] = [];
+    const otherCells: {cx: number; cy: number}[] = [];
 
     for (let dy = -r; dy <= r; dy++) {
       for (let dx = -r; dx <= r; dx++) {
@@ -152,6 +294,7 @@ export default function Fluidos() {
         if (grid[ni] === EMPTY || visited.has(ni)) continue;
         visited.add(ni);
         if (grid[ni] === WALL) {
+          const startCid = comp ? comp[ni] : 0;
           woodCells.push({ cx: nx, cy: ny });
           const queue = [{ cx: nx, cy: ny }];
           for (let qi = 0; qi < queue.length; qi++) {
@@ -160,10 +303,8 @@ export default function Fluidos() {
               const ax = qx + ddx, ay = qy + ddy;
               if (ax < 0 || ax >= W || ay < 0 || ay >= H) continue;
               const ai = ay * W + ax;
-              if (visited.has(ai) || grid[ai] !== WALL) continue;
-              visited.add(ai);
-              woodCells.push({ cx: ax, cy: ay });
-              queue.push({ cx: ax, cy: ay });
+              if (visited.has(ai) || grid[ai] !== WALL || (comp && comp[ai] !== startCid)) continue;
+              visited.add(ai); woodCells.push({ cx: ax, cy: ay }); queue.push({ cx: ax, cy: ay });
             }
           }
         } else {
@@ -173,75 +314,21 @@ export default function Fluidos() {
     }
 
     const sortFn = (a: {cx:number;cy:number}, b: {cx:number;cy:number}) =>
-      dirX !== 0 ? (dirX > 0 ? b.cx - a.cx : a.cx - b.cx)
-                 : (dirY > 0 ? b.cy - a.cy : a.cy - b.cy);
+      dirX !== 0 ? (dirX > 0 ? b.cx - a.cx : a.cx - b.cx) : (dirY > 0 ? b.cy - a.cy : a.cy - b.cy);
     otherCells.sort(sortFn);
 
-    // Sand/water: cascade through same material, stop at foreign
-    const findEnd = (cx: number, cy: number, mat: number): { ex: number; ey: number } | null => {
-      let ex = cx + dirX, ey = cy + dirY;
-      while (ex >= 0 && ex < W && ey >= 0 && ey < H) {
-        const obs = grid[ey * W + ex];
-        if (obs === EMPTY) return { ex, ey };
-        if (obs !== mat) return null;
-        ex += dirX; ey += dirY;
-      }
-      return null;
-    };
-
-    const shiftChain = (cx: number, cy: number, ex: number, ey: number) => {
-      let tx = ex, ty = ey;
-      while (tx !== cx || ty !== cy) {
-        const bx = tx - dirX, by = ty - dirY;
-        grid[ty * W + tx] = grid[by * W + bx];
-        ages[ty * W + tx]  = ages[by * W + bx];
-        tx = bx; ty = by;
-      }
-      grid[cy * W + cx] = EMPTY;
-      ages[cy * W + cx] = 0;
-    };
-
-    // Index set of wood cell positions — lets canMove check skip intra-component cells
     const woodIdxSet = new Set<number>(woodCells.map(c => c.cy * W + c.cx));
 
     for (let s = 0; s < steps; s++) {
-      // Wood: rigid body — snapshot → clear → write (simultaneous move, no chain artifacts)
-      if (woodCells.length > 0) {
-        let woodCanMove = true;
-        for (const { cx, cy } of woodCells) {
-          const nx = cx + dirX, ny = cy + dirY;
-          if (nx < 0 || nx >= W || ny < 0 || ny >= H) { woodCanMove = false; break; }
-          const obs = grid[ny * W + nx];
-          // Blocked by sand or any non-component wood; water/fire/empty are passable
-          if (obs === SAND || (obs === WALL && !woodIdxSet.has(ny * W + nx))) {
-            woodCanMove = false; break;
-          }
-        }
-        if (woodCanMove) {
-          const snap = woodCells.map(({ cx, cy }) => ({
-            cx, cy, val: grid[cy * W + cx], age: ages[cy * W + cx],
-          }));
-          for (const { cx, cy } of snap) { grid[cy * W + cx] = EMPTY; ages[cy * W + cx] = 0; }
-          for (const { cx, cy, val, age } of snap) {
-            grid[(cy + dirY) * W + (cx + dirX)] = val;
-            ages[(cy + dirY) * W + (cx + dirX)] = age;
-          }
-          woodIdxSet.clear();
-          for (let i = 0; i < woodCells.length; i++) {
-            woodCells[i] = { cx: woodCells[i].cx + dirX, cy: woodCells[i].cy + dirY };
-            woodIdxSet.add(woodCells[i].cy * W + woodCells[i].cx);
-          }
-        }
-      }
+      if (woodCells.length > 0) tryMoveWood(woodCells, woodIdxSet);
 
-      // Sand / water: independent, stop at foreign material
       for (let i = 0; i < otherCells.length; i++) {
         const { cx, cy } = otherCells[i];
         const mat = grid[cy * W + cx];
         if (mat === EMPTY) continue;
-        const end = findEnd(cx, cy, mat);
+        const end = findEndInDir(cx, cy, mat, dirX, dirY);
         if (!end) continue;
-        shiftChain(cx, cy, end.ex, end.ey);
+        shiftInDir(cx, cy, end.ex, end.ey, dirX, dirY);
         otherCells[i] = { cx: cx + dirX, cy: cy + dirY };
       }
     }
@@ -511,6 +598,7 @@ export default function Fluidos() {
       if (e.key === "c" || e.key === "C") {
         gridRef.current?.fill(0);
         agesRef.current?.fill(0);
+        compRef.current?.fill(0);
       }
     };
     window.addEventListener("keydown", onKey);
@@ -542,22 +630,66 @@ export default function Fluidos() {
       const pos = getCanvasPos(e);
       if (!pos) return;
       lastPosRef.current = pos;
-      if (toolRef.current !== MOVE) paintAt(pos.x, pos.y);
+      if (toolRef.current === MOVE) {
+        // Check for wood in brush to decide if we're grabbing
+        const { W, H } = dimRef.current;
+        const grid = gridRef.current;
+        const gx = Math.floor(pos.x / CELL), gy = Math.floor(pos.y / CELL);
+        const r = brushRef.current;
+        let found = false;
+        outer: for (let dy = -r; dy <= r && !found; dy++) {
+          for (let dx = -r; dx <= r && !found; dx++) {
+            if (dx*dx + dy*dy > r*r) continue;
+            const nx = gx+dx, ny = gy+dy;
+            if (nx < 0 || nx >= W || ny < 0 || ny >= H) continue;
+            if (grid && grid[ny * W + nx] === WALL) { found = true; break outer; }
+          }
+        }
+        woodGrabRef.current = found;
+        woodAnchorRef.current = pos;
+        woodMovedRef.current = { x: 0, y: 0 };
+      } else {
+        paintAt(pos.x, pos.y);
+      }
     };
     const onMove = (e: MouseEvent | TouchEvent) => {
       e.preventDefault();
       if (!paintRef.current) return;
       const pos = getCanvasPos(e);
       if (!pos) return;
-      const last = lastPosRef.current;
-      if (toolRef.current === MOVE && last) {
-        moveAt(pos.x, pos.y, pos.x - last.x, pos.y - last.y);
+      if (toolRef.current === MOVE) {
+        const anchor = woodAnchorRef.current;
+        if (anchor) {
+          if (woodGrabRef.current) {
+            // Anchor tracking: accumulated cell delta since grab start
+            const totalDx = pos.x - anchor.x;
+            const totalDy = pos.y - anchor.y;
+            const targetX = Math.round(totalDx / CELL);
+            const targetY = Math.round(totalDy / CELL);
+            const dcx = targetX - woodMovedRef.current.x;
+            const dcy = targetY - woodMovedRef.current.y;
+            if (dcx !== 0 || dcy !== 0) {
+              moveAt(pos.x, pos.y, dcx * CELL, dcy * CELL);
+              woodMovedRef.current = { x: targetX, y: targetY };
+            }
+          } else {
+            // No wood grabbed — push fluids with per-event delta
+            const last = lastPosRef.current;
+            if (last) moveAt(pos.x, pos.y, pos.x - last.x, pos.y - last.y);
+          }
+        }
       } else {
         paintAt(pos.x, pos.y);
       }
       lastPosRef.current = pos;
     };
-    const onUp = () => { paintRef.current = false; lastPosRef.current = null; };
+    const onUp = () => {
+      paintRef.current = false;
+      lastPosRef.current = null;
+      woodAnchorRef.current = null;
+      woodMovedRef.current = { x: 0, y: 0 };
+      woodGrabRef.current = false;
+    };
 
     canvas.addEventListener("mousedown",  onDown);
     canvas.addEventListener("mousemove",  onMove);
