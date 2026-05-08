@@ -631,6 +631,7 @@ export default function Fluidos() {
           .tool-btn { padding: 0.4rem 0.45rem; gap: 0.25rem; }
           .brush-group { display: none; }
           .hint-row { gap: 0.8rem; }
+          .sim-sub { display: none; }
         }
       `}</style>
 
@@ -696,12 +697,12 @@ export default function Fluidos() {
         {/* Hints */}
         <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem", padding: "0.45rem 0 0" }}>
           <div className="hint-row">
-            <span className="hint-item">La tierra se hunde en el agua · El agua apaga el fuego · El fuego quema la madera</span>
-          </div>
-          <div className="hint-row">
             <span className="hint-item"><span className="hint-key">1–6</span> material</span>
             <span className="hint-item"><span className="hint-key">[ ]</span> pincel</span>
             <span className="hint-item"><span className="hint-key">C</span> limpiar</span>
+          </div>
+          <div className="hint-row">
+            <span className="hint-item">La tierra se hunde en el agua · El agua apaga el fuego · El fuego quema la madera</span>
           </div>
         </div>
 
