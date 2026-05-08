@@ -73,7 +73,7 @@ const BASE_EXTRAS: Extra[] = [
   {
     id: "objetivo",
     label: "Broma",
-    title: "Sigue tus sueños",
+    title: "Alcanza tus objetivos",
     description: "El objetivo está justo ahí. Solo tienes que llegar.",
     status: "available",
     href: "/bromas/objetivo",

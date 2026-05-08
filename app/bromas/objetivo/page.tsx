@@ -12,9 +12,9 @@ const HOLD_MS = 1000;
 const ARC_C = 2 * Math.PI * (TARGET_R - 4);
 
 const CONFESSIONS = [
-  "Yo tampoco sabía cuál era el real",
-  "Llevo aquí desde 2024",
-  "Oye, ¿y ahora qué hago yo?",
+  "Yo también iba al objetivo",
+  "El éxito está por aquí, te lo juro",
+  "Sígueme, yo sé el camino",
 ];
 
 // Travel durations (seconds): fastest → slowest
@@ -659,7 +659,7 @@ export default function SigueTusSuenos() {
       {/* Idle */}
       {gameState === "idle" && (
         <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "0.75rem", pointerEvents: "none" }}>
-          <p style={{ fontSize: "1.5rem", fontWeight: 800, color: "#111827", letterSpacing: "-0.03em" }}>Sigue tus sueños</p>
+          <p style={{ fontSize: "1.5rem", fontWeight: 800, color: "#111827", letterSpacing: "-0.03em" }}>Alcanza tus objetivos</p>
           <p style={{ fontSize: "0.85rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)" }}>
             {isMobile ? "Toca la pantalla para empezar" : "Mueve el ratón para empezar"}
           </p>
