@@ -410,7 +410,7 @@ export default function Home() {
     for (const d of letterData) {
       const span = document.createElement("span");
       span.textContent = d.char;
-      span.style.cssText = `position:fixed;left:${d.cx}px;top:${d.cy}px;font-size:${d.fontSize};font-family:${d.fontFamily};font-weight:${d.fontWeight};color:${d.color};transform:translate(-50%,-50%);transform-origin:center center;pointer-events:none;white-space:pre;${d.isGradient ? "background:linear-gradient(135deg,#1e40af 0%,#3b82f6 50%,#93c5fd 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;" : ""}`;
+      span.style.cssText = `position:fixed;left:0;top:0;font-size:${d.fontSize};font-family:${d.fontFamily};font-weight:${d.fontWeight};color:${d.color};transform:translate(${d.cx}px,${d.cy}px) translate(-50%,-50%);transform-origin:50% 50%;will-change:transform;pointer-events:none;white-space:pre;${d.isGradient ? "background:linear-gradient(135deg,#1e40af 0%,#3b82f6 50%,#93c5fd 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;" : ""}`;
       overlay.appendChild(span);
       letterSpans.push(span);
     }
@@ -447,7 +447,7 @@ export default function Home() {
       const cs = window.getComputedStyle(pacrEl);
       pacrSpan = document.createElement("span");
       pacrSpan.textContent = "pacr.es";
-      pacrSpan.style.cssText = `position:fixed;left:${pacrRect.left + pacrRect.width / 2}px;top:${pacrRect.top + pacrRect.height / 2}px;font-size:${cs.fontSize};font-family:${cs.fontFamily};font-weight:${cs.fontWeight};color:${cs.color};transform:translate(-50%,-50%);transform-origin:center center;white-space:pre;cursor:pointer;pointer-events:auto;`;
+      pacrSpan.style.cssText = `position:fixed;left:0;top:0;font-size:${cs.fontSize};font-family:${cs.fontFamily};font-weight:${cs.fontWeight};color:${cs.color};transform:translate(${pacrRect.left + pacrRect.width / 2}px,${pacrRect.top + pacrRect.height / 2}px) translate(-50%,-50%);transform-origin:50% 50%;will-change:transform;white-space:pre;cursor:pointer;pointer-events:auto;`;
       overlay.appendChild(pacrSpan);
       pacrBody = Bodies.rectangle(pacrRect.left + pacrRect.width / 2, pacrRect.top + pacrRect.height / 2, pacrRect.width, Math.max(pacrRect.height, 8), { restitution: 0.4, friction: 0.5, frictionAir: 0.008 });
       World.add(engine.world, pacrBody);
@@ -456,10 +456,13 @@ export default function Home() {
     const runner = Runner.create();
     Runner.run(runner, engine);
 
-    // Giroscopio: actualizar gravedad según orientación del móvil
+    // Giroscopio: actualizar gravedad según orientación del móvil.
+    // No pedimos permiso — en iOS sin permiso los eventos llegan con 0 o no llegan,
+    // y el umbral de 3° evita que valores cero bloqueen el fallback táctil.
     let gyroFired = false;
     const handleOrientation = (e: DeviceOrientationEvent) => {
       if (e.gamma === null || e.beta === null) return;
+      if (Math.abs(e.gamma) < 3 && Math.abs(e.beta) < 3) return;
       gyroFired = true;
       const maxTilt = 45;
       const gx = Math.max(-1, Math.min(1, e.gamma / maxTilt));
@@ -467,18 +470,7 @@ export default function Home() {
       engine.gravity.x = gx * 2;
       engine.gravity.y = gy * 2;
     };
-    // iOS 13+ requiere permiso explícito; sin él el evento puede llegar con valores 0
-    // (no null), lo que pone gyroFired=true y la gravedad a cero bloqueando el fallback táctil
-    if (typeof DeviceOrientationEvent !== "undefined" &&
-        typeof (DeviceOrientationEvent as any).requestPermission === "function") {
-      (DeviceOrientationEvent as any).requestPermission()
-        .then((state: string) => {
-          if (state === "granted") window.addEventListener("deviceorientation", handleOrientation);
-        })
-        .catch(() => {});
-    } else {
-      window.addEventListener("deviceorientation", handleOrientation);
-    }
+    window.addEventListener("deviceorientation", handleOrientation);
 
     // Fallback táctil: cuando no hay giróscopo, el dedo controla la gravedad
     const handleTouchGravity = (e: TouchEvent) => {
@@ -512,15 +504,11 @@ export default function Home() {
           Body.setVelocity(b, { x: b.velocity.x * 0.9, y: -b.velocity.y * 0.5 });
         }
         const { x, y } = b.position;
-        letterSpans[i].style.left = `${x}px`;
-        letterSpans[i].style.top = `${y}px`;
-        letterSpans[i].style.transform = `translate(-50%,-50%) rotate(${b.angle}rad)`;
+        letterSpans[i].style.transform = `translate(${x}px,${y}px) translate(-50%,-50%) rotate(${b.angle}rad)`;
       }
       if (pacrSpan && pacrBody) {
         const { x, y } = pacrBody.position;
-        pacrSpan.style.left = `${x}px`;
-        pacrSpan.style.top = `${y}px`;
-        pacrSpan.style.transform = `translate(-50%,-50%) rotate(${pacrBody.angle}rad)`;
+        pacrSpan.style.transform = `translate(${x}px,${y}px) translate(-50%,-50%) rotate(${pacrBody.angle}rad)`;
       }
       animFrame = requestAnimationFrame(animate);
     };
@@ -533,18 +521,16 @@ export default function Home() {
       Runner.stop(runner);
       Engine.clear(engine);
 
-      const t = "left 0.7s cubic-bezier(0.4,0,0.2,1), top 0.7s cubic-bezier(0.4,0,0.2,1), transform 0.7s";
+      const t = "transform 0.7s cubic-bezier(0.4,0,0.2,1)";
       letterSpans.forEach((span, i) => {
         span.style.transition = t;
-        span.style.left = `${letterData[i].cx}px`;
-        span.style.top = `${letterData[i].cy}px`;
-        span.style.transform = "translate(-50%,-50%) rotate(0rad)";
+        span.style.transform = `translate(${letterData[i].cx}px,${letterData[i].cy}px) translate(-50%,-50%) rotate(0rad)`;
       });
       if (pacrSpan && pacrRect) {
         pacrSpan.style.transition = t;
-        pacrSpan.style.left = `${pacrRect.left + pacrRect.width / 2}px`;
-        pacrSpan.style.top = `${pacrRect.top + pacrRect.height / 2}px`;
-        pacrSpan.style.transform = "translate(-50%,-50%) rotate(0rad)";
+        const pcx = pacrRect.left + pacrRect.width / 2;
+        const pcy = pacrRect.top + pacrRect.height / 2;
+        pacrSpan.style.transform = `translate(${pcx}px,${pcy}px) translate(-50%,-50%) rotate(0rad)`;
       }
 
       setTimeout(() => {
