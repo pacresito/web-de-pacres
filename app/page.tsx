@@ -626,8 +626,7 @@ export default function Home() {
         }
       }, 50);
     };
-    const endHold = () => {
-      const secs = holdSecsRef.current;
+    const endHold = (secs: number) => {
       if (holdTimerRef.current) clearInterval(holdTimerRef.current);
       holdSecsRef.current = 0;
       if (pressHaloRef.current) {
@@ -640,8 +639,30 @@ export default function Home() {
         setTransformed(!transformedRef.current);
       }
     };
+    const animateTap = (x: number, y: number) => {
+      const halo = pressHaloRef.current;
+      if (!halo) return;
+      const duration = 900;
+      const startTime = performance.now();
+      const color = transformedRef.current ? "255,255,255" : "59,130,246";
+      halo.style.left = `${x}px`;
+      halo.style.top = `${y}px`;
+      halo.style.background = `radial-gradient(circle, rgba(${color},0.7) 0%, rgba(${color},0.3) 40%, transparent 70%)`;
+      const step = (now: number) => {
+        const t = Math.min((now - startTime) / duration, 1);
+        const size = 80 + t * 300;
+        // sube rápido (15%), baja despacio el resto
+        const opacity = t < 0.15 ? (t / 0.15) * 0.55 : 0.55 * (1 - (t - 0.15) / 0.85);
+        halo.style.width = `${size}px`;
+        halo.style.height = `${size}px`;
+        halo.style.opacity = `${Math.max(0, opacity)}`;
+        if (t < 1) requestAnimationFrame(step);
+        else halo.style.opacity = "0";
+      };
+      requestAnimationFrame(step);
+    };
     const handleMouseDown = () => startHold();
-    const handleMouseUp = () => endHold();
+    const handleMouseUp = () => { const secs = holdSecsRef.current; endHold(secs); };
     const handleTouchStart = (e: TouchEvent) => {
       const touch = e.touches[0];
       if (!touch) return;
@@ -651,7 +672,17 @@ export default function Home() {
       }
       startHold();
     };
-    const handleTouchEnd = () => endHold();
+    const handleTouchEnd = (e: TouchEvent) => {
+      const secs = holdSecsRef.current;
+      if (secs < 1) {
+        if (holdTimerRef.current) clearInterval(holdTimerRef.current);
+        holdSecsRef.current = 0;
+        const touch = e.changedTouches[0];
+        if (touch) animateTap(touch.clientX, touch.clientY);
+        return;
+      }
+      endHold(secs);
+    };
     window.addEventListener("mousedown", handleMouseDown);
     window.addEventListener("mouseup", handleMouseUp);
     window.addEventListener("touchstart", handleTouchStart);
