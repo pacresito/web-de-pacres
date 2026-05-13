@@ -263,10 +263,9 @@ function RecsSlider() {
         border: "1px solid rgba(96,165,250,0.15)",
         background: "rgba(239,246,255,0.6)",
         animation: "fadeSlide 0.35s ease",
-        height: "320px",
+        minHeight: "320px",
         display: "flex", flexDirection: "column", justifyContent: "space-between",
         borderRadius: "4px",
-        overflow: "hidden",
         cursor: "pointer",
       }}>
         <p style={{
