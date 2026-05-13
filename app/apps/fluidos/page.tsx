@@ -19,6 +19,8 @@ const TOOL_DEFS: { id: Tool; label: string; key: string; color: string; border: 
 ];
 
 export default function Fluidos() {
+  const [whyOpen, setWhyOpen] = useState(false);
+  const whyRef = useRef<HTMLDivElement>(null);
   const canvasRef      = useRef<HTMLCanvasElement>(null);
   const wrapRef        = useRef<HTMLDivElement>(null);
   const gridRef        = useRef<Uint8Array | null>(null);
@@ -203,6 +205,15 @@ export default function Fluidos() {
       for (const [ddx, ddy] of allDirs) {
         const end = findEndInDir(cx, cy, mat, ddx, ddy);
         if (end) return { ...end, ddx, ddy };
+      }
+      // Sand can displace water directly when no empty escape exists
+      if (mat === SAND) {
+        for (const [ddx, ddy] of allDirs) {
+          const nx = cx + ddx, ny = cy + ddy;
+          if (nx >= 0 && nx < W && ny >= 0 && ny < H && grid[ny * W + nx] === WATER) {
+            return { ex: nx, ey: ny, ddx, ddy };
+          }
+        }
       }
       return null;
     };
@@ -966,8 +977,25 @@ export default function Fluidos() {
         </div>
 
         {/* Footer */}
-        <footer style={{ marginTop: "auto", paddingTop: "1.5rem", paddingBottom: "1.25rem", display: "flex", justifyContent: "center" }}>
-          <Link href="/extras" className="pacres-link">pacr.es</Link>
+        <footer style={{ marginTop: "auto", paddingTop: "1.5rem", paddingBottom: "1.25rem", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem" }}>
+          <button
+            onClick={() => { const next = !whyOpen; setWhyOpen(next); if (next) setTimeout(() => whyRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }), 50); }}
+            style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: "0.7rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono), monospace", transition: "color 0.2s" }}
+            onMouseEnter={e => (e.currentTarget.style.color = "#3b82f6")}
+            onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}
+          >
+            {whyOpen ? "cerrar" : "¿Por qué un simulador de fluidos?"}
+          </button>
+          {whyOpen && (
+            <div ref={whyRef} style={{ maxWidth: 420, fontSize: "0.78rem", color: "#6b7280", lineHeight: 1.65, textAlign: "center", display: "flex", flexDirection: "column", gap: "0.65rem" }}>
+              <p>Un autómata celular de partículas es una simulación sobre una cuadrícula donde cada celda sigue reglas locales simples.</p>
+              <p>De esas reglas emergen comportamientos complejos: agua fluyendo, arena acumulándose, fuego propagándose.</p>
+              <p>Este enfoque se usa en videojuegos, simulaciones físicas y sistemas educativos por su simplicidad y eficiencia.</p>
+              <p>En este experimento: la arena cae, el agua fluye, el fuego se expande, y cada elemento interactúa solo con sus vecinos inmediatos.</p>
+              <p style={{ color: "#9ca3af", fontSize: "0.72rem" }}>Creado el 8 de mayo de 2026.</p>
+            </div>
+          )}
+          <Link href="/lab" className="pacres-link">pacr.es</Link>
         </footer>
 
       </main>

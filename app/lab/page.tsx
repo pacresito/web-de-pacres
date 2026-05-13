@@ -3,6 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
+function calcularEdad(nacimiento: Date): number {
+  const hoy = new Date();
+  const cumpleEsteAño = new Date(hoy.getFullYear(), nacimiento.getMonth(), nacimiento.getDate());
+  return hoy.getFullYear() - nacimiento.getFullYear() - (hoy < cumpleEsteAño ? 1 : 0);
+}
+
+const edadLucas = calcularEdad(new Date(2020, 2, 30));
+
 type Extra = {
   id: string;
   label: string;
@@ -20,7 +28,7 @@ const BASE_EXTRAS: Extra[] = [
     id: "lucas",
     label: "Web",
     title: "Dr. Lucas Crespo",
-    description: "El perfil profesional de un ingeniero de cohetes de 6 años.",
+    description: `El perfil profesional de un ingeniero de cohetes de ${edadLucas} años.`,
     status: "available",
     href: "/webs/lucas",
     cta: "Ver perfil →",
@@ -111,7 +119,7 @@ const PLACEHOLDER: Extra = {
   cta: "En construcción",
 };
 
-export default function EasterEggs() {
+export default function Laboratorio() {
   const observerRef = useRef<IntersectionObserver | null>(null);
   const [twoColumns, setTwoColumns] = useState(false);
 
@@ -266,7 +274,7 @@ export default function EasterEggs() {
           font-size: 0.9rem;
           color: var(--text-muted);
           line-height: 1.6;
-          max-width: 520px;
+          max-width: 700px;
         }
 
         .divider { border: none; border-top: 1px solid var(--border); }
@@ -283,10 +291,10 @@ export default function EasterEggs() {
         {/* Header */}
         <div style={{ marginBottom: "3.5rem" }}>
           <h1 className="page-title reveal">
-            <span>Extras</span>
+            <span>Laboratorio</span>
           </h1>
           <p className="page-subtitle reveal reveal-delay-1">
-            Esta web es mi laboratorio personal. Aquí están algunos de los experimentos.
+            Te doy la bienvenida a mi laboratorio. Aquí experimento, aprendo y creo cosas nuevas.
           </p>
         </div>
 

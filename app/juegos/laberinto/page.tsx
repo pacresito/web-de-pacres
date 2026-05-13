@@ -239,6 +239,8 @@ export default function Laberinto() {
   const boardRef = useRef<HTMLDivElement>(null);
   const loopRef = useRef<(t: number) => void>(() => {});
 
+  const [whyOpen, setWhyOpen] = useState(false);
+  const whyRef = useRef<HTMLDivElement>(null);
   const [score, setScore] = useState(0);
   const [timeLeft, setTimeLeft] = useState(GAME_DURATION);
   const [gameOver, setGameOver] = useState(false);
@@ -1005,7 +1007,7 @@ export default function Laberinto() {
           <p style={{ fontSize: "0.65rem", color: "#d1d5db", textAlign: "center", lineHeight: 1.4 }}>
             {orientState === "on" ? "Toca para calibrar · Inclina el móvil" : orientState === "needs-permission" ? "Toca el tablero para activar el giroscopio" : "Mueve el ratón o toca para inclinar"}
           </p>
-          <a href="/extras" style={{ fontSize: "0.7rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", textDecoration: "none" }}
+          <a href="/lab" style={{ fontSize: "0.7rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", textDecoration: "none" }}
             onMouseEnter={e => (e.currentTarget.style.color = "#3b82f6")}
             onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}>
             pacr.es
@@ -1052,7 +1054,24 @@ export default function Laberinto() {
             ? "Toca el tablero para activar el giroscopio"
             : "Mueve el ratón o toca el tablero para inclinar"}
         </p>
-        <a href="/extras" style={{ fontSize: "0.75rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", textDecoration: "none", transition: "color 0.2s" }}
+        <button
+          onClick={() => { const next = !whyOpen; setWhyOpen(next); if (next) setTimeout(() => whyRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }), 50); }}
+          style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: "0.7rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", transition: "color 0.2s" }}
+          onMouseEnter={e => (e.currentTarget.style.color = "#3b82f6")}
+          onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}
+        >
+          {whyOpen ? "cerrar" : "¿Por qué un laberinto?"}
+        </button>
+        {whyOpen && (
+          <div ref={whyRef} style={{ maxWidth: 420, fontSize: "0.78rem", color: "#6b7280", lineHeight: 1.65, textAlign: "center", display: "flex", flexDirection: "column", gap: "0.65rem" }}>
+            <p>El laberinto usa una variante de la heurística de Warnsdorff para generar un único corredor que recorre las 77 celdas disponibles exactamente una vez, sin bifurcaciones ni callejones sin salida.</p>
+            <p>Antes de generar el camino se colocan cuatro agujeros aleatorios. El sistema analiza los giros del recorrido y solo acepta laberintos donde al menos dos curvas apunten hacia un agujero, creando falsas pistas y aumentando la dificultad.</p>
+            <p>La salida siempre aparece al final del recorrido generado.</p>
+            <p>Aproximadamente 1 de cada 100 generaciones cumple esas condiciones.</p>
+            <p style={{ color: "#9ca3af", fontSize: "0.72rem" }}>Creado el 1 de mayo de 2026.</p>
+          </div>
+        )}
+        <a href="/lab" style={{ fontSize: "0.75rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", textDecoration: "none", transition: "color 0.2s" }}
           onMouseEnter={e => (e.currentTarget.style.color = "#3b82f6")}
           onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}>
           pacr.es

@@ -1057,7 +1057,7 @@ export default function Home() {
               <span key={skill} className="skill-tag">{skill}</span>
             ))}
             <span className="skill-tag">Trabajo en equipo</span>
-            <a href="/extras" className="skill-tag skill-tag-shine" style={{ textDecoration: "none" }}>Resolución de problemas</a>
+            <a href="/lab" className="skill-tag skill-tag-shine" style={{ textDecoration: "none" }}>Resolución de problemas</a>
           </div>
         </section>
 

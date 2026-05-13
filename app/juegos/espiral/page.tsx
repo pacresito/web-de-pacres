@@ -266,6 +266,8 @@ export default function Espiral() {
 
   const bothWin = left.gameState === "win" && right.gameState === "win";
   const [firstWin, setFirstWin] = useState<"left" | "right" | null>(null);
+  const [whyOpen, setWhyOpen] = useState(false);
+  const whyRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (left.gameState === "win" && right.gameState !== "win" && firstWin === null) setFirstWin("left");
@@ -386,7 +388,7 @@ export default function Espiral() {
 
       {bothWin && (
         <div style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem" }}>
-          <p style={{ color: "#3b82f6", fontSize: "1.1rem", fontWeight: 600 }}>¡Enhorabuena! — {finalTime?.toFixed(1)}s</p>
+          <p style={{ color: "#3b82f6", fontSize: "1.1rem", fontWeight: 600 }}>¡Enhorabuena! {finalTime?.toFixed(1)}s</p>
 
           {!submitted ? (
             <form onSubmit={submitScore} style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
@@ -449,20 +451,33 @@ export default function Espiral() {
         <Board canvasRef={canvasR} gameState={right.gameState} label="→" bothWin={bothWin} isFirst={firstWin === "right"} onPress={() => { if (bothWin) { replay(); } else if (right.gameState !== "win") right.press(); }} />
       </div>
 
-      <a
-        href="/extras"
-        style={{
-          marginTop: "auto",
-          paddingTop: "1.5rem",
-          paddingBottom: "0.5rem",
-          fontSize: "0.75rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)",
-          textDecoration: "none", transition: "color 0.2s",
-        }}
-        onMouseEnter={e => (e.currentTarget.style.color = "#3b82f6")}
-        onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}
-      >
-        pacr.es
-      </a>
+      <div style={{ marginTop: "auto", paddingTop: "1.5rem", paddingBottom: "0.5rem", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem" }}>
+        <button
+          onClick={() => { const next = !whyOpen; setWhyOpen(next); if (next) setTimeout(() => whyRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }), 50); }}
+          style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: "0.7rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", transition: "color 0.2s" }}
+          onMouseEnter={e => (e.currentTarget.style.color = "#3b82f6")}
+          onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}
+        >
+          {whyOpen ? "cerrar" : "¿Por qué una espiral?"}
+        </button>
+        {whyOpen && (
+          <div ref={whyRef} style={{ maxWidth: 420, fontSize: "0.78rem", color: "#6b7280", lineHeight: 1.65, textAlign: "center", display: "flex", flexDirection: "column", gap: "0.65rem" }}>
+            <p>Este fue el primer experimento de la web. La idea era partir de una estructura mínima y fácil de entender, pero difícil de dominar.</p>
+            <p>Me gusta distinguir tres conceptos que se mezclan a menudo.</p>
+            <p>Simple se refiere a la cantidad de elementos y reglas: dos espirales, dos pelotas, dos controles. Sencillo describe lo fácil que es entender el objetivo: se comprende de inmediato. Difícil hace referencia a lo que cuesta dominarlo: coordinar ambas acciones a la vez exige atención y precisión.</p>
+            <p>En el extremo opuesto estaría un juego de rol con cien reglas cuya primera misión es "habla con el aldeano de enfrente": complejo, complicado, pero fácil.</p>
+            <p style={{ color: "#9ca3af", fontSize: "0.72rem" }}>Creado el 30 de abril de 2026.</p>
+          </div>
+        )}
+        <a
+          href="/lab"
+          style={{ fontSize: "0.75rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", textDecoration: "none", transition: "color 0.2s" }}
+          onMouseEnter={e => (e.currentTarget.style.color = "#3b82f6")}
+          onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}
+        >
+          pacr.es
+        </a>
+      </div>
     </div>
   );
 }

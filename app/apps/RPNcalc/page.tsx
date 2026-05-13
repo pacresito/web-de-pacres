@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
 
 export default function CalculadoraRPN() {
+  const [whyOpen, setWhyOpen] = useState(false);
+  const whyRef = useRef<HTMLDivElement>(null);
   const [stack, setStack] = useState<number[]>([]);
   const [input, setInput] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
@@ -552,8 +554,8 @@ export default function CalculadoraRPN() {
           <p className="page-subtitle">
             Hecha para Antonio y para toda persona que alguna vez pensó:<br/>
             «esto iría más rápido con una pila y menos paréntesis».<br/>
-            Porque introducir el operador al final no es una excentricidad<br/>
-            — es superioridad cognitiva.
+            Porque introducir el operador al final no es una excentricidad.<br/>
+            Es superioridad cognitiva.
           </p>
         </div>
 
@@ -657,8 +659,25 @@ export default function CalculadoraRPN() {
         </div>
 
         {/* Footer */}
-        <footer style={{ marginTop: "auto", paddingTop: "2rem", paddingBottom: "1.5rem", display: "flex", justifyContent: "center" }}>
-          <Link href="/extras" className="pacres-link">pacr.es</Link>
+        <footer style={{ marginTop: "auto", paddingTop: "2rem", paddingBottom: "1.5rem", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem" }}>
+          <button
+            onClick={() => { const next = !whyOpen; setWhyOpen(next); if (next) setTimeout(() => whyRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }), 50); }}
+            style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: "0.7rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono), monospace", transition: "color 0.2s" }}
+            onMouseEnter={e => (e.currentTarget.style.color = "#3b82f6")}
+            onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}
+          >
+            {whyOpen ? "cerrar" : "¿Por qué esta calculadora?"}
+          </button>
+          {whyOpen && (
+            <div ref={whyRef} style={{ maxWidth: 420, fontSize: "0.78rem", color: "#6b7280", lineHeight: 1.65, textAlign: "center", display: "flex", flexDirection: "column", gap: "0.65rem" }}>
+              <p>El modo RPN (Reverse Polish Notation, notación polaca inversa) es un sistema en el que los operadores se colocan después de los operandos, eliminando la necesidad de paréntesis.</p>
+              <p>Se basa en una pila: los números se introducen en orden y las operaciones se aplican sobre los últimos valores introducidos.</p>
+              <p>Fue propuesto por el lógico Jan Łukasiewicz y lo popularizó Hewlett-Packard en sus calculadoras científicas de los años 70 y 80.</p>
+              <p>Hoy sigue siendo valorado en entornos técnicos y de programación por su eficiencia, claridad en la evaluación de expresiones y ausencia de paréntesis.</p>
+              <p style={{ color: "#9ca3af", fontSize: "0.72rem" }}>Creado el 7 de mayo de 2026.</p>
+            </div>
+          )}
+          <Link href="/lab" className="pacres-link">pacr.es</Link>
         </footer>
 
       </main>
