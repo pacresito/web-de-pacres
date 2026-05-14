@@ -495,69 +495,76 @@ export default function Fluidos() {
 
         // VAPOR — rises slowly and erratically (through water too), condenses at ceiling
         if (type === VAPOR) {
-          // Slow down: only act ~45% of ticks
           if (Math.random() > 0.45) continue;
 
           const atTop = y === 0;
           const above = atTop ? WALL : grid[(y - 1) * W + x];
           const atCeiling = atTop || above === WALL;
 
-          // Adhesion: if vapor is directly or diagonally above, prefer to stay clustered
-          const vaporDirectlyAbove = !atTop && above === VAPOR;
-          const vaporDiagAbove = !atTop && !vaporDirectlyAbove && (
+          // At ceiling: stay and condense; drift sideways slowly to spread cloud width
+          if (atCeiling) {
+            ages[i] = Math.min(ages[i] + 1, VAPOR_CONDENSE_MAX);
+            if (ages[i] >= VAPOR_CONDENSE_MAX) { grid[i] = WATER; ages[i] = 0; upd[i] = 1; continue; }
+            if (Math.random() < 0.15) {
+              const d = Math.random() < 0.5 ? -1 : 1;
+              const nx = x + d;
+              if (nx >= 0 && nx < W && grid[y*W+nx] === EMPTY) {
+                grid[y*W+nx] = VAPOR; ages[y*W+nx] = ages[i]; upd[y*W+nx] = 1;
+                grid[i] = EMPTY;
+              }
+            }
+            continue;
+          }
+
+          // Vapor directly above → strong adhesion: pile up below ceiling cloud
+          const vaporDirectlyAbove = above === VAPOR;
+          if (vaporDirectlyAbove && Math.random() < 0.85) {
+            ages[i] = Math.min(ages[i] + 1, VAPOR_CONDENSE_MAX);
+            if (ages[i] >= VAPOR_CONDENSE_MAX) { grid[i] = WATER; ages[i] = 0; upd[i] = 1; }
+            continue;
+          }
+
+          // Vapor diagonally above → medium adhesion: sparse cloud edges
+          const vaporDiagAbove =
             (x > 0   && grid[(y-1)*W+(x-1)] === VAPOR) ||
-            (x < W-1 && grid[(y-1)*W+(x+1)] === VAPOR)
-          );
-          if (vaporDirectlyAbove && Math.random() < 0.80) {
-            ages[i] = Math.min(ages[i] + 1, VAPOR_CONDENSE_MAX);
-            if (ages[i] >= VAPOR_CONDENSE_MAX) { grid[i] = WATER; ages[i] = 0; upd[i] = 1; }
-            continue;
-          }
-          if (vaporDiagAbove && Math.random() < 0.50) {
+            (x < W-1 && grid[(y-1)*W+(x+1)] === VAPOR);
+          if (vaporDiagAbove && Math.random() < 0.55) {
             ages[i] = Math.min(ages[i] + 1, VAPOR_CONDENSE_MAX);
             if (ages[i] >= VAPOR_CONDENSE_MAX) { grid[i] = WATER; ages[i] = 0; upd[i] = 1; }
             continue;
           }
 
-          // Erratic sideways drift even when rise is possible (~25% chance)
-          const driftFirst = !atCeiling && Math.random() < 0.25;
+          // Free: try to rise (through water or empty), with occasional erratic drift
           let moved = false;
-
-          if (!driftFirst && !atTop) {
-            if (above === EMPTY) {
-              grid[(y-1)*W+x] = VAPOR; ages[(y-1)*W+x] = ages[i]; upd[(y-1)*W+x] = 1;
-              grid[i] = EMPTY; ages[i] = 0; moved = true;
-            } else if (above === WATER) {
+          const driftFirst = Math.random() < 0.15;
+          if (!driftFirst) {
+            if (above === WATER) {
               grid[(y-1)*W+x] = VAPOR; ages[(y-1)*W+x] = ages[i]; upd[(y-1)*W+x] = 1;
               grid[i] = WATER; ages[i] = 0; upd[i] = 1; moved = true;
+            } else if (above === EMPTY) {
+              grid[(y-1)*W+x] = VAPOR; ages[(y-1)*W+x] = ages[i]; upd[(y-1)*W+x] = 1;
+              grid[i] = EMPTY; ages[i] = 0; moved = true;
             }
           }
-
           if (!moved) {
             const r = Math.random();
             const dirs: [number, number][] = r < 0.33
-              ? [[-1, 0], [1, 0], [-1, -1], [1, -1]]
+              ? [[-1,0],[1,0],[-1,-1],[1,-1]]
               : r < 0.66
-              ? [[1, 0], [-1, 0], [1, -1], [-1, -1]]
-              : [[-1, -1], [1, -1], [-1, 0], [1, 0]];
+              ? [[1,0],[-1,0],[1,-1],[-1,-1]]
+              : [[-1,-1],[1,-1],[-1,0],[1,0]];
             for (const [dx, dy] of dirs) {
-              const nx = x + dx, ny2 = y + dy;
+              const nx = x+dx, ny2 = y+dy;
               if (nx < 0 || nx >= W || ny2 < 0 || ny2 >= H) continue;
-              const ni = ny2 * W + nx;
-              if (grid[ni] === EMPTY) {
-                grid[ni] = VAPOR; ages[ni] = ages[i]; upd[ni] = 1;
-                grid[i] = EMPTY;
-                if (!atCeiling) ages[i] = 0;
-                moved = true; break;
+              if (grid[ny2*W+nx] === EMPTY) {
+                grid[ny2*W+nx] = VAPOR; ages[ny2*W+nx] = ages[i]; upd[ny2*W+nx] = 1;
+                grid[i] = EMPTY; ages[i] = 0; moved = true; break;
               }
             }
           }
-
-          if (!moved || atCeiling) {
-            ages[i] = Math.min(ages[i] + (atCeiling ? 2 : 1), VAPOR_CONDENSE_MAX);
-            if (ages[i] >= VAPOR_CONDENSE_MAX) {
-              grid[i] = WATER; ages[i] = 0; upd[i] = 1;
-            }
+          if (!moved) {
+            ages[i] = Math.min(ages[i] + 1, VAPOR_CONDENSE_MAX);
+            if (ages[i] >= VAPOR_CONDENSE_MAX) { grid[i] = WATER; ages[i] = 0; upd[i] = 1; }
           }
           continue;
         }
@@ -785,6 +792,9 @@ export default function Fluidos() {
   useEffect(() => {
     const loop = () => {
       rafRef.current = requestAnimationFrame(loop);
+      if (paintRef.current && lastPosRef.current) {
+        paintAt(lastPosRef.current.x, lastPosRef.current.y);
+      }
       step();
       render();
     };
