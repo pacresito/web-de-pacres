@@ -224,12 +224,15 @@ export default function Fluidos() {
         const end = findEndInDir(cx, cy, mat, ddx, ddy);
         if (end) return { ...end, ddx, ddy };
       }
-      // Sand can displace water directly when no empty escape exists
+      // Sand cascades through sand to reach and displace water when no empty escape exists
       if (mat === SAND) {
         for (const [ddx, ddy] of allDirs) {
-          const nx = cx + ddx, ny = cy + ddy;
-          if (nx >= 0 && nx < W && ny >= 0 && ny < H && grid[ny * W + nx] === WATER) {
-            return { ex: nx, ey: ny, ddx, ddy };
+          let nx = cx + ddx, ny = cy + ddy;
+          while (nx >= 0 && nx < W && ny >= 0 && ny < H) {
+            const cell = grid[ny * W + nx];
+            if (cell === WATER) return { ex: nx, ey: ny, ddx, ddy };
+            if (cell !== SAND) break;
+            nx += ddx; ny += ddy;
           }
         }
       }
@@ -298,20 +301,24 @@ export default function Fluidos() {
           shiftInDir(cx, cy, end.ex, end.ey, end.ddx, end.ddy);
           // If destination was water (not empty), it got overwritten — restore it nearby
           if (destMat === WATER) {
-            // Try sideways first, then upward — water always finds a way
-            const sides = Math.random() > 0.5 ? [-1, 1] : [1, -1];
+            // Water floats up from where it was displaced
+            const wx0 = end.ex, wy0 = end.ey;
             let placed = false;
-            for (const d of sides) {
-              const wx = cx + d;
-              if (wx >= 0 && wx < W && grid[cy * W + wx] === EMPTY) {
-                grid[cy * W + wx] = WATER; ages[cy * W + wx] = destAge; placed = true; break;
+            if (wy0 > 0 && grid[(wy0 - 1) * W + wx0] === EMPTY) {
+              grid[(wy0 - 1) * W + wx0] = WATER; ages[(wy0 - 1) * W + wx0] = destAge; placed = true;
+            }
+            if (!placed) {
+              for (const d of (Math.random() > 0.5 ? [-1, 1] : [1, -1])) {
+                const sx = wx0 + d;
+                if (sx >= 0 && sx < W && grid[wy0 * W + sx] === EMPTY) {
+                  grid[wy0 * W + sx] = WATER; ages[wy0 * W + sx] = destAge; placed = true; break;
+                }
               }
             }
             if (!placed && cy > 0 && grid[(cy - 1) * W + cx] === EMPTY) {
               grid[(cy - 1) * W + cx] = WATER; ages[(cy - 1) * W + cx] = destAge; placed = true;
             }
             if (!placed) {
-              // Last resort: put water where sand was (now empty after shift)
               grid[cy * W + cx] = WATER; ages[cy * W + cx] = destAge;
             }
           }
