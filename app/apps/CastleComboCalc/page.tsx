@@ -105,7 +105,7 @@ export default function CastleComboCalc() {
   };
 
   const players = ALL_PLAYERS.slice(0, numPlayers);
-  const totals = scores.map((ps) => ps.reduce((s, v) => s + (v ?? 0), 0));
+  const totals = scores.map((ps) => ps.reduce((s: number, v) => s + (v ?? 0), 0));
   const maxTotal = done ? Math.max(...totals) : null;
   const cols = `2.5rem ${Array(numPlayers).fill("1fr").join(" ")}`;
 
