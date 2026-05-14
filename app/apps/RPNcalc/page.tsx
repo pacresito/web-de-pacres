@@ -12,6 +12,8 @@ export default function CalculadoraRPN() {
   const [justOperated, setJustOperated] = useState(false);
   const [lastFlash, setLastFlash] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [history, setHistory] = useState<Array<{stack: number[], input: string}>>([]);
+  const [future, setFuture] = useState<Array<{stack: number[], input: string}>>([]);
 
   const clearError = () => setError(null);
 
@@ -39,6 +41,8 @@ export default function CalculadoraRPN() {
     clearError();
     const val = input === "" ? (stack.length > 0 ? stack[stack.length - 1] : 0) : parseFloat(input);
     if (isNaN(val)) { setError("Número no válido"); return; }
+    setHistory(h => [...h, { stack, input }]);
+    setFuture([]);
     setStack((prev) => [...prev, val]);
     setInput("");
     setJustOperated(false);
@@ -67,6 +71,8 @@ export default function CalculadoraRPN() {
       if (b === 0) { setError("División por cero"); return; }
       result = a / b;
     }
+    setHistory(h => [...h, { stack, input }]);
+    setFuture([]);
     setStack([...currentStack.slice(0, -2), result]);
     setInput("");
     setJustOperated(true);
@@ -89,26 +95,73 @@ export default function CalculadoraRPN() {
     const newStack = [...currentStack];
     const last = newStack.length - 1;
     [newStack[last], newStack[last - 1]] = [newStack[last - 1], newStack[last]];
+    setHistory(h => [...h, { stack, input }]);
+    setFuture([]);
     setStack(newStack);
     setJustOperated(false);
   }, [input, stack]);
 
   const pressDel = useCallback(() => {
     clearError();
+    if (input === "" && stack.length === 0) return;
+    setHistory(h => [...h, { stack, input }]);
+    setFuture([]);
     if (input !== "") {
       setInput((prev) => prev.slice(0, -1));
-    } else if (stack.length > 0) {
+    } else {
       setStack((prev) => prev.slice(0, -1));
       setJustOperated(false);
     }
   }, [input, stack]);
 
   const pressClear = useCallback(() => {
+    setHistory(h => [...h, { stack, input }]);
+    setFuture([]);
     setStack([]);
     setInput("");
     setError(null);
     setJustOperated(false);
-  }, []);
+  }, [stack, input]);
+
+  const pressUndo = useCallback(() => {
+    if (history.length === 0) return;
+    const prev = history[history.length - 1];
+    setFuture(f => [{ stack, input }, ...f]);
+    setHistory(h => h.slice(0, -1));
+    setStack(prev.stack);
+    setInput(prev.input);
+    setError(null);
+    setJustOperated(false);
+  }, [history, stack, input]);
+
+  const pressRedo = useCallback(() => {
+    if (future.length === 0) return;
+    const next = future[0];
+    setHistory(h => [...h, { stack, input }]);
+    setFuture(f => f.slice(1));
+    setStack(next.stack);
+    setInput(next.input);
+    setError(null);
+    setJustOperated(false);
+  }, [future, stack, input]);
+
+  const pressSum = useCallback(() => {
+    clearError();
+    let currentStack = stack;
+    if (input !== "") {
+      const val = parseFloat(input);
+      if (isNaN(val)) { setError("Número no válido"); return; }
+      currentStack = [...stack, val];
+    }
+    if (currentStack.length === 0) { setError("La pila está vacía"); return; }
+    const sum = currentStack.reduce((a, b) => a + b, 0);
+    setHistory(h => [...h, { stack, input }]);
+    setFuture([]);
+    setStack([sum]);
+    setInput("");
+    setJustOperated(true);
+    flash();
+  }, [input, stack]);
 
   const toggleFullscreen = useCallback(() => {
     if (!isFullscreen) {
@@ -148,10 +201,13 @@ export default function CalculadoraRPN() {
       else if (e.key === "/") { e.preventDefault(); pressOp("/"); }
       else if (e.key === "Backspace") pressDel();
       else if (e.key === "Escape") pressClear();
+      else if (e.key === "F1") { e.preventDefault(); pressUndo(); }
+      else if (e.key === "F2") { e.preventDefault(); pressRedo(); }
+      else if (e.key === "F6") { e.preventDefault(); pressSum(); }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [pressDigit, pressEnter, pressOp, pressDel, pressClear]);
+  }, [pressDigit, pressEnter, pressOp, pressDel, pressClear, pressUndo, pressRedo, pressSum]);
 
   const formatNum = (n: number) => {
     if (Number.isInteger(n) && Math.abs(n) < 1e15) return n.toString();
@@ -508,7 +564,19 @@ export default function CalculadoraRPN() {
           color: rgba(255,255,255,0.55);
           letter-spacing: 0.02em;
           font-weight: 600;
+          border: none;
+          padding: 0;
         }
+
+        button.hp-softkey {
+          cursor: pointer;
+          color: rgba(255,255,255,0.8);
+          transition: opacity 0.1s;
+          -webkit-tap-highlight-color: transparent;
+          touch-action: manipulation;
+        }
+        button.hp-softkey:hover { opacity: 0.75; }
+        button.hp-softkey:active { opacity: 0.5; }
 
         /* ── Button grid ── */
         .hp-btns {
@@ -731,9 +799,15 @@ export default function CalculadoraRPN() {
                 </div>
               </div>
 
-              {/* Soft-menu strip (F1–F6, decorativo) */}
+              {/* Soft-menu strip (F1–F6) */}
               <div className="hp-softmenu">
-                {["F1","F2","F3","F4","F5","F6"].map(f => <div key={f} className="hp-softkey">{f}</div>)}
+                {(["F1","F2","F3","F4","F5","F6"] as const).map(f => {
+                  const handlers: Partial<Record<string, () => void>> = { F1: pressUndo, F2: pressRedo, F6: pressSum };
+                  const handler = handlers[f];
+                  return handler
+                    ? <button key={f} className="hp-softkey" onClick={handler}>{f}</button>
+                    : <div key={f} className="hp-softkey">{f}</div>;
+                })}
               </div>
 
               {/* Buttons */}
@@ -776,6 +850,9 @@ export default function CalculadoraRPN() {
             <span><span className="key">+ − * /</span> operar</span>
             <span><span className="key">Backspace</span> borrar</span>
             <span><span className="key">Esc</span> limpiar</span>
+            <span><span className="key">F1</span> deshacer</span>
+            <span><span className="key">F2</span> rehacer</span>
+            <span><span className="key">F6</span> sumatorio</span>
           </p>
         </div>
 
