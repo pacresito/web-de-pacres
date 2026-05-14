@@ -128,7 +128,7 @@ export default function CastleComboCalc() {
   const totals = scores.map((ps) => ps.reduce((s: number, v) => s + (v ?? 0), 0));
   const maxTotal = done ? Math.max(...totals) : null;
   const showAddButton = !gameStarted && numPlayers < 4;
-  const cols = `2.5rem ${Array(numPlayers).fill("1fr").join(" ")}${showAddButton ? " 2rem" : ""}`;
+  const cols = `3.5rem ${Array(numPlayers).fill("1fr").join(" ")}${showAddButton ? " 2rem" : ""}`;
 
   return (
     <main className="min-h-screen flex flex-col items-center py-6 px-4" style={{ background: "#ffffff" }}>
@@ -167,7 +167,7 @@ export default function CastleComboCalc() {
                 key={i}
                 className="h-12 flex items-center justify-center text-sm font-bold transition-colors"
                 style={{
-                  borderRight: "1px solid rgba(0,0,0,0.2)",
+                  borderRight: "1px solid rgba(0,0,0,0.4)",
                   background: "#78b5d0",
                   ...(done && totals[i] === maxTotal
                     ? { background: "#fbbf24", color: "#78350f" }
@@ -204,14 +204,13 @@ export default function CastleComboCalc() {
                   gridTemplateColumns: cols,
                   background: isActiveRow ? "#8ec5de" : even ? "#b5d9ee" : "#ffffff",
                   boxShadow: isActiveRow ? "inset 0 0 0 2px #4d91c0" : "none",
-                  borderBottom: "1px solid rgba(0,0,0,0.4)",
                 }}
               >
                 <div
                   className="h-14 flex items-center justify-center"
                   style={{
                     background: isActiveRow ? "#7dbad3" : even ? "#9dc8dc" : "#cce6f4",
-                    padding: "8px 10px",
+                    padding: "8px 16px",
                   }}
                 >
                   {posItem.isKey ? <KeyIcon /> : <CardGridIcon pos={posItem.pos} />}
@@ -224,7 +223,7 @@ export default function CastleComboCalc() {
                       key={pi}
                       className="h-14 flex items-center justify-center font-mono text-sm"
                       style={{
-                        borderRight: "1px solid rgba(0,0,0,0.12)",
+                        borderRight: "1px solid rgba(0,0,0,0.4)",
                         ...(isActiveCell
                           ? { color: "#1d4ed8", fontWeight: 700 }
                           : val !== null
@@ -249,7 +248,7 @@ export default function CastleComboCalc() {
                 key={i}
                 className="h-12 flex items-center justify-center text-xl font-bold"
                 style={{
-                  borderRight: "1px solid rgba(0,0,0,0.2)",
+                  borderRight: "1px solid rgba(0,0,0,0.4)",
                   background: "#78b5d0",
                   ...(done && totals[i] === maxTotal ? { color: "#fef08a" } : {}),
                 }}
