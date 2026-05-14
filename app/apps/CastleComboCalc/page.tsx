@@ -31,7 +31,7 @@ function PinIcon() {
 
 function CardGridIcon({ pos }: { pos: Pos }) {
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 11px)", gridTemplateRows: "repeat(3, 14px)", gap: "1.5px" }}>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 8px)", gridTemplateRows: "repeat(3, 12px)", gap: "1px" }}>
       {[0, 1, 2].flatMap((r) =>
         [0, 1, 2].map((c) => {
           const active = pos && pos.row === r && pos.col === c;
@@ -180,7 +180,7 @@ export default function CastleComboCalc() {
               </div>
             ))}
             {showAddButton && (
-              <div className="h-12 flex items-center justify-center">
+              <div className="h-12 flex items-center justify-center" style={{ background: "#78b5d0" }}>
                 <button
                   onClick={addPlayer}
                   className="flex items-center justify-center rounded-full text-white font-bold transition-colors"
@@ -204,14 +204,14 @@ export default function CastleComboCalc() {
                   gridTemplateColumns: cols,
                   background: isActiveRow ? "#8ec5de" : even ? "#b5d9ee" : "#ffffff",
                   boxShadow: isActiveRow ? "inset 0 0 0 2px #4d91c0" : "none",
-                  borderBottom: "1px solid rgba(0,0,0,0.14)",
+                  borderBottom: "1px solid rgba(0,0,0,0.4)",
                 }}
               >
                 <div
                   className="h-14 flex items-center justify-center"
                   style={{
                     background: isActiveRow ? "#7dbad3" : even ? "#9dc8dc" : "#cce6f4",
-                    padding: "5px 8px",
+                    padding: "8px 10px",
                   }}
                 >
                   {posItem.isKey ? <KeyIcon /> : <CardGridIcon pos={posItem.pos} />}
@@ -242,8 +242,8 @@ export default function CastleComboCalc() {
           })}
 
           {/* Total row */}
-          <div className="grid text-white font-bold" style={{ gridTemplateColumns: cols, background: "#4d91c0", borderTop: "2px solid rgba(0,0,0,0.8)" }}>
-            <div className="h-12 flex items-center justify-center text-2xl" style={{ background: "#3d7fa8" }}>Σ</div>
+          <div className="grid text-white font-bold" style={{ gridTemplateColumns: cols, background: "#4d91c0", borderTop: "2px solid rgba(0,0,0,0.7)" }}>
+            <div className="h-12 flex items-center justify-center text-2xl" style={{ background: "#4d91c0" }}>Σ</div>
             {totals.map((total, i) => (
               <div
                 key={i}
@@ -257,7 +257,7 @@ export default function CastleComboCalc() {
                 {scores[i].some((v) => v !== null) ? total : "—"}
               </div>
             ))}
-            {showAddButton && <div className="h-12" />}
+            {showAddButton && <div className="h-12" style={{ background: "#78b5d0" }} />}
           </div>
         </div>
 
