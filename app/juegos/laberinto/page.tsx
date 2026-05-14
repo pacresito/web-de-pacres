@@ -1054,14 +1054,24 @@ export default function Laberinto() {
             ? "Toca el tablero para activar el giroscopio"
             : "Mueve el ratón o toca el tablero para inclinar"}
         </p>
-        <button
-          onClick={() => { const next = !whyOpen; setWhyOpen(next); if (next) setTimeout(() => whyRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }), 50); }}
-          style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: "0.7rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", transition: "color 0.2s" }}
-          onMouseEnter={e => (e.currentTarget.style.color = "#3b82f6")}
-          onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}
-        >
-          {whyOpen ? "cerrar" : "¿Por qué un laberinto?"}
-        </button>
+        <div style={{ display: "flex", alignItems: "center", width: 480, maxWidth: "100%", position: "relative" }}>
+          <a href="/lab" style={{ fontSize: "0.75rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", textDecoration: "none", transition: "color 0.2s" }}
+            onMouseEnter={e => (e.currentTarget.style.color = "#3b82f6")}
+            onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}>
+            pacr.es
+          </a>
+          <button
+            onClick={() => { const next = !whyOpen; setWhyOpen(next); if (next) setTimeout(() => whyRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }), 50); }}
+            style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", gap: "4px", background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: "0.7rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", transition: "color 0.2s", whiteSpace: "nowrap" }}
+            onMouseEnter={e => (e.currentTarget.style.color = "#3b82f6")}
+            onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}
+          >
+            ¿Por qué un laberinto?
+            <svg width="10" height="10" viewBox="0 0 10 10" style={{ transform: whyOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}>
+              <path d="M1 3L5 7L9 3" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        </div>
         {whyOpen && (
           <div ref={whyRef} style={{ maxWidth: 420, fontSize: "0.78rem", color: "#6b7280", lineHeight: 1.65, textAlign: "center", display: "flex", flexDirection: "column", gap: "0.65rem" }}>
             <p>El laberinto usa una variante de la heurística de Warnsdorff para generar un único corredor que recorre las 77 celdas disponibles exactamente una vez, sin bifurcaciones ni callejones sin salida.</p>
@@ -1071,11 +1081,6 @@ export default function Laberinto() {
             <p style={{ color: "#9ca3af", fontSize: "0.72rem" }}>Creado el 1 de mayo de 2026.</p>
           </div>
         )}
-        <a href="/lab" style={{ fontSize: "0.75rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", textDecoration: "none", transition: "color 0.2s" }}
-          onMouseEnter={e => (e.currentTarget.style.color = "#3b82f6")}
-          onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}>
-          pacr.es
-        </a>
       </div>
     </main>
   );
