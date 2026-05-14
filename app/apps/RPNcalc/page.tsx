@@ -856,6 +856,14 @@ export default function CalculadoraRPN() {
           </p>
         </div>
 
+        {/* Otras calculadoras */}
+        <div style={{ marginTop: "2rem", textAlign: "center", fontSize: "0.75rem", color: "#9ca3af" }}>
+          Otras calculadoras:{" "}
+          <Link href="/apps/CastleComboCalc" style={{ color: "#3b82f6" }}>Castle Combo</Link>
+          {" · "}
+          <span style={{ color: "#d1d5db" }}>Agrícola</span>
+        </div>
+
         {/* Footer */}
         <footer style={{ marginTop: "auto", paddingTop: "2rem", paddingBottom: "1.5rem", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem" }}>
           <div className="footer-inner">
