@@ -39,7 +39,7 @@ function CardGridIcon({ pos }: { pos: Pos }) {
             <div
               key={`${r}-${c}`}
               style={{
-                backgroundColor: "#fef9c3",
+                backgroundColor: "#fffde8",
                 border: active ? "1px solid #374151" : "0.5px solid #b0b0b0",
                 borderRadius: 1,
                 display: "flex",
@@ -158,8 +158,8 @@ export default function CastleComboCalc() {
         {/* Scoring table */}
         <div className="rounded-2xl overflow-hidden shadow-lg">
           {/* Header */}
-          <div className="grid text-white font-bold text-sm" style={{ gridTemplateColumns: cols, background: "#4d91c0", borderBottom: "1px solid rgba(255,255,255,0.55)" }}>
-            <div className="h-12 flex items-center justify-center" style={{ borderRight: "1px solid rgba(0,0,0,0.2)" }}>
+          <div className="grid text-white font-bold text-sm" style={{ gridTemplateColumns: cols, background: "#4d91c0", borderBottom: "5px solid rgba(255,255,255,0.9)" }}>
+            <div className="h-12 flex items-center justify-center">
               <span className="text-xl">🏰</span>
             </div>
             {players.map((p, i) => (
@@ -208,8 +208,7 @@ export default function CastleComboCalc() {
                 <div
                   className="h-10 flex items-center justify-center"
                   style={{
-                    borderRight: "1px solid rgba(0,0,0,0.15)",
-                    background: isActiveRow ? "#7dbad3" : even ? "#9dc8dc" : "#cce6f4",
+                      background: isActiveRow ? "#7dbad3" : even ? "#9dc8dc" : "#cce6f4",
                     padding: "5px 8px",
                   }}
                 >
@@ -241,8 +240,8 @@ export default function CastleComboCalc() {
           })}
 
           {/* Total row */}
-          <div className="grid text-white font-bold" style={{ gridTemplateColumns: cols, background: "#4d91c0", borderTop: "2px solid rgba(0,0,0,0.35)" }}>
-            <div className="h-12 flex items-center justify-center text-2xl" style={{ borderRight: "1px solid rgba(0,0,0,0.2)" }}>Σ</div>
+          <div className="grid text-white font-bold" style={{ gridTemplateColumns: cols, background: "#4d91c0", borderTop: "2px solid rgba(0,0,0,0.8)" }}>
+            <div className="h-12 flex items-center justify-center text-2xl" style={{ background: "#3d7fa8" }}>Σ</div>
             {totals.map((total, i) => (
               <div
                 key={i}
