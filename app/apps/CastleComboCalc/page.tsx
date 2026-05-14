@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 
-const ALL_PLAYERS = ["Lucas", "Pablo", "Prince", "Princess"];
+const ALL_PLAYERS = ["Lucas", "Pablo", "Prince", "Princess", "His Majesty", "Her Majesty"];
 
 type Pos = { row: number; col: number } | null;
 
@@ -128,12 +128,14 @@ export default function CastleComboCalc() {
   const players = ALL_PLAYERS.slice(0, numPlayers);
   const totals = scores.map((ps) => ps.reduce((s: number, v) => s + (v ?? 0), 0));
   const maxTotal = done ? Math.max(...totals) : null;
-  const showAddButton = !gameStarted && numPlayers < 4;
+  const showAddButton = !gameStarted && numPlayers < 6;
   const cols = `3.5rem ${Array(numPlayers).fill("1fr").join(" ")}${showAddButton ? " 2rem" : ""}`;
+
+  const maxWidths: Record<number, string> = { 2: "20rem", 3: "26rem", 4: "32rem", 5: "38rem", 6: "44rem" };
 
   return (
     <main className="min-h-screen flex flex-col items-center py-6 px-4" style={{ background: "#ffffff" }}>
-      <div className="w-full" style={{ maxWidth: numPlayers <= 2 ? "20rem" : numPlayers === 3 ? "26rem" : "32rem" }}>
+      <div className="w-full" style={{ maxWidth: maxWidths[numPlayers] ?? "44rem" }}>
 
         {/* Title */}
         <h1 className="text-center text-xl font-bold text-blue-900 mb-5 tracking-wide">
