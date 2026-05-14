@@ -5,6 +5,8 @@ import Link from "next/link";
 
 const CELL = 2;
 const EMPTY = 0, SAND = 1, WATER = 2, FIRE = 3, WALL = 4, VAPOR = 5;
+const WATER_HEAT_MAX = 55;   // ticks for heated water to vaporize
+const VAPOR_CONDENSE_MAX = 90; // ticks for stuck vapor to condense back to water
 const MOVE = 98;
 type Mat = 0 | 1 | 2 | 3 | 4 | 5;
 type Tool = Mat | 98 | 99;
@@ -157,8 +159,9 @@ export default function Fluidos() {
           if (t === FIRE && ages[i] === 0) ages[i] = 600 + Math.floor(Math.random() * 200);
 
         } else if (existing === WATER) {
-          if (t === SAND || t === WALL) {
-            grid[i] = t as Mat; ages[i] = 0;
+          if (t === SAND || t === WALL || t === FIRE) {
+            grid[i] = t as Mat;
+            ages[i] = t === FIRE ? 60 + Math.floor(Math.random() * 80) : 0;
             if (t === WALL) assignWoodComp(i, nx, ny);
           }
 
@@ -443,6 +446,19 @@ export default function Fluidos() {
 
         // WATER
         if (type === WATER) {
+          // Heat from adjacent fire — gradually vaporize
+          let fireAdj = false;
+          for (const [dx, dy] of [[0,1],[0,-1],[1,0],[-1,0]]) {
+            const nx = x+dx, ny2 = y+dy;
+            if (nx < 0 || nx >= W || ny2 < 0 || ny2 >= H) continue;
+            if (grid[ny2*W+nx] === FIRE) { fireAdj = true; break; }
+          }
+          if (fireAdj) {
+            ages[i]++;
+            if (ages[i] >= WATER_HEAT_MAX) { grid[i] = VAPOR; ages[i] = 0; upd[i] = 1; continue; }
+          } else if (ages[i] > 0) {
+            ages[i]--;
+          }
           if (y < H - 1) {
             const bi = (y + 1) * W + x;
             if (grid[bi] === EMPTY) {
@@ -477,53 +493,70 @@ export default function Fluidos() {
           continue;
         }
 
-        // VAPOR — rises, condenses on ceiling or wood
+        // VAPOR — rises slowly and erratically (through water too), condenses at ceiling
         if (type === VAPOR) {
-          // Condense if at top or blocked above by wall
-          const aboveBlocked = y === 0 || grid[(y - 1) * W + x] === WALL;
-          if (aboveBlocked) {
-            grid[i] = WATER; ages[i] = 0; upd[i] = 1; continue;
-          }
-          // Try to rise
-          const ai = (y - 1) * W + x;
-          if (grid[ai] === EMPTY) {
-            grid[ai] = VAPOR; upd[ai] = 1;
-            grid[i] = EMPTY; continue;
-          }
-          // Drift sideways if blocked above
-          const dirs = Math.random() > 0.5 ? [-1, 1] : [1, -1];
+          // Slow down: only act ~45% of ticks
+          if (Math.random() > 0.45) continue;
+
+          const atTop = y === 0;
+          const above = atTop ? WALL : grid[(y - 1) * W + x];
+          const atCeiling = atTop || above === WALL;
+
+          // Erratic sideways drift even when rise is possible (~25% chance)
+          const driftFirst = !atCeiling && Math.random() < 0.25;
+
           let moved = false;
-          for (const d of dirs) {
-            const nx = x + d;
-            if (nx < 0 || nx >= W) continue;
-            const ni = y * W + nx;
-            if (grid[ni] === EMPTY) {
-              grid[ni] = VAPOR; upd[ni] = 1;
-              grid[i] = EMPTY; moved = true; break;
+
+          if (!driftFirst && !atTop) {
+            if (above === EMPTY) {
+              grid[(y-1)*W+x] = VAPOR; ages[(y-1)*W+x] = ages[i]; upd[(y-1)*W+x] = 1;
+              grid[i] = EMPTY; ages[i] = 0; moved = true;
+            } else if (above === WATER) {
+              grid[(y-1)*W+x] = VAPOR; ages[(y-1)*W+x] = ages[i]; upd[(y-1)*W+x] = 1;
+              grid[i] = WATER; ages[i] = 0; upd[i] = 1; moved = true;
             }
           }
+
           if (!moved) {
-            // Completely stuck — condense to water
-            grid[i] = WATER; ages[i] = 0; upd[i] = 1;
+            // Drift sideways — also try diagonal up
+            const r = Math.random();
+            const dirs: [number, number][] = r < 0.33
+              ? [[-1, 0], [1, 0], [-1, -1], [1, -1]]
+              : r < 0.66
+              ? [[1, 0], [-1, 0], [1, -1], [-1, -1]]
+              : [[-1, -1], [1, -1], [-1, 0], [1, 0]];
+            for (const [dx, dy] of dirs) {
+              const nx = x + dx, ny2 = y + dy;
+              if (nx < 0 || nx >= W || ny2 < 0 || ny2 >= H) continue;
+              const ni = ny2 * W + nx;
+              if (grid[ni] === EMPTY) {
+                grid[ni] = VAPOR; ages[ni] = ages[i]; upd[ni] = 1;
+                grid[i] = EMPTY;
+                if (!atCeiling) ages[i] = 0;
+                moved = true; break;
+              }
+            }
+          }
+
+          if (!moved || atCeiling) {
+            ages[i] = Math.min(ages[i] + (atCeiling ? 2 : 1), VAPOR_CONDENSE_MAX);
+            if (ages[i] >= VAPOR_CONDENSE_MAX) {
+              grid[i] = WATER; ages[i] = 0; upd[i] = 1;
+            }
           }
           continue;
         }
 
         // FIRE
         if (type === FIRE) {
-          // Water adjacent: vaporize it and consume the fire
-          let vaporized = false;
+          // Age faster when surrounded by water (fire struggles in water)
+          let waterNeighbors = 0;
           for (const [dx, dy] of [[0,1],[0,-1],[1,0],[-1,0]]) {
             const nx = x+dx, ny2 = y+dy;
             if (nx < 0 || nx >= W || ny2 < 0 || ny2 >= H) continue;
-            if (grid[ny2*W+nx] === WATER) {
-              grid[ny2*W+nx] = VAPOR; ages[ny2*W+nx] = 0; upd[ny2*W+nx] = 1;
-              vaporized = true;
-            }
+            if (grid[ny2*W+nx] === WATER) waterNeighbors++;
           }
-          if (vaporized) { grid[i] = EMPTY; ages[i] = 0; continue; }
-
-          ages[i] = Math.max(0, ages[i] - 1 - (Math.random() > 0.6 ? 1 : 0));
+          ages[i] = Math.max(0, ages[i] - 1 - (Math.random() > 0.6 ? 1 : 0) - waterNeighbors);
           if (ages[i] === 0) { grid[i] = EMPTY; continue; }
 
           // Ignite adjacent wood
@@ -618,6 +651,7 @@ export default function Fluidos() {
         if (type === EMPTY) continue;
 
         let color: string;
+        let skipFill = false;
 
         if (type === SAND) {
           // Stable per-grain hash → consistent texture across frames
@@ -626,11 +660,15 @@ export default function Fluidos() {
           color = `rgb(${178 + v1},${146 + Math.floor(v1 * 0.5)},${82 + Math.floor(v1 * 0.15) - v2})`;
 
         } else if (type === WATER) {
-          // Darker, deeper blue with gentle shimmer
+          // Darker, deeper blue with gentle shimmer; blends to white when heated
           const wave = Math.sin((x * 0.35 + t / 500)) * 4;
           const depth = Math.min(y / H, 1);
           const w = Math.floor(wave);
-          color = `rgb(${Math.max(18, 32 - Math.floor(depth * 12) + w)},${Math.max(70, 105 - Math.floor(depth * 25) + w)},${215 + w})`;
+          const br = Math.max(18, 32 - Math.floor(depth * 12) + w);
+          const bg = Math.max(70, 105 - Math.floor(depth * 25) + w);
+          const bb = Math.min(255, 215 + w);
+          const heat = ages[i] > 0 ? Math.min(1, ages[i] / WATER_HEAT_MAX) : 0;
+          color = `rgb(${Math.round(br + heat*(255-br))},${Math.round(bg + heat*(255-bg))},${Math.round(bb + heat*(255-bb))})`;
 
         } else if (type === FIRE) {
           // Yellow-white core → orange → dark red as age drops
@@ -650,10 +688,19 @@ export default function Fluidos() {
           color = `rgb(${fr},${fg},${fb})`;
 
         } else if (type === VAPOR) {
-          // Vapor — soft blue-white, semi-transparent look
-          const flick = ((x * 13 + y * 7 + Math.floor(t / 80)) & 0x1f) / 31;
-          const v = Math.floor(flick * 30);
-          color = `rgb(${185 + v},${210 + v},${240})`;
+          // White → gray → dark as condensation builds; drawn as cross (larger than 1 cell)
+          const condensation = Math.min(1, ages[i] / VAPOR_CONDENSE_MAX);
+          const base = Math.floor(235 - condensation * 185);
+          const flick = ((x * 13 + y * 7 + Math.floor(t / 80)) & 0x1f) / 31 * 20;
+          const v = Math.floor(flick);
+          const cr = Math.min(255, base + v), cg = Math.min(255, base + 8 + v), cb = Math.min(255, base + 35 + v);
+          color = `rgb(${cr},${cg},${cb})`;
+          skipFill = true;
+          ctx.fillStyle = color;
+          const px = x * CELL, py = y * CELL, half = CELL / 2;
+          const ext = Math.round(CELL * 2.2), arm = Math.max(1, Math.round(CELL * 0.75));
+          ctx.fillRect(px + half - ext, py + half - arm, ext * 2, arm * 2); // horizontal
+          ctx.fillRect(px + half - arm, py + half - ext, arm * 2, ext * 2); // vertical
 
         } else {
           // WALL — wood grain
@@ -671,8 +718,10 @@ export default function Fluidos() {
           }
         }
 
-        ctx.fillStyle = color;
-        ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
+        if (!skipFill) {
+          ctx.fillStyle = color;
+          ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
+        }
       }
     }
 
@@ -732,8 +781,8 @@ export default function Fluidos() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "1") setToolSync(WATER as Tool);
-      if (e.key === "2") setToolSync(SAND  as Tool);
-      if (e.key === "3") setToolSync(FIRE  as Tool);
+      if (e.key === "2") setToolSync(FIRE  as Tool);
+      if (e.key === "3") setToolSync(SAND  as Tool);
       if (e.key === "4") setToolSync(WALL  as Tool);
       if (e.key === "5") setToolSync(MOVE  as Tool);
       if (e.key === "6" || e.key === "e") setToolSync(99 as Tool);
