@@ -995,6 +995,14 @@ export default function Fluidos() {
           text-decoration: none; transition: color 0.2s;
         }
         .pacres-link:hover { color: var(--blue); }
+        .footer-inner { display: flex; align-items: center; width: 100%; max-width: 480px; position: relative; }
+        .footer-btn { position: absolute; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 4px; background: none; border: none; padding: 0; cursor: pointer; font-size: 0.7rem; color: #9ca3af; font-family: var(--font-geist-mono), monospace; transition: color 0.2s; white-space: nowrap; }
+        .footer-btn:hover { color: #3b82f6; }
+        @media (max-width: 640px) {
+          .footer-inner { flex-direction: column; align-items: center; position: static; gap: 0.75rem; }
+          .footer-btn { position: static; transform: none; order: 1; }
+          .footer-inner .pacres-link { order: 2; }
+        }
 
         @media (max-width: 500px) {
           .tool-label { display: none; }
@@ -1067,11 +1075,11 @@ export default function Fluidos() {
 
         {/* Footer */}
         <footer style={{ marginTop: "auto", paddingTop: "1.5rem", paddingBottom: "1.25rem", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem" }}>
-          <div style={{ display: "flex", alignItems: "center", width: 480, maxWidth: "100%", position: "relative" }}>
+          <div className="footer-inner">
             <Link href="/lab" className="pacres-link">pacr.es</Link>
             <button
+              className="footer-btn"
               onClick={() => { const next = !whyOpen; setWhyOpen(next); if (next) setTimeout(() => whyRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }), 50); }}
-              style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", gap: "4px", background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: "0.7rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono), monospace", transition: "color 0.2s", whiteSpace: "nowrap" }}
               onMouseEnter={e => (e.currentTarget.style.color = "#3b82f6")}
               onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}
             >
