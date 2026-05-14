@@ -22,16 +22,16 @@ const POSITIONS: { label: string; pos: Pos; isKey?: boolean }[] = [
 
 function PinIcon() {
   return (
-    <svg viewBox="0 0 10 13" width="9" height="11" fill="none">
-      <path d="M5 0.5C2.5 0.5 0.5 2.6 0.5 5C0.5 8 5 12.5 5 12.5C5 12.5 9.5 8 9.5 5C9.5 2.6 7.5 0.5 5 0.5Z" fill="#dc2626" stroke="#b91c1c" strokeWidth="0.5"/>
-      <circle cx="5" cy="4.8" r="1.7" fill="white"/>
+    <svg viewBox="0 0 10 13" width="7" height="10" fill="none">
+      <path d="M5 0.5C2.5 0.5 0.5 2.6 0.5 5C0.5 8 5 12.5 5 12.5C5 12.5 9.5 8 9.5 5C9.5 2.6 7.5 0.5 5 0.5Z" fill="#374151" stroke="#1f2937" strokeWidth="0.5"/>
+      <circle cx="5" cy="4.8" r="1.6" fill="white"/>
     </svg>
   );
 }
 
 function CardGridIcon({ pos }: { pos: Pos }) {
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 10px)", gridTemplateRows: "repeat(3, 11px)", gap: "2px" }}>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 8px)", gridTemplateRows: "repeat(3, 12px)", gap: "1px" }}>
       {[0, 1, 2].flatMap((r) =>
         [0, 1, 2].map((c) => {
           const active = pos && pos.row === r && pos.col === c;
@@ -39,8 +39,8 @@ function CardGridIcon({ pos }: { pos: Pos }) {
             <div
               key={`${r}-${c}`}
               style={{
-                backgroundColor: "#fffef5",
-                border: "0.5px solid #d1d5db",
+                backgroundColor: "#ffffff",
+                border: active ? "1px solid #374151" : "0.5px solid #c8c8c8",
                 borderRadius: 1,
                 display: "flex",
                 alignItems: "center",
@@ -58,12 +58,14 @@ function CardGridIcon({ pos }: { pos: Pos }) {
 
 function KeyIcon() {
   return (
-    <svg viewBox="0 0 26 16" width="26" height="16" fill="none">
-      <circle cx="6" cy="8" r="5" stroke="#92400e" strokeWidth="1.8" />
-      <circle cx="6" cy="8" r="2" fill="#92400e" />
-      <line x1="11" y1="8" x2="25" y2="8" stroke="#92400e" strokeWidth="1.8" strokeLinecap="round" />
-      <line x1="20" y1="8" x2="20" y2="11.5" stroke="#92400e" strokeWidth="1.8" strokeLinecap="round" />
-      <line x1="23.5" y1="8" x2="23.5" y2="11.5" stroke="#92400e" strokeWidth="1.8" strokeLinecap="round" />
+    <svg viewBox="0 0 32 32" width="26" height="26" fill="none">
+      <g transform="rotate(-38, 16, 16)">
+        <circle cx="9" cy="16" r="6.5" stroke="#92400e" strokeWidth="2.2" fill="none"/>
+        <circle cx="9" cy="16" r="2.6" fill="#92400e"/>
+        <rect x="15" y="14.7" width="14" height="2.8" rx="1" fill="#92400e"/>
+        <rect x="19.5" y="17.5" width="2.4" height="4" rx="0.6" fill="#92400e"/>
+        <rect x="25" y="17.5" width="2.4" height="3" rx="0.6" fill="#92400e"/>
+      </g>
     </svg>
   );
 }
@@ -156,9 +158,9 @@ export default function CastleComboCalc() {
         {/* Scoring table */}
         <div className="rounded-2xl overflow-hidden shadow-lg border border-blue-300">
           {/* Header */}
-          <div className="grid text-white font-bold text-sm" style={{ gridTemplateColumns: cols, background: "#3b82f6" }}>
+          <div className="grid text-white font-bold text-sm" style={{ gridTemplateColumns: cols, background: "#4d91c0" }}>
             <div className="h-12 flex items-center justify-center" style={{ borderRight: "1px solid rgba(0,0,0,0.2)" }}>
-              <span className="text-base">🏰</span>
+              <span className="text-xl">🏰</span>
             </div>
             {players.map((p, i) => (
               <div
@@ -169,7 +171,7 @@ export default function CastleComboCalc() {
                   ...(done && totals[i] === maxTotal
                     ? { background: "#fbbf24", color: "#78350f" }
                     : !done && stepPlayer === i
-                    ? { background: "#2563eb" }
+                    ? { background: "#3a7fad" }
                     : {}),
                 }}
               >
@@ -181,7 +183,7 @@ export default function CastleComboCalc() {
                 <button
                   onClick={addPlayer}
                   className="flex items-center justify-center rounded-full text-white font-bold transition-colors"
-                  style={{ background: "#3b82f6", width: "1.25rem", height: "1.25rem", fontSize: "0.85rem", lineHeight: 1 }}
+                  style={{ background: "#4d91c0", width: "1.25rem", height: "1.25rem", fontSize: "0.85rem", lineHeight: 1 }}
                 >
                   +
                 </button>
@@ -199,8 +201,8 @@ export default function CastleComboCalc() {
                 className="grid transition-all"
                 style={{
                   gridTemplateColumns: cols,
-                  background: isActiveRow ? "#a8d4ee" : even ? "#c8e4f8" : "#ffffff",
-                  outline: isActiveRow ? "2px solid #3b82f6" : "none",
+                  background: isActiveRow ? "#8ec5de" : even ? "#b5d9ee" : "#ffffff",
+                  outline: isActiveRow ? "2px solid #4d91c0" : "none",
                   outlineOffset: "-2px",
                 }}
               >
@@ -233,12 +235,12 @@ export default function CastleComboCalc() {
           })}
 
           {/* Total row */}
-          <div className="grid text-white font-bold" style={{ gridTemplateColumns: cols, background: "#3b82f6" }}>
-            <div className="h-12 flex items-center justify-center text-lg" style={{ borderRight: "1px solid rgba(0,0,0,0.2)" }}>Σ</div>
+          <div className="grid text-white font-bold" style={{ gridTemplateColumns: cols, background: "#4d91c0" }}>
+            <div className="h-12 flex items-center justify-center text-2xl" style={{ borderRight: "1px solid rgba(0,0,0,0.2)" }}>Σ</div>
             {totals.map((total, i) => (
               <div
                 key={i}
-                className="h-12 flex items-center justify-center text-lg font-bold"
+                className="h-12 flex items-center justify-center text-xl font-bold"
                 style={{
                   borderRight: "1px solid rgba(0,0,0,0.2)",
                   ...(done && totals[i] === maxTotal ? { color: "#fef08a" } : {}),
