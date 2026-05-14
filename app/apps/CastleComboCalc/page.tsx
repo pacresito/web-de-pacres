@@ -20,14 +20,35 @@ const POSITIONS: { label: string; pos: Pos; isKey?: boolean }[] = [
   { label: "Llaves",             pos: null, isKey: true },
 ];
 
+function PinIcon() {
+  return (
+    <svg viewBox="0 0 10 13" width="9" height="11" fill="none">
+      <path d="M5 0.5C2.5 0.5 0.5 2.6 0.5 5C0.5 8 5 12.5 5 12.5C5 12.5 9.5 8 9.5 5C9.5 2.6 7.5 0.5 5 0.5Z" fill="#dc2626" stroke="#b91c1c" strokeWidth="0.5"/>
+      <circle cx="5" cy="4.8" r="1.7" fill="white"/>
+    </svg>
+  );
+}
+
 function CardGridIcon({ pos }: { pos: Pos }) {
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 7px)", gridTemplateRows: "repeat(3, 8px)", gap: "1.5px" }}>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 10px)", gridTemplateRows: "repeat(3, 11px)", gap: "2px" }}>
       {[0, 1, 2].flatMap((r) =>
         [0, 1, 2].map((c) => {
           const active = pos && pos.row === r && pos.col === c;
           return (
-            <div key={`${r}-${c}`} style={{ backgroundColor: active ? "#1e40af" : "#fef9c3", border: active ? "none" : "0.5px solid #d1d5db", borderRadius: 1 }} />
+            <div
+              key={`${r}-${c}`}
+              style={{
+                backgroundColor: "#fffef5",
+                border: "0.5px solid #d1d5db",
+                borderRadius: 1,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              {active && <PinIcon />}
+            </div>
           );
         })
       )}
@@ -136,20 +157,21 @@ export default function CastleComboCalc() {
         <div className="rounded-2xl overflow-hidden shadow-lg border border-blue-300">
           {/* Header */}
           <div className="grid text-white font-bold text-sm" style={{ gridTemplateColumns: cols, background: "#3b82f6" }}>
-            <div className="h-12 flex items-center justify-center">
+            <div className="h-12 flex items-center justify-center" style={{ borderRight: "1px solid rgba(0,0,0,0.2)" }}>
               <span className="text-base">🏰</span>
             </div>
             {players.map((p, i) => (
               <div
                 key={i}
                 className="h-12 flex items-center justify-center text-sm font-bold transition-colors"
-                style={
-                  done && totals[i] === maxTotal
+                style={{
+                  borderRight: "1px solid rgba(0,0,0,0.2)",
+                  ...(done && totals[i] === maxTotal
                     ? { background: "#fbbf24", color: "#78350f" }
                     : !done && stepPlayer === i
                     ? { background: "#2563eb" }
-                    : {}
-                }
+                    : {}),
+                }}
               >
                 {p}
               </div>
@@ -177,12 +199,12 @@ export default function CastleComboCalc() {
                 className="grid transition-all"
                 style={{
                   gridTemplateColumns: cols,
-                  background: isActiveRow ? "#bfdbfe" : even ? "#ffffff" : "#eff6ff",
+                  background: isActiveRow ? "#a8d4ee" : even ? "#c8e4f8" : "#ffffff",
                   outline: isActiveRow ? "2px solid #3b82f6" : "none",
                   outlineOffset: "-2px",
                 }}
               >
-                <div className="h-10 flex items-center justify-center">
+                <div className="h-10 flex items-center justify-center" style={{ borderRight: "1px solid rgba(0,0,0,0.12)" }}>
                   {posItem.isKey ? <KeyIcon /> : <CardGridIcon pos={posItem.pos} />}
                 </div>
                 {players.map((_, pi) => {
@@ -192,13 +214,14 @@ export default function CastleComboCalc() {
                     <div
                       key={pi}
                       className="h-10 flex items-center justify-center font-mono text-sm"
-                      style={
-                        isActiveCell
+                      style={{
+                        borderRight: "1px solid rgba(0,0,0,0.12)",
+                        ...(isActiveCell
                           ? { color: "#1d4ed8", fontWeight: 700 }
                           : val !== null
                           ? { color: "#1e293b" }
-                          : { color: "#cbd5e1" }
-                      }
+                          : { color: "#cbd5e1" }),
+                      }}
                     >
                       {val !== null ? val : isActiveCell ? "·" : "—"}
                     </div>
@@ -211,12 +234,15 @@ export default function CastleComboCalc() {
 
           {/* Total row */}
           <div className="grid text-white font-bold" style={{ gridTemplateColumns: cols, background: "#3b82f6" }}>
-            <div className="h-12 flex items-center justify-center text-lg">Σ</div>
+            <div className="h-12 flex items-center justify-center text-lg" style={{ borderRight: "1px solid rgba(0,0,0,0.2)" }}>Σ</div>
             {totals.map((total, i) => (
               <div
                 key={i}
                 className="h-12 flex items-center justify-center text-lg font-bold"
-                style={done && totals[i] === maxTotal ? { color: "#fef08a" } : {}}
+                style={{
+                  borderRight: "1px solid rgba(0,0,0,0.2)",
+                  ...(done && totals[i] === maxTotal ? { color: "#fef08a" } : {}),
+                }}
               >
                 {scores[i].some((v) => v !== null) ? total : "—"}
               </div>
