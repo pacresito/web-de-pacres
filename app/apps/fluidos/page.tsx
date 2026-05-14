@@ -799,7 +799,7 @@ export default function Fluidos() {
   useEffect(() => {
     const loop = () => {
       rafRef.current = requestAnimationFrame(loop);
-      if (paintRef.current && lastPosRef.current) {
+      if (paintRef.current && lastPosRef.current && toolRef.current !== MOVE) {
         paintAt(lastPosRef.current.x, lastPosRef.current.y);
       }
       step();
