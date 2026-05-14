@@ -4,9 +4,9 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 
 const CELL = 2;
-const EMPTY = 0, SAND = 1, WATER = 2, FIRE = 3, WALL = 4;
+const EMPTY = 0, SAND = 1, WATER = 2, FIRE = 3, WALL = 4, VAPOR = 5;
 const MOVE = 98;
-type Mat = 0 | 1 | 2 | 3 | 4;
+type Mat = 0 | 1 | 2 | 3 | 4 | 5;
 type Tool = Mat | 98 | 99;
 
 const TOOL_DEFS: { id: Tool; label: string; key: string; color: string; border: string }[] = [
@@ -21,6 +21,23 @@ const TOOL_DEFS: { id: Tool; label: string; key: string; color: string; border: 
 export default function Fluidos() {
   const [whyOpen, setWhyOpen] = useState(false);
   const whyRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (whyOpen) {
+      document.documentElement.style.height = "auto";
+      document.documentElement.style.overflow = "auto";
+      document.body.style.overflow = "auto";
+    } else {
+      document.documentElement.style.height = "";
+      document.documentElement.style.overflow = "";
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.documentElement.style.height = "";
+      document.documentElement.style.overflow = "";
+      document.body.style.overflow = "";
+    };
+  }, [whyOpen]);
   const canvasRef      = useRef<HTMLCanvasElement>(null);
   const wrapRef        = useRef<HTMLDivElement>(null);
   const gridRef        = useRef<Uint8Array | null>(null);
@@ -30,7 +47,7 @@ export default function Fluidos() {
   const nextCompRef    = useRef(1);                        // next component ID counter
   const dimRef         = useRef({ W: 0, H: 0 });
   const toolRef        = useRef<Tool>(WATER as Tool);
-  const brushRef       = useRef(4);
+  const brushRef       = useRef(5);
   const paintRef       = useRef(false);
   const lastPosRef     = useRef<{ x: number; y: number } | null>(null);
   const rafRef         = useRef(0);
@@ -44,6 +61,7 @@ export default function Fluidos() {
 
   const setToolSync = useCallback((t: Tool) => {
     toolRef.current = t;
+    brushRef.current = (t === MOVE || t === 99) ? 8 : 5;
     setTool(t);
   }, []);
 
@@ -274,8 +292,30 @@ export default function Fluidos() {
         const mat = grid[cy * W + cx];
         if (mat === EMPTY) continue;
         const end = findEndAny(cx, cy, mat);
-        if (end) shiftInDir(cx, cy, end.ex, end.ey, end.ddx, end.ddy);
-        // water with no space: gets overwritten — rare, flows naturally afterward
+        if (end) {
+          const destMat = grid[end.ey * W + end.ex];
+          const destAge = ages[end.ey * W + end.ex];
+          shiftInDir(cx, cy, end.ex, end.ey, end.ddx, end.ddy);
+          // If destination was water (not empty), it got overwritten — restore it nearby
+          if (destMat === WATER) {
+            // Try sideways first, then upward — water always finds a way
+            const sides = Math.random() > 0.5 ? [-1, 1] : [1, -1];
+            let placed = false;
+            for (const d of sides) {
+              const wx = cx + d;
+              if (wx >= 0 && wx < W && grid[cy * W + wx] === EMPTY) {
+                grid[cy * W + wx] = WATER; ages[cy * W + wx] = destAge; placed = true; break;
+              }
+            }
+            if (!placed && cy > 0 && grid[(cy - 1) * W + cx] === EMPTY) {
+              grid[(cy - 1) * W + cx] = WATER; ages[(cy - 1) * W + cx] = destAge; placed = true;
+            }
+            if (!placed) {
+              // Last resort: put water where sand was (now empty after shift)
+              grid[cy * W + cx] = WATER; ages[cy * W + cx] = destAge;
+            }
+          }
+        }
       }
 
       // Rigid-body move: snapshot → clear → write (carry component ID)
@@ -430,16 +470,51 @@ export default function Fluidos() {
           continue;
         }
 
+        // VAPOR — rises, condenses on ceiling or wood
+        if (type === VAPOR) {
+          // Condense if at top or blocked above by wall
+          const aboveBlocked = y === 0 || grid[(y - 1) * W + x] === WALL;
+          if (aboveBlocked) {
+            grid[i] = WATER; ages[i] = 0; upd[i] = 1; continue;
+          }
+          // Try to rise
+          const ai = (y - 1) * W + x;
+          if (grid[ai] === EMPTY) {
+            grid[ai] = VAPOR; upd[ai] = 1;
+            grid[i] = EMPTY; continue;
+          }
+          // Drift sideways if blocked above
+          const dirs = Math.random() > 0.5 ? [-1, 1] : [1, -1];
+          let moved = false;
+          for (const d of dirs) {
+            const nx = x + d;
+            if (nx < 0 || nx >= W) continue;
+            const ni = y * W + nx;
+            if (grid[ni] === EMPTY) {
+              grid[ni] = VAPOR; upd[ni] = 1;
+              grid[i] = EMPTY; moved = true; break;
+            }
+          }
+          if (!moved) {
+            // Completely stuck — condense to water
+            grid[i] = WATER; ages[i] = 0; upd[i] = 1;
+          }
+          continue;
+        }
+
         // FIRE
         if (type === FIRE) {
-          // Extinguish if water adjacent
-          let wet = false;
+          // Water adjacent: vaporize it and consume the fire
+          let vaporized = false;
           for (const [dx, dy] of [[0,1],[0,-1],[1,0],[-1,0]]) {
             const nx = x+dx, ny2 = y+dy;
             if (nx < 0 || nx >= W || ny2 < 0 || ny2 >= H) continue;
-            if (grid[ny2*W+nx] === WATER) { wet = true; break; }
+            if (grid[ny2*W+nx] === WATER) {
+              grid[ny2*W+nx] = VAPOR; ages[ny2*W+nx] = 0; upd[ny2*W+nx] = 1;
+              vaporized = true;
+            }
           }
-          if (wet) { grid[i] = EMPTY; ages[i] = 0; continue; }
+          if (vaporized) { grid[i] = EMPTY; ages[i] = 0; continue; }
 
           ages[i] = Math.max(0, ages[i] - 1 - (Math.random() > 0.6 ? 1 : 0));
           if (ages[i] === 0) { grid[i] = EMPTY; continue; }
@@ -566,6 +641,12 @@ export default function Fluidos() {
             fr = Math.floor(120 + p * 135); fg = Math.floor(p * 40); fb = 0;
           }
           color = `rgb(${fr},${fg},${fb})`;
+
+        } else if (type === VAPOR) {
+          // Vapor — soft blue-white, semi-transparent look
+          const flick = ((x * 13 + y * 7 + Math.floor(t / 80)) & 0x1f) / 31;
+          const v = Math.floor(flick * 30);
+          color = `rgb(${185 + v},${210 + v},${240})`;
 
         } else {
           // WALL — wood grain
@@ -921,9 +1002,10 @@ export default function Fluidos() {
         maxWidth: 900,
         margin: "0 auto",
         padding: "0 clamp(1.25rem, 4vw, 2rem)",
-        height: "100dvh",
-        overflow: "hidden",
+        height: whyOpen ? "auto" : "100dvh",
+        minHeight: "100dvh",
         overflowX: "hidden",
+        overflowY: whyOpen ? "auto" : "hidden",
         display: "flex",
         flexDirection: "column",
       }}>
@@ -972,20 +1054,26 @@ export default function Fluidos() {
         {/* Hints */}
         <div style={{ padding: "0.45rem 0 0" }}>
           <div className="hint-row">
-            <span className="hint-item">La tierra se hunde en el agua · El agua apaga el fuego · El fuego quema la madera</span>
+            <span className="hint-item">La tierra se hunde en el agua · El fuego vaporiza el agua · El vapor sube y condensa · El fuego quema la madera</span>
           </div>
         </div>
 
         {/* Footer */}
         <footer style={{ marginTop: "auto", paddingTop: "1.5rem", paddingBottom: "1.25rem", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem" }}>
-          <button
-            onClick={() => { const next = !whyOpen; setWhyOpen(next); if (next) setTimeout(() => whyRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }), 50); }}
-            style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: "0.7rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono), monospace", transition: "color 0.2s" }}
-            onMouseEnter={e => (e.currentTarget.style.color = "#3b82f6")}
-            onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}
-          >
-            {whyOpen ? "cerrar" : "¿Por qué un simulador de fluidos?"}
-          </button>
+          <div style={{ display: "flex", alignItems: "center", width: 480, maxWidth: "100%", position: "relative" }}>
+            <Link href="/lab" className="pacres-link">pacr.es</Link>
+            <button
+              onClick={() => { const next = !whyOpen; setWhyOpen(next); if (next) setTimeout(() => whyRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }), 50); }}
+              style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", gap: "4px", background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: "0.7rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono), monospace", transition: "color 0.2s", whiteSpace: "nowrap" }}
+              onMouseEnter={e => (e.currentTarget.style.color = "#3b82f6")}
+              onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}
+            >
+              ¿Por qué un simulador de fluidos?
+              <svg width="10" height="10" viewBox="0 0 10 10" style={{ transform: whyOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}>
+                <path d="M1 3L5 7L9 3" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          </div>
           {whyOpen && (
             <div ref={whyRef} style={{ maxWidth: 420, fontSize: "0.78rem", color: "#6b7280", lineHeight: 1.65, textAlign: "center", display: "flex", flexDirection: "column", gap: "0.65rem" }}>
               <p>Un autómata celular de partículas es una simulación sobre una cuadrícula donde cada celda sigue reglas locales simples.</p>
@@ -995,7 +1083,6 @@ export default function Fluidos() {
               <p style={{ color: "#9ca3af", fontSize: "0.72rem" }}>Creado el 8 de mayo de 2026.</p>
             </div>
           )}
-          <Link href="/lab" className="pacres-link">pacr.es</Link>
         </footer>
 
       </main>
