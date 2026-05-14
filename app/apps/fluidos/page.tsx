@@ -22,9 +22,11 @@ const TOOL_DEFS: { id: Tool; label: string; key: string; color: string; border: 
 
 export default function Fluidos() {
   const [whyOpen, setWhyOpen] = useState(false);
-  const whyRef = useRef<HTMLDivElement>(null);
+  const whyRef    = useRef<HTMLDivElement>(null);
+  const whyOpenRef = useRef(false);
 
   useEffect(() => {
+    whyOpenRef.current = whyOpen;
     if (whyOpen) {
       document.documentElement.style.height = "auto";
       document.documentElement.style.overflow = "auto";
@@ -83,6 +85,7 @@ export default function Fluidos() {
     if (!canvas || !wrap) return;
 
     const resize = () => {
+      if (whyOpenRef.current) return;
       const W = Math.floor(wrap.clientWidth  / CELL);
       const H = Math.floor(wrap.clientHeight / CELL);
       if (W === dimRef.current.W && H === dimRef.current.H) return;
