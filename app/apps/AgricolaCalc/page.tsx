@@ -30,10 +30,10 @@ function calcTablePts(count: number, animal: Animal): number {
 // ! rows auto-fill from scoring table — not manually entered
 const STEP_TO_ROW = [0, 1, 2, 3, 10, 11];
 const STEP_LABELS = [
-  "Ovejas — ¿cuántas?",
-  "Cerdos — ¿cuántos?",
-  "Vacas — ¿cuántas?",
-  "Caballos — ¿cuántos?",
+  "¿Cuántas ovejas? 🐑",
+  "¿Cuántos cerdos? 🐷",
+  "¿Cuántas vacas? 🐄",
+  "¿Cuántos caballos? 🐴",
   "Puntos de terreno",
   "Puntos de edificios",
 ];
