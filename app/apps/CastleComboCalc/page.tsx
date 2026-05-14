@@ -66,13 +66,10 @@ export default function CastleComboCalc() {
     if (!done) inputRef.current?.focus();
   }, [stepPlayer, stepPos, done]);
 
-  const changeNumPlayers = (n: number) => {
+  const addPlayer = () => {
+    const n = numPlayers + 1;
     setNumPlayers(n);
     setScores(emptyScores(n));
-    setStepPlayer(0);
-    setStepPos(0);
-    setInputVal("");
-    setDone(false);
   };
 
   const confirm = () => {
@@ -107,7 +104,8 @@ export default function CastleComboCalc() {
   const players = ALL_PLAYERS.slice(0, numPlayers);
   const totals = scores.map((ps) => ps.reduce((s: number, v) => s + (v ?? 0), 0));
   const maxTotal = done ? Math.max(...totals) : null;
-  const cols = `2.5rem ${Array(numPlayers).fill("1fr").join(" ")}`;
+  const showAddButton = !gameStarted && numPlayers < 4;
+  const cols = `2.5rem ${Array(numPlayers).fill("1fr").join(" ")}${showAddButton ? " 2rem" : ""}`;
 
   return (
     <main className="min-h-screen flex flex-col items-center py-6 px-4" style={{ background: "#ffffff" }}>
@@ -117,25 +115,6 @@ export default function CastleComboCalc() {
         <h1 className="text-center text-xl font-bold text-blue-900 mb-5 tracking-wide">
           Castle Combo
         </h1>
-
-        {/* Player count selector */}
-        <div className="flex items-center justify-center gap-2 mb-5">
-          {[2, 3, 4].map((n) => (
-            <button
-              key={n}
-              onClick={() => changeNumPlayers(n)}
-              disabled={gameStarted && numPlayers === n}
-              className="rounded-lg px-3 py-1 text-sm font-semibold transition-colors"
-              style={
-                numPlayers === n
-                  ? { background: "#3b82f6", color: "#fff" }
-                  : { background: "#eff6ff", color: "#3b82f6", border: "1px solid #bfdbfe" }
-              }
-            >
-              {n} jugadores
-            </button>
-          ))}
-        </div>
 
         {/* Winner banner */}
         {done && (
@@ -175,6 +154,17 @@ export default function CastleComboCalc() {
                 {p}
               </div>
             ))}
+            {showAddButton && (
+              <div className="h-12 flex items-center justify-center">
+                <button
+                  onClick={addPlayer}
+                  className="flex items-center justify-center rounded-full text-white font-bold transition-colors"
+                  style={{ background: "#3b82f6", width: "1.25rem", height: "1.25rem", fontSize: "0.85rem", lineHeight: 1 }}
+                >
+                  +
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Card rows */}
@@ -214,6 +204,7 @@ export default function CastleComboCalc() {
                     </div>
                   );
                 })}
+                {showAddButton && <div className="h-10" />}
               </div>
             );
           })}
@@ -230,6 +221,7 @@ export default function CastleComboCalc() {
                 {scores[i].some((v) => v !== null) ? total : "—"}
               </div>
             ))}
+            {showAddButton && <div className="h-12" />}
           </div>
         </div>
 
