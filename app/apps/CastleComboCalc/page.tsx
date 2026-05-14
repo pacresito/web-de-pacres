@@ -31,7 +31,7 @@ function PinIcon() {
 
 function CardGridIcon({ pos }: { pos: Pos }) {
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 8px)", gridTemplateRows: "repeat(3, 12px)", gap: "1px" }}>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 11px)", gridTemplateRows: "repeat(3, 14px)", gap: "1.5px" }}>
       {[0, 1, 2].flatMap((r) =>
         [0, 1, 2].map((c) => {
           const active = pos && pos.row === r && pos.col === c;
@@ -168,10 +168,11 @@ export default function CastleComboCalc() {
                 className="h-12 flex items-center justify-center text-sm font-bold transition-colors"
                 style={{
                   borderRight: "1px solid rgba(0,0,0,0.2)",
+                  background: "#78b5d0",
                   ...(done && totals[i] === maxTotal
                     ? { background: "#fbbf24", color: "#78350f" }
                     : !done && stepPlayer === i
-                    ? { background: "#3a7fad" }
+                    ? { background: "#5a9ec0" }
                     : {}),
                 }}
               >
@@ -203,12 +204,13 @@ export default function CastleComboCalc() {
                   gridTemplateColumns: cols,
                   background: isActiveRow ? "#8ec5de" : even ? "#b5d9ee" : "#ffffff",
                   boxShadow: isActiveRow ? "inset 0 0 0 2px #4d91c0" : "none",
+                  borderBottom: "1px solid rgba(0,0,0,0.14)",
                 }}
               >
                 <div
-                  className="h-10 flex items-center justify-center"
+                  className="h-14 flex items-center justify-center"
                   style={{
-                      background: isActiveRow ? "#7dbad3" : even ? "#9dc8dc" : "#cce6f4",
+                    background: isActiveRow ? "#7dbad3" : even ? "#9dc8dc" : "#cce6f4",
                     padding: "5px 8px",
                   }}
                 >
@@ -220,7 +222,7 @@ export default function CastleComboCalc() {
                   return (
                     <div
                       key={pi}
-                      className="h-10 flex items-center justify-center font-mono text-sm"
+                      className="h-14 flex items-center justify-center font-mono text-sm"
                       style={{
                         borderRight: "1px solid rgba(0,0,0,0.12)",
                         ...(isActiveCell
@@ -248,6 +250,7 @@ export default function CastleComboCalc() {
                 className="h-12 flex items-center justify-center text-xl font-bold"
                 style={{
                   borderRight: "1px solid rgba(0,0,0,0.2)",
+                  background: "#78b5d0",
                   ...(done && totals[i] === maxTotal ? { color: "#fef08a" } : {}),
                 }}
               >
