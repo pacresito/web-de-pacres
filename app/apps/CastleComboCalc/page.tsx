@@ -22,7 +22,7 @@ const POSITIONS: { label: string; pos: Pos; isKey?: boolean }[] = [
 
 function PinIcon() {
   return (
-    <svg viewBox="0 0 10 13" width="5" height="7" fill="none">
+    <svg viewBox="0 0 10 13" width="4" height="6" fill="none" preserveAspectRatio="none">
       <path d="M5 0.5C2.5 0.5 0.5 2.6 0.5 5C0.5 8 5 12.5 5 12.5C5 12.5 9.5 8 9.5 5C9.5 2.6 7.5 0.5 5 0.5Z" fill="#374151" stroke="#1f2937" strokeWidth="0.5"/>
       <circle cx="5" cy="4.8" r="1.6" fill="white"/>
     </svg>
@@ -31,7 +31,7 @@ function PinIcon() {
 
 function CardGridIcon({ pos }: { pos: Pos }) {
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 8px)", gridTemplateRows: "repeat(3, 12px)", gap: "1px" }}>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 7px)", gridTemplateRows: "repeat(3, 10px)", gap: "1px" }}>
       {[0, 1, 2].flatMap((r) =>
         [0, 1, 2].map((c) => {
           const active = pos && pos.row === r && pos.col === c;
@@ -63,8 +63,9 @@ function KeyIcon() {
         <circle cx="18" cy="8" r="6" stroke="#92400e" strokeWidth="2.2" fill="none"/>
         <circle cx="18" cy="8" r="2.4" fill="#92400e"/>
         <rect x="16.5" y="14" width="3" height="18" rx="1.5" fill="#92400e"/>
-        <rect x="19.5" y="19" width="4" height="2.5" rx="0.6" fill="#92400e"/>
-        <rect x="19.5" y="24" width="3.5" height="2" rx="0.6" fill="#92400e"/>
+        <rect x="19.5" y="23" width="5" height="2.5" rx="0.6" fill="#92400e"/>
+        <rect x="19.5" y="26.5" width="3.5" height="1.8" rx="0.6" fill="#92400e"/>
+        <rect x="19.5" y="29.5" width="5" height="2.5" rx="0.6" fill="#92400e"/>
       </g>
     </svg>
   );
@@ -160,19 +161,17 @@ export default function CastleComboCalc() {
           {/* Header */}
           <div className="grid text-white font-bold text-sm" style={{ gridTemplateColumns: cols, background: "#4d91c0", borderBottom: "5px solid rgba(255,255,255,0.9)" }}>
             <div className="h-12 flex items-center justify-center">
-              <span className="text-xl">🏰</span>
+              <span style={{ fontSize: "1.875rem" }}>🏰</span>
             </div>
             {players.map((p, i) => (
               <div
                 key={i}
                 className="h-12 flex items-center justify-center text-sm font-bold transition-colors"
                 style={{
-                  borderRight: "1px solid rgba(0,0,0,0.4)",
+                  borderRight: "1px solid rgba(0,0,0,0.3)",
                   background: "#78b5d0",
                   ...(done && totals[i] === maxTotal
                     ? { background: "#fbbf24", color: "#78350f" }
-                    : !done && stepPlayer === i
-                    ? { background: "#5a9ec0" }
                     : {}),
                 }}
               >
@@ -202,15 +201,14 @@ export default function CastleComboCalc() {
                 className="grid transition-all"
                 style={{
                   gridTemplateColumns: cols,
-                  background: isActiveRow ? "#8ec5de" : even ? "#b5d9ee" : "#ffffff",
-                  boxShadow: isActiveRow ? "inset 0 0 0 2px #4d91c0" : "none",
+                  background: even ? "#b5d9ee" : "#ffffff",
                 }}
               >
                 <div
-                  className="h-14 flex items-center justify-center"
+                  className="flex items-center justify-center"
                   style={{
-                    background: isActiveRow ? "#7dbad3" : even ? "#9dc8dc" : "#cce6f4",
-                    padding: "8px 16px",
+                    height: "38px",
+                    background: even ? "#9dc8dc" : "#cce6f4",
                   }}
                 >
                   {posItem.isKey ? <KeyIcon /> : <CardGridIcon pos={posItem.pos} />}
@@ -221,39 +219,37 @@ export default function CastleComboCalc() {
                   return (
                     <div
                       key={pi}
-                      className="h-14 flex items-center justify-center font-mono text-sm"
+                      className="flex items-center justify-center font-mono text-sm"
                       style={{
-                        borderRight: "1px solid rgba(0,0,0,0.4)",
-                        ...(isActiveCell
-                          ? { color: "#1d4ed8", fontWeight: 700 }
-                          : val !== null
-                          ? { color: "#1e293b" }
-                          : { color: "#cbd5e1" }),
+                        height: "38px",
+                        borderRight: "1px solid rgba(0,0,0,0.3)",
+                        color: val !== null ? "#1e293b" : "#cbd5e1",
+                        ...(isActiveCell ? { boxShadow: "inset 0 0 0 2px #4d91c0" } : {}),
                       }}
                     >
-                      {val !== null ? val : isActiveCell ? "·" : "—"}
+                      {val !== null ? val : ""}
                     </div>
                   );
                 })}
-                {showAddButton && <div className="h-10" />}
+                {showAddButton && <div style={{ height: "38px" }} />}
               </div>
             );
           })}
 
           {/* Total row */}
-          <div className="grid text-white font-bold" style={{ gridTemplateColumns: cols, background: "#4d91c0", borderTop: "2px solid rgba(0,0,0,0.7)" }}>
+          <div className="grid text-white font-bold" style={{ gridTemplateColumns: cols, background: "#4d91c0", borderTop: "2px solid rgba(0,0,0,0.5)" }}>
             <div className="h-12 flex items-center justify-center text-2xl" style={{ background: "#4d91c0" }}>Σ</div>
             {totals.map((total, i) => (
               <div
                 key={i}
                 className="h-12 flex items-center justify-center text-xl font-bold"
                 style={{
-                  borderRight: "1px solid rgba(0,0,0,0.4)",
+                  borderRight: "1px solid rgba(0,0,0,0.3)",
                   background: "#78b5d0",
                   ...(done && totals[i] === maxTotal ? { color: "#fef08a" } : {}),
                 }}
               >
-                {scores[i].some((v) => v !== null) ? total : "—"}
+                {scores[i].some((v) => v !== null) ? total : ""}
               </div>
             ))}
             {showAddButton && <div className="h-12" style={{ background: "#78b5d0" }} />}
