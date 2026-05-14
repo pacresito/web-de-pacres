@@ -3,7 +3,6 @@ import redis from "@/lib/redis";
 import { parseEntry } from "@/lib/ranking";
 
 const KEY = process.env.NODE_ENV === "development" ? "laberinto-dev:ranking" : "laberinto:ranking";
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 async function findExisting(normalizedName: string): Promise<{ member: string; score: number } | null> {
   const entries = await redis.zrange(KEY, 0, -1, "WITHSCORES");
@@ -55,6 +54,7 @@ export async function POST(request: Request) {
   await redis.zadd(KEY, score, member);
 
   if (process.env.NODE_ENV !== "development") {
+    const resend = new Resend(process.env.RESEND_API_KEY);
     resend.emails.send({
       from: "Web de Pacres <hola@pacr.es>",
       to: "pacres.g@gmail.com",
