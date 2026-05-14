@@ -22,7 +22,7 @@ const POSITIONS: { label: string; pos: Pos; isKey?: boolean }[] = [
 
 function PinIcon() {
   return (
-    <svg viewBox="0 0 10 13" width="6" height="8" fill="none">
+    <svg viewBox="0 0 10 13" width="5" height="7" fill="none">
       <path d="M5 0.5C2.5 0.5 0.5 2.6 0.5 5C0.5 8 5 12.5 5 12.5C5 12.5 9.5 8 9.5 5C9.5 2.6 7.5 0.5 5 0.5Z" fill="#374151" stroke="#1f2937" strokeWidth="0.5"/>
       <circle cx="5" cy="4.8" r="1.6" fill="white"/>
     </svg>
@@ -39,7 +39,7 @@ function CardGridIcon({ pos }: { pos: Pos }) {
             <div
               key={`${r}-${c}`}
               style={{
-                backgroundColor: "#ffffff",
+                backgroundColor: "#fef9c3",
                 border: active ? "1px solid #374151" : "0.5px solid #b0b0b0",
                 borderRadius: 1,
                 display: "flex",
@@ -158,7 +158,7 @@ export default function CastleComboCalc() {
         {/* Scoring table */}
         <div className="rounded-2xl overflow-hidden shadow-lg">
           {/* Header */}
-          <div className="grid text-white font-bold text-sm" style={{ gridTemplateColumns: cols, background: "#4d91c0" }}>
+          <div className="grid text-white font-bold text-sm" style={{ gridTemplateColumns: cols, background: "#4d91c0", borderBottom: "1px solid rgba(255,255,255,0.55)" }}>
             <div className="h-12 flex items-center justify-center" style={{ borderRight: "1px solid rgba(0,0,0,0.2)" }}>
               <span className="text-xl">🏰</span>
             </div>
@@ -209,8 +209,8 @@ export default function CastleComboCalc() {
                   className="h-10 flex items-center justify-center"
                   style={{
                     borderRight: "1px solid rgba(0,0,0,0.15)",
-                    background: isActiveRow ? "#7dbad3" : "#b5d9ee",
-                    padding: "3px 6px",
+                    background: isActiveRow ? "#7dbad3" : even ? "#9dc8dc" : "#cce6f4",
+                    padding: "5px 8px",
                   }}
                 >
                   {posItem.isKey ? <KeyIcon /> : <CardGridIcon pos={posItem.pos} />}
@@ -241,7 +241,7 @@ export default function CastleComboCalc() {
           })}
 
           {/* Total row */}
-          <div className="grid text-white font-bold" style={{ gridTemplateColumns: cols, background: "#4d91c0" }}>
+          <div className="grid text-white font-bold" style={{ gridTemplateColumns: cols, background: "#4d91c0", borderTop: "2px solid rgba(0,0,0,0.35)" }}>
             <div className="h-12 flex items-center justify-center text-2xl" style={{ borderRight: "1px solid rgba(0,0,0,0.2)" }}>Σ</div>
             {totals.map((total, i) => (
               <div
