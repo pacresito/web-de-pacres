@@ -11,6 +11,7 @@ export default function CalculadoraRPN() {
   const [error, setError] = useState<string | null>(null);
   const [justOperated, setJustOperated] = useState(false);
   const [lastFlash, setLastFlash] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const clearError = () => setError(null);
 
@@ -109,6 +110,33 @@ export default function CalculadoraRPN() {
     setJustOperated(false);
   }, []);
 
+  const toggleFullscreen = useCallback(() => {
+    if (!isFullscreen) {
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+      document.body.style.overflow = "hidden";
+      setIsFullscreen(true);
+    } else {
+      if (document.fullscreenElement && document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      }
+      document.body.style.overflow = "";
+      setIsFullscreen(false);
+    }
+  }, [isFullscreen]);
+
+  useEffect(() => {
+    const onFSChange = () => {
+      if (!document.fullscreenElement) {
+        document.body.style.overflow = "";
+        setIsFullscreen(false);
+      }
+    };
+    document.addEventListener("fullscreenchange", onFSChange);
+    return () => document.removeEventListener("fullscreenchange", onFSChange);
+  }, []);
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key >= "0" && e.key <= "9") pressDigit(e.key);
@@ -147,7 +175,7 @@ export default function CalculadoraRPN() {
           .footer-inner .pacres-link { order: 2; }
         }
 
-        /* ── Page layout (igual que extras) ── */
+        /* ── Page layout ── */
         .calc-page {
           max-width: 900px;
           margin: 0 auto;
@@ -184,92 +212,164 @@ export default function CalculadoraRPN() {
           border-top: 1px solid rgba(0,0,0,0.07);
         }
 
-        /* ── HP 49G body ── */
+        /* ── Fullscreen wrapper ── */
         .hp-wrap {
           display: flex;
           justify-content: center;
         }
 
+        .hp-wrap.is-fullscreen {
+          position: fixed;
+          inset: 0;
+          z-index: 9999;
+          margin: 0;
+          background: #111;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 1rem;
+        }
+
+        .hp-wrap.is-fullscreen .hp-body {
+          max-height: calc(100dvh - 2rem);
+          overflow-y: auto;
+          scrollbar-width: none;
+        }
+        .hp-wrap.is-fullscreen .hp-body::-webkit-scrollbar { display: none; }
+
+        /* ── HP 49g+ outer frame — dark rubber/plastic ── */
         .hp-body {
           width: 100%;
           max-width: 340px;
-          background: linear-gradient(170deg, #26223a 0%, #1a1628 60%, #14111f 100%);
-          border-radius: 12px 12px 20px 20px;
-          padding: 18px 16px 22px;
+          background: #111111;
+          border-radius: 10px 10px 20px 20px;
+          padding: 10px 10px 14px;
           box-shadow:
-            0 0 0 1px rgba(255,255,255,0.07),
-            0 4px 6px rgba(0,0,0,0.25),
-            0 20px 60px rgba(0,0,0,0.45),
-            inset 0 1px 0 rgba(255,255,255,0.09);
+            0 0 0 1px rgba(255,255,255,0.05),
+            0 4px 8px rgba(0,0,0,0.4),
+            0 20px 60px rgba(0,0,0,0.5);
           position: relative;
         }
 
-        /* Top stripe — same purple-gray */
+        /* IR notch at top center */
         .hp-body::before {
-          content: '';
+          content: '▲';
           position: absolute;
-          top: 0; left: 0; right: 0;
-          height: 6px;
-          background: linear-gradient(90deg, #3b2f6e, #5a3fa0, #3b2f6e);
-          border-radius: 12px 12px 0 0;
-          opacity: 0.7;
+          top: 3px;
+          left: 50%;
+          transform: translateX(-50%);
+          font-size: 0.35rem;
+          color: rgba(255,255,255,0.2);
+          letter-spacing: 0;
+        }
+
+        /* ── Inner cream/silver face panel ── */
+        .hp-face {
+          background: linear-gradient(175deg, #d0ccbe 0%, #c8c4b4 50%, #c4c0b0 100%);
+          border-radius: 4px 4px 12px 12px;
+          padding: 10px 10px 14px;
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(0,0,0,0.1);
         }
 
         /* ── Brand bar ── */
         .hp-brand {
           display: flex;
-          align-items: baseline;
+          align-items: flex-start;
           justify-content: space-between;
-          margin-bottom: 12px;
+          margin-bottom: 8px;
           padding: 0 2px;
         }
 
+        .hp-brand-left {
+          display: flex;
+          flex-direction: column;
+          gap: 1px;
+        }
+
         .hp-logo {
-          font-size: 1.1rem;
+          font-size: 0.95rem;
           font-weight: 900;
           font-family: var(--font-geist-sans), Arial, sans-serif;
-          color: #c8bfea;
-          letter-spacing: -0.05em;
+          color: #222;
+          letter-spacing: -0.03em;
+          line-height: 1.1;
+        }
+        .hp-logo em {
           font-style: italic;
+          letter-spacing: -0.05em;
+        }
+        .hp-logo .model-num {
+          font-style: normal;
+          font-weight: 700;
+          font-size: 0.85rem;
         }
 
-        .hp-model {
-          font-size: 0.55rem;
-          font-family: var(--font-geist-mono), monospace;
-          letter-spacing: 0.18em;
-          text-transform: uppercase;
-          color: rgba(200,191,234,0.45);
+        .hp-model-line {
+          font-size: 0.44rem;
+          font-family: var(--font-geist-sans), Arial, sans-serif;
+          color: #555;
+          letter-spacing: 0.01em;
+          line-height: 1;
         }
 
-        /* ── Screen bezel ── */
-        .hp-screen-bezel {
-          background: #0d0b16;
-          border-radius: 4px;
-          padding: 8px;
-          margin-bottom: 14px;
+        /* HP badge — blue border, silver interior, italic hp */
+        .hp-badge {
+          width: 32px;
+          height: 22px;
+          background: linear-gradient(145deg, #e8e8e8 0%, #c8c8c8 50%, #d8d8d8 100%);
+          border-radius: 5px;
+          border: 2px solid #1a4a8a;
+          display: flex;
+          align-items: center;
+          justify-content: center;
           box-shadow:
-            inset 0 2px 6px rgba(0,0,0,0.6),
-            0 1px 0 rgba(255,255,255,0.05);
+            0 1px 3px rgba(0,0,0,0.3),
+            inset 0 1px 0 rgba(255,255,255,0.7),
+            inset 0 0 0 1px rgba(255,255,255,0.2);
+          flex-shrink: 0;
+          cursor: pointer;
+          user-select: none;
+          -webkit-tap-highlight-color: transparent;
+          touch-action: manipulation;
+          transition: opacity 0.15s;
+        }
+        .hp-badge:hover { opacity: 0.75; }
+        .hp-badge-text {
+          font-size: 0.55rem;
+          font-weight: 900;
+          font-family: var(--font-geist-sans), Arial, sans-serif;
+          color: #888;
+          font-style: italic;
+          letter-spacing: -0.06em;
+          text-shadow: 0 1px 0 rgba(255,255,255,0.8);
         }
 
-        /* ── LCD ── */
+        /* ── Screen bezel (cream-tinted inset) ── */
+        .hp-screen-bezel {
+          background: #a8a898;
+          border-radius: 3px;
+          padding: 5px;
+          margin-bottom: 10px;
+          box-shadow:
+            inset 0 2px 6px rgba(0,0,0,0.4),
+            0 1px 0 rgba(255,255,255,0.3);
+        }
+
+        /* ── LCD — neutral gray, like HP 49g+ ── */
         .hp-lcd {
-          background: #b8ccaa;
-          border-radius: 2px;
-          min-height: 160px;
+          background: #c4c8bc;
+          border-radius: 1px;
+          min-height: 150px;
           display: flex;
           flex-direction: column;
           overflow: hidden;
-          box-shadow: inset 0 1px 3px rgba(0,0,0,0.3);
+          box-shadow: inset 0 1px 3px rgba(0,0,0,0.25);
           position: relative;
-          transition: background 0.15s;
+          transition: background 0.12s;
         }
 
-        .hp-lcd.flash {
-          background: #cce0b0;
-        }
+        .hp-lcd.flash { background: #d4d8cc; }
 
-        /* Subtle LCD scanline texture */
         .hp-lcd::after {
           content: '';
           position: absolute;
@@ -278,8 +378,8 @@ export default function CalculadoraRPN() {
             0deg,
             transparent,
             transparent 2px,
-            rgba(0,0,0,0.03) 2px,
-            rgba(0,0,0,0.03) 3px
+            rgba(0,0,0,0.02) 2px,
+            rgba(0,0,0,0.02) 3px
           );
           pointer-events: none;
         }
@@ -287,12 +387,12 @@ export default function CalculadoraRPN() {
         /* ── Stack area ── */
         .hp-stack {
           flex: 1;
-          min-height: 108px;
+          min-height: 100px;
           display: flex;
           flex-direction: column;
           justify-content: flex-end;
           padding: 6px 8px 4px;
-          border-bottom: 1px solid rgba(0,0,0,0.15);
+          border-bottom: 1px solid rgba(0,0,0,0.12);
           position: relative;
         }
 
@@ -305,7 +405,7 @@ export default function CalculadoraRPN() {
           font-size: 0.6rem;
           font-family: var(--font-geist-mono), monospace;
           letter-spacing: 0.12em;
-          color: rgba(30,50,10,0.35);
+          color: rgba(40,50,30,0.3);
           text-transform: uppercase;
         }
 
@@ -319,7 +419,7 @@ export default function CalculadoraRPN() {
         .hp-stack-idx {
           font-size: 0.5rem;
           font-family: var(--font-geist-mono), monospace;
-          color: rgba(30,50,10,0.4);
+          color: rgba(40,50,30,0.4);
           min-width: 1.5rem;
           letter-spacing: 0.08em;
         }
@@ -328,7 +428,7 @@ export default function CalculadoraRPN() {
           font-size: 0.82rem;
           font-family: var(--font-geist-mono), monospace;
           font-weight: 600;
-          color: #1a320a;
+          color: #1a2a0a;
           text-align: right;
           flex: 1;
         }
@@ -336,7 +436,7 @@ export default function CalculadoraRPN() {
         .hp-stack-val.is-top {
           font-size: 1.1rem;
           font-weight: 700;
-          color: #0d2205;
+          color: #0d1e06;
         }
 
         /* ── Input display ── */
@@ -345,21 +445,21 @@ export default function CalculadoraRPN() {
           display: flex;
           align-items: center;
           justify-content: flex-end;
-          min-height: 36px;
+          min-height: 34px;
         }
 
         .hp-input-num {
-          font-size: 1.35rem;
+          font-size: 1.3rem;
           font-family: var(--font-geist-mono), monospace;
           font-weight: 700;
-          color: #0d2205;
+          color: #0d1e06;
           letter-spacing: -0.02em;
         }
 
         .hp-input-placeholder {
           font-size: 0.65rem;
           font-family: var(--font-geist-mono), monospace;
-          color: rgba(30,50,10,0.3);
+          color: rgba(40,50,30,0.28);
           letter-spacing: 0.1em;
         }
 
@@ -367,7 +467,7 @@ export default function CalculadoraRPN() {
           display: inline-block;
           width: 2px;
           height: 1em;
-          background: #1a320a;
+          background: #1a2a0a;
           margin-left: 1px;
           vertical-align: text-bottom;
           animation: blink 0.9s step-end infinite;
@@ -377,135 +477,133 @@ export default function CalculadoraRPN() {
         /* ── Error strip ── */
         .hp-error {
           padding: 3px 8px;
-          background: rgba(180,0,0,0.15);
-          border-top: 1px solid rgba(180,0,0,0.25);
+          background: rgba(150,0,0,0.1);
+          border-top: 1px solid rgba(150,0,0,0.2);
           font-size: 0.58rem;
           font-family: var(--font-geist-mono), monospace;
-          color: #7a1010;
+          color: #6e1010;
           letter-spacing: 0.04em;
         }
 
-        /* ── Soft-menu strip (decorative, like HP) ── */
+        /* ── Soft-menu strip (F1–F6, gray keys on cream) ── */
         .hp-softmenu {
           display: flex;
-          gap: 2px;
-          margin-bottom: 10px;
+          gap: 3px;
+          margin-bottom: 8px;
         }
 
         .hp-softkey {
           flex: 1;
-          height: 14px;
-          background: #1e1a30;
+          height: 18px;
+          background: linear-gradient(180deg, #4a4a4a 0%, #383838 100%);
           border-radius: 2px;
           box-shadow:
-            0 1px 0 rgba(255,255,255,0.06),
-            inset 0 1px 2px rgba(0,0,0,0.4);
+            0 2px 0 #1a1a1a,
+            inset 0 1px 0 rgba(255,255,255,0.1);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 0.38rem;
+          font-family: var(--font-geist-mono), monospace;
+          color: rgba(255,255,255,0.55);
+          letter-spacing: 0.02em;
+          font-weight: 600;
         }
 
         /* ── Button grid ── */
         .hp-btns {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
-          gap: 5px;
+          gap: 4px;
         }
 
+        /* Base key — near-black charcoal, like HP 49g+ number keys */
         .hp-btn {
-          background: linear-gradient(180deg, #2e2848 0%, #231f38 100%);
+          background: linear-gradient(180deg, #2c2c2c 0%, #1e1e1e 100%);
           border: none;
-          border-radius: 4px;
-          padding: 0.9rem 0.3rem 0.7rem;
+          border-radius: 3px;
+          padding: 0.85rem 0.3rem 0.65rem;
           font-size: 0.9rem;
           font-family: var(--font-geist-mono), monospace;
           font-weight: 600;
-          color: #ddd8f0;
+          color: #f0f0f0;
           cursor: pointer;
           user-select: none;
           -webkit-tap-highlight-color: transparent;
           touch-action: manipulation;
           box-shadow:
-            0 3px 0 #0f0d1a,
-            0 4px 6px rgba(0,0,0,0.4),
+            0 3px 0 #080808,
+            0 4px 5px rgba(0,0,0,0.35),
             inset 0 1px 0 rgba(255,255,255,0.1);
           transition: transform 0.07s, box-shadow 0.07s;
-          position: relative;
         }
 
         .hp-btn:active {
           transform: translateY(2px);
           box-shadow:
-            0 1px 0 #0f0d1a,
+            0 1px 0 #080808,
+            0 2px 3px rgba(0,0,0,0.3),
+            inset 0 1px 0 rgba(255,255,255,0.05);
+        }
+
+        /* Operator keys — medium gray, like the upper function buttons */
+        .hp-btn-op {
+          background: linear-gradient(180deg, #555555 0%, #444444 100%);
+          color: #f0f0f0;
+          box-shadow:
+            0 3px 0 #1a1a1a,
+            0 4px 5px rgba(0,0,0,0.35),
+            inset 0 1px 0 rgba(255,255,255,0.12);
+        }
+        .hp-btn-op:active {
+          box-shadow:
+            0 1px 0 #1a1a1a,
             0 2px 3px rgba(0,0,0,0.3),
             inset 0 1px 0 rgba(255,255,255,0.06);
         }
 
-        /* Operator buttons — amber/orange (HP right-shift color) */
-        .hp-btn-op {
-          background: linear-gradient(180deg, #8b3a00 0%, #6e2d00 100%);
-          color: #ffd090;
-          box-shadow:
-            0 3px 0 #2a0d00,
-            0 4px 6px rgba(0,0,0,0.4),
-            inset 0 1px 0 rgba(255,200,100,0.15);
-        }
-        .hp-btn-op:active {
-          box-shadow:
-            0 1px 0 #2a0d00,
-            0 2px 3px rgba(0,0,0,0.3),
-            inset 0 1px 0 rgba(255,200,100,0.08);
-        }
-
-        /* ENTER — blue (HP left-shift color) */
+        /* ENTER — teal (HP 49g+ left-arrow/backspace accent) */
         .hp-btn-enter {
-          background: linear-gradient(180deg, #1a4080 0%, #122e5e 100%);
-          color: #90c8ff;
-          font-size: 0.62rem;
-          letter-spacing: 0.1em;
+          background: linear-gradient(180deg, #115555 0%, #0a3d3d 100%);
+          color: #60d0c8;
+          font-size: 0.6rem;
+          letter-spacing: 0.12em;
           grid-column: span 2;
           box-shadow:
-            0 3px 0 #060f20,
-            0 4px 6px rgba(0,0,0,0.4),
-            inset 0 1px 0 rgba(144,200,255,0.12);
+            0 3px 0 #030f0f,
+            0 4px 5px rgba(0,0,0,0.35),
+            inset 0 1px 0 rgba(96,208,200,0.12);
         }
         .hp-btn-enter:active {
           box-shadow:
-            0 1px 0 #060f20,
+            0 1px 0 #030f0f,
             0 2px 3px rgba(0,0,0,0.3),
-            inset 0 1px 0 rgba(144,200,255,0.06);
+            inset 0 1px 0 rgba(96,208,200,0.06);
         }
 
-        /* Clear — dark red */
+        /* CLEAR — red (HP 49g+ right-shift key is red/orange) */
         .hp-btn-clear {
-          background: linear-gradient(180deg, #5a1010 0%, #440c0c 100%);
-          color: #ff9090;
+          background: linear-gradient(180deg, #8a1a1a 0%, #6a1010 100%);
+          color: #ffaaaa;
           box-shadow:
-            0 3px 0 #1a0404,
-            0 4px 6px rgba(0,0,0,0.4),
+            0 3px 0 #1e0404,
+            0 4px 5px rgba(0,0,0,0.35),
             inset 0 1px 0 rgba(255,150,150,0.1);
         }
         .hp-btn-clear:active {
           box-shadow:
-            0 1px 0 #1a0404,
+            0 1px 0 #1e0404,
             0 2px 3px rgba(0,0,0,0.3);
         }
 
-        /* DEL and SWAP — slightly muted */
+        /* DEL and SWAP — same near-black, muted text */
         .hp-btn-util {
-          background: linear-gradient(180deg, #1e1c2c 0%, #171522 100%);
-          color: #a090d0;
-          font-size: 0.62rem;
-          letter-spacing: 0.06em;
-          box-shadow:
-            0 3px 0 #09080f,
-            0 4px 6px rgba(0,0,0,0.4),
-            inset 0 1px 0 rgba(255,255,255,0.07);
-        }
-        .hp-btn-util:active {
-          box-shadow:
-            0 1px 0 #09080f,
-            0 2px 3px rgba(0,0,0,0.3);
+          color: #aaaaaa;
+          font-size: 0.6rem;
+          letter-spacing: 0.05em;
         }
 
-        /* ── Legend (page level, white bg) ── */
+        /* ── Legend ── */
         .legend {
           padding: 0.75rem 1rem;
           border: 1px solid rgba(0,0,0,0.07);
@@ -555,7 +653,7 @@ export default function CalculadoraRPN() {
 
       <main className="calc-page">
 
-        {/* Header — igual que extras */}
+        {/* Header */}
         <div style={{ marginBottom: "3.5rem" }}>
           <h1 className="page-title">
             Calculadora <span>RPN</span>
@@ -570,88 +668,102 @@ export default function CalculadoraRPN() {
 
         <hr className="divider" style={{ marginBottom: "2.5rem" }} />
 
-        {/* HP 49G Calculator */}
-        <div className="hp-wrap" style={{ marginBottom: "2.5rem" }}>
+        {/* HP 49g+ Calculator */}
+        <div className={`hp-wrap${isFullscreen ? " is-fullscreen" : ""}`} style={{ marginBottom: isFullscreen ? 0 : "2.5rem" }}>
           <div className="hp-body">
+            <div className="hp-face">
 
-            {/* Brand */}
-            <div className="hp-brand">
-              <span className="hp-logo">hp</span>
-              <span className="hp-model">49g+  ·  RPN</span>
-            </div>
-
-            {/* Screen */}
-            <div className="hp-screen-bezel">
-              <div className={`hp-lcd${lastFlash ? " flash" : ""}`}>
-
-                {/* Stack */}
-                <div className="hp-stack">
-                  {displayStack.length === 0 ? (
-                    <p className="hp-stack-empty">stack empty</p>
-                  ) : (
-                    displayStack.map((val, i) => {
-                      const isTop = i === displayStack.length - 1;
-                      const label = displayStack.length - i;
-                      return (
-                        <div key={i} className="hp-stack-row">
-                          <span className="hp-stack-idx">{label}:</span>
-                          <span className={`hp-stack-val${isTop ? " is-top" : ""}`}>
-                            {formatNum(val)}
-                          </span>
-                        </div>
-                      );
-                    })
-                  )}
+              {/* Brand */}
+              <div className="hp-brand">
+                <div className="hp-brand-left">
+                  <span className="hp-logo">
+                    <em>hp</em> <span className="model-num">49g+</span>
+                  </span>
+                  <span className="hp-model-line">graphing calculator</span>
                 </div>
-
-                {/* Input */}
-                <div className="hp-input">
-                  {input === "" ? (
-                    <span className="hp-input-placeholder">_ _ _</span>
-                  ) : (
-                    <span className="hp-input-num">
-                      {input}<span className="hp-cursor" />
-                    </span>
-                  )}
+                <div
+                  className="hp-badge"
+                  onClick={toggleFullscreen}
+                  onTouchStart={(e) => { e.preventDefault(); toggleFullscreen(); }}
+                  title={isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
+                >
+                  <span className="hp-badge-text">hp</span>
                 </div>
-
-                {/* Error */}
-                {error && <div className="hp-error">{error}</div>}
               </div>
+
+              {/* Screen */}
+              <div className="hp-screen-bezel">
+                <div className={`hp-lcd${lastFlash ? " flash" : ""}`}>
+
+                  {/* Stack */}
+                  <div className="hp-stack">
+                    {displayStack.length === 0 ? (
+                      <p className="hp-stack-empty">stack empty</p>
+                    ) : (
+                      displayStack.map((val, i) => {
+                        const isTop = i === displayStack.length - 1;
+                        const label = displayStack.length - i;
+                        return (
+                          <div key={i} className="hp-stack-row">
+                            <span className="hp-stack-idx">{label}:</span>
+                            <span className={`hp-stack-val${isTop ? " is-top" : ""}`}>
+                              {formatNum(val)}
+                            </span>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  {/* Input */}
+                  <div className="hp-input">
+                    {input === "" ? (
+                      <span className="hp-input-placeholder">_ _ _</span>
+                    ) : (
+                      <span className="hp-input-num">
+                        {input}<span className="hp-cursor" />
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Error */}
+                  {error && <div className="hp-error">{error}</div>}
+                </div>
+              </div>
+
+              {/* Soft-menu strip (F1–F6, decorativo) */}
+              <div className="hp-softmenu">
+                {["F1","F2","F3","F4","F5","F6"].map(f => <div key={f} className="hp-softkey">{f}</div>)}
+              </div>
+
+              {/* Buttons */}
+              <div className="hp-btns">
+                <button className="hp-btn hp-btn-clear" onClick={pressClear}>C</button>
+                <button className="hp-btn hp-btn-util" onClick={pressDel}>DEL</button>
+                <button className="hp-btn hp-btn-util" onClick={pressSwap}>SWAP</button>
+                <button className="hp-btn hp-btn-op" onClick={() => pressOp("/")}>÷</button>
+
+                <button className="hp-btn" onClick={() => pressDigit("7")}>7</button>
+                <button className="hp-btn" onClick={() => pressDigit("8")}>8</button>
+                <button className="hp-btn" onClick={() => pressDigit("9")}>9</button>
+                <button className="hp-btn hp-btn-op" onClick={() => pressOp("*")}>×</button>
+
+                <button className="hp-btn" onClick={() => pressDigit("4")}>4</button>
+                <button className="hp-btn" onClick={() => pressDigit("5")}>5</button>
+                <button className="hp-btn" onClick={() => pressDigit("6")}>6</button>
+                <button className="hp-btn hp-btn-op" onClick={() => pressOp("-")}>−</button>
+
+                <button className="hp-btn" onClick={() => pressDigit("1")}>1</button>
+                <button className="hp-btn" onClick={() => pressDigit("2")}>2</button>
+                <button className="hp-btn" onClick={() => pressDigit("3")}>3</button>
+                <button className="hp-btn hp-btn-op" onClick={() => pressOp("+")}>+</button>
+
+                <button className="hp-btn" onClick={() => pressDigit("0")}>0</button>
+                <button className="hp-btn" onClick={() => pressDigit(".")}>.</button>
+                <button className="hp-btn hp-btn-enter" onClick={pressEnter}>ENTER</button>
+              </div>
+
             </div>
-
-            {/* Soft-menu strip (decorativo) */}
-            <div className="hp-softmenu">
-              {[0,1,2,3,4,5].map(i => <div key={i} className="hp-softkey" />)}
-            </div>
-
-            {/* Buttons */}
-            <div className="hp-btns">
-              <button className="hp-btn hp-btn-clear" onClick={pressClear}>C</button>
-              <button className="hp-btn hp-btn-util" onClick={pressDel}>DEL</button>
-              <button className="hp-btn hp-btn-util" onClick={pressSwap}>SWAP</button>
-              <button className="hp-btn hp-btn-op" onClick={() => pressOp("/")}>÷</button>
-
-              <button className="hp-btn" onClick={() => pressDigit("7")}>7</button>
-              <button className="hp-btn" onClick={() => pressDigit("8")}>8</button>
-              <button className="hp-btn" onClick={() => pressDigit("9")}>9</button>
-              <button className="hp-btn hp-btn-op" onClick={() => pressOp("*")}>×</button>
-
-              <button className="hp-btn" onClick={() => pressDigit("4")}>4</button>
-              <button className="hp-btn" onClick={() => pressDigit("5")}>5</button>
-              <button className="hp-btn" onClick={() => pressDigit("6")}>6</button>
-              <button className="hp-btn hp-btn-op" onClick={() => pressOp("-")}>−</button>
-
-              <button className="hp-btn" onClick={() => pressDigit("1")}>1</button>
-              <button className="hp-btn" onClick={() => pressDigit("2")}>2</button>
-              <button className="hp-btn" onClick={() => pressDigit("3")}>3</button>
-              <button className="hp-btn hp-btn-op" onClick={() => pressOp("+")}>+</button>
-
-              <button className="hp-btn" onClick={() => pressDigit("0")}>0</button>
-              <button className="hp-btn" onClick={() => pressDigit(".")}>.</button>
-              <button className="hp-btn hp-btn-enter" onClick={pressEnter}>ENTER</button>
-            </div>
-
           </div>
         </div>
 
