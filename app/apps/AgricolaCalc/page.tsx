@@ -1,0 +1,376 @@
+"use client";
+
+import { useState, useRef, useEffect } from "react";
+import Link from "next/link";
+
+const PLAYERS = ["Lucas", "Pablo"];
+
+type Animal = "sheep" | "pig" | "cow" | "horse";
+const ANIMALS: Animal[] = ["sheep", "pig", "cow", "horse"];
+const ANIMAL_ICONS: Record<Animal, string> = { sheep: "🐑", pig: "🐷", cow: "🐄", horse: "🐴" };
+
+function calcTablePts(count: number, animal: Animal): number {
+  if (count <= 3) return -3;
+  const base3: Record<Animal, number> = { sheep: 13, pig: 11, cow: 10, horse: 9 };
+  if (count >= base3[animal]) return 3 + (count - base3[animal]);
+  const ranges: Record<Animal, [number, number][]> = {
+    sheep: [[4, 7], [8, 10], [11, 12]],
+    pig:   [[4, 6], [7,  8], [9,  10]],
+    cow:   [[4, 5], [6,  7], [8,   9]],
+    horse: [[4, 4], [5,  6], [7,   8]],
+  };
+  for (let pts = 0; pts <= 2; pts++) {
+    const [lo, hi] = ranges[animal][pts];
+    if (count >= lo && count <= hi) return pts;
+  }
+  return 0;
+}
+
+// 6 inputs per player: 4 animal counts, terrain pts, building pts
+// ! rows auto-fill from scoring table — not manually entered
+const STEP_TO_ROW = [0, 1, 2, 3, 10, 11];
+const STEP_LABELS = [
+  "Ovejas — ¿cuántas?",
+  "Cerdos — ¿cuántos?",
+  "Vacas — ¿cuántas?",
+  "Caballos — ¿cuántos?",
+  "Puntos de terreno",
+  "Puntos de edificios",
+];
+
+type RowDef =
+  | { kind: "animal"; animal: Animal; idx: number }
+  | { kind: "sigma1" }
+  | { kind: "bonus"; animal: Animal; idx: number }
+  | { kind: "sigma2" }
+  | { kind: "terrains" }
+  | { kind: "buildings" }
+  | { kind: "final" };
+
+const ROWS: RowDef[] = [
+  { kind: "animal",   animal: "sheep", idx: 0 },
+  { kind: "animal",   animal: "pig",   idx: 1 },
+  { kind: "animal",   animal: "cow",   idx: 2 },
+  { kind: "animal",   animal: "horse", idx: 3 },
+  { kind: "sigma1" },
+  { kind: "bonus",    animal: "sheep", idx: 0 },
+  { kind: "bonus",    animal: "pig",   idx: 1 },
+  { kind: "bonus",    animal: "cow",   idx: 2 },
+  { kind: "bonus",    animal: "horse", idx: 3 },
+  { kind: "sigma2" },
+  { kind: "terrains" },
+  { kind: "buildings" },
+  { kind: "final" },
+];
+
+function emptyScores() {
+  return Array.from({ length: 2 }, () => Array(6).fill(null) as (number | null)[]);
+}
+
+function getDerived(s: (number | null)[]) {
+  const counts = s.slice(0, 4) as (number | null)[];
+  const tablePts = ANIMALS.map((a, i) =>
+    counts[i] !== null ? calcTablePts(counts[i]!, a) : null
+  );
+  const sigma1 = counts.every((v) => v !== null)
+    ? (counts as number[]).reduce((a, b) => a + b, 0)
+    : null;
+  const tableSum = tablePts.every((v) => v !== null)
+    ? (tablePts as number[]).reduce((a, b) => a + b, 0)
+    : null;
+  const sigma2 = tableSum;
+  const terrainPts = s[4];
+  const buildingPts = s[5];
+  const final =
+    sigma1 !== null && sigma2 !== null && terrainPts !== null && buildingPts !== null
+      ? sigma1 + sigma2 + terrainPts + buildingPts
+      : null;
+  return { counts, tablePts, sigma1, sigma2, terrainPts, buildingPts, final };
+}
+
+function TerrainIcon() {
+  return (
+    <svg width="14" height="20" viewBox="0 0 14 20" fill="none">
+      <rect x="0.5" y="0.5"  width="13" height="5" rx="1" fill="#7B9E6B" stroke="#4A6741" strokeWidth="0.8"/>
+      <rect x="0.5" y="7.5"  width="13" height="5" rx="1" fill="#8CAF7B" stroke="#4A6741" strokeWidth="0.8"/>
+      <rect x="0.5" y="14.5" width="13" height="5" rx="1" fill="#9BBF8A" stroke="#4A6741" strokeWidth="0.8"/>
+    </svg>
+  );
+}
+
+function getRowIcon(row: RowDef) {
+  if (row.kind === "animal") return <span>{ANIMAL_ICONS[row.animal]}</span>;
+  if (row.kind === "bonus")  return <span style={{ fontSize: "0.7rem" }}>!{ANIMAL_ICONS[row.animal]}</span>;
+  if (row.kind === "sigma1" || row.kind === "sigma2") return <span>Σ</span>;
+  if (row.kind === "terrains") return <TerrainIcon />;
+  if (row.kind === "buildings") return <span>🏠</span>;
+  if (row.kind === "final") return <span>Σ</span>;
+  return null;
+}
+
+function getCellValue(row: RowDef, d: ReturnType<typeof getDerived>): number | null {
+  switch (row.kind) {
+    case "animal":    return d.counts[row.idx];
+    case "sigma1":    return d.sigma1;
+    case "bonus":     return d.tablePts[row.idx];
+    case "sigma2":    return d.sigma2;
+    case "terrains":  return d.terrainPts;
+    case "buildings": return d.buildingPts;
+    case "final":     return d.final;
+  }
+}
+
+const C = {
+  headerBg:   "#3D2B1F",
+  sigmaGreen: "#4A6741",
+  sigmaLight: "#5C7A52",
+  finalBg:    "#2D1F14",
+  parchA:     "#F5E6C8",
+  parchB:     "#EDD9A3",
+  parchIconA: "#E8D5A3",
+  parchIconB: "#DFC88A",
+  amber:      "#C4832A",
+  text:       "#2C1810",
+  cream:      "#FFF8E7",
+  gold:       "#8B6914",
+};
+
+export default function AgricolaCalc() {
+  const [scores, setScores] = useState(emptyScores());
+  const [step, setStep] = useState(0); // 0–11 (0–5 Lucas, 6–11 Pablo)
+  const [inputVal, setInputVal] = useState("");
+  const [done, setDone] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const currentPlayer = Math.floor(step / 6);
+  const localStep = step % 6;
+  const currentRow = STEP_TO_ROW[localStep];
+
+  useEffect(() => {
+    if (!done) inputRef.current?.focus();
+  }, [step, done]);
+
+  const confirm = () => {
+    const trimmed = inputVal.trim();
+    if (trimmed === "") return;
+    const val = parseInt(trimmed, 10);
+    if (isNaN(val)) return;
+    const newScores = scores.map((r) => [...r]);
+    newScores[currentPlayer][localStep] = val;
+    setScores(newScores);
+    setInputVal("");
+    if (step < 11) setStep(step + 1);
+    else setDone(true);
+  };
+
+  const reset = () => {
+    setScores(emptyScores());
+    setStep(0);
+    setInputVal("");
+    setDone(false);
+  };
+
+  const derived = [0, 1].map((pi) => getDerived(scores[pi]));
+  const finals = derived.map((d) => d.final);
+  const maxFinal =
+    done ? Math.max(...(finals.filter((f) => f !== null) as number[])) : null;
+
+  return (
+    <main
+      className="min-h-screen flex flex-col items-center py-6 px-4"
+      style={{ background: "#FAF3E0" }}
+    >
+      <div className="w-full" style={{ maxWidth: "22rem" }}>
+
+        <h1
+          className="text-center text-xl font-bold mb-0.5"
+          style={{ color: C.headerBg, fontFamily: "Georgia, serif", letterSpacing: "0.04em" }}
+        >
+          Agrícola
+        </h1>
+        <p className="text-center text-xs mb-5" style={{ color: C.gold }}>
+          All Creatures Big and Small
+        </p>
+
+        {done && maxFinal !== null && (
+          <div
+            className="rounded-xl px-4 py-3 mb-4 text-center font-bold text-base"
+            style={
+              finals.filter((f) => f === maxFinal).length > 1
+                ? { background: C.parchB, color: C.text, border: `1px solid ${C.amber}` }
+                : { background: C.amber, color: C.cream }
+            }
+          >
+            {finals.filter((f) => f === maxFinal).length > 1
+              ? "Empate"
+              : `Gana ${PLAYERS[finals.indexOf(maxFinal)]}`}
+          </div>
+        )}
+
+        <div
+          className="rounded-2xl overflow-hidden shadow-lg"
+          style={{ border: `2px solid ${C.headerBg}` }}
+        >
+          {/* Header */}
+          <div
+            className="grid font-bold text-sm"
+            style={{
+              gridTemplateColumns: "3rem 1fr 1fr",
+              background: C.headerBg,
+              borderBottom: `3px solid ${C.amber}`,
+            }}
+          >
+            <div className="h-12 flex items-center justify-center text-2xl" style={{ color: C.amber }}>
+              🌾
+            </div>
+            {PLAYERS.map((p, pi) => (
+              <div
+                key={pi}
+                className="h-12 flex items-center justify-center text-sm font-bold"
+                style={{
+                  borderLeft: "1px solid rgba(255,255,255,0.12)",
+                  background:
+                    done && finals[pi] === maxFinal && maxFinal !== null
+                      ? C.amber
+                      : "rgba(255,255,255,0.07)",
+                  color:
+                    done && finals[pi] === maxFinal && maxFinal !== null
+                      ? C.cream
+                      : "#e8d5b0",
+                }}
+              >
+                {p}
+              </div>
+            ))}
+          </div>
+
+          {/* Rows */}
+          {ROWS.map((row, rowIdx) => {
+            const isFinal = row.kind === "final";
+            const isSigma = row.kind === "sigma1" || row.kind === "sigma2" || isFinal;
+            const even = rowIdx % 2 === 0;
+
+            const rowBg = isFinal
+              ? C.finalBg
+              : isSigma
+              ? C.sigmaGreen
+              : even ? C.parchA : C.parchB;
+
+            const iconBg = isFinal
+              ? "rgba(255,255,255,0.08)"
+              : isSigma
+              ? C.sigmaLight
+              : even ? C.parchIconA : C.parchIconB;
+
+            const rowText = isSigma ? C.cream : C.text;
+
+            return (
+              <div
+                key={rowIdx}
+                className="grid"
+                style={{
+                  gridTemplateColumns: "3rem 1fr 1fr",
+                  background: rowBg,
+                  borderTop: isSigma
+                    ? `2px solid ${isFinal ? C.amber : "rgba(255,255,255,0.25)"}`
+                    : undefined,
+                }}
+              >
+                <div
+                  className="flex items-center justify-center text-sm font-bold"
+                  style={{ height: 38, background: iconBg, color: rowText }}
+                >
+                  {getRowIcon(row)}
+                </div>
+                {[0, 1].map((pi) => {
+                  const val = getCellValue(row, derived[pi]);
+                  const active = !done && currentRow === rowIdx && currentPlayer === pi;
+                  return (
+                    <div
+                      key={pi}
+                      className="flex items-center justify-center font-mono text-sm font-bold"
+                      style={{
+                        height: 38,
+                        borderLeft: "1px solid rgba(0,0,0,0.12)",
+                        color:
+                          val !== null
+                            ? isSigma
+                              ? C.cream
+                              : val < 0
+                              ? "#B91C1C"
+                              : C.text
+                            : "rgba(0,0,0,0.12)",
+                        ...(active ? { boxShadow: `inset 0 0 0 2px ${C.amber}` } : {}),
+                      }}
+                    >
+                      {val !== null ? val : ""}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Input */}
+        {!done ? (
+          <div
+            className="mt-5 rounded-2xl px-4 pt-4 pb-5 shadow"
+            style={{ background: C.cream, border: "1px solid #D4B87A" }}
+          >
+            <p className="text-center font-bold text-base mb-0.5" style={{ color: C.headerBg }}>
+              {PLAYERS[currentPlayer]}
+            </p>
+            <p className="text-center text-xs mb-3" style={{ color: C.gold }}>
+              {STEP_LABELS[localStep]}
+            </p>
+            <div className="flex gap-2">
+              <input
+                ref={inputRef}
+                type="number"
+                inputMode="numeric"
+                value={inputVal}
+                onChange={(e) => setInputVal(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && confirm()}
+                placeholder="0"
+                className="flex-1 rounded-xl px-3 py-3 text-2xl text-center font-bold focus:outline-none"
+                style={{
+                  border: "2px solid #D4B87A",
+                  color: C.text,
+                  background: "#FFFDF5",
+                  minWidth: 0,
+                  transition: "border-color 0.15s",
+                }}
+                onFocus={(e) => (e.target.style.borderColor = C.amber)}
+                onBlur={(e) => (e.target.style.borderColor = "#D4B87A")}
+              />
+              <button
+                onClick={confirm}
+                className="rounded-xl px-5 text-xl font-bold"
+                style={{ background: C.amber, color: C.cream }}
+              >
+                →
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="mt-5 text-center">
+            <button
+              onClick={reset}
+              className="rounded-xl px-8 py-3 font-bold"
+              style={{ background: C.amber, color: C.cream }}
+            >
+              Nueva partida
+            </button>
+          </div>
+        )}
+
+        <div className="mt-8 text-center">
+          <Link href="/lab" className="text-xs transition-colors" style={{ color: "#B0956A" }}>
+            pacr.es
+          </Link>
+        </div>
+      </div>
+    </main>
+  );
+}

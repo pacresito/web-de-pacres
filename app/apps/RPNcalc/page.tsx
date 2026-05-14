@@ -861,7 +861,7 @@ export default function CalculadoraRPN() {
           Otras calculadoras:{" "}
           <Link href="/apps/CastleComboCalc" style={{ color: "#3b82f6" }}>Castle Combo</Link>
           {" · "}
-          <span style={{ color: "#d1d5db" }}>Agrícola</span>
+          <Link href="/apps/AgricolaCalc" style={{ color: "#3b82f6" }}>Agrícola</Link>
         </div>
 
         {/* Footer */}
