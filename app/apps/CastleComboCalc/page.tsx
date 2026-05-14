@@ -22,7 +22,7 @@ const POSITIONS: { label: string; pos: Pos; isKey?: boolean }[] = [
 
 function PinIcon() {
   return (
-    <svg viewBox="0 0 10 13" width="7" height="10" fill="none">
+    <svg viewBox="0 0 10 13" width="6" height="8" fill="none">
       <path d="M5 0.5C2.5 0.5 0.5 2.6 0.5 5C0.5 8 5 12.5 5 12.5C5 12.5 9.5 8 9.5 5C9.5 2.6 7.5 0.5 5 0.5Z" fill="#374151" stroke="#1f2937" strokeWidth="0.5"/>
       <circle cx="5" cy="4.8" r="1.6" fill="white"/>
     </svg>
@@ -40,7 +40,7 @@ function CardGridIcon({ pos }: { pos: Pos }) {
               key={`${r}-${c}`}
               style={{
                 backgroundColor: "#ffffff",
-                border: active ? "1px solid #374151" : "0.5px solid #c8c8c8",
+                border: active ? "1px solid #374151" : "0.5px solid #b0b0b0",
                 borderRadius: 1,
                 display: "flex",
                 alignItems: "center",
@@ -58,13 +58,13 @@ function CardGridIcon({ pos }: { pos: Pos }) {
 
 function KeyIcon() {
   return (
-    <svg viewBox="0 0 32 32" width="26" height="26" fill="none">
-      <g transform="rotate(-38, 16, 16)">
-        <circle cx="9" cy="16" r="6.5" stroke="#92400e" strokeWidth="2.2" fill="none"/>
-        <circle cx="9" cy="16" r="2.6" fill="#92400e"/>
-        <rect x="15" y="14.7" width="14" height="2.8" rx="1" fill="#92400e"/>
-        <rect x="19.5" y="17.5" width="2.4" height="4" rx="0.6" fill="#92400e"/>
-        <rect x="25" y="17.5" width="2.4" height="3" rx="0.6" fill="#92400e"/>
+    <svg viewBox="0 0 36 36" width="26" height="26" fill="none">
+      <g transform="rotate(20, 18, 18)">
+        <circle cx="18" cy="8" r="6" stroke="#92400e" strokeWidth="2.2" fill="none"/>
+        <circle cx="18" cy="8" r="2.4" fill="#92400e"/>
+        <rect x="16.5" y="14" width="3" height="18" rx="1.5" fill="#92400e"/>
+        <rect x="19.5" y="19" width="4" height="2.5" rx="0.6" fill="#92400e"/>
+        <rect x="19.5" y="24" width="3.5" height="2" rx="0.6" fill="#92400e"/>
       </g>
     </svg>
   );
@@ -156,7 +156,7 @@ export default function CastleComboCalc() {
         )}
 
         {/* Scoring table */}
-        <div className="rounded-2xl overflow-hidden shadow-lg border border-blue-300">
+        <div className="rounded-2xl overflow-hidden shadow-lg">
           {/* Header */}
           <div className="grid text-white font-bold text-sm" style={{ gridTemplateColumns: cols, background: "#4d91c0" }}>
             <div className="h-12 flex items-center justify-center" style={{ borderRight: "1px solid rgba(0,0,0,0.2)" }}>
@@ -202,11 +202,17 @@ export default function CastleComboCalc() {
                 style={{
                   gridTemplateColumns: cols,
                   background: isActiveRow ? "#8ec5de" : even ? "#b5d9ee" : "#ffffff",
-                  outline: isActiveRow ? "2px solid #4d91c0" : "none",
-                  outlineOffset: "-2px",
+                  boxShadow: isActiveRow ? "inset 0 0 0 2px #4d91c0" : "none",
                 }}
               >
-                <div className="h-10 flex items-center justify-center" style={{ borderRight: "1px solid rgba(0,0,0,0.12)" }}>
+                <div
+                  className="h-10 flex items-center justify-center"
+                  style={{
+                    borderRight: "1px solid rgba(0,0,0,0.15)",
+                    background: isActiveRow ? "#7dbad3" : "#b5d9ee",
+                    padding: "3px 6px",
+                  }}
+                >
                   {posItem.isKey ? <KeyIcon /> : <CardGridIcon pos={posItem.pos} />}
                 </div>
                 {players.map((_, pi) => {
