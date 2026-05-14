@@ -502,9 +502,25 @@ export default function Fluidos() {
           const above = atTop ? WALL : grid[(y - 1) * W + x];
           const atCeiling = atTop || above === WALL;
 
+          // Adhesion: if vapor is directly or diagonally above, prefer to stay clustered
+          const vaporDirectlyAbove = !atTop && above === VAPOR;
+          const vaporDiagAbove = !atTop && !vaporDirectlyAbove && (
+            (x > 0   && grid[(y-1)*W+(x-1)] === VAPOR) ||
+            (x < W-1 && grid[(y-1)*W+(x+1)] === VAPOR)
+          );
+          if (vaporDirectlyAbove && Math.random() < 0.80) {
+            ages[i] = Math.min(ages[i] + 1, VAPOR_CONDENSE_MAX);
+            if (ages[i] >= VAPOR_CONDENSE_MAX) { grid[i] = WATER; ages[i] = 0; upd[i] = 1; }
+            continue;
+          }
+          if (vaporDiagAbove && Math.random() < 0.50) {
+            ages[i] = Math.min(ages[i] + 1, VAPOR_CONDENSE_MAX);
+            if (ages[i] >= VAPOR_CONDENSE_MAX) { grid[i] = WATER; ages[i] = 0; upd[i] = 1; }
+            continue;
+          }
+
           // Erratic sideways drift even when rise is possible (~25% chance)
           const driftFirst = !atCeiling && Math.random() < 0.25;
-
           let moved = false;
 
           if (!driftFirst && !atTop) {
@@ -518,7 +534,6 @@ export default function Fluidos() {
           }
 
           if (!moved) {
-            // Drift sideways — also try diagonal up
             const r = Math.random();
             const dirs: [number, number][] = r < 0.33
               ? [[-1, 0], [1, 0], [-1, -1], [1, -1]]
@@ -1118,7 +1133,7 @@ export default function Fluidos() {
         {/* Hints */}
         <div style={{ padding: "0.45rem 0 0" }}>
           <div className="hint-row">
-            <span className="hint-item">La tierra se hunde en el agua · El fuego vaporiza el agua · El vapor sube y condensa · El fuego quema la madera</span>
+            <span className="hint-item">La tierra se hunde en el agua · El agua apaga el fuego · El fuego quema la madera</span>
           </div>
         </div>
 
