@@ -579,7 +579,11 @@ export default function Fluidos() {
             if (grid[ny2*W+nx] === WATER) waterNeighbors++;
           }
           ages[i] = Math.max(0, ages[i] - 1 - (Math.random() > 0.6 ? 1 : 0) - waterNeighbors);
-          if (ages[i] === 0) { grid[i] = EMPTY; continue; }
+          if (ages[i] === 0) {
+            // Si murió rodeado de agua, produce vapor (conserva la masa)
+            grid[i] = waterNeighbors > 0 ? VAPOR : EMPTY;
+            ages[i] = 0; upd[i] = 1; continue;
+          }
 
           // Ignite adjacent wood
           for (const [dx, dy] of [[0,1],[0,-1],[1,0],[-1,0]]) {
