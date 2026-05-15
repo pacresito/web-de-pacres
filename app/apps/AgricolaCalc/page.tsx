@@ -26,16 +26,10 @@ function calcTablePts(count: number, animal: Animal): number {
   return 0;
 }
 
-// 6 inputs per player: 4 animal counts, terrain pts, building pts
-// ! rows auto-fill from scoring table — not manually entered
 const STEP_TO_ROW = [0, 1, 2, 3, 10, 11];
 const STEP_LABELS = [
-  "Ovejas 🐑",
-  "Cerdos 🐷",
-  "Vacas 🐄",
-  "Caballos 🐴",
-  "Puntos de terreno",
-  "Puntos de edificios",
+  "Ovejas 🐑", "Cerdos 🐷", "Vacas 🐄", "Caballos 🐴",
+  "Puntos de terreno", "Puntos de edificios",
 ];
 
 type RowDef =
@@ -138,20 +132,175 @@ const C = {
   gold:       "#8B6914",
 };
 
+type RegistroRecord = {
+  date: string;
+  players: string[];
+  inputs: number[][];
+  finals: number[];
+  winner: string;
+};
+
+type RegistroPage = {
+  records: RegistroRecord[];
+  total: number;
+  page: number;
+  totalPages: number;
+};
+
+function DetailTable({ record }: { record: RegistroRecord }) {
+  const { players, inputs, finals } = record;
+  const maxFinal = Math.max(...finals);
+  const scores = inputs.map((inp) =>
+    inp.map((v, i) => (i < 4 ? v : v) as number | null | "heart")
+  );
+  const derived = scores.map((s) => getDerived(s));
+
+  return (
+    <div className="rounded-xl overflow-hidden mt-2" style={{ border: `2px solid ${C.headerBg}` }}>
+      <div className="grid font-bold text-xs" style={{ gridTemplateColumns: "3rem 1fr 1fr", background: C.headerBg, borderBottom: `2px solid ${C.amber}` }}>
+        <div className="h-9 flex items-center justify-center text-lg" style={{ color: C.amber }}>🌾</div>
+        {players.map((p, pi) => (
+          <div key={pi} className="h-9 flex items-center justify-center" style={{ borderLeft: "1px solid rgba(255,255,255,0.12)", background: C.amber, color: C.cream }}>{p}</div>
+        ))}
+      </div>
+      {ROWS.map((row, rowIdx) => {
+        const isFinal = row.kind === "final";
+        const isSigma = row.kind === "sigma1" || row.kind === "sigma2" || isFinal;
+        const even = rowIdx % 2 === 0;
+        const rowBg = isFinal ? C.finalBg : isSigma ? C.sigmaGreen : even ? C.parchA : C.parchB;
+        const iconBg = isFinal ? "rgba(255,255,255,0.08)" : isSigma ? C.sigmaLight : even ? C.parchIconA : C.parchIconB;
+        const rowText = isSigma ? C.cream : C.text;
+        return (
+          <div key={rowIdx} className="grid" style={{ gridTemplateColumns: "3rem 1fr 1fr", background: rowBg, borderTop: isSigma ? `2px solid ${isFinal ? C.amber : "rgba(255,255,255,0.25)"}` : undefined }}>
+            <div className="flex items-center justify-center text-xs font-bold" style={{ height: 32, background: iconBg, color: rowText }}>
+              {getRowIcon(row)}
+            </div>
+            {[0, 1].map((pi) => {
+              const val = getCellValue(row, derived[pi]);
+              return (
+                <div key={pi} className="flex items-center justify-center font-mono text-xs font-bold" style={{ height: 32, borderLeft: "1px solid rgba(0,0,0,0.12)", color: val !== null ? isSigma ? C.cream : typeof val === "number" && val < 0 ? "#B91C1C" : C.text : "rgba(0,0,0,0.12)" }}>
+                  {val !== null ? (val === "heart" ? "💚" : val) : ""}
+                </div>
+              );
+            })}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function RegistroSection() {
+  const [open, setOpen] = useState(false);
+  const [data, setData] = useState<RegistroPage | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [expanded, setExpanded] = useState<number | null>(null);
+
+  const load = async (page = 1) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/registro/agricola?page=${page}`);
+      const json = await res.json();
+      setData(json);
+      setExpanded(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggle = () => {
+    if (!open && !data) load(1);
+    setOpen((v) => !v);
+  };
+
+  return (
+    <div className="mt-4 text-center">
+      <button onClick={toggle} className="text-xs transition-colors" style={{ color: C.amber }}>
+        Registro {open ? "▲" : "▼"}
+      </button>
+
+      {open && (
+        <div className="mt-3 text-left">
+          {loading && <p className="text-xs text-center" style={{ color: C.gold }}>Cargando…</p>}
+
+          {data && data.records.length === 0 && (
+            <p className="text-xs text-center" style={{ color: C.gold }}>No hay partidas guardadas.</p>
+          )}
+
+          {data && data.records.map((rec, i) => (
+            <div key={i} className="mb-3 rounded-xl px-3 py-2" style={{ background: C.cream, border: `1px solid ${C.amber}` }}>
+              <div className="flex items-center justify-between gap-2">
+                <div className="text-xs" style={{ color: C.text }}>
+                  <span className="font-mono">{rec.date}</span>
+                  {" · "}
+                  {rec.players.map((p, pi) => (
+                    <span key={pi}>
+                      {p} <span className="font-bold">{rec.finals[pi]}</span>
+                      {pi < rec.players.length - 1 ? " · " : ""}
+                    </span>
+                  ))}
+                  {" · "}
+                  <span className="font-bold" style={{ color: C.amber }}>🏆 {rec.winner}</span>
+                </div>
+                <button
+                  onClick={() => setExpanded(expanded === i ? null : i)}
+                  className="text-xs shrink-0"
+                  style={{ color: C.amber }}
+                >
+                  {expanded === i ? "Cerrar" : "Ver"}
+                </button>
+              </div>
+              {expanded === i && <DetailTable record={rec} />}
+            </div>
+          ))}
+
+          {data && data.totalPages > 1 && (
+            <div className="flex justify-center gap-4 mt-2">
+              <button onClick={() => load(data.page - 1)} disabled={data.page <= 1} className="text-xs disabled:opacity-30" style={{ color: C.amber }}>← Anterior</button>
+              <span className="text-xs" style={{ color: C.gold }}>{data.page} / {data.totalPages}</span>
+              <button onClick={() => load(data.page + 1)} disabled={data.page >= data.totalPages} className="text-xs disabled:opacity-30" style={{ color: C.amber }}>Siguiente →</button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AgricolaCalc() {
+  const [unlocked, setUnlocked] = useState(false);
+  const [passwordInput, setPasswordInput] = useState("");
+  const [passwordError, setPasswordError] = useState(false);
+
   const [scores, setScores] = useState(emptyScores());
-  const [step, setStep] = useState(0); // 0–11 (0–5 Lucas, 6–11 Pablo)
+  const [step, setStep] = useState(0);
   const [inputVal, setInputVal] = useState("");
   const [done, setDone] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
 
   const currentPlayer = Math.floor(step / 6);
   const localStep = step % 6;
   const currentRow = STEP_TO_ROW[localStep];
 
   useEffect(() => {
-    if (!done) inputRef.current?.focus();
-  }, [step, done]);
+    if (!done && unlocked) inputRef.current?.focus();
+  }, [step, done, unlocked]);
+
+  useEffect(() => {
+    if (!unlocked) passwordRef.current?.focus();
+  }, [unlocked]);
+
+  const unlock = () => {
+    if (passwordInput === "***REMOVED***") {
+      setUnlocked(true);
+      setPasswordError(false);
+    } else {
+      setPasswordError(true);
+    }
+  };
 
   const confirm = () => {
     const trimmed = inputVal.trim();
@@ -172,209 +321,190 @@ export default function AgricolaCalc() {
     setStep(0);
     setInputVal("");
     setDone(false);
+    setSaved(false);
+  };
+
+  const saveResult = async () => {
+    setSaving(true);
+    try {
+      const derived = [0, 1].map((pi) => getDerived(scores[pi]));
+      const finals = derived.map((d) => d.final ?? 0);
+      const maxFinal = Math.max(...finals);
+      const winners = PLAYERS.filter((_, i) => finals[i] === maxFinal);
+      const winner = winners.length > 1 ? "Empate" : winners[0];
+      const date = new Date().toISOString().slice(0, 10);
+      const inputs = scores.map((ps) =>
+        ps.map((v) => (v === "heart" ? 0 : (v ?? 0)))
+      );
+
+      const res = await fetch("/api/registro/agricola", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: passwordInput, date, players: PLAYERS, inputs, finals, winner }),
+      });
+      if (res.ok) setSaved(true);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const derived = [0, 1].map((pi) => getDerived(scores[pi]));
   const finals = derived.map((d) => d.final);
-  const maxFinal =
-    done ? Math.max(...(finals.filter((f) => f !== null) as number[])) : null;
+  const maxFinal = done ? Math.max(...(finals.filter((f) => f !== null) as number[])) : null;
   const anyHeart = scores.some((ps) => ps.includes("heart"));
 
   return (
-    <main
-      className="min-h-screen flex flex-col items-center py-6 px-4"
-      style={{ background: "#FAF3E0" }}
-    >
+    <main className="min-h-screen flex flex-col items-center py-6 px-4" style={{ background: "#FAF3E0" }}>
       <div className="w-full" style={{ maxWidth: "22rem" }}>
 
-        <h1
-          className="text-center text-xl font-bold mb-0.5"
-          style={{ color: C.headerBg, fontFamily: "Georgia, serif", letterSpacing: "0.04em" }}
-        >
+        <h1 className="text-center text-xl font-bold mb-0.5" style={{ color: C.headerBg, fontFamily: "Georgia, serif", letterSpacing: "0.04em" }}>
           Agrícola
         </h1>
-        <p className="text-center text-xs mb-5" style={{ color: C.gold }}>
-          All Creatures Big and Small
-        </p>
+        <p className="text-center text-xs mb-5" style={{ color: C.gold }}>All Creatures Big and Small</p>
 
-        {done && maxFinal !== null && (
-          <div
-            className="rounded-xl px-4 py-3 mb-4 text-center font-bold text-base"
-            style={
-              anyHeart
-                ? { background: "linear-gradient(135deg, #fbbf24, #4ade80, #60a5fa, #f472b6)", color: "#fff" }
-                : finals.filter((f) => f === maxFinal).length > 1
-                ? { background: C.parchB, color: C.text, border: `1px solid ${C.amber}` }
-                : { background: C.amber, color: C.cream }
-            }
-          >
-            {anyHeart
-              ? "Todo el mundo gana 🌈"
-              : finals.filter((f) => f === maxFinal).length > 1
-              ? "Empate"
-              : `Gana ${PLAYERS[finals.indexOf(maxFinal)]}`}
-          </div>
-        )}
-
-        <div
-          className="rounded-2xl overflow-hidden shadow-lg"
-          style={{ border: `2px solid ${C.headerBg}` }}
-        >
-          {/* Header */}
-          <div
-            className="grid font-bold text-sm"
-            style={{
-              gridTemplateColumns: "3rem 1fr 1fr",
-              background: C.headerBg,
-              borderBottom: `3px solid ${C.amber}`,
-            }}
-          >
-            <div className="h-12 flex items-center justify-center text-2xl" style={{ color: C.amber }}>
-              🌾
-            </div>
-            {PLAYERS.map((p, pi) => (
-              <div
-                key={pi}
-                className="h-12 flex items-center justify-center text-sm font-bold"
-                style={{
-                  borderLeft: "1px solid rgba(255,255,255,0.12)",
-                  background:
-                    done && maxFinal !== null
-                      ? C.amber
-                      : "rgba(255,255,255,0.07)",
-                  color:
-                    done && maxFinal !== null
-                      ? C.cream
-                      : "#e8d5b0",
-                }}
-              >
-                {p}
-              </div>
-            ))}
-          </div>
-
-          {/* Rows */}
-          {ROWS.map((row, rowIdx) => {
-            const isFinal = row.kind === "final";
-            const isSigma = row.kind === "sigma1" || row.kind === "sigma2" || isFinal;
-            const even = rowIdx % 2 === 0;
-
-            const rowBg = isFinal
-              ? C.finalBg
-              : isSigma
-              ? C.sigmaGreen
-              : even ? C.parchA : C.parchB;
-
-            const iconBg = isFinal
-              ? "rgba(255,255,255,0.08)"
-              : isSigma
-              ? C.sigmaLight
-              : even ? C.parchIconA : C.parchIconB;
-
-            const rowText = isSigma ? C.cream : C.text;
-
-            return (
-              <div
-                key={rowIdx}
-                className="grid"
-                style={{
-                  gridTemplateColumns: "3rem 1fr 1fr",
-                  background: rowBg,
-                  borderTop: isSigma
-                    ? `2px solid ${isFinal ? C.amber : "rgba(255,255,255,0.25)"}`
-                    : undefined,
-                }}
-              >
-                <div
-                  className="flex items-center justify-center text-sm font-bold"
-                  style={{ height: 38, background: iconBg, color: rowText }}
-                >
-                  {getRowIcon(row)}
-                </div>
-                {[0, 1].map((pi) => {
-                  const val = getCellValue(row, derived[pi]);
-                  const active = !done && currentRow === rowIdx && currentPlayer === pi;
-                  return (
-                    <div
-                      key={pi}
-                      className="flex items-center justify-center font-mono text-sm font-bold"
-                      style={{
-                        height: 38,
-                        borderLeft: "1px solid rgba(0,0,0,0.12)",
-                        color:
-                          val !== null
-                            ? isSigma
-                              ? C.cream
-                              : typeof val === "number" && val < 0
-                              ? "#B91C1C"
-                              : C.text
-                            : "rgba(0,0,0,0.12)",
-                        ...(active ? { boxShadow: `inset 0 0 0 2px ${C.amber}` } : {}),
-                      }}
-                    >
-                      {val !== null ? (val === "heart" ? "💚" : val) : ""}
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Input */}
-        {!done ? (
-          <div
-            className="mt-5 rounded-2xl px-4 pt-4 pb-5 shadow"
-            style={{ background: C.cream, border: "1px solid #D4B87A" }}
-          >
-            <p className="text-center font-bold text-base mb-0.5" style={{ color: C.headerBg }}>
-              {PLAYERS[currentPlayer]}
-            </p>
-            <p className="text-center text-xs mb-3" style={{ color: C.gold }}>
-              {STEP_LABELS[localStep]}
-            </p>
+        {/* Password gate */}
+        {!unlocked && (
+          <div className="mb-5 rounded-2xl px-4 pt-4 pb-5 shadow" style={{ background: C.cream, border: `1px solid ${C.amber}` }}>
+            <p className="text-center font-bold text-sm mb-3" style={{ color: C.headerBg }}>Introduce la clave para jugar</p>
             <div className="flex gap-2">
               <input
-                ref={inputRef}
-                type="number"
-                inputMode="numeric"
-                value={inputVal}
-                onChange={(e) => setInputVal(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && confirm()}
-                placeholder="0"
-                className="flex-1 rounded-xl px-3 py-3 text-2xl text-center font-bold focus:outline-none"
-                style={{
-                  border: "2px solid #D4B87A",
-                  color: C.text,
-                  background: "#FFFDF5",
-                  minWidth: 0,
-                  transition: "border-color 0.15s",
-                }}
-                onFocus={(e) => (e.target.style.borderColor = C.amber)}
-                onBlur={(e) => (e.target.style.borderColor = "#D4B87A")}
+                ref={passwordRef}
+                type="password"
+                value={passwordInput}
+                onChange={(e) => { setPasswordInput(e.target.value); setPasswordError(false); }}
+                onKeyDown={(e) => e.key === "Enter" && unlock()}
+                placeholder="Clave"
+                className="flex-1 rounded-xl px-3 py-3 text-base text-center focus:outline-none"
+                style={{ border: `2px solid ${passwordError ? "#ef4444" : "#D4B87A"}`, background: "#FFFDF5", minWidth: 0 }}
               />
-              <button
-                onClick={confirm}
-                className="rounded-xl px-5 text-xl font-bold"
-                style={{ background: C.amber, color: C.cream }}
-              >
-                →
-              </button>
+              <button onClick={unlock} className="rounded-xl px-5 text-xl font-bold" style={{ background: C.amber, color: C.cream }}>→</button>
             </div>
-          </div>
-        ) : (
-          <div className="mt-5 text-center">
-            <button
-              onClick={reset}
-              className="rounded-xl px-8 py-3 font-bold"
-              style={{ background: C.amber, color: C.cream }}
-            >
-              Nueva partida
-            </button>
+            {passwordError && <p className="text-xs text-center mt-2" style={{ color: "#ef4444" }}>Clave incorrecta</p>}
           </div>
         )}
 
-        <div className="mt-8 text-center">
+        {unlocked && (
+          <>
+            {done && maxFinal !== null && (
+              <div
+                className="rounded-xl px-4 py-3 mb-4 text-center font-bold text-base"
+                style={
+                  anyHeart
+                    ? { background: "linear-gradient(135deg, #fbbf24, #4ade80, #60a5fa, #f472b6)", color: "#fff" }
+                    : finals.filter((f) => f === maxFinal).length > 1
+                    ? { background: C.parchB, color: C.text, border: `1px solid ${C.amber}` }
+                    : { background: C.amber, color: C.cream }
+                }
+              >
+                {anyHeart
+                  ? "Todo el mundo gana 🌈"
+                  : finals.filter((f) => f === maxFinal).length > 1
+                  ? "Empate"
+                  : `Gana ${PLAYERS[finals.indexOf(maxFinal)]}`}
+              </div>
+            )}
+
+            <div className="rounded-2xl overflow-hidden shadow-lg" style={{ border: `2px solid ${C.headerBg}` }}>
+              <div className="grid font-bold text-sm" style={{ gridTemplateColumns: "3rem 1fr 1fr", background: C.headerBg, borderBottom: `3px solid ${C.amber}` }}>
+                <div className="h-12 flex items-center justify-center text-2xl" style={{ color: C.amber }}>🌾</div>
+                {PLAYERS.map((p, pi) => (
+                  <div
+                    key={pi}
+                    className="h-12 flex items-center justify-center text-sm font-bold"
+                    style={{
+                      borderLeft: "1px solid rgba(255,255,255,0.12)",
+                      background: done && maxFinal !== null ? C.amber : "rgba(255,255,255,0.07)",
+                      color: done && maxFinal !== null ? C.cream : "#e8d5b0",
+                    }}
+                  >
+                    {p}
+                  </div>
+                ))}
+              </div>
+
+              {ROWS.map((row, rowIdx) => {
+                const isFinal = row.kind === "final";
+                const isSigma = row.kind === "sigma1" || row.kind === "sigma2" || isFinal;
+                const even = rowIdx % 2 === 0;
+                const rowBg = isFinal ? C.finalBg : isSigma ? C.sigmaGreen : even ? C.parchA : C.parchB;
+                const iconBg = isFinal ? "rgba(255,255,255,0.08)" : isSigma ? C.sigmaLight : even ? C.parchIconA : C.parchIconB;
+                const rowText = isSigma ? C.cream : C.text;
+                return (
+                  <div
+                    key={rowIdx}
+                    className="grid"
+                    style={{ gridTemplateColumns: "3rem 1fr 1fr", background: rowBg, borderTop: isSigma ? `2px solid ${isFinal ? C.amber : "rgba(255,255,255,0.25)"}` : undefined }}
+                  >
+                    <div className="flex items-center justify-center text-sm font-bold" style={{ height: 38, background: iconBg, color: rowText }}>
+                      {getRowIcon(row)}
+                    </div>
+                    {[0, 1].map((pi) => {
+                      const val = getCellValue(row, derived[pi]);
+                      const active = !done && currentRow === rowIdx && currentPlayer === pi;
+                      return (
+                        <div
+                          key={pi}
+                          className="flex items-center justify-center font-mono text-sm font-bold"
+                          style={{
+                            height: 38,
+                            borderLeft: "1px solid rgba(0,0,0,0.12)",
+                            color: val !== null ? isSigma ? C.cream : typeof val === "number" && val < 0 ? "#B91C1C" : C.text : "rgba(0,0,0,0.12)",
+                            ...(active ? { boxShadow: `inset 0 0 0 2px ${C.amber}` } : {}),
+                          }}
+                        >
+                          {val !== null ? (val === "heart" ? "💚" : val) : ""}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
+
+            {!done ? (
+              <div className="mt-5 rounded-2xl px-4 pt-4 pb-5 shadow" style={{ background: C.cream, border: "1px solid #D4B87A" }}>
+                <p className="text-center font-bold text-base mb-0.5" style={{ color: C.headerBg }}>{PLAYERS[currentPlayer]}</p>
+                <p className="text-center text-xs mb-3" style={{ color: C.gold }}>{STEP_LABELS[localStep]}</p>
+                <div className="flex gap-2">
+                  <input
+                    ref={inputRef}
+                    type="number"
+                    inputMode="numeric"
+                    value={inputVal}
+                    onChange={(e) => setInputVal(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && confirm()}
+                    placeholder="0"
+                    className="flex-1 rounded-xl px-3 py-3 text-2xl text-center font-bold focus:outline-none"
+                    style={{ border: "2px solid #D4B87A", color: C.text, background: "#FFFDF5", minWidth: 0 }}
+                    onFocus={(e) => (e.target.style.borderColor = C.amber)}
+                    onBlur={(e) => (e.target.style.borderColor = "#D4B87A")}
+                  />
+                  <button onClick={confirm} className="rounded-xl px-5 text-xl font-bold" style={{ background: C.amber, color: C.cream }}>→</button>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-5 flex flex-col items-center gap-3">
+                {!anyHeart && !saved && (
+                  <button
+                    onClick={saveResult}
+                    disabled={saving}
+                    className="rounded-xl px-8 py-3 font-bold"
+                    style={{ background: C.amber, color: C.cream, opacity: saving ? 0.6 : 1 }}
+                  >
+                    {saving ? "Guardando…" : "Guardar resultado"}
+                  </button>
+                )}
+                {saved && <p className="text-sm font-bold" style={{ color: C.amber }}>Guardado ✓</p>}
+                <button onClick={reset} className="rounded-xl px-8 py-3 font-bold" style={{ background: C.amber, color: C.cream }}>
+                  Nueva partida
+                </button>
+              </div>
+            )}
+          </>
+        )}
+
+        <RegistroSection />
+        <div className="mt-3 text-center">
           <Link href="/lab" className="text-xs transition-colors" style={{ color: "#B0956A" }}>
             pacr.es
           </Link>
