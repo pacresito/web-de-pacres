@@ -30,10 +30,10 @@ function calcTablePts(count: number, animal: Animal): number {
 // ! rows auto-fill from scoring table — not manually entered
 const STEP_TO_ROW = [0, 1, 2, 3, 10, 11];
 const STEP_LABELS = [
-  "¿Cuántas ovejas? 🐑",
-  "¿Cuántos cerdos? 🐷",
-  "¿Cuántas vacas? 🐄",
-  "¿Cuántos caballos? 🐴",
+  "Ovejas 🐑",
+  "Cerdos 🐷",
+  "Vacas 🐄",
+  "Caballos 🐴",
   "Puntos de terreno",
   "Puntos de edificios",
 ];
@@ -64,16 +64,17 @@ const ROWS: RowDef[] = [
 ];
 
 function emptyScores() {
-  return Array.from({ length: 2 }, () => Array(6).fill(null) as (number | null)[]);
+  return Array.from({ length: 2 }, () => Array(6).fill(null) as (number | null | "heart")[]);
 }
 
-function getDerived(s: (number | null)[]) {
-  const counts = s.slice(0, 4) as (number | null)[];
+function getDerived(s: (number | null | "heart")[]) {
+  const counts = s.slice(0, 4) as (number | null | "heart")[];
+  const numCounts = counts.map((v) => (v === "heart" ? 0 : v)) as (number | null)[];
   const tablePts = ANIMALS.map((a, i) =>
-    counts[i] !== null ? calcTablePts(counts[i]!, a) : null
+    numCounts[i] !== null ? calcTablePts(numCounts[i]!, a) : null
   );
   const sigma1 = counts.every((v) => v !== null)
-    ? (counts as number[]).reduce((a, b) => a + b, 0)
+    ? numCounts.reduce((a, b) => a + (b ?? 0), 0)
     : null;
   const tableSum = tablePts.every((v) => v !== null)
     ? (tablePts as number[]).reduce((a, b) => a + b, 0)
@@ -81,9 +82,11 @@ function getDerived(s: (number | null)[]) {
   const sigma2 = tableSum;
   const terrainPts = s[4];
   const buildingPts = s[5];
+  const numTerrainPts = terrainPts === "heart" ? 0 : terrainPts;
+  const numBuildingPts = buildingPts === "heart" ? 0 : buildingPts;
   const final =
-    sigma1 !== null && sigma2 !== null && terrainPts !== null && buildingPts !== null
-      ? sigma1 + sigma2 + terrainPts + buildingPts
+    sigma1 !== null && sigma2 !== null && numTerrainPts !== null && numBuildingPts !== null
+      ? sigma1 + sigma2 + numTerrainPts + numBuildingPts
       : null;
   return { counts, tablePts, sigma1, sigma2, terrainPts, buildingPts, final };
 }
@@ -108,7 +111,7 @@ function getRowIcon(row: RowDef) {
   return null;
 }
 
-function getCellValue(row: RowDef, d: ReturnType<typeof getDerived>): number | null {
+function getCellValue(row: RowDef, d: ReturnType<typeof getDerived>): number | null | "heart" {
   switch (row.kind) {
     case "animal":    return d.counts[row.idx];
     case "sigma1":    return d.sigma1;
@@ -155,8 +158,9 @@ export default function AgricolaCalc() {
     if (trimmed === "") return;
     const val = parseInt(trimmed, 10);
     if (isNaN(val)) return;
+    const stored: number | "heart" = val < 0 ? 0 : val > 99 ? "heart" : val;
     const newScores = scores.map((r) => [...r]);
-    newScores[currentPlayer][localStep] = val;
+    newScores[currentPlayer][localStep] = stored;
     setScores(newScores);
     setInputVal("");
     if (step < 11) setStep(step + 1);
@@ -174,6 +178,7 @@ export default function AgricolaCalc() {
   const finals = derived.map((d) => d.final);
   const maxFinal =
     done ? Math.max(...(finals.filter((f) => f !== null) as number[])) : null;
+  const anyHeart = scores.some((ps) => ps.includes("heart"));
 
   return (
     <main
@@ -196,12 +201,16 @@ export default function AgricolaCalc() {
           <div
             className="rounded-xl px-4 py-3 mb-4 text-center font-bold text-base"
             style={
-              finals.filter((f) => f === maxFinal).length > 1
+              anyHeart
+                ? { background: "linear-gradient(135deg, #fbbf24, #4ade80, #60a5fa, #f472b6)", color: "#fff" }
+                : finals.filter((f) => f === maxFinal).length > 1
                 ? { background: C.parchB, color: C.text, border: `1px solid ${C.amber}` }
                 : { background: C.amber, color: C.cream }
             }
           >
-            {finals.filter((f) => f === maxFinal).length > 1
+            {anyHeart
+              ? "Todo el mundo gana 🌈"
+              : finals.filter((f) => f === maxFinal).length > 1
               ? "Empate"
               : `Gana ${PLAYERS[finals.indexOf(maxFinal)]}`}
           </div>
@@ -230,11 +239,11 @@ export default function AgricolaCalc() {
                 style={{
                   borderLeft: "1px solid rgba(255,255,255,0.12)",
                   background:
-                    done && finals[pi] === maxFinal && maxFinal !== null
+                    done && maxFinal !== null
                       ? C.amber
                       : "rgba(255,255,255,0.07)",
                   color:
-                    done && finals[pi] === maxFinal && maxFinal !== null
+                    done && maxFinal !== null
                       ? C.cream
                       : "#e8d5b0",
                 }}
@@ -296,14 +305,14 @@ export default function AgricolaCalc() {
                           val !== null
                             ? isSigma
                               ? C.cream
-                              : val < 0
+                              : typeof val === "number" && val < 0
                               ? "#B91C1C"
                               : C.text
                             : "rgba(0,0,0,0.12)",
                         ...(active ? { boxShadow: `inset 0 0 0 2px ${C.amber}` } : {}),
                       }}
                     >
-                      {val !== null ? val : ""}
+                      {val !== null ? (val === "heart" ? "💚" : val) : ""}
                     </div>
                   );
                 })}

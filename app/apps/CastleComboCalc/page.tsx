@@ -72,12 +72,12 @@ function KeyIcon() {
 }
 
 function emptyScores(n: number) {
-  return Array.from({ length: n }, () => Array(10).fill(null) as (number | null)[]);
+  return Array.from({ length: n }, () => Array(10).fill(null) as (number | null | "heart")[]);
 }
 
 export default function CastleComboCalc() {
   const [numPlayers, setNumPlayers] = useState(2);
-  const [scores, setScores] = useState<(number | null)[][]>(emptyScores(2));
+  const [scores, setScores] = useState<(number | null | "heart")[][]>(emptyScores(2));
   const [stepPlayer, setStepPlayer] = useState(0);
   const [stepPos, setStepPos] = useState(0);
   const [inputVal, setInputVal] = useState("");
@@ -101,9 +101,10 @@ export default function CastleComboCalc() {
     if (trimmed === "") return;
     const val = parseInt(trimmed, 10);
     if (isNaN(val)) return;
+    const stored: number | "heart" = val < 0 ? 0 : val > 99 ? "heart" : val;
 
     const newScores = scores.map((r) => [...r]);
-    newScores[stepPlayer][stepPos] = val;
+    newScores[stepPlayer][stepPos] = stored;
     setScores(newScores);
     setInputVal("");
 
@@ -126,8 +127,9 @@ export default function CastleComboCalc() {
   };
 
   const players = ALL_PLAYERS.slice(0, numPlayers);
-  const totals = scores.map((ps) => ps.reduce((s: number, v) => s + (v ?? 0), 0));
+  const totals = scores.map((ps) => ps.reduce((s: number, v) => s + (v === "heart" ? 0 : (v ?? 0)), 0));
   const maxTotal = done ? Math.max(...totals) : null;
+  const anyHeart = scores.some((ps) => ps.includes("heart"));
   const showAddButton = !gameStarted && numPlayers < 6;
   const cols = `3.5rem ${Array(numPlayers).fill("1fr").join(" ")}${showAddButton ? " 2rem" : ""}`;
 
@@ -147,12 +149,16 @@ export default function CastleComboCalc() {
           <div
             className="rounded-xl px-4 py-3 mb-4 text-center font-bold text-base"
             style={
-              maxTotal !== null && totals.filter((t) => t === maxTotal).length > 1
+              anyHeart
+                ? { background: "linear-gradient(135deg, #fbbf24, #34d399, #60a5fa, #f472b6)", color: "#fff" }
+                : maxTotal !== null && totals.filter((t) => t === maxTotal).length > 1
                 ? { background: "#f3f4f6", color: "#4b5563", border: "1px solid #e5e7eb" }
                 : { background: "#fbbf24", color: "#78350f" }
             }
           >
-            {maxTotal !== null && totals.filter((t) => t === maxTotal).length > 1
+            {anyHeart
+              ? "Todo el mundo gana 🌈"
+              : maxTotal !== null && totals.filter((t) => t === maxTotal).length > 1
               ? "Empate"
               : `Gana ${players[totals.indexOf(maxTotal!)]}`}
           </div>
@@ -172,7 +178,7 @@ export default function CastleComboCalc() {
                 style={{
                   borderRight: "1px solid rgba(0,0,0,0.3)",
                   background: "#78b5d0",
-                  ...(done && totals[i] === maxTotal
+                  ...(done
                     ? { background: "#fbbf24", color: "#78350f" }
                     : {}),
                 }}
@@ -229,7 +235,7 @@ export default function CastleComboCalc() {
                         ...(isActiveCell ? { boxShadow: "inset 0 0 0 2px #4d91c0" } : {}),
                       }}
                     >
-                      {val !== null ? val : ""}
+                      {val !== null ? (val === "heart" ? "💙" : val) : ""}
                     </div>
                   );
                 })}
