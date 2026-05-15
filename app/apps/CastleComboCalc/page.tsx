@@ -91,17 +91,18 @@ type RegistroPage = {
 };
 
 function DetailTable({ record }: { record: RegistroRecord }) {
-  const { players, scores, totals } = record;
-  const maxTotal = Math.max(...totals);
+  const { players, scores, totals, winner } = record;
+  const isEmpate = winner === "Empate";
   const cols = `3.5rem ${Array(players.length).fill("1fr").join(" ")}`;
 
   return (
     <div className="rounded-xl overflow-hidden mt-2" style={{ border: "1px solid #bfdbfe" }}>
       <div className="grid text-white font-bold text-xs" style={{ gridTemplateColumns: cols, background: "#4d91c0", borderBottom: "3px solid rgba(255,255,255,0.85)" }}>
         <div className="h-9 flex items-center justify-center text-lg">🏰</div>
-        {players.map((p, i) => (
-          <div key={i} className="h-9 flex items-center justify-center" style={{ borderLeft: "1px solid rgba(0,0,0,0.2)", background: "#78b5d0" }}>{p}</div>
-        ))}
+        {players.map((p, i) => {
+          const hl = !isEmpate && p === winner;
+          return <div key={i} className="h-9 flex items-center justify-center" style={{ borderLeft: "1px solid rgba(0,0,0,0.2)", background: hl ? "#fbbf24" : "#78b5d0", color: hl ? "#78350f" : "#fff" }}>{p}</div>;
+        })}
       </div>
       {POSITIONS.map((posItem, rowIdx) => {
         const even = rowIdx % 2 === 0;
@@ -121,7 +122,7 @@ function DetailTable({ record }: { record: RegistroRecord }) {
       <div className="grid font-bold" style={{ gridTemplateColumns: cols, background: "#4d91c0", borderTop: "2px solid rgba(0,0,0,0.4)" }}>
         <div className="h-10 flex items-center justify-center text-white text-lg">Σ</div>
         {totals.map((total, i) => (
-          <div key={i} className="h-10 flex items-center justify-center text-sm font-bold" style={{ borderLeft: "1px solid rgba(0,0,0,0.2)", background: "#78b5d0", color: total === maxTotal ? "#fef08a" : "#fff" }}>
+          <div key={i} className="h-10 flex items-center justify-center text-sm font-bold" style={{ borderLeft: "1px solid rgba(0,0,0,0.2)", background: "#78b5d0", color: !isEmpate && players[i] === winner ? "#fef08a" : "#fff" }}>
             {total}
           </div>
         ))}

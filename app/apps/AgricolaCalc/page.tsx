@@ -148,8 +148,8 @@ type RegistroPage = {
 };
 
 function DetailTable({ record }: { record: RegistroRecord }) {
-  const { players, inputs, finals } = record;
-  const maxFinal = Math.max(...finals);
+  const { players, inputs, finals, winner } = record;
+  const isEmpate = winner === "Empate";
   const scores = inputs.map((inp) => inp.map((v) => v as number | null | "heart"));
   const derived = scores.map((s) => getDerived(s));
 
@@ -157,9 +157,10 @@ function DetailTable({ record }: { record: RegistroRecord }) {
     <div className="rounded-xl overflow-hidden mt-2" style={{ border: `2px solid ${C.headerBg}` }}>
       <div className="grid font-bold text-xs" style={{ gridTemplateColumns: "3rem 1fr 1fr", background: C.headerBg, borderBottom: `2px solid ${C.amber}` }}>
         <div className="h-9 flex items-center justify-center text-lg" style={{ color: C.amber }}>🌾</div>
-        {players.map((p, pi) => (
-          <div key={pi} className="h-9 flex items-center justify-center" style={{ borderLeft: "1px solid rgba(255,255,255,0.12)", background: C.amber, color: C.cream }}>{p}</div>
-        ))}
+        {players.map((p, pi) => {
+          const hl = !isEmpate && p === winner;
+          return <div key={pi} className="h-9 flex items-center justify-center" style={{ borderLeft: "1px solid rgba(255,255,255,0.12)", background: hl ? C.amber : "rgba(255,255,255,0.07)", color: hl ? C.cream : "#e8d5b0" }}>{p}</div>;
+        })}
       </div>
       {ROWS.map((row, rowIdx) => {
         const isFinal = row.kind === "final";
