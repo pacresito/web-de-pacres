@@ -7,7 +7,7 @@ const KEY =
     : "registro:castle-combo";
 
 const PASSWORD = "***REMOVED***";
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 10;
 
 const POSITIONS = [
   "Superior izquierda", "Superior centro", "Superior derecha",
