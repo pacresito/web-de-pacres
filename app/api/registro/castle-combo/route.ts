@@ -98,13 +98,29 @@ export async function GET(request: Request) {
   });
 }
 
+const RATE_LIMIT_PREFIX = "ratelimit:registro:castle-combo:";
+const RATE_LIMIT_MAX = 5;
+const RATE_LIMIT_TTL = 900; // 15 min
+
 export async function POST(request: Request) {
+  const ip =
+    request.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
+  const rateLimitKey = RATE_LIMIT_PREFIX + ip;
+
+  const attempts = await redis.incr(rateLimitKey);
+  if (attempts === 1) await redis.expire(rateLimitKey, RATE_LIMIT_TTL);
+  if (attempts > RATE_LIMIT_MAX) {
+    return Response.json({ error: "Demasiados intentos. Espera 15 minutos." }, { status: 429 });
+  }
+
   const body = await request.json();
   const { password, date, players, scores, totals, winner } = body;
 
   if (password !== PASSWORD) {
     return Response.json({ error: "Clave incorrecta" }, { status: 401 });
   }
+
+  await redis.del(rateLimitKey);
   if (!date || !players || !scores || !totals || !winner) {
     return Response.json({ error: "Datos incompletos" }, { status: 400 });
   }
