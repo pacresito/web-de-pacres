@@ -74,7 +74,7 @@ function getDerived(s: (number | null | "heart")[]) {
     numCounts[i] !== null ? calcTablePts(numCounts[i]!, a) : null
   );
   const sigma1 = counts.every((v) => v !== null)
-    ? numCounts.reduce((a, b) => a + (b ?? 0), 0)
+    ? (numCounts as number[]).reduce((a, b) => a + b, 0)
     : null;
   const tableSum = tablePts.every((v) => v !== null)
     ? (tablePts as number[]).reduce((a, b) => a + b, 0)
