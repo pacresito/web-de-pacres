@@ -203,15 +203,20 @@ export async function POST(request: Request) {
   await redis.lpush(KEY, JSON.stringify(record));
 
   if (process.env.NODE_ENV !== "development") {
-    const resend = new Resend(process.env.RESEND_API_KEY);
-    resend.emails
-      .send({
+    try {
+      const resend = new Resend(process.env.RESEND_API_KEY);
+      const html = buildEmail(record);
+      const text = `Agrícola — ${date}\n${players.map((p: string, i: number) => `${p}: ${finals[i]}`).join("  |  ")}\nGanador: ${winner}`;
+      await resend.emails.send({
         from: "Web de Pacres <hola@pacr.es>",
         to: "pacres.g@gmail.com",
         subject: `Agrícola — ${date}`,
-        html: buildEmail(record),
-      })
-      .catch((err) => console.error("Resend error (registro agricola):", err));
+        html,
+        text,
+      });
+    } catch (err) {
+      console.error("Resend error (registro agricola):", err);
+    }
   }
 
   return Response.json({ ok: true });
