@@ -10,10 +10,10 @@ const PASSWORD = "***REMOVED***";
 const PAGE_SIZE = 10;
 
 const POSITIONS = [
-  "Superior izquierda", "Superior centro", "Superior derecha",
-  "Centro izquierda", "Centro", "Centro derecha",
-  "Inferior izquierda", "Inferior centro", "Inferior derecha",
-  "Llaves",
+  "↖️ Superior izquierda", "⬆️ Superior centro", "↗️ Superior derecha",
+  "◀️ Centro izquierda", "⏺️ Centro", "▶️ Centro derecha",
+  "↙️ Inferior izquierda", "⬇️ Inferior centro", "↘️ Inferior derecha",
+  "🗝️ Llaves",
 ];
 
 function buildEmail(record: {
