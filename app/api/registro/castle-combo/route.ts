@@ -6,7 +6,7 @@ const KEY =
     ? "registro:castle-combo-dev"
     : "registro:castle-combo";
 
-const PASSWORD = "***REMOVED***";
+const PASSWORD = process.env.REGISTRO_PASSWORD!;
 const PAGE_SIZE = 10;
 
 const POSITIONS = [

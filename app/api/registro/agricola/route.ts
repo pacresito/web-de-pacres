@@ -6,7 +6,7 @@ const KEY =
     ? "registro:agricola-dev"
     : "registro:agricola";
 
-const PASSWORD = "***REMOVED***";
+const PASSWORD = process.env.REGISTRO_PASSWORD!;
 const PAGE_SIZE = 10;
 
 const PLAYERS = ["Lucas", "Pablo"];
