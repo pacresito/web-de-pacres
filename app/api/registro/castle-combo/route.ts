@@ -10,10 +10,10 @@ const PASSWORD = "***REMOVED***";
 const PAGE_SIZE = 10;
 
 const POSITIONS = [
-  "↖️ Superior izquierda", "⬆️ Superior centro", "↗️ Superior derecha",
-  "◀️ Centro izquierda", "⏺️ Centro", "▶️ Centro derecha",
-  "↙️ Inferior izquierda", "⬇️ Inferior centro", "↘️ Inferior derecha",
-  "🗝️ Llaves",
+  "↖️", "⬆️", "↗️",
+  "◀️", "⏺️", "▶️",
+  "↙️", "⬇️", "↘️",
+  "🗝️",
 ];
 
 function buildEmail(record: {
@@ -25,11 +25,12 @@ function buildEmail(record: {
 }) {
   const { date, players, scores, totals, winner } = record;
 
+  const isEmpate = winner === "Empate";
   const headerCols = players
-    .map(
-      (p) =>
-        `<th style="padding:10px 14px;text-align:center;color:#fff;background:#78b5d0;border-left:1px solid rgba(0,0,0,0.2);">${p}</th>`
-    )
+    .map((p) => {
+      const hl = !isEmpate && p === winner;
+      return `<th style="padding:10px 14px;text-align:center;color:${hl ? "#78350f" : "#fff"};background:${hl ? "#fbbf24" : "#78b5d0"};border-left:1px solid rgba(0,0,0,0.2);">${p}</th>`;
+    })
     .join("");
 
   const bodyRows = POSITIONS.map((label, i) => {
@@ -48,10 +49,10 @@ function buildEmail(record: {
   }).join("");
 
   const totalCells = totals
-    .map(
-      (t, i) =>
-        `<td style="padding:12px 14px;text-align:center;font-size:18px;font-weight:bold;color:${totals[i] === Math.max(...totals) ? "#fef08a" : "#fff"};border-left:1px solid rgba(0,0,0,0.2);">${t}</td>`
-    )
+    .map((t, i) => {
+      const hl = !isEmpate && players[i] === winner;
+      return `<td style="padding:12px 14px;text-align:center;font-size:18px;font-weight:bold;color:${hl ? "#fef08a" : "#fff"};border-left:1px solid rgba(0,0,0,0.2);">${t}</td>`;
+    })
     .join("");
 
   return `<!DOCTYPE html>

@@ -14,10 +14,10 @@ const PLAYERS = ["Lucas", "Pablo"];
 type Animal = "sheep" | "pig" | "cow" | "horse";
 const ANIMALS: Animal[] = ["sheep", "pig", "cow", "horse"];
 const ANIMAL_LABELS: Record<Animal, string> = {
-  sheep: "Ovejas 🐑",
-  pig: "Cerdos 🐷",
-  cow: "Vacas 🐄",
-  horse: "Caballos 🐴",
+  sheep: "🐑",
+  pig: "🐷",
+  cow: "🐄",
+  horse: "🐴",
 };
 
 function calcTablePts(count: number, animal: Animal): number {
@@ -72,11 +72,12 @@ function buildEmail(record: {
     cream: "#FFF8E7",
   };
 
+  const isEmpate = winner === "Empate";
   const headerCols = players
-    .map(
-      (p) =>
-        `<th style="padding:10px 14px;text-align:center;color:${C.cream};background:${C.amber};border-left:1px solid rgba(255,255,255,0.12);">${p}</th>`
-    )
+    .map((p, pi) => {
+      const hl = !isEmpate && p === winner;
+      return `<th style="padding:10px 14px;text-align:center;color:${hl ? C.cream : "#e8d5b0"};background:${hl ? C.amber : "rgba(255,255,255,0.07)"};border-left:1px solid rgba(255,255,255,0.12);">${p}</th>`;
+    })
     .join("");
 
   type RowSpec =
@@ -110,10 +111,9 @@ function buildEmail(record: {
 
     let label = "Σ";
     if (row.kind === "animal") label = row.label;
-    else if (row.kind === "bonus") label = `!${row.label.split(" ")[1] ?? ""}`;
-    else if (row.kind === "terrains") label = "🌿 Terreno";
-    else if (row.kind === "buildings") label = "🏠 Edificios";
-    else if (row.kind === "final") label = "Σ Total";
+    else if (row.kind === "bonus") label = `!${row.label}`;
+    else if (row.kind === "terrains") label = "🌿";
+    else if (row.kind === "buildings") label = "🏠";
 
     const getVal = (pi: number): number | null => {
       const d = derived[pi];

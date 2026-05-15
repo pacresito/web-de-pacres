@@ -379,7 +379,7 @@ export default function AgricolaCalc() {
           <div className="grid font-bold text-sm" style={{ gridTemplateColumns: "3rem 1fr 1fr", background: C.headerBg, borderBottom: `3px solid ${C.amber}` }}>
             <div className="h-12 flex items-center justify-center text-2xl" style={{ color: C.amber }}>🌾</div>
             {PLAYERS.map((p, pi) => (
-              <div key={pi} className="h-12 flex items-center justify-center text-sm font-bold" style={{ borderLeft: "1px solid rgba(255,255,255,0.12)", background: done && maxFinal !== null ? C.amber : "rgba(255,255,255,0.07)", color: done && maxFinal !== null ? C.cream : "#e8d5b0" }}>
+              <div key={pi} className="h-12 flex items-center justify-center text-sm font-bold" style={{ borderLeft: "1px solid rgba(255,255,255,0.12)", background: done && maxFinal !== null && (anyHeart || (finals.filter(f => f === maxFinal).length === 1 && finals[pi] === maxFinal)) ? C.amber : "rgba(255,255,255,0.07)", color: done && maxFinal !== null && (anyHeart || (finals.filter(f => f === maxFinal).length === 1 && finals[pi] === maxFinal)) ? C.cream : "#e8d5b0" }}>
                 {p}
               </div>
             ))}

@@ -349,7 +349,7 @@ export default function CastleComboCalc() {
               <div
                 key={i}
                 className="h-12 flex items-center justify-center text-sm font-bold transition-colors"
-                style={{ borderRight: "1px solid rgba(0,0,0,0.3)", background: "#78b5d0", ...(done ? { background: "#fbbf24", color: "#78350f" } : {}) }}
+                style={{ borderRight: "1px solid rgba(0,0,0,0.3)", background: "#78b5d0", ...(done && (anyHeart || (totals.filter(t => t === maxTotal).length === 1 && totals[i] === maxTotal)) ? { background: "#fbbf24", color: "#78350f" } : {}) }}
               >
                 {p}
               </div>
@@ -404,7 +404,7 @@ export default function CastleComboCalc() {
               <div
                 key={i}
                 className="h-12 flex items-center justify-center text-xl font-bold"
-                style={{ borderRight: "1px solid rgba(0,0,0,0.3)", background: "#78b5d0", ...(done && totals[i] === maxTotal ? { color: "#fef08a" } : {}) }}
+                style={{ borderRight: "1px solid rgba(0,0,0,0.3)", background: "#78b5d0", ...(done && (anyHeart || (totals.filter(t => t === maxTotal).length === 1 && totals[i] === maxTotal)) ? { color: "#fef08a" } : {}) }}
               >
                 {scores[i].some((v) => v !== null) ? total : ""}
               </div>
