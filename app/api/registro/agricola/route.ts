@@ -166,7 +166,7 @@ function buildEmail(record: {
         ${bodyRows}
       </tbody>
     </table>
-    <p style="text-align:center;margin-top:16px;font-weight:bold;color:${C.cream};background:${C.amber};padding:10px;border-radius:8px;">🏆 ${winner} · ${players.map((p, i) => `${p}: ${finals[i]}`).join(" · ")}</p>
+    <p style="text-align:center;margin-top:16px;font-weight:bold;color:${C.cream};background:${C.amber};padding:10px;border-radius:8px;">🏆 ${winner}</p>
   </div>
 </body>
 </html>`;
