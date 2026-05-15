@@ -271,6 +271,7 @@ export default function AgricolaCalc() {
   const [showSavePrompt, setShowSavePrompt] = useState(false);
   const [savePassword, setSavePassword] = useState("");
   const [saveError, setSaveError] = useState(false);
+  const [saveAttempts, setSaveAttempts] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const savePasswordRef = useRef<HTMLInputElement>(null);
 
@@ -309,6 +310,7 @@ export default function AgricolaCalc() {
     setShowSavePrompt(false);
     setSavePassword("");
     setSaveError(false);
+    setSaveAttempts(0);
   };
 
   const saveResult = async () => {
@@ -333,6 +335,7 @@ export default function AgricolaCalc() {
         setShowSavePrompt(false);
       } else {
         setSaveError(true);
+        setSaveAttempts((n) => n + 1);
       }
     } finally {
       setSaving(false);
@@ -431,7 +434,7 @@ export default function AgricolaCalc() {
           </div>
         ) : (
           <div className="mt-5 flex flex-col items-center gap-3">
-            {!anyHeart && !saved && (
+            {!anyHeart && !saved && saveAttempts < 2 && (
               showSavePrompt ? (
                 <div className="w-full rounded-2xl px-4 pt-4 pb-4 shadow" style={{ background: C.cream, border: "1px solid #D4B87A" }}>
                   <p className="text-center text-sm font-bold mb-2" style={{ color: C.headerBg }}>Clave para guardar</p>

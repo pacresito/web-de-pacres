@@ -219,6 +219,7 @@ export default function CastleComboCalc() {
   const [showSavePrompt, setShowSavePrompt] = useState(false);
   const [savePassword, setSavePassword] = useState("");
   const [saveError, setSaveError] = useState(false);
+  const [saveAttempts, setSaveAttempts] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const savePasswordRef = useRef<HTMLInputElement>(null);
 
@@ -270,6 +271,7 @@ export default function CastleComboCalc() {
     setShowSavePrompt(false);
     setSavePassword("");
     setSaveError(false);
+    setSaveAttempts(0);
   };
 
   const saveResult = async () => {
@@ -296,6 +298,7 @@ export default function CastleComboCalc() {
         setShowSavePrompt(false);
       } else {
         setSaveError(true);
+        setSaveAttempts((n) => n + 1);
       }
     } finally {
       setSaving(false);
@@ -431,7 +434,7 @@ export default function CastleComboCalc() {
           </div>
         ) : (
           <div className="mt-5 flex flex-col items-center gap-3">
-            {!anyHeart && !saved && (
+            {!anyHeart && !saved && saveAttempts < 2 && (
               showSavePrompt ? (
                 <div className="w-full bg-white rounded-2xl px-4 pt-4 pb-4 shadow border border-blue-100">
                   <p className="text-center text-blue-800 text-xs font-bold mb-2">Clave para guardar</p>
