@@ -111,7 +111,7 @@ function buildEmail(record: {
 
     let label = "Σ";
     if (row.kind === "animal") label = row.label;
-    else if (row.kind === "bonus") label = `!${row.label}`;
+    else if (row.kind === "bonus") label = row.label;
     else if (row.kind === "terrains") label = "🌿";
     else if (row.kind === "buildings") label = "🏠";
 
