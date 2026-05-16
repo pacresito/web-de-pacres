@@ -11,7 +11,7 @@ function calcularEdad(nacimiento: Date): number {
 
 const edadLucas = calcularEdad(new Date(2020, 2, 30));
 
-type Extra = {
+type LabItem = {
   id: string;
   label: string;
   title: string;
@@ -23,7 +23,7 @@ type Extra = {
 };
 
 // Orden: Webs → Juegos → Bromas → Easter eggs
-const BASE_EXTRAS: Extra[] = [
+const BASE_ITEMS: LabItem[] = [
   {
     id: "lucas",
     label: "Web",
@@ -109,7 +109,7 @@ const BASE_EXTRAS: Extra[] = [
   },
 ];
 
-const PLACEHOLDER: Extra = {
+const PLACEHOLDER: LabItem = {
   id: "placeholder",
   label: "Web",
   title: "Aquí va lo importante",
@@ -133,12 +133,12 @@ export default function Laboratorio() {
   }, []);
 
   // Placeholder siempre en 1 columna; en 2 columnas solo si hay impar de elementos base
-  const showPlaceholder = !twoColumns || BASE_EXTRAS.length % 2 !== 0;
-  const lastWebIndex = BASE_EXTRAS.reduce((last, item, i) => item.label === "Web" ? i : last, -1);
+  const showPlaceholder = !twoColumns || BASE_ITEMS.length % 2 !== 0;
+  const lastWebIndex = BASE_ITEMS.reduce((last, item, i) => item.label === "Web" ? i : last, -1);
   const insertAt = lastWebIndex + 1;
-  const displayExtras = showPlaceholder
-    ? [...BASE_EXTRAS.slice(0, insertAt), PLACEHOLDER, ...BASE_EXTRAS.slice(insertAt)]
-    : BASE_EXTRAS;
+  const displayItems = showPlaceholder
+    ? [...BASE_ITEMS.slice(0, insertAt), PLACEHOLDER, ...BASE_ITEMS.slice(insertAt)]
+    : BASE_ITEMS;
 
   useEffect(() => {
     observerRef.current?.disconnect();
@@ -302,7 +302,7 @@ export default function Laboratorio() {
 
         {/* Grid */}
         <div className="egg-grid">
-          {displayExtras.map((egg, i) => (
+          {displayItems.map((egg, i) => (
             <div
               key={egg.id}
               className={`egg-card reveal reveal-delay-${(i % 4) + 1}`}
