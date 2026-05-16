@@ -11,7 +11,7 @@ const PAGE_SIZE = 10;
 
 const POSITIONS = [
   "↖️", "⬆️", "↗️",
-  "◀️", "⏺️", "▶️",
+  "⬅️", "⏺️", "➡️",
   "↙️", "⬇️", "↘️",
   "🗝️",
 ];
@@ -29,7 +29,7 @@ function buildEmail(record: {
   const headerCols = players
     .map((p) => {
       const hl = !isEmpate && p === winner;
-      return `<th style="padding:10px 14px;text-align:center;color:${hl ? "#78350f" : "#fff"};background:${hl ? "#fbbf24" : "#78b5d0"};border-left:1px solid rgba(0,0,0,0.2);">${p}</th>`;
+      return `<th style="padding:10px 14px;text-align:center;color:#fff;background:${hl ? "#fbbf24" : "#78b5d0"};border-left:1px solid rgba(0,0,0,0.2);">${p}</th>`;
     })
     .join("");
 
@@ -76,7 +76,7 @@ function buildEmail(record: {
         </tr>
       </tbody>
     </table>
-    <p style="text-align:center;margin-top:16px;font-weight:bold;color:#78350f;background:#fbbf24;padding:10px;border-radius:8px;">🏆 ${winner}</p>
+    <p style="text-align:center;margin-top:16px;font-weight:bold;color:#fff;background:#fbbf24;padding:10px;border-radius:8px;">🏆 ${winner}</p>
   </div>
 </body>
 </html>`;

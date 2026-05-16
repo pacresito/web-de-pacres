@@ -8,16 +8,16 @@ const ALL_PLAYERS = ["Lucas", "Pablo", "Prince", "Princess", "His Majesty", "Her
 type Pos = { row: number; col: number } | null;
 
 const POSITIONS: { label: string; pos: Pos; isKey?: boolean }[] = [
-  { label: "Superior izquierda", pos: { row: 0, col: 0 } },
-  { label: "Superior centro",    pos: { row: 0, col: 1 } },
-  { label: "Superior derecha",   pos: { row: 0, col: 2 } },
-  { label: "Centro izquierda",   pos: { row: 1, col: 0 } },
-  { label: "Centro",             pos: { row: 1, col: 1 } },
-  { label: "Centro derecha",     pos: { row: 1, col: 2 } },
-  { label: "Inferior izquierda", pos: { row: 2, col: 0 } },
-  { label: "Inferior centro",    pos: { row: 2, col: 1 } },
-  { label: "Inferior derecha",   pos: { row: 2, col: 2 } },
-  { label: "Llaves",             pos: null, isKey: true },
+  { label: "Arriba izquierda ↖️", pos: { row: 0, col: 0 } },
+  { label: "Arriba ⬆️",           pos: { row: 0, col: 1 } },
+  { label: "Arriba derecha ↗️",   pos: { row: 0, col: 2 } },
+  { label: "Izquierda ⬅️",        pos: { row: 1, col: 0 } },
+  { label: "Centro ⏺️",           pos: { row: 1, col: 1 } },
+  { label: "Derecha ➡️",          pos: { row: 1, col: 2 } },
+  { label: "Abajo izquierda ↙️",  pos: { row: 2, col: 0 } },
+  { label: "Abajo ⬇️",            pos: { row: 2, col: 1 } },
+  { label: "Abajo derecha ↘️",    pos: { row: 2, col: 2 } },
+  { label: "Llaves 🗝️",           pos: null, isKey: true },
 ];
 
 function PinIcon() {
@@ -101,7 +101,7 @@ function DetailTable({ record }: { record: RegistroRecord }) {
         <div className="h-9 flex items-center justify-center text-lg">🏰</div>
         {players.map((p, i) => {
           const hl = !isEmpate && p === winner;
-          return <div key={i} className="h-9 flex items-center justify-center" style={{ borderLeft: "1px solid rgba(0,0,0,0.2)", background: hl ? "#fbbf24" : "#78b5d0", color: hl ? "#78350f" : "#fff" }}>{p}</div>;
+          return <div key={i} className="h-9 flex items-center justify-center" style={{ borderLeft: "1px solid rgba(0,0,0,0.2)", background: hl ? "#fbbf24" : "#78b5d0", color: "#fff" }}>{p}</div>;
         })}
       </div>
       {POSITIONS.map((posItem, rowIdx) => {
@@ -330,7 +330,7 @@ export default function CastleComboCalc() {
                 ? { background: "linear-gradient(135deg, #fbbf24, #34d399, #60a5fa, #f472b6)", color: "#fff" }
                 : maxTotal !== null && totals.filter((t) => t === maxTotal).length > 1
                 ? { background: "#f3f4f6", color: "#4b5563", border: "1px solid #e5e7eb" }
-                : { background: "#fbbf24", color: "#78350f" }
+                : { background: "#fbbf24", color: "#fff" }
             }
           >
             {anyHeart
@@ -350,7 +350,7 @@ export default function CastleComboCalc() {
               <div
                 key={i}
                 className="h-12 flex items-center justify-center text-sm font-bold transition-colors"
-                style={{ borderRight: "1px solid rgba(0,0,0,0.3)", background: "#78b5d0", ...(done && (anyHeart || (totals.filter(t => t === maxTotal).length === 1 && totals[i] === maxTotal)) ? { background: "#fbbf24", color: "#78350f" } : {}) }}
+                style={{ borderRight: "1px solid rgba(0,0,0,0.3)", background: "#78b5d0", ...(done && (anyHeart || (totals.filter(t => t === maxTotal).length === 1 && totals[i] === maxTotal)) ? { background: "#fbbf24", color: "#fff" } : {}) }}
               >
                 {p}
               </div>
