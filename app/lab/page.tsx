@@ -75,7 +75,7 @@ const BASE_ITEMS: LabItem[] = [
     title: "Círculo perfecto",
     description: "Dibuja el círculo más perfecto que puedas. A ver qué pasa.",
     status: "available",
-    href: "/bromas/circulo",
+    href: "/lab/circulo",
     cta: "Intentarlo →",
   },
   {
@@ -84,7 +84,7 @@ const BASE_ITEMS: LabItem[] = [
     title: "Alcanza tus objetivos",
     description: "El objetivo está justo ahí. Solo tienes que llegar.",
     status: "available",
-    href: "/bromas/objetivo",
+    href: "/lab/objetivo",
     cta: "Intentarlo →",
   },
   {
