@@ -121,18 +121,15 @@ function CardFace({ beast, w }: { beast: Beast; w: number }) {
 
       {isAce && (
         <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
-          <span style={{ fontSize: Math.floor(h * 0.48), color, lineHeight: 1, userSelect: "none" }}>{beast.suit}</span>
+          <span style={{ fontSize: Math.floor(h * 0.58), color, lineHeight: 1, userSelect: "none" }}>{beast.suit}</span>
         </div>
       )}
 
       {isFace && (
-        <>
-          <div style={{ position: "absolute", inset: Math.floor(w * 0.1), border: `1px solid ${color}`, borderRadius: 3, opacity: 0.2, pointerEvents: "none" }} />
-          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2, pointerEvents: "none" }}>
-            <span style={{ fontSize: Math.floor(h * 0.36), fontFamily: "Georgia, serif", color, lineHeight: 1, fontWeight: 700, userSelect: "none" }}>{beast.value}</span>
-            <span style={{ fontSize: Math.floor(h * 0.14), color, lineHeight: 1, userSelect: "none" }}>{beast.suit}</span>
-          </div>
-        </>
+        <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, pointerEvents: "none" }}>
+          <span style={{ fontSize: Math.floor(h * 0.26), fontFamily: "Georgia, serif", color, lineHeight: 1, fontWeight: 700, userSelect: "none" }}>{beast.value}</span>
+          <span style={{ fontSize: Math.floor(h * 0.40), color, lineHeight: 1, userSelect: "none" }}>{beast.suit}</span>
+        </div>
       )}
 
       {!isAce && !isFace && CHARM_POSITIONS[beast.value] && (
@@ -142,7 +139,7 @@ function CardFace({ beast, w }: { beast: Beast; w: number }) {
               position: "absolute",
               left: `${rx * 100}%`, top: `${ry * 100}%`,
               transform: `translate(-50%, -50%)${ry > 0.5 ? " rotate(180deg)" : ""}`,
-              fontSize: Math.max(8, Math.floor(w * 0.28)),
+              fontSize: Math.max(9, Math.floor(w * 0.34)),
               color, lineHeight: 1, userSelect: "none",
             }}>
               {beast.suit}
@@ -169,6 +166,9 @@ function SpellWheel({
   const dragging = useRef(false);
   const startAngleRef = useRef(0);
   const startRotRef = useRef(0);
+  const lastAngleRef = useRef(0);
+  const lastAngleTimeRef = useRef(0);
+  const angularVelRef = useRef(0);
   const animFrame = useRef(0);
   const settled = useRef(false);
   const hasStarted = useRef(false);
@@ -196,20 +196,25 @@ function SpellWheel({
   }
 
   function snap() {
+    const speed = Math.abs(angularVelRef.current); // rad/ms
+    // Mínimo 3 vueltas completas siempre para que no se adivine
+    const extraRevs = Math.min(8, Math.max(3, speed * 5000));
     const tIdx = RUNES.indexOf(targetRune);
     const step = (2 * Math.PI) / RUNE_COUNT;
     let target = -Math.PI / 2 - tIdx * step;
-    const minFinal = rotRef.current + 3 * 2 * Math.PI;
+    const minFinal = rotRef.current + extraRevs * 2 * Math.PI;
     while (target < minFinal) target += 2 * Math.PI;
 
     const from = rotRef.current;
     const delta = target - from;
-    const duration = Math.max(1800, Math.min(3500, Math.abs(delta) * 140));
+    // Frenado muy suave: mínimo 5s, máximo 10s — ease-out cuadrático (más gradual)
+    const duration = Math.max(5000, Math.min(10000, Math.abs(delta) * 300));
     const t0 = performance.now();
 
     function frame(now: number) {
       const t = Math.min((now - t0) / duration, 1);
-      const eased = 1 - Math.pow(1 - t, 4);
+      // ease-out cuadrático — deceleración suave y gradual
+      const eased = 1 - Math.pow(1 - t, 2);
       updateRot(from + delta * eased);
       if (t < 1) {
         animFrame.current = requestAnimationFrame(frame);
@@ -225,8 +230,12 @@ function SpellWheel({
     if (settled.current) return;
     cancelAnimationFrame(animFrame.current);
     dragging.current = true;
-    startAngleRef.current = getPtrAngle(e.clientX, e.clientY);
+    const a = getPtrAngle(e.clientX, e.clientY);
+    startAngleRef.current = a;
     startRotRef.current = rotRef.current;
+    lastAngleRef.current = a;
+    lastAngleTimeRef.current = performance.now();
+    angularVelRef.current = 0;
     (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
     if (!hasStarted.current) { hasStarted.current = true; onStart(); }
   }
@@ -234,6 +243,17 @@ function SpellWheel({
   function onPointerMove(e: React.PointerEvent) {
     if (!dragging.current) return;
     const angle = getPtrAngle(e.clientX, e.clientY);
+    const now = performance.now();
+    const dt = now - lastAngleTimeRef.current;
+    if (dt > 0 && dt < 150) {
+      let da = angle - lastAngleRef.current;
+      // wrap-around
+      if (da > Math.PI) da -= 2 * Math.PI;
+      if (da < -Math.PI) da += 2 * Math.PI;
+      angularVelRef.current = da / dt;
+    }
+    lastAngleRef.current = angle;
+    lastAngleTimeRef.current = now;
     updateRot(startRotRef.current + (angle - startAngleRef.current));
   }
 
@@ -348,8 +368,8 @@ export default function MagicPage() {
     }}>
       <style>{`
         @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
-        @keyframes beastGrow { 0% { opacity:0; transform:scale(0.3); } 70% { transform:scale(1.1); } 100% { opacity:1; transform:scale(1); } }
-        @keyframes cardEmerge { 0% { opacity:0; transform:scale(0.08) translateY(-24px); } 65% { transform:scale(1.06) translateY(2px); } 100% { opacity:1; transform:scale(1) translateY(0); } }
+        @keyframes beastGrow { 0% { opacity:0; transform:scale(0.25); } 80% { transform:scale(1.04); } 100% { opacity:1; transform:scale(1); } }
+        @keyframes cardEmerge { 0% { opacity:0; transform:translateY(-55px) scale(0.06); } 15% { opacity:1; } 100% { transform:translateY(0) scale(1); } }
         @keyframes spellFade { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
       `}</style>
 
@@ -358,10 +378,10 @@ export default function MagicPage() {
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "2rem", marginTop: "5rem", animation: "fadeUp 0.5s ease" }}>
           <div style={{ textAlign: "center" }}>
             <h1 style={{ color: "#111827", fontSize: "1.6rem", fontWeight: 800, letterSpacing: "-0.03em" }}>
-              ¿Puedes guardar un secreto?
+              Piensa en una carta.
             </h1>
             <p style={{ color: "#9ca3af", fontSize: "0.88rem", marginTop: "0.75rem", fontFamily: mono }}>
-              Piensa en una de las cartas que vas a ver. Solo una.
+              No me la digas.
             </p>
           </div>
           <button
@@ -379,15 +399,11 @@ export default function MagicPage() {
           <div style={{ textAlign: "center" }}>
             <p style={{ color: "#9ca3af", fontSize: "0.7rem", fontFamily: mono }}>Ronda {round + 1} de 3</p>
             <p style={{ color: "#111827", fontSize: "1rem", fontWeight: 600, marginTop: "0.3rem" }}>
-              {round === 0
-                ? "Elige una carta. Grábatela en la mente."
-                : "¿En qué columna está tu carta?"}
+              ¿En qué columna está tu carta?
             </p>
-            {round > 0 && (
-              <p style={{ color: "#9ca3af", fontSize: "0.78rem", fontFamily: mono, marginTop: "0.3rem" }}>
-                {ROUND_HINTS[round]}
-              </p>
-            )}
+            <p style={{ color: "#9ca3af", fontSize: "0.78rem", fontFamily: mono, marginTop: "0.3rem" }}>
+              {round === 0 ? "Elige una carta. Grábatela en la mente." : ROUND_HINTS[round]}
+            </p>
           </div>
           <div key={round} style={{ display: "flex", gap: 14, alignItems: "flex-start", animation: "fadeUp 0.25s ease" }}>
             {[0, 1, 2].map((col) => (
@@ -435,7 +451,7 @@ export default function MagicPage() {
           {spinDone && (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1rem", animation: "fadeUp 0.4s ease" }}>
               <p style={{ color: "#111827", fontSize: "1.05rem", fontWeight: 600 }}>
-                Piensa en un animal que empiece por...
+                ¡La letra {guide.rune}! Piensa en un animal que empiece por {guide.rune}.
               </p>
               <button
                 onClick={() => setPhase("reveal")}
@@ -451,16 +467,16 @@ export default function MagicPage() {
       {/* REVEAL */}
       {phase === "reveal" && (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1.25rem", marginTop: "3rem", textAlign: "center" }}>
-          <div style={{ fontSize: "5.5rem", lineHeight: 1, animation: "beastGrow 1.2s cubic-bezier(0.34,1.56,0.64,1) both" }}>
+          <div style={{ fontSize: "5.5rem", lineHeight: 1, animation: "beastGrow 2s cubic-bezier(0.22,1,0.36,1) both" }}>
             {guide.emoji}
           </div>
-          <div style={{ animation: "cardEmerge 0.8s ease-out 1.7s both" }}>
+          <div style={{ animation: "cardEmerge 1.4s cubic-bezier(0.22,1,0.36,1) 2s both" }}>
             <CardFace beast={revealBeast} w={90} />
           </div>
           <p style={{
             color: "#111827", fontSize: "1rem", fontWeight: 600,
             maxWidth: 300, lineHeight: 1.5,
-            animation: "spellFade 0.5s ease 3s both",
+            animation: "spellFade 0.5s ease 4s both",
           }}>
             {summonPhrase(guideIdx, revealBeast)}
           </p>
@@ -469,7 +485,7 @@ export default function MagicPage() {
             style={{
               background: "none", border: "none", cursor: "pointer",
               color: "#9ca3af", fontSize: "0.78rem", fontFamily: mono,
-              animation: "spellFade 0.5s ease 3.5s both",
+              animation: "spellFade 0.5s ease 4.6s both",
             }}
           >
             Volver a intentarlo →
