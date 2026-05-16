@@ -23,7 +23,7 @@ const RUNE_COUNT = RUNES.length;
 const SPIRIT_GUIDES = [
   { article: "La", name: "iguana", emoji: "🦎", rune: "I", color: "#16a34a" },
   { article: "El", name: "ñu",     emoji: "🐃", rune: "Ñ", color: "#b45309" },
-  { article: "El", name: "koala",  emoji: "🐨", rune: "K", color: "#6b7280" },
+  { article: "El", name: "koala",  emoji: "🐨", rune: "K", color: "#7a6a5a" },
 ];
 
 const VALUE_ARTICLE: Record<string, string> = {
@@ -42,7 +42,7 @@ const VALUE_ES: Record<string, string> = {
 const ROUND_HINTS = ["", "No cambies de idea.", "La primera impresión es la correcta."];
 
 const CHARM_POSITIONS: Record<string, [number, number][]> = {
-  "2": [[0.22, 0.5], [0.78, 0.5]],
+  "2": [[0.3, 0.5], [0.7, 0.5]],
   "3": [[0.22, 0.5], [0.5, 0.5], [0.78, 0.5]],
   "4": [[0.24, 0.3], [0.24, 0.7], [0.76, 0.3], [0.76, 0.7]],
   "5": [[0.22, 0.3], [0.22, 0.7], [0.5, 0.5], [0.78, 0.3], [0.78, 0.7]],
@@ -130,8 +130,8 @@ function CardFace({ beast, w }: { beast: Beast; w: number }) {
       )}
 
       {isFace && (
-        <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, pointerEvents: "none" }}>
-          <span style={{ fontSize: Math.floor(h * 0.26), fontFamily: "Georgia, serif", color, lineHeight: 1, fontWeight: 700, userSelect: "none" }}>{beast.value}</span>
+        <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 0, pointerEvents: "none" }}>
+          <span style={{ fontSize: Math.floor(h * 0.26), fontFamily: "Georgia, serif", color, lineHeight: 1.1, fontWeight: 700, userSelect: "none" }}>{beast.value}</span>
           <span style={{ fontSize: Math.floor(h * 0.40), color, lineHeight: 1, userSelect: "none" }}>{beast.suit}</span>
         </div>
       )}
@@ -179,8 +179,11 @@ function SpellWheel({
   const [rot, setRot] = useState(0);
   const [activeIdx, setActiveIdx] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const forceBarRef = useRef<HTMLDivElement>(null);
+  const forceContainerRef = useRef<HTMLDivElement>(null);
+  const smoothVelRef = useRef(0);
+  const forceRafRef = useRef(0);
 
-  // initialise activeIdx for rot=0 on mount
   useEffect(() => { updateRot(0); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   function getPtrAngle(cx: number, cy: number): number {
@@ -199,11 +202,26 @@ function SpellWheel({
     setActiveIdx((idx + RUNE_COUNT) % RUNE_COUNT);
   }
 
+  function runForceBar() {
+    smoothVelRef.current *= 0.90; // gradual decay each frame
+    if (forceBarRef.current) {
+      const pct = Math.min(100, smoothVelRef.current * 10000);
+      forceBarRef.current.style.width = `${pct}%`;
+    }
+    if (smoothVelRef.current > 0.00005 || dragging.current) {
+      forceRafRef.current = requestAnimationFrame(runForceBar);
+    } else {
+      if (forceContainerRef.current) forceContainerRef.current.style.opacity = "0";
+    }
+  }
+
   function snap() {
-    const speed = Math.abs(angularVelRef.current); // rad/ms
-    const direction = angularVelRef.current >= 0 ? 1 : -1;
-    // Vueltas extra proporcionales a la velocidad — sin mínimo: empuje suave → menos de una vuelta
-    const extraRevs = speed * 5000;
+    if (forceContainerRef.current) forceContainerRef.current.style.opacity = "0";
+
+    const vel = angularVelRef.current;
+    const speed = Math.abs(vel);
+    const direction = vel >= 0 ? 1 : -1;
+    const extraRevs = Math.min(2, speed * 200);
     const tIdx = RUNES.indexOf(targetRune);
     const step = (2 * Math.PI) / RUNE_COUNT;
     let target = -Math.PI / 2 - tIdx * step;
@@ -217,14 +235,14 @@ function SpellWheel({
 
     const from = rotRef.current;
     const delta = target - from;
-    // Frenado suave: mínimo 1.5s, máximo 10s — ease-out cuadrático
-    const duration = Math.max(1500, Math.min(10000, Math.abs(delta) * 300));
+    // Cubic ease-out: deceleration decreases continuously, speed → 0 smoothly
+    // Duration proportional to force: 2s base + 3s per extra revolution
+    const duration = 2000 + extraRevs * 3000;
     const t0 = performance.now();
 
     function frame(now: number) {
       const t = Math.min((now - t0) / duration, 1);
-      // ease-out cuadrático — deceleración suave y gradual
-      const eased = 1 - Math.pow(1 - t, 2);
+      const eased = 1 - Math.pow(1 - t, 3);
       updateRot(from + delta * eased);
       if (t < 1) {
         animFrame.current = requestAnimationFrame(frame);
@@ -246,7 +264,12 @@ function SpellWheel({
     lastAngleRef.current = a;
     lastAngleTimeRef.current = performance.now();
     angularVelRef.current = 0;
+    smoothVelRef.current = 0;
     (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
+    if (forceContainerRef.current) forceContainerRef.current.style.opacity = "1";
+    if (forceBarRef.current) forceBarRef.current.style.width = "0%";
+    cancelAnimationFrame(forceRafRef.current);
+    forceRafRef.current = requestAnimationFrame(runForceBar);
     if (!hasStarted.current) { hasStarted.current = true; onStart(); }
   }
 
@@ -257,7 +280,6 @@ function SpellWheel({
     const dt = now - lastAngleTimeRef.current;
     if (dt > 0 && dt < 150) {
       let da = angle - lastAngleRef.current;
-      // wrap-around
       if (da > Math.PI) da -= 2 * Math.PI;
       if (da < -Math.PI) da += 2 * Math.PI;
       angularVelRef.current = da / dt;
@@ -265,6 +287,13 @@ function SpellWheel({
     lastAngleRef.current = angle;
     lastAngleTimeRef.current = now;
     updateRot(startRotRef.current + (angle - startAngleRef.current));
+    // Instant rise to max, slow fall — RAF handles decay
+    const speed = Math.abs(angularVelRef.current);
+    if (speed > smoothVelRef.current) {
+      smoothVelRef.current = speed;
+    } else {
+      smoothVelRef.current = smoothVelRef.current * 0.85 + speed * 0.15;
+    }
   }
 
   function onPointerUp() {
@@ -273,7 +302,10 @@ function SpellWheel({
     snap();
   }
 
-  useEffect(() => () => cancelAnimationFrame(animFrame.current), []);
+  useEffect(() => () => {
+    cancelAnimationFrame(animFrame.current);
+    cancelAnimationFrame(forceRafRef.current);
+  }, []);
 
   const size = WHEEL_R * 2;
 
@@ -314,6 +346,24 @@ function SpellWheel({
             </span>
           );
         })}
+      </div>
+      {/* Force indicator — shown while dragging, updated via DOM ref */}
+      <div
+        ref={forceContainerRef}
+        style={{
+          width: size, height: 4, borderRadius: 2,
+          background: "rgba(96,165,250,0.12)",
+          opacity: 0, transition: "opacity 0.2s",
+          overflow: "hidden",
+        }}
+      >
+        <div
+          ref={forceBarRef}
+          style={{
+            height: "100%", width: "0%",
+            background: "#3b82f6", borderRadius: 2,
+          }}
+        />
       </div>
     </div>
   );
@@ -378,8 +428,17 @@ export default function MagicPage() {
     }}>
       <style>{`
         @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
-        @keyframes beastGrow { 0% { opacity:0; transform:scale(0.25); } 80% { transform:scale(1.04); } 100% { opacity:1; transform:scale(1); } }
-        @keyframes cardEmerge { 0% { opacity:0; transform:translateY(-55px) scale(0.06); } 15% { opacity:1; } 100% { transform:translateY(0) scale(1); } }
+        @keyframes beastEnter {
+          0%   { opacity:0; transform:translate(-180px, 0) scale(0.08); }
+          15%  { opacity:1; }
+          85%  { transform:translate(0, 0) scale(1); }
+          100% { opacity:1; transform:translate(0, 0) scale(1); }
+        }
+        @keyframes cardFromBeast {
+          0%   { opacity:0; transform:translateY(-84px) scale(0.06); }
+          18%  { opacity:1; }
+          100% { transform:translateY(0) scale(1); }
+        }
         @keyframes spellFade { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
       `}</style>
 
@@ -478,22 +537,26 @@ export default function MagicPage() {
       {/* REVEAL */}
       {phase === "reveal" && (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1.25rem", marginTop: "3rem", textAlign: "center" }}>
-          <div style={{ fontSize: "5.5rem", lineHeight: 1, animation: "beastGrow 2s cubic-bezier(0.22,1,0.36,1) both" }}>
+          <div style={{
+            fontSize: "5.5rem", lineHeight: 1,
+            animation: "beastEnter 3.5s cubic-bezier(0.25,0.1,0.25,1) both",
+          }}>
             {guide.emoji}
           </div>
-          <div style={{ animation: "cardEmerge 1.4s cubic-bezier(0.22,1,0.36,1) 2s both" }}>
+          <div style={{ animation: "cardFromBeast 2s ease-out 3s both" }}>
             <CardFace beast={revealBeast} w={90} />
           </div>
           <p style={{
             color: "#6b7280", fontSize: "1rem", fontWeight: 600,
             maxWidth: 300, lineHeight: 1.5, textAlign: "center",
-            animation: "spellFade 0.5s ease 4s both",
+            animation: "spellFade 0.5s ease 5.5s both",
           }}>
             {guide.article}{" "}
             <span style={{ color: guide.color }}>{guide.name}</span>
             {" "}que había en tu mente se había comido{" "}
+            {cardArticle(revealBeast)}{" "}
             <span style={{ color: revealBeast.red ? "#dc2626" : "#111827" }}>
-              {cardArticle(revealBeast)} {spellName(revealBeast)}
+              {spellName(revealBeast)}
             </span>
             .
           </p>
@@ -502,7 +565,7 @@ export default function MagicPage() {
             style={{
               background: "none", border: "none", cursor: "pointer",
               color: "#9ca3af", fontSize: "0.78rem", fontFamily: mono,
-              animation: "spellFade 0.5s ease 4.6s both",
+              animation: "spellFade 0.5s ease 6s both",
             }}
           >
             Volver a intentarlo →
