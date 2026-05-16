@@ -22,7 +22,7 @@ type LabItem = {
   cta: string;
 };
 
-// Orden: Webs → Juegos → Bromas → Easter eggs
+// Orden: Webs → Juegos → Trucos → Easter eggs
 const BASE_ITEMS: LabItem[] = [
   {
     id: "lucas",
@@ -71,21 +71,21 @@ const BASE_ITEMS: LabItem[] = [
   },
   {
     id: "circulo",
-    label: "Broma",
+    label: "Truco",
     title: "Círculo perfecto",
     description: "Dibuja el círculo más perfecto que puedas. A ver qué pasa.",
     status: "available",
     href: "/lab/circulo",
-    cta: "Intentarlo →",
+    cta: "Probar →",
   },
   {
-    id: "objetivo",
-    label: "Broma",
-    title: "Alcanza tus objetivos",
-    description: "El objetivo está justo ahí. Solo tienes que llegar.",
+    id: "magia",
+    label: "Truco",
+    title: "Magia de la buena",
+    description: "Piensa en una carta. No me la digas.",
     status: "available",
-    href: "/lab/objetivo",
-    cta: "Intentarlo →",
+    href: "/lab/magia",
+    cta: "Probar →",
   },
   {
     id: "color",

@@ -1054,17 +1054,23 @@ export default function Laberinto() {
             ? "Toca el tablero para activar el giroscopio"
             : "Mueve el ratón o toca el tablero para inclinar"}
         </p>
-        <div style={{ display: "flex", alignItems: "center", width: 480, maxWidth: "100%", position: "relative" }}>
-          <a href="/lab" style={{ fontSize: "0.75rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", textDecoration: "none", transition: "color 0.2s" }}
-            onMouseEnter={e => (e.currentTarget.style.color = "#3b82f6")}
-            onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}>
-            pacr.es
-          </a>
+        <style>{`
+          .footer-inner { display: flex; align-items: center; width: 100%; max-width: 480px; position: relative; }
+          .footer-btn { position: absolute; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 4px; background: none; border: none; padding: 0; cursor: pointer; font-size: 0.7rem; color: #9ca3af; font-family: var(--font-geist-mono), monospace; transition: color 0.2s; white-space: nowrap; }
+          .footer-btn:hover { color: #3b82f6; }
+          .pacres-link { font-size: 0.75rem; color: #9ca3af; font-family: var(--font-geist-mono), monospace; text-decoration: none; transition: color 0.2s; }
+          .pacres-link:hover { color: #3b82f6; }
+          @media (max-width: 640px) {
+            .footer-inner { flex-direction: column; align-items: center; position: static; gap: 0.75rem; }
+            .footer-btn { position: static; transform: none; order: 1; }
+            .footer-inner .pacres-link { order: 2; }
+          }
+        `}</style>
+        <div className="footer-inner">
+          <a href="/lab" className="pacres-link">pacr.es</a>
           <button
+            className="footer-btn"
             onClick={() => { const next = !whyOpen; setWhyOpen(next); if (next) setTimeout(() => whyRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }), 50); }}
-            style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", gap: "4px", background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: "0.7rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", transition: "color 0.2s", whiteSpace: "nowrap" }}
-            onMouseEnter={e => (e.currentTarget.style.color = "#3b82f6")}
-            onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}
           >
             ¿Por qué un laberinto?
             <svg width="10" height="10" viewBox="0 0 10 10" style={{ transform: whyOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}>

@@ -37,6 +37,8 @@ export default function CirculoPerfecto() {
   const circleHoldStartRef = useRef<number | null>(null);
 
   const [sz, setSz] = useState(0);
+  const [whyOpen, setWhyOpen] = useState(false);
+  const whyRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     certNumRef.current = Math.floor(Math.random() * 900000) + 100000;
@@ -347,96 +349,126 @@ export default function CirculoPerfecto() {
   const pct = Math.round(displayScore * 100);
 
   return (
-    <div style={{ background: "#fff", minHeight: "100dvh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "1.5rem", padding: "2rem", position: "relative" }}>
-      <style>{`* { box-sizing: border-box; margin: 0; padding: 0; } body { background: #fff; }`}</style>
+    <div style={{ background: "#fff", minHeight: "100dvh", display: "flex", flexDirection: "column", alignItems: "center", padding: "2rem 2rem 4rem" }}>
+      <style>{`
+        * { box-sizing: border-box; margin: 0; padding: 0; } body { background: #fff; }
+        .footer-inner { display: flex; align-items: center; width: 100%; max-width: 480px; position: relative; }
+        .footer-btn { position: absolute; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 4px; background: none; border: none; padding: 0; cursor: pointer; font-size: 0.7rem; color: #9ca3af; font-family: var(--font-geist-mono), monospace; transition: color 0.2s; white-space: nowrap; }
+        .footer-btn:hover { color: #3b82f6; }
+        .pacres-link { font-size: 0.75rem; color: #9ca3af; font-family: var(--font-geist-mono), monospace; text-decoration: none; transition: color 0.2s; }
+        .pacres-link:hover { color: #3b82f6; }
+        @media (max-width: 640px) {
+          .footer-inner { flex-direction: column; align-items: center; position: static; gap: 0.75rem; }
+          .footer-btn { position: static; transform: none; order: 1; }
+          .footer-inner .pacres-link { order: 2; }
+        }
+      `}</style>
 
-      <h1 style={{ color: "#111827", fontSize: "1.5rem", fontWeight: 800, letterSpacing: "-0.03em" }}>
-        Círculo perfecto
-      </h1>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1.5rem", flex: 1, justifyContent: "center", width: "100%" }}>
+        <h1 style={{ color: "#111827", fontSize: "1.5rem", fontWeight: 800, letterSpacing: "-0.03em" }}>
+          Círculo perfecto
+        </h1>
 
-      <div style={{ position: "relative", width: sz || 480, height: sz || 480 }}>
-        <canvas
-          ref={canvasRef}
-          style={{
-            display: "block",
-            border: "1px solid rgba(96,165,250,0.2)",
-            borderRadius: "8px",
-            cursor: "default",
-            touchAction: "none",
-            userSelect: "none",
-          }}
-        />
+        <div style={{ position: "relative", width: sz || 480, height: sz || 480 }}>
+          <canvas
+            ref={canvasRef}
+            style={{
+              display: "block",
+              border: "1px solid rgba(96,165,250,0.2)",
+              borderRadius: "8px",
+              cursor: "default",
+              touchAction: "none",
+              userSelect: "none",
+            }}
+          />
 
-        {phase === "idle" && (
-          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
-            <p style={{ color: "#9ca3af", fontSize: "0.85rem", fontFamily: "var(--font-geist-mono, monospace)" }}>
-              Dibuja un círculo
-            </p>
-          </div>
-        )}
-
-        {phase === "score" && (
-          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "rgba(255,255,255,0.9)", backdropFilter: "blur(6px)", borderRadius: "8px" }}>
-            <p style={{ fontSize: "4.5rem", fontWeight: 800, fontFamily: "var(--font-geist-mono, monospace)", color: displayScore >= THRESHOLD ? "#3b82f6" : "#111827", lineHeight: 1 }}>
-              {pct}%
-            </p>
-            <p style={{ marginTop: "0.75rem", fontSize: "0.85rem", color: "#9ca3af" }}>
-              {displayScore >= THRESHOLD ? "Un momento..." : pct >= 65 ? "Casi, casi..." : "Inténtalo de nuevo"}
-            </p>
-          </div>
-        )}
-
-        {phase === "caught" && (
-          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "rgba(255,255,255,0.97)", borderRadius: "8px", gap: "1.5rem" }}>
-            <div style={{ border: "2px solid #3b82f6", borderRadius: "4px", padding: "1.75rem 2rem", width: "82%", maxWidth: "300px", textAlign: "center", position: "relative" }}>
-              <div style={{ position: "absolute", inset: 5, border: "1px solid rgba(96,165,250,0.3)", borderRadius: "3px", pointerEvents: "none" }} />
-              <p style={{ fontSize: "0.55rem", letterSpacing: "0.22em", textTransform: "uppercase", fontFamily: "var(--font-geist-mono, monospace)", color: "#3b82f6", marginBottom: "0.75rem" }}>
-                Certificado oficial
+          {phase === "idle" && (
+            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
+              <p style={{ color: "#9ca3af", fontSize: "0.85rem", fontFamily: "var(--font-geist-mono, monospace)" }}>
+                Dibuja un círculo
               </p>
-              <p style={{ fontSize: "1.15rem", fontWeight: 800, letterSpacing: "-0.02em", color: "#111827" }}>
-                Círculo Perfecto
+            </div>
+          )}
+
+          {phase === "score" && (
+            <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "rgba(255,255,255,0.9)", backdropFilter: "blur(6px)", borderRadius: "8px" }}>
+              <p style={{ fontSize: "4.5rem", fontWeight: 800, fontFamily: "var(--font-geist-mono, monospace)", color: displayScore >= THRESHOLD ? "#3b82f6" : "#111827", lineHeight: 1 }}>
+                {pct}%
               </p>
-              <p style={{ fontSize: "0.68rem", color: "#6b7280", margin: "0.75rem 0 1.25rem", lineHeight: 2.0, fontFamily: "var(--font-geist-mono, monospace)" }}>
-                Se certifica que el portador<br />
-                ha trazado un círculo<br />
-                de precisión extraordinaria
+              <p style={{ marginTop: "0.75rem", fontSize: "0.85rem", color: "#9ca3af" }}>
+                {displayScore >= THRESHOLD ? "Un momento..." : pct >= 65 ? "Casi, casi..." : "Inténtalo de nuevo"}
               </p>
-              <div style={{ borderTop: "1px solid rgba(96,165,250,0.25)", paddingTop: "0.9rem", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
-                <p style={{ fontSize: "0.58rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)" }}>
-                  Nº {certNumRef.current}
+            </div>
+          )}
+
+          {phase === "caught" && (
+            <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "rgba(255,255,255,0.97)", borderRadius: "8px", gap: "1.5rem" }}>
+              <div style={{ border: "2px solid #3b82f6", borderRadius: "4px", padding: "1.75rem 2rem", width: "82%", maxWidth: "300px", textAlign: "center", position: "relative" }}>
+                <div style={{ position: "absolute", inset: 5, border: "1px solid rgba(96,165,250,0.3)", borderRadius: "3px", pointerEvents: "none" }} />
+                <p style={{ fontSize: "0.55rem", letterSpacing: "0.22em", textTransform: "uppercase", fontFamily: "var(--font-geist-mono, monospace)", color: "#3b82f6", marginBottom: "0.75rem" }}>
+                  Certificado oficial
                 </p>
-                <div style={{ textAlign: "right" }}>
-                  <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: "0.88rem", color: "#374151" }}>
-                    Pablo Crespo
+                <p style={{ fontSize: "1.15rem", fontWeight: 800, letterSpacing: "-0.02em", color: "#111827" }}>
+                  Círculo Perfecto
+                </p>
+                <p style={{ fontSize: "0.68rem", color: "#6b7280", margin: "0.75rem 0 1.25rem", lineHeight: 2.0, fontFamily: "var(--font-geist-mono, monospace)" }}>
+                  Se certifica que el portador<br />
+                  ha trazado un círculo<br />
+                  de precisión extraordinaria
+                </p>
+                <div style={{ borderTop: "1px solid rgba(96,165,250,0.25)", paddingTop: "0.9rem", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+                  <p style={{ fontSize: "0.58rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)" }}>
+                    Nº {certNumRef.current}
                   </p>
-                  <div style={{ width: 76, height: 1, background: "rgba(0,0,0,0.15)", margin: "0.15rem 0 0 auto" }} />
-                  <p style={{ fontSize: "0.52rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", marginTop: "0.15rem" }}>
-                    Autoridad certificadora
-                  </p>
+                  <div style={{ textAlign: "right" }}>
+                    <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: "0.88rem", color: "#374151" }}>
+                      Pablo Crespo
+                    </p>
+                    <div style={{ width: 76, height: 1, background: "rgba(0,0,0,0.15)", margin: "0.15rem 0 0 auto" }} />
+                    <p style={{ fontSize: "0.52rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", marginTop: "0.15rem" }}>
+                      Autoridad certificadora
+                    </p>
+                  </div>
                 </div>
               </div>
+              <button onClick={reset} style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", fontSize: "0.78rem", fontFamily: "var(--font-geist-mono, monospace)", padding: "0.5rem" }}>
+                Volver a intentarlo
+              </button>
             </div>
-            <button onClick={reset} style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", fontSize: "0.78rem", fontFamily: "var(--font-geist-mono, monospace)", padding: "0.5rem" }}>
-              Volver a intentarlo
-            </button>
-          </div>
+          )}
+        </div>
+
+        {phase === "score" && displayScore < THRESHOLD && (
+          <button onClick={reset} style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", fontSize: "0.78rem", fontFamily: "var(--font-geist-mono, monospace)" }}>
+            Reintentar →
+          </button>
         )}
       </div>
 
-      {phase === "score" && displayScore < THRESHOLD && (
-        <button onClick={reset} style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", fontSize: "0.78rem", fontFamily: "var(--font-geist-mono, monospace)" }}>
-          Reintentar →
-        </button>
-      )}
-
-      <a
-        href="/lab"
-        style={{ position: "absolute", bottom: "1.5rem", left: "50%", transform: "translateX(-50%)", fontSize: "0.75rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", textDecoration: "none", transition: "color 0.2s" }}
-        onMouseEnter={e => (e.currentTarget.style.color = "#3b82f6")}
-        onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}
-      >
-        pacr.es
-      </a>
+      {/* Footer */}
+      <div style={{ marginTop: "auto", paddingTop: "1.5rem", paddingBottom: "0.5rem", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem", width: "100%" }}>
+        <div className="footer-inner">
+          <a href="/lab" className="pacres-link">pacr.es</a>
+          <button
+            className="footer-btn"
+            onClick={() => { const next = !whyOpen; setWhyOpen(next); if (next) setTimeout(() => whyRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }), 50); }}
+          >
+            ¿Por qué un círculo perfecto?
+            <svg width="10" height="10" viewBox="0 0 10 10" style={{ transform: whyOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}>
+              <path d="M1 3L5 7L9 3" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        </div>
+        {whyOpen && (
+          <div ref={whyRef} style={{ maxWidth: 420, fontSize: "0.78rem", color: "#6b7280", lineHeight: 1.65, textAlign: "center", display: "flex", flexDirection: "column", gap: "0.65rem" }}>
+            <p>Intentar dibujar un círculo perfecto a mano es una tarea condenada al fracaso, y precisamente por eso resulta interesante.</p>
+            <p>El sistema evalúa tu trazo, decide si se acerca lo suficiente a una circunferencia ideal y, cuando lo consigue, cambia las reglas.</p>
+            <p>Es una broma, pero también una forma de recordar que muchos objetivos «perfectos» funcionan así: parecen alcanzables hasta el momento exacto en el que llegas a ellos.</p>
+            <p>Hize otro «truco» similar, pero no funcionaba muy bien en mobile. Puedes probarlo aquí si tienes curiosidad: <a href="/lab/objetivo" style={{ color: "#3b82f6", textDecoration: "none" }}>Alcanza tus objetivos</a>.</p>
+            <p style={{ color: "#9ca3af", fontSize: "0.72rem" }}>Creado el 6 de mayo de 2026.</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

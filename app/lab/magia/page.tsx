@@ -96,10 +96,6 @@ function cardArticle(beast: Beast): string {
   return VALUE_ARTICLE[beast.value];
 }
 
-function getGuideIdx(castCount: number): number {
-  return (castCount - 1) % 3;
-}
-
 // ─── CardFace ─────────────────────────────────────────────────────────────────
 
 function CardFace({ beast, w }: { beast: Beast; w: number }) {
@@ -235,8 +231,6 @@ function SpellWheel({
 
     const from = rotRef.current;
     const delta = target - from;
-    // Cubic ease-out: deceleration decreases continuously, speed → 0 smoothly
-    // Duration proportional to force: 2s base + 3s per extra revolution
     const duration = 2000 + extraRevs * 3000;
     const t0 = performance.now();
 
@@ -287,7 +281,6 @@ function SpellWheel({
     lastAngleRef.current = angle;
     lastAngleTimeRef.current = now;
     updateRot(startRotRef.current + (angle - startAngleRef.current));
-    // Only rise here — RAF handles linear decay
     const speed = Math.abs(angularVelRef.current);
     if (speed > smoothVelRef.current) smoothVelRef.current = speed;
   }
@@ -343,7 +336,6 @@ function SpellWheel({
           );
         })}
       </div>
-      {/* Force indicator — shown while dragging, updated via DOM ref */}
       <div
         ref={forceContainerRef}
         style={{
@@ -367,11 +359,12 @@ function SpellWheel({
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
-export default function MagicPage() {
+export default function MagiaPage() {
   const [phase, setPhase] = useState<SpellPhase>("intro");
   const [deck, setDeck] = useState<Beast[]>(() => weave(buildBeastDeck()));
   const [round, setRound] = useState(0);
-  const [castCount, setCastCount] = useState(0);
+  const [guideIdx, setGuideIdx] = useState(0);
+  const lastGuideIdxRef = useRef(-1);
   const [spinStarted, setSpinStarted] = useState(false);
   const [spinDone, setSpinDone] = useState(false);
   const [cardW, setCardW] = useState(54);
@@ -386,16 +379,18 @@ export default function MagicPage() {
     return () => window.removeEventListener("resize", calc);
   }, []);
 
-  const guideIdx = castCount === 0 ? 0 : getGuideIdx(castCount);
   const guide = SPIRIT_GUIDES[guideIdx];
   const revealBeast = deck[10];
 
   function beginSpell() {
+    const options = [0, 1, 2].filter(i => i !== lastGuideIdxRef.current);
+    const newIdx = options[Math.floor(Math.random() * options.length)];
+    lastGuideIdxRef.current = newIdx;
+    setGuideIdx(newIdx);
     setDeck(weave(buildBeastDeck()));
     setRound(0);
     setSpinStarted(false);
     setSpinDone(false);
-    setCastCount((c) => c + 1);
     setPhase("dealing");
   }
 
@@ -444,10 +439,10 @@ export default function MagicPage() {
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "2rem", marginTop: "5rem", animation: "fadeUp 0.5s ease" }}>
           <div style={{ textAlign: "center" }}>
             <h1 style={{ color: "#111827", fontSize: "1.6rem", fontWeight: 800, letterSpacing: "-0.03em" }}>
-              Piensa en una carta.
+              Piensa en una carta
             </h1>
             <p style={{ color: "#9ca3af", fontSize: "0.88rem", marginTop: "0.75rem", fontFamily: mono }}>
-              No me la digas.
+              No me la digas
             </p>
           </div>
           <button
