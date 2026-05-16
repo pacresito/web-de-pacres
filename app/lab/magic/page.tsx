@@ -130,8 +130,8 @@ function CardFace({ beast, w }: { beast: Beast; w: number }) {
       )}
 
       {isFace && (
-        <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 0, pointerEvents: "none" }}>
-          <span style={{ fontSize: Math.floor(h * 0.26), fontFamily: "Georgia, serif", color, lineHeight: 1.1, fontWeight: 700, userSelect: "none" }}>{beast.value}</span>
+        <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 0, pointerEvents: "none", transform: `translateY(${Math.floor(h * 0.06)}px)` }}>
+          <span style={{ fontSize: Math.floor(h * 0.28), fontFamily: "Georgia, serif", color, lineHeight: 0.7, fontWeight: 700, userSelect: "none" }}>{beast.value}</span>
           <span style={{ fontSize: Math.floor(h * 0.40), color, lineHeight: 1, userSelect: "none" }}>{beast.suit}</span>
         </div>
       )}
@@ -203,7 +203,7 @@ function SpellWheel({
   }
 
   function runForceBar() {
-    smoothVelRef.current *= 0.90; // gradual decay each frame
+    smoothVelRef.current *= 0.98;
     if (forceBarRef.current) {
       const pct = Math.min(100, smoothVelRef.current * 10000);
       forceBarRef.current.style.width = `${pct}%`;
@@ -287,13 +287,9 @@ function SpellWheel({
     lastAngleRef.current = angle;
     lastAngleTimeRef.current = now;
     updateRot(startRotRef.current + (angle - startAngleRef.current));
-    // Instant rise to max, slow fall — RAF handles decay
+    // Only rise here — RAF handles linear decay
     const speed = Math.abs(angularVelRef.current);
-    if (speed > smoothVelRef.current) {
-      smoothVelRef.current = speed;
-    } else {
-      smoothVelRef.current = smoothVelRef.current * 0.85 + speed * 0.15;
-    }
+    if (speed > smoothVelRef.current) smoothVelRef.current = speed;
   }
 
   function onPointerUp() {
@@ -435,8 +431,9 @@ export default function MagicPage() {
           100% { opacity:1; transform:translate(0, 0) scale(1); }
         }
         @keyframes cardFromBeast {
-          0%   { opacity:0; transform:translateY(-84px) scale(0.06); }
-          18%  { opacity:1; }
+          0%   { opacity:0; transform:translateY(-84px) scale(0.07); }
+          10%  { opacity:1; }
+          30%  { transform:translateY(0) scale(0.4); }
           100% { transform:translateY(0) scale(1); }
         }
         @keyframes spellFade { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
@@ -543,13 +540,13 @@ export default function MagicPage() {
           }}>
             {guide.emoji}
           </div>
-          <div style={{ animation: "cardFromBeast 2s ease-out 3s both" }}>
+          <div style={{ animation: "cardFromBeast 3.5s ease-out 3s both" }}>
             <CardFace beast={revealBeast} w={90} />
           </div>
           <p style={{
             color: "#6b7280", fontSize: "1rem", fontWeight: 600,
             maxWidth: 300, lineHeight: 1.5, textAlign: "center",
-            animation: "spellFade 0.5s ease 5.5s both",
+            animation: "spellFade 0.5s ease 6s both",
           }}>
             {guide.article}{" "}
             <span style={{ color: guide.color }}>{guide.name}</span>
@@ -565,7 +562,7 @@ export default function MagicPage() {
             style={{
               background: "none", border: "none", cursor: "pointer",
               color: "#9ca3af", fontSize: "0.78rem", fontFamily: mono,
-              animation: "spellFade 0.5s ease 6s both",
+              animation: "spellFade 0.5s ease 6.5s both",
             }}
           >
             Volver a intentarlo →
