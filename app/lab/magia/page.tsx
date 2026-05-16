@@ -543,14 +543,14 @@ export default function MagiaPage() {
             maxWidth: 300, lineHeight: 1.5, textAlign: "center",
             animation: "spellFade 0.5s ease 6s both",
           }}>
-            {guide.article}{" "}
+            Desde algún lugar de la magia,
+            <br />
+            {guide.article.toLowerCase()}{" "}
             <span style={{ color: guide.color }}>{guide.name}</span>
-            {" "}que había en tu mente se había comido{" "}
-            {cardArticle(revealBeast)}{" "}
+            {" "}te trae tu{" "}
             <span style={{ color: revealBeast.red ? "#dc2626" : "#111827" }}>
               {spellName(revealBeast)}
             </span>
-            .
           </p>
           <button
             onClick={beginSpell}
