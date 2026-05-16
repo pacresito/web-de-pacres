@@ -21,10 +21,15 @@ const RUNES = [
 const RUNE_COUNT = RUNES.length;
 
 const SPIRIT_GUIDES = [
-  { article: "La", name: "iguana", emoji: "🦎", rune: "I" },
-  { article: "El", name: "ñu",     emoji: "🐃", rune: "Ñ" },
-  { article: "El", name: "koala",  emoji: "🐨", rune: "K" },
+  { article: "La", name: "iguana", emoji: "🦎", rune: "I", color: "#16a34a" },
+  { article: "El", name: "ñu",     emoji: "🐃", rune: "Ñ", color: "#b45309" },
+  { article: "El", name: "koala",  emoji: "🐨", rune: "K", color: "#6b7280" },
 ];
+
+const VALUE_ARTICLE: Record<string, string> = {
+  "A": "el", "2": "el", "3": "el", "4": "el", "5": "el",
+  "J": "la", "Q": "la", "K": "el",
+};
 
 const SUIT_ES: Record<string, string> = {
   "♠": "picas", "♥": "corazones", "♦": "diamantes", "♣": "tréboles",
@@ -87,9 +92,8 @@ function spellName(beast: Beast): string {
   return `${VALUE_ES[beast.value]} de ${SUIT_ES[beast.suit]}`;
 }
 
-function summonPhrase(guideIdx: number, beast: Beast): string {
-  const { article, name } = SPIRIT_GUIDES[guideIdx];
-  return `${article} ${name} que había en tu mente se había comido el ${spellName(beast)}.`;
+function cardArticle(beast: Beast): string {
+  return VALUE_ARTICLE[beast.value];
 }
 
 function getGuideIdx(castCount: number): number {
@@ -197,18 +201,24 @@ function SpellWheel({
 
   function snap() {
     const speed = Math.abs(angularVelRef.current); // rad/ms
-    // Mínimo 3 vueltas completas siempre para que no se adivine
-    const extraRevs = Math.min(8, Math.max(3, speed * 5000));
+    const direction = angularVelRef.current >= 0 ? 1 : -1;
+    // Vueltas extra proporcionales a la velocidad — sin mínimo: empuje suave → menos de una vuelta
+    const extraRevs = speed * 5000;
     const tIdx = RUNES.indexOf(targetRune);
     const step = (2 * Math.PI) / RUNE_COUNT;
     let target = -Math.PI / 2 - tIdx * step;
-    const minFinal = rotRef.current + extraRevs * 2 * Math.PI;
-    while (target < minFinal) target += 2 * Math.PI;
+    if (direction > 0) {
+      const minFinal = rotRef.current + extraRevs * 2 * Math.PI;
+      while (target < minFinal) target += 2 * Math.PI;
+    } else {
+      const maxFinal = rotRef.current - extraRevs * 2 * Math.PI;
+      while (target > maxFinal) target -= 2 * Math.PI;
+    }
 
     const from = rotRef.current;
     const delta = target - from;
-    // Frenado muy suave: mínimo 5s, máximo 10s — ease-out cuadrático (más gradual)
-    const duration = Math.max(5000, Math.min(10000, Math.abs(delta) * 300));
+    // Frenado suave: mínimo 1.5s, máximo 10s — ease-out cuadrático
+    const duration = Math.max(1500, Math.min(10000, Math.abs(delta) * 300));
     const t0 = performance.now();
 
     function frame(now: number) {
@@ -450,8 +460,9 @@ export default function MagicPage() {
 
           {spinDone && (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1rem", animation: "fadeUp 0.4s ease" }}>
-              <p style={{ color: "#111827", fontSize: "1.05rem", fontWeight: 600 }}>
-                ¡La letra {guide.rune}! Piensa en un animal que empiece por {guide.rune}.
+              <p style={{ color: "#111827", fontSize: "1.05rem", fontWeight: 600, textAlign: "center", lineHeight: 1.5 }}>
+                ¡La letra {guide.rune}!<br />
+                Piensa en un animal que empiece por {guide.rune}.
               </p>
               <button
                 onClick={() => setPhase("reveal")}
@@ -474,11 +485,17 @@ export default function MagicPage() {
             <CardFace beast={revealBeast} w={90} />
           </div>
           <p style={{
-            color: "#111827", fontSize: "1rem", fontWeight: 600,
-            maxWidth: 300, lineHeight: 1.5,
+            color: "#6b7280", fontSize: "1rem", fontWeight: 600,
+            maxWidth: 300, lineHeight: 1.5, textAlign: "center",
             animation: "spellFade 0.5s ease 4s both",
           }}>
-            {summonPhrase(guideIdx, revealBeast)}
+            {guide.article}{" "}
+            <span style={{ color: guide.color }}>{guide.name}</span>
+            {" "}que había en tu mente se había comido{" "}
+            <span style={{ color: revealBeast.red ? "#dc2626" : "#111827" }}>
+              {cardArticle(revealBeast)} {spellName(revealBeast)}
+            </span>
+            .
           </p>
           <button
             onClick={beginSpell}
