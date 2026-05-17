@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, type ReactNode } from "react";
 import Image from "next/image";
+import HomeNav from "../../components/HomeNav";
 
 interface Job {
   title: string;
@@ -1122,6 +1123,7 @@ export default function DarkHome() {
 
       <footer className="footer">
         <span className="footer-brand" onClick={triggerLetterPhysics}>pacr.es</span>
+        <span className="footer-brand" style={{cursor:"default"}}>Creado el 30 de abril de 2026.</span>
         <a
           href="https://www.linkedin.com/in/pacres/"
           target="_blank"
@@ -1129,6 +1131,7 @@ export default function DarkHome() {
           className="footer-link"
         >LinkedIn →</a>
       </footer>
+      <HomeNav />
     </>
   );
 }

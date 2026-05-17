@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import Image from "next/image";
+import HomeNav from "../../components/HomeNav";
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
 
@@ -1098,6 +1099,13 @@ export default function HomeTempPage() {
           }}>
             pacr.es<span style={{ animation: "blink 1s step-end infinite", color: "rgba(255,255,255,0.9)" }}>_</span>
           </span>
+          <span style={{
+            color: "rgba(0,255,255,0.4)",
+            textShadow: "0 0 6px rgba(0,255,255,0.2)",
+            fontSize: "0.65rem",
+          }}>
+            Creado el 30 de abril de 2026.
+          </span>
           <a href="https://www.linkedin.com/in/pacres/" target="_blank" rel="noopener noreferrer"
             style={{
               color: "#00ffff", textDecoration: "none",
@@ -1112,6 +1120,7 @@ export default function HomeTempPage() {
         </footer>
 
       </main>
+      <HomeNav />
     </>
   );
 }

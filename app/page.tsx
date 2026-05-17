@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
+import HomeNav from "./components/HomeNav";
 
 const JOBS = [
   {
@@ -1084,6 +1085,7 @@ export default function Home() {
         </footer>
 
       </main>
+      <HomeNav />
     </>
   );
 }
