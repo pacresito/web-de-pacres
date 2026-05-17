@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import { usePathname } from "next/navigation";
 import Image from "next/image";
 
 const JOBS = [
@@ -334,6 +335,7 @@ function RecsSlider() {
 }
 
 export default function Home() {
+  const pathname = usePathname();
   const cursorGlowRef = useRef<HTMLDivElement>(null);
   const pressHaloRef = useRef<HTMLDivElement>(null);
   const holdTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -1063,15 +1065,22 @@ export default function Home() {
         <hr className="divider" />
 
         {/* Footer */}
-        <footer style={{padding:"2.5rem 0",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-          <span onClick={triggerLetterPhysics} style={{fontSize:"0.78rem",color:"var(--text-muted)",fontFamily:"var(--font-geist-mono),monospace",cursor:"pointer",userSelect:"none"}}>
-            pacr.es
-          </span>
-          <a href="https://www.linkedin.com/in/pacres/" target="_blank" rel="noopener noreferrer"
-            style={{fontSize:"0.78rem",color:"var(--text-muted)",fontFamily:"var(--font-geist-mono),monospace",textDecoration:"none",transition:"color 0.2s"}}
-            onMouseEnter={e => (e.currentTarget.style.color = "var(--blue-accent)")}
-            onMouseLeave={e => (e.currentTarget.style.color = "var(--text-muted)")}
-          >LinkedIn →</a>
+        <footer style={{padding:"2.5rem 0",display:"flex",flexDirection:"column",gap:"0.75rem"}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",position:"relative"}}>
+            <span onClick={triggerLetterPhysics} style={{fontSize:"0.78rem",color:"var(--text-muted)",fontFamily:"var(--font-geist-mono),monospace",cursor:"pointer",userSelect:"none"}}>
+              pacr.es
+            </span>
+            <a href="https://www.linkedin.com/in/pacres/" target="_blank" rel="noopener noreferrer"
+              style={{fontSize:"0.78rem",color:"var(--text-muted)",fontFamily:"var(--font-geist-mono),monospace",textDecoration:"none",transition:"color 0.2s"}}
+              onMouseEnter={e => (e.currentTarget.style.color = "var(--blue-accent)")}
+              onMouseLeave={e => (e.currentTarget.style.color = "var(--text-muted)")}
+            >LinkedIn →</a>
+          </div>
+          {pathname === "/home/minimalista" && (
+            <p style={{textAlign:"center",fontSize:"0.72rem",color:"var(--text-muted)",fontFamily:"var(--font-geist-mono),monospace",margin:0}}>
+              Creado el 30 de abril de 2026.
+            </p>
+          )}
         </footer>
 
       </main>
