@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
+import HomeNav from "../../components/HomeNav";
 
 const JOBS = [
   {
@@ -742,6 +743,7 @@ export default function TempHome() {
         </footer>
 
       </div>
+      <HomeNav />
     </>
   );
 }

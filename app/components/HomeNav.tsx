@@ -20,7 +20,7 @@ export default function HomeNav() {
   const leaveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const ref = useRef<HTMLDivElement>(null);
 
-  const current = MINIMALISTA_HREFS.has(pathname ?? "") ? "/home/minimalista" : (pathname ?? "");
+  const current = MINIMALISTA_HREFS.has(pathname ?? "") ? "/home/original" : (pathname ?? "");
   const isOpen = hovered || expanded;
 
   // Click outside → collapse (mobile)
