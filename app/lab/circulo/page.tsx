@@ -465,7 +465,7 @@ export default function CirculoPerfecto() {
             <p>El sistema evalúa tu trazo, decide si se acerca lo suficiente a una circunferencia ideal y, cuando lo consigue, cambia las reglas.</p>
             <p>Es una broma, pero también una forma de recordar que muchos objetivos «perfectos» funcionan así: parecen alcanzables hasta el momento exacto en el que llegas a ellos.</p>
             <p>Hize otro «truco» similar, pero no funcionaba muy bien en mobile. Puedes probarlo aquí si tienes curiosidad: <a href="/lab/objetivo" style={{ color: "#3b82f6", textDecoration: "none" }}>Alcanza tus objetivos</a>.</p>
-            <p style={{ color: "#9ca3af", fontSize: "0.72rem" }}>Creado el 6 de mayo de 2026.</p>
+            <p style={{ color: "#9ca3af", fontSize: "0.72rem" }}>Creado el 6 de mayo de 2026</p>
           </div>
         )}
       </div>

@@ -1121,15 +1121,19 @@ export default function DarkHome() {
 
       </main>
 
-      <footer className="footer">
-        <span className="footer-brand" onClick={triggerLetterPhysics}>pacr.es</span>
-        <span className="footer-brand" style={{cursor:"default"}}>Creado el 30 de abril de 2026.</span>
-        <a
-          href="https://www.linkedin.com/in/pacres/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="footer-link"
-        >LinkedIn →</a>
+      <footer className="footer" style={{ flexDirection: "column", gap: "0.6rem" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", width: "100%" }}>
+          <span className="footer-brand" onClick={triggerLetterPhysics}>pacr.es</span>
+          <a
+            href="https://www.linkedin.com/in/pacres/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="footer-link"
+          >LinkedIn →</a>
+        </div>
+        <span className="footer-brand" style={{ cursor: "default", textAlign: "center", width: "100%" }}>
+          Creado el 17 de mayo de 2026
+        </span>
       </footer>
       <HomeNav />
     </>

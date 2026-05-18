@@ -1176,7 +1176,7 @@ export default function Fluidos() {
               <p>De esas reglas emergen comportamientos complejos: agua fluyendo, arena acumulándose, fuego propagándose.</p>
               <p>Este enfoque se usa en videojuegos, simulaciones físicas y sistemas educativos por su simplicidad y eficiencia.</p>
               <p>En este experimento: la arena cae, el agua fluye, el fuego se expande, y cada elemento interactúa solo con sus vecinos inmediatos.</p>
-              <p style={{ color: "#9ca3af", fontSize: "0.72rem" }}>Creado el 8 de mayo de 2026.</p>
+              <p style={{ color: "#9ca3af", fontSize: "0.72rem" }}>Creado el 8 de mayo de 2026</p>
             </div>
           )}
         </footer>

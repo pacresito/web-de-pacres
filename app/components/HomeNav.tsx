@@ -2,12 +2,12 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 
 const VARIANTS = [
-  { label: "·", href: "/", title: "minimalista" },
-  { label: "·", href: "/home/dark", title: "dark" },
-  { label: "·", href: "/home/neon", title: "neon" },
+  { href: "/", title: "minimalista" },
+  { href: "/home/dark", title: "dark" },
+  { href: "/home/neon", title: "neon" },
 ];
 
 const ACTIVE_HREFS = new Set(["/", "/home", "/home/minimalista"]);
@@ -15,49 +15,90 @@ const ACTIVE_HREFS = new Set(["/", "/home", "/home/minimalista"]);
 export default function HomeNav() {
   const pathname = usePathname();
   const [hovered, setHovered] = useState(false);
+  const [expanded, setExpanded] = useState(false); // mobile tap state
+  const leaveTimer = useRef<ReturnType<typeof setTimeout>>();
+  const ref = useRef<HTMLDivElement>(null);
 
   const current = ACTIVE_HREFS.has(pathname ?? "") ? "/" : (pathname ?? "");
+  const isOpen = hovered || expanded;
+
+  // Click outside → collapse (mobile)
+  useEffect(() => {
+    if (!expanded) return;
+    const handler = (e: MouseEvent | TouchEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setExpanded(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    document.addEventListener("touchstart", handler);
+    return () => {
+      document.removeEventListener("mousedown", handler);
+      document.removeEventListener("touchstart", handler);
+    };
+  }, [expanded]);
+
+  const handleMouseEnter = () => {
+    clearTimeout(leaveTimer.current);
+    setHovered(true);
+  };
+
+  // Debounce collapse to prevent vibration at the boundary
+  const handleMouseLeave = () => {
+    leaveTimer.current = setTimeout(() => setHovered(false), 180);
+  };
 
   return (
     <div
+      ref={ref}
       style={{
         position: "fixed",
         bottom: "1.2rem",
         right: "1.2rem",
-        display: "flex",
-        gap: "0.5rem",
-        alignItems: "center",
         zIndex: 9999,
+        padding: "0.5rem",  // buffer zone — prevents vibration at edges
       }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
-      {VARIANTS.map((v) => {
-        const isActive = v.href === current;
-        return (
-          <Link
-            key={v.href}
-            href={v.href}
-            title={v.title}
-            style={{
-              fontSize: hovered ? "0.65rem" : "1.1rem",
-              lineHeight: 1,
-              color: isActive
-                ? "rgba(180,180,180,0.9)"
-                : hovered
-                ? "rgba(140,140,140,0.7)"
-                : "rgba(100,100,100,0.35)",
-              textDecoration: "none",
-              transition: "color 0.2s, font-size 0.15s",
-              letterSpacing: hovered ? "0.05em" : 0,
-              fontFamily: "var(--font-geist-mono, monospace)",
-              userSelect: "none",
-            }}
-          >
-            {hovered ? v.title : "·"}
-          </Link>
-        );
-      })}
+      <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+        {VARIANTS.map((v) => {
+          const isActive = v.href === current;
+          return (
+            <Link
+              key={v.href}
+              href={v.href}
+              title={v.title}
+              onClick={(e) => {
+                // Mobile: first tap expands, second tap navigates
+                if (!isOpen) {
+                  e.preventDefault();
+                  setExpanded(true);
+                } else {
+                  setExpanded(false);
+                }
+              }}
+              style={{
+                fontSize: isOpen ? "0.65rem" : "1rem",
+                lineHeight: 1,
+                color: isActive
+                  ? isOpen ? "rgba(220,220,220,0.98)" : "rgba(180,180,180,0.7)"
+                  : isOpen
+                  ? "rgba(150,150,150,0.8)"
+                  : "rgba(160,160,160,0.5)",
+                textDecoration: "none",
+                transition: "color 0.2s, font-size 0.15s",
+                letterSpacing: isOpen ? "0.04em" : 0,
+                fontFamily: "var(--font-geist-mono, monospace)",
+                userSelect: "none",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {isOpen ? v.title : "·"}
+            </Link>
+          );
+        })}
+      </div>
     </div>
   );
 }

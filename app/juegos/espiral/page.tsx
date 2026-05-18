@@ -482,7 +482,7 @@ export default function Espiral() {
             <p>Me gusta distinguir tres conceptos que se mezclan a menudo.</p>
             <p>Simple se refiere a la cantidad de elementos y reglas: dos espirales, dos pelotas, dos controles. Sencillo describe lo fácil que es entender el objetivo: se comprende de inmediato. Difícil hace referencia a lo que cuesta dominarlo: coordinar ambas acciones a la vez exige atención y precisión.</p>
             <p>En el extremo opuesto estaría un juego de rol con cien reglas cuya primera misión es "habla con el aldeano de enfrente": complejo, complicado, pero fácil.</p>
-            <p style={{ color: "#9ca3af", fontSize: "0.72rem" }}>Creado el 30 de abril de 2026.</p>
+            <p style={{ color: "#9ca3af", fontSize: "0.72rem" }}>Creado el 30 de abril de 2026</p>
           </div>
         )}
       </div>

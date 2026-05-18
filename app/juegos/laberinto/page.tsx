@@ -1084,7 +1084,7 @@ export default function Laberinto() {
             <p>Antes de generar el camino se colocan cuatro agujeros aleatorios. El sistema analiza los giros del recorrido y solo acepta laberintos donde al menos dos curvas apunten hacia un agujero, creando falsas pistas y aumentando la dificultad.</p>
             <p>La salida siempre aparece al final del recorrido generado.</p>
             <p>Aproximadamente 1 de cada 100 generaciones cumple esas condiciones.</p>
-            <p style={{ color: "#9ca3af", fontSize: "0.72rem" }}>Creado el 1 de mayo de 2026.</p>
+            <p style={{ color: "#9ca3af", fontSize: "0.72rem" }}>Creado el 1 de mayo de 2026</p>
           </div>
         )}
       </div>

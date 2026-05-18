@@ -886,7 +886,7 @@ export default function CalculadoraRPN() {
               <p>Se basa en una pila: los números se introducen en orden y las operaciones se aplican sobre los últimos valores introducidos.</p>
               <p>Fue propuesto por el lógico Jan Łukasiewicz y lo popularizó Hewlett-Packard en sus calculadoras científicas de los años 70 y 80.</p>
               <p>Hoy sigue siendo valorado en entornos técnicos y de programación por su eficiencia, claridad en la evaluación de expresiones y ausencia de paréntesis.</p>
-              <p style={{ color: "#9ca3af", fontSize: "0.72rem" }}>Creado el 7 de mayo de 2026.</p>
+              <p style={{ color: "#9ca3af", fontSize: "0.72rem" }}>Creado el 7 de mayo de 2026</p>
             </div>
           )}
         </footer>

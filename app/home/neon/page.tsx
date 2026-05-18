@@ -646,6 +646,7 @@ export default function HomeTempPage() {
     <>
       <style>{`
         * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { overflow-x: hidden; }
 
         /* ── Keyframes ── */
 
@@ -1088,35 +1089,38 @@ export default function HomeTempPage() {
         {/* ── FOOTER ───────────────────────────────────────────────────── */}
         <footer style={{
           padding: "2.5rem 0",
-          display: "flex", alignItems: "center", justifyContent: "space-between",
+          display: "flex", flexDirection: "column", gap: "0.6rem",
           fontFamily: "var(--font-geist-mono), monospace",
           fontSize: "0.78rem",
         }}>
-          <span style={{
-            color: "#ff006e",
-            textShadow: "0 0 8px rgba(255,0,110,0.6)",
-            animation: "neonTextMag 3s ease-in-out infinite",
-          }}>
-            pacr.es<span style={{ animation: "blink 1s step-end infinite", color: "rgba(255,255,255,0.9)" }}>_</span>
-          </span>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{
+              color: "#ff006e",
+              textShadow: "0 0 8px rgba(255,0,110,0.6)",
+              animation: "neonTextMag 3s ease-in-out infinite",
+            }}>
+              pacr.es<span style={{ animation: "blink 1s step-end infinite", color: "rgba(255,255,255,0.9)" }}>_</span>
+            </span>
+            <a href="https://www.linkedin.com/in/pacres/" target="_blank" rel="noopener noreferrer"
+              style={{
+                color: "#00ffff", textDecoration: "none",
+                textShadow: "0 0 8px rgba(0,255,255,0.5)",
+                transition: "text-shadow 0.2s",
+              }}
+              onMouseEnter={e => (e.currentTarget as HTMLAnchorElement).style.textShadow = "0 0 20px rgba(0,255,255,1), 0 0 40px rgba(0,255,255,0.5)"}
+              onMouseLeave={e => (e.currentTarget as HTMLAnchorElement).style.textShadow = "0 0 8px rgba(0,255,255,0.5)"}
+            >
+              LinkedIn →
+            </a>
+          </div>
           <span style={{
             color: "rgba(0,255,255,0.4)",
             textShadow: "0 0 6px rgba(0,255,255,0.2)",
             fontSize: "0.65rem",
+            textAlign: "center",
           }}>
-            Creado el 30 de abril de 2026.
+            Creado el 17 de mayo de 2026
           </span>
-          <a href="https://www.linkedin.com/in/pacres/" target="_blank" rel="noopener noreferrer"
-            style={{
-              color: "#00ffff", textDecoration: "none",
-              textShadow: "0 0 8px rgba(0,255,255,0.5)",
-              transition: "text-shadow 0.2s",
-            }}
-            onMouseEnter={e => (e.currentTarget as HTMLAnchorElement).style.textShadow = "0 0 20px rgba(0,255,255,1), 0 0 40px rgba(0,255,255,0.5)"}
-            onMouseLeave={e => (e.currentTarget as HTMLAnchorElement).style.textShadow = "0 0 8px rgba(0,255,255,0.5)"}
-          >
-            LinkedIn →
-          </a>
         </footer>
 
       </main>

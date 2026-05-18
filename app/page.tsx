@@ -1079,7 +1079,7 @@ export default function Home() {
           </div>
           {pathname === "/home/minimalista" && (
             <p style={{textAlign:"center",fontSize:"0.72rem",color:"var(--text-muted)",fontFamily:"var(--font-geist-mono),monospace",margin:0}}>
-              Creado el 30 de abril de 2026.
+              Creado el 30 de abril de 2026
             </p>
           )}
         </footer>
