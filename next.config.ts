@@ -4,7 +4,7 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return [
       { source: '/home', destination: '/' },
-      { source: '/home/minimalista', destination: '/' },
+      { source: '/home/original', destination: '/' },
     ];
   },
 };

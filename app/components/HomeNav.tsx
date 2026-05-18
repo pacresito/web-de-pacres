@@ -5,12 +5,13 @@ import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 
 const VARIANTS = [
+  { href: "/home/original", title: "original" },
   { href: "/home/minimalista", title: "minimalista" },
   { href: "/home/dark", title: "dark" },
   { href: "/home/neon", title: "neon" },
 ];
 
-const MINIMALISTA_HREFS = new Set(["/", "/home", "/home/minimalista"]);
+const MINIMALISTA_HREFS = new Set(["/", "/home", "/home/original"]);
 
 export default function HomeNav() {
   const pathname = usePathname();
