@@ -16,7 +16,7 @@ export default function HomeNav() {
   const pathname = usePathname();
   const [hovered, setHovered] = useState(false);
   const [expanded, setExpanded] = useState(false); // mobile tap state
-  const leaveTimer = useRef<ReturnType<typeof setTimeout>>();
+  const leaveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const ref = useRef<HTMLDivElement>(null);
 
   const current = MINIMALISTA_HREFS.has(pathname ?? "") ? "/home/minimalista" : (pathname ?? "");
