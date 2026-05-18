@@ -833,7 +833,7 @@ export default function HomeTempPage() {
       <div className="nt-hud-corner" style={{ top: "1rem", left: "1rem" }}>
         SYS:ONLINE · PABLO_CV.EXE
       </div>
-      <div className="nt-hud-corner" style={{ bottom: "1rem", right: "1rem", textAlign: "right" }}>
+      <div className="nt-hud-corner" style={{ bottom: "1rem", left: "1rem", textAlign: "left" }}>
         REV:2026 · CLASSIFIED
       </div>
 
