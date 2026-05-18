@@ -486,7 +486,7 @@ export default function CastleComboCalc() {
 
         <RegistroSection />
         <div className="mt-3 text-center">
-          <Link href="/trucos" className="text-gray-400 text-xs hover:text-blue-500 transition-colors">
+          <Link href="/lab" className="text-gray-400 text-xs hover:text-blue-500 transition-colors">
             pacr.es
           </Link>
         </div>

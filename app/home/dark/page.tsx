@@ -1115,7 +1115,7 @@ export default function DarkHome() {
             {SKILLS.map((s) => (
               <span key={s} className="skill-tag">{s}</span>
             ))}
-            <a href="/trucos" className="skill-tag skill-tag-shine">Resolución de problemas</a>
+            <a href="/lab" className="skill-tag skill-tag-shine">Resolución de problemas</a>
           </div>
         </section>
 

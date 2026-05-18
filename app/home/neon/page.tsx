@@ -1063,7 +1063,7 @@ export default function HomeTempPage() {
               const cls = ["c-mag","c-cyan","c-acid","c-purp"][i % 4];
               if (skill === "Resolución de problemas") {
                 return (
-                  <a key={skill} href="/trucos" className={`nt-skill nt-skill-shine c-cyan`}
+                  <a key={skill} href="/lab" className={`nt-skill nt-skill-shine c-cyan`}
                     style={{ textDecoration: "none", animationDelay: `${i * 0.04}s` }}>
                     {skill}
                   </a>

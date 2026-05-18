@@ -1007,7 +1007,7 @@ export default function Laberinto() {
           <p style={{ fontSize: "0.65rem", color: "#d1d5db", textAlign: "center", lineHeight: 1.4 }}>
             {orientState === "on" ? "Toca para calibrar · Inclina el móvil" : orientState === "needs-permission" ? "Toca el tablero para activar el giroscopio" : "Mueve el ratón o toca para inclinar"}
           </p>
-          <a href="/trucos" style={{ fontSize: "0.7rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", textDecoration: "none" }}
+          <a href="/lab" style={{ fontSize: "0.7rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", textDecoration: "none" }}
             onMouseEnter={e => (e.currentTarget.style.color = "#3b82f6")}
             onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}>
             pacr.es
@@ -1067,7 +1067,7 @@ export default function Laberinto() {
           }
         `}</style>
         <div className="footer-inner">
-          <a href="/trucos" className="pacres-link">pacr.es</a>
+          <a href="/lab" className="pacres-link">pacr.es</a>
           <button
             className="footer-btn"
             onClick={() => { const next = !whyOpen; setWhyOpen(next); if (next) setTimeout(() => whyRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }), 50); }}

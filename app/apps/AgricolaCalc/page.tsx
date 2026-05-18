@@ -472,7 +472,7 @@ export default function AgricolaCalc() {
 
         <RegistroSection />
         <div className="mt-3 text-center">
-          <Link href="/trucos" className="text-xs transition-colors" style={{ color: "#B0956A" }}>
+          <Link href="/lab" className="text-xs transition-colors" style={{ color: "#B0956A" }}>
             pacr.es
           </Link>
         </div>
