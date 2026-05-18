@@ -232,8 +232,8 @@ function Starfield() {
     if (!ctx) return;
 
     const resize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+      canvas.width = document.documentElement.clientWidth;
+      canvas.height = document.documentElement.clientHeight;
     };
     resize();
 
@@ -646,7 +646,6 @@ export default function HomeTempPage() {
     <>
       <style>{`
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        html, body { overflow-x: hidden; }
 
         /* ── Keyframes ── */
 
@@ -840,7 +839,7 @@ export default function HomeTempPage() {
 
       <main className="nt-page" style={{
         position: "relative", zIndex: 5,
-        maxWidth: "960px", margin: "0 auto", padding: "0 2rem",
+        width: "100%", maxWidth: "960px", margin: "0 auto", padding: "0 2rem",
       }}>
 
         {/* ── HERO ─────────────────────────────────────────────────────── */}

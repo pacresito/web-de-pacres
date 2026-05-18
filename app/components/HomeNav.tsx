@@ -5,12 +5,12 @@ import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 
 const VARIANTS = [
-  { href: "/", title: "minimalista" },
+  { href: "/home/minimalista", title: "minimalista" },
   { href: "/home/dark", title: "dark" },
   { href: "/home/neon", title: "neon" },
 ];
 
-const ACTIVE_HREFS = new Set(["/", "/home", "/home/minimalista"]);
+const MINIMALISTA_HREFS = new Set(["/", "/home", "/home/minimalista"]);
 
 export default function HomeNav() {
   const pathname = usePathname();
@@ -19,7 +19,7 @@ export default function HomeNav() {
   const leaveTimer = useRef<ReturnType<typeof setTimeout>>();
   const ref = useRef<HTMLDivElement>(null);
 
-  const current = ACTIVE_HREFS.has(pathname ?? "") ? "/" : (pathname ?? "");
+  const current = MINIMALISTA_HREFS.has(pathname ?? "") ? "/home/minimalista" : (pathname ?? "");
   const isOpen = hovered || expanded;
 
   // Click outside → collapse (mobile)
@@ -45,7 +45,7 @@ export default function HomeNav() {
 
   // Debounce collapse to prevent vibration at the boundary
   const handleMouseLeave = () => {
-    leaveTimer.current = setTimeout(() => setHovered(false), 180);
+    leaveTimer.current = setTimeout(() => setHovered(false), 250);
   };
 
   return (
