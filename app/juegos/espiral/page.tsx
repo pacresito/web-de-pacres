@@ -465,7 +465,7 @@ export default function Espiral() {
 
       <div style={{ marginTop: "auto", paddingTop: "1.5rem", paddingBottom: "0.5rem", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem", width: "100%" }}>
         <div className="footer-inner">
-          <a href="/lab" className="pacres-link">pacr.es</a>
+          <a href="/trucos" className="pacres-link">pacr.es</a>
           <button
             className="footer-btn"
             onClick={() => { const next = !whyOpen; setWhyOpen(next); if (next) setTimeout(() => whyRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }), 50); }}

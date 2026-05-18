@@ -724,7 +724,7 @@ export default function SigueTusSuenos() {
       )}
 
       <a
-        href="/lab"
+        href="/trucos"
         style={{ position: "fixed", bottom: "1.5rem", left: "50%", transform: "translateX(-50%)", fontSize: "0.75rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", textDecoration: "none", zIndex: 10, transition: "color 0.2s" }}
         onMouseEnter={e => (e.currentTarget.style.color = "#3b82f6")}
         onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}

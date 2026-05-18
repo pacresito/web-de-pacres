@@ -1157,7 +1157,7 @@ export default function Fluidos() {
         {/* Footer */}
         <footer style={{ marginTop: "auto", paddingTop: "1.5rem", paddingBottom: "1.25rem", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem" }}>
           <div className="footer-inner">
-            <Link href="/lab" className="pacres-link">pacr.es</Link>
+            <Link href="/trucos" className="pacres-link">pacr.es</Link>
             <button
               className="footer-btn"
               onClick={() => { const next = !whyOpen; setWhyOpen(next); if (next) setTimeout(() => whyRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }), 50); }}

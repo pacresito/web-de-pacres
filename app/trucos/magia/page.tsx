@@ -566,7 +566,7 @@ export default function MagiaPage() {
       )}
 
       <a
-        href="/lab"
+        href="/trucos"
         style={{ marginTop: "auto", paddingTop: "2rem", fontSize: "0.75rem", color: "#9ca3af", fontFamily: mono, textDecoration: "none", transition: "color 0.2s" }}
         onMouseEnter={(e) => (e.currentTarget.style.color = "#3b82f6")}
         onMouseLeave={(e) => (e.currentTarget.style.color = "#9ca3af")}

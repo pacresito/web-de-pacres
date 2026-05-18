@@ -75,7 +75,7 @@ const BASE_ITEMS: LabItem[] = [
     title: "Círculo perfecto",
     description: "Dibuja el círculo más perfecto que puedas. A ver qué pasa.",
     status: "available",
-    href: "/lab/circulo",
+    href: "/trucos/circulo",
     cta: "Probar →",
   },
   {
@@ -84,7 +84,7 @@ const BASE_ITEMS: LabItem[] = [
     title: "Magia de la buena",
     description: "Piensa en una carta. No me la digas.",
     status: "available",
-    href: "/lab/magia",
+    href: "/trucos/magia",
     cta: "Probar →",
   },
   {

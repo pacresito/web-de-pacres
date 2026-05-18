@@ -98,7 +98,7 @@ export default function Ranking() {
       </Link>
 
       <a
-        href="/lab"
+        href="/trucos"
         style={{
           position: "absolute",
           bottom: "1.5rem",

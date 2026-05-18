@@ -448,7 +448,7 @@ export default function CirculoPerfecto() {
       {/* Footer */}
       <div style={{ marginTop: "auto", paddingTop: "1.5rem", paddingBottom: "0.5rem", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem", width: "100%" }}>
         <div className="footer-inner">
-          <a href="/lab" className="pacres-link">pacr.es</a>
+          <a href="/trucos" className="pacres-link">pacr.es</a>
           <button
             className="footer-btn"
             onClick={() => { const next = !whyOpen; setWhyOpen(next); if (next) setTimeout(() => whyRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }), 50); }}
@@ -464,7 +464,7 @@ export default function CirculoPerfecto() {
             <p>Intentar dibujar un círculo perfecto a mano es una tarea condenada al fracaso, y precisamente por eso resulta interesante.</p>
             <p>El sistema evalúa tu trazo, decide si se acerca lo suficiente a una circunferencia ideal y, cuando lo consigue, cambia las reglas.</p>
             <p>Es una broma, pero también una forma de recordar que muchos objetivos «perfectos» funcionan así: parecen alcanzables hasta el momento exacto en el que llegas a ellos.</p>
-            <p>Hize otro «truco» similar, pero no funcionaba muy bien en mobile. Puedes probarlo aquí si tienes curiosidad: <a href="/lab/objetivo" style={{ color: "#3b82f6", textDecoration: "none" }}>Alcanza tus objetivos</a>.</p>
+            <p>Hize otro «truco» similar, pero no funcionaba muy bien en mobile. Puedes probarlo aquí si tienes curiosidad: <a href="/trucos/objetivo" style={{ color: "#3b82f6", textDecoration: "none" }}>Alcanza tus objetivos</a>.</p>
             <p style={{ color: "#9ca3af", fontSize: "0.72rem" }}>Creado el 6 de mayo de 2026</p>
           </div>
         )}
