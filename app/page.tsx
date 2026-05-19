@@ -1066,7 +1066,7 @@ export default function Home() {
         <hr className="divider" />
 
         {/* Footer */}
-        <footer style={{padding:"2.5rem 0",display:"flex",flexDirection:"column",gap:"0.75rem"}}>
+        <footer style={{padding:"2.5rem 0 4rem",display:"flex",flexDirection:"column",gap:"0.75rem"}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",position:"relative"}}>
             <span onClick={triggerLetterPhysics} style={{fontSize:"0.78rem",color:"var(--text-muted)",fontFamily:"var(--font-geist-mono),monospace",cursor:"pointer",userSelect:"none"}}>
               pacr.es

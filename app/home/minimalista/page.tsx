@@ -610,6 +610,7 @@ body {
 .cv-footer {
   margin-top: clamp(2.5rem, 7vw, 4rem);
   padding-top: 1.25rem;
+  padding-bottom: 4rem;
   border-top: 1px solid var(--faint);
   display: flex;
   justify-content: space-between;
@@ -730,8 +731,9 @@ export default function TempHome() {
         </section>
 
         {/* FOOTER */}
-        <footer className="cv-footer">
+        <footer className="cv-footer" style={{ flexWrap: "wrap", gap: "0.5rem" }}>
           <span className="footer-mark">pacr.es</span>
+          <span className="footer-mark" style={{ cursor: "default" }}>Creado el 18 de mayo de 2026</span>
           <a
             href="https://www.linkedin.com/in/pacres/"
             target="_blank"

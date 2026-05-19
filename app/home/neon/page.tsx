@@ -1087,7 +1087,7 @@ export default function HomeTempPage() {
 
         {/* ── FOOTER ───────────────────────────────────────────────────── */}
         <footer style={{
-          padding: "2.5rem 0",
+          padding: "2.5rem 0 4rem",
           display: "flex", flexDirection: "column", gap: "0.6rem",
           fontFamily: "var(--font-geist-mono), monospace",
           fontSize: "0.78rem",

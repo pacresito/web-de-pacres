@@ -1121,7 +1121,7 @@ export default function DarkHome() {
 
       </main>
 
-      <footer className="footer" style={{ flexDirection: "column", gap: "0.6rem" }}>
+      <footer className="footer" style={{ flexDirection: "column", gap: "0.6rem", paddingBottom: "4rem" }}>
         <div style={{ display: "flex", justifyContent: "space-between", width: "100%" }}>
           <span className="footer-brand" onClick={triggerLetterPhysics}>pacr.es</span>
           <a
