@@ -508,24 +508,6 @@ body {
   color: var(--text);
   text-decoration: none;
   font-weight: 600;
-  position: relative;
-  overflow: hidden;
-  display: inline-block;
-  vertical-align: baseline;
-}
-.skills-flow .lab-link::after {
-  content: "";
-  position: absolute;
-  top: -50%; left: -75%;
-  width: 50%; height: 200%;
-  background: linear-gradient(120deg, transparent 0%, rgba(251,191,36,0.15) 40%, rgba(253,224,71,0.55) 50%, rgba(251,191,36,0.15) 60%, transparent 100%);
-  transform: skewX(-20deg);
-  animation: goldSweep 10s ease-in-out infinite;
-}
-@keyframes goldSweep {
-  0%, 88%  { left: -75%; opacity: 1; }
-  97%      { left: 150%; opacity: 1; }
-  98%, 100%{ left: 150%; opacity: 0; }
 }
 .skills-dot { color: var(--text-4); margin: 0 0.3rem; }
 
@@ -897,10 +879,10 @@ export default function TempHome() {
       </section>
 
       {/* FOOTER */}
-      <footer className="tl-footer">
+      <footer className="tl-footer" style={{ paddingBottom: "4rem" }}>
         <span className="tl-footer-brand">pacr.es</span>
         <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.62rem", color: "var(--text-4)" }}>
-          mayo 2026
+          Creado el 19 de mayo de 2026
         </span>
         <a href="https://www.linkedin.com/in/pacres/" target="_blank" rel="noopener noreferrer" className="tl-footer-link">
           LinkedIn →
