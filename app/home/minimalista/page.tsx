@@ -613,8 +613,8 @@ body {
   padding-bottom: 4rem;
   border-top: 1px solid var(--faint);
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  gap: 0.6rem;
 }
 
 .footer-mark {
@@ -731,17 +731,19 @@ export default function TempHome() {
         </section>
 
         {/* FOOTER */}
-        <footer className="cv-footer" style={{ flexWrap: "wrap", gap: "0.5rem" }}>
-          <span className="footer-mark">pacr.es</span>
-          <span className="footer-mark" style={{ cursor: "default" }}>Creado el 18 de mayo de 2026</span>
-          <a
-            href="https://www.linkedin.com/in/pacres/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="footer-link"
-          >
-            LinkedIn →
-          </a>
+        <footer className="cv-footer">
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span className="footer-mark">pacr.es</span>
+            <a
+              href="https://www.linkedin.com/in/pacres/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="footer-link"
+            >
+              LinkedIn →
+            </a>
+          </div>
+          <span className="footer-mark" style={{ textAlign: "center", cursor: "default" }}>Creado el 18 de mayo de 2026</span>
         </footer>
 
       </div>
