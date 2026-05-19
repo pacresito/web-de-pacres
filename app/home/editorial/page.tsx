@@ -146,7 +146,7 @@ const DATA = {
       company: "GLOSSYBOX",
       type: "Jornada completa",
       kind: "fulltime",
-      summary: "Las primeras manos en cajas, proveedores y CRM.",
+      summary: "",
       bullets: [
         "Gestión de miles de envíos mensuales.",
         "Relación con proveedores y operadores logísticos.",
@@ -165,7 +165,7 @@ const DATA = {
       company: "Universidad Pontificia Comillas — ICAI-ICADE",
       type: "Educación",
       kind: "edu",
-      summary: "La caja de herramientas. Sistemas, procesos, decisiones bajo incertidumbre.",
+      summary: "",
       bullets: [] as string[],
       blocks: [] as { title: string; bullets: string[] }[],
     },
