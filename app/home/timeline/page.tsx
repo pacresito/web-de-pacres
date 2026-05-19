@@ -552,13 +552,22 @@ body {
     padding: 0 1.5rem;
     position: relative;
   }
-  .tl-rail::before {
-    left: calc(1.5rem + 40px + 12px + 7px);
-    right: auto;
-    top: 0; bottom: 0;
-    height: 100%;
+  .tl-rail::before { display: none; }
+
+  /* Line drawn per-entry via dot-wrap so it's always centered on the dot */
+  .tl-dot-wrap::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
     width: 2px;
+    background: var(--text);
+    top: 0;
+    bottom: calc(-1.6rem - 11px);
+    z-index: 0;
   }
+  .tl-entry:first-child .tl-dot-wrap::after { top: 7px; }
+  .tl-entry:last-child .tl-dot-wrap::after { height: 14px; bottom: auto; }
   .tl-entry {
     flex: none;
     display: grid;
