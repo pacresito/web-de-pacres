@@ -560,7 +560,7 @@ body {
     left: calc(1.5rem + 40px + 12px + 6px);
     right: auto;
     top: 11px;
-    bottom: 3rem;
+    bottom: 1.2rem;
     height: auto;
     width: 2px;
   }
