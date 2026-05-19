@@ -552,22 +552,18 @@ body {
     padding: 0 1.5rem;
     position: relative;
   }
-  .tl-rail::before { display: none; }
-
-  /* Line drawn per-entry via dot-wrap so it's always centered on the dot */
-  .tl-dot-wrap::after {
-    content: "";
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
+  /* Single continuous line: starts at center of first dot, ends at center of last dot.
+     left: 1.5rem (rail padding) + 40px (year col) + 12px (gap) + 6px (center 2px in 14px dot col)
+     top: 11px = 4px (dot-wrap margin-top) + 7px (half dot height, align-items:flex-start)
+     bottom: calculated to stop at last dot center (rows 2-4 of last entry + padding ≈ 4.5rem) */
+  .tl-rail::before {
+    left: calc(1.5rem + 40px + 12px + 6px);
+    right: auto;
+    top: 11px;
+    bottom: 4.5rem;
+    height: auto;
     width: 2px;
-    background: var(--text);
-    top: 0;
-    bottom: calc(-1.6rem - 11px);
-    z-index: 0;
   }
-  .tl-entry:first-child .tl-dot-wrap::after { top: 7px; }
-  .tl-entry:last-child .tl-dot-wrap::after { height: 14px; bottom: auto; }
   .tl-entry {
     flex: none;
     display: grid;
