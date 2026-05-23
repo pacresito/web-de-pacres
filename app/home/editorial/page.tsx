@@ -771,7 +771,8 @@ function Recos() {
 function Skills() {
   return (
     <section className="skills-section" style={{ opacity: 0.6 }}>
-      <hr className="rule" style={{ marginBottom: 14 }} />
+      <hr className="rule" style={{ marginBottom: 12 }} />
+      <div className="mono" style={{ fontSize: 10, marginBottom: 10, color: "var(--ink-3)" }}>Aptitudes</div>
       <div className="chips-wrap" style={{ gap: 5 }}>
         {DATA.skills.map((s, i) => (
           <span key={i} className="chip" style={{ fontSize: 10, padding: "2px 7px", color: "var(--ink-3)" }}>

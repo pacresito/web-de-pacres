@@ -514,16 +514,35 @@ body {
 /* ── PHOTO ── */
 .tl-photo {
   flex-shrink: 0;
-  width: clamp(100px, 15vw, 160px);
+  width: clamp(140px, 20vw, 260px);
   aspect-ratio: 1 / 1;
   overflow: hidden;
-  border-radius: 4px;
+  border-radius: 2px;
   border: 1px solid var(--border);
   align-self: flex-start;
+  position: relative;
+  background: var(--bg);
 }
-.tl-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.tl-photo img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+  filter: grayscale(1) contrast(0.94) brightness(1.04);
+  mix-blend-mode: multiply;
+}
+.tl-photo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(184,135,10,0.28) 0%,
+    rgba(184,135,10,0.12) 60%,
+    rgba(26,26,26,0.18) 100%
+  );
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
 @media (max-width: 640px) {
-  .tl-photo { width: 80px; }
+  .tl-photo { width: 110px; }
 }
 
 /* ── FOOTER ── */
