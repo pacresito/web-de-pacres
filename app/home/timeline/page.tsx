@@ -542,7 +542,7 @@ body {
   pointer-events: none;
 }
 @media (max-width: 640px) {
-  .tl-photo { width: 110px; }
+  .tl-photo { width: 180px; }
 }
 
 /* ── FOOTER ── */
