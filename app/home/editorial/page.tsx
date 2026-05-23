@@ -443,13 +443,18 @@ function Manifesto() {
 function RoleEntry({
   entry,
   index,
+  open,
+  onToggle,
 }: {
   entry: (typeof DATA.timeline)[0];
   index: number;
+  open: boolean;
+  onToggle: () => void;
 }) {
   const total = DATA.timeline.length;
+  const hasContent = entry.summary || entry.bullets.length > 0 || entry.blocks.length > 0;
   return (
-    <article className="role-entry">
+    <article className="role-entry" style={{ cursor: hasContent ? "pointer" : "default" }} onClick={hasContent ? onToggle : undefined}>
       {/* Mobile: compact year header */}
       <div className="role-header-mobile">
         <div className="role-year-mobile">
@@ -528,12 +533,19 @@ function RoleEntry({
           {String(index + 1).padStart(2, "0")} / {total} · {entry.fromFull} →{" "}
           {entry.toFull}
         </div>
-        <h3
-          className="display"
-          style={{ fontSize: 22, margin: 0, lineHeight: 1.15, fontWeight: 500 }}
-        >
-          {entry.role}
-        </h3>
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
+          <h3
+            className="display"
+            style={{ fontSize: 22, margin: 0, lineHeight: 1.15, fontWeight: 500 }}
+          >
+            {entry.role}
+          </h3>
+          {hasContent && (
+            <span className="mono" style={{ fontSize: 10, color: "var(--ink-3)", flexShrink: 0, transition: "transform 0.2s", display: "inline-block", transform: open ? "rotate(90deg)" : "none" }}>
+              ▶
+            </span>
+          )}
+        </div>
         <div style={{ marginTop: 4, fontSize: 13.5, color: "var(--ink-2)" }}>
           <span style={{ color: "var(--ink)" }}>{entry.company}</span>
           {entry.type && (
@@ -546,77 +558,85 @@ function RoleEntry({
             </>
           )}
         </div>
-        {entry.summary && (
-          <p
-            style={{
-              marginTop: 10,
-              fontSize: 13.5,
-              lineHeight: 1.5,
-              color: "var(--ink-2)",
-            }}
-          >
-            {entry.summary}
-          </p>
-        )}
-        {entry.bullets.length > 0 && (
-          <ul
-            style={{
-              marginTop: 10,
-              paddingLeft: 16,
-              fontSize: 12.5,
-              lineHeight: 1.55,
-              color: "var(--ink-2)",
-            }}
-          >
-            {entry.bullets.map((b, i) => (
-              <li key={i} style={{ marginBottom: 3 }}>
-                {b}
-              </li>
-            ))}
-          </ul>
-        )}
-        {entry.blocks.length > 0 && (
-          <div style={{ marginTop: 12 }}>
-            {entry.blocks.map((blk, i) => (
-              <div
-                key={i}
-                style={{
-                  borderTop: "1px solid var(--rule)",
-                  paddingTop: 10,
-                  marginTop: 10,
-                }}
-              >
+        <div style={{
+          maxHeight: open ? "3000px" : "0",
+          overflow: "hidden",
+          transition: "max-height 0.4s ease, opacity 0.3s ease",
+          opacity: open ? 1 : 0,
+        }}>
+          {entry.summary && (
+            <p
+              style={{
+                marginTop: 10,
+                fontSize: 13.5,
+                lineHeight: 1.5,
+                color: "var(--ink-2)",
+              }}
+            >
+              {entry.summary}
+            </p>
+          )}
+          {entry.bullets.length > 0 && (
+            <ul
+              style={{
+                marginTop: 10,
+                paddingLeft: 16,
+                fontSize: 12.5,
+                lineHeight: 1.55,
+                color: "var(--ink-2)",
+              }}
+            >
+              {entry.bullets.map((b, i) => (
+                <li key={i} style={{ marginBottom: 3 }}>
+                  {b}
+                </li>
+              ))}
+            </ul>
+          )}
+          {entry.blocks.length > 0 && (
+            <div style={{ marginTop: 12 }}>
+              {entry.blocks.map((blk, i) => (
                 <div
-                  className="display"
-                  style={{ fontSize: 13.5, fontWeight: 600, marginBottom: 6 }}
-                >
-                  {blk.title}
-                </div>
-                <ul
+                  key={i}
                   style={{
-                    margin: 0,
-                    paddingLeft: 14,
-                    fontSize: 12,
-                    lineHeight: 1.5,
-                    color: "var(--ink-2)",
+                    borderTop: "1px solid var(--rule)",
+                    paddingTop: 10,
+                    marginTop: 10,
                   }}
                 >
-                  {blk.bullets.map((b, j) => (
-                    <li key={j} style={{ marginBottom: 2 }}>
-                      {b}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        )}
+                  <div
+                    className="display"
+                    style={{ fontSize: 13.5, fontWeight: 600, marginBottom: 6 }}
+                  >
+                    {blk.title}
+                  </div>
+                  <ul
+                    style={{
+                      margin: 0,
+                      paddingLeft: 14,
+                      fontSize: 12,
+                      lineHeight: 1.5,
+                      color: "var(--ink-2)",
+                    }}
+                  >
+                    {blk.bullets.map((b, j) => (
+                      <li key={j} style={{ marginBottom: 2 }}>
+                        {b}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </article>
   );
 }
 
 function Timeline() {
+  const [openIdx, setOpenIdx] = useState<number | null>(null);
   return (
     <section className="timeline-section">
       <div className="section-header">
@@ -629,7 +649,13 @@ function Timeline() {
       </div>
       <hr className="rule-strong" />
       {DATA.timeline.map((entry, i) => (
-        <RoleEntry key={entry.id} entry={entry} index={i} />
+        <RoleEntry
+          key={entry.id}
+          entry={entry}
+          index={i}
+          open={openIdx === i}
+          onToggle={() => setOpenIdx(openIdx === i ? null : i)}
+        />
       ))}
       <hr className="rule" />
     </section>
@@ -744,19 +770,11 @@ function Recos() {
 
 function Skills() {
   return (
-    <section className="skills-section">
-      <div className="section-header" style={{ marginBottom: 14 }}>
-        <h2 className="display" style={{ fontSize: 24, margin: 0, fontWeight: 400 }}>
-          Aptitudes
-        </h2>
-        <div className="mono" style={{ fontSize: 9 }}>
-          {DATA.skills.length + 1} ÍTEMS
-        </div>
-      </div>
+    <section className="skills-section" style={{ opacity: 0.6 }}>
       <hr className="rule" style={{ marginBottom: 14 }} />
-      <div className="chips-wrap">
+      <div className="chips-wrap" style={{ gap: 5 }}>
         {DATA.skills.map((s, i) => (
-          <span key={i} className="chip">
+          <span key={i} className="chip" style={{ fontSize: 10, padding: "2px 7px", color: "var(--ink-3)" }}>
             {s}
           </span>
         ))}
@@ -764,6 +782,7 @@ function Skills() {
           className="chip lab"
           href={DATA.skillSecret.href}
           title={DATA.skillSecret.title}
+          style={{ fontSize: 10, padding: "2px 7px" }}
         >
           {DATA.skillSecret.label}
         </a>
@@ -882,8 +901,8 @@ export default function EditorialPage() {
       <Manifesto />
       <Timeline />
       <Recos />
-      <Skills />
       <Misc />
+      <Skills />
       <Footer />
       <HomeNav />
     </div>

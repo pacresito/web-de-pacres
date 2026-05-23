@@ -426,9 +426,9 @@ function JobItem({ job, index }: { job: typeof JOBS[0]; index: number }) {
             letterSpacing: "0.04em",
           }}>{job.company}</p>
           <div style={{
-            maxHeight: open ? "800px" : "0",
+            maxHeight: open ? "3000px" : "0",
             overflow: "hidden",
-            transition: "max-height 0.45s ease, opacity 0.35s ease",
+            transition: "max-height 0.55s ease, opacity 0.35s ease",
             opacity: open ? 1 : 0,
             marginTop: open ? "0.8rem" : 0,
             marginLeft: "1.1rem",
@@ -436,7 +436,7 @@ function JobItem({ job, index }: { job: typeof JOBS[0]; index: number }) {
             <div className="job-desc-inner">{job.description}</div>
           </div>
         </div>
-        <p style={{
+        <p className="job-period" style={{
           fontSize: "0.65rem", color: "rgba(0,255,255,0.6)",
           fontFamily: "var(--font-geist-mono), monospace",
           whiteSpace: "nowrap", paddingTop: "0.15rem", flexShrink: 0,
@@ -812,6 +812,12 @@ export default function HomeTempPage() {
         .nt-scanlines {
           position: fixed; inset: 0; pointer-events: none; z-index: 3;
           background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.06) 3px, rgba(0,0,0,0.06) 4px);
+        }
+
+        /* ── Mobile: job period hidden, desc full width ── */
+        @media (max-width: 640px) {
+          .nt-page .job-period { display: none; }
+          .nt-page .job-desc-inner { width: 100%; }
         }
 
         /* ── Corner HUD ── */

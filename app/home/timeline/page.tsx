@@ -511,6 +511,21 @@ body {
 }
 .skills-dot { color: var(--text-4); margin: 0 0.3rem; }
 
+/* ── PHOTO ── */
+.tl-photo {
+  flex-shrink: 0;
+  width: clamp(100px, 15vw, 160px);
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  align-self: flex-start;
+}
+.tl-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+@media (max-width: 640px) {
+  .tl-photo { width: 80px; }
+}
+
 /* ── FOOTER ── */
 .tl-footer {
   padding: 2rem clamp(1.5rem, 7vw, 5rem);
@@ -732,6 +747,9 @@ export default function TempHome() {
             inmanejable.
           </p>
         </div>
+        <div className="tl-photo">
+          <Image src="/pablo.png" alt="Pablo Crespo" width={320} height={320} priority style={{ objectFit: "cover", display: "block", width: "100%", height: "100%" }} />
+        </div>
         <div className="tl-cta">
           <a href="mailto:crespovelasco@gmail.com" className="tl-btn">Contactar →</a>
           <a href="https://www.linkedin.com/in/pacres/" target="_blank" rel="noopener noreferrer" className="tl-btn" style={{ background: "transparent", border: "1.5px solid var(--accent)", color: "var(--accent)" }}>
@@ -805,17 +823,6 @@ export default function TempHome() {
         <div className="spec-row">
           <div className="spec-row-label">
             <span className="spec-num">02</span>
-            <span className="spec-key">Formación</span>
-          </div>
-          <div className="spec-value">
-            <span style={{ fontWeight: 600 }}>Ingeniería Industrial</span>
-            {" · Universidad Pontificia Comillas ICAI-ICADE · 2004 – 2012"}
-          </div>
-        </div>
-
-        <div className="spec-row">
-          <div className="spec-row-label">
-            <span className="spec-num">03</span>
             <span className="spec-key">Certificaciones</span>
           </div>
           <div className="spec-pills">
@@ -829,7 +836,7 @@ export default function TempHome() {
 
         <div className="spec-row" style={{ paddingBottom: "2.5rem" }}>
           <div className="spec-row-label">
-            <span className="spec-num">04</span>
+            <span className="spec-num">03</span>
             <span className="spec-key">Reconocimientos</span>
           </div>
           <div>
