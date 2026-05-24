@@ -431,7 +431,7 @@
 
 /* Skills */
 .editorial .skills-section {
-  padding: 32px var(--pad-x) 20px;
+  padding: 12px var(--pad-x) 20px;
 }
 
 .editorial .chips-wrap {
@@ -622,7 +622,7 @@
 
   /* Skills */
   .editorial .skills-section {
-    padding: var(--section-py) var(--pad-x) 32px;
+    padding: 24px var(--pad-x) 32px;
   }
 
   .editorial .chips-wrap {

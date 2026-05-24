@@ -783,7 +783,7 @@ function Skills() {
           className="chip lab"
           href={DATA.skillSecret.href}
           title={DATA.skillSecret.title}
-          style={{ fontSize: 10, padding: "2px 7px" }}
+          style={{ fontSize: 10, padding: "2px 7px", color: "var(--ink-3)" }}
         >
           {DATA.skillSecret.label}
         </a>
