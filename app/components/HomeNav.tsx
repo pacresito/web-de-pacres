@@ -11,6 +11,7 @@ const VARIANTS = [
   { href: "/home/neon", title: "neon" },
   { href: "/home/timeline", title: "timeline" },
   { href: "/home/editorial", title: "editorial" },
+  { href: "/home/terminal", title: "terminal" },
 ];
 
 const MINIMALISTA_HREFS = new Set(["/", "/home", "/home/original"]);
