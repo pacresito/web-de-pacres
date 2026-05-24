@@ -508,6 +508,30 @@ body {
   color: var(--text);
   text-decoration: none;
   font-weight: 600;
+  background: linear-gradient(
+    100deg,
+    var(--text) 0%,
+    var(--text) 35%,
+    rgba(253,224,71,0.15) 44%,
+    rgba(253,224,71,0.85) 48%,
+    rgba(251,191,36,1.0) 50%,
+    rgba(253,224,71,0.85) 52%,
+    rgba(253,224,71,0.15) 56%,
+    var(--text) 65%,
+    var(--text) 100%
+  );
+  background-size: 300% 100%;
+  background-position: 100% center;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: goldTextSweep 10s ease-in-out infinite;
+}
+@keyframes goldTextSweep {
+  0%, 87%     { background-position: 100% center; }
+  92%         { background-position: 50% center; }
+  97%         { background-position: 0% center; }
+  97.1%, 100% { background-position: 100% center; }
 }
 .skills-dot { color: var(--text-4); margin: 0 0.3rem; }
 
@@ -542,7 +566,7 @@ body {
   pointer-events: none;
 }
 @media (max-width: 640px) {
-  .tl-photo { width: 180px; }
+  .tl-photo { width: 100%; }
 }
 
 /* ── FOOTER ── */
