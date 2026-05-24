@@ -297,7 +297,7 @@ export default function AgricolaCalc() {
     const val = isDecimalStep ? parseFloat(normalized) : parseInt(trimmed, 10);
     if (isNaN(val)) return;
     let rounded = val;
-    if (isTerrainStep) rounded = Math.ceil(val / 4) * 4;
+    if (isTerrainStep) rounded = Math.floor(val / 4) * 4;
     else if (isDecimalStep && val % 1 !== 0) rounded = Math.floor(val) + 0.5;
     const stored: number | "heart" = rounded < 0 ? 0 : rounded > 99 ? "heart" : rounded;
     const newScores = scores.map((r) => [...r]);
