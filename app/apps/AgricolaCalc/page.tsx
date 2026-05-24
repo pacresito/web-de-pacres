@@ -29,7 +29,7 @@ function calcTablePts(count: number, animal: Animal): number {
 const STEP_TO_ROW = [0, 1, 2, 3, 10, 11];
 const STEP_LABELS = [
   "Ovejas 🐑", "Cerdos 🐷", "Vacas 🐄", "Caballos 🐴",
-  "Puntos de terreno", "Puntos de edificios",
+  "Puntos de terreno 🌿", "Puntos de edificios 🏠",
 ];
 
 type RowDef =
@@ -291,9 +291,12 @@ export default function AgricolaCalc() {
   const confirm = () => {
     const trimmed = inputVal.trim();
     if (trimmed === "") return;
-    const val = parseInt(trimmed, 10);
+    const isDecimalStep = localStep === 4 || localStep === 5;
+    const normalized = trimmed.replace(",", ".");
+    const val = isDecimalStep ? parseFloat(normalized) : parseInt(trimmed, 10);
     if (isNaN(val)) return;
-    const stored: number | "heart" = val < 0 ? 0 : val > 99 ? "heart" : val;
+    const rounded = isDecimalStep && val % 1 !== 0 ? Math.floor(val) + 0.5 : val;
+    const stored: number | "heart" = rounded < 0 ? 0 : rounded > 99 ? "heart" : rounded;
     const newScores = scores.map((r) => [...r]);
     newScores[currentPlayer][localStep] = stored;
     setScores(newScores);
@@ -419,8 +422,9 @@ export default function AgricolaCalc() {
             <div className="flex gap-2">
               <input
                 ref={inputRef}
-                type="number"
-                inputMode="numeric"
+                type={localStep >= 4 ? "text" : "number"}
+                inputMode={localStep >= 4 ? "decimal" : "numeric"}
+                step={localStep >= 4 ? "0.5" : "1"}
                 value={inputVal}
                 onChange={(e) => setInputVal(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && confirm()}
