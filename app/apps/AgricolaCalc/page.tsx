@@ -291,11 +291,14 @@ export default function AgricolaCalc() {
   const confirm = () => {
     const trimmed = inputVal.trim();
     if (trimmed === "") return;
-    const isDecimalStep = localStep === 4 || localStep === 5;
+    const isTerrainStep = localStep === 4;
+    const isDecimalStep = localStep === 5;
     const normalized = trimmed.replace(",", ".");
     const val = isDecimalStep ? parseFloat(normalized) : parseInt(trimmed, 10);
     if (isNaN(val)) return;
-    const rounded = isDecimalStep && val % 1 !== 0 ? Math.floor(val) + 0.5 : val;
+    let rounded = val;
+    if (isTerrainStep) rounded = Math.ceil(val / 4) * 4;
+    else if (isDecimalStep && val % 1 !== 0) rounded = Math.floor(val) + 0.5;
     const stored: number | "heart" = rounded < 0 ? 0 : rounded > 99 ? "heart" : rounded;
     const newScores = scores.map((r) => [...r]);
     newScores[currentPlayer][localStep] = stored;
@@ -422,9 +425,9 @@ export default function AgricolaCalc() {
             <div className="flex gap-2">
               <input
                 ref={inputRef}
-                type={localStep >= 4 ? "text" : "number"}
-                inputMode={localStep >= 4 ? "decimal" : "numeric"}
-                step={localStep >= 4 ? "0.5" : "1"}
+                type={localStep === 5 ? "text" : "number"}
+                inputMode={localStep === 5 ? "decimal" : "numeric"}
+                step={localStep === 4 ? "4" : localStep === 5 ? "0.5" : "1"}
                 value={inputVal}
                 onChange={(e) => setInputVal(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && confirm()}
