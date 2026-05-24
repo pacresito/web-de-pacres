@@ -98,6 +98,14 @@ const EXPERIENCIA: ExpItem[] = [
       ]],
     ],
   },
+  {
+    titulo: "Ingeniería Industrial",
+    empresa: "ICAI",
+    tipo: "Formación",
+    fechas: "2004 – 2012",
+    resumen: "Universidad Pontificia Comillas ICAI-ICADE",
+    bullets: [],
+  },
 ];
 
 const RECS: Rec[] = [
@@ -155,6 +163,8 @@ const IDIOMAS = [
 ];
 
 const TICKER_BASE = ["GLOSSYBOX", "NONABOX", "IE BUSINESS SCHOOL", "LETGO", "MAKAI", "CARPA FINANCIEROS", "·"];
+
+const PALABRAS_FIN = ["operaciones", "producto", "personas"];
 
 function RecsCarousel({ recs }: { recs: Rec[] }) {
   const [i, setI] = useState(0);
@@ -228,6 +238,34 @@ function RecsCarousel({ recs }: { recs: Rec[] }) {
         ))}
       </div>
     </section>
+  );
+}
+
+function AnimatedCyclingWord({ words, index }: { words: string[]; index: number }) {
+  const [shownIdx, setShownIdx] = useState(index);
+  const [phase, setPhase] = useState<"idle" | "out" | "in">("idle");
+
+  useEffect(() => {
+    if (index === shownIdx) return;
+    setPhase("out");
+    const exitMs = words[shownIdx].length * 45 + 80;
+    const t = setTimeout(() => { setShownIdx(index); setPhase("in"); }, exitMs);
+    return () => clearTimeout(t);
+  }, [index]);
+
+  const word = words[shownIdx];
+  return (
+    <>
+      {word.split("").map((ch, i) => (
+        <span
+          key={`${shownIdx}-${i}`}
+          className={phase === "out" ? "vE-ch-out" : phase === "in" ? "vE-ch-in" : ""}
+          style={{ animationDelay: phase === "out" ? `${(word.length - 1 - i) * 45}ms` : `${i * 45}ms` }}
+        >
+          {ch === " " ? " " : ch}
+        </span>
+      ))}
+    </>
   );
 }
 
@@ -332,7 +370,7 @@ const STYLES = `
 .vE-rail[data-nav-open="1"] .vE-rail__burger span:nth-child(2) { opacity: 0; }
 .vE-rail[data-nav-open="1"] .vE-rail__burger span:nth-child(3) { transform: translateY(-5.5px) rotate(-45deg); }
 .vE-rail__nav { display: flex; flex-direction: column; gap: 14px; margin-top: 48px; }
-.vE-rail__nav a { display: flex; align-items: baseline; gap: 8px; font: 500 13px "IBM Plex Sans"; color: var(--ink-2); }
+.vE-rail__nav a { display: flex; align-items: baseline; gap: 8px; font: 500 12px "IBM Plex Sans"; color: var(--ink-2); white-space: nowrap; }
 .vE-rail__nav a:hover { color: var(--accent); }
 .vE-rail__nav a i { font: 500 10px "IBM Plex Mono", monospace; color: var(--ink-4); font-style: normal; width: 18px; }
 .vE-rail__bot { font: 500 11px "IBM Plex Mono", monospace; color: var(--ink-3); line-height: 1.8; display: flex; flex-direction: column; gap: 18px; }
@@ -341,16 +379,16 @@ const STYLES = `
 .vE-rail__live span { width: 6px; height: 6px; border-radius: 50%; background: var(--ok); display: inline-block; }
 
 /* Theme toggle */
-.vE-themeT { display: flex; padding: 3px; border: 1px solid var(--line); border-radius: 999px; background: color-mix(in srgb, var(--paper) 30%, transparent); }
-.vE-themeT__b { appearance: none; background: transparent; border: 0; cursor: pointer; flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 5px; padding: 6px 8px; border-radius: 999px; font: 500 10px/1 "IBM Plex Mono", monospace; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); transition: background .15s, color .15s; }
+.vE-themeT { display: flex; padding: 3px; gap: 3px; border: 1px solid var(--line); border-radius: 999px; background: color-mix(in srgb, var(--paper) 30%, transparent); overflow: hidden; }
+.vE-themeT__b { appearance: none; background: transparent; border: 0; cursor: pointer; flex: 1; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 5px 5px; border-radius: 999px; font: 500 10px/1 "IBM Plex Mono", monospace; letter-spacing: 0; text-transform: uppercase; color: var(--ink-3); transition: background .15s, color .15s; }
 .vE-themeT__b:hover { color: var(--ink); }
 .vE-themeT__b.is-on { background: var(--ink); color: var(--bg); }
 .vE-themeT__ico { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: currentColor; position: relative; }
-.vE-themeT__ico--sun { width: 8px; height: 8px; box-shadow: 0 -7px 0 -2.5px currentColor, 0 7px 0 -2.5px currentColor, -7px 0 0 -2.5px currentColor, 7px 0 0 -2.5px currentColor, -5px -5px 0 -2.5px currentColor, 5px 5px 0 -2.5px currentColor, -5px 5px 0 -2.5px currentColor, 5px -5px 0 -2.5px currentColor; }
+.vE-themeT__ico--sun { width: 8px; height: 8px; box-shadow: 0 -5px 0 -2.5px currentColor, 0 5px 0 -2.5px currentColor, -5px 0 0 -2.5px currentColor, 5px 0 0 -2.5px currentColor, -4px -4px 0 -2.5px currentColor, 4px 4px 0 -2.5px currentColor, -4px 4px 0 -2.5px currentColor, 4px -4px 0 -2.5px currentColor; }
 .vE-themeT__ico--moon { background: transparent; box-shadow: inset -3px -1px 0 0 currentColor; transform: rotate(-25deg); }
 
 /* Main */
-.vE-main { padding: 32px 56px 64px; max-width: 1100px; }
+.vE-main { padding: 32px 56px 64px; max-width: 1100px; min-width: 0; }
 
 /* Hero */
 .vE-hero { padding-bottom: 48px; border-bottom: 1px solid var(--line); }
@@ -365,6 +403,8 @@ const STYLES = `
 .vE-h1__l4 em { color: var(--accent); font-style: italic; }
 .vE-hero__bot { display: grid; grid-template-columns: 180px 1fr; gap: 32px; align-items: end; margin-top: 24px; }
 .vE-photo-ph { width: 180px; height: 220px; background: repeating-linear-gradient(135deg, var(--line-soft) 0 1px, transparent 1px 14px); border: 1px solid var(--line-soft); display: flex; align-items: center; justify-content: center; color: var(--ink-4); font: 500 10px "IBM Plex Mono", monospace; letter-spacing: .12em; text-transform: uppercase; }
+.vE-photo-wrap { width: 180px; height: 220px; flex-shrink: 0; overflow: hidden; border: 1px solid var(--line-soft); }
+.vE-photo-wrap img { width: 100%; height: 100%; object-fit: cover; object-position: center top; display: block; }
 .vE-hero__pitch p { font-size: 17px; color: var(--ink-2); max-width: 56ch; margin-bottom: 18px; line-height: 1.5; }
 .vE-hero__ctas { display: flex; gap: 10px; }
 
@@ -454,22 +494,34 @@ const STYLES = `
 /* Aptitudes */
 .vE-skills { padding: 48px 0 64px; border-bottom: 1px solid var(--line); }
 .vE-skills__k { font: 500 12px "IBM Plex Mono", monospace; letter-spacing: .2em; color: var(--ink-3); margin-bottom: 20px; }
-.vE-skills__list { margin: 0; padding: 0; font-family: "Instrument Serif", Georgia, serif; font-size: 22px; line-height: 1.45; letter-spacing: -.005em; color: var(--ink-3); max-width: 70ch; text-wrap: pretty; }
-.vE-skills__list span { color: var(--ink-2); }
+.vE-skills__list { margin: 0; padding: 0; font-family: "Instrument Serif", Georgia, serif; font-size: 19px; line-height: 1.6; letter-spacing: -.005em; color: var(--ink-4); max-width: 800px; }
+.vE-skills__list span { color: var(--ink-3); white-space: nowrap; }
+.vE-skills__list span[data-line-start="1"] .vE-dot { display: none; }
 .vE-skills__list em { color: var(--ink-4); font-style: normal; padding: 0 .2em; }
 
 /* CTA Final */
 .vE-end { padding: 80px 0 5rem; text-align: left; }
 .vE-end__h { font-family: "Instrument Serif", Georgia, serif; font-weight: 400; font-size: 140px; line-height: .9; letter-spacing: -.04em; margin-bottom: 56px; padding-bottom: .16em; }
 .vE-end__h em { color: var(--accent); font-style: italic; }
+@keyframes vEChIn  { from { opacity: 0; transform: translateX(-0.2em); } to { opacity: 1; transform: none; } }
+@keyframes vEChOut { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(0.2em); } }
+.vE-ch-in  { display: inline-block; animation: vEChIn  0.22s cubic-bezier(.2,.7,.2,1) both; }
+.vE-ch-out { display: inline-block; animation: vEChOut 0.18s cubic-bezier(.6,0,.8,1) both; }
 .vE-end__row { display: flex; gap: 12px; margin-bottom: 60px; flex-wrap: wrap; }
 .vE-end__btn { font-size: 14px !important; padding: 14px 22px !important; }
 .vE-end__foot { display: flex; gap: 16px; flex-wrap: wrap; font: 500 11px "IBM Plex Mono", monospace; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); padding-top: 32px; border-top: 1px solid var(--line); }
 .vE-end__foot span:nth-child(even) { color: var(--accent); }
 
+/* Mid desktop (901px – 1200px) */
+@media (max-width: 1200px) and (min-width: 901px) {
+  .vE-h1__l1, .vE-h1__l2, .vE-h1__l3, .vE-h1__l4 { font-size: 72px; }
+  .vE-h1__l2, .vE-h1__l4 { padding-left: 48px; }
+  .vE-end__h { font-size: 100px; }
+}
+
 /* Mobile (≤ 900px) */
 @media (max-width: 900px) {
-  .vE { display: block; }
+  .vE.wf-page { display: block; }
   .vE-rail { position: sticky; top: 0; z-index: 50; height: auto; min-height: 0; display: flex; flex-direction: column; padding: 0; border-right: 0; border-bottom: 1px solid var(--line); background: var(--bg); }
   .vE-rail__top { display: flex; flex-direction: row; align-items: center; gap: 10px; padding: 14px 20px; }
   .vE-rail__brand { flex-shrink: 0; }
@@ -491,6 +543,7 @@ const STYLES = `
   .vE-h1__l2, .vE-h1__l4 { padding-left: 32px; }
   .vE-hero__bot { grid-template-columns: 1fr; gap: 20px; margin-top: 20px; }
   .vE-photo-ph { width: 100%; height: 200px; }
+  .vE-photo-wrap { width: 100%; height: 200px; }
   .vE-hero__pitch p { font-size: 15px; }
   .vE-hero__ctas { flex-wrap: wrap; }
   .vE-ticker__t { font-size: 22px; }
@@ -546,6 +599,8 @@ const STYLES = `
 export default function Manifesto() {
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [navOpen, setNavOpen] = useState(false);
+  const [palabraIdx, setPalabraIdx] = useState(0);
+  const skillsRef = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => {
     const link = document.createElement("link");
@@ -564,6 +619,28 @@ export default function Manifesto() {
     document.body.style.background = theme === "dark" ? "#14130f" : "#f7f4ed";
     return () => { document.body.style.background = ""; };
   }, [theme]);
+
+  useEffect(() => {
+    const t = setInterval(() => setPalabraIdx(p => (p + 1) % PALABRAS_FIN.length), 4000);
+    return () => clearInterval(t);
+  }, []);
+
+  useEffect(() => {
+    const update = () => {
+      const spans = skillsRef.current?.querySelectorAll<HTMLSpanElement>("span[data-line-start]");
+      if (!spans?.length) return;
+      let prevTop = 0;
+      spans.forEach((span, i) => {
+        const top = Math.round(span.getBoundingClientRect().top);
+        if (i === 0) { prevTop = top; return; }
+        span.dataset.lineStart = top !== prevTop ? "1" : "0";
+        prevTop = top;
+      });
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
 
   const handleThemeChange = (t: "light" | "dark") => {
     setTheme(t);
@@ -628,7 +705,9 @@ export default function Manifesto() {
               <span className="vE-h1__l4">lo <em>imposible.</em></span>
             </h1>
             <div className="vE-hero__bot">
-              <div className="vE-photo-ph">RETRATO</div>
+              <div className="vE-photo-wrap">
+                <Image src="/pablo.png" alt="Pablo Crespo Velasco" width={180} height={220} />
+              </div>
               <div className="vE-hero__pitch">
                 <p>Ingeniero Industrial con curiosidad por el funcionamiento de todo y gran capacidad para comprender y resolver cualquier problema que se presente. Siempre con una sonrisa, los grandes retos me hacen feliz: organizar el caos, solucionar lo imposible, gestionar lo inmanejable.</p>
                 <div className="vE-hero__ctas">
@@ -722,16 +801,6 @@ export default function Manifesto() {
               </ul>
             </div>
             <div className="vE-info">
-              <div className="vE-info__k">— EDUCACIÓN —</div>
-              <ul className="vE-info__list">
-                <li>
-                  <strong>Ingeniería Industrial</strong>
-                  <span>Universidad Pontificia Comillas ICAI-ICADE</span>
-                  <small>2004 – 2012</small>
-                </li>
-              </ul>
-            </div>
-            <div className="vE-info">
               <div className="vE-info__k">— CERTIFICACIONES —</div>
               <ul className="vE-info__list vE-info__nums">
                 {CERTIFICACIONES.map((c, ci) => (
@@ -756,11 +825,13 @@ export default function Manifesto() {
           {/* APTITUDES */}
           <section className="vE-skills" id="skills">
             <div className="vE-skills__k">— APTITUDES —</div>
-            <p className="vE-skills__list">
+            <p className="vE-skills__list" ref={skillsRef}>
               {APTITUDES.map((a, ai) => (
                 <Fragment key={a}>
-                  <span>{a}</span>
-                  {ai < APTITUDES.length - 1 && <em>·</em>}
+                  {ai > 0 && " "}
+                  <span {...(ai > 0 ? { "data-line-start": "0" } : {})}>
+                    {ai > 0 && <em className="vE-dot">· </em>}{a}
+                  </span>
                 </Fragment>
               ))}
             </p>
@@ -769,12 +840,12 @@ export default function Manifesto() {
           {/* CTA FINAL */}
           <section className="vE-end" id="contacto">
             <h2 className="vE-end__h">
-              ¿Hablamos<br />de <em>operaciones?</em>
+              ¿Hablamos<br />de <em><AnimatedCyclingWord words={PALABRAS_FIN} index={palabraIdx} />?</em>
             </h2>
             <div className="vE-end__row">
               <a href="mailto:crespovelasco@gmail.com" className="wf-btn wf-btn--primary vE-end__btn">Contactar →</a>
               <a href="https://www.linkedin.com/in/pacres/" target="_blank" rel="noopener noreferrer" className="wf-btn">LinkedIn ↗</a>
-              <span className="wf-btn wf-btn--ghost">Descargar CV ↓</span>
+              <a href="/CV-Pablo-Crespo.pdf" download className="wf-btn wf-btn--ghost">Descargar CV ↓</a>
             </div>
             <div className="vE-end__foot">
               <span>pacr.es</span>
