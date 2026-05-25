@@ -542,8 +542,8 @@ const STYLES = `
   .vE-h1__l1, .vE-h1__l2, .vE-h1__l3, .vE-h1__l4 { font-size: 56px; }
   .vE-h1__l2, .vE-h1__l4 { padding-left: 32px; }
   .vE-hero__bot { grid-template-columns: 1fr; gap: 20px; margin-top: 20px; }
-  .vE-photo-ph { width: 100%; height: 200px; }
-  .vE-photo-wrap { width: 100%; height: 200px; }
+  .vE-photo-ph { width: 100%; height: 260px; }
+  .vE-photo-wrap { width: 100%; height: 260px; }
   .vE-hero__pitch p { font-size: 15px; }
   .vE-hero__ctas { flex-wrap: wrap; }
   .vE-ticker__t { font-size: 22px; }
@@ -674,7 +674,7 @@ export default function Manifesto() {
         <aside className="vE-rail" data-nav-open={navOpen ? "1" : "0"}>
           <div className="vE-rail__top">
             <div className="vE-rail__brand">pacr.es</div>
-            <div className="vE-rail__year">&apos;26</div>
+            <div className="vE-rail__year">&apos;{new Date().getFullYear().toString().slice(-2)}</div>
             <button
               type="button"
               className="vE-rail__burger"
@@ -870,7 +870,7 @@ export default function Manifesto() {
               <span>★</span>
               <span>Pablo Crespo Velasco</span>
               <span>★</span>
-              <span>Madrid &apos;26</span>
+              <span>Madrid &apos;{new Date().getFullYear().toString().slice(-2)}</span>
             </div>
           </section>
 
