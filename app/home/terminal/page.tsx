@@ -205,18 +205,10 @@ function WinIcon({ kind }: { kind: "close" | "minimize" | "maximize" | "restore"
       <path d="M1.5 4h5" {...s} />
     </svg>
   );
-  if (kind === "maximize") return (
-    /* ◤ top-left + ◢ bottom-right → expandir hacia las esquinas */
+  if (kind === "maximize" || kind === "restore") return (
     <svg width="7" height="7" viewBox="0 0 8 8" style={{ display: "block" }}>
-      <polygon points="1,1 4.5,1 1,4.5" fill={f} />
-      <polygon points="7,7 3.5,7 7,3.5" fill={f} />
-    </svg>
-  );
-  /* restore: ◢ top-left (ángulo en 3,3) + ◤ bottom-right (ángulo en 5,5) — separados */
-  return (
-    <svg width="7" height="7" viewBox="0 0 8 8" style={{ display: "block" }}>
-      <polygon points="3,3 1,3 3,1" fill={f} />
-      <polygon points="5,5 7,5 5,7" fill={f} />
+      <polygon points="1,1 5,1 1,5" fill={f} />
+      <polygon points="7,7 3,7 7,3" fill={f} />
     </svg>
   );
 }
@@ -403,7 +395,7 @@ function PromptRow({ n, cmd, highlight = false, active = false }: { n: string; c
         setDisplayed(cmd.slice(0, i));
         if (i >= cmd.length) {
           clearInterval(iv);
-          const ms = cmd.length * 7 + Math.floor(Math.random() * 41) - 20;
+          const ms = cmd.length * 3 + Math.floor(Math.random() * 31) - 15;
           setTimeout(() => setExecMs(ms), 90);
         }
       }, 26);
