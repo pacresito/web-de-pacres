@@ -511,6 +511,7 @@ const STYLES = `
 .vE-end__row { display: flex; gap: 12px; margin-bottom: 60px; flex-wrap: wrap; }
 .vE-end__btn { font-size: 14px !important; padding: 14px 22px !important; }
 .vE-end__foot { display: flex; gap: 16px; flex-wrap: wrap; font: 500 11px "IBM Plex Mono", monospace; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); padding-top: 32px; border-top: 1px solid var(--line); }
+.vE .vE-end__date { font: 500 11px "IBM Plex Mono", monospace; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-4); text-align: center; margin-top: 2rem; }
 .vE-end__foot span:nth-child(even) { color: var(--accent); }
 
 /* Mid desktop (901px – 1200px) */
@@ -876,7 +877,7 @@ export default function Manifesto() {
               <span>Madrid &apos;{new Date().getFullYear().toString().slice(-2)}</span>
             </div>
             {pathname === "/home/manifesto" && (
-              <p style={{textAlign:"center",fontSize:"0.72rem",color:"var(--ink-3)",fontFamily:'"IBM Plex Mono",monospace',margin:"0.5rem 0 0"}}>
+              <p className="vE-end__date">
                 Creado el 24 de mayo de 2026
               </p>
             )}
