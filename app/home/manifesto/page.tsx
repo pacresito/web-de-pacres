@@ -627,19 +627,37 @@ export default function Manifesto() {
 
   useEffect(() => {
     const update = () => {
-      const spans = skillsRef.current?.querySelectorAll<HTMLSpanElement>("span[data-line-start]");
-      if (!spans?.length) return;
-      let prevTop = 0;
-      spans.forEach((span, i) => {
-        const top = Math.round(span.getBoundingClientRect().top);
-        if (i === 0) { prevTop = top; return; }
-        span.dataset.lineStart = top !== prevTop ? "1" : "0";
-        prevTop = top;
+      const container = skillsRef.current;
+      if (!container) return;
+      const firstSpan = container.querySelector<HTMLSpanElement>("span:not([data-line-start])");
+      const spans = container.querySelectorAll<HTMLSpanElement>("span[data-line-start]");
+      if (!spans.length) return;
+      // Start clean: no dots
+      spans.forEach(s => { s.dataset.lineStart = "1"; });
+      void container.offsetHeight;
+      // Process left-to-right: tentatively add dot to each span, keep it only if the span
+      // stays on the same visual line as its predecessor. Each decision is committed before
+      // the next span is processed — no oscillation.
+      let prevTop = firstSpan ? Math.round(firstSpan.getBoundingClientRect().top) : 0;
+      spans.forEach(span => {
+        span.dataset.lineStart = "0"; // try dot
+        const myTop = Math.round(span.getBoundingClientRect().top); // forces reflow
+        if (myTop !== prevTop) {
+          span.dataset.lineStart = "1"; // dot causes overflow → revert
+          prevTop = Math.round(span.getBoundingClientRect().top);
+        } else {
+          prevTop = myTop;
+        }
       });
     };
     update();
+    document.fonts.ready.then(update);
+    const t = setTimeout(update, 500);
     window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener("resize", update);
+    };
   }, []);
 
   const handleThemeChange = (t: "light" | "dark") => {
