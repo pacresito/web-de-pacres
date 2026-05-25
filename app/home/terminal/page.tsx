@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import HomeNav from "../../components/HomeNav";
 
@@ -173,6 +174,53 @@ const SKILLS = [
 
 // ─── Subcomponents ────────────────────────────────────────────────────────────
 
+function useInView(delay = 180) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [inView, setInView] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    let timer: ReturnType<typeof setTimeout>;
+    const io = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting) {
+        timer = setTimeout(() => { setInView(true); io.disconnect(); }, delay);
+      }
+    }, { threshold: 0.2, rootMargin: "0px 0px -80px 0px" });
+    io.observe(el);
+    return () => { io.disconnect(); clearTimeout(timer); };
+  }, [delay]);
+  return { ref, inView };
+}
+
+function WinIcon({ kind }: { kind: "close" | "minimize" | "maximize" | "restore" }) {
+  const f = "rgba(0,0,0,0.4)";
+  const s = { stroke: f, strokeWidth: 1.3, strokeLinecap: "round" as const, fill: "none" as const };
+  if (kind === "close") return (
+    <svg width="7" height="7" viewBox="0 0 8 8" style={{ display: "block" }}>
+      <path d="M1.5 1.5l5 5M6.5 1.5l-5 5" {...s} />
+    </svg>
+  );
+  if (kind === "minimize") return (
+    <svg width="7" height="7" viewBox="0 0 8 8" style={{ display: "block" }}>
+      <path d="M1.5 4h5" {...s} />
+    </svg>
+  );
+  if (kind === "maximize") return (
+    /* ◤ top-left + ◢ bottom-right → expandir hacia las esquinas */
+    <svg width="7" height="7" viewBox="0 0 8 8" style={{ display: "block" }}>
+      <polygon points="1,1 4.5,1 1,4.5" fill={f} />
+      <polygon points="7,7 3.5,7 7,3.5" fill={f} />
+    </svg>
+  );
+  /* restore: ◥ top-right + ◣ bottom-left → ángulos en esquinas, mismo gap que maximize */
+  return (
+    <svg width="7" height="7" viewBox="0 0 8 8" style={{ display: "block" }}>
+      <polygon points="7,1 3.5,1 7,4.5" fill={f} />
+      <polygon points="1,7 1,3.5 4.5,7" fill={f} />
+    </svg>
+  );
+}
+
 function Pill({ type }: { type: string }) {
   const isLive = type === "live";
   return (
@@ -193,7 +241,33 @@ function Pill({ type }: { type: string }) {
   );
 }
 
-function ChromeBar() {
+function WindowBtn({ color, onClick, title, kind, showIcon = false }: {
+  color: string; onClick: () => void; title: string; kind: "close" | "minimize" | "maximize" | "restore"; showIcon?: boolean;
+}) {
+  return (
+    <button
+      title={title}
+      onClick={onClick}
+      style={{
+        width: 12, height: 12, borderRadius: "50%",
+        background: color,
+        border: "none", cursor: "pointer", padding: 0,
+        flexShrink: 0,
+        display: "flex", alignItems: "center", justifyContent: "center",
+      }}
+    >
+      {showIcon && <WinIcon kind={kind} />}
+    </button>
+  );
+}
+
+function ChromeBar({ onClose, onMinimize, onMaximize, isMaximized }: {
+  onClose: () => void;
+  onMinimize: () => void;
+  onMaximize: () => void;
+  isMaximized: boolean;
+}) {
+  const [groupHot, setGroupHot] = useState(false);
   return (
     <div style={{
       background: "var(--t-paper2)",
@@ -203,10 +277,14 @@ function ChromeBar() {
       gridTemplateColumns: "140px 1fr 140px",
       alignItems: "center",
     }}>
-      <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
-        <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#e3e0d6" }} />
-        <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#e3e0d6" }} />
-        <div style={{ width: 12, height: 12, borderRadius: "50%", background: "var(--t-accent)" }} />
+      <div
+        style={{ display: "flex", gap: 7, alignItems: "center" }}
+        onMouseEnter={() => setGroupHot(true)}
+        onMouseLeave={() => setGroupHot(false)}
+      >
+        <WindowBtn color="#ff5f57" onClick={onClose} title="Cerrar" kind="close" showIcon={groupHot} />
+        <WindowBtn color="#febc2e" onClick={onMinimize} title="Minimizar" kind="minimize" showIcon={groupHot} />
+        <WindowBtn color="#28c840" onClick={onMaximize} title={isMaximized ? "Restaurar" : "Maximizar"} kind={isMaximized ? "restore" : "maximize"} showIcon={groupHot} />
       </div>
       <div style={{ textAlign: "center", fontFamily: "var(--t-mono)", fontSize: 12, color: "var(--t-ink2)" }}>
         ⌘&nbsp;&nbsp;pacr.es — cv — 124×42&nbsp;
@@ -225,6 +303,44 @@ function ChromeBar() {
       <div style={{ textAlign: "right", fontFamily: "var(--t-mono)", fontSize: 10, color: "var(--t-ink3)" }}>
         v4.0.0 · zsh
       </div>
+    </div>
+  );
+}
+
+function MinimizedBar({ onRestore, onMaximize, onClose }: { onRestore: () => void; onMaximize: () => void; onClose: () => void }) {
+  const [groupHot, setGroupHot] = useState(false);
+  return (
+    <div style={{
+      position: "fixed",
+      bottom: 28,
+      left: "50%",
+      transform: "translateX(-50%)",
+      background: "var(--t-paper2)",
+      border: "1px solid var(--t-rule)",
+      borderRadius: 10,
+      padding: "10px 16px",
+      display: "flex",
+      alignItems: "center",
+      gap: 12,
+      boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+      fontFamily: "var(--t-mono)",
+      fontSize: 12,
+      color: "var(--t-ink2)",
+      zIndex: 100,
+      animation: "t-sectionIn 0.25s ease-out",
+      whiteSpace: "nowrap",
+    }}>
+      <div
+        style={{ display: "flex", gap: 6, alignItems: "center" }}
+        onMouseEnter={() => setGroupHot(true)}
+        onMouseLeave={() => setGroupHot(false)}
+      >
+        <WindowBtn color="#ff5f57" onClick={onClose} title="Cerrar" kind="close" showIcon={groupHot} />
+        <WindowBtn color="#febc2e" onClick={onRestore} title="Restaurar" kind="minimize" showIcon={groupHot} />
+        <WindowBtn color="#28c840" onClick={onMaximize} title="Maximizar" kind="maximize" showIcon={groupHot} />
+      </div>
+      <span>pacr.es — cv — 124×42</span>
+      <span style={{ color: "var(--t-ink4)", fontSize: 10 }}>· minimizado</span>
     </div>
   );
 }
@@ -274,14 +390,36 @@ function TabsBar() {
   );
 }
 
-function PromptRow({ n, cmd, highlight = false }: { n: string; cmd: string; highlight?: boolean }) {
+function PromptRow({ n, cmd, highlight = false, active = false }: { n: string; cmd: string; highlight?: boolean; active?: boolean }) {
+  const [displayed, setDisplayed] = useState("");
+  const [execMs, setExecMs] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!active) return;
+    let i = 0;
+    const t = setTimeout(() => {
+      const iv = setInterval(() => {
+        i++;
+        setDisplayed(cmd.slice(0, i));
+        if (i >= cmd.length) {
+          clearInterval(iv);
+          const ms = Math.floor(Math.random() * 220 + 18);
+          setTimeout(() => setExecMs(ms), 90);
+        }
+      }, 26);
+      return () => clearInterval(iv);
+    }, 120);
+    return () => clearTimeout(t);
+  }, [active, cmd]);
+
+  const done = displayed.length >= cmd.length;
+
   return (
     <div style={{
       display: "grid",
       gridTemplateColumns: "44px 1fr auto",
       gap: "0 12px",
       padding: "18px 28px 8px",
-      borderTop: "1px solid var(--t-rule)",
       alignItems: "baseline",
     }} className="t-prompt">
       <span style={{ fontFamily: "var(--t-mono)", fontSize: 11, color: "var(--t-ink4)" }} className="t-prompt-num">
@@ -294,14 +432,16 @@ function PromptRow({ n, cmd, highlight = false }: { n: string; cmd: string; high
         <span style={{ color: "var(--t-ink3)" }}>$ </span>
         {highlight ? (
           <>
-            <span style={{ background: "var(--t-accent)", color: "white", borderRadius: 2, padding: "0 4px" }}>{cmd}</span>
-            <span style={{ color: "var(--t-accent)", animation: "t-blink 1s steps(1) infinite", marginLeft: 2 }}>▍</span>
+            <span style={{ background: "var(--t-accent)", color: "white", borderRadius: 2, padding: "0 4px" }}>{displayed}</span>
+            {done && <span style={{ color: "var(--t-accent)", animation: "t-blink 1s steps(1) infinite", marginLeft: 2 }}>▍</span>}
           </>
         ) : (
-          <span style={{ color: "var(--t-ink)" }}>{cmd}</span>
+          <span style={{ color: "var(--t-ink)" }}>{displayed}</span>
         )}
       </span>
-      <span style={{ fontFamily: "var(--t-mono)", fontSize: 10, color: "var(--t-ink3)" }}>↳ 0ms</span>
+      <span style={{ fontFamily: "var(--t-mono)", fontSize: 10, color: "var(--t-ink3)", visibility: execMs !== null ? "visible" : "hidden" }}>
+        ↳ {execMs ?? 0}ms
+      </span>
     </div>
   );
 }
@@ -373,10 +513,9 @@ function WhoamiSection() {
   );
 }
 
-function TimelineDesktop({ letgoOpen, setLetgoOpen }: { letgoOpen: boolean; setLetgoOpen: (v: boolean) => void }) {
+function TimelineDesktop({ expandedId, setExpandedId }: { expandedId: string | null; setExpandedId: (id: string | null) => void }) {
   return (
     <div className="t-tl-desktop" style={{ border: "1px solid var(--t-rule)", borderRadius: 10, overflow: "hidden" }}>
-      {/* Header */}
       <div style={{
         display: "grid",
         gridTemplateColumns: "70px 60px 76px 1fr 1fr 96px 24px",
@@ -395,14 +534,14 @@ function TimelineDesktop({ letgoOpen, setLetgoOpen }: { letgoOpen: boolean; setL
       </div>
 
       {TIMELINE.map((row, idx) => {
-        const isLetgo = row.id === "letgo";
+        const hasContent = row.id === "letgo" || row.bullets.length > 0;
         const isCurrent = row.kind === "current";
-        const isExpanded = isLetgo && letgoOpen;
+        const isExpanded = expandedId === row.id;
 
         return (
           <div key={row.id}>
             <div
-              onClick={isLetgo ? () => setLetgoOpen(!letgoOpen) : undefined}
+              onClick={hasContent ? () => setExpandedId(isExpanded ? null : row.id) : undefined}
               style={{
                 display: "grid",
                 gridTemplateColumns: "70px 60px 76px 1fr 1fr 96px 24px",
@@ -410,7 +549,7 @@ function TimelineDesktop({ letgoOpen, setLetgoOpen }: { letgoOpen: boolean; setL
                 padding: "10px 18px",
                 borderTop: idx === 0 ? "none" : "1px dashed var(--t-rule)",
                 background: isExpanded ? "var(--t-paper2)" : isCurrent ? "var(--t-accent-bg)" : "transparent",
-                cursor: isLetgo ? "pointer" : "default",
+                cursor: hasContent ? "pointer" : "default",
                 alignItems: "center",
                 transition: "background 0.15s",
               }}
@@ -425,14 +564,14 @@ function TimelineDesktop({ letgoOpen, setLetgoOpen }: { letgoOpen: boolean; setL
               <span style={{ fontFamily: "var(--t-mono)", fontSize: 12, color: "var(--t-ink3)", textAlign: "right" }}>{row.span}</span>
               <span style={{
                 fontFamily: "var(--t-mono)", fontSize: 11,
-                color: isLetgo ? "var(--t-accent2)" : "transparent",
+                color: hasContent ? "var(--t-accent2)" : "transparent",
                 display: "block", textAlign: "center",
                 transition: "transform 0.2s",
                 transform: isExpanded ? "rotate(90deg)" : "none",
               }}>▸</span>
             </div>
 
-            {isLetgo && letgoOpen && (
+            {isExpanded && (
               <div className="t-slide-down" style={{
                 borderTop: "1px dashed var(--t-rule)",
                 padding: "16px 24px 20px",
@@ -440,7 +579,7 @@ function TimelineDesktop({ letgoOpen, setLetgoOpen }: { letgoOpen: boolean; setL
               }}>
                 <div style={{ fontFamily: "var(--t-mono)", fontSize: 11, color: "var(--t-ink3)", marginBottom: 12 }}>
                   ↳ pacres@resume:~/cv${" "}
-                  <span style={{ color: "var(--t-accent2)" }}>cv timeline --expand letgo</span>
+                  <span style={{ color: "var(--t-accent2)" }}>cv timeline --expand {row.id}</span>
                 </div>
                 <div style={{
                   border: "1px solid var(--t-accent)",
@@ -451,53 +590,67 @@ function TimelineDesktop({ letgoOpen, setLetgoOpen }: { letgoOpen: boolean; setL
                 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10, gap: 16 }}>
                     <h3 style={{ fontFamily: "var(--t-serif)", fontSize: 28, fontWeight: 400, color: "var(--t-ink)", margin: 0, lineHeight: 1.1 }}>
-                      Launch Manager / Senior PM{" "}
+                      {row.role}{" "}
                       <span style={{ color: "var(--t-accent2)", fontFamily: "var(--t-mono)", fontSize: 22 }}>@</span>{" "}
-                      <em>Letgo</em>
+                      <em>{row.company.split(" —")[0]}</em>
                     </h3>
                     <span style={{ fontFamily: "var(--t-mono)", fontSize: 11, color: "var(--t-ink3)", flexShrink: 0, paddingTop: 6 }}>
-                      2015 → 2023 · ft · L.0200
+                      {row.span} · {row.type} · {row.lineId}
                     </span>
                   </div>
-                  <p style={{ fontFamily: "var(--t-sans)", fontSize: 14.5, color: "var(--t-ink2)", lineHeight: 1.55, marginBottom: 16 }}>
-                    {row.summary}
-                  </p>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", border: "1px solid var(--t-rule)", background: "var(--t-paper)", borderRadius: 6, overflow: "hidden" }}>
-                    {row.blocks.map((block, bi) => {
-                      const isRight = bi % 2 === 1;
-                      const totalRows = Math.ceil(row.blocks.length / 2);
-                      const currentRow = Math.floor(bi / 2);
-                      const isLastRow = currentRow === totalRows - 1;
-                      return (
-                        <div key={block.title} style={{
-                          padding: 16,
-                          borderRight: !isRight ? "1px solid var(--t-rule)" : "none",
-                          borderBottom: !isLastRow ? "1px solid var(--t-rule)" : "none",
-                        }}>
-                          <div style={{ fontFamily: "var(--t-mono)", fontSize: 10, color: "var(--t-accent2)", marginBottom: 4 }}>
-                            $ {block.title.toLowerCase().replace(/\s+/g, "-")}
+                  {row.summary && (
+                    <p style={{ fontFamily: "var(--t-sans)", fontSize: 14.5, color: "var(--t-ink2)", lineHeight: 1.55, marginBottom: 16 }}>
+                      {row.summary}
+                    </p>
+                  )}
+                  {row.blocks.length > 0 && (
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", border: "1px solid var(--t-rule)", background: "var(--t-paper)", borderRadius: 6, overflow: "hidden" }}>
+                      {row.blocks.map((block, bi) => {
+                        const isRight = bi % 2 === 1;
+                        const totalRows = Math.ceil(row.blocks.length / 2);
+                        const currentRow = Math.floor(bi / 2);
+                        const isLastRow = currentRow === totalRows - 1;
+                        return (
+                          <div key={block.title} style={{
+                            padding: 16,
+                            borderRight: !isRight ? "1px solid var(--t-rule)" : "none",
+                            borderBottom: !isLastRow ? "1px solid var(--t-rule)" : "none",
+                          }}>
+                            <div style={{ fontFamily: "var(--t-mono)", fontSize: 10, color: "var(--t-accent2)", marginBottom: 4 }}>
+                              $ {block.title.toLowerCase().replace(/\s+/g, "-")}
+                            </div>
+                            <div style={{ fontFamily: "var(--t-sans)", fontSize: 13, fontWeight: 500, color: "var(--t-ink)", marginBottom: 6 }}>
+                              {block.title}
+                            </div>
+                            <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                              {block.bullets.slice(0, 3).map((b, i) => (
+                                <li key={i} style={{ fontFamily: "var(--t-sans)", fontSize: 12.5, color: "var(--t-ink2)", marginBottom: 3, paddingLeft: 14, position: "relative" }}>
+                                  <span style={{ position: "absolute", left: 0, color: "var(--t-accent2)", fontFamily: "var(--t-mono)" }}>›</span>
+                                  {b}
+                                </li>
+                              ))}
+                              {block.bullets.length > 3 && (
+                                <li style={{ fontFamily: "var(--t-mono)", fontSize: 11, color: "var(--t-ink4)", marginTop: 2 }}>
+                                  … +{block.bullets.length - 3} more
+                                </li>
+                              )}
+                            </ul>
                           </div>
-                          <div style={{ fontFamily: "var(--t-sans)", fontSize: 13, fontWeight: 500, color: "var(--t-ink)", marginBottom: 6 }}>
-                            {block.title}
-                          </div>
-                          <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-                            {block.bullets.slice(0, 3).map((b, i) => (
-                              <li key={i} style={{ fontFamily: "var(--t-sans)", fontSize: 12.5, color: "var(--t-ink2)", marginBottom: 3, paddingLeft: 14, position: "relative" }}>
-                                <span style={{ position: "absolute", left: 0, color: "var(--t-accent2)", fontFamily: "var(--t-mono)" }}>›</span>
-                                {b}
-                              </li>
-                            ))}
-                            {block.bullets.length > 3 && (
-                              <li style={{ fontFamily: "var(--t-mono)", fontSize: 11, color: "var(--t-ink4)", marginTop: 2 }}>
-                                … +{block.bullets.length - 3} more
-                              </li>
-                            )}
-                          </ul>
-                        </div>
-                      );
-                    })}
-                    {row.blocks.length % 2 === 1 && <div />}
-                  </div>
+                        );
+                      })}
+                      {row.blocks.length % 2 === 1 && <div />}
+                    </div>
+                  )}
+                  {row.bullets.length > 0 && row.blocks.length === 0 && (
+                    <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                      {row.bullets.map((b, i) => (
+                        <li key={i} style={{ fontFamily: "var(--t-sans)", fontSize: 13.5, color: "var(--t-ink2)", marginBottom: 6, paddingLeft: 18, position: "relative", lineHeight: 1.5 }}>
+                          <span style={{ position: "absolute", left: 0, color: "var(--t-accent2)", fontFamily: "var(--t-mono)" }}>›</span>
+                          {b}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               </div>
             )}
@@ -505,16 +658,9 @@ function TimelineDesktop({ letgoOpen, setLetgoOpen }: { letgoOpen: boolean; setL
         );
       })}
 
-      {!letgoOpen && (
+      {!expandedId && (
         <div style={{ padding: "10px 18px", borderTop: "1px dashed var(--t-rule)", fontFamily: "var(--t-mono)", fontSize: 11, color: "var(--t-ink3)" }}>
-          ↳ tip: click on{" "}
-          <button
-            onClick={() => setLetgoOpen(true)}
-            style={{ background: "none", border: "none", padding: 0, fontFamily: "var(--t-mono)", fontSize: 11, color: "var(--t-accent2)", borderBottom: "1px dotted var(--t-accent2)", cursor: "pointer" }}
-          >
-            letgo
-          </button>
-          {" "}to expand sub-projects (cv timeline --expand letgo)
+          ↳ tip: click any row to expand details
         </div>
       )}
     </div>
@@ -523,10 +669,10 @@ function TimelineDesktop({ letgoOpen, setLetgoOpen }: { letgoOpen: boolean; setL
 
 function TimelineMobile({ expandedRow, toggleExpanded }: { expandedRow: string | null; toggleExpanded: (id: string) => void }) {
   return (
-    <div className="t-tl-mobile" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+    <div className="t-tl-mobile" style={{ flexDirection: "column", gap: 8 }}>
       {TIMELINE.map((row) => {
         const isExpanded = expandedRow === row.id;
-        const hasContent = row.bullets.length > 0 || row.id === "letgo";
+        const hasContent = row.id === "letgo" || row.bullets.length > 0;
         const isCurrent = row.kind === "current";
 
         return (
@@ -773,14 +919,59 @@ function ContactSection() {
   );
 }
 
+function FooterSection() {
+  const { ref, inView } = useInView();
+  return (
+    <div style={{ borderTop: "1px solid var(--t-rule)" }}>
+      <div ref={ref} className={`t-section-wrap${inView ? " t-in" : ""}`}
+        style={{ padding: "1.2rem 28px 4rem 86px", textAlign: "center" }}>
+        <span style={{ fontFamily: "var(--t-mono)", fontSize: 10, color: "var(--t-ink4)" }}>
+          ↳ created: 24 de mayo de 2026
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function Section({ n, cmd, highlight = false, children, contentStyle, noBorder = false }: {
+  n: string; cmd: string; highlight?: boolean; children: React.ReactNode; contentStyle?: React.CSSProperties; noBorder?: boolean;
+}) {
+  const { ref, inView } = useInView();
+  const [contentVisible, setContentVisible] = useState(false);
+  useEffect(() => {
+    if (!inView) return;
+    const t = setTimeout(() => setContentVisible(true), 120 + cmd.length * 26 + 200);
+    return () => clearTimeout(t);
+  }, [inView, cmd.length]);
+  return (
+    <div ref={ref} style={noBorder ? undefined : { borderTop: "1px solid var(--t-rule)" }}>
+      <PromptRow n={n} cmd={cmd} highlight={highlight} active={inView} />
+      <div className={`t-section-wrap${contentVisible ? " t-in" : ""}`}>
+        <div style={contentStyle} className="t-content">
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function TerminalHome() {
-  const [letgoOpen, setLetgoOpen] = useState(false);
+  const router = useRouter();
+  const [expandedDesktopId, setExpandedDesktopId] = useState<string | null>(null);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  const [windowState, setWindowState] = useState<"normal" | "minimized" | "maximized">("normal");
   const toggleExpanded = (id: string) => setExpandedRow((prev) => prev === id ? null : id);
 
+  const handleClose = () => router.push("/");
+  const handleMinimize = () => setWindowState("minimized");
+  const handleMaximize = () => setWindowState((s) => s === "maximized" ? "normal" : "maximized");
+
   const CONTENT_STYLE: React.CSSProperties = { padding: "0 28px 32px 86px" };
+
+  const isMax = windowState === "maximized";
+  const isMin = windowState === "minimized";
 
   return (
     <>
@@ -813,6 +1004,22 @@ export default function TerminalHome() {
           to   { opacity: 1; transform: translateY(0); }
         }
         .t-slide-down { animation: t-slideDown 0.22s ease-out; }
+        @keyframes t-sectionIn {
+          from { opacity: 0; transform: translateY(12px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .t-section-wrap {
+          opacity: 0;
+          transform: translateY(12px);
+          transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+        }
+        .t-section-wrap.t-in {
+          opacity: 1;
+          transform: none;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .t-section-wrap { opacity: 1 !important; transform: none !important; transition: none !important; }
+        }
 
         .t-ibtn {
           width: 30px; height: 30px; background: var(--t-paper);
@@ -826,7 +1033,7 @@ export default function TerminalHome() {
 
         /* Desktop: show table, hide cards + mobile avatar */
         .t-tl-desktop { display: block; }
-        .t-tl-mobile  { display: none; }
+        .t-tl-mobile  { display: none; flex-direction: column; gap: 8px; }
         .t-avatar-desktop { display: block; }
         .t-avatar-mobile  { display: none; }
         .t-stack-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 28px; }
@@ -849,62 +1056,63 @@ export default function TerminalHome() {
         }
       `}</style>
 
-      <div className="t-bg" style={{ minHeight: "100vh", padding: "2rem 1rem 3rem", display: "flex", justifyContent: "center", alignItems: "flex-start", fontFamily: "var(--t-sans)" }}>
+      {isMin && <MinimizedBar onRestore={() => setWindowState("normal")} onMaximize={() => setWindowState("maximized")} onClose={handleClose} />}
+
+      <div className="t-bg" style={{
+        minHeight: "100vh",
+        padding: isMax ? 0 : "2rem 1rem 3rem",
+        display: isMin ? "none" : "flex",
+        justifyContent: "center",
+        alignItems: "flex-start",
+        fontFamily: "var(--t-sans)",
+      }}>
         <div style={{
-          width: "100%", maxWidth: 920,
+          width: "100%",
+          maxWidth: isMax ? "none" : 920,
           background: "var(--t-paper)",
-          borderRadius: 12,
-          border: "1px solid var(--t-rule)",
-          boxShadow: "0 30px 80px -40px rgba(0,0,0,0.25), 0 2px 6px rgba(0,0,0,0.04)",
+          borderRadius: isMax ? 0 : 12,
+          border: isMax ? "none" : "1px solid var(--t-rule)",
+          boxShadow: isMax ? "none" : "0 30px 80px -40px rgba(0,0,0,0.25), 0 2px 6px rgba(0,0,0,0.04)",
           overflow: "hidden",
-          marginBottom: "3rem",
+          marginBottom: isMax ? 0 : "3rem",
+          transition: "border-radius 0.25s ease, box-shadow 0.25s ease",
         }}>
-          <ChromeBar />
+          <ChromeBar onClose={handleClose} onMinimize={handleMinimize} onMaximize={handleMaximize} isMaximized={isMax} />
           <TabsBar />
 
           {/* 000 — whoami */}
-          <PromptRow n="000" cmd="whoami --pretty" />
-          <div style={CONTENT_STYLE} className="t-content">
+          <Section n="000" cmd="whoami --pretty" contentStyle={CONTENT_STYLE} noBorder>
             <WhoamiSection />
-          </div>
+          </Section>
 
           {/* 001 — timeline */}
-          <PromptRow n="001" cmd="cv timeline --since=2004 --format=pretty | head -n 7" />
-          <div style={CONTENT_STYLE} className="t-content">
-            <TimelineDesktop letgoOpen={letgoOpen} setLetgoOpen={setLetgoOpen} />
+          <Section n="001" cmd="cv timeline --since=2004 --format=pretty | head -n 7" contentStyle={CONTENT_STYLE}>
+            <TimelineDesktop expandedId={expandedDesktopId} setExpandedId={setExpandedDesktopId} />
             <TimelineMobile expandedRow={expandedRow} toggleExpanded={toggleExpanded} />
-          </div>
+          </Section>
 
           {/* 002 — recos */}
-          <PromptRow n="002" cmd="curl https://pacr.es/api/reco | jq" />
-          <div style={CONTENT_STYLE} className="t-content">
+          <Section n="002" cmd="curl https://pacr.es/api/reco | jq" contentStyle={CONTENT_STYLE}>
             <RecoCarousel />
-          </div>
+          </Section>
 
           {/* 003 — stack */}
-          <PromptRow n="003" cmd="cv stack --include=langs,certs,awards" />
-          <div style={CONTENT_STYLE} className="t-content">
+          <Section n="003" cmd="cv stack --include=langs,certs,awards" contentStyle={CONTENT_STYLE}>
             <StackSection />
-          </div>
+          </Section>
 
           {/* 004 — skills */}
-          <PromptRow n="004" cmd="cv skills | sort -R" />
-          <div style={CONTENT_STYLE} className="t-content">
+          <Section n="004" cmd="cv skills | sort -R" contentStyle={CONTENT_STYLE}>
             <SkillsSection />
-          </div>
+          </Section>
 
           {/* 005 — contact */}
-          <PromptRow n="005" cmd="contact --reply" highlight />
-          <div style={CONTENT_STYLE} className="t-content">
+          <Section n="005" cmd="contact --reply" highlight contentStyle={CONTENT_STYLE}>
             <ContactSection />
-          </div>
+          </Section>
 
           {/* Footer */}
-          <div style={{ padding: "1.2rem 28px 4rem 86px", textAlign: "center" }} className="t-footer">
-            <span style={{ fontFamily: "var(--t-mono)", fontSize: 10, color: "var(--t-ink4)" }}>
-              ↳ created: 24 de mayo de 2026
-            </span>
-          </div>
+          <FooterSection />
         </div>
       </div>
 
