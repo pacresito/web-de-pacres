@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, Fragment } from "react";
+import { useState, useEffect, useRef, Fragment, useCallback } from "react";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
 import HomeNav from "../../components/HomeNav";
@@ -587,8 +587,8 @@ const STYLES = `
   .vE-skills { padding: 32px 0 40px; }
   .vE-skills__list { font-size: 18px; }
   .vE-end { padding: 48px 0 5rem; }
-  .vE-end__h { font-size: 64px; margin-bottom: 32px; padding-bottom: .14em; }
-  .vE-end__row { gap: 10px; margin-bottom: 36px; }
+  .vE-end__h { font-size: 64px; margin-bottom: 56px; padding-bottom: .14em; }
+  .vE-end__row { gap: 10px; margin-bottom: 36px; margin-top: 48px; }
   .vE-end__foot { gap: 10px; font-size: 10px; padding-top: 20px; }
 }
 
@@ -605,6 +605,8 @@ export default function Manifesto() {
   const [navOpen, setNavOpen] = useState(false);
   const [palabraIdx, setPalabraIdx] = useState(0);
   const skillsRef = useRef<HTMLParagraphElement>(null);
+  const physicsActiveRef = useRef(false);
+  const restoreRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const link = document.createElement("link");
@@ -662,6 +664,205 @@ export default function Manifesto() {
       clearTimeout(t);
       window.removeEventListener("resize", update);
     };
+  }, []);
+
+  const triggerLetterPhysics = useCallback(async () => {
+    if (physicsActiveRef.current) return;
+    physicsActiveRef.current = true;
+
+    let Engine: typeof import("matter-js").Engine,
+        Bodies: typeof import("matter-js").Bodies,
+        Body: typeof import("matter-js").Body,
+        World: typeof import("matter-js").World,
+        Runner: typeof import("matter-js").Runner;
+    try {
+      const mod = await import("matter-js");
+      const M = (mod as any).default ?? mod;
+      Engine = M.Engine; Bodies = M.Bodies; Body = M.Body; World = M.World; Runner = M.Runner;
+      if (!Engine) throw new Error("matter-js no cargó");
+    } catch (e) {
+      console.error("Error cargando matter-js:", e);
+      physicsActiveRef.current = false;
+      return;
+    }
+
+    const overlay = document.createElement("div");
+    overlay.style.cssText = "position:fixed;inset:0;pointer-events:none;z-index:99999;overflow:hidden;";
+    document.body.appendChild(overlay);
+
+    const pacrEl = document.querySelector("[data-pacres]") as HTMLElement | null;
+    const pacrRect = pacrEl?.getBoundingClientRect();
+
+    const letterData: { char: string; cx: number; cy: number; w: number; h: number; fontSize: string; fontFamily: string; fontWeight: string; color: string; isGradient: boolean }[] = [];
+
+    const walk = (node: Node) => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        const parent = node.parentElement;
+        if (!parent || parent === pacrEl) return;
+        const tag = parent.tagName.toLowerCase();
+        if (["script", "style", "noscript"].includes(tag)) return;
+        const cs = window.getComputedStyle(parent);
+        if (cs.display === "none" || cs.visibility === "hidden" || cs.opacity === "0") return;
+        if (parent.closest("[data-no-physics]")) return;
+        const text = node.textContent || "";
+        for (let i = 0; i < text.length; i++) {
+          if (!text[i].trim()) continue;
+          const range = document.createRange();
+          range.setStart(node, i);
+          range.setEnd(node, i + 1);
+          const rect = range.getBoundingClientRect();
+          if (rect.width > 0) {
+            letterData.push({ char: text[i], cx: rect.left + rect.width / 2, cy: rect.top + rect.height / 2, w: rect.width, h: rect.height, fontSize: cs.fontSize, fontFamily: cs.fontFamily, fontWeight: cs.fontWeight, color: cs.color, isGradient: false });
+          }
+        }
+      } else {
+        node.childNodes.forEach(walk);
+      }
+    };
+    walk(document.body);
+
+    const letterSpans: HTMLSpanElement[] = [];
+    for (const d of letterData) {
+      const span = document.createElement("span");
+      span.textContent = d.char;
+      span.style.cssText = `position:fixed;left:0;top:0;font-size:${d.fontSize};font-family:${d.fontFamily};font-weight:${d.fontWeight};color:${d.color};transform:translate(${d.cx}px,${d.cy}px) translate(-50%,-50%);transform-origin:50% 50%;will-change:transform;pointer-events:none;white-space:pre;`;
+      overlay.appendChild(span);
+      letterSpans.push(span);
+    }
+
+    const main = document.querySelector(".vE") as HTMLElement | null;
+    if (main) { main.style.transition = "opacity 0.15s"; main.style.opacity = "0"; }
+
+    const engine = Engine.create({ gravity: { x: 0, y: 2 } });
+    const floor = Bodies.rectangle(window.innerWidth / 2, window.innerHeight + 30, window.innerWidth * 3, 60, { isStatic: true });
+    const wallL = Bodies.rectangle(-30, window.innerHeight / 2, 60, window.innerHeight * 3, { isStatic: true });
+    const wallR = Bodies.rectangle(window.innerWidth + 30, window.innerHeight / 2, 60, window.innerHeight * 3, { isStatic: true });
+    const hardCeilingY = -window.scrollY;
+    const ceiling = Bodies.rectangle(window.innerWidth / 2, hardCeilingY - 30, window.innerWidth * 3, 60, { isStatic: true, restitution: 0.3, friction: 0.5 });
+    World.add(engine.world, [floor, wallL, wallR, ceiling]);
+    const FOLD_CEILING_Y = -100;
+
+    const bodies: Matter.Body[] = [];
+    for (const d of letterData) {
+      const body = Bodies.rectangle(d.cx, d.cy, Math.max(d.w, 4), Math.max(d.h, 4), { restitution: 0.35, friction: 0.5, frictionAir: 0.008 });
+      Body.setVelocity(body, { x: (Math.random() - 0.5) * 5, y: Math.random() * 2 });
+      Body.setAngularVelocity(body, (Math.random() - 0.5) * 0.25);
+      World.add(engine.world, body);
+      bodies.push(body);
+    }
+
+    let pacrSpan: HTMLSpanElement | null = null;
+    let pacrBody: Matter.Body | null = null;
+    if (pacrEl && pacrRect) {
+      const cs = window.getComputedStyle(pacrEl);
+      pacrSpan = document.createElement("span");
+      pacrSpan.textContent = "pacr.es";
+      pacrSpan.style.cssText = `position:fixed;left:0;top:0;font-size:${cs.fontSize};font-family:${cs.fontFamily};font-weight:${cs.fontWeight};color:${cs.color};transform:translate(${pacrRect.left + pacrRect.width / 2}px,${pacrRect.top + pacrRect.height / 2}px) translate(-50%,-50%);transform-origin:50% 50%;will-change:transform;white-space:pre;cursor:pointer;pointer-events:auto;`;
+      overlay.appendChild(pacrSpan);
+      pacrBody = Bodies.rectangle(pacrRect.left + pacrRect.width / 2, pacrRect.top + pacrRect.height / 2, pacrRect.width, Math.max(pacrRect.height, 8), { restitution: 0.4, friction: 0.5, frictionAir: 0.008 });
+      World.add(engine.world, pacrBody);
+    }
+
+    const runner = Runner.create();
+    Runner.run(runner, engine);
+
+    let gyroFired = false;
+    const handleOrientation = (e: DeviceOrientationEvent) => {
+      if (e.gamma === null || e.beta === null) return;
+      if (Math.abs(e.gamma) < 3 && Math.abs(e.beta) < 3) return;
+      gyroFired = true;
+      const maxTilt = 45;
+      engine.gravity.x = Math.max(-1, Math.min(1, e.gamma / maxTilt)) * 2;
+      engine.gravity.y = Math.max(-1, Math.min(1, e.beta / maxTilt)) * 2;
+    };
+    window.addEventListener("deviceorientation", handleOrientation);
+
+    const handleTouchGravity = (e: TouchEvent) => {
+      if (gyroFired) return;
+      const touch = e.touches[0];
+      if (!touch) return;
+      engine.gravity.x = ((touch.clientX - window.innerWidth / 2) / (window.innerWidth / 2)) * 2;
+      engine.gravity.y = ((touch.clientY - window.innerHeight / 2) / (window.innerHeight / 2)) * 2;
+    };
+    window.addEventListener("touchmove", handleTouchGravity, { passive: true });
+
+    const handleMouseGravity = (e: MouseEvent) => {
+      engine.gravity.x = ((e.clientX - window.innerWidth / 2) / (window.innerWidth / 2)) * 2;
+      engine.gravity.y = ((e.clientY - window.innerHeight / 2) / (window.innerHeight / 2)) * 2;
+    };
+    window.addEventListener("mousemove", handleMouseGravity);
+
+    let stopped = false;
+    let animFrame: number;
+    const animate = () => {
+      if (stopped) return;
+      for (let i = 0; i < letterSpans.length; i++) {
+        const b = bodies[i];
+        if (b.position.y < FOLD_CEILING_Y && b.velocity.y < 0) {
+          Body.setVelocity(b, { x: b.velocity.x * 0.9, y: -b.velocity.y * 0.5 });
+        }
+        const { x, y } = b.position;
+        letterSpans[i].style.transform = `translate(${x}px,${y}px) translate(-50%,-50%) rotate(${b.angle}rad)`;
+      }
+      if (pacrSpan && pacrBody) {
+        const { x, y } = pacrBody.position;
+        pacrSpan.style.transform = `translate(${x}px,${y}px) translate(-50%,-50%) rotate(${pacrBody.angle}rad)`;
+      }
+      animFrame = requestAnimationFrame(animate);
+    };
+    animate();
+
+    const restore = () => {
+      stopped = true;
+      cancelAnimationFrame(animFrame);
+      Runner.stop(runner);
+      Engine.clear(engine);
+
+      const t = "transform 0.7s cubic-bezier(0.4,0,0.2,1)";
+      letterSpans.forEach((span, i) => {
+        span.style.transition = t;
+        span.style.transform = `translate(${letterData[i].cx}px,${letterData[i].cy}px) translate(-50%,-50%) rotate(0rad)`;
+      });
+      if (pacrSpan && pacrRect) {
+        pacrSpan.style.transition = t;
+        pacrSpan.style.transform = `translate(${pacrRect.left + pacrRect.width / 2}px,${pacrRect.top + pacrRect.height / 2}px) translate(-50%,-50%) rotate(0rad)`;
+      }
+
+      setTimeout(() => {
+        overlay.remove();
+        if (main) main.style.opacity = "1";
+        physicsActiveRef.current = false;
+      }, 750);
+    };
+
+    const cleanupListeners = () => {
+      window.removeEventListener("deviceorientation", handleOrientation);
+      window.removeEventListener("mousemove", handleMouseGravity);
+      window.removeEventListener("touchmove", handleTouchGravity);
+    };
+
+    overlay.style.pointerEvents = "auto";
+    const isTouchDevice = "ontouchstart" in window;
+    if (isTouchDevice) {
+      let lastTapTime = 0;
+      const handleDoubleTap = () => {
+        const now = Date.now();
+        if (now - lastTapTime < 350) {
+          overlay.removeEventListener("touchend", handleDoubleTap);
+          cleanupListeners();
+          restore();
+        }
+        lastTapTime = now;
+      };
+      overlay.addEventListener("touchend", handleDoubleTap);
+    } else {
+      overlay.style.cursor = "pointer";
+      overlay.addEventListener("click", () => {
+        cleanupListeners();
+        restore();
+      }, { once: true });
+    }
+    restoreRef.current = restore;
   }, []);
 
   const handleThemeChange = (t: "light" | "dark") => {
@@ -870,7 +1071,7 @@ export default function Manifesto() {
               <a href="/CV-Pablo-Crespo.pdf" download className="wf-btn wf-btn--ghost">Descargar CV ↓</a>
             </div>
             <div className="vE-end__foot">
-              <span>pacr.es</span>
+              <span data-pacres onClick={triggerLetterPhysics} style={{cursor:"pointer",userSelect:"none"}}>pacr.es</span>
               <span>★</span>
               <span>Pablo Crespo Velasco</span>
               <span>★</span>
