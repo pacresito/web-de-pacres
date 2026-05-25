@@ -212,11 +212,11 @@ function WinIcon({ kind }: { kind: "close" | "minimize" | "maximize" | "restore"
       <polygon points="7,7 3.5,7 7,3.5" fill={f} />
     </svg>
   );
-  /* restore: ◥ top-right + ◣ bottom-left → ángulos en esquinas, mismo gap que maximize */
+  /* restore: ◤ en bottom-right + ◢ en top-left → apuntan hacia el centro */
   return (
     <svg width="7" height="7" viewBox="0 0 8 8" style={{ display: "block" }}>
-      <polygon points="7,1 3.5,1 7,4.5" fill={f} />
-      <polygon points="1,7 1,3.5 4.5,7" fill={f} />
+      <polygon points="3.5,3.5 7,3.5 3.5,7" fill={f} />
+      <polygon points="4.5,4.5 1,4.5 4.5,1" fill={f} />
     </svg>
   );
 }
@@ -403,7 +403,8 @@ function PromptRow({ n, cmd, highlight = false, active = false }: { n: string; c
         setDisplayed(cmd.slice(0, i));
         if (i >= cmd.length) {
           clearInterval(iv);
-          const ms = Math.floor(Math.random() * 220 + 18);
+          const base = 120 + cmd.length * 26;
+          const ms = base + Math.floor(Math.random() * 21) - 10;
           setTimeout(() => setExecMs(ms), 90);
         }
       }, 26);
