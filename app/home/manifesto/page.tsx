@@ -513,6 +513,7 @@ const STYLES = `
   -webkit-text-fill-color: transparent;
   animation: vEGoldTextSweep 10s ease-in-out infinite;
 }
+.vE-skill-shine .vE-dot { -webkit-text-fill-color: var(--ink-4); }
 @keyframes vEGoldTextSweep {
   0%, 87%     { background-position: 100% center; }
   89.5%       { background-position: 50% center; }
