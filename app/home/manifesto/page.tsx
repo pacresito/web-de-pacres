@@ -508,7 +508,7 @@ const STYLES = `
 @keyframes vEChOut { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(0.2em); } }
 .vE-ch-in  { display: inline-block; animation: vEChIn  0.22s cubic-bezier(.2,.7,.2,1) both; }
 .vE-ch-out { display: inline-block; animation: vEChOut 0.18s cubic-bezier(.6,0,.8,1) both; }
-.vE-end__row { display: flex; gap: 12px; margin-bottom: 60px; flex-wrap: wrap; }
+.vE-end__row { display: flex; gap: 12px; margin-bottom: 60px; margin-top: 20px; flex-wrap: wrap; }
 .vE-end__btn { font-size: 14px !important; padding: 14px 22px !important; }
 .vE-end__foot { display: flex; gap: 16px; flex-wrap: wrap; font: 500 11px "IBM Plex Mono", monospace; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); padding-top: 32px; border-top: 1px solid var(--line); }
 .vE .vE-end__date { font: 500 11px "IBM Plex Mono", monospace; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-4); text-align: center; margin-top: 2rem; }
@@ -588,7 +588,7 @@ const STYLES = `
   .vE-skills__list { font-size: 18px; }
   .vE-end { padding: 48px 0 5rem; }
   .vE-end__h { font-size: 64px; margin-bottom: 56px; padding-bottom: .14em; }
-  .vE-end__row { gap: 10px; margin-bottom: 36px; margin-top: 48px; }
+  .vE-end__row { gap: 10px; margin-bottom: 36px; margin-top: 20px; }
   .vE-end__foot { gap: 10px; font-size: 10px; padding-top: 20px; }
 }
 
