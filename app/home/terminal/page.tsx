@@ -833,7 +833,8 @@ export default function TerminalHome() {
         .t-session-meta { display: block; }
 
         @media (max-width: 700px) {
-          .t-tl-desktop { overflow-x: auto; }
+          .t-tl-desktop { display: none !important; }
+          .t-tl-mobile  { display: flex; }
           .t-avatar-desktop { display: none !important; }
           .t-avatar-mobile  { display: block; }
           .t-whoami-row { flex-direction: column !important; }
@@ -871,6 +872,7 @@ export default function TerminalHome() {
           <PromptRow n="001" cmd="cv timeline --since=2004 --format=pretty | head -n 7" />
           <div style={CONTENT_STYLE} className="t-content">
             <TimelineDesktop letgoOpen={letgoOpen} setLetgoOpen={setLetgoOpen} />
+            <TimelineMobile expandedRow={expandedRow} toggleExpanded={toggleExpanded} />
           </div>
 
           {/* 002 — recos */}
