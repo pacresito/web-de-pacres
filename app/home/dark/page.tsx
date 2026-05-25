@@ -969,7 +969,7 @@ export default function DarkHome() {
 
       <footer className="footer" style={{ flexDirection: "column", gap: "0.6rem", paddingBottom: "4rem" }}>
         <div style={{ display: "flex", justifyContent: "space-between", width: "100%" }}>
-          <span className="footer-brand">pacr.es</span>
+          <span className="footer-brand" style={{ cursor: "default" }}>pacr.es</span>
           <a
             href="https://www.linkedin.com/in/pacres/"
             target="_blank"

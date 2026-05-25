@@ -500,10 +500,25 @@ const STYLES = `
 .vE-skills__list span[data-line-start="1"] .vE-dot { display: none; }
 .vE-skills__list em { color: var(--ink-4); font-style: normal; padding: 0 .2em; }
 
-/* Skill shine */
-.vE-skill-shine { color: inherit; text-decoration: none; position: relative; overflow: hidden; }
-.vE-skill-shine::after { content: ""; position: absolute; top: -50%; left: -75%; width: 50%; height: 200%; background: linear-gradient(120deg, transparent 0%, rgba(251,191,36,0.15) 40%, rgba(253,224,71,0.55) 50%, rgba(251,191,36,0.15) 60%, transparent 100%); transform: skewX(-20deg); animation: vEGoldSweep 10s ease-in-out infinite; }
-@keyframes vEGoldSweep { 0%, 88% { left: -75%; opacity: 1; } 97% { left: 150%; opacity: 1; } 98%, 100% { left: 150%; opacity: 0; } }
+/* Skill shine — mismo color que los span de aptitudes (--ink-3) */
+.vE-skill-shine {
+  text-decoration: none;
+  color: var(--ink-3);
+  white-space: nowrap;
+  background: linear-gradient(100deg, var(--ink-3) 0%, var(--ink-3) 35%, rgba(253,224,71,0.15) 44%, rgba(253,224,71,0.85) 48%, rgba(251,191,36,1.0) 50%, rgba(253,224,71,0.85) 52%, rgba(253,224,71,0.15) 56%, var(--ink-3) 65%, var(--ink-3) 100%);
+  background-size: 300% 100%;
+  background-position: 100% center;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: vEGoldTextSweep 10s ease-in-out infinite;
+}
+@keyframes vEGoldTextSweep {
+  0%, 87%     { background-position: 100% center; }
+  89.5%       { background-position: 50% center; }
+  92%         { background-position: 0% center; }
+  92.1%, 100% { background-position: 100% center; }
+}
 
 /* CTA Final */
 .vE-end { padding: 80px 0 5rem; text-align: left; }
