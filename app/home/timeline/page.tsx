@@ -900,7 +900,7 @@ export default function TempHome() {
           Para empresas (B2B)<span className="skills-dot">·</span>
           Negociación<span className="skills-dot">·</span>
           Trabajo en equipo<span className="skills-dot">·</span>
-          Resolución de problemas
+          <strong>Resolución de problemas</strong>
         </p>
       </section>
 
