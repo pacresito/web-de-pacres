@@ -72,7 +72,7 @@ const TIMELINE = [
   },
   {
     id: "fastisimo", lineId: "L.0400", tPlus: "+11y",
-    span: "abr–may 2015", role: "Mentor", company: "Fastísimo / IE Business School",
+    span: "2015", role: "Mentor", company: "Fastísimo / IE Business School",
     type: "mentor", kind: "mentor",
     summary: "Mentor de Fastísimo en el Area 31 del IE Business School. La app, después renombrada Ermes con Bernardo Hernández, opera en Nueva York.",
     bullets: [] as string[],
