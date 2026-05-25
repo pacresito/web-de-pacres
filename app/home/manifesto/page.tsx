@@ -544,6 +544,7 @@ const STYLES = `
   .vE-hero__bot { grid-template-columns: 1fr; gap: 20px; margin-top: 20px; }
   .vE-photo-ph { width: 100%; height: 300px; }
   .vE-photo-wrap { width: 100%; height: 300px; }
+  .vE-photo-wrap img { object-position: center 45%; }
   .vE-hero__pitch p { font-size: 15px; }
   .vE-hero__ctas { flex-wrap: wrap; }
   .vE-ticker__t { font-size: 22px; }
