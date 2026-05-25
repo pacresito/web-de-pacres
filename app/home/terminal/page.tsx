@@ -168,7 +168,7 @@ const SKILLS = [
   "analítica de datos", "análisis de negocio", "decisiones basadas en datos",
   "experiencia de usuario", "diseño de interfaz", "investigación de mercado",
   "comportamiento del usuario", "requisitos de productos", "lanzamiento de productos",
-  "b2b", "negociación", "trabajo en equipo",
+  "b2b", "negociación", "trabajo en equipo", "resolución de problemas",
 ];
 
 // ─── Subcomponents ────────────────────────────────────────────────────────────
@@ -748,9 +748,6 @@ function SkillsSection() {
   return (
     <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
       {SKILLS.map((skill) => <span key={skill} style={pillStyle}>{skill}</span>)}
-      <span className="t-skill-shine" style={{ ...pillStyle, position: "relative", overflow: "hidden" }}>
-        resolución de problemas
-      </span>
     </div>
   );
 }
@@ -811,20 +808,6 @@ export default function TerminalHome() {
         .t-bg { background: #ece9e0 !important; }
 
         @keyframes t-blink { 50% { opacity: 0; } }
-        @keyframes t-greenSweep {
-          0%, 88%  { left: -75%; opacity: 1; }
-          97%      { left: 150%; opacity: 1; }
-          98%, 100%{ left: 150%; opacity: 0; }
-        }
-        .t-skill-shine::after {
-          content: "";
-          position: absolute;
-          top: -50%; left: -75%;
-          width: 50%; height: 200%;
-          background: linear-gradient(120deg, transparent 0%, rgba(0,183,122,0.12) 40%, rgba(0,183,122,0.45) 50%, rgba(0,183,122,0.12) 60%, transparent 100%);
-          transform: skewX(-20deg);
-          animation: t-greenSweep 10s ease-in-out infinite;
-        }
         @keyframes t-slideDown {
           from { opacity: 0; transform: translateY(-6px); }
           to   { opacity: 1; transform: translateY(0); }

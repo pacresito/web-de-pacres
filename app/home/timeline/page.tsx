@@ -504,35 +504,6 @@ body {
   max-width: 860px;
 }
 .skills-flow .hl { color: var(--text); font-weight: 600; }
-.skills-flow .lab-link {
-  color: var(--text);
-  text-decoration: none;
-  font-weight: 600;
-  background: linear-gradient(
-    100deg,
-    var(--text) 0%,
-    var(--text) 35%,
-    rgba(253,224,71,0.15) 44%,
-    rgba(253,224,71,0.85) 48%,
-    rgba(251,191,36,1.0) 50%,
-    rgba(253,224,71,0.85) 52%,
-    rgba(253,224,71,0.15) 56%,
-    var(--text) 65%,
-    var(--text) 100%
-  );
-  background-size: 300% 100%;
-  background-position: 100% center;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: goldTextSweep 10s ease-in-out infinite;
-}
-@keyframes goldTextSweep {
-  0%, 87%     { background-position: 100% center; }
-  92%         { background-position: 50% center; }
-  97%         { background-position: 0% center; }
-  97.1%, 100% { background-position: 100% center; }
-}
 .skills-dot { color: var(--text-4); margin: 0 0.3rem; }
 
 /* ── PHOTO ── */
@@ -929,7 +900,7 @@ export default function TempHome() {
           Para empresas (B2B)<span className="skills-dot">·</span>
           Negociación<span className="skills-dot">·</span>
           Trabajo en equipo<span className="skills-dot">·</span>
-          <span className="lab-link">Resolución de problemas</span>
+          Resolución de problemas
         </p>
       </section>
 
