@@ -887,7 +887,7 @@ function Footer() {
         </a>
       </div>
       <p className="mono" style={{ textAlign: "center", marginTop: "0.75rem", fontSize: 11 }}>
-        Creado el 30 de abril de 2026
+        Creado el 19 de mayo de 2026
       </p>
     </footer>
   );

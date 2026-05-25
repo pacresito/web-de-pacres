@@ -1075,6 +1075,9 @@ export default function Home() {
               onMouseLeave={e => (e.currentTarget.style.color = "var(--text-muted)")}
             >LinkedIn →</a>
           </div>
+          <p style={{textAlign:"center",fontSize:"0.72rem",color:"var(--text-muted)",fontFamily:"var(--font-geist-mono),monospace",margin:0}}>
+            Creado el 30 de abril de 2026
+          </p>
         </footer>
 
       </main>
