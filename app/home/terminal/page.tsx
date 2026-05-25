@@ -850,8 +850,7 @@ export default function TerminalHome() {
         .t-session-meta { display: block; }
 
         @media (max-width: 700px) {
-          .t-tl-desktop { display: none; }
-          .t-tl-mobile  { display: flex; }
+          .t-tl-desktop { overflow-x: auto; }
           .t-avatar-desktop { display: none !important; }
           .t-avatar-mobile  { display: block; }
           .t-whoami-row { flex-direction: column !important; }
@@ -889,7 +888,6 @@ export default function TerminalHome() {
           <PromptRow n="001" cmd="cv timeline --since=2004 --format=pretty | head -n 7" />
           <div style={CONTENT_STYLE} className="t-content">
             <TimelineDesktop letgoOpen={letgoOpen} setLetgoOpen={setLetgoOpen} />
-            <TimelineMobile expandedRow={expandedRow} toggleExpanded={toggleExpanded} />
           </div>
 
           {/* 002 — recos */}
@@ -917,21 +915,10 @@ export default function TerminalHome() {
           </div>
 
           {/* Footer */}
-          <div style={{ borderTop: "1px solid var(--t-rule)", padding: "1.8rem 28px 4rem 86px", display: "flex", flexDirection: "column", gap: "0.75rem" }} className="t-footer">
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <span style={{ fontFamily: "var(--t-mono)", fontSize: 11, color: "var(--t-ink3)" }}>pacr.es</span>
-              <a
-                href="https://www.linkedin.com/in/pacres/"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ fontFamily: "var(--t-mono)", fontSize: 11, color: "var(--t-ink3)", textDecoration: "none", transition: "color 0.2s" }}
-                onMouseEnter={e => (e.currentTarget.style.color = "var(--t-accent2)")}
-                onMouseLeave={e => (e.currentTarget.style.color = "var(--t-ink3)")}
-              >LinkedIn →</a>
-            </div>
-            <p style={{ textAlign: "center", fontFamily: "var(--t-mono)", fontSize: 10, color: "var(--t-ink4)", margin: 0 }}>
-              Creado el 24 de mayo de 2026
-            </p>
+          <div style={{ padding: "1.2rem 28px 4rem 86px", textAlign: "center" }} className="t-footer">
+            <span style={{ fontFamily: "var(--t-mono)", fontSize: 10, color: "var(--t-ink4)" }}>
+              ↳ created: 24 de mayo de 2026
+            </span>
           </div>
         </div>
       </div>
