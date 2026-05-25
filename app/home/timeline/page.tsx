@@ -876,7 +876,7 @@ export default function TempHome() {
           <span className="hl">Gestión de productos</span><span className="skills-dot">·</span>
           Gestión de proyectos<span className="skills-dot">·</span>
           Gestión de personas<span className="skills-dot">·</span>
-          <span className="hl">Gestión de crisis</span><span className="skills-dot">·</span>
+          Gestión de crisis<span className="skills-dot">·</span>
           <span className="hl">Liderazgo de equipos</span><span className="skills-dot">·</span>
           Liderazgo de equipos multidisciplinarios<span className="skills-dot">·</span>
           Habilidades sociales<span className="skills-dot">·</span>
@@ -884,7 +884,7 @@ export default function TempHome() {
           Toma de decisiones<span className="skills-dot">·</span>
           Mejora continua<span className="skills-dot">·</span>
           Mejora de procesos<span className="skills-dot">·</span>
-          <span className="hl">Metodologías ágiles</span><span className="skills-dot">·</span>
+          Metodologías ágiles<span className="skills-dot">·</span>
           Estrategia empresarial<span className="skills-dot">·</span>
           Estrategia del producto<span className="skills-dot">·</span>
           Estrategia digital<span className="skills-dot">·</span>
