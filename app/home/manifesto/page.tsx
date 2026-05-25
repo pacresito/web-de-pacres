@@ -500,6 +500,11 @@ const STYLES = `
 .vE-skills__list span[data-line-start="1"] .vE-dot { display: none; }
 .vE-skills__list em { color: var(--ink-4); font-style: normal; padding: 0 .2em; }
 
+/* Skill shine */
+.vE-skill-shine { color: inherit; text-decoration: none; position: relative; overflow: hidden; }
+.vE-skill-shine::after { content: ""; position: absolute; top: -50%; left: -75%; width: 50%; height: 200%; background: linear-gradient(120deg, transparent 0%, rgba(251,191,36,0.15) 40%, rgba(253,224,71,0.55) 50%, rgba(251,191,36,0.15) 60%, transparent 100%); transform: skewX(-20deg); animation: vEGoldSweep 10s ease-in-out infinite; }
+@keyframes vEGoldSweep { 0%, 88% { left: -75%; opacity: 1; } 97% { left: 150%; opacity: 1; } 98%, 100% { left: 150%; opacity: 0; } }
+
 /* CTA Final */
 .vE-end { padding: 80px 0 5rem; text-align: left; }
 .vE-end__h { font-family: "Instrument Serif", Georgia, serif; font-weight: 400; font-size: 140px; line-height: .9; letter-spacing: -.04em; margin-bottom: 56px; padding-bottom: .16em; }
@@ -980,7 +985,7 @@ export default function Manifesto() {
           </section>
 
           {/* CASOS */}
-          <section className="vE-cases" id="casos">
+          <section className="vE-cases" id="casos" data-no-physics>
             <div className="vE-cases__hd">
               <span className="vE-cases__k">— CASOS —</span>
               <h2 className="vE-cases__h">Las paradas del camino</h2>
@@ -1008,7 +1013,7 @@ export default function Manifesto() {
           </section>
 
           {/* RECOMENDACIONES */}
-          <RecsCarousel recs={RECS} />
+          <div data-no-physics><RecsCarousel recs={RECS} /></div>
 
           {/* INFO GRID */}
           <section className="vE-grid" id="info">
@@ -1052,9 +1057,15 @@ export default function Manifesto() {
               {APTITUDES.map((a, ai) => (
                 <Fragment key={a}>
                   {ai > 0 && " "}
-                  <span {...(ai > 0 ? { "data-line-start": "0" } : {})}>
-                    {ai > 0 && <em className="vE-dot">· </em>}{a}
-                  </span>
+                  {a === "Resolución de problemas" ? (
+                    <a href="/lab" className="vE-skill-shine" {...(ai > 0 ? { "data-line-start": "0" } : {})}>
+                      {ai > 0 && <em className="vE-dot">· </em>}{a}
+                    </a>
+                  ) : (
+                    <span {...(ai > 0 ? { "data-line-start": "0" } : {})}>
+                      {ai > 0 && <em className="vE-dot">· </em>}{a}
+                    </span>
+                  )}
                 </Fragment>
               ))}
             </p>

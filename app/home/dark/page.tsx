@@ -827,160 +827,6 @@ body {
 `;
 
 export default function DarkHome() {
-  const physicsActiveRef = useRef(false);
-
-  const triggerLetterPhysics = useCallback(async () => {
-    if (physicsActiveRef.current) return;
-    physicsActiveRef.current = true;
-
-    let Engine: typeof import("matter-js").Engine,
-        Bodies: typeof import("matter-js").Bodies,
-        Body: typeof import("matter-js").Body,
-        World: typeof import("matter-js").World,
-        Runner: typeof import("matter-js").Runner;
-    try {
-      const mod = await import("matter-js");
-      const M = (mod as unknown as { default?: typeof mod }).default ?? mod;
-      Engine = M.Engine; Bodies = M.Bodies; Body = M.Body; World = M.World; Runner = M.Runner;
-      if (!Engine) throw new Error("matter-js no cargó");
-    } catch {
-      physicsActiveRef.current = false;
-      return;
-    }
-
-    const overlay = document.createElement("div");
-    overlay.style.cssText = "position:fixed;inset:0;pointer-events:none;z-index:99999;overflow:hidden;";
-    document.body.appendChild(overlay);
-
-    const pacrEl = document.querySelector("footer span") as HTMLElement | null;
-    const pacrRect = pacrEl?.getBoundingClientRect();
-
-    type LetterData = { char: string; cx: number; cy: number; w: number; h: number; fontSize: string; fontFamily: string; fontWeight: string; color: string };
-    const letterData: LetterData[] = [];
-
-    const walk = (node: Node) => {
-      if (node.nodeType === Node.TEXT_NODE) {
-        const parent = node.parentElement;
-        if (!parent || parent === pacrEl) return;
-        const tag = parent.tagName.toLowerCase();
-        if (["script", "style", "noscript"].includes(tag)) return;
-        const cs = window.getComputedStyle(parent);
-        if (cs.display === "none" || cs.visibility === "hidden" || cs.opacity === "0") return;
-        if (parent.closest("[data-no-physics]")) return;
-        const text = node.textContent || "";
-        for (let i = 0; i < text.length; i++) {
-          if (!text[i].trim()) continue;
-          const range = document.createRange();
-          range.setStart(node, i);
-          range.setEnd(node, i + 1);
-          const rect = range.getBoundingClientRect();
-          if (rect.width > 0) {
-            letterData.push({ char: text[i], cx: rect.left + rect.width / 2, cy: rect.top + rect.height / 2, w: rect.width, h: rect.height, fontSize: cs.fontSize, fontFamily: cs.fontFamily, fontWeight: cs.fontWeight, color: cs.color });
-          }
-        }
-      } else {
-        node.childNodes.forEach(walk);
-      }
-    };
-    walk(document.body);
-
-    const letterSpans: HTMLSpanElement[] = [];
-    for (const d of letterData) {
-      const span = document.createElement("span");
-      span.textContent = d.char;
-      span.style.cssText = `position:fixed;left:0;top:0;font-size:${d.fontSize};font-family:${d.fontFamily};font-weight:${d.fontWeight};color:${d.color};transform:translate(${d.cx}px,${d.cy}px) translate(-50%,-50%);transform-origin:50% 50%;will-change:transform;pointer-events:none;white-space:pre;`;
-      overlay.appendChild(span);
-      letterSpans.push(span);
-    }
-
-    const main = document.querySelector("main") as HTMLElement | null;
-    const heroEl = document.querySelector(".hero") as HTMLElement | null;
-    if (main) { main.style.transition = "opacity 0.15s"; main.style.opacity = "0"; }
-    if (heroEl) { heroEl.style.transition = "opacity 0.15s"; heroEl.style.opacity = "0"; }
-
-    const engine = Engine.create({ gravity: { x: 0, y: 2 } });
-    const floor = Bodies.rectangle(window.innerWidth / 2, window.innerHeight + 30, window.innerWidth * 3, 60, { isStatic: true });
-    const wallL = Bodies.rectangle(-30, window.innerHeight / 2, 60, window.innerHeight * 3, { isStatic: true });
-    const wallR = Bodies.rectangle(window.innerWidth + 30, window.innerHeight / 2, 60, window.innerHeight * 3, { isStatic: true });
-    World.add(engine.world, [floor, wallL, wallR]);
-
-    const bodies: Matter.Body[] = [];
-    for (const d of letterData) {
-      const body = Bodies.rectangle(d.cx, d.cy, Math.max(d.w, 4), Math.max(d.h, 4), { restitution: 0.35, friction: 0.5, frictionAir: 0.008 });
-      Body.setVelocity(body, { x: (Math.random() - 0.5) * 5, y: Math.random() * 2 });
-      Body.setAngularVelocity(body, (Math.random() - 0.5) * 0.25);
-      World.add(engine.world, body);
-      bodies.push(body);
-    }
-
-    let pacrSpan: HTMLSpanElement | null = null;
-    let pacrBody: Matter.Body | null = null;
-    if (pacrEl && pacrRect) {
-      const cs = window.getComputedStyle(pacrEl);
-      pacrSpan = document.createElement("span");
-      pacrSpan.textContent = "pacr.es";
-      pacrSpan.style.cssText = `position:fixed;left:0;top:0;font-size:${cs.fontSize};font-family:${cs.fontFamily};font-weight:${cs.fontWeight};color:${cs.color};transform:translate(${pacrRect.left + pacrRect.width / 2}px,${pacrRect.top + pacrRect.height / 2}px) translate(-50%,-50%);transform-origin:50% 50%;will-change:transform;white-space:pre;cursor:pointer;pointer-events:auto;`;
-      overlay.appendChild(pacrSpan);
-      pacrBody = Bodies.rectangle(pacrRect.left + pacrRect.width / 2, pacrRect.top + pacrRect.height / 2, pacrRect.width, Math.max(pacrRect.height, 8), { restitution: 0.4, friction: 0.5, frictionAir: 0.008 });
-      World.add(engine.world, pacrBody);
-    }
-
-    const runner = Runner.create();
-    Runner.run(runner, engine);
-
-    let stopped = false;
-    let animFrame: number;
-    const animate = () => {
-      if (stopped) return;
-      for (let i = 0; i < letterSpans.length; i++) {
-        const { x, y } = bodies[i].position;
-        letterSpans[i].style.transform = `translate(${x}px,${y}px) translate(-50%,-50%) rotate(${bodies[i].angle}rad)`;
-      }
-      if (pacrSpan && pacrBody) {
-        const { x, y } = pacrBody.position;
-        pacrSpan.style.transform = `translate(${x}px,${y}px) translate(-50%,-50%) rotate(${pacrBody.angle}rad)`;
-      }
-      animFrame = requestAnimationFrame(animate);
-    };
-    animate();
-
-    const restore = () => {
-      stopped = true;
-      cancelAnimationFrame(animFrame);
-      Runner.stop(runner);
-      Engine.clear(engine);
-      const t = "transform 0.7s cubic-bezier(0.4,0,0.2,1)";
-      letterSpans.forEach((span, i) => {
-        span.style.transition = t;
-        span.style.transform = `translate(${letterData[i].cx}px,${letterData[i].cy}px) translate(-50%,-50%) rotate(0rad)`;
-      });
-      if (pacrSpan && pacrRect) {
-        pacrSpan.style.transition = t;
-        pacrSpan.style.transform = `translate(${pacrRect.left + pacrRect.width / 2}px,${pacrRect.top + pacrRect.height / 2}px) translate(-50%,-50%) rotate(0rad)`;
-      }
-      setTimeout(() => {
-        overlay.remove();
-        if (main) main.style.opacity = "1";
-        if (heroEl) heroEl.style.opacity = "1";
-        physicsActiveRef.current = false;
-      }, 750);
-    };
-
-    overlay.style.pointerEvents = "auto";
-    const isTouchDevice = "ontouchstart" in window;
-    if (isTouchDevice) {
-      let lastTap = 0;
-      const handleDoubleTap = () => {
-        const now = Date.now();
-        if (now - lastTap < 350) { overlay.removeEventListener("touchend", handleDoubleTap); restore(); }
-        lastTap = now;
-      };
-      overlay.addEventListener("touchend", handleDoubleTap);
-    } else {
-      overlay.style.cursor = "pointer";
-      overlay.addEventListener("click", restore, { once: true });
-    }
-  }, []);
 
   useEffect(() => {
     const obs = new IntersectionObserver(
@@ -1115,7 +961,7 @@ export default function DarkHome() {
             {SKILLS.map((s) => (
               <span key={s} className="skill-tag">{s}</span>
             ))}
-            <a href="/lab" className="skill-tag skill-tag-shine">Resolución de problemas</a>
+            <span className="skill-tag">Resolución de problemas</span>
           </div>
         </section>
 
@@ -1123,7 +969,7 @@ export default function DarkHome() {
 
       <footer className="footer" style={{ flexDirection: "column", gap: "0.6rem", paddingBottom: "4rem" }}>
         <div style={{ display: "flex", justifyContent: "space-between", width: "100%" }}>
-          <span className="footer-brand" onClick={triggerLetterPhysics}>pacr.es</span>
+          <span className="footer-brand">pacr.es</span>
           <a
             href="https://www.linkedin.com/in/pacres/"
             target="_blank"

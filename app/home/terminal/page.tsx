@@ -748,9 +748,9 @@ function SkillsSection() {
   return (
     <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
       {SKILLS.map((skill) => <span key={skill} style={pillStyle}>{skill}</span>)}
-      <a href="/lab" className="t-skill-shine" style={{ ...pillStyle, position: "relative", overflow: "hidden", textDecoration: "none" }}>
+      <span className="t-skill-shine" style={{ ...pillStyle, position: "relative", overflow: "hidden" }}>
         resolución de problemas
-      </a>
+      </span>
     </div>
   );
 }
