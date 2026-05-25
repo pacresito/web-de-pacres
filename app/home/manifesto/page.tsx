@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, Fragment } from "react";
+import { usePathname } from "next/navigation";
 import Image from "next/image";
 import HomeNav from "../../components/HomeNav";
 
@@ -598,6 +599,7 @@ const STYLES = `
 `;
 
 export default function Manifesto() {
+  const pathname = usePathname();
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [navOpen, setNavOpen] = useState(false);
   const [palabraIdx, setPalabraIdx] = useState(0);
@@ -873,6 +875,11 @@ export default function Manifesto() {
               <span>★</span>
               <span>Madrid &apos;{new Date().getFullYear().toString().slice(-2)}</span>
             </div>
+            {pathname === "/home/manifesto" && (
+              <p style={{textAlign:"center",fontSize:"0.72rem",color:"var(--ink-3)",fontFamily:'"IBM Plex Mono",monospace',margin:"0.5rem 0 0"}}>
+                Creado el 24 de mayo de 2026
+              </p>
+            )}
           </section>
 
         </div>

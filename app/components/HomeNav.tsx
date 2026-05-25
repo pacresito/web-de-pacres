@@ -5,17 +5,17 @@ import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 
 const VARIANTS = [
-  { href: "/home/original", title: "original" },
+  { href: "/home/manifesto", title: "manifesto" },
   { href: "/home/minimalista", title: "minimalista" },
   { href: "/home/dark", title: "dark" },
   { href: "/home/neon", title: "neon" },
   { href: "/home/timeline", title: "timeline" },
   { href: "/home/editorial", title: "editorial" },
   { href: "/home/terminal", title: "terminal" },
-  { href: "/home/manifesto", title: "manifesto" },
+  { href: "/home/original", title: "original" },
 ];
 
-const MINIMALISTA_HREFS = new Set(["/", "/home", "/home/original"]);
+const MANIFESTO_HREFS = new Set(["/", "/home", "/home/manifesto"]);
 
 export default function HomeNav() {
   const pathname = usePathname();
@@ -24,7 +24,7 @@ export default function HomeNav() {
   const leaveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const ref = useRef<HTMLDivElement>(null);
 
-  const current = MINIMALISTA_HREFS.has(pathname ?? "") ? "/home/original" : (pathname ?? "");
+  const current = MANIFESTO_HREFS.has(pathname ?? "") ? "/home/manifesto" : (pathname ?? "");
   const isOpen = hovered || expanded;
 
   // Click outside → collapse (mobile)
