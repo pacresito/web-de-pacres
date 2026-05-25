@@ -542,8 +542,8 @@ const STYLES = `
   .vE-h1__l1, .vE-h1__l2, .vE-h1__l3, .vE-h1__l4 { font-size: 56px; }
   .vE-h1__l2, .vE-h1__l4 { padding-left: 32px; }
   .vE-hero__bot { grid-template-columns: 1fr; gap: 20px; margin-top: 20px; }
-  .vE-photo-ph { width: 100%; height: 260px; }
-  .vE-photo-wrap { width: 100%; height: 260px; }
+  .vE-photo-ph { width: 100%; height: 300px; }
+  .vE-photo-wrap { width: 100%; height: 300px; }
   .vE-hero__pitch p { font-size: 15px; }
   .vE-hero__ctas { flex-wrap: wrap; }
   .vE-ticker__t { font-size: 22px; }
