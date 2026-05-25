@@ -916,7 +916,7 @@ function FooterSection() {
   return (
     <div style={{ borderTop: "1px solid var(--t-rule)" }}>
       <div ref={ref} className={`t-section-wrap${inView ? " t-in" : ""}`}
-        style={{ padding: "1.2rem 28px 4rem 86px", textAlign: "center" }}>
+        style={{ padding: "1.2rem 28px 4rem", textAlign: "center" }}>
         <span style={{ fontFamily: "var(--t-mono)", fontSize: 10, color: "var(--t-ink4)" }}>
           ↳ created: 24 de mayo de 2026
         </span>
