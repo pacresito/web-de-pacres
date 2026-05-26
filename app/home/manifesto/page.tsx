@@ -619,6 +619,17 @@ const STYLES = `
   .vE-end__h { font-size: 52px; }
 }
 
+/* ── Hero entrance (CSS animation, no JS needed) ── */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes vE-hero-fade {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .vE-hero__meta { animation: vE-hero-fade .55s cubic-bezier(.4,0,.2,1) both; }
+  .vE-h1         { animation: vE-hero-fade .55s cubic-bezier(.4,0,.2,1) .12s both; }
+  .vE-hero__bot  { animation: vE-hero-fade .55s cubic-bezier(.4,0,.2,1) .26s both; }
+}
+
 /* ── Reveal on scroll ── */
 @media (prefers-reduced-motion: no-preference) {
   .vE-reveal {
@@ -630,8 +641,6 @@ const STYLES = `
     opacity: 1;
     transform: translateY(0);
   }
-  .vE-reveal--d1 { transition-delay: .15s; }
-  .vE-reveal--d2 { transition-delay: .3s; }
 }
 `;
 
@@ -960,7 +969,7 @@ export default function Manifesto() {
 
           {/* HERO */}
           <section className="vE-hero" id="hola">
-            <div className="vE-hero__meta vE-reveal">
+            <div className="vE-hero__meta">
               <span>★</span>
               <span>Pablo Crespo Velasco</span>
               <span>·</span>
@@ -968,13 +977,13 @@ export default function Manifesto() {
               <span>·</span>
               <span>2011 → ahora</span>
             </div>
-            <h1 className="vE-h1 vE-reveal vE-reveal--d1">
+            <h1 className="vE-h1">
               <span className="vE-h1__l1">Organizar</span>
               <span className="vE-h1__l2">el <em>caos.</em></span>
               <span className="vE-h1__l3">Solucionar</span>
               <span className="vE-h1__l4">lo <em>imposible.</em></span>
             </h1>
-            <div className="vE-hero__bot vE-reveal vE-reveal--d2">
+            <div className="vE-hero__bot">
               <div className="vE-photo-wrap">
                 <Image src="/pablo.png" alt="Pablo Crespo Velasco" width={180} height={220} priority />
               </div>
