@@ -19,11 +19,10 @@ const ITEMS: DesignItem[] = [
   { id: "original",    num: "01", title: "Original",    description: "El primero, una copia de mi LinkedIn como prueba de concepto.",                  date: "30 abr 2026", status: "available", href: "/home/original"   },
   { id: "dark",        num: "02", title: "Dark",        description: "Un intento de versión oscura.",                                                   date: "17 may 2026", status: "available", href: "/home/dark"        },
   { id: "neon",        num: "03", title: "Neon",        description: "Opción hortera, atrevida con primeras animaciones.",                              date: "17 may 2026", status: "available", href: "/home/neon"        },
-  { id: "minimalista", num: "04", title: "Minimalista", description: "Lo mínimo necesario, todavía bastante soso.",                                     date: "18 may 2026", status: "available", href: "/home/minimalista" },
-  { id: "editorial",   num: "05", title: "Editorial",   description: "Versión más profesional con estilo editorial como protagonista.",                 date: "19 may 2026", status: "available", href: "/home/editorial"  },
-  { id: "timeline",    num: "06", title: "Timeline",    description: "Timeline horizontal arrastrable y slider de recomendaciones.",                    date: "19 may 2026", status: "available", href: "/home/timeline"   },
-  { id: "terminal",    num: "07", title: "Terminal",    description: "Terminal macOS con varias animaciones y guiños chulos.",                          date: "24 may 2026", status: "available", href: "/home/terminal"   },
-  { id: "manifesto",   num: "08", title: "Manifesto",   description: "La home principal. Texto editorial, física de letras, Instrument Serif.",         date: "24 may 2026", status: "active",    href: "/home/manifesto"  },
+  { id: "editorial",   num: "04", title: "Editorial",   description: "Versión más profesional con estilo editorial como protagonista.",                 date: "19 may 2026", status: "available", href: "/home/editorial"  },
+  { id: "timeline",    num: "05", title: "Timeline",    description: "Timeline horizontal arrastrable y slider de recomendaciones.",                    date: "19 may 2026", status: "available", href: "/home/timeline"   },
+  { id: "terminal",    num: "06", title: "Terminal",    description: "Terminal macOS con varias animaciones y guiños chulos.",                          date: "24 may 2026", status: "available", href: "/home/terminal"   },
+  { id: "manifesto",   num: "07", title: "Manifesto",   description: "La home principal. Texto editorial, física de letras, Instrument Serif.",         date: "24 may 2026", status: "active",    href: "/home/manifesto"  },
 ];
 
 const CMD = "ls ~/designs --format=grid";
