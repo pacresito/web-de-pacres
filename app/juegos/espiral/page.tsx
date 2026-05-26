@@ -501,6 +501,15 @@ export default function EspiralTerminal() {
         .esp-content-unmaximizing {
           animation: esp-content-fadeout 0.9s ease forwards;
         }
+
+        @keyframes esp-nav-collapse {
+          0%   { opacity: 1; max-width: 200px; }
+          40%  { opacity: 0; max-width: 200px; }
+          100% { opacity: 0; max-width: 0; overflow: hidden; }
+        }
+        .esp-nav-collapsing {
+          animation: esp-nav-collapse 0.9s ease forwards;
+        }
       `}</style>
 
       {/* outer: terminal background */}
@@ -537,41 +546,42 @@ export default function EspiralTerminal() {
             background: "var(--t-paper2)",
             borderBottom: "1px solid var(--t-rule)",
             padding: "14px 18px",
-            display: fullscreen ? "none" : "grid",
-            gridTemplateColumns: "200px 1fr 140px",
+            display: fullscreen ? "none" : "flex",
             alignItems: "center",
+            gap: 7,
           }}>
-            <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
-              <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#ff5f57", flexShrink: 0 }} />
-              <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#febc2e", flexShrink: 0 }} />
-              <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#28c840", flexShrink: 0 }} />
-              <div className={animClass === "esp-win-unmaximizing" ? "esp-content-unmaximizing" : ""} style={{ display: "flex", gap: 7, alignItems: "center" }}>
-                <div style={{ width: 1, height: 16, background: "var(--t-rule)", margin: "0 6px", flexShrink: 0 }} />
-                {/* back */}
-                <button className="esp-nav-btn" onClick={handleBack} title="Volver a /lab">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                    <path d="M19 12H5M5 12l7 7M5 12l7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </button>
-                {/* forward — siempre desactivado */}
-                <button className="esp-nav-btn" disabled title="Adelante">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                    <path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </button>
-                {/* refresh */}
-                <button className="esp-nav-btn" onClick={() => window.location.reload()} title="Recargar">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-                    <polyline points="23 4 23 10 17 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </button>
-              </div>
+            {/* circles — siempre visibles */}
+            <div style={{ display: "flex", gap: 7, alignItems: "center", flexShrink: 0 }}>
+              <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#ff5f57" }} />
+              <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#febc2e" }} />
+              <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#28c840" }} />
             </div>
-            <div style={{ textAlign: "center", fontFamily: MONO, fontSize: 12, color: "var(--t-ink2)" }}>
+            {/* nav — colapsa al volver */}
+            <div className={animClass === "esp-win-unmaximizing" ? "esp-nav-collapsing" : ""} style={{ display: "flex", gap: 7, alignItems: "center", flexShrink: 0, overflow: "hidden" }}>
+              <div style={{ width: 1, height: 16, background: "var(--t-rule)", margin: "0 6px", flexShrink: 0 }} />
+              <button className="esp-nav-btn" onClick={handleBack} title="Volver a /lab">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M19 12H5M5 12l7 7M5 12l7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+              <button className="esp-nav-btn" disabled title="Adelante">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+              <button className="esp-nav-btn" onClick={() => window.location.reload()} title="Recargar">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                  <polyline points="23 4 23 10 17 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+            </div>
+            {/* título — ocupa el espacio restante, centrado */}
+            <div style={{ flex: 1, textAlign: "center", fontFamily: MONO, fontSize: 12, color: "var(--t-ink2)", whiteSpace: "nowrap" }}>
               ⌘&nbsp;&nbsp;pacr.es — espiral
             </div>
-            <div style={{ textAlign: "right", fontFamily: MONO, fontSize: 10, color: "var(--t-ink3)" }}>
+            {/* versión — pegada a la derecha, sin corte */}
+            <div style={{ flexShrink: 0, fontFamily: MONO, fontSize: 10, color: "var(--t-ink3)", whiteSpace: "nowrap" }}>
               v4.0.0 · zsh
             </div>
           </div>
