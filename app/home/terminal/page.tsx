@@ -955,23 +955,20 @@ export default function TerminalHome() {
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
 
   const handleExpandDesktop = (id: string | null, el: HTMLElement) => {
-    const isSwitch = expandedDesktopId !== null && id !== null && expandedDesktopId !== id;
-    const beforeTop = isSwitch ? el.getBoundingClientRect().top : 0;
     setExpandedDesktopId(id);
-    if (isSwitch) {
+    if (id !== null) {
       requestAnimationFrame(() => {
-        window.scrollBy({ top: el.getBoundingClientRect().top - beforeTop, behavior: "instant" });
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
       });
     }
   };
   const [windowState, setWindowState] = useState<"normal" | "minimized" | "maximized">("normal");
   const toggleExpanded = (id: string, el?: HTMLElement) => {
-    const isSwitch = expandedRow !== null && expandedRow !== id && el != null;
-    const beforeTop = isSwitch ? el!.getBoundingClientRect().top : 0;
+    const isExpanding = expandedRow !== id;
     setExpandedRow((prev) => prev === id ? null : id);
-    if (isSwitch) {
+    if (isExpanding && el) {
       requestAnimationFrame(() => {
-        window.scrollBy({ top: el!.getBoundingClientRect().top - beforeTop, behavior: "instant" });
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
       });
     }
   };
