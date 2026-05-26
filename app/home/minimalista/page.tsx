@@ -621,6 +621,7 @@ body {
   font-size: 0.62rem;
   color: var(--faint);
   letter-spacing: 0.08em;
+  text-decoration: none;
 }
 
 .footer-link {
@@ -732,7 +733,7 @@ export default function TempHome() {
         {/* FOOTER */}
         <footer className="cv-footer">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span className="footer-mark">pacr.es</span>
+            <a href="/designs" className="footer-mark">pacr.es</a>
             <a
               href="https://www.linkedin.com/in/pacres/"
               target="_blank"

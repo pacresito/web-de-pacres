@@ -568,6 +568,7 @@ body {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.72rem;
   color: var(--text-3);
+  text-decoration: none;
 }
 .tl-footer-link {
   font-family: 'JetBrains Mono', monospace;
@@ -922,7 +923,7 @@ export default function TempHome() {
 
       {/* FOOTER */}
       <footer className="tl-footer" style={{ paddingBottom: "4rem" }}>
-        <span className="tl-footer-brand">pacr.es</span>
+        <a href="/designs" className="tl-footer-brand">pacr.es</a>
         <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.62rem", color: "var(--text-4)" }}>
           Creado el 19 de mayo de 2026
         </span>

@@ -876,7 +876,7 @@ function Footer() {
   return (
     <footer style={{ padding: "2.5rem var(--pad-x, 22px) 4rem", borderTop: "3px double var(--ink)" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span className="mono" style={{ fontSize: 11 }}>pacr.es</span>
+        <a href="/designs" className="mono" style={{ fontSize: 11, textDecoration: "none", color: "inherit" }}>pacr.es</a>
         <a
           href={DATA.linkedinUrl}
           className="mono link-underline"

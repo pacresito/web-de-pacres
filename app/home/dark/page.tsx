@@ -714,20 +714,23 @@ body {
 .skill-tag:hover { border-color: rgba(59,130,246,0.18); color: var(--text-dim); }
 .skill-tag.skill-shine {
   text-decoration: none;
-  white-space: nowrap;
-  background: linear-gradient(100deg, var(--text-muted) 0%, var(--text-muted) 35%, rgba(253,224,71,0.15) 44%, rgba(253,224,71,0.85) 48%, rgba(251,191,36,1.0) 50%, rgba(253,224,71,0.85) 52%, rgba(253,224,71,0.15) 56%, var(--text-muted) 65%, var(--text-muted) 100%);
-  background-size: 300% 100%;
-  background-position: 100% center;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: goldTextSweep 10s ease-in-out infinite;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
 }
-@keyframes goldTextSweep {
-  0%, 87%     { background-position: 100% center; }
-  89.5%       { background-position: 50% center; }
-  92%         { background-position: 0% center; }
-  92.1%, 100% { background-position: 100% center; }
+.skill-tag.skill-shine::after {
+  content: "";
+  position: absolute;
+  top: -50%; left: -75%;
+  width: 50%; height: 200%;
+  background: linear-gradient(120deg, transparent 0%, rgba(59,130,246,0.1) 40%, rgba(96,165,250,0.45) 50%, rgba(59,130,246,0.1) 60%, transparent 100%);
+  transform: skewX(-20deg);
+  animation: blueSweep 10s ease-in-out infinite;
+}
+@keyframes blueSweep {
+  0%, 88%   { left: -75%; opacity: 1; }
+  97%       { left: 150%; opacity: 1; }
+  98%, 100% { left: 150%; opacity: 0; }
 }
 
 
@@ -792,6 +795,7 @@ body {
   cursor: pointer;
   user-select: none;
   transition: color 0.2s;
+  text-decoration: none;
 }
 .footer-brand:hover { color: var(--accent-bright); }
 .footer-link {
@@ -960,7 +964,7 @@ export default function DarkHome() {
 
       <footer className="footer" style={{ flexDirection: "column", gap: "0.6rem", paddingBottom: "4rem" }}>
         <div style={{ display: "flex", justifyContent: "space-between", width: "100%" }}>
-          <span className="footer-brand" style={{ cursor: "default" }}>pacr.es</span>
+          <a href="/designs" className="footer-brand">pacr.es</a>
           <a
             href="https://www.linkedin.com/in/pacres/"
             target="_blank"

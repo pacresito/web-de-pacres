@@ -1098,13 +1098,14 @@ export default function HomeTempPage() {
           fontSize: "0.78rem",
         }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{
+            <a href="/designs" style={{
               color: "#ff006e",
               textShadow: "0 0 8px rgba(255,0,110,0.6)",
               animation: "neonTextMag 3s ease-in-out infinite",
+              textDecoration: "none",
             }}>
               pacr.es<span style={{ animation: "blink 1s step-end infinite", color: "rgba(255,255,255,0.9)" }}>_</span>
-            </span>
+            </a>
             <a href="https://www.linkedin.com/in/pacres/" target="_blank" rel="noopener noreferrer"
               style={{
                 color: "#00ffff", textDecoration: "none",

@@ -623,20 +623,26 @@ export default function Home() {
         .skill-tag:hover { border-color: rgba(96,165,250,0.4); color: var(--blue-accent); background: rgba(96,165,250,0.05); }
         .skill-tag.skill-shine {
           text-decoration: none;
-          white-space: nowrap;
-          background: linear-gradient(100deg, var(--text-muted) 0%, var(--text-muted) 35%, rgba(253,224,71,0.15) 44%, rgba(253,224,71,0.85) 48%, rgba(251,191,36,1.0) 50%, rgba(253,224,71,0.85) 52%, rgba(253,224,71,0.15) 56%, var(--text-muted) 65%, var(--text-muted) 100%);
-          background-size: 300% 100%;
-          background-position: 100% center;
-          -webkit-background-clip: text;
-          background-clip: text;
-          -webkit-text-fill-color: transparent;
-          animation: goldTextSweep 10s ease-in-out infinite;
+          position: relative;
+          overflow: hidden;
+          cursor: pointer;
         }
-        @keyframes goldTextSweep {
-          0%, 87%     { background-position: 100% center; }
-          89.5%       { background-position: 50% center; }
-          92%         { background-position: 0% center; }
-          92.1%, 100% { background-position: 100% center; }
+        .skill-tag.skill-shine::after {
+          content: "";
+          position: absolute;
+          top: -50%; left: -75%;
+          width: 50%; height: 200%;
+          background: linear-gradient(120deg, transparent 0%, rgba(59,130,246,0.1) 40%, rgba(59,130,246,0.45) 50%, rgba(59,130,246,0.1) 60%, transparent 100%);
+          transform: skewX(-20deg);
+          animation: blueSweep 10s ease-in-out infinite;
+        }
+        body.page-transformed .skill-tag.skill-shine::after {
+          background: linear-gradient(120deg, transparent 0%, rgba(255,255,255,0.1) 40%, rgba(255,255,255,0.45) 50%, rgba(255,255,255,0.1) 60%, transparent 100%);
+        }
+        @keyframes blueSweep {
+          0%, 88%   { left: -75%; opacity: 1; }
+          97%       { left: 150%; opacity: 1; }
+          98%, 100% { left: 150%; opacity: 0; }
         }
 
         .lang-row {
@@ -830,9 +836,9 @@ export default function Home() {
         {/* Footer */}
         <footer style={{padding:"2.5rem 0 4rem",display:"flex",flexDirection:"column",gap:"0.75rem"}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",position:"relative"}}>
-            <span style={{fontSize:"0.78rem",color:"var(--text-muted)",fontFamily:"var(--font-geist-mono),monospace"}}>
+            <a href="/designs" style={{fontSize:"0.78rem",color:"var(--text-muted)",fontFamily:"var(--font-geist-mono),monospace",textDecoration:"none"}}>
               pacr.es
-            </span>
+            </a>
             <a href="https://www.linkedin.com/in/pacres/" target="_blank" rel="noopener noreferrer"
               style={{fontSize:"0.78rem",color:"var(--text-muted)",fontFamily:"var(--font-geist-mono),monospace",textDecoration:"none",transition:"color 0.2s"}}
               onMouseEnter={e => (e.currentTarget.style.color = "var(--blue-accent)")}

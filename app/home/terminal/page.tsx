@@ -992,15 +992,6 @@ function SkillsSection({ active = false }: { active?: boolean }) {
     <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
       {SKILLS.map((skill, idx) => {
         const revealed = idx < visibleCount;
-        if (skill === "resolución de problemas") {
-          return (
-            <a key={skill} href="https://pacr.es/designs"
-              className={`t-skill-shine${revealed ? " t-skill-in" : ""}`}
-              style={{ ...pillStyle, visibility: revealed ? undefined : "hidden" }}>
-              {skill}
-            </a>
-          );
-        }
         return (
           <span key={skill} className={revealed ? "t-skill-in" : undefined} style={{ ...pillStyle, visibility: revealed ? undefined : "hidden" }}>{skill}</span>
         );
@@ -1241,23 +1232,6 @@ export default function TerminalHome() {
         }
         .t-row-in   { animation: t-row-in 0.18s ease-out both; }
         .t-skill-in { animation: t-row-in 0.15s ease-out both; }
-        .t-skill-shine {
-          text-decoration: none;
-          white-space: nowrap;
-          background: linear-gradient(100deg, var(--t-ink4) 0%, var(--t-ink4) 35%, rgba(253,224,71,0.15) 44%, rgba(253,224,71,0.85) 48%, rgba(251,191,36,1.0) 50%, rgba(253,224,71,0.85) 52%, rgba(253,224,71,0.15) 56%, var(--t-ink4) 65%, var(--t-ink4) 100%);
-          background-size: 300% 100%;
-          background-position: 100% center;
-          -webkit-background-clip: text;
-          background-clip: text;
-          -webkit-text-fill-color: transparent;
-          animation: goldTextSweep 10s ease-in-out infinite;
-        }
-        @keyframes goldTextSweep {
-          0%, 87%     { background-position: 100% center; }
-          89.5%       { background-position: 50% center; }
-          92%         { background-position: 0% center; }
-          92.1%, 100% { background-position: 100% center; }
-        }
 
         @keyframes t-win-close {
           from { opacity: 1; transform: scale(1); }
