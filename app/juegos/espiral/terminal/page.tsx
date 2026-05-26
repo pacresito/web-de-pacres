@@ -270,13 +270,14 @@ export default function EspiralTerminal() {
     setWinWidth(window.innerWidth);
     const onResize = () => setWinWidth(window.innerWidth);
     window.addEventListener("resize", onResize);
-    // auto-maximize on load
-    const t = setTimeout(() => {
-      setAnimClass("esp-win-maximizing");
-      setTimeout(() => { setWindowState("maximized"); setAnimClass(""); }, 1020);
-    }, 80);
-    return () => { window.removeEventListener("resize", onResize); clearTimeout(t); };
+    setWindowState("maximized");
+    return () => window.removeEventListener("resize", onResize);
   }, []);
+
+  const handleBack = () => {
+    setAnimClass("esp-win-unmaximizing");
+    setTimeout(() => router.push("/lab"), 900);
+  };
 
   const isMax = windowState === "maximized";
 
@@ -525,22 +526,22 @@ export default function EspiralTerminal() {
               <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#28c840", flexShrink: 0 }} />
               <div style={{ width: 1, height: 16, background: "var(--t-rule)", margin: "0 6px", flexShrink: 0 }} />
               {/* back */}
-              <button className="esp-nav-btn" onClick={() => router.push("/lab")} title="Volver a /lab">
-                <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                  <path d="M11 4L6 9L11 14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+              <button className="esp-nav-btn" onClick={handleBack} title="Volver a /lab">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M19 12H5M5 12l7 7M5 12l7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               </button>
               {/* forward — siempre desactivado */}
               <button className="esp-nav-btn" disabled title="Adelante">
-                <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                  <path d="M7 4L12 9L7 14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               </button>
               {/* refresh */}
               <button className="esp-nav-btn" onClick={() => window.location.reload()} title="Recargar">
-                <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                  <path d="M14.5 9A5.5 5.5 0 1 1 11.2 4.1" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
-                  <path d="M11 1.5V5.5H15" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <polyline points="23 4 23 10 17 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               </button>
             </div>
