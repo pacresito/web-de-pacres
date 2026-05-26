@@ -688,15 +688,15 @@ export default function EspiralTerminal() {
                     </button>
                   </div>
                 ) : (
-                  <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
+                  <div style={{ display: "flex", gap: "2.5rem", alignItems: "center" }}>
                     <button
                       onClick={() => router.push("/juegos/espiral/ranking")}
                       className="esp-t-btn"
                     >
-                      ver ranking →
+                      ranking
                     </button>
                     <button onClick={replay} className="esp-t-btn">
-                      repetir
+                      reiniciar
                     </button>
                   </div>
                 )}
