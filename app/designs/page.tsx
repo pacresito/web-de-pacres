@@ -82,12 +82,7 @@ function ChromeBar({ onClose, onMinimize, onMaximize, isMaximized }: {
         <WindowBtn color="#28c840" onClick={onMaximize} title={isMaximized ? "Restaurar" : "Maximizar"} kind={isMaximized ? "restore" : "maximize"} showIcon={hot} />
       </div>
       <div style={{ textAlign: "center", fontFamily: "var(--t-mono)", fontSize: 12, color: "var(--t-ink2)" }}>
-        ⌘&nbsp;&nbsp;pacr.es — designs — 124×42&nbsp;
-        <span style={{
-          display: "inline-block", border: "1px solid var(--t-rule)", borderBottomWidth: 2,
-          borderRadius: 2, background: "var(--t-paper)", padding: "1px 5px",
-          fontSize: 10, color: "var(--t-ink3)", lineHeight: 1.4,
-        }}>⌘K</span>
+        ⌘&nbsp;&nbsp;pacr.es — designs
       </div>
       <div style={{ textAlign: "right", fontFamily: "var(--t-mono)", fontSize: 10, color: "var(--t-ink3)" }}>
         v4.0.0 · zsh
@@ -116,7 +111,7 @@ function MinimizedBar({ onRestore, onMaximize, onClose, animatingOut = false }: 
         <WindowBtn color="#febc2e" onClick={onRestore} title="Restaurar" kind="minimize" showIcon={hot} />
         <WindowBtn color="#28c840" onClick={onMaximize} title="Maximizar" kind="maximize" showIcon={hot} />
       </div>
-      <span>pacr.es — designs — 124×42</span>
+      <span>pacr.es — designs</span>
       <span style={{ color: "var(--t-ink4)", fontSize: 10 }}>· minimizado</span>
     </div>
   );
