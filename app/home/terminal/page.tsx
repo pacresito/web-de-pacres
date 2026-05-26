@@ -1001,7 +1001,7 @@ function SkillsSection({ active = false }: { active?: boolean }) {
   );
 }
 
-function ContactSection({ active = false }: { active?: boolean }) {
+function ContactSection({ active = false, onDone }: { active?: boolean; onDone?: () => void }) {
   const LINE1 = "crespovelasco@gmail.com";
   const LINE2 = "linkedin.com/in/pacres";
   const [line1, setLine1] = useState("");
@@ -1018,7 +1018,7 @@ function ContactSection({ active = false }: { active?: boolean }) {
       } else {
         setLine2(LINE2.slice(0, idx - LINE1.length));
       }
-      if (idx >= total) clearInterval(iv);
+      if (idx >= total) { clearInterval(iv); onDone?.(); }
     }, 25);
     return () => clearInterval(iv);
   }, [active]);
@@ -1026,41 +1026,59 @@ function ContactSection({ active = false }: { active?: boolean }) {
   return (
     <div>
       <div style={{ fontFamily: "var(--t-mono)", fontSize: 14, lineHeight: 1.8 }}>
-        {active && (
-          <>
-            <div style={{ marginBottom: 4 }}>
-              <span style={{ color: "var(--t-accent2)" }}>→ </span>
-              <a href="mailto:crespovelasco@gmail.com" style={{ color: "var(--t-accent2)", textDecoration: "none" }}>
-                {line1}
-              </a>
-              {line1.length < LINE1.length && (
-                <span style={{ color: "var(--t-accent2)", animation: "t-blink 0.7s steps(1) infinite" }}>▍</span>
-              )}
-            </div>
-            <div>
-              <span style={{ color: "var(--t-accent2)" }}>→ </span>
-              <a href="https://www.linkedin.com/in/pacres/" target="_blank" rel="noopener noreferrer" style={{ color: "var(--t-accent2)", textDecoration: "none" }}>
-                {line2}
-              </a>
-              {line1.length >= LINE1.length && line2.length < LINE2.length && (
-                <span style={{ color: "var(--t-accent2)", animation: "t-blink 0.7s steps(1) infinite" }}>▍</span>
-              )}
-            </div>
-          </>
-        )}
+        <div style={{ marginBottom: 4, visibility: active ? undefined : "hidden" }}>
+          <span style={{ color: "var(--t-accent2)" }}>→ </span>
+          <a href="mailto:crespovelasco@gmail.com" style={{ color: "var(--t-accent2)", textDecoration: "none" }}>
+            {line1}
+          </a>
+          {active && line1.length < LINE1.length && (
+            <span style={{ color: "var(--t-accent2)", animation: "t-blink 0.7s steps(1) infinite" }}>▍</span>
+          )}
+        </div>
+        <div style={{ visibility: active ? undefined : "hidden" }}>
+          <span style={{ color: "var(--t-accent2)" }}>→ </span>
+          <a href="https://www.linkedin.com/in/pacres/" target="_blank" rel="noopener noreferrer" style={{ color: "var(--t-accent2)", textDecoration: "none" }}>
+            {line2}
+          </a>
+          {active && line1.length >= LINE1.length && line2.length < LINE2.length && (
+            <span style={{ color: "var(--t-accent2)", animation: "t-blink 0.7s steps(1) infinite" }}>▍</span>
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
-function FooterSection() {
-  const { ref, inView } = useInView();
+function FooterSection({ startAfter = false }: { startAfter?: boolean }) {
+  const TEXT = "↳ created: 24 de mayo de 2026";
+  const [displayed, setDisplayed] = useState("");
+  const [started, setStarted] = useState(false);
+
+  useEffect(() => {
+    if (!startAfter) return;
+    const t = setTimeout(() => setStarted(true), 200);
+    return () => clearTimeout(t);
+  }, [startAfter]);
+
+  useEffect(() => {
+    if (!started) return;
+    let idx = 0;
+    const iv = setInterval(() => {
+      idx++;
+      setDisplayed(TEXT.slice(0, idx));
+      if (idx >= TEXT.length) clearInterval(iv);
+    }, 50);
+    return () => clearInterval(iv);
+  }, [started]);
+
   return (
-    <div style={{ borderTop: "1px solid var(--t-rule)" }}>
-      <div ref={ref} className={`t-section-wrap${inView ? " t-in" : ""}`}
-        style={{ padding: "1.2rem 28px 4rem", textAlign: "center" }}>
-        <span style={{ fontFamily: "var(--t-mono)", fontSize: 10, color: "var(--t-ink4)" }}>
-          ↳ created: 24 de mayo de 2026
+    <div>
+      <div style={{ padding: "0.4rem 28px 1.5rem", textAlign: "center" }}>
+        <span style={{ fontFamily: "var(--t-mono)", fontSize: 10, color: "var(--t-ink4)", visibility: started ? undefined : "hidden" }}>
+          {started ? displayed : TEXT}
+          {started && displayed.length < TEXT.length && (
+            <span style={{ animation: "t-blink 0.7s steps(1) infinite" }}>▍</span>
+          )}
         </span>
       </div>
     </div>
@@ -1097,6 +1115,7 @@ export default function TerminalHome() {
   const router = useRouter();
   const [expandedDesktopId, setExpandedDesktopId] = useState<string | null>(null);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  const [contactDone, setContactDone] = useState(false);
 
   const handleExpandDesktop = (id: string | null, el: HTMLElement) => {
     setExpandedDesktopId(id);
@@ -1389,11 +1408,11 @@ export default function TerminalHome() {
 
           {/* 005 — contact */}
           <Section n="005" cmd="contact --reply" highlight contentStyle={CONTENT_STYLE}>
-            {(active) => <ContactSection active={active} />}
+            {(active) => <ContactSection active={active} onDone={() => setContactDone(true)} />}
           </Section>
 
           {/* Footer */}
-          <FooterSection />
+          <FooterSection startAfter={contactDone} />
         </div>
       </div>
 
