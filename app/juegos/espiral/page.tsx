@@ -583,7 +583,7 @@ export default function EspiralTerminal() {
           <div style={{
             padding: "18px 28px 8px",
             display: fullscreen ? "none" : "grid",
-            gridTemplateColumns: "44px 1fr auto",
+            gridTemplateColumns: "44px 1fr",
             gap: "0 12px",
             alignItems: "baseline",
             borderBottom: "1px dashed var(--t-rule)",
@@ -596,9 +596,6 @@ export default function EspiralTerminal() {
               <span style={{ color: "var(--t-ink3)" }}>$ </span>
               <span style={{ color: "var(--t-ink)" }}>./espiral --mode=dual</span>
               <span style={{ color: "var(--t-accent)", animation: "esp-blink 1s steps(1) infinite", marginLeft: 2 }}>▍</span>
-            </span>
-            <span style={{ fontFamily: MONO, fontSize: 12, color: "var(--t-ink3)", fontVariantNumeric: "tabular-nums" }}>
-              {elapsed > 0 ? `${elapsed}s` : ""}
             </span>
           </div>
 
