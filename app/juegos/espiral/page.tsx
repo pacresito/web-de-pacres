@@ -270,11 +270,23 @@ export default function EspiralTerminal() {
     setWinWidth(window.innerWidth);
     const onResize = () => setWinWidth(window.innerWidth);
     window.addEventListener("resize", onResize);
-    setWindowState("maximized");
-    return () => window.removeEventListener("resize", onResize);
+
+    const wasRestored = sessionStorage.getItem("espiral_state") === "restored";
+    if (wasRestored) {
+      sessionStorage.removeItem("espiral_state");
+      const t = setTimeout(() => {
+        setAnimClass("esp-win-maximizing");
+        setTimeout(() => { setWindowState("maximized"); setAnimClass(""); }, 1020);
+      }, 80);
+      return () => { window.removeEventListener("resize", onResize); clearTimeout(t); };
+    } else {
+      setWindowState("maximized");
+      return () => window.removeEventListener("resize", onResize);
+    }
   }, []);
 
   const handleBack = () => {
+    sessionStorage.setItem("espiral_state", "restored");
     setAnimClass("esp-win-unmaximizing");
     setTimeout(() => router.push("/lab"), 900);
   };
@@ -539,7 +551,7 @@ export default function EspiralTerminal() {
               </button>
               {/* refresh */}
               <button className="esp-nav-btn" onClick={() => window.location.reload()} title="Recargar">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
                   <polyline points="23 4 23 10 17 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                   <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
