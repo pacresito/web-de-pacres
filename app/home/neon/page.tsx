@@ -763,29 +763,22 @@ export default function HomeTempPage() {
 
         .nt-skill.c-purp { border: 1px solid rgba(191,90,242,0.4); color: #bf5af2; background: rgba(191,90,242,0.06); }
         .nt-skill.c-purp:hover { background: #bf5af2; color: #0a0a0f; box-shadow: 0 0 18px #bf5af2; }
-        .nt-skill-shine {
-          border: 1px solid rgba(191,90,242,0.4);
-          color: #bf5af2;
-          background: rgba(191,90,242,0.06);
-          text-decoration: none;
-          position: relative;
-          overflow: hidden;
-        }
+        /* ── Skill shine (Resolución de problemas) ── */
+        .nt-skill-shine { position: relative; overflow: hidden; }
         .nt-skill-shine::after {
           content: "";
           position: absolute;
           top: -50%; left: -75%;
           width: 50%; height: 200%;
-          background: linear-gradient(120deg, transparent 0%, rgba(191,90,242,0.15) 40%, rgba(191,90,242,0.6) 50%, rgba(191,90,242,0.15) 60%, transparent 100%);
+          background: linear-gradient(120deg, transparent 0%, rgba(191,90,242,0.15) 40%, rgba(191,90,242,0.55) 50%, rgba(191,90,242,0.15) 60%, transparent 100%);
           transform: skewX(-20deg);
-          animation: purpSweep 10s ease-in-out infinite;
+          animation: neonSweep 10s ease-in-out infinite;
         }
-        @keyframes purpSweep {
-          0%, 88%   { left: -75%; opacity: 1; }
-          97%       { left: 150%; opacity: 1; }
-          98%, 100% { left: 150%; opacity: 0; }
+        @keyframes neonSweep {
+          0%, 88%  { left: -75%; opacity: 1; }
+          97%      { left: 150%; opacity: 1; }
+          98%, 100%{ left: 150%; opacity: 0; }
         }
-
         /* ── CTA button ── */
         .nt-cta { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.9rem 2.2rem; border: 1.5px solid #ff006e; color: #ff006e; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; font-family: var(--font-geist-mono), monospace; background: rgba(255,0,110,0.07); transition: background 0.25s, color 0.25s; animation: neonPulseMag 3s ease-in-out infinite; cursor: none; }
         .nt-cta:hover { background: #ff006e; color: #0a0a0f; box-shadow: 0 0 30px #ff006e, 0 0 60px #ff006e40; }
@@ -1069,15 +1062,15 @@ export default function HomeTempPage() {
           <SLabel>Aptitudes</SLabel>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "0.45rem" }}>
             {SKILLS.map((skill, i) => {
+              const cls = ["c-mag","c-cyan","c-acid","c-purp"][i % 4];
               if (skill === "Resolución de problemas") {
                 return (
-                  <a key={skill} href="https://pacr.es/designs" className="nt-skill nt-skill-shine"
-                    style={{ animationDelay: `${i * 0.04}s` }}>
+                  <a key={skill} href="https://pacr.es/designs" className="nt-skill nt-skill-shine c-purp"
+                    style={{ textDecoration: "none", animationDelay: `${i * 0.04}s` }}>
                     {skill}
                   </a>
                 );
               }
-              const cls = ["c-mag","c-cyan","c-acid","c-purp"][i % 4];
               return (
                 <span key={skill} className={`nt-skill ${cls}`}
                   style={{ animationDelay: `${i * 0.04}s` }}>
