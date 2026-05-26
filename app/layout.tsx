@@ -17,7 +17,7 @@ const instrumentSerif = Instrument_Serif({
   style: ["normal", "italic"],
   weight: "400",
   variable: "--font-instrument-serif",
-  display: "block",
+  display: "swap",
 });
 
 const ibmPlexSans = IBM_Plex_Sans({
