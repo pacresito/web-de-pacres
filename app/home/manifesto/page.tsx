@@ -404,8 +404,8 @@ const STYLES = `
 .vE-h1__l4 em { color: var(--accent); font-style: italic; }
 .vE-hero__bot { display: grid; grid-template-columns: 180px 1fr; gap: 32px; align-items: end; margin-top: 24px; }
 .vE-photo-ph { width: 180px; height: 220px; background: repeating-linear-gradient(135deg, var(--line-soft) 0 1px, transparent 1px 14px); border: 1px solid var(--line-soft); display: flex; align-items: center; justify-content: center; color: var(--ink-4); font: 500 10px "IBM Plex Mono", monospace; letter-spacing: .12em; text-transform: uppercase; }
-.vE-photo-wrap { width: 180px; height: 220px; flex-shrink: 0; overflow: hidden; border: 1px solid var(--line-soft); }
-.vE-photo-wrap img { width: 100%; height: 100%; object-fit: cover; object-position: center top; display: block; }
+.vE-photo-wrap { position: relative; width: 180px; height: 220px; flex-shrink: 0; overflow: hidden; border: 1px solid var(--line-soft); }
+.vE-photo-wrap img { object-fit: cover; object-position: center top; }
 .vE-hero__pitch p { font-size: 17px; color: var(--ink-2); max-width: 56ch; margin-bottom: 18px; line-height: 1.5; }
 .vE-hero__ctas { display: flex; gap: 10px; }
 
@@ -946,7 +946,7 @@ export default function Manifesto() {
             </h1>
             <div className="vE-hero__bot">
               <div className="vE-photo-wrap">
-                <Image src="/pablo.png" alt="Pablo Crespo Velasco" width={180} height={220} priority />
+                <Image src="/pablo.png" alt="Pablo Crespo Velasco" fill sizes="(max-width: 900px) 100vw, 180px" priority />
               </div>
               <div className="vE-hero__pitch">
                 <p>Ingeniero Industrial con curiosidad por el funcionamiento de todo y gran capacidad para comprender y resolver cualquier problema que se presente. Siempre con una sonrisa, los grandes retos me hacen feliz: organizar el caos, solucionar lo imposible, gestionar lo inmanejable.</p>
