@@ -764,22 +764,26 @@ export default function HomeTempPage() {
         .nt-skill.c-purp { border: 1px solid rgba(191,90,242,0.4); color: #bf5af2; background: rgba(191,90,242,0.06); }
         .nt-skill.c-purp:hover { background: #bf5af2; color: #0a0a0f; box-shadow: 0 0 18px #bf5af2; }
         .nt-skill-shine {
-          border: 1px solid rgba(251,191,36,0.35);
+          border: 1px solid rgba(191,90,242,0.4);
+          color: #bf5af2;
+          background: rgba(191,90,242,0.06);
           text-decoration: none;
-          white-space: nowrap;
-          background: linear-gradient(100deg, #bf5af2 0%, #bf5af2 35%, rgba(253,224,71,0.15) 44%, rgba(253,224,71,0.85) 48%, rgba(251,191,36,1.0) 50%, rgba(253,224,71,0.85) 52%, rgba(253,224,71,0.15) 56%, #bf5af2 65%, #bf5af2 100%);
-          background-size: 300% 100%;
-          background-position: 100% center;
-          -webkit-background-clip: text;
-          background-clip: text;
-          -webkit-text-fill-color: transparent;
-          animation: goldTextSweep 10s ease-in-out infinite;
+          position: relative;
+          overflow: hidden;
         }
-        @keyframes goldTextSweep {
-          0%, 87%     { background-position: 100% center; }
-          89.5%       { background-position: 50% center; }
-          92%         { background-position: 0% center; }
-          92.1%, 100% { background-position: 100% center; }
+        .nt-skill-shine::after {
+          content: "";
+          position: absolute;
+          top: -50%; left: -75%;
+          width: 50%; height: 200%;
+          background: linear-gradient(120deg, transparent 0%, rgba(191,90,242,0.15) 40%, rgba(191,90,242,0.6) 50%, rgba(191,90,242,0.15) 60%, transparent 100%);
+          transform: skewX(-20deg);
+          animation: purpSweep 10s ease-in-out infinite;
+        }
+        @keyframes purpSweep {
+          0%, 88%   { left: -75%; opacity: 1; }
+          97%       { left: 150%; opacity: 1; }
+          98%, 100% { left: 150%; opacity: 0; }
         }
 
         /* ── CTA button ── */
