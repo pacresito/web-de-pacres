@@ -11,7 +11,7 @@ type DesignItem = {
   title: string;
   description: string;
   date: string;
-  status: "active" | "available";
+  status: "primary" | "active" | "available";
   href: string;
 };
 
@@ -22,7 +22,7 @@ const ITEMS: DesignItem[] = [
   { id: "editorial",   num: "04", title: "Editorial",   description: "Versión más profesional con estilo editorial como protagonista.",                 date: "19 may 2026", status: "available", href: "/home/editorial"  },
   { id: "timeline",    num: "05", title: "Timeline",    description: "Timeline horizontal arrastrable y slider de recomendaciones.",                    date: "19 may 2026", status: "available", href: "/home/timeline"   },
   { id: "terminal",    num: "06", title: "Terminal",    description: "Terminal macOS con varias animaciones y guiños chulos.",                          date: "24 may 2026", status: "active",    href: "/home/terminal"   },
-  { id: "manifesto",   num: "07", title: "Manifesto",   description: "La home principal. Texto editorial, física de letras, Instrument Serif.",         date: "24 may 2026", status: "active",    href: "/home/manifesto"  },
+  { id: "manifesto",   num: "07", title: "Manifesto",   description: "La home principal. Texto editorial, física de letras, Instrument Serif.",         date: "24 may 2026", status: "primary",   href: "/home/manifesto"  },
 ];
 
 const CMD = "ls ~/designs --format=grid";
@@ -195,7 +195,10 @@ function PromptRow({ cmd, active }: { cmd: string; active: boolean }) {
   );
 }
 
-function StatusTag({ status }: { status: "active" | "available" }) {
+function StatusTag({ status }: { status: "primary" | "active" | "available" }) {
+  if (status === "primary") return (
+    <span style={{ fontFamily: "var(--t-mono)", fontSize: 10, color: "var(--t-accent2)" }}>★ primary</span>
+  );
   if (status === "active") return (
     <span style={{ fontFamily: "var(--t-mono)", fontSize: 10, color: "var(--t-accent2)" }}>● active</span>
   );
@@ -247,7 +250,7 @@ function DesignsTable({ items, visible }: { items: DesignItem[]; visible: number
 
       {visible >= items.length && (
         <div style={{ padding: "10px 18px", borderTop: "1px dashed var(--t-rule)", fontFamily: "var(--t-mono)", fontSize: 11, color: "var(--t-ink3)" }}>
-          ↳ {items.length} diseños · {items.filter(i => i.status === "active").length} activos
+          ↳ {items.length} diseños · {items.filter(i => i.status === "active" || i.status === "primary").length} activos
         </div>
       )}
     </div>
