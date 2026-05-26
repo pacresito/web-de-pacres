@@ -576,13 +576,13 @@ export default function EspiralTerminal() {
                 </svg>
               </button>
             </div>
-            {/* título — ocupa el espacio restante, centrado */}
-            <div style={{ flex: 1, textAlign: "center", fontFamily: MONO, fontSize: 12, color: "var(--t-ink2)", whiteSpace: "nowrap" }}>
-              ⌘&nbsp;&nbsp;pacr.es — espiral
-            </div>
-            {/* versión — pegada a la derecha, sin corte */}
-            <div style={{ flexShrink: 0, fontFamily: MONO, fontSize: 10, color: "var(--t-ink3)", whiteSpace: "nowrap" }}>
-              v4.0.0 · zsh
+            {/* título + versión — ocupa el espacio restante */}
+            <div style={{ flex: 1, textAlign: "center", fontFamily: MONO }}>
+              <div style={{ fontSize: 12, color: "var(--t-ink2)" }}>⌘&nbsp;&nbsp;pacr.es</div>
+              <div style={{ fontSize: 10, color: "var(--t-ink3)", marginTop: 2, display: "flex", justifyContent: "center", gap: "1.5rem" }}>
+                <span>— espiral</span>
+                <span>v4.0.0 · zsh</span>
+              </div>
             </div>
           </div>
 
