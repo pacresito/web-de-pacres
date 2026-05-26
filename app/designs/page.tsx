@@ -321,14 +321,23 @@ export default function Designs() {
   }, [mounted]);
 
   const handleClose = () => {
+    const nav = () => {
+      if ("startViewTransition" in document) {
+        (document as unknown as { startViewTransition: (cb: () => void) => void }).startViewTransition(() => router.push("/"));
+      } else { router.push("/"); }
+    };
+    if (windowState === "minimized") {
+      setDockAnimOut(true);
+      setTimeout(() => {
+        document.body.style.transition = "background 0.3s ease";
+        document.body.style.background = "#f7f4ed";
+        setTimeout(nav, 300);
+      }, 220);
+      return;
+    }
     document.body.style.background = "#f7f4ed";
     setAnimClass("t-win-closing");
-    setTimeout(() => {
-      const nav = () => router.push("/");
-      if ("startViewTransition" in document) {
-        (document as unknown as { startViewTransition: (cb: () => void) => void }).startViewTransition(nav);
-      } else { nav(); }
-    }, 500);
+    setTimeout(nav, 500);
   };
   const handleMinimize = () => {
     setAnimClass("t-win-minimizing");
