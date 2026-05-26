@@ -759,11 +759,9 @@ export default function Manifesto() {
     const wallL = Bodies.rectangle(-30, window.innerHeight / 2, 60, window.innerHeight * 3, { isStatic: true });
     const wallR = Bodies.rectangle(window.innerWidth + 30, window.innerHeight / 2, 60, window.innerHeight * 3, { isStatic: true });
     const hardCeilingY = -window.scrollY;
-    // El borde inferior del cuerpo (center + 30) = techo deseado. Para 10px sobre el top: center = -10 - 30 = -40
-    const CEILING_ABOVE_VIEWPORT = 10;
-    const ceiling = Bodies.rectangle(window.innerWidth / 2, hardCeilingY - CEILING_ABOVE_VIEWPORT - 30, window.innerWidth * 3, 60, { isStatic: true, restitution: 0.3, friction: 0.5 });
+    const ceiling = Bodies.rectangle(window.innerWidth / 2, hardCeilingY - 30, window.innerWidth * 3, 60, { isStatic: true, restitution: 0.3, friction: 0.5 });
     World.add(engine.world, [floor, wallL, wallR, ceiling]);
-    const FOLD_CEILING_Y = -100;
+    const FOLD_CEILING_Y = -30; // 30px por encima del top del viewport
 
     const bodies: Matter.Body[] = [];
     for (const d of letterData) {
@@ -817,12 +815,16 @@ export default function Manifesto() {
 
     let stopped = false;
     let animFrame: number;
+    // Trackea qué letras ya han bajado por debajo del techo — solo esas no pueden volver a subir
+    const hasCrossedCeiling = new Array(bodies.length).fill(false);
     const animate = () => {
       if (stopped) return;
       for (let i = 0; i < letterSpans.length; i++) {
         const b = bodies[i];
-        if (b.position.y < FOLD_CEILING_Y && b.velocity.y < 0) {
-          Body.setVelocity(b, { x: b.velocity.x * 0.9, y: -b.velocity.y * 0.5 });
+        if (b.position.y >= FOLD_CEILING_Y) hasCrossedCeiling[i] = true;
+        if (hasCrossedCeiling[i] && b.position.y < FOLD_CEILING_Y) {
+          Body.setPosition(b, { x: b.position.x, y: FOLD_CEILING_Y });
+          if (b.velocity.y < 0) Body.setVelocity(b, { x: b.velocity.x * 0.9, y: -b.velocity.y * 0.5 });
         }
         const { x, y } = b.position;
         letterSpans[i].style.transform = `translate(${x}px,${y}px) translate(-50%,-50%) rotate(${b.angle}rad)`;
