@@ -512,7 +512,7 @@ export default function EspiralTerminal() {
         }
         @media (max-width: 640px) {
           .esp-version { display: none; }
-          .esp-chrome-title { flex: 0 0 auto; margin-left: auto; max-width: 120px; text-align: right; }
+          .esp-chrome-title { margin-left: auto; max-width: 120px; text-align: right; }
         }
       `}</style>
 
