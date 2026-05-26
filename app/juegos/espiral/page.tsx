@@ -237,6 +237,17 @@ function useBoard(
     return () => cancelAnimationFrame(animRef.current);
   }, [gameState, startCount]);
 
+  function reset() {
+    cancelAnimationFrame(animRef.current);
+    stateRef.current = initBoard(path, originRef.current, initialVel, cellRef.current);
+    setGameState("idle");
+    const canvas = canvasRef.current;
+    if (canvas) {
+      const ctx = canvas.getContext("2d")!;
+      drawBoard(ctx, canvas.width, path, originRef.current, stateRef.current, goalCell, cellRef.current);
+    }
+  }
+
   function cheat() {
     const s = stateRef.current;
     if (s.gameState === "win") return;
@@ -251,7 +262,7 @@ function useBoard(
     }
   }
 
-  return { gameState, press, start, cheat };
+  return { gameState, press, start, reset, cheat };
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -304,6 +315,8 @@ export default function EspiralTerminal() {
   const [finalTime, setFinalTime] = useState<number | null>(null);
   const startTimeRef = useRef<number | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const [fullscreen, setFullscreen] = useState(false);
 
   const [alias, setAlias] = useState("");
   const [submitted, setSubmitted] = useState(false);
@@ -386,8 +399,8 @@ export default function EspiralTerminal() {
   }
 
   function replay() {
-    left.start();
-    right.start();
+    left.reset();
+    right.reset();
     setSubmitted(false);
     setAlias("");
   }
@@ -524,7 +537,7 @@ export default function EspiralTerminal() {
             background: "var(--t-paper2)",
             borderBottom: "1px solid var(--t-rule)",
             padding: "14px 18px",
-            display: "grid",
+            display: fullscreen ? "none" : "grid",
             gridTemplateColumns: "200px 1fr 140px",
             alignItems: "center",
           }}>
@@ -569,7 +582,7 @@ export default function EspiralTerminal() {
           {/* prompt header */}
           <div style={{
             padding: "18px 28px 8px",
-            display: "grid",
+            display: fullscreen ? "none" : "grid",
             gridTemplateColumns: "44px 1fr auto",
             gap: "0 12px",
             alignItems: "baseline",
@@ -593,7 +606,7 @@ export default function EspiralTerminal() {
           <div style={{ padding: "28px", display: "flex", flexDirection: "column", alignItems: "center", gap: "1.5rem" }}>
 
             {/* status row */}
-            <div style={{ display: "flex", alignItems: "center", gap: "1.5rem", fontFamily: MONO }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "1rem", fontFamily: MONO }}>
               <span style={{ fontSize: "0.75rem", color: "var(--t-ink3)" }}>
                 ↳ status:{" "}
                 <span style={{ color: left.gameState === "win" ? "var(--t-accent)" : left.gameState === "dead" ? "#e55" : "var(--t-ink2)" }}>
@@ -604,14 +617,41 @@ export default function EspiralTerminal() {
                   {right.gameState}
                 </span>
               </span>
-              <a
-                href="/juegos/espiral/ranking"
-                style={{ fontSize: "0.75rem", color: "var(--t-ink3)", fontFamily: MONO, textDecoration: "none", transition: "color 0.15s" }}
-                onMouseEnter={e => (e.currentTarget.style.color = "var(--t-accent)")}
-                onMouseLeave={e => (e.currentTarget.style.color = "var(--t-ink3)")}
-              >
-                ranking →
-              </a>
+              {(left.gameState !== "idle" || right.gameState !== "idle") && !bothWin && (
+                <span style={{ fontSize: "0.75rem", color: "var(--t-ink3)", fontVariantNumeric: "tabular-nums" }}>{elapsed}s</span>
+              )}
+              <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "1rem" }}>
+                <a
+                  href="/juegos/espiral/ranking"
+                  title="Ranking"
+                  style={{ color: "var(--t-ink3)", display: "flex", alignItems: "center", transition: "color 0.15s" }}
+                  onMouseEnter={e => (e.currentTarget.style.color = "var(--t-accent)")}
+                  onMouseLeave={e => (e.currentTarget.style.color = "var(--t-ink3)")}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+                    <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+                  </svg>
+                </a>
+                <button
+                  className="esp-t-btn"
+                  onClick={() => setFullscreen(f => !f)}
+                  title={fullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
+                  style={{ display: "flex", alignItems: "center" }}
+                >
+                  {fullscreen ? (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/>
+                      <line x1="10" y1="14" x2="3" y2="21"/><line x1="21" y1="3" x2="14" y2="10"/>
+                    </svg>
+                  ) : (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
+                      <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
+                    </svg>
+                  )}
+                </button>
+              </div>
             </div>
 
             {/* win panel */}
@@ -622,23 +662,31 @@ export default function EspiralTerminal() {
                 </p>
 
                 {!submitted ? (
-                  <form onSubmit={submitScore} style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-                    <input
-                      type="text"
-                      value={alias}
-                      onChange={e => setAlias(e.target.value)}
-                      placeholder="Tu nombre"
-                      maxLength={20}
-                      className="esp-t-input"
-                    />
-                    <button
-                      type="submit"
-                      disabled={submitting || !alias.trim()}
-                      className="esp-t-submit"
-                    >
-                      {submitting ? "..." : "$ guardar"}
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.5rem" }}>
+                    <form onSubmit={submitScore} style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                      <input
+                        type="text"
+                        value={alias}
+                        onChange={e => setAlias(e.target.value)}
+                        placeholder="Tu nombre"
+                        maxLength={20}
+                        autoComplete="off"
+                        data-1p-ignore
+                        data-lpignore="true"
+                        className="esp-t-input"
+                      />
+                      <button
+                        type="submit"
+                        disabled={submitting || !alias.trim()}
+                        className="esp-t-submit"
+                      >
+                        {submitting ? "..." : "$ guardar"}
+                      </button>
+                    </form>
+                    <button onClick={replay} className="esp-t-btn" style={{ fontSize: "0.72rem" }}>
+                      reiniciar
                     </button>
-                  </form>
+                  </div>
                 ) : (
                   <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
                     <button
@@ -662,7 +710,7 @@ export default function EspiralTerminal() {
             </div>
 
             {/* footer */}
-            <div style={{ marginTop: "auto", paddingTop: "1rem", width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
+            <div style={{ marginTop: "auto", paddingTop: "1rem", width: "100%", display: fullscreen ? "none" : "flex", flexDirection: "column", alignItems: "center" }}>
               <button
                 className="esp-t-btn"
                 style={{ display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}
