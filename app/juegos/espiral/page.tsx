@@ -480,6 +480,14 @@ export default function EspiralTerminal() {
         }
         .esp-nav-btn:hover { color: var(--t-ink); }
         .esp-nav-btn:disabled { color: var(--t-ink4); cursor: default; }
+
+        @keyframes esp-content-fadeout {
+          0%, 45% { opacity: 1; }
+          100%    { opacity: 0; }
+        }
+        .esp-content-unmaximizing {
+          animation: esp-content-fadeout 0.9s ease forwards;
+        }
       `}</style>
 
       {/* outer: terminal background */}
@@ -500,6 +508,7 @@ export default function EspiralTerminal() {
           style={{
             "--win-w": winWidth ? `${winWidth}px` : "100vw",
             width: winWidth ? (isMax ? winWidth : Math.min(900, winWidth)) : "100%",
+            minHeight: isMax ? "100dvh" : undefined,
             maxWidth: "none",
             background: "var(--t-paper)",
             borderRadius: isMax ? 0 : 12,
@@ -523,26 +532,28 @@ export default function EspiralTerminal() {
               <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#ff5f57", flexShrink: 0 }} />
               <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#febc2e", flexShrink: 0 }} />
               <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#28c840", flexShrink: 0 }} />
-              <div style={{ width: 1, height: 16, background: "var(--t-rule)", margin: "0 6px", flexShrink: 0 }} />
-              {/* back */}
-              <button className="esp-nav-btn" onClick={handleBack} title="Volver a /lab">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                  <path d="M19 12H5M5 12l7 7M5 12l7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </button>
-              {/* forward — siempre desactivado */}
-              <button className="esp-nav-btn" disabled title="Adelante">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                  <path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </button>
-              {/* refresh */}
-              <button className="esp-nav-btn" onClick={() => window.location.reload()} title="Recargar">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-                  <polyline points="23 4 23 10 17 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </button>
+              <div className={animClass === "esp-win-unmaximizing" ? "esp-content-unmaximizing" : ""} style={{ display: "flex", gap: 7, alignItems: "center" }}>
+                <div style={{ width: 1, height: 16, background: "var(--t-rule)", margin: "0 6px", flexShrink: 0 }} />
+                {/* back */}
+                <button className="esp-nav-btn" onClick={handleBack} title="Volver a /lab">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <path d="M19 12H5M5 12l7 7M5 12l7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </button>
+                {/* forward — siempre desactivado */}
+                <button className="esp-nav-btn" disabled title="Adelante">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </button>
+                {/* refresh */}
+                <button className="esp-nav-btn" onClick={() => window.location.reload()} title="Recargar">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                    <polyline points="23 4 23 10 17 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </button>
+              </div>
             </div>
             <div style={{ textAlign: "center", fontFamily: MONO, fontSize: 12, color: "var(--t-ink2)" }}>
               ⌘&nbsp;&nbsp;pacr.es — espiral
@@ -551,6 +562,9 @@ export default function EspiralTerminal() {
               v4.0.0 · zsh
             </div>
           </div>
+
+          {/* content: fades out during unmaximize */}
+          <div className={animClass === "esp-win-unmaximizing" ? "esp-content-unmaximizing" : ""}>
 
           {/* prompt header */}
           <div style={{
@@ -675,11 +689,13 @@ export default function EspiralTerminal() {
                   <p>Me gusta distinguir tres conceptos que se mezclan a menudo.</p>
                   <p>Simple se refiere a la cantidad de elementos y reglas: dos espirales, dos pelotas, dos controles. Sencillo describe lo fácil que es entender el objetivo: se comprende de inmediato. Difícil hace referencia a lo que cuesta dominarlo: coordinar ambas acciones a la vez exige atención y precisión.</p>
                   <p>En el extremo opuesto estaría un juego de rol con cien reglas cuya primera misión es "habla con el aldeano de enfrente": complejo, complicado, pero fácil.</p>
-                  <p style={{ color: "var(--t-ink4)", fontSize: "0.72rem" }}>↳ created: 30 de abril de 2026</p>
+                  <p style={{ color: "var(--t-ink4)", fontSize: "0.72rem" }}>↳ Creado el 30 de abril de 2026</p>
                 </div>
               )}
             </div>
           </div>
+
+          </div>{/* end fade-out wrapper */}
         </div>
       </div>
     </>
