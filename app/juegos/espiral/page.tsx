@@ -262,7 +262,7 @@ export default function EspiralTerminal() {
   const router = useRouter();
 
   // window maximize state
-  const [windowState, setWindowState] = useState<"normal" | "maximized">("normal");
+  const [windowState, setWindowState] = useState<"normal" | "maximized">("maximized");
   const [animClass, setAnimClass] = useState("");
   const [winWidth, setWinWidth] = useState(0);
 
@@ -270,23 +270,10 @@ export default function EspiralTerminal() {
     setWinWidth(window.innerWidth);
     const onResize = () => setWinWidth(window.innerWidth);
     window.addEventListener("resize", onResize);
-
-    const wasRestored = sessionStorage.getItem("espiral_state") === "restored";
-    if (wasRestored) {
-      sessionStorage.removeItem("espiral_state");
-      const t = setTimeout(() => {
-        setAnimClass("esp-win-maximizing");
-        setTimeout(() => { setWindowState("maximized"); setAnimClass(""); }, 1020);
-      }, 80);
-      return () => { window.removeEventListener("resize", onResize); clearTimeout(t); };
-    } else {
-      setWindowState("maximized");
-      return () => window.removeEventListener("resize", onResize);
-    }
+    return () => window.removeEventListener("resize", onResize);
   }, []);
 
   const handleBack = () => {
-    sessionStorage.setItem("espiral_state", "restored");
     setAnimClass("esp-win-unmaximizing");
     setTimeout(() => router.push("/lab"), 900);
   };
@@ -561,7 +548,7 @@ export default function EspiralTerminal() {
               ⌘&nbsp;&nbsp;pacr.es — espiral
             </div>
             <div style={{ textAlign: "right", fontFamily: MONO, fontSize: 10, color: "var(--t-ink3)" }}>
-              v1.0.0 · zsh
+              v4.0.0 · zsh
             </div>
           </div>
 
