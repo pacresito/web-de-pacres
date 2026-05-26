@@ -630,14 +630,6 @@ export default function Manifesto() {
   const restoreRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
-    const link = document.createElement("link");
-    link.rel = "stylesheet";
-    link.href = "https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap";
-    document.head.appendChild(link);
-    return () => { document.head.removeChild(link); };
-  }, []);
-
-  useEffect(() => {
     const saved = localStorage.getItem("manifesto-theme");
     if (saved === "light" || saved === "dark") setTheme(saved);
   }, []);
