@@ -954,7 +954,7 @@ export default function Manifesto() {
             </h1>
             <div className="vE-hero__bot">
               <div className="vE-photo-wrap">
-                <Image src="/pablo.png" alt="Pablo Crespo Velasco" width={180} height={220} />
+                <Image src="/pablo.png" alt="Pablo Crespo Velasco" width={180} height={220} priority />
               </div>
               <div className="vE-hero__pitch">
                 <p>Ingeniero Industrial con curiosidad por el funcionamiento de todo y gran capacidad para comprender y resolver cualquier problema que se presente. Siempre con una sonrisa, los grandes retos me hacen feliz: organizar el caos, solucionar lo imposible, gestionar lo inmanejable.</p>
