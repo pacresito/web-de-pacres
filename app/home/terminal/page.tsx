@@ -505,7 +505,7 @@ function WhoamiSection() {
   );
 }
 
-function TimelineDesktop({ expandedId, setExpandedId }: { expandedId: string | null; setExpandedId: (id: string | null) => void }) {
+function TimelineDesktop({ expandedId, onToggle }: { expandedId: string | null; onToggle: (id: string | null, el: HTMLElement) => void }) {
   return (
     <div className="t-tl-desktop" style={{ border: "1px solid var(--t-rule)", borderRadius: 10, overflow: "hidden" }}>
       <div style={{
@@ -533,7 +533,7 @@ function TimelineDesktop({ expandedId, setExpandedId }: { expandedId: string | n
         return (
           <div key={row.id}>
             <div
-              onClick={hasContent ? () => setExpandedId(isExpanded ? null : row.id) : undefined}
+              onClick={hasContent ? (e) => onToggle(isExpanded ? null : row.id, e.currentTarget) : undefined}
               style={{
                 display: "grid",
                 gridTemplateColumns: "70px 60px 76px 1fr 1fr 96px 24px",
@@ -659,7 +659,7 @@ function TimelineDesktop({ expandedId, setExpandedId }: { expandedId: string | n
   );
 }
 
-function TimelineMobile({ expandedRow, toggleExpanded }: { expandedRow: string | null; toggleExpanded: (id: string) => void }) {
+function TimelineMobile({ expandedRow, toggleExpanded }: { expandedRow: string | null; toggleExpanded: (id: string, el?: HTMLElement) => void }) {
   return (
     <div className="t-tl-mobile" style={{ flexDirection: "column", gap: 8 }}>
       {TIMELINE.map((row) => {
@@ -670,7 +670,7 @@ function TimelineMobile({ expandedRow, toggleExpanded }: { expandedRow: string |
         return (
           <div
             key={row.id}
-            onClick={hasContent ? () => toggleExpanded(row.id) : undefined}
+            onClick={hasContent ? (e) => toggleExpanded(row.id, e.currentTarget) : undefined}
             style={{
               border: "1px solid var(--t-rule)",
               borderRadius: 8,
@@ -953,8 +953,28 @@ export default function TerminalHome() {
   const router = useRouter();
   const [expandedDesktopId, setExpandedDesktopId] = useState<string | null>(null);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
+
+  const handleExpandDesktop = (id: string | null, el: HTMLElement) => {
+    const isSwitch = expandedDesktopId !== null && id !== null && expandedDesktopId !== id;
+    const beforeTop = isSwitch ? el.getBoundingClientRect().top : 0;
+    setExpandedDesktopId(id);
+    if (isSwitch) {
+      requestAnimationFrame(() => {
+        window.scrollBy({ top: el.getBoundingClientRect().top - beforeTop, behavior: "instant" });
+      });
+    }
+  };
   const [windowState, setWindowState] = useState<"normal" | "minimized" | "maximized">("normal");
-  const toggleExpanded = (id: string) => setExpandedRow((prev) => prev === id ? null : id);
+  const toggleExpanded = (id: string, el?: HTMLElement) => {
+    const isSwitch = expandedRow !== null && expandedRow !== id && el != null;
+    const beforeTop = isSwitch ? el!.getBoundingClientRect().top : 0;
+    setExpandedRow((prev) => prev === id ? null : id);
+    if (isSwitch) {
+      requestAnimationFrame(() => {
+        window.scrollBy({ top: el!.getBoundingClientRect().top - beforeTop, behavior: "instant" });
+      });
+    }
+  };
 
   const handleClose = () => router.push("/");
   const handleMinimize = () => setWindowState("minimized");
@@ -1079,7 +1099,7 @@ export default function TerminalHome() {
 
           {/* 001 — timeline */}
           <Section n="001" cmd="cv timeline --since=2004 --format=pretty | head -n 7" contentStyle={CONTENT_STYLE}>
-            <TimelineDesktop expandedId={expandedDesktopId} setExpandedId={setExpandedDesktopId} />
+            <TimelineDesktop expandedId={expandedDesktopId} onToggle={handleExpandDesktop} />
             <TimelineMobile expandedRow={expandedRow} toggleExpanded={toggleExpanded} />
           </Section>
 
