@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import Image from "next/image";
-import HomeNav from "../../components/HomeNav";
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
 
@@ -1103,7 +1102,6 @@ export default function HomeTempPage() {
         </footer>
 
       </main>
-      <HomeNav />
     </>
   );
 }

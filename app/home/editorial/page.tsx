@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import HomeNav from "../../components/HomeNav";
 import "./editorial.css";
 
 // ─── Data ──────────────────────────────────────────────────────────────────
@@ -904,7 +903,6 @@ export default function EditorialPage() {
       <Misc />
       <Skills />
       <Footer />
-      <HomeNav />
     </div>
   );
 }

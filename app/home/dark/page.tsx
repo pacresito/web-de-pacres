@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, useCallback, type ReactNode } from "react";
 import Image from "next/image";
-import HomeNav from "../../components/HomeNav";
 
 interface Job {
   title: string;
@@ -957,7 +956,6 @@ export default function DarkHome() {
           Creado el 17 de mayo de 2026
         </span>
       </footer>
-      <HomeNav />
     </>
   );
 }

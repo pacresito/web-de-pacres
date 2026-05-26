@@ -5,38 +5,28 @@ import { useRouter } from "next/navigation";
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
-function calcularEdad(nacimiento: Date): number {
-  const hoy = new Date();
-  const cumple = new Date(hoy.getFullYear(), nacimiento.getMonth(), nacimiento.getDate());
-  return hoy.getFullYear() - nacimiento.getFullYear() - (hoy < cumple ? 1 : 0);
-}
-
-type LabItem = {
+type DesignItem = {
   id: string;
   num: string;
-  type: string;
   title: string;
   description: string;
-  hint?: string;
-  status: "available" | "hidden" | "soon";
-  href: string | null;
-  cta: string;
+  date: string;
+  status: "active" | "available";
+  href: string;
 };
 
-const ITEMS: LabItem[] = [
-  { id: "lucas",       num: "01", type: "web",        title: "Dr. Lucas Crespo",     description: `Perfil profesional de un aeronáutico de ${calcularEdad(new Date(2020, 2, 30))} años.`, status: "available", href: "/webs/lucas",       cta: "Ver perfil →" },
-  { id: "placeholder", num: "02", type: "web",        title: "Aquí va lo importante", description: "Aquí podría ir tu web. Dime tu idea y lo implementamos.",                            status: "soon",      href: null,               cta: "En construcción" },
-  { id: "rpncalc",     num: "03", type: "app",        title: "Calculadora RPN",       description: "Para los que piensan en pila.",                                                       status: "available", href: "/apps/RPNcalc",     cta: "Abrir →" },
-  { id: "fluidos",     num: "04", type: "app",        title: "Fluidos",               description: "Agua, fuego, tierra. Controla los elementos.",                                        status: "available", href: "/apps/fluidos",     cta: "Abrir →" },
-  { id: "espiral",     num: "05", type: "juego",      title: "Espiral",               description: "Dos espirales, dos destinos, una sola mente.",                                        status: "available", href: "/juegos/espiral",   cta: "Jugar →" },
-  { id: "laberinto",   num: "06", type: "juego",      title: "Laberinto",             description: "Inclina el móvil o usa el ratón.",                                                    status: "available", href: "/juegos/laberinto", cta: "Jugar →" },
-  { id: "circulo",     num: "07", type: "truco",      title: "Círculo perfecto",      description: "Dibuja el círculo más perfecto que puedas.",                                          status: "available", href: "/trucos/circulo",   cta: "Probar →" },
-  { id: "magia",       num: "08", type: "truco",      title: "Magia de la buena",     description: "Piensa en una carta. No me la digas.",                                                status: "available", href: "/trucos/magia",     cta: "Probar →" },
-  { id: "letras",      num: "09", type: "easter-egg", title: "Las letras caen",       description: "Algo pasa si sabes dónde pinchar.",                                                   status: "hidden",    href: "/",                cta: "Ir a probarlo →" },
-  { id: "color",       num: "10", type: "easter-egg", title: "Cambio de tema",        description: `Cambio de tema dinámico en el diseño "Original".`,                                                               status: "hidden", href: "/home/original", cta: "Ir a probarlo →" },
+const ITEMS: DesignItem[] = [
+  { id: "original",    num: "01", title: "Original",    description: "El primero, una copia de mi LinkedIn como prueba de concepto.",                  date: "30 abr 2026", status: "available", href: "/home/original"   },
+  { id: "dark",        num: "02", title: "Dark",        description: "Un intento de versión oscura.",                                                   date: "17 may 2026", status: "available", href: "/home/dark"        },
+  { id: "neon",        num: "03", title: "Neon",        description: "Opción hortera, atrevida con primeras animaciones.",                              date: "17 may 2026", status: "available", href: "/home/neon"        },
+  { id: "minimalista", num: "04", title: "Minimalista", description: "Lo mínimo necesario, todavía bastante soso.",                                     date: "18 may 2026", status: "available", href: "/home/minimalista" },
+  { id: "editorial",   num: "05", title: "Editorial",   description: "Versión más profesional con estilo editorial como protagonista.",                 date: "19 may 2026", status: "available", href: "/home/editorial"  },
+  { id: "timeline",    num: "06", title: "Timeline",    description: "Timeline horizontal arrastrable y slider de recomendaciones.",                    date: "19 may 2026", status: "available", href: "/home/timeline"   },
+  { id: "terminal",    num: "07", title: "Terminal",    description: "Terminal macOS con varias animaciones y guiños chulos.",                          date: "24 may 2026", status: "available", href: "/home/terminal"   },
+  { id: "manifesto",   num: "08", title: "Manifesto",   description: "La home principal. Texto editorial, física de letras, Instrument Serif.",         date: "24 may 2026", status: "active",    href: "/home/manifesto"  },
 ];
 
-const CMD = "ls ~/lab --long --all";
+const CMD = "ls ~/designs --format=grid";
 
 // ─── Subcomponents ────────────────────────────────────────────────────────────
 
@@ -93,7 +83,7 @@ function ChromeBar({ onClose, onMinimize, onMaximize, isMaximized }: {
         <WindowBtn color="#28c840" onClick={onMaximize} title={isMaximized ? "Restaurar" : "Maximizar"} kind={isMaximized ? "restore" : "maximize"} showIcon={hot} />
       </div>
       <div style={{ textAlign: "center", fontFamily: "var(--t-mono)", fontSize: 12, color: "var(--t-ink2)" }}>
-        ⌘&nbsp;&nbsp;pacr.es — lab — 124×42&nbsp;
+        ⌘&nbsp;&nbsp;pacr.es — designs — 124×42&nbsp;
         <span style={{
           display: "inline-block", border: "1px solid var(--t-rule)", borderBottomWidth: 2,
           borderRadius: 2, background: "var(--t-paper)", padding: "1px 5px",
@@ -127,17 +117,17 @@ function MinimizedBar({ onRestore, onMaximize, onClose, animatingOut = false }: 
         <WindowBtn color="#febc2e" onClick={onRestore} title="Restaurar" kind="minimize" showIcon={hot} />
         <WindowBtn color="#28c840" onClick={onMaximize} title="Maximizar" kind="maximize" showIcon={hot} />
       </div>
-      <span>pacr.es — lab — 124×42</span>
+      <span>pacr.es — designs — 124×42</span>
       <span style={{ color: "var(--t-ink4)", fontSize: 10 }}>· minimizado</span>
     </div>
   );
 }
 
-function TabsBar({ onCvClick, onDesignsClick }: { onCvClick: () => void; onDesignsClick: () => void }) {
+function TabsBar({ onCvClick, onLabClick }: { onCvClick: () => void; onLabClick: () => void }) {
   const tabs = [
-    { label: "~/cv",      active: false, onClick: onCvClick },
-    { label: "~/lab",     active: true,  onClick: undefined },
-    { label: "~/designs", active: false, onClick: onDesignsClick },
+    { label: "~/cv",      active: false, onClick: onCvClick  },
+    { label: "~/lab",     active: false, onClick: onLabClick },
+    { label: "~/designs", active: true,  onClick: undefined  },
   ];
   return (
     <div style={{
@@ -200,7 +190,7 @@ function PromptRow({ cmd, active }: { cmd: string; active: boolean }) {
       <span style={{ fontFamily: "var(--t-mono)", fontSize: 13.5 }} className="t-prompt-cmd">
         <span style={{ color: "var(--t-accent2)" }}>pacres</span>
         <span style={{ color: "var(--t-ink3)" }}>@resume</span>
-        <span style={{ color: "var(--t-ink2)" }}>:~/lab</span>
+        <span style={{ color: "var(--t-ink2)" }}>:~/designs</span>
         <span style={{ color: "var(--t-ink3)" }}>$ </span>
         <span style={{ color: "var(--t-ink)" }}>{displayed}</span>
       </span>
@@ -211,129 +201,89 @@ function PromptRow({ cmd, active }: { cmd: string; active: boolean }) {
   );
 }
 
-function StatusTag({ status }: { status: "available" | "hidden" | "soon" }) {
-  const cfg = {
-    available: { label: "● live",   color: "var(--t-accent2)" },
-    hidden:    { label: "◌ hidden", color: "var(--t-ink4)"    },
-    soon:      { label: "○ soon",   color: "var(--t-ink3)"    },
-  }[status];
-  return <span style={{ fontFamily: "var(--t-mono)", fontSize: 10, color: cfg.color }}>{cfg.label}</span>;
-}
-
-function TypePill({ type, status }: { type: string; status: "available" | "hidden" | "soon" }) {
-  const live = status === "available";
+function StatusTag({ status }: { status: "active" | "available" }) {
+  if (status === "active") return (
+    <span style={{ fontFamily: "var(--t-mono)", fontSize: 10, color: "var(--t-accent2)" }}>● active</span>
+  );
   return (
-    <span style={{
-      display: "inline-block", fontSize: 10, fontFamily: "var(--t-mono)",
-      textTransform: "uppercase", letterSpacing: "0.05em", padding: "2px 8px",
-      borderRadius: 999,
-      border: `1px solid ${live ? "color-mix(in srgb, var(--t-accent) 35%, transparent)" : "var(--t-rule)"}`,
-      background: live ? "color-mix(in srgb, var(--t-accent) 12%, var(--t-paper))" : "var(--t-paper)",
-      color: live ? "var(--t-accent2)" : status === "hidden" ? "var(--t-ink4)" : "var(--t-ink3)",
-    }}>
-      {type}
-    </span>
+    <span style={{ fontFamily: "var(--t-mono)", fontSize: 10, color: "var(--t-ink3)" }}>○ design</span>
   );
 }
 
-function LabTable({ items, visible }: { items: LabItem[]; visible: number }) {
-  const available = items.filter(i => i.status === "available").length;
-  const hidden    = items.filter(i => i.status === "hidden").length;
+function DesignsTable({ items, visible }: { items: DesignItem[]; visible: number }) {
   return (
     <div style={{ border: "1px solid var(--t-rule)", borderRadius: 10, overflow: "hidden" }} className="t-lab-desktop">
       <div style={{
-        display: "grid", gridTemplateColumns: "38px 100px 160px 1fr 80px 24px",
+        display: "grid", gridTemplateColumns: "38px 120px 1fr 90px 80px 24px",
         gap: "0 16px", padding: "10px 18px",
         background: "var(--t-paper2)", borderBottom: "1px dashed var(--t-rule)",
         fontFamily: "var(--t-mono)", fontSize: 10, color: "var(--t-ink3)",
         textTransform: "uppercase", letterSpacing: "0.05em",
       }}>
-        <span>#</span><span>type</span><span>title</span><span>description</span>
-        <span style={{ textAlign: "right" }}>status</span><span />
+        <span>#</span><span>design</span><span>description</span>
+        <span>created</span><span style={{ textAlign: "right" }}>status</span><span />
       </div>
 
       {items.map((item, idx) => {
         const revealed = idx < visible;
-        const clickable = item.status === "available" && item.href;
         return (
           <div key={item.id} className={revealed ? "t-row-in" : undefined}
             style={{ visibility: revealed ? undefined : "hidden" }}>
             <div
-              onClick={() => { if (clickable) window.location.href = item.href!; }}
-              onMouseEnter={(e) => { if (clickable) e.currentTarget.style.background = "var(--t-paper2)"; }}
+              onClick={() => window.location.href = item.href}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "var(--t-paper2)"; }}
               onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
               style={{
-                display: "grid", gridTemplateColumns: "38px 100px 160px 1fr 80px 24px",
+                display: "grid", gridTemplateColumns: "38px 120px 1fr 90px 80px 24px",
                 gap: "0 16px", padding: "10px 18px",
                 borderTop: idx === 0 ? "none" : "1px dashed var(--t-rule)",
-                background: "transparent", alignItems: "center",
-                cursor: clickable ? "pointer" : "default",
-                transition: "background 0.15s",
+                background: item.status === "active" ? "color-mix(in srgb, var(--t-accent) 6%, var(--t-paper))" : "transparent",
+                alignItems: "center", cursor: "pointer", transition: "background 0.15s",
               }}>
               <span style={{ fontFamily: "var(--t-mono)", fontSize: 12, color: "var(--t-ink4)" }}>{item.num}</span>
-              <TypePill type={item.type} status={item.status} />
               <span style={{ fontFamily: "var(--t-sans)", fontSize: 14, fontWeight: 500, color: "var(--t-ink)" }}>{item.title}</span>
               <span style={{ fontFamily: "var(--t-sans)", fontSize: 13, color: "var(--t-ink2)", lineHeight: 1.45 }}>{item.description}</span>
+              <span style={{ fontFamily: "var(--t-mono)", fontSize: 11, color: "var(--t-ink4)" }}>{item.date}</span>
               <span style={{ textAlign: "right" }}><StatusTag status={item.status} /></span>
-              <span style={{ fontFamily: "var(--t-mono)", fontSize: 11, textAlign: "center", color: clickable ? "var(--t-accent2)" : "transparent" }}>→</span>
+              <span style={{ fontFamily: "var(--t-mono)", fontSize: 11, textAlign: "center", color: "var(--t-accent2)" }}>→</span>
             </div>
-            {item.hint && (
-              <div style={{
-                padding: "4px 18px 10px",
-                paddingLeft: `calc(38px + 100px + 16px + 16px + 18px)`,
-                fontFamily: "var(--t-mono)", fontSize: 11, color: "var(--t-ink3)",
-              }}>
-                ↳ {item.hint}
-              </div>
-            )}
           </div>
         );
       })}
 
       {visible >= items.length && (
         <div style={{ padding: "10px 18px", borderTop: "1px dashed var(--t-rule)", fontFamily: "var(--t-mono)", fontSize: 11, color: "var(--t-ink3)" }}>
-          ↳ {available} disponibles · {hidden} ocultos
+          ↳ {items.length} diseños · 1 activo
         </div>
       )}
     </div>
   );
 }
 
-function LabCards({ items, visible }: { items: LabItem[]; visible: number }) {
+function DesignsCards({ items, visible }: { items: DesignItem[]; visible: number }) {
   return (
     <div className="t-lab-mobile" style={{ flexDirection: "column", gap: 8 }}>
       {items.map((item, idx) => {
         const revealed = idx < visible;
-        const clickable = item.status === "available" && item.href;
         return (
-          <div key={item.id} className={revealed ? "t-row-in" : undefined}
+          <a key={item.id} href={item.href} className={revealed ? "t-row-in" : undefined}
             style={{
-              border: "1px solid var(--t-rule)", borderRadius: 8,
-              background: "var(--t-paper)", overflow: "hidden",
+              border: `1px solid ${item.status === "active" ? "color-mix(in srgb, var(--t-accent) 35%, transparent)" : "var(--t-rule)"}`,
+              borderRadius: 8,
+              background: item.status === "active" ? "color-mix(in srgb, var(--t-accent) 6%, var(--t-paper))" : "var(--t-paper)",
+              overflow: "hidden", textDecoration: "none", display: "block",
               visibility: revealed ? undefined : "hidden",
             }}>
             <div style={{ padding: "10px 14px 8px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <span style={{ fontFamily: "var(--t-mono)", fontSize: 10.5, color: "var(--t-ink4)" }}>{item.num}</span>
-                <TypePill type={item.type} status={item.status} />
-              </div>
+              <span style={{ fontFamily: "var(--t-mono)", fontSize: 10.5, color: "var(--t-ink4)" }}>{item.num}</span>
               <StatusTag status={item.status} />
             </div>
             <div style={{ padding: "0 14px 14px" }}>
               <div style={{ fontFamily: "var(--t-sans)", fontSize: 14.5, fontWeight: 500, color: "var(--t-ink)", marginBottom: 4 }}>{item.title}</div>
-              <div style={{ fontFamily: "var(--t-sans)", fontSize: 13, color: "var(--t-ink2)", lineHeight: 1.55 }}>{item.description}</div>
-              {item.hint && (
-                <div style={{ marginTop: 8, fontFamily: "var(--t-mono)", fontSize: 11, color: "var(--t-ink3)", borderLeft: "2px solid var(--t-accent)", paddingLeft: 8, lineHeight: 1.5 }}>
-                  ↳ {item.hint}
-                </div>
-              )}
-              {clickable && (
-                <a href={item.href!} style={{ display: "inline-block", marginTop: 10, fontFamily: "var(--t-mono)", fontSize: 12, color: "var(--t-accent2)", textDecoration: "none" }}>
-                  {item.cta}
-                </a>
-              )}
+              <div style={{ fontFamily: "var(--t-sans)", fontSize: 13, color: "var(--t-ink2)", lineHeight: 1.55, marginBottom: 6 }}>{item.description}</div>
+              <div style={{ fontFamily: "var(--t-mono)", fontSize: 11, color: "var(--t-ink4)" }}>{item.date}</div>
             </div>
-          </div>
+          </a>
         );
       })}
     </div>
@@ -342,7 +292,7 @@ function LabCards({ items, visible }: { items: LabItem[]; visible: number }) {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export default function Laboratorio() {
+export default function Designs() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(0);
@@ -425,23 +375,22 @@ export default function Laboratorio() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
         :root {
-          --t-paper:       #fafaf7;
-          --t-paper2:      #f4f1ea;
-          --t-ink:         #16140f;
-          --t-ink2:        #3a382f;
-          --t-ink3:        #7a766b;
-          --t-ink4:        #b8b3a6;
-          --t-rule:        #d9d4c7;
-          --t-sans:  "Inter", ui-sans-serif, system-ui, sans-serif;
-          --t-mono:  "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-          --t-accent:      #00b87a;
-          --t-accent2:     #009764;
+          --t-paper:   #fafaf7;
+          --t-paper2:  #f4f1ea;
+          --t-ink:     #16140f;
+          --t-ink2:    #3a382f;
+          --t-ink3:    #7a766b;
+          --t-ink4:    #b8b3a6;
+          --t-rule:    #d9d4c7;
+          --t-sans:    "Inter", ui-sans-serif, system-ui, sans-serif;
+          --t-mono:    "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+          --t-accent:  #00b87a;
+          --t-accent2: #009764;
         }
 
-        @keyframes t-blink { 50% { opacity: 0; } }
         @keyframes t-row-in {
           from { opacity: 0; transform: translateX(-8px); }
           to   { opacity: 1; transform: none; }
@@ -497,9 +446,9 @@ export default function Laboratorio() {
         @keyframes t-bg-fade-out { from { opacity: 1; } to { opacity: 0; } }
         @keyframes t-bg-fade-in  { from { opacity: 0; } to { opacity: 1; } }
 
-        .t-win-closing    { animation: t-win-close    0.2s ease-out  forwards; }
-        .t-win-minimizing { animation: t-win-minimize 0.38s ease-in  forwards; transform-origin: bottom center !important; }
-        .t-win-restoring  { animation: t-win-restore  0.6s ease-out  forwards; transform-origin: bottom center !important; }
+        .t-win-closing      { animation: t-win-close      0.2s ease-out  forwards; }
+        .t-win-minimizing   { animation: t-win-minimize   0.38s ease-in  forwards; transform-origin: bottom center !important; }
+        .t-win-restoring    { animation: t-win-restore    0.6s ease-out  forwards; transform-origin: bottom center !important; }
         .t-win-maximizing   { animation: t-win-maximize   1s ease forwards; }
         .t-win-unmaximizing { animation: t-win-unmaximize 1s ease forwards; }
         .t-outer-maximizing   { animation: t-outer-maximize   1s ease forwards !important; }
@@ -557,21 +506,21 @@ export default function Laboratorio() {
           />
           <TabsBar
             onCvClick={() => router.push("/home/terminal")}
-            onDesignsClick={() => router.push("/designs")}
+            onLabClick={() => router.push("/lab")}
           />
 
           <PromptRow cmd={CMD} active={mounted} />
 
           <div className={`t-content-wrap${contentReady ? " t-in" : ""}`}>
             <div className="t-content" style={{ padding: "0 28px 32px 86px" }}>
-              <LabTable items={ITEMS} visible={visible} />
-              <LabCards items={ITEMS} visible={visible} />
+              <DesignsTable items={ITEMS} visible={visible} />
+              <DesignsCards items={ITEMS} visible={visible} />
             </div>
           </div>
 
           <div style={{ padding: "0.4rem 28px 1.5rem", textAlign: "center" }}>
             <span style={{ fontFamily: "var(--t-mono)", fontSize: 10, color: "var(--t-ink4)" }}>
-              ↳ pacr.es/lab
+              ↳ pacr.es/designs
             </span>
           </div>
         </div>

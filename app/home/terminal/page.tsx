@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import HomeNav from "../../components/HomeNav";
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -337,11 +336,11 @@ function MinimizedBar({ onRestore, onMaximize, onClose, animatingOut = false }: 
   );
 }
 
-function TabsBar() {
+function TabsBar({ onLabClick, onDesignsClick }: { onLabClick: () => void; onDesignsClick: () => void }) {
   const tabs = [
-    { label: "~/cv", active: true, dot: false },
-    { label: "~/lab", active: false, dot: true },
-    { label: "~/contact", active: false, dot: false },
+    { label: "~/cv",      active: true,  dot: false, onClick: undefined },
+    { label: "~/lab",     active: false, dot: true,  onClick: onLabClick },
+    { label: "~/designs", active: false, dot: false, onClick: onDesignsClick },
   ];
   return (
     <div style={{
@@ -354,7 +353,7 @@ function TabsBar() {
     }}>
       <div style={{ display: "flex" }}>
         {tabs.map((tab) => (
-          <div key={tab.label} style={{
+          <div key={tab.label} onClick={tab.onClick} style={{
             padding: "8px 14px",
             fontFamily: "var(--t-mono)",
             fontSize: 11,
@@ -367,7 +366,7 @@ function TabsBar() {
             display: "flex",
             alignItems: "center",
             gap: 5,
-            cursor: tab.active ? "default" : "pointer",
+            cursor: tab.onClick ? "pointer" : "default",
             userSelect: "none" as const,
           }}>
             {tab.dot && <span style={{ width: 5, height: 5, borderRadius: "50%", background: "var(--t-accent)", display: "inline-block", flexShrink: 0 }} />}
@@ -1374,7 +1373,7 @@ export default function TerminalHome() {
         } as React.CSSProperties}>
           <ChromeBar onClose={handleClose} onMinimize={handleMinimize} onMaximize={handleMaximize}
             isMaximized={windowState === "maximized" || animClass === "t-win-maximizing"} />
-          <TabsBar />
+          <TabsBar onLabClick={() => router.push("/lab")} onDesignsClick={() => router.push("/designs")} />
 
           {/* 000 — whoami */}
           <Section n="000" cmd="whoami --pretty" contentStyle={CONTENT_STYLE} noBorder>
@@ -1416,7 +1415,6 @@ export default function TerminalHome() {
         </div>
       </div>
 
-      <HomeNav />
     </>
   );
 }

@@ -2,7 +2,6 @@
 
 import { useRef, useCallback, useState, useEffect } from "react";
 import Image from "next/image";
-import HomeNav from "../../components/HomeNav";
 
 const TIMELINE = [
   {
@@ -915,7 +914,6 @@ export default function TempHome() {
         </a>
       </footer>
 
-      <HomeNav />
     </>
   );
 }

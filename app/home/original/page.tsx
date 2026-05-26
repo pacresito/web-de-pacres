@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import Image from "next/image";
-import HomeNav from "../../components/HomeNav";
 
 const JOBS = [
   {
@@ -829,7 +828,6 @@ export default function Home() {
         </footer>
 
       </main>
-      <HomeNav />
     </>
   );
 }
