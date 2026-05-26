@@ -1115,7 +1115,7 @@ export default function Manifesto() {
                 <Fragment key={a}>
                   {ai > 0 && " "}
                   {a === "Resolución de problemas" ? (
-                    <a href="/home/terminal" className="vE-skill-shine" {...(ai > 0 ? { "data-line-start": "0" } : {})}>
+                    <a href="/lab" className="vE-skill-shine" {...(ai > 0 ? { "data-line-start": "0" } : {})}>
                       {ai > 0 && <em className="vE-dot">· </em>}{a}
                     </a>
                   ) : (

@@ -763,6 +763,24 @@ export default function HomeTempPage() {
 
         .nt-skill.c-purp { border: 1px solid rgba(191,90,242,0.4); color: #bf5af2; background: rgba(191,90,242,0.06); }
         .nt-skill.c-purp:hover { background: #bf5af2; color: #0a0a0f; box-shadow: 0 0 18px #bf5af2; }
+        .nt-skill-shine {
+          border: 1px solid rgba(251,191,36,0.35);
+          text-decoration: none;
+          white-space: nowrap;
+          background: linear-gradient(100deg, #bf5af2 0%, #bf5af2 35%, rgba(253,224,71,0.15) 44%, rgba(253,224,71,0.85) 48%, rgba(251,191,36,1.0) 50%, rgba(253,224,71,0.85) 52%, rgba(253,224,71,0.15) 56%, #bf5af2 65%, #bf5af2 100%);
+          background-size: 300% 100%;
+          background-position: 100% center;
+          -webkit-background-clip: text;
+          background-clip: text;
+          -webkit-text-fill-color: transparent;
+          animation: goldTextSweep 10s ease-in-out infinite;
+        }
+        @keyframes goldTextSweep {
+          0%, 87%     { background-position: 100% center; }
+          89.5%       { background-position: 50% center; }
+          92%         { background-position: 0% center; }
+          92.1%, 100% { background-position: 100% center; }
+        }
 
         /* ── CTA button ── */
         .nt-cta { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.9rem 2.2rem; border: 1.5px solid #ff006e; color: #ff006e; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; font-family: var(--font-geist-mono), monospace; background: rgba(255,0,110,0.07); transition: background 0.25s, color 0.25s; animation: neonPulseMag 3s ease-in-out infinite; cursor: none; }
@@ -1047,6 +1065,14 @@ export default function HomeTempPage() {
           <SLabel>Aptitudes</SLabel>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "0.45rem" }}>
             {SKILLS.map((skill, i) => {
+              if (skill === "Resolución de problemas") {
+                return (
+                  <a key={skill} href="https://pacr.es/designs" className="nt-skill nt-skill-shine"
+                    style={{ animationDelay: `${i * 0.04}s` }}>
+                    {skill}
+                  </a>
+                );
+              }
               const cls = ["c-mag","c-cyan","c-acid","c-purp"][i % 4];
               return (
                 <span key={skill} className={`nt-skill ${cls}`}

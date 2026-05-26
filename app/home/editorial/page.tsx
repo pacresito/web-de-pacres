@@ -778,13 +778,14 @@ function Skills() {
             {s}
           </span>
         ))}
-        <span
-          className="chip"
+        <a
+          href="https://pacr.es/designs"
+          className="chip lab"
           title={DATA.skillSecret.title}
           style={{ fontSize: 10, padding: "2px 7px", color: "var(--ink-3)" }}
         >
           {DATA.skillSecret.label}
-        </span>
+        </a>
       </div>
     </section>
   );

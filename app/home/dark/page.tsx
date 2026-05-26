@@ -712,7 +712,23 @@ body {
   display: inline-block;
 }
 .skill-tag:hover { border-color: rgba(59,130,246,0.18); color: var(--text-dim); }
-
+.skill-tag.skill-shine {
+  text-decoration: none;
+  white-space: nowrap;
+  background: linear-gradient(100deg, var(--text-muted) 0%, var(--text-muted) 35%, rgba(253,224,71,0.15) 44%, rgba(253,224,71,0.85) 48%, rgba(251,191,36,1.0) 50%, rgba(253,224,71,0.85) 52%, rgba(253,224,71,0.15) 56%, var(--text-muted) 65%, var(--text-muted) 100%);
+  background-size: 300% 100%;
+  background-position: 100% center;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: goldTextSweep 10s ease-in-out infinite;
+}
+@keyframes goldTextSweep {
+  0%, 87%     { background-position: 100% center; }
+  89.5%       { background-position: 50% center; }
+  92%         { background-position: 0% center; }
+  92.1%, 100% { background-position: 100% center; }
+}
 
 
 /* ── LANG ── */
@@ -936,7 +952,7 @@ export default function DarkHome() {
             {SKILLS.map((s) => (
               <span key={s} className="skill-tag">{s}</span>
             ))}
-            <span className="skill-tag">Resolución de problemas</span>
+            <a href="https://pacr.es/designs" className="skill-tag skill-shine">Resolución de problemas</a>
           </div>
         </section>
 
