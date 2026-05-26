@@ -505,7 +505,21 @@ function WhoamiSection() {
   );
 }
 
-function TimelineDesktop({ expandedId, onToggle }: { expandedId: string | null; onToggle: (id: string | null, el: HTMLElement) => void }) {
+function TimelineDesktop({ expandedId, onToggle, active = false }: {
+  expandedId: string | null;
+  onToggle: (id: string | null, el: HTMLElement) => void;
+  active?: boolean;
+}) {
+  const [visibleCount, setVisibleCount] = useState(0);
+
+  useEffect(() => {
+    if (!active) return;
+    const timers = TIMELINE.map((_, idx) =>
+      setTimeout(() => setVisibleCount(idx + 1), idx * 70)
+    );
+    return () => timers.forEach(clearTimeout);
+  }, [active]);
+
   return (
     <div className="t-tl-desktop" style={{ border: "1px solid var(--t-rule)", borderRadius: 10, overflow: "hidden" }}>
       <div style={{
@@ -526,12 +540,13 @@ function TimelineDesktop({ expandedId, onToggle }: { expandedId: string | null; 
       </div>
 
       {TIMELINE.map((row, idx) => {
+        const revealed = idx < visibleCount;
         const hasContent = row.id === "letgo" || row.bullets.length > 0;
         const isCurrent = row.kind === "current";
         const isExpanded = expandedId === row.id;
 
         return (
-          <div key={row.id}>
+          <div key={row.id} className={revealed ? "t-row-in" : undefined} style={{ visibility: revealed ? undefined : "hidden" }}>
             <div
               onClick={hasContent ? (e) => onToggle(isExpanded ? null : row.id, e.currentTarget) : undefined}
               style={{
@@ -650,7 +665,7 @@ function TimelineDesktop({ expandedId, onToggle }: { expandedId: string | null; 
         );
       })}
 
-      {!expandedId && (
+      {!expandedId && visibleCount >= TIMELINE.length && (
         <div style={{ padding: "10px 18px", borderTop: "1px dashed var(--t-rule)", fontFamily: "var(--t-mono)", fontSize: 11, color: "var(--t-ink3)" }}>
           ↳ tip: click any row to expand details
         </div>
@@ -659,10 +674,25 @@ function TimelineDesktop({ expandedId, onToggle }: { expandedId: string | null; 
   );
 }
 
-function TimelineMobile({ expandedRow, toggleExpanded }: { expandedRow: string | null; toggleExpanded: (id: string, el?: HTMLElement) => void }) {
+function TimelineMobile({ expandedRow, toggleExpanded, active = false }: {
+  expandedRow: string | null;
+  toggleExpanded: (id: string, el?: HTMLElement) => void;
+  active?: boolean;
+}) {
+  const [visibleCount, setVisibleCount] = useState(0);
+
+  useEffect(() => {
+    if (!active) return;
+    const timers = TIMELINE.map((_, idx) =>
+      setTimeout(() => setVisibleCount(idx + 1), idx * 70)
+    );
+    return () => timers.forEach(clearTimeout);
+  }, [active]);
+
   return (
     <div className="t-tl-mobile" style={{ flexDirection: "column", gap: 8 }}>
-      {TIMELINE.map((row) => {
+      {TIMELINE.map((row, idx) => {
+        const revealed = idx < visibleCount;
         const isExpanded = expandedRow === row.id;
         const hasContent = row.id === "letgo" || row.bullets.length > 0;
         const isCurrent = row.kind === "current";
@@ -670,6 +700,7 @@ function TimelineMobile({ expandedRow, toggleExpanded }: { expandedRow: string |
         return (
           <div
             key={row.id}
+            className={revealed ? "t-row-in" : undefined}
             onClick={hasContent ? (e) => toggleExpanded(row.id, e.currentTarget) : undefined}
             style={{
               border: "1px solid var(--t-rule)",
@@ -677,6 +708,7 @@ function TimelineMobile({ expandedRow, toggleExpanded }: { expandedRow: string |
               background: isCurrent ? "var(--t-accent-bg)" : isExpanded ? "var(--t-paper2)" : "var(--t-paper)",
               cursor: hasContent ? "pointer" : "default",
               overflow: "hidden",
+              visibility: revealed ? undefined : "hidden",
             }}
           >
             <div style={{ padding: "10px 14px 8px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -748,13 +780,31 @@ function TimelineMobile({ expandedRow, toggleExpanded }: { expandedRow: string |
   );
 }
 
-function RecoCarousel() {
+function RecoCarousel({ active = false }: { active?: boolean }) {
   const [i, setI] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
+  const [displayedQuote, setDisplayedQuote] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+
   const prev = () => setI((c) => (c - 1 + RECOS.length) % RECOS.length);
   const next = () => setI((c) => (c + 1) % RECOS.length);
-  const r = RECOS[i];
-  const idStr = String(i + 1).padStart(2, "0");
+
+  useEffect(() => {
+    if (!active) return;
+    setDisplayedQuote("");
+    setIsTyping(true);
+    const quote = RECOS[i].quote;
+    let charIdx = 0;
+    const iv = setInterval(() => {
+      charIdx++;
+      setDisplayedQuote(quote.slice(0, charIdx));
+      if (charIdx >= quote.length) {
+        clearInterval(iv);
+        setIsTyping(false);
+      }
+    }, 8);
+    return () => clearInterval(iv);
+  }, [active, i]);
 
   useEffect(() => {
     const el = rootRef.current;
@@ -766,6 +816,10 @@ function RecoCarousel() {
     el.addEventListener("keydown", handleKey);
     return () => el.removeEventListener("keydown", handleKey);
   });
+
+  const r = RECOS[i];
+  const idStr = String(i + 1).padStart(2, "0");
+  const shownQuote = isTyping ? displayedQuote : r.quote;
 
   return (
     <div ref={rootRef} tabIndex={0} style={{ outline: "none" }}>
@@ -807,9 +861,14 @@ function RecoCarousel() {
           <span style={{ color: "var(--t-accent2)" }}>&quot;quote&quot;</span>
           <span style={{ color: "var(--t-ink3)" }}>:</span>
         </div>
-        <div style={{ paddingLeft: 28, borderLeft: "2px solid var(--t-accent)", marginLeft: 16, paddingTop: 6, paddingBottom: 6 }}>
-          <span style={{ fontFamily: "var(--t-serif)", fontStyle: "italic", fontSize: 20, lineHeight: 1.45, color: "var(--t-ink)" }} className="t-quote-mobile">
+        <div style={{ paddingLeft: 28, borderLeft: "2px solid var(--t-accent)", marginLeft: 16, paddingTop: 6, paddingBottom: 6, position: "relative" }}>
+          {/* full quote — invisible, only for height reservation */}
+          <span style={{ fontFamily: "var(--t-serif)", fontStyle: "italic", fontSize: 20, lineHeight: 1.45, color: "transparent", userSelect: "none" }} className="t-quote-mobile" aria-hidden="true">
             &ldquo;{r.quote}&rdquo;
+          </span>
+          {/* typed text overlaid */}
+          <span style={{ fontFamily: "var(--t-serif)", fontStyle: "italic", fontSize: 20, lineHeight: 1.45, color: "var(--t-ink)", position: "absolute", top: 6, left: 28, right: 0 }} className="t-quote-mobile">
+            &ldquo;{shownQuote}{isTyping && <span style={{ animation: "t-blink 0.7s steps(1) infinite" }}>▍</span>}&rdquo;
           </span>
         </div>
         <div>{"}"}</div>
@@ -829,48 +888,94 @@ function RecoCarousel() {
   );
 }
 
-function StackSection() {
-  const Bars = ({ dots }: { dots: number }) => (
+function StackSection({ active = false }: { active?: boolean }) {
+  const [langsVisible, setLangsVisible] = useState(0);
+  const [langDots, setLangDots] = useState<number[]>(LANGUAGES.map(() => 0));
+  const [certsVisible, setCertsVisible] = useState(0);
+  const [awardsVisible, setAwardsVisible] = useState(0);
+
+  useEffect(() => {
+    if (!active) return;
+    const actions: (() => void)[] = [];
+
+    LANGUAGES.forEach((lang, li) => {
+      actions.push(() => setLangsVisible(li + 1));
+      for (let d = 1; d <= lang.dots; d++) {
+        const dd = d, lli = li;
+        actions.push(() => setLangDots(prev => { const n = [...prev]; n[lli] = dd; return n; }));
+      }
+    });
+    CERTS.forEach((_, ci) => actions.push(() => setCertsVisible(ci + 1)));
+    AWARDS.forEach((_, ai) => actions.push(() => setAwardsVisible(ai + 1)));
+
+    const timers = actions.map((action, idx) => setTimeout(action, idx * 50));
+    return () => timers.forEach(clearTimeout);
+  }, [active]);
+
+  const Bars = ({ shown }: { shown: number }) => (
     <>
-      <span style={{ color: "var(--t-accent2)", letterSpacing: 1, fontFamily: "var(--t-mono)" }}>{"█".repeat(dots)}</span>
-      <span style={{ color: "var(--t-ink4)", letterSpacing: 1, fontFamily: "var(--t-mono)" }}>{"░".repeat(5 - dots)}</span>
+      <span style={{ color: "var(--t-accent2)", letterSpacing: 1, fontFamily: "var(--t-mono)" }}>{"█".repeat(shown)}</span>
+      <span style={{ color: "var(--t-ink4)", letterSpacing: 1, fontFamily: "var(--t-mono)" }}>{"░".repeat(5 - shown)}</span>
     </>
   );
+
   return (
     <div className="t-stack-grid">
       <div>
-        <div style={{ fontFamily: "var(--t-mono)", fontSize: 11, color: "var(--t-accent2)", marginBottom: 10 }}>// langs.json</div>
-        {LANGUAGES.map((l, i) => (
-          <div key={l.lang} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderTop: i === 0 ? "none" : "1px dotted var(--t-rule)" }}>
-            <span style={{ fontFamily: "var(--t-mono)", fontSize: 13, color: "var(--t-ink)" }}>{l.lang}</span>
-            <span style={{ display: "inline-flex" }}><Bars dots={l.dots} /></span>
-          </div>
-        ))}
+        <div style={{ fontFamily: "var(--t-mono)", fontSize: 11, color: "var(--t-accent2)", marginBottom: 10, visibility: langsVisible > 0 ? undefined : "hidden" }}>// langs.json</div>
+        {LANGUAGES.map((l, idx) => {
+          const revealed = idx < langsVisible;
+          return (
+            <div key={l.lang} className={revealed ? "t-row-in" : undefined} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderTop: idx === 0 ? "none" : "1px dotted var(--t-rule)", visibility: revealed ? undefined : "hidden" }}>
+              <span style={{ fontFamily: "var(--t-mono)", fontSize: 13, color: "var(--t-ink)" }}>{l.lang}</span>
+              <span style={{ display: "inline-flex" }}><Bars shown={langDots[idx] ?? 0} /></span>
+            </div>
+          );
+        })}
       </div>
       <div>
-        <div style={{ fontFamily: "var(--t-mono)", fontSize: 11, color: "var(--t-accent2)", marginBottom: 10 }}>// certs.txt</div>
-        {CERTS.map((cert, i) => (
-          <div key={cert} style={{ display: "grid", gridTemplateColumns: "26px 1fr", padding: "5px 0", borderTop: i === 0 ? "none" : "1px dotted var(--t-rule)" }}>
-            <span style={{ fontFamily: "var(--t-mono)", fontSize: 12.5, color: "var(--t-ink3)" }}>{String(i + 1).padStart(2, "0")}.</span>
-            <span style={{ fontFamily: "var(--t-mono)", fontSize: 12.5, color: "var(--t-ink)" }}>{cert}</span>
-          </div>
-        ))}
+        <div style={{ fontFamily: "var(--t-mono)", fontSize: 11, color: "var(--t-accent2)", marginBottom: 10, visibility: certsVisible > 0 ? undefined : "hidden" }}>// certs.txt</div>
+        {CERTS.map((cert, i) => {
+          const revealed = i < certsVisible;
+          return (
+            <div key={cert} className={revealed ? "t-row-in" : undefined} style={{ display: "grid", gridTemplateColumns: "26px 1fr", padding: "5px 0", borderTop: i === 0 ? "none" : "1px dotted var(--t-rule)", visibility: revealed ? undefined : "hidden" }}>
+              <span style={{ fontFamily: "var(--t-mono)", fontSize: 12.5, color: "var(--t-ink3)" }}>{String(i + 1).padStart(2, "0")}.</span>
+              <span style={{ fontFamily: "var(--t-mono)", fontSize: 12.5, color: "var(--t-ink)" }}>{cert}</span>
+            </div>
+          );
+        })}
       </div>
       <div>
-        <div style={{ fontFamily: "var(--t-mono)", fontSize: 11, color: "var(--t-accent2)", marginBottom: 10 }}>// awards.log</div>
-        {AWARDS.map((a, i) => (
-          <div key={a.title} style={{ padding: "8px 0", borderTop: i === 0 ? "none" : "1px dotted var(--t-rule)" }}>
-            <div style={{ fontFamily: "var(--t-mono)", fontSize: 10, color: "var(--t-accent2)", marginBottom: 3 }}>[{a.date}]</div>
-            <div style={{ fontFamily: "var(--t-sans)", fontSize: 13, color: "var(--t-ink)", marginBottom: a.org ? 2 : 0 }}>{a.title}</div>
-            {a.org && <div style={{ fontFamily: "var(--t-mono)", fontSize: 10, color: "var(--t-ink3)" }}>{a.org}</div>}
-          </div>
-        ))}
+        <div style={{ fontFamily: "var(--t-mono)", fontSize: 11, color: "var(--t-accent2)", marginBottom: 10, visibility: awardsVisible > 0 ? undefined : "hidden" }}>// awards.log</div>
+        {AWARDS.map((a, i) => {
+          const revealed = i < awardsVisible;
+          return (
+            <div key={a.title} className={revealed ? "t-row-in" : undefined} style={{ padding: "8px 0", borderTop: i === 0 ? "none" : "1px dotted var(--t-rule)", visibility: revealed ? undefined : "hidden" }}>
+              <div style={{ fontFamily: "var(--t-mono)", fontSize: 10, color: "var(--t-accent2)", marginBottom: 3 }}>[{a.date}]</div>
+              <div style={{ fontFamily: "var(--t-sans)", fontSize: 13, color: "var(--t-ink)", marginBottom: a.org ? 2 : 0 }}>{a.title}</div>
+              {a.org && <div style={{ fontFamily: "var(--t-mono)", fontSize: 10, color: "var(--t-ink3)" }}>{a.org}</div>}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
 }
 
-function SkillsSection() {
+function SkillsSection({ active = false }: { active?: boolean }) {
+  const [visibleCount, setVisibleCount] = useState(0);
+
+  useEffect(() => {
+    if (!active) return;
+    let count = 0;
+    const iv = setInterval(() => {
+      count++;
+      setVisibleCount(count);
+      if (count >= SKILLS.length) clearInterval(iv);
+    }, 35);
+    return () => clearInterval(iv);
+  }, [active]);
+
   const pillStyle: React.CSSProperties = {
     display: "inline-block",
     fontFamily: "var(--t-mono)",
@@ -883,29 +988,66 @@ function SkillsSection() {
     background: "transparent",
     color: "var(--t-ink4)",
   };
+
   return (
     <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-      {SKILLS.map((skill) => <span key={skill} style={pillStyle}>{skill}</span>)}
+      {SKILLS.map((skill, idx) => {
+        const revealed = idx < visibleCount;
+        return (
+          <span key={skill} className={revealed ? "t-skill-in" : undefined} style={{ ...pillStyle, visibility: revealed ? undefined : "hidden" }}>{skill}</span>
+        );
+      })}
     </div>
   );
 }
 
-function ContactSection() {
+function ContactSection({ active = false }: { active?: boolean }) {
+  const LINE1 = "crespovelasco@gmail.com";
+  const LINE2 = "linkedin.com/in/pacres";
+  const [line1, setLine1] = useState("");
+  const [line2, setLine2] = useState("");
+
+  useEffect(() => {
+    if (!active) return;
+    let idx = 0;
+    const total = LINE1.length + LINE2.length;
+    const iv = setInterval(() => {
+      idx++;
+      if (idx <= LINE1.length) {
+        setLine1(LINE1.slice(0, idx));
+      } else {
+        setLine2(LINE2.slice(0, idx - LINE1.length));
+      }
+      if (idx >= total) clearInterval(iv);
+    }, 25);
+    return () => clearInterval(iv);
+  }, [active]);
+
   return (
     <div>
       <div style={{ fontFamily: "var(--t-mono)", fontSize: 14, lineHeight: 1.8 }}>
-        <div style={{ marginBottom: 4 }}>
-          <span style={{ color: "var(--t-accent2)" }}>→ </span>
-          <a href="mailto:crespovelasco@gmail.com" style={{ color: "var(--t-accent2)", textDecoration: "none" }}>
-            crespovelasco@gmail.com
-          </a>
-        </div>
-        <div>
-          <span style={{ color: "var(--t-accent2)" }}>→ </span>
-          <a href="https://www.linkedin.com/in/pacres/" target="_blank" rel="noopener noreferrer" style={{ color: "var(--t-accent2)", textDecoration: "none" }}>
-            linkedin.com/in/pacres
-          </a>
-        </div>
+        {active && (
+          <>
+            <div style={{ marginBottom: 4 }}>
+              <span style={{ color: "var(--t-accent2)" }}>→ </span>
+              <a href="mailto:crespovelasco@gmail.com" style={{ color: "var(--t-accent2)", textDecoration: "none" }}>
+                {line1}
+              </a>
+              {line1.length < LINE1.length && (
+                <span style={{ color: "var(--t-accent2)", animation: "t-blink 0.7s steps(1) infinite" }}>▍</span>
+              )}
+            </div>
+            <div>
+              <span style={{ color: "var(--t-accent2)" }}>→ </span>
+              <a href="https://www.linkedin.com/in/pacres/" target="_blank" rel="noopener noreferrer" style={{ color: "var(--t-accent2)", textDecoration: "none" }}>
+                {line2}
+              </a>
+              {line1.length >= LINE1.length && line2.length < LINE2.length && (
+                <span style={{ color: "var(--t-accent2)", animation: "t-blink 0.7s steps(1) infinite" }}>▍</span>
+              )}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -926,7 +1068,9 @@ function FooterSection() {
 }
 
 function Section({ n, cmd, highlight = false, children, contentStyle, noBorder = false }: {
-  n: string; cmd: string; highlight?: boolean; children: React.ReactNode; contentStyle?: React.CSSProperties; noBorder?: boolean;
+  n: string; cmd: string; highlight?: boolean;
+  children: React.ReactNode | ((active: boolean) => React.ReactNode);
+  contentStyle?: React.CSSProperties; noBorder?: boolean;
 }) {
   const { ref, inView } = useInView();
   const [contentVisible, setContentVisible] = useState(false);
@@ -940,7 +1084,7 @@ function Section({ n, cmd, highlight = false, children, contentStyle, noBorder =
       <PromptRow n={n} cmd={cmd} highlight={highlight} active={inView} />
       <div className={`t-section-wrap${contentVisible ? " t-in" : ""}`}>
         <div style={contentStyle} className="t-content">
-          {children}
+          {typeof children === "function" ? children(contentVisible) : children}
         </div>
       </div>
     </div>
@@ -1063,6 +1207,13 @@ export default function TerminalHome() {
           to   { opacity: 1; transform: translateY(0); }
         }
         .t-slide-down { animation: t-slideDown 0.22s ease-out; }
+
+        @keyframes t-row-in {
+          from { opacity: 0; transform: translateX(-8px); }
+          to   { opacity: 1; transform: none; }
+        }
+        .t-row-in   { animation: t-row-in 0.18s ease-out both; }
+        .t-skill-in { animation: t-row-in 0.15s ease-out both; }
 
         @keyframes t-win-close {
           from { opacity: 1; transform: scale(1); }
@@ -1213,28 +1364,32 @@ export default function TerminalHome() {
 
           {/* 001 — timeline */}
           <Section n="001" cmd="cv timeline --since=2004 --format=pretty | head -n 7" contentStyle={CONTENT_STYLE}>
-            <TimelineDesktop expandedId={expandedDesktopId} onToggle={handleExpandDesktop} />
-            <TimelineMobile expandedRow={expandedRow} toggleExpanded={toggleExpanded} />
+            {(active) => (
+              <>
+                <TimelineDesktop expandedId={expandedDesktopId} onToggle={handleExpandDesktop} active={active} />
+                <TimelineMobile expandedRow={expandedRow} toggleExpanded={toggleExpanded} active={active} />
+              </>
+            )}
           </Section>
 
           {/* 002 — recos */}
           <Section n="002" cmd="curl https://pacr.es/api/reco | jq" contentStyle={CONTENT_STYLE}>
-            <RecoCarousel />
+            {(active) => <RecoCarousel active={active} />}
           </Section>
 
           {/* 003 — stack */}
           <Section n="003" cmd="cv stack --include=langs,certs,awards" contentStyle={CONTENT_STYLE}>
-            <StackSection />
+            {(active) => <StackSection active={active} />}
           </Section>
 
           {/* 004 — skills */}
           <Section n="004" cmd="cv skills | sort -R" contentStyle={CONTENT_STYLE}>
-            <SkillsSection />
+            {(active) => <SkillsSection active={active} />}
           </Section>
 
           {/* 005 — contact */}
           <Section n="005" cmd="contact --reply" highlight contentStyle={CONTENT_STYLE}>
-            <ContactSection />
+            {(active) => <ContactSection active={active} />}
           </Section>
 
           {/* Footer */}
