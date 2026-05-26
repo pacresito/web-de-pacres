@@ -759,7 +759,7 @@ export default function Manifesto() {
     const wallL = Bodies.rectangle(-30, window.innerHeight / 2, 60, window.innerHeight * 3, { isStatic: true });
     const wallR = Bodies.rectangle(window.innerWidth + 30, window.innerHeight / 2, 60, window.innerHeight * 3, { isStatic: true });
     const hardCeilingY = -window.scrollY;
-    const ceiling = Bodies.rectangle(window.innerWidth / 2, hardCeilingY - 30, window.innerWidth * 3, 60, { isStatic: true, restitution: 0.3, friction: 0.5 });
+    const ceiling = Bodies.rectangle(window.innerWidth / 2, hardCeilingY - 10, window.innerWidth * 3, 60, { isStatic: true, restitution: 0.3, friction: 0.5 });
     World.add(engine.world, [floor, wallL, wallR, ceiling]);
     const FOLD_CEILING_Y = -100;
 
