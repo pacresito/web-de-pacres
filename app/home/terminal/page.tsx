@@ -1086,7 +1086,7 @@ export default function TerminalHome() {
           from { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
           to   { opacity: 0; transform: translateX(-50%) translateY(14px) scale(0.86); }
         }
-        .t-win-closing    { animation: t-win-close    0.5s ease-out  forwards; }
+        .t-win-closing    { animation: t-win-close    0.2s ease-out  forwards; }
         .t-win-minimizing { animation: t-win-minimize 0.38s ease-in   forwards; transform-origin: bottom center !important; }
         .t-win-restoring  { animation: t-win-restore  0.6s ease-out   forwards; transform-origin: bottom center !important; }
 
@@ -1185,7 +1185,7 @@ export default function TerminalHome() {
         fontFamily: "var(--t-sans)",
         transition: "padding 1.1s ease",
         animation:
-          animClass === "t-win-closing"    ? "t-bg-fade-out 0.5s ease-out  forwards" :
+          animClass === "t-win-closing"    ? "t-bg-fade-out 0.2s ease-out  forwards" :
           animClass === "t-win-minimizing" ? "t-bg-fade-out 0.38s ease-in   forwards" :
           animClass === "t-win-restoring"  ? "t-bg-fade-in  0.6s  ease-out"           :
           undefined,
