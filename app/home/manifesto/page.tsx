@@ -761,7 +761,7 @@ export default function Manifesto() {
     const hardCeilingY = -window.scrollY;
     const ceiling = Bodies.rectangle(window.innerWidth / 2, hardCeilingY - 30, window.innerWidth * 3, 60, { isStatic: true, restitution: 0.3, friction: 0.5 });
     World.add(engine.world, [floor, wallL, wallR, ceiling]);
-    const FOLD_CEILING_Y = -30; // 30px por encima del top del viewport
+    const FOLD_CEILING_Y = -50; // 50px por encima del top del viewport
 
     const bodies: Matter.Body[] = [];
     for (const d of letterData) {
