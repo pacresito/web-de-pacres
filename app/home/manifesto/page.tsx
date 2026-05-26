@@ -618,6 +618,21 @@ const STYLES = `
   .vE-h1__l2, .vE-h1__l4 { padding-left: 20px; }
   .vE-end__h { font-size: 52px; }
 }
+
+/* ── Reveal on scroll ── */
+@media (prefers-reduced-motion: no-preference) {
+  .vE-reveal {
+    opacity: 0;
+    transform: translateY(36px);
+    transition: opacity 0.65s cubic-bezier(.4,0,.2,1), transform 0.65s cubic-bezier(.4,0,.2,1);
+  }
+  .vE-reveal.vE-in {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .vE-reveal--d1 { transition-delay: .15s; }
+  .vE-reveal--d2 { transition-delay: .3s; }
+}
 `;
 
 export default function Manifesto() {
@@ -642,6 +657,21 @@ export default function Manifesto() {
   useEffect(() => {
     const t = setInterval(() => setPalabraIdx(p => (p + 1) % PALABRAS_FIN.length), 4000);
     return () => clearInterval(t);
+  }, []);
+
+  useEffect(() => {
+    const els = document.querySelectorAll<HTMLElement>(".vE-reveal");
+    if (!els.length) return;
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.classList.add("vE-in");
+          obs.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.12 });
+    els.forEach(el => obs.observe(el));
+    return () => obs.disconnect();
   }, []);
 
   useEffect(() => {
@@ -930,7 +960,7 @@ export default function Manifesto() {
 
           {/* HERO */}
           <section className="vE-hero" id="hola">
-            <div className="vE-hero__meta">
+            <div className="vE-hero__meta vE-reveal">
               <span>★</span>
               <span>Pablo Crespo Velasco</span>
               <span>·</span>
@@ -938,13 +968,13 @@ export default function Manifesto() {
               <span>·</span>
               <span>2011 → ahora</span>
             </div>
-            <h1 className="vE-h1">
+            <h1 className="vE-h1 vE-reveal vE-reveal--d1">
               <span className="vE-h1__l1">Organizar</span>
               <span className="vE-h1__l2">el <em>caos.</em></span>
               <span className="vE-h1__l3">Solucionar</span>
               <span className="vE-h1__l4">lo <em>imposible.</em></span>
             </h1>
-            <div className="vE-hero__bot">
+            <div className="vE-hero__bot vE-reveal vE-reveal--d2">
               <div className="vE-photo-wrap">
                 <Image src="/pablo.png" alt="Pablo Crespo Velasco" width={180} height={220} priority />
               </div>
@@ -968,7 +998,7 @@ export default function Manifesto() {
           </section>
 
           {/* MÉTODO */}
-          <section className="vE-mani" id="metodo">
+          <section className="vE-mani vE-reveal" id="metodo">
             <div className="vE-mani__k">— EL MÉTODO —</div>
             <h2 className="vE-mani__h">Tres cosas se me dan bien.</h2>
             <div className="vE-mani__rows">
@@ -997,7 +1027,7 @@ export default function Manifesto() {
           </section>
 
           {/* CASOS */}
-          <section className="vE-cases" id="casos" data-no-physics>
+          <section className="vE-cases vE-reveal" id="casos" data-no-physics>
             <div className="vE-cases__hd">
               <span className="vE-cases__k">— CASOS —</span>
               <h2 className="vE-cases__h">Las paradas del camino</h2>
@@ -1025,10 +1055,10 @@ export default function Manifesto() {
           </section>
 
           {/* RECOMENDACIONES */}
-          <div data-no-physics><RecsCarousel recs={RECS} /></div>
+          <div className="vE-reveal" data-no-physics><RecsCarousel recs={RECS} /></div>
 
           {/* INFO GRID */}
-          <section className="vE-grid" id="info">
+          <section className="vE-grid vE-reveal" id="info">
             <div className="vE-info">
               <div className="vE-info__k">— IDIOMAS —</div>
               <ul className="vE-info__list">
@@ -1063,7 +1093,7 @@ export default function Manifesto() {
           </section>
 
           {/* APTITUDES */}
-          <section className="vE-skills" id="skills">
+          <section className="vE-skills vE-reveal" id="skills">
             <div className="vE-skills__k">— APTITUDES —</div>
             <p className="vE-skills__list" ref={skillsRef}>
               {APTITUDES.map((a, ai) => (
@@ -1084,7 +1114,7 @@ export default function Manifesto() {
           </section>
 
           {/* CTA FINAL */}
-          <section className="vE-end" id="contacto">
+          <section className="vE-end vE-reveal" id="contacto">
             <h2 className="vE-end__h">
               ¿Hablamos<br />de <em><AnimatedCyclingWord words={PALABRAS_FIN} index={palabraIdx} />?</em>
             </h2>
