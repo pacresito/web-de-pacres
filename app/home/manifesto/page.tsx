@@ -389,7 +389,7 @@ const STYLES = `
 .vE-themeT__ico--moon { background: transparent; box-shadow: inset -3px -1px 0 0 currentColor; transform: rotate(-25deg); }
 
 /* Main */
-.vE-main { padding: 32px 56px 64px; max-width: 1100px; min-width: 0; }
+.vE-main { padding: 32px 56px 64px; max-width: 1100px; min-width: 0; overflow-anchor: none; }
 
 /* Hero */
 .vE-hero { padding-bottom: 48px; border-bottom: 1px solid var(--line); }
@@ -652,6 +652,13 @@ export default function Manifesto() {
   const skillsRef = useRef<HTMLParagraphElement>(null);
   const physicsActiveRef = useRef(false);
   const restoreRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    if ("scrollRestoration" in window.history) {
+      window.history.scrollRestoration = "manual";
+    }
+    window.scrollTo(0, 0);
+  }, []);
 
   useEffect(() => {
     const saved = localStorage.getItem("manifesto-theme");
