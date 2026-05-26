@@ -965,6 +965,13 @@ export default function TerminalHome() {
   const [windowState, setWindowState] = useState<"normal" | "minimized" | "maximized">("normal");
   const [animClass, setAnimClass] = useState("");
   const [dockAnimOut, setDockAnimOut] = useState(false);
+  const [winWidth, setWinWidth] = useState(0);
+  useEffect(() => {
+    setWinWidth(window.innerWidth);
+    const onResize = () => setWinWidth(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
   const toggleExpanded = (id: string, el?: HTMLElement) => {
     const isExpanding = expandedRow !== id;
     setExpandedRow((prev) => prev === id ? null : id);
@@ -985,13 +992,22 @@ export default function TerminalHome() {
       } else {
         nav();
       }
-    }, 260);
+    }, 500);
   };
   const handleMinimize = () => {
     setAnimClass("t-win-minimizing");
     setTimeout(() => { setWindowState("minimized"); setAnimClass(""); }, 390);
   };
-  const handleMaximize = () => setWindowState((s) => s === "maximized" ? "normal" : "maximized");
+  const handleMaximize = () => {
+    if (animClass.includes("maximiz")) return;
+    if (windowState !== "maximized") {
+      setAnimClass("t-win-maximizing");
+      setTimeout(() => { setWindowState("maximized"); setAnimClass(""); }, 1020);
+    } else {
+      setAnimClass("t-win-unmaximizing");
+      setTimeout(() => { setWindowState("normal"); setAnimClass(""); }, 1020);
+    }
+  };
   const handleRestore = () => {
     setDockAnimOut(true);
     setTimeout(() => {
@@ -1070,9 +1086,32 @@ export default function TerminalHome() {
           from { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
           to   { opacity: 0; transform: translateX(-50%) translateY(14px) scale(0.86); }
         }
-        .t-win-closing    { animation: t-win-close    0.25s ease-out  forwards; }
+        .t-win-closing    { animation: t-win-close    0.5s ease-out  forwards; }
         .t-win-minimizing { animation: t-win-minimize 0.38s ease-in   forwards; transform-origin: bottom center !important; }
         .t-win-restoring  { animation: t-win-restore  0.6s ease-out   forwards; transform-origin: bottom center !important; }
+
+        @keyframes t-win-maximize {
+          0%  { width: 920px; border-radius: 12px; border: 1px solid var(--t-rule); box-shadow: 0 30px 80px -40px rgba(0,0,0,0.25), 0 2px 6px rgba(0,0,0,0.04); margin-bottom: 3rem; }
+          55% { width: var(--win-w); border-radius: 12px; border: 1px solid var(--t-rule); box-shadow: 0 30px 80px -40px rgba(0,0,0,0.25), 0 2px 6px rgba(0,0,0,0.04); margin-bottom: 3rem; }
+          100%{ width: var(--win-w); border-radius: 0; border: 1px solid transparent; box-shadow: none; margin-bottom: 0; }
+        }
+        @keyframes t-win-unmaximize {
+          0%  { width: var(--win-w); border-radius: 0; border: 1px solid transparent; box-shadow: none; margin-bottom: 0; }
+          45% { width: var(--win-w); border-radius: 12px; border: 1px solid var(--t-rule); box-shadow: 0 30px 80px -40px rgba(0,0,0,0.25), 0 2px 6px rgba(0,0,0,0.04); margin-bottom: 3rem; }
+          100%{ width: 920px; border-radius: 12px; border: 1px solid var(--t-rule); box-shadow: 0 30px 80px -40px rgba(0,0,0,0.25), 0 2px 6px rgba(0,0,0,0.04); margin-bottom: 3rem; }
+        }
+        @keyframes t-outer-maximize {
+          0%, 55% { padding: 2rem 1rem 3rem; }
+          100%    { padding: 0; }
+        }
+        @keyframes t-outer-unmaximize {
+          0%      { padding: 0; }
+          45%, 100% { padding: 2rem 1rem 3rem; }
+        }
+        .t-win-maximizing   { animation: t-win-maximize   1s ease forwards; }
+        .t-win-unmaximizing { animation: t-win-unmaximize 1s ease forwards; }
+        .t-outer-maximizing   { animation: t-outer-maximize   1s ease forwards !important; }
+        .t-outer-unmaximizing { animation: t-outer-unmaximize 1s ease forwards !important; }
 
         @keyframes t-bg-fade-out {
           from { opacity: 1; }
@@ -1137,7 +1176,7 @@ export default function TerminalHome() {
 
       {isMin && <MinimizedBar onRestore={handleRestore} onMaximize={handleRestoreMaximized} onClose={handleClose} animatingOut={dockAnimOut} />}
 
-      <div className="t-bg" style={{
+      <div className={`t-bg${animClass === "t-win-maximizing" ? " t-outer-maximizing" : animClass === "t-win-unmaximizing" ? " t-outer-unmaximizing" : ""}`} style={{
         minHeight: "100vh",
         padding: isMax ? 0 : "2rem 1rem 3rem",
         display: (isMin && !animClass) ? "none" : "flex",
@@ -1146,24 +1185,25 @@ export default function TerminalHome() {
         fontFamily: "var(--t-sans)",
         transition: "padding 1.1s ease",
         animation:
-          animClass === "t-win-closing"    ? "t-bg-fade-out 0.26s ease-out  forwards" :
+          animClass === "t-win-closing"    ? "t-bg-fade-out 0.5s ease-out  forwards" :
           animClass === "t-win-minimizing" ? "t-bg-fade-out 0.38s ease-in   forwards" :
           animClass === "t-win-restoring"  ? "t-bg-fade-in  0.6s  ease-out"           :
           undefined,
       }}>
         <div className={animClass} style={{
-          width: "100%",
-          maxWidth: isMax ? 9999 : 920,
+          "--win-w": winWidth ? `${winWidth}px` : "100vw",
+          width: winWidth ? (isMax ? winWidth : Math.min(920, winWidth)) : "100%",
+          maxWidth: "none",
           background: "var(--t-paper)",
           borderRadius: isMax ? 0 : 12,
           border: isMax ? "none" : "1px solid var(--t-rule)",
           boxShadow: isMax ? "none" : "0 30px 80px -40px rgba(0,0,0,0.25), 0 2px 6px rgba(0,0,0,0.04)",
           overflow: "hidden",
           marginBottom: isMax ? 0 : "3rem",
-          transition: "border-radius 0.42s ease, box-shadow 0.42s ease, max-width 1.1s ease, margin 0.42s ease",
           transformOrigin: (animClass === "t-win-minimizing" || animClass === "t-win-restoring") ? "bottom center" : "center center",
-        }}>
-          <ChromeBar onClose={handleClose} onMinimize={handleMinimize} onMaximize={handleMaximize} isMaximized={isMax} />
+        } as React.CSSProperties}>
+          <ChromeBar onClose={handleClose} onMinimize={handleMinimize} onMaximize={handleMaximize}
+            isMaximized={windowState === "maximized" || animClass === "t-win-maximizing"} />
           <TabsBar />
 
           {/* 000 — whoami */}
