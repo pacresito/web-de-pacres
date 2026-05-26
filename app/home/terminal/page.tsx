@@ -299,7 +299,7 @@ function ChromeBar({ onClose, onMinimize, onMaximize, isMaximized }: {
   );
 }
 
-function MinimizedBar({ onRestore, onMaximize, onClose }: { onRestore: () => void; onMaximize: () => void; onClose: () => void }) {
+function MinimizedBar({ onRestore, onMaximize, onClose, animatingOut = false }: { onRestore: () => void; onMaximize: () => void; onClose: () => void; animatingOut?: boolean }) {
   const [groupHot, setGroupHot] = useState(false);
   return (
     <div style={{
@@ -319,7 +319,7 @@ function MinimizedBar({ onRestore, onMaximize, onClose }: { onRestore: () => voi
       fontSize: 12,
       color: "var(--t-ink2)",
       zIndex: 100,
-      animation: "t-sectionIn 0.25s ease-out",
+      animation: animatingOut ? "t-dock-out 0.22s ease-out forwards" : "t-dock-in 0.25s ease-out",
       whiteSpace: "nowrap",
     }}>
       <div
@@ -963,6 +963,8 @@ export default function TerminalHome() {
     }
   };
   const [windowState, setWindowState] = useState<"normal" | "minimized" | "maximized">("normal");
+  const [animClass, setAnimClass] = useState("");
+  const [dockAnimOut, setDockAnimOut] = useState(false);
   const toggleExpanded = (id: string, el?: HTMLElement) => {
     const isExpanding = expandedRow !== id;
     setExpandedRow((prev) => prev === id ? null : id);
@@ -973,9 +975,41 @@ export default function TerminalHome() {
     }
   };
 
-  const handleClose = () => router.push("/");
-  const handleMinimize = () => setWindowState("minimized");
+  const handleClose = () => {
+    document.body.style.background = "#f7f4ed";
+    setAnimClass("t-win-closing");
+    setTimeout(() => {
+      const nav = () => router.push("/");
+      if ("startViewTransition" in document) {
+        (document as unknown as { startViewTransition: (cb: () => void) => void }).startViewTransition(nav);
+      } else {
+        nav();
+      }
+    }, 260);
+  };
+  const handleMinimize = () => {
+    setAnimClass("t-win-minimizing");
+    setTimeout(() => { setWindowState("minimized"); setAnimClass(""); }, 390);
+  };
   const handleMaximize = () => setWindowState((s) => s === "maximized" ? "normal" : "maximized");
+  const handleRestore = () => {
+    setDockAnimOut(true);
+    setTimeout(() => {
+      setWindowState("normal");
+      setAnimClass("t-win-restoring");
+      setDockAnimOut(false);
+      setTimeout(() => setAnimClass(""), 640);
+    }, 220);
+  };
+  const handleRestoreMaximized = () => {
+    setDockAnimOut(true);
+    setTimeout(() => {
+      setWindowState("maximized");
+      setAnimClass("t-win-restoring");
+      setDockAnimOut(false);
+      setTimeout(() => setAnimClass(""), 640);
+    }, 220);
+  };
 
   const CONTENT_STYLE: React.CSSProperties = { padding: "0 28px 32px 86px" };
 
@@ -1013,6 +1047,42 @@ export default function TerminalHome() {
           to   { opacity: 1; transform: translateY(0); }
         }
         .t-slide-down { animation: t-slideDown 0.22s ease-out; }
+
+        @keyframes t-win-close {
+          from { opacity: 1; transform: scale(1); }
+          to   { opacity: 0; transform: scale(0.94); }
+        }
+        @keyframes t-win-minimize {
+          0%   { opacity: 1;   transform: scale(1) translateY(0); }
+          65%  { opacity: 0.4; transform: scaleX(0.35) scaleY(0.2) translateY(18vh); }
+          100% { opacity: 0;   transform: scaleX(0.07) scaleY(0.02) translateY(26vh); }
+        }
+        @keyframes t-win-restore {
+          0%   { opacity: 0;   transform: scaleX(0.07) scaleY(0.02) translateY(26vh); }
+          35%  { opacity: 0.4; transform: scaleX(0.35) scaleY(0.2) translateY(18vh); }
+          100% { opacity: 1;   transform: scale(1) translateY(0); }
+        }
+        @keyframes t-dock-in {
+          from { opacity: 0; transform: translateX(-50%) translateY(12px); }
+          to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+        @keyframes t-dock-out {
+          from { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+          to   { opacity: 0; transform: translateX(-50%) translateY(14px) scale(0.86); }
+        }
+        .t-win-closing    { animation: t-win-close    0.25s ease-out  forwards; }
+        .t-win-minimizing { animation: t-win-minimize 0.38s ease-in   forwards; transform-origin: bottom center !important; }
+        .t-win-restoring  { animation: t-win-restore  0.6s ease-out   forwards; transform-origin: bottom center !important; }
+
+        @keyframes t-bg-fade-out {
+          from { opacity: 1; }
+          to   { opacity: 0; }
+        }
+        @keyframes t-bg-fade-in {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+
         @keyframes t-sectionIn {
           from { opacity: 0; transform: translateY(12px); }
           to   { opacity: 1; transform: translateY(0); }
@@ -1065,26 +1135,33 @@ export default function TerminalHome() {
         }
       `}</style>
 
-      {isMin && <MinimizedBar onRestore={() => setWindowState("normal")} onMaximize={() => setWindowState("maximized")} onClose={handleClose} />}
+      {isMin && <MinimizedBar onRestore={handleRestore} onMaximize={handleRestoreMaximized} onClose={handleClose} animatingOut={dockAnimOut} />}
 
       <div className="t-bg" style={{
         minHeight: "100vh",
         padding: isMax ? 0 : "2rem 1rem 3rem",
-        display: isMin ? "none" : "flex",
+        display: (isMin && !animClass) ? "none" : "flex",
         justifyContent: "center",
         alignItems: "flex-start",
         fontFamily: "var(--t-sans)",
+        transition: "padding 1.1s ease",
+        animation:
+          animClass === "t-win-closing"    ? "t-bg-fade-out 0.26s ease-out  forwards" :
+          animClass === "t-win-minimizing" ? "t-bg-fade-out 0.38s ease-in   forwards" :
+          animClass === "t-win-restoring"  ? "t-bg-fade-in  0.6s  ease-out"           :
+          undefined,
       }}>
-        <div style={{
+        <div className={animClass} style={{
           width: "100%",
-          maxWidth: isMax ? "none" : 920,
+          maxWidth: isMax ? 9999 : 920,
           background: "var(--t-paper)",
           borderRadius: isMax ? 0 : 12,
           border: isMax ? "none" : "1px solid var(--t-rule)",
           boxShadow: isMax ? "none" : "0 30px 80px -40px rgba(0,0,0,0.25), 0 2px 6px rgba(0,0,0,0.04)",
           overflow: "hidden",
           marginBottom: isMax ? 0 : "3rem",
-          transition: "border-radius 0.25s ease, box-shadow 0.25s ease",
+          transition: "border-radius 0.42s ease, box-shadow 0.42s ease, max-width 1.1s ease, margin 0.42s ease",
+          transformOrigin: (animClass === "t-win-minimizing" || animClass === "t-win-restoring") ? "bottom center" : "center center",
         }}>
           <ChromeBar onClose={handleClose} onMinimize={handleMinimize} onMaximize={handleMaximize} isMaximized={isMax} />
           <TabsBar />
