@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import TerminalShell from "../../components/TerminalShell";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -100,8 +101,8 @@ function cardArticle(beast: Beast): string {
 
 function CardFace({ beast, w }: { beast: Beast; w: number }) {
   const h = Math.floor(w * 1.42);
-  const mono = "var(--font-geist-mono, monospace)";
-  const color = beast.red ? "#ef4444" : "#111827";
+  const mono = "var(--ts-mono)";
+  const color = beast.red ? "#ef4444" : "var(--ts-ink)";
   const borderColor = beast.red ? "rgba(239,68,68,0.22)" : "rgba(0,0,0,0.1)";
   const csz = Math.max(8, Math.floor(w * 0.19));
   const isFace = ["J", "Q", "K"].includes(beast.value);
@@ -300,7 +301,7 @@ function SpellWheel({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-      <div style={{ width: 0, height: 0, borderLeft: "7px solid transparent", borderRight: "7px solid transparent", borderTop: "11px solid #3b82f6" }} />
+      <div style={{ width: 0, height: 0, borderLeft: "7px solid transparent", borderRight: "7px solid transparent", borderTop: "11px solid var(--ts-accent)" }} />
       <div
         ref={containerRef}
         onPointerDown={onPointerDown}
@@ -309,10 +310,9 @@ function SpellWheel({
         onPointerLeave={onPointerUp}
         style={{
           width: size, height: size, borderRadius: "50%",
-          border: "2px solid rgba(96,165,250,0.18)", background: "#fafeff",
+          border: "1px solid var(--ts-rule)", background: "var(--ts-paper)",
           position: "relative", cursor: settled.current ? "default" : "grab",
           touchAction: "none", userSelect: "none",
-          boxShadow: "0 2px 12px rgba(96,165,250,0.07)",
         }}
       >
         {RUNES.map((letter, i) => {
@@ -326,8 +326,8 @@ function SpellWheel({
               transform: "translate(-50%, -50%)",
               fontSize: isActive ? "1.05rem" : "0.62rem",
               fontWeight: isActive ? 800 : 400,
-              color: isActive ? "#3b82f6" : "#94a3b8",
-              fontFamily: "var(--font-geist-mono, monospace)",
+              color: isActive ? "var(--ts-accent)" : "var(--ts-ink4)",
+              fontFamily: "var(--ts-mono)",
               transition: "font-size 0.08s, color 0.08s",
               pointerEvents: "none", lineHeight: 1,
             }}>
@@ -340,7 +340,7 @@ function SpellWheel({
         ref={forceContainerRef}
         style={{
           width: size, height: 4, borderRadius: 2,
-          background: "rgba(96,165,250,0.12)",
+          background: "var(--ts-paper2)",
           opacity: 0, transition: "opacity 0.2s",
           overflow: "hidden",
         }}
@@ -349,7 +349,7 @@ function SpellWheel({
           ref={forceBarRef}
           style={{
             height: "100%", width: "0%",
-            background: "#3b82f6", borderRadius: 2,
+            background: "var(--ts-accent)", borderRadius: 2,
           }}
         />
       </div>
@@ -408,14 +408,16 @@ export default function MagiaPage() {
   const onWheelStart = useCallback(() => setSpinStarted(true), []);
   const onWheelSettle = useCallback(() => setSpinDone(true), []);
 
-  const mono = "var(--font-geist-mono, monospace)";
+  const mono = "var(--ts-mono)";
+  const [whyOpen, setWhyOpen] = useState(false);
+  const whyRef = useRef<HTMLDivElement>(null);
   const cardGap = Math.max(3, Math.floor(cardW * 0.07));
 
   return (
+    <TerminalShell title="magia" prompt={{ host: "magia", path: "~/trucos", command: "./magia --cartas=21" }}>
     <div style={{
-      background: "#fff", minHeight: "100dvh",
       display: "flex", flexDirection: "column", alignItems: "center",
-      padding: "2rem 1rem 4rem",
+      padding: "2rem 1rem 4rem", flex: 1,
     }}>
       <style>{`
         @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
@@ -438,16 +440,16 @@ export default function MagiaPage() {
       {phase === "intro" && (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "2rem", marginTop: "5rem", animation: "fadeUp 0.5s ease" }}>
           <div style={{ textAlign: "center" }}>
-            <h1 style={{ color: "#111827", fontSize: "1.6rem", fontWeight: 800, letterSpacing: "-0.03em" }}>
+            <h1 style={{ color: "var(--ts-ink)", fontSize: "1.6rem", fontWeight: 800, letterSpacing: "-0.03em", fontFamily: mono }}>
               Piensa en una carta
             </h1>
-            <p style={{ color: "#9ca3af", fontSize: "0.88rem", marginTop: "0.75rem", fontFamily: mono }}>
+            <p style={{ color: "var(--ts-ink4)", fontSize: "0.88rem", marginTop: "0.75rem", fontFamily: mono }}>
               No me la digas
             </p>
           </div>
           <button
             onClick={beginSpell}
-            style={{ padding: "0.6rem 1.6rem", background: "#111827", color: "#fff", border: "none", borderRadius: 8, fontSize: "0.88rem", fontFamily: mono, cursor: "pointer" }}
+            style={{ padding: "0.6rem 1.6rem", background: "var(--ts-ink)", color: "var(--ts-paper)", border: "none", borderRadius: 8, fontSize: "0.88rem", fontFamily: mono, cursor: "pointer" }}
           >
             Estoy listo
           </button>
@@ -458,11 +460,11 @@ export default function MagiaPage() {
       {phase === "dealing" && (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1rem", width: "100%", animation: "fadeUp 0.3s ease" }}>
           <div style={{ textAlign: "center" }}>
-            <p style={{ color: "#9ca3af", fontSize: "0.7rem", fontFamily: mono }}>Ronda {round + 1} de 3</p>
-            <p style={{ color: "#111827", fontSize: "1rem", fontWeight: 600, marginTop: "0.3rem" }}>
+            <p style={{ color: "var(--ts-ink4)", fontSize: "0.7rem", fontFamily: mono }}>Ronda {round + 1} de 3</p>
+            <p style={{ color: "var(--ts-ink)", fontSize: "1rem", fontWeight: 600, marginTop: "0.3rem", fontFamily: mono }}>
               ¿En qué columna está tu carta?
             </p>
-            <p style={{ color: "#9ca3af", fontSize: "0.78rem", fontFamily: mono, marginTop: "0.3rem" }}>
+            <p style={{ color: "var(--ts-ink3)", fontSize: "0.78rem", fontFamily: mono, marginTop: "0.3rem" }}>
               {round === 0 ? "Elige una carta. Grábatela en la mente." : ROUND_HINTS[round]}
             </p>
           </div>
@@ -474,11 +476,11 @@ export default function MagiaPage() {
                 style={{
                   display: "flex", flexDirection: "column", gap: cardGap,
                   padding: "8px 6px", borderRadius: 8,
-                  border: "2px solid rgba(96,165,250,0.12)",
+                  border: "1px solid var(--ts-rule)",
                   cursor: "pointer", transition: "border-color 0.15s, background 0.15s",
                 }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = "#3b82f6"; (e.currentTarget as HTMLDivElement).style.background = "#f0f6ff"; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(96,165,250,0.12)"; (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = "var(--ts-accent)"; (e.currentTarget as HTMLDivElement).style.background = "rgba(0,184,122,0.04)"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = "var(--ts-rule)"; (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
               >
                 {getCharm(deck, col).map((beast, i) => (
                   <CardFace key={i} beast={beast} w={cardW} />
@@ -497,8 +499,8 @@ export default function MagiaPage() {
             transition: "opacity 0.5s ease",
             pointerEvents: spinStarted ? "none" : "auto",
           }}>
-            <p style={{ color: "#111827", fontSize: "1rem", fontWeight: 600 }}>Ya tengo lo que necesito.</p>
-            <p style={{ color: "#9ca3af", fontSize: "0.82rem", fontFamily: mono, marginTop: "0.4rem" }}>
+            <p style={{ color: "var(--ts-ink)", fontSize: "1rem", fontWeight: 600, fontFamily: mono }}>Ya tengo lo que necesito.</p>
+            <p style={{ color: "var(--ts-ink3)", fontSize: "0.82rem", fontFamily: mono, marginTop: "0.4rem" }}>
               Olvida tu carta. Arrastra la ruleta para continuar.
             </p>
           </div>
@@ -511,13 +513,13 @@ export default function MagiaPage() {
 
           {spinDone && (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1rem", animation: "fadeUp 0.4s ease" }}>
-              <p style={{ color: "#111827", fontSize: "1.05rem", fontWeight: 600, textAlign: "center", lineHeight: 1.5 }}>
+              <p style={{ color: "var(--ts-ink)", fontSize: "1.05rem", fontWeight: 600, textAlign: "center", lineHeight: 1.5, fontFamily: mono }}>
                 ¡La letra {guide.rune}!<br />
                 Piensa en un animal que empiece por {guide.rune}.
               </p>
               <button
                 onClick={() => setPhase("reveal")}
-                style={{ padding: "0.6rem 1.6rem", background: "#3b82f6", color: "#fff", border: "none", borderRadius: 8, fontSize: "0.88rem", fontFamily: mono, cursor: "pointer" }}
+                style={{ padding: "0.6rem 1.6rem", background: "var(--ts-accent)", color: "#fff", border: "none", borderRadius: 8, fontSize: "0.88rem", fontFamily: mono, cursor: "pointer" }}
               >
                 Ya lo tengo
               </button>
@@ -539,8 +541,9 @@ export default function MagiaPage() {
             <CardFace beast={revealBeast} w={90} />
           </div>
           <p style={{
-            color: "#6b7280", fontSize: "1rem", fontWeight: 600,
+            color: "var(--ts-ink2)", fontSize: "1rem", fontWeight: 600,
             maxWidth: 300, lineHeight: 1.5, textAlign: "center",
+            fontFamily: mono,
             animation: "spellFade 0.5s ease 6s both",
           }}>
             Desde algún lugar de la magia,
@@ -548,7 +551,7 @@ export default function MagiaPage() {
             {guide.article.toLowerCase()}{" "}
             <span style={{ color: guide.color }}>{guide.name}</span>
             {" "}te trae tu{" "}
-            <span style={{ color: revealBeast.red ? "#dc2626" : "#111827" }}>
+            <span style={{ color: revealBeast.red ? "#dc2626" : "var(--ts-ink)" }}>
               {spellName(revealBeast)}
             </span>
           </p>
@@ -556,7 +559,7 @@ export default function MagiaPage() {
             onClick={beginSpell}
             style={{
               background: "none", border: "none", cursor: "pointer",
-              color: "#9ca3af", fontSize: "0.78rem", fontFamily: mono,
+              color: "var(--ts-ink3)", fontSize: "0.78rem", fontFamily: mono,
               animation: "spellFade 0.5s ease 6.5s both",
             }}
           >
@@ -565,14 +568,27 @@ export default function MagiaPage() {
         </div>
       )}
 
-      <a
-        href="/lab"
-        style={{ marginTop: "auto", paddingTop: "2rem", fontSize: "0.75rem", color: "#9ca3af", fontFamily: mono, textDecoration: "none", transition: "color 0.2s" }}
-        onMouseEnter={(e) => (e.currentTarget.style.color = "#3b82f6")}
-        onMouseLeave={(e) => (e.currentTarget.style.color = "#9ca3af")}
-      >
-        pacr.es
-      </a>
+      {/* Footer */}
+      <div style={{ marginTop: "auto", paddingTop: "1.5rem", paddingBottom: "0.5rem", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem", width: "100%" }}>
+        <button
+          className="ts-why-btn"
+          onClick={() => { const next = !whyOpen; setWhyOpen(next); if (next) setTimeout(() => whyRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }), 50); }}
+        >
+          ¿Cómo funciona el truco?
+          <svg width="10" height="10" viewBox="0 0 10 10" style={{ transform: whyOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}>
+            <path d="M1 3L5 7L9 3" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+        {whyOpen && (
+          <div ref={whyRef} className="ts-why-box" style={{ maxWidth: 420, textAlign: "left" }}>
+            <p>Es un truco matemático, no de magia. Se llama el «truco de las 21 cartas» y lleva en circulación desde al menos el siglo XVII.</p>
+            <p>El truco funciona repartiendo las cartas en tres columnas y usando tu elección para reordenarlas sistemáticamente. Después de tres rondas, la carta elegida siempre queda en la posición 11 del mazo.</p>
+            <p>La ruleta y el animal guía son pura distracción: su letra inicial ya está determinada antes de que empieces a girar.</p>
+            <p style={{ color: "var(--ts-ink4)", fontSize: "0.72rem" }}>↳ Creado el 15 de mayo de 2026</p>
+          </div>
+        )}
+      </div>
     </div>
+    </TerminalShell>
   );
 }

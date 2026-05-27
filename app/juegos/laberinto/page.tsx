@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import TerminalShell from "../../components/TerminalShell";
 
 const COLS = 9;
 const ROWS = 9;
@@ -827,22 +828,22 @@ export default function Laberinto() {
     }
   }, [attachOrientListener, calibrateOrientation]);
 
-  const scoreColor = score < 0 ? "#ef4444" : "#3b82f6";
-  const timerColor = timeLeft <= 10 ? "#ef4444" : "#9ca3af";
+  const scoreColor = score < 0 ? "#ef4444" : "var(--ts-accent)";
+  const timerColor = timeLeft <= 10 ? "#ef4444" : "var(--ts-ink3)";
 
   const gameOverOverlay = gameOver ? (
     <div style={{
       position: "absolute", inset: 0,
-      background: "rgba(255,255,255,0.93)",
+      background: "rgba(250,250,247,0.93)",
       display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
       gap: "1rem", zIndex: 10,
     }}>
-      <p style={{ color: "#3b82f6", fontSize: "1.1rem", fontWeight: 600 }}>
+      <p style={{ color: "var(--ts-accent)", fontSize: "1.1rem", fontWeight: 600, fontFamily: "var(--ts-mono)" }}>
         ¡Tiempo!
       </p>
-      <p style={{ color: scoreColor, fontSize: "2rem", fontWeight: 800, fontFamily: "var(--font-geist-mono, monospace)", lineHeight: 1 }}>
+      <p style={{ color: scoreColor, fontSize: "2rem", fontWeight: 800, fontFamily: "var(--ts-mono)", lineHeight: 1 }}>
         {score >= 0 ? "+" : ""}{score}
-        <span style={{ fontSize: "1rem", fontWeight: 400, color: "#9ca3af", marginLeft: "0.4rem" }}>pts</span>
+        <span style={{ fontSize: "1rem", fontWeight: 400, color: "var(--ts-ink4)", marginLeft: "0.4rem" }}>pts</span>
       </p>
 
       {!submitted ? (
@@ -858,13 +859,13 @@ export default function Laberinto() {
               autoComplete="new-password"
               style={{
                 padding: "0.35rem 0.65rem",
-                border: "1px solid rgba(96,165,250,0.4)",
+                border: "1px solid var(--ts-rule)",
                 borderRadius: "6px",
                 fontSize: "0.85rem",
                 outline: "none",
-                color: "#111827",
-                background: "#f8faff",
-                fontFamily: "var(--font-geist-mono, monospace)",
+                color: "var(--ts-ink)",
+                background: "var(--ts-paper2)",
+                fontFamily: "var(--ts-mono)",
                 width: "130px",
               }}
             />
@@ -873,14 +874,14 @@ export default function Laberinto() {
               disabled={submitting || !alias.trim()}
               style={{
                 padding: "0.35rem 0.85rem",
-                background: "#3b82f6",
+                background: "var(--ts-accent)",
                 color: "#fff",
                 border: "none",
                 borderRadius: "6px",
                 fontSize: "0.85rem",
                 cursor: alias.trim() && !submitting ? "pointer" : "default",
                 opacity: alias.trim() && !submitting ? 1 : 0.4,
-                fontFamily: "var(--font-geist-mono, monospace)",
+                fontFamily: "var(--ts-mono)",
               }}
             >
               {submitting ? "..." : "Guardar"}
@@ -888,7 +889,7 @@ export default function Laberinto() {
           </form>
           <button
             onClick={fullRestart}
-            style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", fontSize: "0.8rem", fontFamily: "var(--font-geist-mono, monospace)" }}
+            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ts-ink3)", fontSize: "0.8rem", fontFamily: "var(--ts-mono)" }}
           >
             Jugar de nuevo
           </button>
@@ -898,13 +899,13 @@ export default function Laberinto() {
           <div style={{ display: "flex", gap: "1rem" }}>
             <a
               href="/juegos/laberinto/ranking"
-              style={{ color: "#3b82f6", fontSize: "0.85rem", fontFamily: "var(--font-geist-mono, monospace)", textDecoration: "none" }}
+              style={{ color: "var(--ts-accent)", fontSize: "0.85rem", fontFamily: "var(--ts-mono)", textDecoration: "none" }}
             >
               Ver ranking →
             </a>
             <button
               onClick={fullRestart}
-              style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", fontSize: "0.85rem", fontFamily: "var(--font-geist-mono, monospace)" }}
+              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ts-ink3)", fontSize: "0.85rem", fontFamily: "var(--ts-mono)" }}
             >
               Repetir
             </button>
@@ -916,18 +917,18 @@ export default function Laberinto() {
 
   const header = (
     <div style={{ display: "flex", alignItems: "center", gap: "1.25rem" }}>
-      <h1 style={{ color: "#111827", fontSize: "1.5rem", fontWeight: 800, letterSpacing: "-0.03em" }}>Laberinto</h1>
-      <span style={{ color: timerColor, fontSize: "0.85rem", fontVariantNumeric: "tabular-nums", fontFamily: "var(--font-geist-mono, monospace)", minWidth: "2.5rem" }}>
+      <h1 style={{ color: "var(--ts-ink)", fontSize: "1.5rem", fontWeight: 800, letterSpacing: "-0.03em", fontFamily: "var(--ts-mono)" }}>Laberinto</h1>
+      <span style={{ color: timerColor, fontSize: "0.85rem", fontVariantNumeric: "tabular-nums", fontFamily: "var(--ts-mono)", minWidth: "2.5rem" }}>
         {timeLeft}s
       </span>
-      <span style={{ color: scoreColor, fontSize: "0.85rem", fontFamily: "var(--font-geist-mono, monospace)", fontWeight: 600 }}>
+      <span style={{ color: scoreColor, fontSize: "0.85rem", fontFamily: "var(--ts-mono)", fontWeight: 600 }}>
         {score >= 0 ? "+" : ""}{score}
       </span>
       <a
         href="/juegos/laberinto/ranking"
-        style={{ fontSize: "0.75rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", textDecoration: "none", transition: "color 0.2s" }}
-        onMouseEnter={e => (e.currentTarget.style.color = "#3b82f6")}
-        onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}
+        style={{ fontSize: "0.75rem", color: "var(--ts-ink4)", fontFamily: "var(--ts-mono)", textDecoration: "none", transition: "color 0.2s" }}
+        onMouseEnter={e => (e.currentTarget.style.color = "var(--ts-accent)")}
+        onMouseLeave={e => (e.currentTarget.style.color = "var(--ts-ink4)")}
       >
         ranking
       </a>
@@ -989,29 +990,25 @@ export default function Laberinto() {
 
   if (isLandscape) {
     return (
-      <main style={{ background: "#ffffff", height: "100dvh", overflow: "hidden", userSelect: "none" }} className="flex flex-row items-center justify-center gap-2 px-2">
+      <TerminalShell title="laberinto" prompt={{ host: "laberinto", path: "~/juegos", command: "./laberinto --celdas=77" }}>
+      <main style={{ height: "100%", overflow: "hidden", userSelect: "none" }} className="flex flex-row items-center justify-center gap-2 px-2">
         <div style={{ width: 120, flexShrink: 0 }} className="flex flex-col items-center justify-center gap-3 h-full">
-          <h1 style={{ color: "#111827", fontSize: "1.1rem", fontWeight: 800, letterSpacing: "-0.03em", textAlign: "center" }}>Laberinto</h1>
+          <h1 style={{ color: "var(--ts-ink)", fontSize: "1.1rem", fontWeight: 800, letterSpacing: "-0.03em", textAlign: "center", fontFamily: "var(--ts-mono)" }}>Laberinto</h1>
           <div style={{ display: "flex", gap: "0.6rem", alignItems: "center" }}>
-            <span style={{ color: timerColor, fontSize: "0.8rem", fontFamily: "var(--font-geist-mono, monospace)" }}>{timeLeft}s</span>
-            <span style={{ color: scoreColor, fontSize: "0.8rem", fontFamily: "var(--font-geist-mono, monospace)", fontWeight: 600 }}>{score >= 0 ? "+" : ""}{score}</span>
+            <span style={{ color: timerColor, fontSize: "0.8rem", fontFamily: "var(--ts-mono)" }}>{timeLeft}s</span>
+            <span style={{ color: scoreColor, fontSize: "0.8rem", fontFamily: "var(--ts-mono)", fontWeight: 600 }}>{score >= 0 ? "+" : ""}{score}</span>
           </div>
           <a
             href="/juegos/laberinto/ranking"
-            style={{ fontSize: "0.65rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", textDecoration: "none", transition: "color 0.2s" }}
-            onMouseEnter={e => (e.currentTarget.style.color = "#3b82f6")}
-            onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}
+            style={{ fontSize: "0.65rem", color: "var(--ts-ink4)", fontFamily: "var(--ts-mono)", textDecoration: "none", transition: "color 0.2s" }}
+            onMouseEnter={e => (e.currentTarget.style.color = "var(--ts-accent)")}
+            onMouseLeave={e => (e.currentTarget.style.color = "var(--ts-ink4)")}
           >
             ranking
           </a>
-          <p style={{ fontSize: "0.65rem", color: "#d1d5db", textAlign: "center", lineHeight: 1.4 }}>
+          <p style={{ fontSize: "0.65rem", color: "var(--ts-ink4)", textAlign: "center", lineHeight: 1.4 }}>
             {orientState === "on" ? "Toca para calibrar · Inclina el móvil" : orientState === "needs-permission" ? "Toca el tablero para activar el giroscopio" : "Mueve el ratón o toca para inclinar"}
           </p>
-          <a href="/lab" style={{ fontSize: "0.7rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", textDecoration: "none" }}
-            onMouseEnter={e => (e.currentTarget.style.color = "#3b82f6")}
-            onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}>
-            pacr.es
-          </a>
         </div>
 
         {boardEl}
@@ -1027,11 +1024,13 @@ export default function Laberinto() {
           )}
         </div>
       </main>
+      </TerminalShell>
     );
   }
 
   return (
-    <main style={{ background: "#ffffff", minHeight: "100dvh", position: "relative", userSelect: "none" }} className="flex flex-col items-center justify-start px-4 py-12 gap-8 overflow-x-auto">
+    <TerminalShell title="laberinto">
+    <main style={{ minHeight: "100%", position: "relative", userSelect: "none" }} className="flex flex-col items-center justify-start px-4 py-12 gap-8 overflow-x-auto">
       {header}
 
       {boardEl}
@@ -1047,47 +1046,33 @@ export default function Laberinto() {
       )}
 
       <div className="mt-auto flex flex-col items-center gap-2 pb-10">
-        <p style={{ fontSize: "0.75rem", color: "#d1d5db" }}>
+        <p style={{ fontSize: "0.75rem", color: "var(--ts-ink4)", fontFamily: "var(--ts-mono)" }}>
           {orientState === "on"
             ? "Toca el tablero para calibrar · Inclina el móvil para mover la bola"
             : orientState === "needs-permission"
             ? "Toca el tablero para activar el giroscopio"
             : "Mueve el ratón o toca el tablero para inclinar"}
         </p>
-        <style>{`
-          .footer-inner { display: flex; align-items: center; width: 100%; max-width: 480px; position: relative; }
-          .footer-btn { position: absolute; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 4px; background: none; border: none; padding: 0; cursor: pointer; font-size: 0.7rem; color: #9ca3af; font-family: var(--font-geist-mono), monospace; transition: color 0.2s; white-space: nowrap; }
-          .footer-btn:hover { color: #3b82f6; }
-          .pacres-link { font-size: 0.75rem; color: #9ca3af; font-family: var(--font-geist-mono), monospace; text-decoration: none; transition: color 0.2s; }
-          .pacres-link:hover { color: #3b82f6; }
-          @media (max-width: 640px) {
-            .footer-inner { flex-direction: column; align-items: center; position: static; gap: 0.75rem; }
-            .footer-btn { position: static; transform: none; order: 1; }
-            .footer-inner .pacres-link { order: 2; }
-          }
-        `}</style>
-        <div className="footer-inner">
-          <a href="/lab" className="pacres-link">pacr.es</a>
-          <button
-            className="footer-btn"
-            onClick={() => { const next = !whyOpen; setWhyOpen(next); if (next) setTimeout(() => whyRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }), 50); }}
-          >
-            ¿Por qué un laberinto?
-            <svg width="10" height="10" viewBox="0 0 10 10" style={{ transform: whyOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}>
-              <path d="M1 3L5 7L9 3" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
-        </div>
+        <button
+          className="ts-why-btn"
+          onClick={() => { const next = !whyOpen; setWhyOpen(next); if (next) setTimeout(() => whyRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }), 50); }}
+        >
+          ¿Por qué un laberinto?
+          <svg width="10" height="10" viewBox="0 0 10 10" style={{ transform: whyOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}>
+            <path d="M1 3L5 7L9 3" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
         {whyOpen && (
-          <div ref={whyRef} style={{ maxWidth: 420, fontSize: "0.78rem", color: "#6b7280", lineHeight: 1.65, textAlign: "center", display: "flex", flexDirection: "column", gap: "0.65rem" }}>
+          <div ref={whyRef} className="ts-why-box" style={{ maxWidth: 420, textAlign: "left" }}>
             <p>El laberinto usa una variante de la heurística de Warnsdorff para generar un único corredor que recorre las 77 celdas disponibles exactamente una vez, sin bifurcaciones ni callejones sin salida.</p>
             <p>Antes de generar el camino se colocan cuatro agujeros aleatorios. El sistema analiza los giros del recorrido y solo acepta laberintos donde al menos dos curvas apunten hacia un agujero, creando falsas pistas y aumentando la dificultad.</p>
             <p>La salida siempre aparece al final del recorrido generado.</p>
             <p>Aproximadamente 1 de cada 100 generaciones cumple esas condiciones.</p>
-            <p style={{ color: "#9ca3af", fontSize: "0.72rem" }}>Creado el 1 de mayo de 2026</p>
+            <p style={{ color: "var(--ts-ink4)", fontSize: "0.72rem" }}>↳ Creado el 1 de mayo de 2026</p>
           </div>
         )}
       </div>
     </main>
+    </TerminalShell>
   );
 }

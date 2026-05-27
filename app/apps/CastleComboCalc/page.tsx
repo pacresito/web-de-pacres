@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import TerminalShell from "../../components/TerminalShell";
 
 const ALL_PLAYERS = ["Lucas", "Pablo", "Prince", "Princess", "His Majesty", "Her Majesty"];
 
@@ -315,6 +316,7 @@ export default function CastleComboCalc() {
   const maxWidths: Record<number, string> = { 2: "20rem", 3: "26rem", 4: "32rem", 5: "38rem", 6: "44rem" };
 
   return (
+    <TerminalShell title="castle combo">
     <main className="min-h-screen flex flex-col items-center py-6 px-4" style={{ background: "#EBF5FB" }}>
       <div className="w-full" style={{ maxWidth: maxWidths[numPlayers] ?? "44rem" }}>
 
@@ -485,12 +487,8 @@ export default function CastleComboCalc() {
         )}
 
         <RegistroSection />
-        <div className="mt-3 text-center">
-          <Link href="/lab" className="text-gray-400 text-xs hover:text-blue-500 transition-colors">
-            pacr.es
-          </Link>
-        </div>
       </div>
     </main>
+    </TerminalShell>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import TerminalShell from "../../components/TerminalShell";
 
 const PLAYERS = ["Lucas", "Pablo"];
 
@@ -355,6 +356,7 @@ export default function AgricolaCalc() {
   const anyHeart = scores.some((ps) => ps.includes("heart"));
 
   return (
+    <TerminalShell title="agrícola">
     <main className="min-h-screen flex flex-col items-center py-6 px-4" style={{ background: "#FAF3E0" }}>
       <div className="w-full" style={{ maxWidth: "22rem" }}>
 
@@ -478,12 +480,8 @@ export default function AgricolaCalc() {
         )}
 
         <RegistroSection />
-        <div className="mt-3 text-center">
-          <Link href="/lab" className="text-xs transition-colors" style={{ color: "#B0956A" }}>
-            pacr.es
-          </Link>
-        </div>
       </div>
     </main>
+    </TerminalShell>
   );
 }

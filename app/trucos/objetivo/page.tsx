@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import TerminalShell from "../../components/TerminalShell";
 
 type GameState = "idle" | "playing" | "lost" | "confessing" | "certificate";
 
@@ -25,7 +26,7 @@ function CursorIcon() {
     <svg width="22" height="22" viewBox="0 0 22 22" fill="none" style={{ display: "block" }}>
       <path
         d="M4 2L4 18L8 14L12 21L14.5 20L10.5 13L17 13Z"
-        fill="#111827"
+        fill="var(--ts-ink)"
         stroke="white"
         strokeWidth="1.5"
         strokeLinejoin="round"
@@ -529,10 +530,10 @@ export default function SigueTusSuenos() {
   }
 
   return (
-    <div style={{ background: "#fff", width: "100vw", height: "100dvh", position: "relative", overflow: "hidden", cursor: isMobile ? "auto" : "none" }}>
+    <TerminalShell title="objetivo" prompt={{ host: "objetivo", path: "~/trucos", command: "./objetivo" }}>
+    <div style={{ width: "100%", height: "100%", position: "relative", overflow: "hidden", cursor: isMobile ? "auto" : "none" }}>
       <style>{`
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: #fff; overflow: hidden; }
         @keyframes winkBounce {
           0%   { transform: scale(1)   rotate(-8deg); }
           50%  { transform: scale(1.3) rotate(0deg);  }
@@ -558,14 +559,14 @@ export default function SigueTusSuenos() {
             willChange: "transform",
             width: TARGET_R * 2, height: TARGET_R * 2,
             borderRadius: "50%",
-            border: "2px solid rgba(96,165,250,0.55)",
+            border: "1px solid var(--ts-accent)",
             pointerEvents: "none", zIndex: 100,
           }}
         >
-          <div style={{ position: "absolute", left: "50%", top: 0, width: 1, height: "28%", background: "rgba(96,165,250,0.45)", transform: "translateX(-50%)" }} />
-          <div style={{ position: "absolute", left: "50%", bottom: 0, width: 1, height: "28%", background: "rgba(96,165,250,0.45)", transform: "translateX(-50%)" }} />
-          <div style={{ position: "absolute", top: "50%", left: 0, height: 1, width: "28%", background: "rgba(96,165,250,0.45)", transform: "translateY(-50%)" }} />
-          <div style={{ position: "absolute", top: "50%", right: 0, height: 1, width: "28%", background: "rgba(96,165,250,0.45)", transform: "translateY(-50%)" }} />
+          <div style={{ position: "absolute", left: "50%", top: 0, width: 1, height: "28%", background: "rgba(0,184,122,0.45)", transform: "translateX(-50%)" }} />
+          <div style={{ position: "absolute", left: "50%", bottom: 0, width: 1, height: "28%", background: "rgba(0,184,122,0.45)", transform: "translateX(-50%)" }} />
+          <div style={{ position: "absolute", top: "50%", left: 0, height: 1, width: "28%", background: "rgba(0,184,122,0.45)", transform: "translateY(-50%)" }} />
+          <div style={{ position: "absolute", top: "50%", right: 0, height: 1, width: "28%", background: "rgba(0,184,122,0.45)", transform: "translateY(-50%)" }} />
           <svg
             style={{ position: "absolute", inset: 0, width: "100%", height: "100%", overflow: "visible" }}
             viewBox={`0 0 ${TARGET_R * 2} ${TARGET_R * 2}`}
@@ -576,7 +577,7 @@ export default function SigueTusSuenos() {
               cy={TARGET_R}
               r={TARGET_R - 4}
               fill="none"
-              stroke="#3b82f6"
+              stroke="var(--ts-accent)"
               strokeWidth="3"
               strokeDasharray={`0 ${ARC_C}`}
               strokeLinecap="round"
@@ -602,10 +603,10 @@ export default function SigueTusSuenos() {
                 position: "absolute",
                 left: 20,
                 top: -32,
-                background: "#111827",
-                color: "#fff",
+                background: "var(--ts-ink)",
+                color: "var(--ts-paper)",
                 fontSize: "0.72rem",
-                fontFamily: "var(--font-geist-mono, monospace)",
+                fontFamily: "var(--ts-mono)",
                 padding: "0.35rem 0.65rem",
                 borderRadius: "4px",
                 whiteSpace: "nowrap",
@@ -628,9 +629,9 @@ export default function SigueTusSuenos() {
             top: "50%",
             left: "50%",
             transform: "translate(-50%, calc(-50% - 55px))",
-            color: "#3b82f6",
+            color: "var(--ts-accent)",
             fontSize: "0.82rem",
-            fontFamily: "var(--font-geist-mono, monospace)",
+            fontFamily: "var(--ts-mono)",
             pointerEvents: "none",
             zIndex: 9999,
             whiteSpace: "nowrap",
@@ -659,8 +660,8 @@ export default function SigueTusSuenos() {
       {/* Idle */}
       {gameState === "idle" && (
         <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "0.75rem", pointerEvents: "none" }}>
-          <p style={{ fontSize: "1.5rem", fontWeight: 800, color: "#111827", letterSpacing: "-0.03em" }}>Alcanza tus objetivos</p>
-          <p style={{ fontSize: "0.85rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)" }}>
+          <p style={{ fontSize: "1.5rem", fontWeight: 800, color: "var(--ts-ink)", letterSpacing: "-0.03em", fontFamily: "var(--ts-mono)" }}>Alcanza tus objetivos</p>
+          <p style={{ fontSize: "0.85rem", color: "var(--ts-ink3)", fontFamily: "var(--ts-mono)" }}>
             {isMobile ? "Toca la pantalla para empezar" : "Mueve el ratón para empezar"}
           </p>
         </div>
@@ -670,17 +671,17 @@ export default function SigueTusSuenos() {
       {(gameState === "playing" || gameState === "lost") && (
         <div style={{ position: "absolute", top: "2rem", left: 0, right: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: "0.35rem", pointerEvents: "none" }}>
           {isMobile ? (
-            <p style={{ fontSize: "0.78rem", color: "#d1d5db", fontFamily: "var(--font-geist-mono, monospace)" }}>
+            <p style={{ fontSize: "0.78rem", color: "var(--ts-ink4)", fontFamily: "var(--ts-mono)" }}>
               Mantén el dedo sobre la diana
             </p>
           ) : (
             <>
-              <p style={{ fontSize: "0.78rem", color: "#d1d5db", fontFamily: "var(--font-geist-mono, monospace)" }}>
+              <p style={{ fontSize: "0.78rem", color: "var(--ts-ink4)", fontFamily: "var(--ts-mono)" }}>
                 Haz clic en el objetivo con el cursor correcto
               </p>
-              {attempts === 1 && <p style={{ fontSize: "0.68rem", color: "#d1d5db", fontFamily: "var(--font-geist-mono, monospace)" }}>Tienes que estar solo en el objetivo...</p>}
-              {attempts === 2 && <p style={{ fontSize: "0.68rem", color: "#d1d5db", fontFamily: "var(--font-geist-mono, monospace)" }}>Muévete rápido. Deja a las réplicas atrás.</p>}
-              {attempts >= 3 && <p style={{ fontSize: "0.68rem", color: "#d1d5db", fontFamily: "var(--font-geist-mono, monospace)" }}>El cursor real debe llegar solo al objetivo.</p>}
+              {attempts === 1 && <p style={{ fontSize: "0.68rem", color: "var(--ts-ink4)", fontFamily: "var(--ts-mono)" }}>Tienes que estar solo en el objetivo...</p>}
+              {attempts === 2 && <p style={{ fontSize: "0.68rem", color: "var(--ts-ink4)", fontFamily: "var(--ts-mono)" }}>Muévete rápido. Deja a las réplicas atrás.</p>}
+              {attempts >= 3 && <p style={{ fontSize: "0.68rem", color: "var(--ts-ink4)", fontFamily: "var(--ts-mono)" }}>El cursor real debe llegar solo al objetivo.</p>}
             </>
           )}
         </div>
@@ -689,48 +690,41 @@ export default function SigueTusSuenos() {
       {/* Certificate */}
       {gameState === "certificate" && (
         <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "1rem", animation: "certAppear 0.4s ease" }}>
-          <div style={{ border: "2px solid #3b82f6", borderRadius: "4px", padding: "1.75rem 2rem", width: "82%", maxWidth: "300px", textAlign: "center", position: "relative" }}>
-            <div style={{ position: "absolute", inset: 5, border: "1px solid rgba(96,165,250,0.3)", borderRadius: "3px", pointerEvents: "none" }} />
-            <p style={{ fontSize: "0.55rem", letterSpacing: "0.22em", textTransform: "uppercase", fontFamily: "var(--font-geist-mono, monospace)", color: "#3b82f6", marginBottom: "0.75rem" }}>
+          <div style={{ border: "2px solid var(--ts-accent)", borderRadius: "4px", padding: "1.75rem 2rem", width: "82%", maxWidth: "300px", textAlign: "center", position: "relative" }}>
+            <div style={{ position: "absolute", inset: 5, border: "1px solid var(--ts-rule)", borderRadius: "3px", pointerEvents: "none" }} />
+            <p style={{ fontSize: "0.55rem", letterSpacing: "0.22em", textTransform: "uppercase", fontFamily: "var(--ts-mono)", color: "var(--ts-accent)", marginBottom: "0.75rem" }}>
               Certificado oficial
             </p>
-            <p style={{ fontSize: "1.15rem", fontWeight: 800, letterSpacing: "-0.02em", color: "#111827" }}>
+            <p style={{ fontSize: "1.15rem", fontWeight: 800, letterSpacing: "-0.02em", color: "var(--ts-ink)", fontFamily: "var(--ts-mono)" }}>
               Perseverancia certificada
             </p>
-            <p style={{ fontSize: "0.68rem", color: "#6b7280", margin: "0.75rem 0 1.25rem", lineHeight: 2.0, fontFamily: "var(--font-geist-mono, monospace)" }}>
+            <p style={{ fontSize: "0.68rem", color: "var(--ts-ink3)", margin: "0.75rem 0 1.25rem", lineHeight: 2.0, fontFamily: "var(--ts-mono)" }}>
               Se certifica que el portador<br />
               consiguió lo que se propuso.<br />
               Eso no le pasa a todo el mundo.
             </p>
-            <div style={{ borderTop: "1px solid rgba(96,165,250,0.25)", paddingTop: "0.9rem", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
-              <p style={{ fontSize: "0.58rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)" }}>
+            <div style={{ borderTop: "1px solid var(--ts-rule)", paddingTop: "0.9rem", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+              <p style={{ fontSize: "0.58rem", color: "var(--ts-ink4)", fontFamily: "var(--ts-mono)" }}>
                 Nº {certNumRef.current}
               </p>
               <div style={{ textAlign: "right" }}>
-                <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: "0.88rem", color: "#374151" }}>
+                <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: "0.88rem", color: "var(--ts-ink2)" }}>
                   Pablo Crespo
                 </p>
-                <div style={{ width: 76, height: 1, background: "rgba(0,0,0,0.15)", margin: "0.15rem 0 0 auto" }} />
-                <p style={{ fontSize: "0.52rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", marginTop: "0.15rem" }}>
+                <div style={{ width: 76, height: 1, background: "var(--ts-rule)", margin: "0.15rem 0 0 auto" }} />
+                <p style={{ fontSize: "0.52rem", color: "var(--ts-ink4)", fontFamily: "var(--ts-mono)", marginTop: "0.15rem" }}>
                   Autoridad certificadora
                 </p>
               </div>
             </div>
           </div>
-          <button onClick={playAgain} style={{ background: "none", border: "none", cursor: "pointer", color: "#3b82f6", fontSize: "0.85rem", fontFamily: "var(--font-geist-mono, monospace)" }}>
+          <button onClick={playAgain} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ts-ink3)", fontSize: "0.85rem", fontFamily: "var(--ts-mono)" }}>
             Otra vez →
           </button>
         </div>
       )}
 
-      <a
-        href="/lab"
-        style={{ position: "fixed", bottom: "1.5rem", left: "50%", transform: "translateX(-50%)", fontSize: "0.75rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", textDecoration: "none", zIndex: 10, transition: "color 0.2s" }}
-        onMouseEnter={e => (e.currentTarget.style.color = "#3b82f6")}
-        onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}
-      >
-        pacr.es
-      </a>
     </div>
+    </TerminalShell>
   );
 }

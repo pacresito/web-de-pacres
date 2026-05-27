@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
+import TerminalShell from "../../components/TerminalShell";
 
 const CELL = 2;
 const EMPTY = 0, SAND = 1, WATER = 2, FIRE = 3, WALL = 4, VAPOR = 5;
@@ -975,19 +976,17 @@ export default function Fluidos() {
   };
 
   return (
-    <>
+    <TerminalShell title="fluidos" prompt={{ host: "fluidos", path: "~/apps", command: "./fluidos --elementos=4" }}>
       <style>{`
         :root {
-          --blue:    #3b82f6;
-          --bg:      #ffffff;
-          --text:    #111827;
-          --muted:   #9ca3af;
-          --border:  rgba(0,0,0,0.07);
+          --blue:    var(--ts-accent);
+          --text:    var(--ts-ink);
+          --muted:   var(--ts-ink3);
+          --border:  var(--ts-rule);
           --sim-bg:  #0f1117;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         html, body { height: 100%; overflow: hidden; }
-        body { background: var(--bg); color: var(--text); font-family: var(--font-geist-sans), sans-serif; }
 
         .sim-header { padding: 1rem 0 0.6rem; }
         .sim-title {
@@ -995,8 +994,7 @@ export default function Fluidos() {
           font-weight: 800; letter-spacing: -0.03em; line-height: 1;
         }
         .sim-title span {
-          background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #93c5fd 100%);
-          -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+          color: var(--ts-ink);
         }
         .sim-sub {
           margin-top: 0.5rem;
@@ -1013,12 +1011,12 @@ export default function Fluidos() {
           border-radius: 4px; border: 1px solid var(--border);
           background: transparent; cursor: pointer;
           font-size: 0.72rem; font-weight: 600;
-          font-family: var(--font-geist-mono), monospace;
+          font-family: var(--ts-mono);
           letter-spacing: 0.05em; color: var(--text);
           transition: border-color 0.15s, background 0.15s;
           -webkit-user-select: none; user-select: none;
         }
-        .tool-btn:hover { border-color: rgba(59,130,246,0.4); background: rgba(59,130,246,0.04); }
+        .tool-btn:hover { border-color: rgba(0,184,122,0.4); background: rgba(0,184,122,0.04); }
         .tool-btn.active { border-color: var(--active-border); background: var(--active-bg); color: var(--active-color); }
         .tool-dot {
           width: 8px; height: 8px; border-radius: 50%;
@@ -1034,7 +1032,7 @@ export default function Fluidos() {
           padding: 0.4rem 0.75rem; border-radius: 4px;
           border: 1px solid var(--border); background: transparent;
           cursor: pointer; font-size: 0.72rem; font-weight: 600;
-          font-family: var(--font-geist-mono), monospace;
+          font-family: var(--ts-mono);
           color: var(--muted); letter-spacing: 0.05em;
           transition: color 0.15s, border-color 0.15s;
           -webkit-user-select: none; user-select: none;
@@ -1061,7 +1059,7 @@ export default function Fluidos() {
         .hint-row {
           padding: 0.55rem 0 0;
           font-size: 0.7rem; color: var(--muted);
-          font-family: var(--font-geist-mono), monospace;
+          font-family: var(--ts-mono);
           display: flex; gap: 1.2rem; flex-wrap: wrap;
         }
         .hint-item { display: flex; gap: 0.35rem; align-items: center; }
@@ -1072,18 +1070,10 @@ export default function Fluidos() {
 
         .pacres-link {
           font-size: 0.75rem; color: var(--muted);
-          font-family: var(--font-geist-mono), monospace;
+          font-family: var(--ts-mono);
           text-decoration: none; transition: color 0.2s;
         }
         .pacres-link:hover { color: var(--blue); }
-        .footer-inner { display: flex; align-items: center; width: 100%; max-width: 480px; position: relative; }
-        .footer-btn { position: absolute; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 4px; background: none; border: none; padding: 0; cursor: pointer; font-size: 0.7rem; color: #9ca3af; font-family: var(--font-geist-mono), monospace; transition: color 0.2s; white-space: nowrap; }
-        .footer-btn:hover { color: #3b82f6; }
-        @media (max-width: 640px) {
-          .footer-inner { flex-direction: column; align-items: center; position: static; gap: 0.75rem; }
-          .footer-btn { position: static; transform: none; order: 1; }
-          .footer-inner .pacres-link { order: 2; }
-        }
 
         @media (max-width: 500px) {
           .tool-label { display: none; }
@@ -1098,8 +1088,8 @@ export default function Fluidos() {
         maxWidth: 900,
         margin: "0 auto",
         padding: "0 clamp(1.25rem, 4vw, 2rem)",
-        height: whyOpen ? "auto" : "100dvh",
-        minHeight: "100dvh",
+        height: whyOpen ? "auto" : "100%",
+        minHeight: "100%",
         overflowX: "hidden",
         overflowY: whyOpen ? "auto" : "hidden",
         display: "flex",
@@ -1156,32 +1146,27 @@ export default function Fluidos() {
 
         {/* Footer */}
         <footer style={{ marginTop: "auto", paddingTop: "1.5rem", paddingBottom: "1.25rem", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem" }}>
-          <div className="footer-inner">
-            <Link href="/lab" className="pacres-link">pacr.es</Link>
-            <button
-              className="footer-btn"
-              onClick={() => { const next = !whyOpen; setWhyOpen(next); if (next) setTimeout(() => whyRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }), 50); }}
-              onMouseEnter={e => (e.currentTarget.style.color = "#3b82f6")}
-              onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}
-            >
-              ¿Por qué un simulador de fluidos?
-              <svg width="10" height="10" viewBox="0 0 10 10" style={{ transform: whyOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}>
-                <path d="M1 3L5 7L9 3" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-          </div>
+          <button
+            className="ts-why-btn"
+            onClick={() => { const next = !whyOpen; setWhyOpen(next); if (next) setTimeout(() => whyRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }), 50); }}
+          >
+            ¿Por qué un simulador de fluidos?
+            <svg width="10" height="10" viewBox="0 0 10 10" style={{ transform: whyOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}>
+              <path d="M1 3L5 7L9 3" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
           {whyOpen && (
-            <div ref={whyRef} style={{ maxWidth: 420, fontSize: "0.78rem", color: "#6b7280", lineHeight: 1.65, textAlign: "center", display: "flex", flexDirection: "column", gap: "0.65rem" }}>
+            <div ref={whyRef} className="ts-why-box" style={{ maxWidth: 420, textAlign: "left" }}>
               <p>Un autómata celular de partículas es una simulación sobre una cuadrícula donde cada celda sigue reglas locales simples.</p>
               <p>De esas reglas emergen comportamientos complejos: agua fluyendo, arena acumulándose, fuego propagándose.</p>
               <p>Este enfoque se usa en videojuegos, simulaciones físicas y sistemas educativos por su simplicidad y eficiencia.</p>
               <p>En este experimento: la arena cae, el agua fluye, el fuego se expande, y cada elemento interactúa solo con sus vecinos inmediatos.</p>
-              <p style={{ color: "#9ca3af", fontSize: "0.72rem" }}>Creado el 8 de mayo de 2026</p>
+              <p style={{ color: "var(--ts-ink4)", fontSize: "0.72rem" }}>↳ Creado el 8 de mayo de 2026</p>
             </div>
           )}
         </footer>
 
       </main>
-    </>
+    </TerminalShell>
   );
 }

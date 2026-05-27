@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
+import TerminalShell from "../../components/TerminalShell";
 
 export default function CalculadoraRPN() {
   const [whyOpen, setWhyOpen] = useState(false);
@@ -217,19 +218,10 @@ export default function CalculadoraRPN() {
   const displayStack = [...stack];
 
   return (
-    <>
+    <TerminalShell title="calculadora RPN" prompt={{ host: "rpncalc", path: "~/apps", command: "./rpncalc" }}>
       <style>{`
         * { box-sizing: border-box; margin: 0; padding: 0; }
         html { overflow-x: hidden; }
-        body { background: #ffffff; overflow-x: hidden; }
-        .footer-inner { display: flex; align-items: center; width: 100%; max-width: 480px; position: relative; }
-        .footer-btn { position: absolute; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 4px; background: none; border: none; padding: 0; cursor: pointer; font-size: 0.7rem; color: #9ca3af; font-family: var(--font-geist-mono), monospace; transition: color 0.2s; white-space: nowrap; }
-        .footer-btn:hover { color: #3b82f6; }
-        @media (max-width: 640px) {
-          .footer-inner { flex-direction: column; align-items: center; position: static; gap: 0.75rem; }
-          .footer-btn { position: static; transform: none; order: 1; }
-          .footer-inner .pacres-link { order: 2; }
-        }
 
         /* ── Page layout ── */
         .calc-page {
@@ -246,26 +238,25 @@ export default function CalculadoraRPN() {
           font-weight: 800;
           letter-spacing: -0.03em;
           line-height: 1;
-          color: #111827;
+          color: var(--ts-ink);
+          font-family: var(--ts-mono);
         }
         .page-title span {
-          background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #93c5fd 100%);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
+          color: var(--ts-accent);
         }
 
         .page-subtitle {
           margin-top: 1rem;
           font-size: 0.9rem;
-          color: #9ca3af;
+          color: var(--ts-ink3);
           line-height: 1.65;
           max-width: 560px;
+          font-family: var(--ts-mono);
         }
 
         .divider {
           border: none;
-          border-top: 1px solid rgba(0,0,0,0.07);
+          border-top: 1px solid var(--ts-rule);
         }
 
         /* ── Fullscreen wrapper ── */
@@ -681,17 +672,17 @@ export default function CalculadoraRPN() {
 
         .legend-title {
           font-size: 0.55rem;
-          font-family: var(--font-geist-mono), monospace;
+          font-family: var(--ts-mono);
           letter-spacing: 0.2em;
           text-transform: uppercase;
-          color: #9ca3af;
+          color: var(--ts-ink4);
           margin-bottom: 0.5rem;
         }
 
         .legend-keys {
           font-size: 0.7rem;
-          font-family: var(--font-geist-mono), monospace;
-          color: #9ca3af;
+          font-family: var(--ts-mono);
+          color: var(--ts-ink3);
           line-height: 1.9;
           display: flex;
           flex-wrap: wrap;
@@ -700,23 +691,23 @@ export default function CalculadoraRPN() {
 
         .key {
           display: inline-block;
-          border: 1px solid rgba(0,0,0,0.12);
+          border: 1px solid var(--ts-rule);
           padding: 0 0.35rem;
           border-radius: 3px;
           font-size: 0.6rem;
-          color: #374151;
-          background: #f9fafb;
+          color: var(--ts-ink2);
+          background: var(--ts-paper2);
           margin-right: 0.15rem;
         }
 
         .pacres-link {
           font-size: 0.75rem;
-          color: #9ca3af;
-          font-family: var(--font-geist-mono), monospace;
+          color: var(--ts-ink4);
+          font-family: var(--ts-mono);
           text-decoration: none;
           transition: color 0.2s;
         }
-        .pacres-link:hover { color: #3b82f6; }
+        .pacres-link:hover { color: var(--ts-accent); }
       `}</style>
 
       <main className="calc-page">
@@ -857,41 +848,36 @@ export default function CalculadoraRPN() {
         </div>
 
         {/* Otras calculadoras */}
-        <div style={{ marginTop: "2rem", textAlign: "center", fontSize: "0.75rem", color: "#9ca3af" }}>
+        <div style={{ marginTop: "2rem", textAlign: "center", fontSize: "0.75rem", color: "var(--ts-ink4)", fontFamily: "var(--ts-mono)" }}>
           Otras calculadoras:{" "}
-          <Link href="/apps/CastleComboCalc" style={{ color: "#3b82f6" }}>Castle Combo</Link>
+          <Link href="/apps/CastleComboCalc" style={{ color: "var(--ts-accent)" }}>Castle Combo</Link>
           {" · "}
-          <Link href="/apps/AgricolaCalc" style={{ color: "#3b82f6" }}>Agrícola</Link>
+          <Link href="/apps/AgricolaCalc" style={{ color: "var(--ts-accent)" }}>Agrícola</Link>
         </div>
 
         {/* Footer */}
         <footer style={{ marginTop: "auto", paddingTop: "2rem", paddingBottom: "1.5rem", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem" }}>
-          <div className="footer-inner">
-            <Link href="/lab" className="pacres-link">pacr.es</Link>
-            <button
-              className="footer-btn"
-              onClick={() => { const next = !whyOpen; setWhyOpen(next); if (next) setTimeout(() => whyRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }), 50); }}
-              onMouseEnter={e => (e.currentTarget.style.color = "#3b82f6")}
-              onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}
-            >
-              ¿Por qué esta calculadora?
-              <svg width="10" height="10" viewBox="0 0 10 10" style={{ transform: whyOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}>
-                <path d="M1 3L5 7L9 3" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-          </div>
+          <button
+            className="ts-why-btn"
+            onClick={() => { const next = !whyOpen; setWhyOpen(next); if (next) setTimeout(() => whyRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }), 50); }}
+          >
+            ¿Por qué esta calculadora?
+            <svg width="10" height="10" viewBox="0 0 10 10" style={{ transform: whyOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}>
+              <path d="M1 3L5 7L9 3" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
           {whyOpen && (
-            <div ref={whyRef} style={{ maxWidth: 420, fontSize: "0.78rem", color: "#6b7280", lineHeight: 1.65, textAlign: "center", display: "flex", flexDirection: "column", gap: "0.65rem" }}>
+            <div ref={whyRef} className="ts-why-box" style={{ maxWidth: 420, textAlign: "left" }}>
               <p>El modo RPN (Reverse Polish Notation, notación polaca inversa) es un sistema en el que los operadores se colocan después de los operandos, eliminando la necesidad de paréntesis.</p>
               <p>Se basa en una pila: los números se introducen en orden y las operaciones se aplican sobre los últimos valores introducidos.</p>
               <p>Fue propuesto por el lógico Jan Łukasiewicz y lo popularizó Hewlett-Packard en sus calculadoras científicas de los años 70 y 80.</p>
               <p>Hoy sigue siendo valorado en entornos técnicos y de programación por su eficiencia, claridad en la evaluación de expresiones y ausencia de paréntesis.</p>
-              <p style={{ color: "#9ca3af", fontSize: "0.72rem" }}>Creado el 7 de mayo de 2026</p>
+              <p style={{ color: "var(--ts-ink4)", fontSize: "0.72rem" }}>↳ Creado el 7 de mayo de 2026</p>
             </div>
           )}
         </footer>
 
       </main>
-    </>
+    </TerminalShell>
   );
 }
