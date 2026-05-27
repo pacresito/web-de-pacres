@@ -530,7 +530,7 @@ export default function SigueTusSuenos() {
   }
 
   return (
-    <TerminalShell title="objetivo" prompt={{ host: "objetivo", path: "~/trucos", command: "./objetivo" }}>
+    <TerminalShell title="objetivo" prompt={{ host: "objetivo", path: "~/trucos", command: "./objetivo --escape=true" }}>
     <div style={{ width: "100%", height: "100%", position: "relative", overflow: "hidden", cursor: isMobile ? "auto" : "none" }}>
       <style>{`
         * { box-sizing: border-box; margin: 0; padding: 0; }
