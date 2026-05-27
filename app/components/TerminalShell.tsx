@@ -17,6 +17,8 @@ interface Props {
   version?: string;
   variant?: "terminal" | "chrome";
   prompt?: PromptConfig;
+  backUrl?: string;
+  hideChrome?: boolean;
   children: ReactNode;
 }
 
@@ -25,6 +27,8 @@ export default function TerminalShell({
   version = "v1.0.0 · zsh",
   variant = "terminal",
   prompt,
+  backUrl,
+  hideChrome = false,
   children,
 }: Props) {
   const router = useRouter();
@@ -69,11 +73,12 @@ export default function TerminalShell({
   }, []);
 
   const handleBack = () => {
+    const dest = backUrl ?? "/lab";
     if (variant === "terminal") {
       setAnimClass("ts-win-unmaximizing");
-      setTimeout(() => router.push("/lab"), 900);
+      setTimeout(() => router.push(dest), 900);
     } else {
-      router.push("/lab");
+      router.push(dest);
     }
   };
 
@@ -248,9 +253,9 @@ export default function TerminalShell({
             flexDirection: "column",
           } as React.CSSProperties}
         >
-          {chromeBar}
+          {!hideChrome && chromeBar}
 
-          {prompt && (
+          {!hideChrome && prompt && (
             <div style={{
               padding: "18px 28px 8px",
               display: "grid",

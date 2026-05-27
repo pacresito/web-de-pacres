@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import TerminalShell from "../../../components/TerminalShell";
 
 const MONO = '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace';
 
@@ -24,14 +25,14 @@ export default function Ranking() {
   }, []);
 
   return (
-    <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
-      `}</style>
-      <div
+    <TerminalShell
+      title="ranking espiral"
+      prompt={{ host: "espiral", path: "~/juegos", command: "cat ranking.json" }}
+      backUrl="/juegos/espiral"
+    >
+      <main
         style={{
-          minHeight: "100dvh",
-          background: "#fafaf7",
+          minHeight: "100%",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
@@ -106,10 +107,7 @@ export default function Ranking() {
         <a
           href="/lab"
           style={{
-            position: "absolute",
-            bottom: "1.5rem",
-            left: "50%",
-            transform: "translateX(-50%)",
+            marginTop: "1rem",
             fontSize: "0.75rem",
             color: "#b8b3a6",
             textDecoration: "none",
@@ -120,8 +118,8 @@ export default function Ranking() {
         >
           pacr.es
         </a>
-      </div>
-    </>
+      </main>
+    </TerminalShell>
   );
 }
 

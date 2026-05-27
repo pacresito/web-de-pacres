@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import TerminalShell from "../../../components/TerminalShell";
 
 const MONO = '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace';
 
@@ -28,11 +29,23 @@ export default function RankingLaberinto() {
   }, []);
 
   return (
-    <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
-      `}</style>
-      <div style={{ minHeight: "100dvh", background: "#fafaf7", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "2rem 1rem", position: "relative", fontFamily: MONO }}>
+    <TerminalShell
+      title="ranking laberinto"
+      prompt={{ host: "laberinto", path: "~/juegos", command: "cat ranking.json" }}
+      backUrl="/juegos/laberinto"
+    >
+      <main
+        style={{
+          minHeight: "100%",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "2rem 1rem",
+          position: "relative",
+          fontFamily: MONO,
+        }}
+      >
         <h1 style={{ color: "#16140f", fontSize: "1.5rem", fontWeight: 800, letterSpacing: "-0.03em", marginBottom: "2.5rem" }}>
           ranking laberinto
         </h1>
@@ -120,14 +133,14 @@ export default function RankingLaberinto() {
 
         <a
           href="/lab"
-          style={{ position: "absolute", bottom: "1.5rem", left: "50%", transform: "translateX(-50%)", fontSize: "0.75rem", color: "#b8b3a6", textDecoration: "none", transition: "color 0.2s" }}
+          style={{ marginTop: "1rem", fontSize: "0.75rem", color: "#b8b3a6", textDecoration: "none", transition: "color 0.2s" }}
           onMouseEnter={e => (e.currentTarget.style.color = "#00b87a")}
           onMouseLeave={e => (e.currentTarget.style.color = "#b8b3a6")}
         >
           pacr.es
         </a>
-      </div>
-    </>
+      </main>
+    </TerminalShell>
   );
 }
 

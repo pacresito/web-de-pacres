@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import TerminalShell from "../../components/TerminalShell";
 
-// ─── Game logic (idéntica a espiral) ──────────────────────────────────────────
+// ─── Game logic ───────────────────────────────────────────────────────────────
 
 function calcSize() {
   const isLandscape = window.innerWidth > window.innerHeight;
@@ -94,7 +95,7 @@ function initBoard(path: typeof PATH_CELLS, origin: { x: number; y: number }, ve
   return { pos: { ...start }, vel: { ...vel }, segIdx: 0, gameState: "idle" };
 }
 
-// ─── Canvas con paleta terminal (verde sobre papel cálido) ────────────────────
+// ─── Canvas con paleta terminal ───────────────────────────────────────────────
 
 function drawBoard(
   ctx: CanvasRenderingContext2D,
@@ -267,29 +268,16 @@ function useBoard(
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export default function EspiralTerminal() {
+const MONO = '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace';
+
+export default function EspiralPage() {
   const canvasL = useRef<HTMLCanvasElement>(null);
   const canvasR = useRef<HTMLCanvasElement>(null);
   const router = useRouter();
 
-  // window maximize state
-  const [windowState, setWindowState] = useState<"normal" | "maximized">("maximized");
-  const [animClass, setAnimClass] = useState("");
-  const [winWidth, setWinWidth] = useState(0);
-
-  useEffect(() => {
-    setWinWidth(window.innerWidth);
-    const onResize = () => setWinWidth(window.innerWidth);
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
-
-  const handleBack = () => {
-    setAnimClass("esp-win-unmaximizing");
-    setTimeout(() => router.push("/lab"), 900);
-  };
-
-  const isMax = windowState === "maximized";
+  const [fullscreen, setFullscreen] = useState(false);
+  const [whyOpen, setWhyOpen] = useState(false);
+  const whyRef = useRef<HTMLDivElement>(null);
 
   const r0 = PATH_RIGHT[0], r1 = PATH_RIGHT[1];
   const rlen = Math.hypot(r1.x - r0.x, r1.y - r0.y);
@@ -301,36 +289,6 @@ export default function EspiralTerminal() {
 
   const bothWin = left.gameState === "win" && right.gameState === "win";
   const [firstWin, setFirstWin] = useState<"left" | "right" | null>(null);
-  const [whyOpen, setWhyOpen] = useState(false);
-  const whyRef = useRef<HTMLDivElement>(null);
-
-  const ESPIRAL_CMD = "./espiral --mode=dual";
-  const [typedLen, setTypedLen] = useState(0);
-  const [typingDone, setTypingDone] = useState(false);
-  const [elapsedMs, setElapsedMs] = useState<number | null>(null);
-  const [promptContentVisible, setPromptContentVisible] = useState(false);
-
-  useEffect(() => {
-    const cmd = ESPIRAL_CMD;
-    let i = 0;
-    const init = setTimeout(() => {
-      const id = setInterval(() => {
-        i++;
-        setTypedLen(i);
-        if (i >= cmd.length) {
-          clearInterval(id);
-          const ms = cmd.length * 3 + Math.floor(Math.random() * 31) - 15;
-          setTimeout(() => {
-            setTypingDone(true);
-            setElapsedMs(ms);
-            setTimeout(() => setPromptContentVisible(true), 250);
-          }, 80);
-        }
-      }, 20);
-      return () => clearInterval(id);
-    }, 150);
-    return () => clearTimeout(init);
-  }, []);
 
   useEffect(() => {
     if (left.gameState === "win" && right.gameState !== "win" && firstWin === null) setFirstWin("left");
@@ -343,8 +301,6 @@ export default function EspiralTerminal() {
   const [finalTime, setFinalTime] = useState<number | null>(null);
   const startTimeRef = useRef<number | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const [fullscreen, setFullscreen] = useState(false);
 
   const [alias, setAlias] = useState("");
   const [submitted, setSubmitted] = useState(false);
@@ -433,364 +389,178 @@ export default function EspiralTerminal() {
     setAlias("");
   }
 
-  const MONO = '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace';
-
   return (
-    <>
+    <TerminalShell
+      title="espiral"
+      version="v4.0.0 · zsh"
+      prompt={{ host: "espiral", path: "~/juegos", command: "./espiral --mode=dual" }}
+      hideChrome={fullscreen}
+    >
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
-
-        :root {
-          --t-paper:  #fafaf7;
-          --t-paper2: #f4f1ea;
-          --t-ink:    #16140f;
-          --t-ink2:   #3a382f;
-          --t-ink3:   #7a766b;
-          --t-ink4:   #b8b3a6;
-          --t-rule:   #d9d4c7;
-          --t-accent: #00b87a;
-          --t-accent2:#009764;
-          --t-mono:   ${MONO};
-        }
-
-        .esp-t-bg { background: #ece9e0 !important; }
-
-        .esp-t-btn {
+        .esp-btn {
           background: none; border: none; cursor: pointer;
-          font-family: var(--t-mono); font-size: 0.75rem;
-          color: var(--t-ink3); padding: 0;
+          font-family: var(--ts-mono); font-size: 0.75rem;
+          color: var(--ts-ink3); padding: 0;
           transition: color 0.15s;
         }
-        .esp-t-btn:hover { color: var(--t-accent); }
+        .esp-btn:hover { color: var(--ts-accent); }
 
-        .esp-t-input {
+        .esp-input {
           padding: 0.35rem 0.65rem;
-          border: 1px solid var(--t-rule);
+          border: 1px solid var(--ts-rule);
           border-radius: 4px;
           font-size: 0.85rem;
           outline: none;
-          color: var(--t-ink);
-          background: var(--t-paper);
-          font-family: var(--t-mono);
+          color: var(--ts-ink);
+          background: var(--ts-paper);
+          font-family: var(--ts-mono);
         }
-        .esp-t-input:focus { border-color: var(--t-accent); }
+        .esp-input:focus { border-color: var(--ts-accent); }
 
-        .esp-t-submit {
+        .esp-submit {
           padding: 0.35rem 0.85rem;
-          background: var(--t-accent);
+          background: var(--ts-accent);
           color: #fff;
           border: none;
           border-radius: 4px;
           font-size: 0.85rem;
-          font-family: var(--t-mono);
+          font-family: var(--ts-mono);
           cursor: pointer;
           transition: opacity 0.15s;
         }
-        .esp-t-submit:disabled { opacity: 0.4; cursor: default; }
-
-        @keyframes esp-blink { 50% { opacity: 0; } }
-
-        @keyframes esp-win-maximize {
-          0%   { width: 900px; border-radius: 12px; border: 1px solid var(--t-rule); box-shadow: 0 30px 80px -40px rgba(0,0,0,0.25), 0 2px 6px rgba(0,0,0,0.04); margin-bottom: 3rem; }
-          55%  { width: var(--win-w); border-radius: 12px; border: 1px solid var(--t-rule); box-shadow: 0 30px 80px -40px rgba(0,0,0,0.25), 0 2px 6px rgba(0,0,0,0.04); margin-bottom: 3rem; }
-          100% { width: var(--win-w); border-radius: 0; border: 1px solid transparent; box-shadow: none; margin-bottom: 0; }
-        }
-        @keyframes esp-win-unmaximize {
-          0%   { width: var(--win-w); border-radius: 0; border: 1px solid transparent; box-shadow: none; margin-bottom: 0; }
-          45%  { width: var(--win-w); border-radius: 12px; border: 1px solid var(--t-rule); box-shadow: 0 30px 80px -40px rgba(0,0,0,0.25), 0 2px 6px rgba(0,0,0,0.04); margin-bottom: 3rem; }
-          100% { width: 900px; border-radius: 12px; border: 1px solid var(--t-rule); box-shadow: 0 30px 80px -40px rgba(0,0,0,0.25), 0 2px 6px rgba(0,0,0,0.04); margin-bottom: 3rem; }
-        }
-        @keyframes esp-outer-maximize {
-          0%, 55% { padding: 2rem 1rem 3rem; }
-          100%    { padding: 0; }
-        }
-        @keyframes esp-outer-unmaximize {
-          0%      { padding: 0; }
-          45%, 100% { padding: 2rem 1rem 3rem; }
-        }
-        .esp-win-maximizing   { animation: esp-win-maximize   1s ease forwards; }
-        .esp-win-unmaximizing { animation: esp-win-unmaximize 1s ease forwards; }
-        .esp-outer-maximizing   { animation: esp-outer-maximize   1s ease forwards !important; }
-        .esp-outer-unmaximizing { animation: esp-outer-unmaximize 1s ease forwards !important; }
-
-        .esp-nav-btn {
-          background: none; border: none; cursor: pointer;
-          color: var(--t-ink2); padding: 4px;
-          display: inline-flex; align-items: center; justify-content: center;
-          transition: color 0.15s; border-radius: 4px;
-        }
-        .esp-nav-btn:hover { color: var(--t-ink); }
-        .esp-nav-btn:disabled { color: var(--t-ink4); cursor: default; }
-
-        @keyframes esp-content-fadeout {
-          0%, 45% { opacity: 1; }
-          100%    { opacity: 0; }
-        }
-        .esp-content-unmaximizing {
-          animation: esp-content-fadeout 0.9s ease forwards;
-        }
-
-        @keyframes esp-nav-collapse {
-          0%   { opacity: 1; max-width: 200px; }
-          40%  { opacity: 0; max-width: 200px; }
-          100% { opacity: 0; max-width: 0; overflow: hidden; }
-        }
-        .esp-nav-collapsing {
-          animation: esp-nav-collapse 0.9s ease forwards;
-        }
-        .esp-title-break { display: none; }
-        @media (max-width: 640px) {
-          .esp-title-break { display: block; }
-        }
+        .esp-submit:disabled { opacity: 0.4; cursor: default; }
       `}</style>
 
-      {/* outer: terminal background */}
-      <div
-        className={`esp-t-bg${animClass === "esp-win-maximizing" ? " esp-outer-maximizing" : animClass === "esp-win-unmaximizing" ? " esp-outer-unmaximizing" : ""}`}
-        style={{
-          minHeight: "100dvh",
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "flex-start",
-          padding: isMax ? 0 : "2rem 1rem 3rem",
-          transition: "padding 1.1s ease",
-        }}
-      >
-        {/* terminal window */}
-        <div
-          className={animClass}
-          style={{
-            "--win-w": winWidth ? `${winWidth}px` : "100vw",
-            width: winWidth ? (isMax ? winWidth : Math.min(900, winWidth)) : "100%",
-            minHeight: isMax ? "100dvh" : undefined,
-            maxWidth: "none",
-            background: "var(--t-paper)",
-            borderRadius: isMax ? 0 : 12,
-            border: isMax ? "none" : "1px solid var(--t-rule)",
-            boxShadow: isMax ? "none" : "0 30px 80px -40px rgba(0,0,0,0.25), 0 2px 6px rgba(0,0,0,0.04)",
-            overflow: "hidden",
-            marginBottom: isMax ? 0 : "3rem",
-          } as React.CSSProperties}
-        >
+      {/* game area */}
+      <div style={{ padding: "28px", display: "flex", flexDirection: "column", alignItems: "center", gap: "1.5rem" }}>
 
-          {/* chrome bar */}
-          <div style={{
-            background: "var(--t-paper2)",
-            borderBottom: "1px solid var(--t-rule)",
-            padding: "14px 18px",
-            display: fullscreen ? "none" : "flex",
-            alignItems: "center",
-            gap: 7,
-          }}>
-            {/* circles — siempre visibles */}
-            <div style={{ display: "flex", gap: 7, alignItems: "center", flexShrink: 0 }}>
-              <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#ff5f57" }} />
-              <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#febc2e" }} />
-              <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#28c840" }} />
-            </div>
-            {/* nav — colapsa al volver */}
-            <div className={animClass === "esp-win-unmaximizing" ? "esp-nav-collapsing" : ""} style={{ display: "flex", gap: 7, alignItems: "center", flexShrink: 0, overflow: "hidden" }}>
-              <div style={{ width: 1, height: 16, background: "var(--t-rule)", margin: "0 6px", flexShrink: 0 }} />
-              <button className="esp-nav-btn" onClick={handleBack} title="Volver a /lab">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                  <path d="M19 12H5M5 12l7 7M5 12l7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </button>
-              <button className="esp-nav-btn" disabled title="Adelante">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                  <path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </button>
-              <button className="esp-nav-btn" onClick={() => window.location.reload()} title="Recargar">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-                  <polyline points="23 4 23 10 17 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </button>
-            </div>
-            {/* título — ocupa el espacio restante, centrado */}
-            <div className="esp-chrome-title" style={{ flex: 1, textAlign: "center", fontFamily: MONO, fontSize: 12, color: "var(--t-ink2)" }}>
-              ⌘&nbsp;&nbsp;pacr.es<br className="esp-title-break" /> — espiral
-            </div>
-            {/* versión — pegada a la derecha, sin corte */}
-            <div className="esp-version" style={{ flexShrink: 0, fontFamily: MONO, fontSize: 10, color: "var(--t-ink3)", whiteSpace: "nowrap" }}>
-              v4.0.0 · zsh
-            </div>
-          </div>
-
-          {/* content: fades out during unmaximize */}
-          <div className={animClass === "esp-win-unmaximizing" ? "esp-content-unmaximizing" : ""}>
-
-          {/* prompt header */}
-          <div style={{
-            padding: "18px 28px 8px",
-            display: fullscreen ? "none" : "grid",
-            gridTemplateColumns: "44px 1fr auto",
-            gap: "0 12px",
-            alignItems: "baseline",
-            borderBottom: "1px dashed var(--t-rule)",
-          }}>
-            <span style={{ fontFamily: MONO, fontSize: 11, color: "var(--t-ink4)" }}>000</span>
-            <span style={{ fontFamily: MONO, fontSize: 13.5 }}>
-              <span style={{ color: "var(--t-accent2)" }}>pacres</span>
-              <span style={{ color: "var(--t-ink3)" }}>@espiral</span>
-              <span style={{ color: "var(--t-ink2)" }}>:~/juegos</span>
-              <span style={{ color: "var(--t-ink3)" }}>$ </span>
-              <span style={{ color: "var(--t-ink)" }}>{ESPIRAL_CMD.slice(0, typedLen)}</span>
-              {!typingDone && (
-                <span style={{ color: "var(--t-accent)", animation: "esp-blink 1s steps(1) infinite", marginLeft: 2 }}>▍</span>
-              )}
+        {/* status row */}
+        <div style={{ display: "flex", alignItems: "center", gap: "1rem", fontFamily: MONO }}>
+          <span style={{ fontSize: "0.75rem", color: "var(--ts-ink3)" }}>
+            ↳ status:{" "}
+            <span style={{ color: left.gameState === "win" ? "var(--ts-accent)" : left.gameState === "dead" ? "#e55" : "var(--ts-ink2)" }}>
+              {left.gameState}
             </span>
-            <span style={{ fontFamily: MONO, fontSize: 10, color: "var(--t-ink4)", visibility: elapsedMs !== null ? "visible" : "hidden", whiteSpace: "nowrap" }}>
-              ↳ {elapsedMs ?? 0}ms
+            {" / "}
+            <span style={{ color: right.gameState === "win" ? "var(--ts-accent)" : right.gameState === "dead" ? "#e55" : "var(--ts-ink2)" }}>
+              {right.gameState}
             </span>
-          </div>
-
-          {/* game area */}
-          <div style={{ padding: "28px", display: "flex", flexDirection: "column", alignItems: "center", gap: "1.5rem", opacity: promptContentVisible ? 1 : 0, transition: promptContentVisible ? "opacity 0.4s ease" : "none" }}>
-
-            {/* status row */}
-            <div style={{ display: "flex", alignItems: "center", gap: "1rem", fontFamily: MONO }}>
-              <span style={{ fontSize: "0.75rem", color: "var(--t-ink3)" }}>
-                ↳ status:{" "}
-                <span style={{ color: left.gameState === "win" ? "var(--t-accent)" : left.gameState === "dead" ? "#e55" : "var(--t-ink2)" }}>
-                  {left.gameState}
-                </span>
-                {" / "}
-                <span style={{ color: right.gameState === "win" ? "var(--t-accent)" : right.gameState === "dead" ? "#e55" : "var(--t-ink2)" }}>
-                  {right.gameState}
-                </span>
-              </span>
-              {(left.gameState !== "idle" || right.gameState !== "idle") && !bothWin && (
-                <span style={{ fontSize: "0.75rem", color: "var(--t-ink3)", fontVariantNumeric: "tabular-nums" }}>{elapsed}s</span>
+          </span>
+          {(left.gameState !== "idle" || right.gameState !== "idle") && !bothWin && (
+            <span style={{ fontSize: "0.75rem", color: "var(--ts-ink3)", fontVariantNumeric: "tabular-nums" }}>{elapsed}s</span>
+          )}
+          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "1rem" }}>
+            <a
+              href="/juegos/espiral/ranking"
+              title="Ranking"
+              style={{ color: "var(--ts-ink3)", display: "flex", alignItems: "center", transition: "color 0.15s" }}
+              onMouseEnter={e => (e.currentTarget.style.color = "var(--ts-accent)")}
+              onMouseLeave={e => (e.currentTarget.style.color = "var(--ts-ink3)")}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+                <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+              </svg>
+            </a>
+            <button
+              className="esp-btn"
+              onClick={() => setFullscreen(f => !f)}
+              title={fullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
+              style={{ display: "flex", alignItems: "center" }}
+            >
+              {fullscreen ? (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/>
+                  <line x1="10" y1="14" x2="3" y2="21"/><line x1="21" y1="3" x2="14" y2="10"/>
+                </svg>
+              ) : (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
+                  <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
+                </svg>
               )}
-              <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "1rem" }}>
-                <a
-                  href="/juegos/espiral/ranking"
-                  title="Ranking"
-                  style={{ color: "var(--t-ink3)", display: "flex", alignItems: "center", transition: "color 0.15s" }}
-                  onMouseEnter={e => (e.currentTarget.style.color = "var(--t-accent)")}
-                  onMouseLeave={e => (e.currentTarget.style.color = "var(--t-ink3)")}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
-                    <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
-                  </svg>
-                </a>
-                <button
-                  className="esp-t-btn"
-                  onClick={() => setFullscreen(f => !f)}
-                  title={fullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
-                  style={{ display: "flex", alignItems: "center" }}
-                >
-                  {fullscreen ? (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/>
-                      <line x1="10" y1="14" x2="3" y2="21"/><line x1="21" y1="3" x2="14" y2="10"/>
-                    </svg>
-                  ) : (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
-                      <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
-                    </svg>
-                  )}
+            </button>
+          </div>
+        </div>
+
+        {/* win panel */}
+        {bothWin && (
+          <div style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem" }}>
+            <p style={{ color: "var(--ts-accent)", fontSize: "1rem", fontWeight: 600, fontFamily: MONO }}>
+              ✓ completed in {finalTime?.toFixed(1)}s
+            </p>
+
+            {!submitted ? (
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.5rem" }}>
+                <form onSubmit={submitScore} style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                  <input
+                    type="text"
+                    value={alias}
+                    onChange={e => setAlias(e.target.value)}
+                    placeholder="Tu nombre"
+                    maxLength={20}
+                    autoComplete="off"
+                    data-1p-ignore
+                    data-lpignore="true"
+                    className="esp-input"
+                  />
+                  <button
+                    type="submit"
+                    disabled={submitting || !alias.trim()}
+                    className="esp-submit"
+                  >
+                    {submitting ? "..." : "$ guardar"}
+                  </button>
+                </form>
+                <button onClick={replay} className="esp-btn" style={{ fontSize: "0.72rem" }}>
+                  reiniciar
                 </button>
               </div>
-            </div>
-
-            {/* win panel */}
-            {bothWin && (
-              <div style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem" }}>
-                <p style={{ color: "var(--t-accent)", fontSize: "1rem", fontWeight: 600, fontFamily: MONO }}>
-                  ✓ completed in {finalTime?.toFixed(1)}s
-                </p>
-
-                {!submitted ? (
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.5rem" }}>
-                    <form onSubmit={submitScore} style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-                      <input
-                        type="text"
-                        value={alias}
-                        onChange={e => setAlias(e.target.value)}
-                        placeholder="Tu nombre"
-                        maxLength={20}
-                        autoComplete="off"
-                        data-1p-ignore
-                        data-lpignore="true"
-                        className="esp-t-input"
-                      />
-                      <button
-                        type="submit"
-                        disabled={submitting || !alias.trim()}
-                        className="esp-t-submit"
-                      >
-                        {submitting ? "..." : "$ guardar"}
-                      </button>
-                    </form>
-                    <button onClick={replay} className="esp-t-btn" style={{ fontSize: "0.72rem" }}>
-                      reiniciar
-                    </button>
-                  </div>
-                ) : (
-                  <div style={{ display: "flex", gap: "2.5rem", alignItems: "center" }}>
-                    <button
-                      onClick={() => router.push("/juegos/espiral/ranking")}
-                      className="esp-t-btn"
-                    >
-                      ranking
-                    </button>
-                    <button onClick={replay} className="esp-t-btn">
-                      reiniciar
-                    </button>
-                  </div>
-                )}
+            ) : (
+              <div style={{ display: "flex", gap: "2.5rem", alignItems: "center" }}>
+                <button onClick={() => router.push("/juegos/espiral/ranking")} className="esp-btn">
+                  ranking
+                </button>
+                <button onClick={replay} className="esp-btn">
+                  reiniciar
+                </button>
               </div>
             )}
-
-            {/* boards */}
-            <div className="flex flex-col gap-6 items-center landscape:flex-row landscape:justify-center landscape:items-start">
-              <Board canvasRef={canvasL} gameState={left.gameState} label="←" bothWin={bothWin} isFirst={firstWin === "left"} onPress={() => { if (bothWin) { replay(); } else if (left.gameState !== "win") left.press(); }} monoFont={MONO} />
-              <Board canvasRef={canvasR} gameState={right.gameState} label="→" bothWin={bothWin} isFirst={firstWin === "right"} onPress={() => { if (bothWin) { replay(); } else if (right.gameState !== "win") right.press(); }} monoFont={MONO} />
-            </div>
-
-            {/* footer */}
-            <div style={{ marginTop: "auto", paddingTop: "1rem", width: "100%", display: fullscreen ? "none" : "flex", flexDirection: "column", alignItems: "center" }}>
-              <button
-                className="esp-t-btn"
-                style={{ display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}
-                onClick={() => { const next = !whyOpen; setWhyOpen(next); if (next) setTimeout(() => whyRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }), 50); }}
-              >
-                ¿Por qué una espiral?
-                <svg width="10" height="10" viewBox="0 0 10 10" style={{ transform: whyOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}>
-                  <path d="M1 3L5 7L9 3" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
-
-              {whyOpen && (
-                <div ref={whyRef} style={{
-                  marginTop: "1rem",
-                  padding: "16px 20px",
-                  border: "1px solid var(--t-rule)",
-                  borderLeft: "3px solid var(--t-accent)",
-                  borderRadius: 8,
-                  background: "var(--t-paper2)",
-                  fontFamily: MONO, fontSize: "0.78rem", color: "var(--t-ink2)", lineHeight: 1.65,
-                  display: "flex", flexDirection: "column", gap: "0.65rem",
-                }}>
-                  <p>Este fue el primer experimento de la web. La idea era partir de una estructura mínima y fácil de entender, pero difícil de dominar.</p>
-                  <p>Me gusta distinguir tres conceptos que se mezclan a menudo.</p>
-                  <p>Simple se refiere a la cantidad de elementos y reglas: dos espirales, dos pelotas, dos controles. Sencillo describe lo fácil que es entender el objetivo: se comprende de inmediato. Difícil hace referencia a lo que cuesta dominarlo: coordinar ambas acciones a la vez exige atención y precisión.</p>
-                  <p>En el extremo opuesto estaría un juego de rol con cien reglas cuya primera misión es "habla con el aldeano de enfrente": complejo, complicado, pero fácil.</p>
-                  <p style={{ color: "var(--t-ink4)", fontSize: "0.72rem" }}>↳ Creado el 30 de abril de 2026</p>
-                </div>
-              )}
-            </div>
           </div>
+        )}
 
-          </div>{/* end fade-out wrapper */}
+        {/* boards */}
+        <div className="flex flex-col gap-6 items-center landscape:flex-row landscape:justify-center landscape:items-start">
+          <Board canvasRef={canvasL} gameState={left.gameState} label="←" bothWin={bothWin} isFirst={firstWin === "left"} onPress={() => { if (bothWin) { replay(); } else if (left.gameState !== "win") left.press(); }} monoFont={MONO} />
+          <Board canvasRef={canvasR} gameState={right.gameState} label="→" bothWin={bothWin} isFirst={firstWin === "right"} onPress={() => { if (bothWin) { replay(); } else if (right.gameState !== "win") right.press(); }} monoFont={MONO} />
         </div>
+
+        {/* footer */}
+        {!fullscreen && (
+          <div style={{ marginTop: "auto", paddingTop: "1rem", width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
+            <button
+              className="ts-why-btn"
+              onClick={() => { const next = !whyOpen; setWhyOpen(next); if (next) setTimeout(() => whyRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }), 50); }}
+            >
+              ¿Por qué una espiral?
+              <svg width="10" height="10" viewBox="0 0 10 10" style={{ transform: whyOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}>
+                <path d="M1 3L5 7L9 3" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+
+            {whyOpen && (
+              <div ref={whyRef} className="ts-why-box">
+                <p>Este fue el primer experimento de la web. La idea era partir de una estructura mínima y fácil de entender, pero difícil de dominar.</p>
+                <p>Me gusta distinguir tres conceptos que se mezclan a menudo.</p>
+                <p>Simple se refiere a la cantidad de elementos y reglas: dos espirales, dos pelotas, dos controles. Sencillo describe lo fácil que es entender el objetivo: se comprende de inmediato. Difícil hace referencia a lo que cuesta dominarlo: coordinar ambas acciones a la vez exige atención y precisión.</p>
+                <p>En el extremo opuesto estaría un juego de rol con cien reglas cuya primera misión es "habla con el aldeano de enfrente": complejo, complicado, pero fácil.</p>
+                <p style={{ color: "var(--ts-ink4)", fontSize: "0.72rem" }}>↳ Creado el 30 de abril de 2026</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
-    </>
+    </TerminalShell>
   );
 }
 
@@ -807,35 +577,35 @@ function Board({
 }) {
   return (
     <div className="flex flex-col items-center gap-2">
-      <p style={{ color: "var(--t-ink4)", fontSize: "0.75rem", fontFamily: monoFont }} className="landscape:block hidden">{label}</p>
+      <p style={{ color: "var(--ts-ink4)", fontSize: "0.75rem", fontFamily: monoFont }} className="landscape:block hidden">{label}</p>
       <div className="relative" onClick={onPress} style={{ cursor: "pointer" }}>
         <canvas
           ref={canvasRef}
           style={{
             display: "block",
             borderRadius: "6px",
-            border: "1px solid var(--t-rule)",
+            border: "1px solid var(--ts-rule)",
           }}
         />
         {gameState === "idle" && (
           <Overlay monoFont={monoFont}>
-            <p style={{ color: "var(--t-ink3)", fontSize: "0.8rem" }}>
-              <span style={{ color: "var(--t-accent2)" }}>$</span> toca {label}
+            <p style={{ color: "var(--ts-ink3)", fontSize: "0.8rem" }}>
+              <span style={{ color: "var(--ts-accent2)" }}>$</span> toca {label}
             </p>
           </Overlay>
         )}
         {gameState === "dead" && (
           <Overlay monoFont={monoFont}>
             <p style={{ color: "#cc3333", fontSize: "0.9rem", fontWeight: 600 }}>✗ fuera</p>
-            <p style={{ color: "var(--t-ink3)", fontSize: "0.7rem", marginTop: "0.2rem" }}>toca {label} para reintentar</p>
+            <p style={{ color: "var(--ts-ink3)", fontSize: "0.7rem", marginTop: "0.2rem" }}>toca {label} para reintentar</p>
           </Overlay>
         )}
         {gameState === "win" && (
           <Overlay monoFont={monoFont}>
-            <p style={{ color: "var(--t-accent)", fontSize: "1rem", fontWeight: 600 }}>
+            <p style={{ color: "var(--ts-accent)", fontSize: "1rem", fontWeight: 600 }}>
               {bothWin ? "✓ listo" : isFirst ? "ya falta poco..." : "✓ listo"}
             </p>
-            {bothWin && <p style={{ color: "var(--t-ink3)", fontSize: "0.7rem", marginTop: "0.2rem" }}>toca para repetir</p>}
+            {bothWin && <p style={{ color: "var(--ts-ink3)", fontSize: "0.7rem", marginTop: "0.2rem" }}>toca para repetir</p>}
           </Overlay>
         )}
       </div>
