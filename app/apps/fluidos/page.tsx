@@ -920,12 +920,14 @@ export default function Fluidos() {
             else if (v === SAND) sand++;
             else if (v === WALL) wall++;
           }
-          const parts: string[] = [];
-          if (water > 0) parts.push(`<span style="color:#3b82f6">agua</span>: ${water}`);
-          if (fire > 0)  parts.push(`<span style="color:#f97316">fuego</span>: ${fire}`);
-          if (sand > 0)  parts.push(`<span style="color:#c2a96e">tierra</span>: ${sand}`);
-          if (wall > 0)  parts.push(`<span style="color:#8b5e3c">madera</span>: ${wall}`);
-          const body = parts.length ? parts.join(" · ") : `<span style="color:var(--ts-ink4)">none</span>`;
+          const wrap = (color: string, label: string, count: number) =>
+            `<span style="white-space:nowrap"><span style="color:${color}">${label}</span>: ${count}</span>`;
+          const body = [
+            wrap("#3b82f6", "agua",   water),
+            wrap("#f97316", "fuego",  fire),
+            wrap("#c2a96e", "tierra", sand),
+            wrap("#8b5e3c", "madera", wall),
+          ].join(" · ");
           statsLabelRef.current.innerHTML = `<span style="color:var(--ts-ink3)">↳ elements:</span> ${body}`;
         }
       }
