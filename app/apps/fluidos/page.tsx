@@ -7,9 +7,38 @@ import WhyFooter from "../../components/WhyFooter";
 
 const CELL = 2;
 const EMPTY = 0, SAND = 1, WATER = 2, FIRE = 3, WALL = 4, VAPOR = 5;
-const WATER_HEAT_MAX = 55;   // ticks for heated water to vaporize
+const WATER_HEAT_MAX = 55;     // ticks for heated water to vaporize
 const VAPOR_CONDENSE_MAX = 90; // ticks for stuck vapor to condense back to water
+const SAND_EXCESS_MAX = 1700;  // max excess K above 300 K ambient (= 2000 K absolute)
+const SAND_HEAT_RATE = 50;     // excess K gained per tick (painting or fire adjacent)
+const SAND_COOL_RATE = 2;      // excess K lost per tick when cooling
 const MOVE = 98;
+
+// Piecewise-linear blackbody color ramp for sand (T in absolute Kelvin)
+// Stops: 600 K → #220000 … 1700 K → #FFF8E8
+const THERMAL_STOPS: [number, number, number, number][] = [
+  [ 600,  34,   0,   0],
+  [ 800, 102,  17,   0],
+  [1000, 170,  51,   0],
+  [1200, 221, 119,   0],
+  [1400, 255, 187,  51],
+  [1600, 255, 241, 184],
+  [1700, 255, 248, 232],
+];
+function thermalRGB(T: number): [number, number, number] {
+  if (T <= THERMAL_STOPS[0][0]) return [THERMAL_STOPS[0][1], THERMAL_STOPS[0][2], THERMAL_STOPS[0][3]];
+  const last = THERMAL_STOPS[THERMAL_STOPS.length - 1];
+  if (T >= last[0]) return [last[1], last[2], last[3]];
+  for (let k = 0; k < THERMAL_STOPS.length - 1; k++) {
+    const [t0, r0, g0, b0] = THERMAL_STOPS[k];
+    const [t1, r1, g1, b1] = THERMAL_STOPS[k + 1];
+    if (T >= t0 && T <= t1) {
+      const p = (T - t0) / (t1 - t0);
+      return [Math.round(r0 + p * (r1 - r0)), Math.round(g0 + p * (g1 - g0)), Math.round(b0 + p * (b1 - b0))];
+    }
+  }
+  return [last[1], last[2], last[3]];
+}
 type Mat = 0 | 1 | 2 | 3 | 4 | 5;
 type Tool = Mat | 98 | 99;
 
@@ -49,6 +78,7 @@ export default function Fluidos() {
   const agesRef        = useRef<Uint8Array | null>(null);
   const updRef         = useRef<Uint8Array | null>(null);
   const compRef        = useRef<Uint16Array | null>(null); // wood component IDs
+  const sandHeatRef    = useRef<Uint16Array | null>(null); // excess K above 300 K for each sand cell
   const nextCompRef    = useRef(1);                        // next component ID counter
   const dimRef         = useRef({ W: 0, H: 0 });
   const toolRef        = useRef<Tool>(WATER as Tool);
@@ -76,10 +106,11 @@ export default function Fluidos() {
   // Init grid
   const initGrid = useCallback((W: number, H: number) => {
     dimRef.current = { W, H };
-    gridRef.current = new Uint8Array(W * H);
-    agesRef.current = new Uint8Array(W * H);
-    updRef.current  = new Uint8Array(W * H);
-    compRef.current  = new Uint16Array(W * H);
+    gridRef.current    = new Uint8Array(W * H);
+    agesRef.current    = new Uint8Array(W * H);
+    updRef.current     = new Uint8Array(W * H);
+    compRef.current    = new Uint16Array(W * H);
+    sandHeatRef.current = new Uint16Array(W * H);
   }, []);
 
   // Resize observer
@@ -94,19 +125,21 @@ export default function Fluidos() {
       const H = Math.floor(wrap.clientHeight / CELL);
       if (W === dimRef.current.W && H === dimRef.current.H) return;
 
-      const oldGrid = gridRef.current;
-      const oldAges = agesRef.current;
-      const oldComp = compRef.current;
+      const oldGrid     = gridRef.current;
+      const oldAges     = agesRef.current;
+      const oldComp     = compRef.current;
+      const oldSandHeat = sandHeatRef.current;
       const { W: oldW, H: oldH } = dimRef.current;
 
       canvas.width  = W * CELL;
       canvas.height = H * CELL;
 
-      dimRef.current = { W, H };
-      gridRef.current = new Uint8Array(W * H);
-      agesRef.current = new Uint8Array(W * H);
-      updRef.current  = new Uint8Array(W * H);
-      compRef.current = new Uint16Array(W * H);
+      dimRef.current      = { W, H };
+      gridRef.current     = new Uint8Array(W * H);
+      agesRef.current     = new Uint8Array(W * H);
+      updRef.current      = new Uint8Array(W * H);
+      compRef.current     = new Uint16Array(W * H);
+      sandHeatRef.current = new Uint16Array(W * H);
 
       if (oldGrid && oldAges && oldW > 0 && oldH > 0) {
         const copyW = Math.min(W, oldW);
@@ -115,7 +148,8 @@ export default function Fluidos() {
           for (let x = 0; x < copyW; x++) {
             gridRef.current[y * W + x] = oldGrid[y * oldW + x];
             agesRef.current[y * W + x] = oldAges[y * oldW + x];
-            if (oldComp) compRef.current[y * W + x] = oldComp[y * oldW + x];
+            if (oldComp)     compRef.current[y * W + x]     = oldComp[y * oldW + x];
+            if (oldSandHeat) sandHeatRef.current[y * W + x] = oldSandHeat[y * oldW + x];
           }
         }
       }
@@ -130,9 +164,10 @@ export default function Fluidos() {
   // Paint cells at canvas pixel position — with material interaction rules
   const paintAt = useCallback((px: number, py: number) => {
     const { W, H } = dimRef.current;
-    const grid = gridRef.current;
-    const ages = agesRef.current;
-    const comp = compRef.current;
+    const grid     = gridRef.current;
+    const ages     = agesRef.current;
+    const comp     = compRef.current;
+    const sandHeat = sandHeatRef.current;
     if (!grid || !ages) return;
 
     const gx = Math.floor(px / CELL);
@@ -198,7 +233,10 @@ export default function Fluidos() {
         } else if (existing === SAND) {
           if (t === SAND || t === WALL) {
             grid[i] = t as Mat; ages[i] = 0;
+            if (sandHeat) sandHeat[i] = 0;
             if (t === WALL) assignWoodComp(i, nx, ny);
+          } else if (t === FIRE) {
+            if (sandHeat) sandHeat[i] = Math.min(SAND_EXCESS_MAX, sandHeat[i] + SAND_HEAT_RATE);
           }
         }
       }
@@ -208,9 +246,10 @@ export default function Fluidos() {
   // Push cells in the direction of mouse movement, cascading into chains
   const moveAt = useCallback((px: number, py: number, dpx: number, dpy: number) => {
     const { W, H } = dimRef.current;
-    const grid = gridRef.current;
-    const ages = agesRef.current;
-    const comp = compRef.current;
+    const grid     = gridRef.current;
+    const ages     = agesRef.current;
+    const comp     = compRef.current;
+    const sandHeat = sandHeatRef.current;
     if (!grid || !ages) return;
 
     const gx  = Math.floor(px / CELL);
@@ -230,9 +269,11 @@ export default function Fluidos() {
         const bx = tx - ddx, by = ty - ddy;
         grid[ty * W + tx] = grid[by * W + bx];
         ages[ty * W + tx]  = ages[by * W + bx];
+        if (sandHeat) sandHeat[ty * W + tx] = sandHeat[by * W + bx];
         tx = bx; ty = by;
       }
       grid[cy * W + cx] = EMPTY; ages[cy * W + cx] = 0;
+      if (sandHeat) sandHeat[cy * W + cx] = 0;
     };
 
     // Find first empty in direction (ddx,ddy), cascading through same material
@@ -358,13 +399,14 @@ export default function Fluidos() {
         }
       }
 
-      // Rigid-body move: snapshot → clear → write (carry component ID)
-      const snap = wCells.map(({ cx, cy }) => ({ cx, cy, val: grid[cy * W + cx], age: ages[cy * W + cx], cid: comp ? comp[cy * W + cx] : 0 }));
-      for (const { cx, cy } of snap) { grid[cy * W + cx] = EMPTY; ages[cy * W + cx] = 0; if (comp) comp[cy * W + cx] = 0; }
-      for (const { cx, cy, val, age, cid } of snap) {
+      // Rigid-body move: snapshot → clear → write (carry component ID + sand heat)
+      const snap = wCells.map(({ cx, cy }) => ({ cx, cy, val: grid[cy * W + cx], age: ages[cy * W + cx], cid: comp ? comp[cy * W + cx] : 0, sh: sandHeat ? sandHeat[cy * W + cx] : 0 }));
+      for (const { cx, cy } of snap) { grid[cy * W + cx] = EMPTY; ages[cy * W + cx] = 0; if (comp) comp[cy * W + cx] = 0; if (sandHeat) sandHeat[cy * W + cx] = 0; }
+      for (const { cx, cy, val, age, cid, sh } of snap) {
         grid[(cy + dirY) * W + (cx + dirX)] = val;
         ages[(cy + dirY) * W + (cx + dirX)] = age;
-        if (comp) comp[(cy + dirY) * W + (cx + dirX)] = cid;
+        if (comp)     comp[(cy + dirY) * W + (cx + dirX)]     = cid;
+        if (sandHeat) sandHeat[(cy + dirY) * W + (cx + dirX)] = sh;
       }
       wIdxSet.clear();
       for (let i = 0; i < wCells.length; i++) {
@@ -433,7 +475,8 @@ export default function Fluidos() {
     const { W, H } = dimRef.current;
     const grid = gridRef.current;
     const ages = agesRef.current;
-    const upd  = updRef.current;
+    const upd      = updRef.current;
+    const sandHeat = sandHeatRef.current;
     if (!grid || !ages || !upd) return;
 
     upd.fill(0);
@@ -450,12 +493,28 @@ export default function Fluidos() {
 
         // SAND (Tierra)
         if (type === SAND) {
+          // Heat from adjacent fire — color only, no physics change
+          if (sandHeat) {
+            let fireAdj = false;
+            for (const [dx, dy] of [[0,1],[0,-1],[1,0],[-1,0]]) {
+              const nx = x+dx, ny2 = y+dy;
+              if (nx < 0 || nx >= W || ny2 < 0 || ny2 >= H) continue;
+              if (grid[ny2*W+nx] === FIRE) { fireAdj = true; break; }
+            }
+            if (fireAdj) {
+              sandHeat[i] = Math.min(SAND_EXCESS_MAX, sandHeat[i] + SAND_HEAT_RATE);
+            } else if (sandHeat[i] > 0) {
+              sandHeat[i] = Math.max(0, sandHeat[i] - SAND_COOL_RATE);
+            }
+          }
+
           if (y < H - 1) {
             const bi = (y + 1) * W + x;
             if (grid[bi] === EMPTY || grid[bi] === WATER) {
               const was = grid[bi];
               grid[bi] = SAND; upd[bi] = 1;
-              grid[i] = was;  upd[i] = 1; // mark both so no re-processing this frame
+              grid[i] = was;   upd[i] = 1;
+              if (sandHeat) { const sh = sandHeat[i]; sandHeat[i] = sandHeat[bi]; sandHeat[bi] = sh; }
               continue;
             }
             const dirs = Math.random() > 0.5 ? [-1, 1] : [1, -1];
@@ -466,7 +525,8 @@ export default function Fluidos() {
               if (grid[ni] === EMPTY || grid[ni] === WATER) {
                 const was = grid[ni];
                 grid[ni] = SAND; upd[ni] = 1;
-                grid[i] = was;  upd[i] = 1;
+                grid[i] = was;   upd[i] = 1;
+                if (sandHeat) { const sh = sandHeat[i]; sandHeat[i] = sandHeat[ni]; sandHeat[ni] = sh; }
                 break;
               }
             }
@@ -697,7 +757,8 @@ export default function Fluidos() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const t = Date.now();
+    const t        = Date.now();
+    const sandHeat = sandHeatRef.current;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     for (let y = 0; y < H; y++) {
@@ -711,9 +772,25 @@ export default function Fluidos() {
 
         if (type === SAND) {
           // Stable per-grain hash → consistent texture across frames
-          const h = ((x * 374761393 + y * 668265263) >>> 0) & 0xff;
-          const v1 = h % 38, v2 = (h >> 5) % 18;
-          color = `rgb(${178 + v1},${146 + Math.floor(v1 * 0.5)},${82 + Math.floor(v1 * 0.15) - v2})`;
+          const hv = ((x * 374761393 + y * 668265263) >>> 0) & 0xff;
+          const v1 = hv % 38, v2 = (hv >> 5) % 18;
+          const nr = 178 + v1, ng = 146 + Math.floor(v1 * 0.5), nb = 82 + Math.floor(v1 * 0.15) - v2;
+
+          const sh = sandHeat ? sandHeat[i] : 0;
+          if (sh > 0) {
+            const T = 300 + sh; // absolute temperature in K
+            const [tr, tg, tb] = thermalRGB(T);
+            // blend: 0 at 600 K, 1 at 1700 K — visible glow starts at red-cherry
+            const blend = Math.min(1, Math.max(0, (T - 600) / 1100));
+            // per-grain noise: lower saturation slightly (±8 % of thermal channel)
+            const noise = ((hv % 17) - 8) * 0.008 * blend;
+            const r = Math.round(nr + blend * (tr - nr + noise * tr));
+            const g = Math.round(ng + blend * (tg - ng + noise * tg));
+            const b = Math.round(nb + blend * (tb - nb + noise * tb));
+            color = `rgb(${Math.max(0,Math.min(255,r))},${Math.max(0,Math.min(255,g))},${Math.max(0,Math.min(255,b))})`;
+          } else {
+            color = `rgb(${nr},${ng},${nb})`;
+          }
 
         } else if (type === WATER) {
           // Darker, deeper blue with gentle shimmer; blends to white when heated
@@ -870,6 +947,7 @@ export default function Fluidos() {
         gridRef.current?.fill(0);
         agesRef.current?.fill(0);
         compRef.current?.fill(0);
+        sandHeatRef.current?.fill(0);
       }
     };
     window.addEventListener("keydown", onKey);
@@ -1020,6 +1098,7 @@ export default function Fluidos() {
   const clearAll = () => {
     gridRef.current?.fill(0);
     agesRef.current?.fill(0);
+    sandHeatRef.current?.fill(0);
   };
 
   const currentToolDef = TOOL_DEFS.find(t => t.id === tool);
