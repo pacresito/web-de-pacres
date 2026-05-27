@@ -1029,7 +1029,7 @@ export default function Laberinto() {
   }
 
   return (
-    <TerminalShell title="laberinto">
+    <TerminalShell title="laberinto" prompt={{ host: "laberinto", path: "~/juegos", command: "./laberinto --celdas=77" }}>
     <main style={{ minHeight: "100%", position: "relative", userSelect: "none" }} className="flex flex-col items-center justify-start px-4 py-12 gap-8 overflow-x-auto">
       {header}
 

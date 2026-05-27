@@ -304,6 +304,34 @@ export default function EspiralTerminal() {
   const [whyOpen, setWhyOpen] = useState(false);
   const whyRef = useRef<HTMLDivElement>(null);
 
+  const ESPIRAL_CMD = "./espiral --mode=dual";
+  const [typedLen, setTypedLen] = useState(0);
+  const [typingDone, setTypingDone] = useState(false);
+  const [elapsedMs, setElapsedMs] = useState<number | null>(null);
+  const [promptContentVisible, setPromptContentVisible] = useState(false);
+
+  useEffect(() => {
+    const cmd = ESPIRAL_CMD;
+    let i = 0;
+    const init = setTimeout(() => {
+      const id = setInterval(() => {
+        i++;
+        setTypedLen(i);
+        if (i >= cmd.length) {
+          clearInterval(id);
+          const ms = cmd.length * 3 + Math.floor(Math.random() * 31) - 15;
+          setTimeout(() => {
+            setTypingDone(true);
+            setElapsedMs(ms);
+            setTimeout(() => setPromptContentVisible(true), 250);
+          }, 80);
+        }
+      }, 20);
+      return () => clearInterval(id);
+    }, 150);
+    return () => clearTimeout(init);
+  }, []);
+
   useEffect(() => {
     if (left.gameState === "win" && right.gameState !== "win" && firstWin === null) setFirstWin("left");
     else if (right.gameState === "win" && left.gameState !== "win" && firstWin === null) setFirstWin("right");
@@ -597,7 +625,7 @@ export default function EspiralTerminal() {
           <div style={{
             padding: "18px 28px 8px",
             display: fullscreen ? "none" : "grid",
-            gridTemplateColumns: "44px 1fr",
+            gridTemplateColumns: "44px 1fr auto",
             gap: "0 12px",
             alignItems: "baseline",
             borderBottom: "1px dashed var(--t-rule)",
@@ -608,13 +636,18 @@ export default function EspiralTerminal() {
               <span style={{ color: "var(--t-ink3)" }}>@espiral</span>
               <span style={{ color: "var(--t-ink2)" }}>:~/juegos</span>
               <span style={{ color: "var(--t-ink3)" }}>$ </span>
-              <span style={{ color: "var(--t-ink)" }}>./espiral --mode=dual</span>
-              <span style={{ color: "var(--t-accent)", animation: "esp-blink 1s steps(1) infinite", marginLeft: 2 }}>▍</span>
+              <span style={{ color: "var(--t-ink)" }}>{ESPIRAL_CMD.slice(0, typedLen)}</span>
+              {!typingDone && (
+                <span style={{ color: "var(--t-accent)", animation: "esp-blink 1s steps(1) infinite", marginLeft: 2 }}>▍</span>
+              )}
+            </span>
+            <span style={{ fontFamily: MONO, fontSize: 10, color: "var(--t-ink4)", visibility: elapsedMs !== null ? "visible" : "hidden", whiteSpace: "nowrap" }}>
+              ↳ {elapsedMs ?? 0}ms
             </span>
           </div>
 
           {/* game area */}
-          <div style={{ padding: "28px", display: "flex", flexDirection: "column", alignItems: "center", gap: "1.5rem" }}>
+          <div style={{ padding: "28px", display: "flex", flexDirection: "column", alignItems: "center", gap: "1.5rem", opacity: promptContentVisible ? 1 : 0, transition: promptContentVisible ? "opacity 0.4s ease" : "none" }}>
 
             {/* status row */}
             <div style={{ display: "flex", alignItems: "center", gap: "1rem", fontFamily: MONO }}>

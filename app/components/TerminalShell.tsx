@@ -55,7 +55,7 @@ export default function TerminalShell({
         setTypedLen(i);
         if (i >= cmd.length) {
           clearInterval(id);
-          const ms = Date.now() - startRef.current;
+          const ms = cmd.length * 3 + Math.floor(Math.random() * 31) - 15;
           setTimeout(() => {
             setTypingDone(true);
             setElapsedMs(ms);
@@ -254,7 +254,7 @@ export default function TerminalShell({
             <div style={{
               padding: "18px 28px 8px",
               display: "grid",
-              gridTemplateColumns: "44px 1fr",
+              gridTemplateColumns: "44px 1fr auto",
               gap: "0 12px",
               alignItems: "baseline",
               borderBottom: "1px dashed var(--ts-rule)",
@@ -270,9 +270,9 @@ export default function TerminalShell({
                 {!typingDone && (
                   <span style={{ color: "var(--ts-accent)", animation: "ts-blink 1s steps(1) infinite", marginLeft: 2 }}>▍</span>
                 )}
-                {typingDone && elapsedMs !== null && (
-                  <span style={{ color: "var(--ts-ink4)", marginLeft: "1.5rem", fontSize: 11 }}>↳ {elapsedMs}ms</span>
-                )}
+              </span>
+              <span style={{ fontFamily: MONO, fontSize: 10, color: "var(--ts-ink4)", visibility: elapsedMs !== null ? "visible" : "hidden", whiteSpace: "nowrap" }}>
+                ↳ {elapsedMs ?? 0}ms
               </span>
             </div>
           )}
