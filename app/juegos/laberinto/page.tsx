@@ -714,6 +714,8 @@ export default function Laberinto() {
     setSubmitted(false);
     setAlias("");
     setRanking(null);
+    if (tiltYRef.current) { tiltYRef.current.textContent = "+0°"; tiltYRef.current.style.color = ""; }
+    if (tiltXRef.current) { tiltXRef.current.textContent = "+0°"; tiltXRef.current.style.color = ""; }
     startLoop();
   }
 
@@ -1093,12 +1095,12 @@ export default function Laberinto() {
 
       {boardEl}
 
+      <button onClick={fullRestart} className="text-gray-400 hover:text-gray-600 text-sm transition-colors">
+        nuevo laberinto
+      </button>
+
       {!fullscreen && (
         <>
-          <button onClick={fullRestart} className="text-gray-400 hover:text-gray-600 text-sm transition-colors">
-            nuevo laberinto
-          </button>
-
           {orientState === "needs-permission" && (
             <button onClick={requestOrientPermission} className="px-4 py-2 rounded-xl text-white text-sm font-semibold" style={{ background: "#00b87a" }}>
               Usar giroscopio

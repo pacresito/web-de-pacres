@@ -38,7 +38,7 @@ export default function TerminalShell({
   const [typedLen, setTypedLen] = useState(0);
   const [typingDone, setTypingDone] = useState(false);
   const [elapsedMs, setElapsedMs] = useState<number | null>(null);
-  const [contentVisible, setContentVisible] = useState(!prompt || variant !== "terminal");
+  const [contentVisible, setContentVisible] = useState(variant === "terminal" ? !prompt : false);
   const startRef = useRef(0);
 
   useEffect(() => {
@@ -46,6 +46,12 @@ export default function TerminalShell({
     const onResize = () => setWinWidth(window.innerWidth);
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  useEffect(() => {
+    if (variant !== "chrome") return;
+    const t = setTimeout(() => setContentVisible(true), 30);
+    return () => clearTimeout(t);
   }, []);
 
   useEffect(() => {
@@ -74,13 +80,8 @@ export default function TerminalShell({
 
   const handleBack = () => {
     const dest = backUrl ?? "/lab";
-    if (variant === "terminal") {
-      setAnimClass("ts-win-unmaximizing");
-      setTimeout(() => router.push(dest), 900);
-    } else {
-      setAnimClass("ts-chrome-leaving");
-      setTimeout(() => router.push(dest), 280);
-    }
+    setAnimClass("ts-win-unmaximizing");
+    setTimeout(() => router.push(dest), 900);
   };
 
   const chromeBar = (
@@ -99,7 +100,7 @@ export default function TerminalShell({
         <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#28c840" }} />
       </div>
       <div
-        className={animClass === "ts-win-unmaximizing" ? "ts-nav-collapsing" : ""}
+        className={animClass ? "ts-nav-collapsing" : ""}
         style={{ display: "flex", gap: 7, alignItems: "center", flexShrink: 0, overflow: "hidden" }}
       >
         <div style={{ width: 1, height: 16, background: "var(--ts-rule)", margin: "0 6px", flexShrink: 0 }} />
@@ -131,7 +132,10 @@ export default function TerminalShell({
 
   if (variant === "chrome") {
     return (
-      <div className={animClass} style={{ minHeight: "100dvh" }}>
+      <div
+        className={animClass === "ts-win-unmaximizing" ? "ts-outer-unmaximizing ts-chrome-outer" : ""}
+        style={{ "--ts-win-w": winWidth ? `${winWidth}px` : "100vw" } as React.CSSProperties}
+      >
         <style>{`
           @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
           :root {
@@ -149,16 +153,52 @@ export default function TerminalShell({
           }
           .ts-nav-btn:hover { color: #16140f; }
           .ts-nav-btn:disabled { color: var(--ts-ink4); cursor: default; }
-          @keyframes ts-chrome-leave {
-            from { opacity: 1; transform: translateY(0); }
-            to   { opacity: 0; transform: translateY(-10px); }
+          @keyframes ts-win-unmaximize {
+            0%   { width: var(--ts-win-w); border-radius: 0; border: 1px solid transparent; box-shadow: none; }
+            45%  { width: var(--ts-win-w); border-radius: 12px; border: 1px solid var(--ts-rule); box-shadow: 0 30px 80px -40px rgba(0,0,0,0.25), 0 2px 6px rgba(0,0,0,0.04); }
+            100% { width: 900px; border-radius: 12px; border: 1px solid var(--ts-rule); box-shadow: 0 30px 80px -40px rgba(0,0,0,0.25), 0 2px 6px rgba(0,0,0,0.04); }
           }
-          .ts-chrome-leaving { animation: ts-chrome-leave 0.28s ease forwards; }
+          @keyframes ts-outer-unmaximize {
+            0%        { padding: 0; }
+            45%, 100% { padding: 2rem 1rem 3rem; }
+          }
+          @keyframes ts-content-fadeout {
+            0%, 45% { opacity: 1; }
+            100%    { opacity: 0; }
+          }
+          @keyframes ts-nav-collapse {
+            0%   { opacity: 1; max-width: 200px; }
+            40%  { opacity: 0; max-width: 200px; }
+            100% { opacity: 0; max-width: 0; overflow: hidden; }
+          }
+          .ts-win-unmaximizing   { animation: ts-win-unmaximize   0.9s ease forwards; overflow: hidden; }
+          .ts-outer-unmaximizing { animation: ts-outer-unmaximize 0.9s ease forwards !important; }
+          .ts-chrome-outer.ts-outer-unmaximizing {
+            background: #ece9e0;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+          }
+          .ts-content-unmaximizing { animation: ts-content-fadeout 0.9s ease forwards; }
+          .ts-nav-collapsing { animation: ts-nav-collapse 0.9s ease forwards; }
         `}</style>
-        <div style={{ position: "sticky", top: 0, zIndex: 100 }}>
-          {chromeBar}
+        <div
+          className={animClass}
+          style={{ width: "100%", background: "transparent" } as React.CSSProperties}
+        >
+          <div style={{ position: "sticky", top: 0, zIndex: 100 }}>
+            {chromeBar}
+          </div>
+          <div
+            className={animClass === "ts-win-unmaximizing" ? "ts-content-unmaximizing" : ""}
+            style={{
+              opacity: contentVisible ? 1 : 0,
+              transition: contentVisible ? "opacity 0.35s ease" : "none",
+            }}
+          >
+            {children}
+          </div>
         </div>
-        {children}
       </div>
     );
   }

@@ -350,7 +350,7 @@ export default function CirculoPerfecto() {
   const pct = Math.round(displayScore * 100);
 
   return (
-    <TerminalShell title="círculo" prompt={{ host: "circulo", path: "~/trucos", command: "./circulo" }}>
+    <TerminalShell title="círculo" prompt={{ host: "circulo", path: "~/trucos", command: "./circulo --threshold=0.88" }}>
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "2rem 2rem 4rem", flex: 1 }}>
       <style>{`
         * { box-sizing: border-box; margin: 0; padding: 0; }

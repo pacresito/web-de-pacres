@@ -218,7 +218,7 @@ export default function CalculadoraRPN() {
   const displayStack = [...stack];
 
   return (
-    <TerminalShell title="calculadora RPN" prompt={{ host: "rpncalc", path: "~/apps", command: "./rpncalc" }}>
+    <TerminalShell title="calculadora RPN" prompt={{ host: "rpncalc", path: "~/apps", command: "./rpncalc --model=hp49g+" }}>
       <style>{`
         * { box-sizing: border-box; margin: 0; padding: 0; }
         html { overflow-x: hidden; }
