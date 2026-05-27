@@ -475,6 +475,19 @@ export default function Laberinto() {
       }
     }
 
+    // "Click to start" prompt (desktop, waiting for first interaction)
+    if (g.current.idle && !g.current.hasMouse && !g.current.hasOrient && !go) {
+      ctx.save();
+      ctx.fillStyle = "rgba(250,250,247,0.78)";
+      ctx.fillRect(0, 0, BOARD_W, BOARD_H);
+      ctx.fillStyle = "#00b87a";
+      ctx.font = `bold ${Math.round(CELL * 0.33)}px JetBrains Mono, monospace`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("Haz clic para empezar", BOARD_W / 2, BOARD_H / 2);
+      ctx.restore();
+    }
+
     // Celebrating overlay (+10)
     if (celebrating) {
       const elapsed = t - celebrateStartTime;
@@ -776,7 +789,6 @@ export default function Laberinto() {
     const onMouseMove = (e: MouseEvent) => {
       state.mouseX = e.clientX;
       state.mouseY = e.clientY;
-      state.hasMouse = true;
     };
     window.addEventListener("mousemove", onMouseMove);
 
@@ -990,7 +1002,12 @@ export default function Laberinto() {
             ref={canvasRef}
             width={BOARD_W}
             height={BOARD_H}
-            style={{ display: "block" }}
+            style={{ display: "block", cursor: "pointer" }}
+            onClick={() => {
+              if (!g.current.hasMouse && !g.current.hasOrient) {
+                g.current.hasMouse = true;
+              }
+            }}
             onTouchStart={(e) => {
               if (orientState === "on") { calibrateOrientation(); return; }
               if (orientState === "needs-permission") { requestOrientPermission(); return; }
@@ -1106,13 +1123,13 @@ export default function Laberinto() {
             </button>
           )}
 
-          <div className="mt-auto flex flex-col items-center gap-2 pb-10">
-            <p style={{ fontSize: "0.75rem", color: "var(--ts-ink4)", fontFamily: "var(--ts-mono)" }}>
-              {orientState === "on"
-                ? "Toca el tablero para calibrar · Inclina el móvil para mover la bola"
-                : orientState === "needs-permission"
-                ? "Toca el tablero para activar el giroscopio"
-                : "Mueve el ratón o toca el tablero para inclinar"}
+          <div className="mt-auto flex flex-col items-center gap-6 pb-10">
+            <p className="md:hidden" style={{ fontSize: "0.75rem", color: "var(--ts-ink4)", fontFamily: "var(--ts-mono)", textAlign: "center", lineHeight: 1.6 }}>
+              {orientState === "on" ? (
+                <>{`Toca el tablero para calibrar`}<br />{`Inclina el móvil para mover la bola`}</>
+              ) : orientState === "needs-permission" ? (
+                "Toca el tablero para activar el giroscopio"
+              ) : null}
             </p>
             <WhyFooter question="¿Por qué un laberinto?" date="1 de mayo de 2026" style={{ paddingTop: 0, paddingBottom: 0 }}>
               <p>El laberinto usa una variante de la heurística de Warnsdorff para generar un único corredor que recorre las 77 celdas disponibles exactamente una vez, sin bifurcaciones ni callejones sin salida.</p>
