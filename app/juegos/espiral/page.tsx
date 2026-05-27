@@ -510,9 +510,9 @@ export default function EspiralTerminal() {
         .esp-nav-collapsing {
           animation: esp-nav-collapse 0.9s ease forwards;
         }
+        .esp-title-break { display: none; }
         @media (max-width: 640px) {
-          .esp-version { display: none; }
-          .esp-chrome-title { margin-left: auto; max-width: 80px; text-align: right; }
+          .esp-title-break { display: block; }
         }
       `}</style>
 
@@ -582,7 +582,7 @@ export default function EspiralTerminal() {
             </div>
             {/* título — ocupa el espacio restante, centrado */}
             <div className="esp-chrome-title" style={{ flex: 1, textAlign: "center", fontFamily: MONO, fontSize: 12, color: "var(--t-ink2)" }}>
-              ⌘&nbsp;&nbsp;pacr.es — espiral
+              ⌘&nbsp;&nbsp;pacr.es<br className="esp-title-break" /> — espiral
             </div>
             {/* versión — pegada a la derecha, sin corte */}
             <div className="esp-version" style={{ flexShrink: 0, fontFamily: MONO, fontSize: 10, color: "var(--t-ink3)", whiteSpace: "nowrap" }}>
