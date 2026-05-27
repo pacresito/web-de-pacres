@@ -1038,7 +1038,7 @@ function ContactSection({ active = false, onDone }: { active?: boolean; onDone?:
 }
 
 function FooterSection({ startAfter = false }: { startAfter?: boolean }) {
-  const TEXT = "↳ created: 24 de mayo de 2026";
+  const TEXT = "↳ Bienvenido a la web de Pacres";
   const [displayed, setDisplayed] = useState("");
   const [started, setStarted] = useState(false);
 
@@ -1055,7 +1055,7 @@ function FooterSection({ startAfter = false }: { startAfter?: boolean }) {
       idx++;
       setDisplayed(TEXT.slice(0, idx));
       if (idx >= TEXT.length) clearInterval(iv);
-    }, 50);
+    }, 100);
     return () => clearInterval(iv);
   }, [started]);
 

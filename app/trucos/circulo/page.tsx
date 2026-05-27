@@ -29,6 +29,7 @@ export default function CirculoPerfecto() {
   const [phase, setPhase] = useState<Phase>("idle");
   const ptsRef = useRef<{ x: number; y: number }[]>([]);
   const [displayScore, setDisplayScore] = useState(0);
+  const [liveRoundness, setLiveRoundness] = useState<number | null>(null);
   const certNumRef = useRef(0);
 
   // Circle in screen coordinates during alive phase
@@ -281,6 +282,9 @@ export default function CirculoPerfecto() {
         const pos = { x: src.clientX - rect.left, y: src.clientY - rect.top };
         ptsRef.current.push(pos);
         drawPoints(canvas!, ptsRef.current);
+        if (ptsRef.current.length % 10 === 0 && ptsRef.current.length >= 20) {
+          setLiveRoundness(computeScore(ptsRef.current));
+        }
       }
     }
 
@@ -289,6 +293,7 @@ export default function CirculoPerfecto() {
       const src = e instanceof TouchEvent ? (e.touches[0] ?? e.changedTouches[0]) : e;
       const rect = canvas!.getBoundingClientRect();
       ptsRef.current = [{ x: src.clientX - rect.left, y: src.clientY - rect.top }];
+      setLiveRoundness(null);
       go("drawing");
     }
 
@@ -341,6 +346,7 @@ export default function CirculoPerfecto() {
     aliveOverlayRef.current = null;
     ptsRef.current = [];
     setDisplayScore(0);
+    setLiveRoundness(null);
     go("idle");
     const canvas = canvasRef.current;
     if (canvas) drawIdle(canvas);
@@ -356,9 +362,12 @@ export default function CirculoPerfecto() {
       `}</style>
 
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1.5rem", flex: 1, justifyContent: "center", width: "100%" }}>
-        <h1 style={{ color: "var(--ts-ink)", fontSize: "1.1rem", fontWeight: 600, letterSpacing: "-0.02em", fontFamily: "var(--ts-mono)" }}>
-          Círculo perfecto
-        </h1>
+        <span style={{ fontSize: "0.75rem", color: "var(--ts-ink3)", fontFamily: "var(--ts-mono)" }}>
+          {"↳ roundness: "}
+          <span style={{ color: (phase === "alive" || phase === "caught" || (phase === "drawing" && (liveRoundness ?? 0) >= THRESHOLD) || (phase === "score" && displayScore >= THRESHOLD)) ? "var(--ts-accent)" : "var(--ts-ink2)" }}>
+            {phase === "idle" ? "0.00" : phase === "drawing" ? (liveRoundness !== null ? liveRoundness.toFixed(2) : "0.00") : phase === "score" ? displayScore.toFixed(2) : phase === "alive" ? "vivo" : "atrapado"}
+          </span>
+        </span>
 
         <div style={{ position: "relative", width: sz || 480, height: sz || 480 }}>
           <canvas
@@ -429,11 +438,6 @@ export default function CirculoPerfecto() {
           )}
         </div>
 
-        {phase === "score" && displayScore < THRESHOLD && (
-          <button onClick={reset} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ts-ink3)", fontSize: "0.78rem", fontFamily: "var(--ts-mono)" }}>
-            Reintentar →
-          </button>
-        )}
       </div>
 
       {/* Footer */}
