@@ -104,20 +104,6 @@ export default function Ranking() {
           ← volver al juego
         </Link>
 
-        <a
-          href="/lab"
-          style={{
-            marginTop: "1rem",
-            fontSize: "0.75rem",
-            color: "#b8b3a6",
-            textDecoration: "none",
-            transition: "color 0.2s",
-          }}
-          onMouseEnter={e => (e.currentTarget.style.color = "#00b87a")}
-          onMouseLeave={e => (e.currentTarget.style.color = "#b8b3a6")}
-        >
-          pacr.es
-        </a>
       </main>
     </TerminalShell>
   );

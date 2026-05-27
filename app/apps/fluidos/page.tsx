@@ -56,6 +56,8 @@ export default function Fluidos() {
   const paintRef       = useRef(false);
   const lastPosRef     = useRef<{ x: number; y: number } | null>(null);
   const rafRef         = useRef(0);
+  const statsFrameRef  = useRef(0);
+  const statsLabelRef  = useRef<HTMLSpanElement>(null);
   const woodAnchorRef  = useRef<{ x: number; y: number } | null>(null); // pixel anchor for grab
   const woodMovedRef   = useRef({ x: 0, y: 0 });                        // cells moved since grab start
   const woodGrabRef    = useRef(false);                                   // whether wood is grabbed
@@ -63,6 +65,7 @@ export default function Fluidos() {
   const carryPosRef    = useRef<{ x: number; y: number } | null>(null);
 
   const [tool, setTool] = useState<Tool>(WATER as Tool);
+  const [fullscreen, setFullscreen] = useState(false);
 
   const setToolSync = useCallback((t: Tool) => {
     toolRef.current = t;
@@ -805,6 +808,26 @@ export default function Fluidos() {
       }
       step();
       render();
+      statsFrameRef.current++;
+      if (statsFrameRef.current % 20 === 0 && statsLabelRef.current) {
+        const grid = gridRef.current;
+        if (grid) {
+          let water = 0, fire = 0, sand = 0, wall = 0;
+          for (let i = 0; i < grid.length; i++) {
+            const v = grid[i];
+            if (v === WATER) water++;
+            else if (v === FIRE) fire++;
+            else if (v === SAND) sand++;
+            else if (v === WALL) wall++;
+          }
+          const parts: string[] = [];
+          if (water > 0) parts.push(`<span style="color:#3b82f6">agua</span>: ${water}`);
+          if (fire > 0)  parts.push(`<span style="color:#f97316">fuego</span>: ${fire}`);
+          if (sand > 0)  parts.push(`<span style="color:#c2a96e">tierra</span>: ${sand}`);
+          if (wall > 0)  parts.push(`<span style="color:#8b5e3c">madera</span>: ${wall}`);
+          statsLabelRef.current.innerHTML = parts.length ? parts.join(" · ") : "";
+        }
+      }
     };
     rafRef.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(rafRef.current);
@@ -975,8 +998,12 @@ export default function Fluidos() {
     agesRef.current?.fill(0);
   };
 
+  const currentToolDef = TOOL_DEFS.find(t => t.id === tool);
+  const toolLabel = currentToolDef?.label ?? "—";
+  const toolColor = currentToolDef?.color ?? "var(--ts-ink3)";
+
   return (
-    <TerminalShell title="fluidos" prompt={{ host: "fluidos", path: "~/apps", command: "./fluidos --elementos=4" }}>
+    <TerminalShell title="fluidos" prompt={{ host: "fluidos", path: "~/apps", command: "./fluidos --elementos=4" }} hideChrome={fullscreen}>
       <style>{`
         :root {
           --blue:    var(--ts-accent);
@@ -1087,7 +1114,7 @@ export default function Fluidos() {
       <main style={{
         maxWidth: 900,
         margin: "0 auto",
-        padding: "0 clamp(1.25rem, 4vw, 2rem)",
+        padding: `0 clamp(1.25rem, 4vw, 2rem) ${fullscreen ? "clamp(1.25rem, 4vw, 2rem)" : "0"}`,
         height: whyOpen ? "auto" : "100%",
         minHeight: "100%",
         overflowX: "hidden",
@@ -1097,9 +1124,33 @@ export default function Fluidos() {
       }}>
 
         {/* Header */}
-        <div className="sim-header">
-          <h1 className="sim-title"><span>Fluidos</span></h1>
-          <p className="sim-sub">Agua, fuego, tierra. Controla los elementos.</p>
+        <div style={{ display: "flex", alignItems: "center", gap: "1rem", fontFamily: "var(--ts-mono)", paddingTop: "1rem", paddingBottom: "0.6rem" }}>
+          <span style={{ fontSize: "0.75rem", color: "var(--ts-ink3)" }}>
+            ↳ herramienta:{" "}
+            <span style={{ color: toolColor }}>{toolLabel}</span>
+          </span>
+          <span ref={statsLabelRef} style={{ fontSize: "0.75rem", color: "var(--ts-ink4)", fontVariantNumeric: "tabular-nums" }} />
+          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center" }}>
+            <button
+              onClick={() => setFullscreen(f => !f)}
+              title={fullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
+              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ts-ink3)", padding: 0, display: "flex", alignItems: "center", transition: "color 0.15s" }}
+              onMouseEnter={e => (e.currentTarget.style.color = "var(--ts-accent)")}
+              onMouseLeave={e => (e.currentTarget.style.color = "var(--ts-ink3)")}
+            >
+              {fullscreen ? (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/>
+                  <line x1="10" y1="14" x2="3" y2="21"/><line x1="21" y1="3" x2="14" y2="10"/>
+                </svg>
+              ) : (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
+                  <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
+                </svg>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Toolbar */}
@@ -1137,34 +1188,38 @@ export default function Fluidos() {
           <canvas className={`sim-canvas${tool === MOVE ? " tool-move" : ""}`} ref={canvasRef} />
         </div>
 
-        {/* Hints */}
-        <div style={{ padding: "0.45rem 0 0" }}>
-          <div className="hint-row">
-            <span className="hint-item">La tierra se hunde en el agua · El agua apaga el fuego · El fuego quema la madera</span>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <footer style={{ marginTop: "auto", paddingTop: "1.5rem", paddingBottom: "1.25rem", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem" }}>
-          <button
-            className="ts-why-btn"
-            onClick={() => { const next = !whyOpen; setWhyOpen(next); if (next) setTimeout(() => whyRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }), 50); }}
-          >
-            ¿Por qué un simulador de fluidos?
-            <svg width="10" height="10" viewBox="0 0 10 10" style={{ transform: whyOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}>
-              <path d="M1 3L5 7L9 3" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
-          {whyOpen && (
-            <div ref={whyRef} className="ts-why-box" style={{ maxWidth: 420, textAlign: "left" }}>
-              <p>Un autómata celular de partículas es una simulación sobre una cuadrícula donde cada celda sigue reglas locales simples.</p>
-              <p>De esas reglas emergen comportamientos complejos: agua fluyendo, arena acumulándose, fuego propagándose.</p>
-              <p>Este enfoque se usa en videojuegos, simulaciones físicas y sistemas educativos por su simplicidad y eficiencia.</p>
-              <p>En este experimento: la arena cae, el agua fluye, el fuego se expande, y cada elemento interactúa solo con sus vecinos inmediatos.</p>
-              <p style={{ color: "var(--ts-ink4)", fontSize: "0.72rem" }}>↳ Creado el 8 de mayo de 2026</p>
+        {!fullscreen && (
+          <>
+            {/* Hints */}
+            <div style={{ padding: "0.45rem 0 0" }}>
+              <div className="hint-row">
+                <span className="hint-item">La tierra se hunde en el agua · El agua apaga el fuego · El fuego quema la madera</span>
+              </div>
             </div>
-          )}
-        </footer>
+
+            {/* Footer */}
+            <footer style={{ marginTop: "auto", paddingTop: "1.5rem", paddingBottom: "1.25rem", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem" }}>
+              <button
+                className="ts-why-btn"
+                onClick={() => { const next = !whyOpen; setWhyOpen(next); if (next) setTimeout(() => whyRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }), 50); }}
+              >
+                ¿Por qué un simulador de fluidos?
+                <svg width="10" height="10" viewBox="0 0 10 10" style={{ transform: whyOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}>
+                  <path d="M1 3L5 7L9 3" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+              {whyOpen && (
+                <div ref={whyRef} className="ts-why-box" style={{ maxWidth: 420, textAlign: "left" }}>
+                  <p>Un autómata celular de partículas es una simulación sobre una cuadrícula donde cada celda sigue reglas locales simples.</p>
+                  <p>De esas reglas emergen comportamientos complejos: agua fluyendo, arena acumulándose, fuego propagándose.</p>
+                  <p>Este enfoque se usa en videojuegos, simulaciones físicas y sistemas educativos por su simplicidad y eficiencia.</p>
+                  <p>En este experimento: la arena cae, el agua fluye, el fuego se expande, y cada elemento interactúa solo con sus vecinos inmediatos.</p>
+                  <p style={{ color: "var(--ts-ink4)", fontSize: "0.72rem" }}>↳ Creado el 8 de mayo de 2026</p>
+                </div>
+              )}
+            </footer>
+          </>
+        )}
 
       </main>
     </TerminalShell>

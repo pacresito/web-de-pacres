@@ -356,7 +356,8 @@ export default function AgricolaCalc() {
   const anyHeart = scores.some((ps) => ps.includes("heart"));
 
   return (
-    <TerminalShell title="agrícola">
+    <TerminalShell title="agrícola" variant="chrome">
+    <style>{`html, body { background: #FAF3E0 !important; }`}</style>
     <main className="min-h-screen flex flex-col items-center py-6 px-4" style={{ background: "#FAF3E0" }}>
       <div className="w-full" style={{ maxWidth: "22rem" }}>
 

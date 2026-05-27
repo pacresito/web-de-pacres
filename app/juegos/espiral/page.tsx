@@ -512,8 +512,8 @@ export default function EspiralPage() {
                     {submitting ? "..." : "$ guardar"}
                   </button>
                 </form>
-                <button onClick={replay} className="esp-btn" style={{ fontSize: "0.72rem" }}>
-                  reiniciar
+                <button onClick={replay} className="esp-btn" style={{ fontSize: "0.72rem", marginTop: "0.5rem" }}>
+                  jugar de nuevo
                 </button>
               </div>
             ) : (
@@ -522,7 +522,7 @@ export default function EspiralPage() {
                   ranking
                 </button>
                 <button onClick={replay} className="esp-btn">
-                  reiniciar
+                  jugar de nuevo
                 </button>
               </div>
             )}

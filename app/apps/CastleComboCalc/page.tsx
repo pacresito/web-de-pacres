@@ -316,7 +316,8 @@ export default function CastleComboCalc() {
   const maxWidths: Record<number, string> = { 2: "20rem", 3: "26rem", 4: "32rem", 5: "38rem", 6: "44rem" };
 
   return (
-    <TerminalShell title="castle combo">
+    <TerminalShell title="castle combo" variant="chrome">
+    <style>{`html, body { background: #EBF5FB !important; }`}</style>
     <main className="min-h-screen flex flex-col items-center py-6 px-4" style={{ background: "#EBF5FB" }}>
       <div className="w-full" style={{ maxWidth: maxWidths[numPlayers] ?? "44rem" }}>
 

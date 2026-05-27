@@ -384,7 +384,7 @@ export default function SigueTusSuenos() {
         ctx.save();
         ctx.translate(b.position.x, b.position.y);
         ctx.rotate(b.angle);
-        ctx.fillStyle = "#1e40af";
+        ctx.fillStyle = "#00b87a";
         ctx.fillRect(-w / 2, -h / 2, w, h);
         ctx.restore();
       }

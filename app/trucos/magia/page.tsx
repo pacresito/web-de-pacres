@@ -409,8 +409,6 @@ export default function MagiaPage() {
   const onWheelSettle = useCallback(() => setSpinDone(true), []);
 
   const mono = "var(--ts-mono)";
-  const [whyOpen, setWhyOpen] = useState(false);
-  const whyRef = useRef<HTMLDivElement>(null);
   const cardGap = Math.max(3, Math.floor(cardW * 0.07));
 
   return (
@@ -568,26 +566,6 @@ export default function MagiaPage() {
         </div>
       )}
 
-      {/* Footer */}
-      <div style={{ marginTop: "auto", paddingTop: "1.5rem", paddingBottom: "0.5rem", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem", width: "100%" }}>
-        <button
-          className="ts-why-btn"
-          onClick={() => { const next = !whyOpen; setWhyOpen(next); if (next) setTimeout(() => whyRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }), 50); }}
-        >
-          ¿Cómo funciona el truco?
-          <svg width="10" height="10" viewBox="0 0 10 10" style={{ transform: whyOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}>
-            <path d="M1 3L5 7L9 3" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
-        {whyOpen && (
-          <div ref={whyRef} className="ts-why-box" style={{ maxWidth: 420, textAlign: "left" }}>
-            <p>Es un truco matemático, no de magia. Se llama el «truco de las 21 cartas» y lleva en circulación desde al menos el siglo XVII.</p>
-            <p>El truco funciona repartiendo las cartas en tres columnas y usando tu elección para reordenarlas sistemáticamente. Después de tres rondas, la carta elegida siempre queda en la posición 11 del mazo.</p>
-            <p>La ruleta y el animal guía son pura distracción: su letra inicial ya está determinada antes de que empieces a girar.</p>
-            <p style={{ color: "var(--ts-ink4)", fontSize: "0.72rem" }}>↳ Creado el 15 de mayo de 2026</p>
-          </div>
-        )}
-      </div>
     </div>
     </TerminalShell>
   );

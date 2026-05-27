@@ -13,7 +13,7 @@ const BOARD_H = ROWS * CELL + WALL_W;
 const START_X = CELL / 2 + WALL_W / 2;
 const START_Y = CELL / 2 + WALL_W / 2;
 
-const MAX_TILT = 14;
+const MAX_TILT = 15;
 const TILT_SPEED = 2.0;
 const GRAVITY = 1750;
 const FRICTION = 0.983;
@@ -239,6 +239,8 @@ export default function Laberinto() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const boardRef = useRef<HTMLDivElement>(null);
   const loopRef = useRef<(t: number) => void>(() => {});
+  const tiltYRef = useRef<HTMLSpanElement>(null);
+  const tiltXRef = useRef<HTMLSpanElement>(null);
 
   const [whyOpen, setWhyOpen] = useState(false);
   const whyRef = useRef<HTMLDivElement>(null);
@@ -250,6 +252,7 @@ export default function Laberinto() {
   const [submitted, setSubmitted] = useState(false);
   const [ranking, setRanking] = useState<RankingData | null>(null);
 
+  const [fullscreen, setFullscreen] = useState(false);
   const [orientState, setOrientState] = useState<"off" | "needs-permission" | "on">("off");
   const [scale, setScale] = useState(1);
   const [isLandscape, setIsLandscape] = useState(false);
@@ -611,6 +614,13 @@ export default function Laberinto() {
       if (boardRef.current) {
         boardRef.current.style.transform = `rotateX(${-state.tiltX}deg) rotateY(${state.tiltY}deg)`;
       }
+      if (tiltYRef.current && tiltXRef.current) {
+        const ty = Math.round(state.tiltY), tx = Math.round(state.tiltX);
+        tiltYRef.current.textContent = `${ty >= 0 ? "+" : ""}${ty}°`;
+        tiltXRef.current.textContent = `${tx >= 0 ? "+" : ""}${tx}°`;
+        tiltYRef.current.style.color = Math.abs(ty) >= MAX_TILT ? "#00b87a" : "";
+        tiltXRef.current.style.color = Math.abs(tx) >= MAX_TILT ? "#00b87a" : "";
+      }
 
       // Physics
       const ax = GRAVITY * Math.sin((state.tiltY * Math.PI) / 180);
@@ -891,7 +901,7 @@ export default function Laberinto() {
             onClick={fullRestart}
             style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ts-ink3)", fontSize: "0.8rem", fontFamily: "var(--ts-mono)" }}
           >
-            Jugar de nuevo
+            jugar de nuevo
           </button>
         </>
       ) : (
@@ -916,22 +926,45 @@ export default function Laberinto() {
   ) : null;
 
   const header = (
-    <div style={{ display: "flex", alignItems: "center", gap: "1.25rem" }}>
-      <h1 style={{ color: "var(--ts-ink)", fontSize: "1.5rem", fontWeight: 800, letterSpacing: "-0.03em", fontFamily: "var(--ts-mono)" }}>Laberinto</h1>
-      <span style={{ color: timerColor, fontSize: "0.85rem", fontVariantNumeric: "tabular-nums", fontFamily: "var(--ts-mono)", minWidth: "2.5rem" }}>
-        {timeLeft}s
+    <div style={{ display: "flex", alignItems: "center", gap: "1rem", fontFamily: "var(--ts-mono)" }}>
+      <span style={{ fontSize: "0.75rem", color: "var(--ts-ink3)", fontVariantNumeric: "tabular-nums" }}>
+        ↳ tilt: <span ref={tiltYRef}>+0°</span> / <span ref={tiltXRef}>+0°</span>
       </span>
-      <span style={{ color: scoreColor, fontSize: "0.85rem", fontFamily: "var(--ts-mono)", fontWeight: 600 }}>
-        {score >= 0 ? "+" : ""}{score}
-      </span>
-      <a
-        href="/juegos/laberinto/ranking"
-        style={{ fontSize: "0.75rem", color: "var(--ts-ink4)", fontFamily: "var(--ts-mono)", textDecoration: "none", transition: "color 0.2s" }}
-        onMouseEnter={e => (e.currentTarget.style.color = "var(--ts-accent)")}
-        onMouseLeave={e => (e.currentTarget.style.color = "var(--ts-ink4)")}
-      >
-        ranking
-      </a>
+      <span style={{ fontSize: "0.75rem", color: timerColor, fontVariantNumeric: "tabular-nums" }}>{timeLeft}s</span>
+      <span style={{ fontSize: "0.75rem", color: scoreColor, fontWeight: 600 }}>{score >= 0 ? "+" : ""}{score}</span>
+      <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "1rem" }}>
+        <a
+          href="/juegos/laberinto/ranking"
+          title="Ranking"
+          style={{ color: "var(--ts-ink3)", display: "flex", alignItems: "center", transition: "color 0.15s" }}
+          onMouseEnter={e => (e.currentTarget.style.color = "var(--ts-accent)")}
+          onMouseLeave={e => (e.currentTarget.style.color = "var(--ts-ink3)")}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+            <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+          </svg>
+        </a>
+        <button
+          onClick={() => setFullscreen(f => !f)}
+          title={fullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
+          style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ts-ink3)", padding: 0, display: "flex", alignItems: "center", transition: "color 0.15s" }}
+          onMouseEnter={e => (e.currentTarget.style.color = "var(--ts-accent)")}
+          onMouseLeave={e => (e.currentTarget.style.color = "var(--ts-ink3)")}
+        >
+          {fullscreen ? (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/>
+              <line x1="10" y1="14" x2="3" y2="21"/><line x1="21" y1="3" x2="14" y2="10"/>
+            </svg>
+          ) : (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
+              <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
+            </svg>
+          )}
+        </button>
+      </div>
     </div>
   );
 
@@ -990,23 +1023,48 @@ export default function Laberinto() {
 
   if (isLandscape) {
     return (
-      <TerminalShell title="laberinto" prompt={{ host: "laberinto", path: "~/juegos", command: "./laberinto --celdas=77" }}>
+      <TerminalShell title="laberinto" prompt={{ host: "laberinto", path: "~/juegos", command: "./laberinto --holes=4" }} hideChrome={fullscreen}>
       <main style={{ height: "100%", overflow: "hidden", userSelect: "none" }} className="flex flex-row items-center justify-center gap-2 px-2">
         <div style={{ width: 120, flexShrink: 0 }} className="flex flex-col items-center justify-center gap-3 h-full">
-          <h1 style={{ color: "var(--ts-ink)", fontSize: "1.1rem", fontWeight: 800, letterSpacing: "-0.03em", textAlign: "center", fontFamily: "var(--ts-mono)" }}>Laberinto</h1>
-          <div style={{ display: "flex", gap: "0.6rem", alignItems: "center" }}>
-            <span style={{ color: timerColor, fontSize: "0.8rem", fontFamily: "var(--ts-mono)" }}>{timeLeft}s</span>
-            <span style={{ color: scoreColor, fontSize: "0.8rem", fontFamily: "var(--ts-mono)", fontWeight: 600 }}>{score >= 0 ? "+" : ""}{score}</span>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.35rem" }}>
+            <div style={{ display: "flex", gap: "0.6rem", alignItems: "center" }}>
+              <span style={{ color: timerColor, fontSize: "0.8rem", fontFamily: "var(--ts-mono)" }}>{timeLeft}s</span>
+              <span style={{ color: scoreColor, fontSize: "0.8rem", fontFamily: "var(--ts-mono)", fontWeight: 600 }}>{score >= 0 ? "+" : ""}{score}</span>
+            </div>
           </div>
-          <a
-            href="/juegos/laberinto/ranking"
-            style={{ fontSize: "0.65rem", color: "var(--ts-ink4)", fontFamily: "var(--ts-mono)", textDecoration: "none", transition: "color 0.2s" }}
-            onMouseEnter={e => (e.currentTarget.style.color = "var(--ts-accent)")}
-            onMouseLeave={e => (e.currentTarget.style.color = "var(--ts-ink4)")}
-          >
-            ranking
-          </a>
-          <p style={{ fontSize: "0.65rem", color: "var(--ts-ink4)", textAlign: "center", lineHeight: 1.4 }}>
+          <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
+            <a
+              href="/juegos/laberinto/ranking"
+              title="Ranking"
+              style={{ color: "var(--ts-ink3)", display: "flex", alignItems: "center", transition: "color 0.15s" }}
+              onMouseEnter={e => (e.currentTarget.style.color = "var(--ts-accent)")}
+              onMouseLeave={e => (e.currentTarget.style.color = "var(--ts-ink3)")}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+                <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+              </svg>
+            </a>
+            <button
+              onClick={() => setFullscreen(f => !f)}
+              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ts-ink3)", padding: 0, display: "flex", alignItems: "center", transition: "color 0.15s" }}
+              onMouseEnter={e => (e.currentTarget.style.color = "var(--ts-accent)")}
+              onMouseLeave={e => (e.currentTarget.style.color = "var(--ts-ink3)")}
+            >
+              {fullscreen ? (
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/>
+                  <line x1="10" y1="14" x2="3" y2="21"/><line x1="21" y1="3" x2="14" y2="10"/>
+                </svg>
+              ) : (
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
+                  <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
+                </svg>
+              )}
+            </button>
+          </div>
+          <p style={{ fontSize: "0.65rem", color: "var(--ts-ink4)", textAlign: "center", lineHeight: 1.4, fontFamily: "var(--ts-mono)" }}>
             {orientState === "on" ? "Toca para calibrar · Inclina el móvil" : orientState === "needs-permission" ? "Toca el tablero para activar el giroscopio" : "Mueve el ratón o toca para inclinar"}
           </p>
         </div>
@@ -1029,49 +1087,53 @@ export default function Laberinto() {
   }
 
   return (
-    <TerminalShell title="laberinto" prompt={{ host: "laberinto", path: "~/juegos", command: "./laberinto --celdas=77" }}>
+    <TerminalShell title="laberinto" prompt={{ host: "laberinto", path: "~/juegos", command: "./laberinto --holes=4" }} hideChrome={fullscreen}>
     <main style={{ minHeight: "100%", position: "relative", userSelect: "none" }} className="flex flex-col items-center justify-start px-4 py-12 gap-8 overflow-x-auto">
       {header}
 
       {boardEl}
 
-      <button onClick={fullRestart} className="text-gray-400 hover:text-gray-600 text-sm transition-colors">
-        nuevo laberinto
-      </button>
+      {!fullscreen && (
+        <>
+          <button onClick={fullRestart} className="text-gray-400 hover:text-gray-600 text-sm transition-colors">
+            nuevo laberinto
+          </button>
 
-      {orientState === "needs-permission" && (
-        <button onClick={requestOrientPermission} className="px-4 py-2 rounded-xl text-white text-sm font-semibold" style={{ background: "#00b87a" }}>
-          Usar giroscopio
-        </button>
-      )}
+          {orientState === "needs-permission" && (
+            <button onClick={requestOrientPermission} className="px-4 py-2 rounded-xl text-white text-sm font-semibold" style={{ background: "#00b87a" }}>
+              Usar giroscopio
+            </button>
+          )}
 
-      <div className="mt-auto flex flex-col items-center gap-2 pb-10">
-        <p style={{ fontSize: "0.75rem", color: "var(--ts-ink4)", fontFamily: "var(--ts-mono)" }}>
-          {orientState === "on"
-            ? "Toca el tablero para calibrar · Inclina el móvil para mover la bola"
-            : orientState === "needs-permission"
-            ? "Toca el tablero para activar el giroscopio"
-            : "Mueve el ratón o toca el tablero para inclinar"}
-        </p>
-        <button
-          className="ts-why-btn"
-          onClick={() => { const next = !whyOpen; setWhyOpen(next); if (next) setTimeout(() => whyRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }), 50); }}
-        >
-          ¿Por qué un laberinto?
-          <svg width="10" height="10" viewBox="0 0 10 10" style={{ transform: whyOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}>
-            <path d="M1 3L5 7L9 3" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
-        {whyOpen && (
-          <div ref={whyRef} className="ts-why-box" style={{ maxWidth: 420, textAlign: "left" }}>
-            <p>El laberinto usa una variante de la heurística de Warnsdorff para generar un único corredor que recorre las 77 celdas disponibles exactamente una vez, sin bifurcaciones ni callejones sin salida.</p>
-            <p>Antes de generar el camino se colocan cuatro agujeros aleatorios. El sistema analiza los giros del recorrido y solo acepta laberintos donde al menos dos curvas apunten hacia un agujero, creando falsas pistas y aumentando la dificultad.</p>
-            <p>La salida siempre aparece al final del recorrido generado.</p>
-            <p>Aproximadamente 1 de cada 100 generaciones cumple esas condiciones.</p>
-            <p style={{ color: "var(--ts-ink4)", fontSize: "0.72rem" }}>↳ Creado el 1 de mayo de 2026</p>
+          <div className="mt-auto flex flex-col items-center gap-2 pb-10">
+            <p style={{ fontSize: "0.75rem", color: "var(--ts-ink4)", fontFamily: "var(--ts-mono)" }}>
+              {orientState === "on"
+                ? "Toca el tablero para calibrar · Inclina el móvil para mover la bola"
+                : orientState === "needs-permission"
+                ? "Toca el tablero para activar el giroscopio"
+                : "Mueve el ratón o toca el tablero para inclinar"}
+            </p>
+            <button
+              className="ts-why-btn"
+              onClick={() => { const next = !whyOpen; setWhyOpen(next); if (next) setTimeout(() => whyRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }), 50); }}
+            >
+              ¿Por qué un laberinto?
+              <svg width="10" height="10" viewBox="0 0 10 10" style={{ transform: whyOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}>
+                <path d="M1 3L5 7L9 3" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+            {whyOpen && (
+              <div ref={whyRef} className="ts-why-box" style={{ maxWidth: 420, textAlign: "left" }}>
+                <p>El laberinto usa una variante de la heurística de Warnsdorff para generar un único corredor que recorre las 77 celdas disponibles exactamente una vez, sin bifurcaciones ni callejones sin salida.</p>
+                <p>Antes de generar el camino se colocan cuatro agujeros aleatorios. El sistema analiza los giros del recorrido y solo acepta laberintos donde al menos dos curvas apunten hacia un agujero, creando falsas pistas y aumentando la dificultad.</p>
+                <p>La salida siempre aparece al final del recorrido generado.</p>
+                <p>Aproximadamente 1 de cada 100 generaciones cumple esas condiciones.</p>
+                <p style={{ color: "var(--ts-ink4)", fontSize: "0.72rem" }}>↳ Creado el 1 de mayo de 2026</p>
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </>
+      )}
     </main>
     </TerminalShell>
   );
