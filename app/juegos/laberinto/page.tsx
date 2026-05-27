@@ -343,7 +343,7 @@ export default function Laberinto() {
     }
 
     // Start marker
-    ctx.strokeStyle = "#3b82f625";
+    ctx.strokeStyle = "rgba(0,184,122,0.14)";
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.arc(START_X, START_Y, CELL * 0.32, 0, Math.PI * 2);
@@ -392,9 +392,9 @@ export default function Laberinto() {
       const grad = isHoriz
         ? ctx.createLinearGradient(0, seg.y1 - halfW, 0, seg.y1 + halfW)
         : ctx.createLinearGradient(seg.x1 - halfW, 0, seg.x1 + halfW, 0);
-      grad.addColorStop(0, "#7dade8");
-      grad.addColorStop(0.45, "#3b82f6");
-      grad.addColorStop(1, "#1e3a8a");
+      grad.addColorStop(0, "#a8e6d0");
+      grad.addColorStop(0.45, "#00b87a");
+      grad.addColorStop(1, "#004433");
       ctx.strokeStyle = grad;
       ctx.beginPath();
       ctx.moveTo(seg.x1, seg.y1);
@@ -418,7 +418,7 @@ export default function Laberinto() {
       const frac = i / trail.length;
       const r = BALL_R * 0.45 * frac;
       if (r < 0.5) continue;
-      ctx.fillStyle = `rgba(59,130,246,${frac * 0.2})`;
+      ctx.fillStyle = `rgba(0,184,122,${frac * 0.2})`;
       ctx.beginPath();
       ctx.arc(trail[i].x, trail[i].y, r, 0, Math.PI * 2);
       ctx.fill();
@@ -445,11 +445,11 @@ export default function Laberinto() {
         ctx.globalAlpha = falling ? 1 - fallingT * 0.5 : 1;
 
         const bg = ctx.createRadialGradient(bx - r * 0.4, by - r * 0.5, r * 0.05, bx + r * 0.1, by + r * 0.15, r * 1.15);
-        bg.addColorStop(0, "#dbeafe");
-        bg.addColorStop(0.18, "#93c5fd");
-        bg.addColorStop(0.5, "#3b82f6");
-        bg.addColorStop(0.85, "#1e40af");
-        bg.addColorStop(1, "#0c1e57");
+        bg.addColorStop(0, "#d0f5e8");
+        bg.addColorStop(0.18, "#7de0bc");
+        bg.addColorStop(0.5, "#00b87a");
+        bg.addColorStop(0.85, "#006644");
+        bg.addColorStop(1, "#003322");
         ctx.fillStyle = bg;
         ctx.beginPath();
         ctx.arc(bx, by, r, 0, Math.PI * 2);
@@ -483,7 +483,7 @@ export default function Laberinto() {
       ctx.fillRect(0, 0, BOARD_W, BOARD_H);
       ctx.save();
       ctx.globalAlpha = alpha;
-      ctx.fillStyle = "#3b82f6";
+      ctx.fillStyle = "#00b87a";
       ctx.font = `bold ${Math.round(CELL * 0.55)}px sans-serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
@@ -979,10 +979,10 @@ export default function Laberinto() {
               g.current.hasMouse = false;
             }}
           />
-          <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: 28, background: "linear-gradient(to bottom, #1e3a8a, #2563eb 45%, #3b82f6)", transformOrigin: "top center", transform: "rotateX(90deg)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.3)" }} />
-          <div style={{ position: "absolute", bottom: 0, left: 0, width: "100%", height: 28, background: "linear-gradient(to top, #0f1f5c, #1e3a8a 45%, #2563eb)", transformOrigin: "bottom center", transform: "rotateX(-90deg)" }} />
-          <div style={{ position: "absolute", top: 0, left: 0, width: 28, height: "100%", background: "linear-gradient(to right, #1e3a8a, #2563eb 45%, #3b82f6)", transformOrigin: "left center", transform: "rotateY(-90deg)", boxShadow: "inset 1px 0 0 rgba(255,255,255,0.3)" }} />
-          <div style={{ position: "absolute", top: 0, right: 0, width: 28, height: "100%", background: "linear-gradient(to left, #0f1f5c, #1e3a8a 45%, #2563eb)", transformOrigin: "right center", transform: "rotateY(90deg)" }} />
+          <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: 28, background: "linear-gradient(to bottom, #004433, #007a52 45%, #00b87a)", transformOrigin: "top center", transform: "rotateX(90deg)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.3)" }} />
+          <div style={{ position: "absolute", bottom: 0, left: 0, width: "100%", height: 28, background: "linear-gradient(to top, #002211, #004433 45%, #007a52)", transformOrigin: "bottom center", transform: "rotateX(-90deg)" }} />
+          <div style={{ position: "absolute", top: 0, left: 0, width: 28, height: "100%", background: "linear-gradient(to right, #004433, #007a52 45%, #00b87a)", transformOrigin: "left center", transform: "rotateY(-90deg)", boxShadow: "inset 1px 0 0 rgba(255,255,255,0.3)" }} />
+          <div style={{ position: "absolute", top: 0, right: 0, width: 28, height: "100%", background: "linear-gradient(to left, #002211, #004433 45%, #007a52)", transformOrigin: "right center", transform: "rotateY(90deg)" }} />
         </div>
       </div>
     </div>
@@ -1018,7 +1018,7 @@ export default function Laberinto() {
             nuevo laberinto
           </button>
           {orientState === "needs-permission" && (
-            <button onClick={requestOrientPermission} className="px-3 py-1.5 rounded-xl bg-blue-500 text-white text-xs font-semibold">
+            <button onClick={requestOrientPermission} className="px-3 py-1.5 rounded-xl text-white text-xs font-semibold" style={{ background: "#00b87a" }}>
               Usar giroscopio
             </button>
           )}
@@ -1040,7 +1040,7 @@ export default function Laberinto() {
       </button>
 
       {orientState === "needs-permission" && (
-        <button onClick={requestOrientPermission} className="px-4 py-2 rounded-xl bg-blue-500 text-white text-sm font-semibold">
+        <button onClick={requestOrientPermission} className="px-4 py-2 rounded-xl text-white text-sm font-semibold" style={{ background: "#00b87a" }}>
           Usar giroscopio
         </button>
       )}

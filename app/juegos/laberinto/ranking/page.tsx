@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
+const MONO = '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace';
+
 interface Entry {
   name: string;
   score: number;
@@ -26,107 +28,112 @@ export default function RankingLaberinto() {
   }, []);
 
   return (
-    <div style={{ minHeight: "100dvh", background: "#ffffff", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "2rem 1rem", position: "relative" }}>
-      <h1 style={{ color: "#111827", fontSize: "1.5rem", fontWeight: 800, letterSpacing: "-0.03em", marginBottom: "2.5rem" }}>
-        Ranking Laberinto
-      </h1>
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+      `}</style>
+      <div style={{ minHeight: "100dvh", background: "#fafaf7", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "2rem 1rem", position: "relative", fontFamily: MONO }}>
+        <h1 style={{ color: "#16140f", fontSize: "1.5rem", fontWeight: 800, letterSpacing: "-0.03em", marginBottom: "2.5rem" }}>
+          ranking laberinto
+        </h1>
 
-      {loading ? (
-        <p style={{ color: "#9ca3af", fontSize: "0.85rem" }}>Cargando...</p>
-      ) : !data ? (
-        <p style={{ color: "#9ca3af", fontSize: "0.85rem" }}>Error al cargar</p>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "2.5rem", width: "100%", maxWidth: "480px" }}>
-          <section>
-            <p style={sectionLabel}>Top 5</p>
-            {data.top.length === 0 ? (
-              <p style={{ color: "#9ca3af", fontSize: "0.85rem", textAlign: "center", padding: "1rem 0" }}>Sin entradas aún</p>
-            ) : (
-              <table style={{ borderCollapse: "collapse", width: "100%" }}>
-                <thead>
-                  <tr>
-                    <th style={thStyle}>#</th>
-                    <th style={{ ...thStyle, textAlign: "left" }}>Nombre</th>
-                    <th style={{ ...thStyle, textAlign: "right" }}>Puntos</th>
-                    <th style={{ ...thStyle, textAlign: "right" }}>Fecha</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.top.map((e, i) => (
-                    <tr key={i} style={{ borderBottom: "1px solid rgba(96,165,250,0.12)" }}>
-                      <td style={{ ...tdStyle, color: i === 0 ? "#3b82f6" : "#9ca3af", fontWeight: i === 0 ? 700 : 400 }}>{i + 1}</td>
-                      <td style={{ ...tdStyle, color: "#111827" }}>{e.name}</td>
-                      <td style={{ ...tdStyle, textAlign: "right", color: "#3b82f6", fontFamily: "var(--font-geist-mono, monospace)", fontWeight: 600 }}>
-                        {e.score >= 0 ? "+" : ""}{e.score}
-                      </td>
-                      <td style={{ ...tdStyle, textAlign: "right", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", fontSize: "0.78rem" }}>
-                        {e.date ?? "—"}
-                      </td>
+        {loading ? (
+          <p style={{ color: "#b8b3a6", fontSize: "0.85rem" }}>cargando...</p>
+        ) : !data ? (
+          <p style={{ color: "#b8b3a6", fontSize: "0.85rem" }}>error al cargar</p>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: "2.5rem", width: "100%", maxWidth: "480px" }}>
+            <section>
+              <p style={sectionLabel}>top 5</p>
+              {data.top.length === 0 ? (
+                <p style={{ color: "#b8b3a6", fontSize: "0.85rem", textAlign: "center", padding: "1rem 0" }}>sin entradas aún</p>
+              ) : (
+                <table style={{ borderCollapse: "collapse", width: "100%" }}>
+                  <thead>
+                    <tr>
+                      <th style={thStyle}>#</th>
+                      <th style={{ ...thStyle, textAlign: "left" }}>nombre</th>
+                      <th style={{ ...thStyle, textAlign: "right" }}>puntos</th>
+                      <th style={{ ...thStyle, textAlign: "right" }}>fecha</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </section>
+                  </thead>
+                  <tbody>
+                    {data.top.map((e, i) => (
+                      <tr key={i} style={{ borderBottom: "1px solid rgba(0,184,122,0.12)" }}>
+                        <td style={{ ...tdStyle, color: i === 0 ? "#00b87a" : "#b8b3a6", fontWeight: i === 0 ? 700 : 400 }}>{i + 1}</td>
+                        <td style={{ ...tdStyle, color: "#16140f" }}>{e.name}</td>
+                        <td style={{ ...tdStyle, textAlign: "right", color: "#00b87a", fontWeight: 600 }}>
+                          {e.score >= 0 ? "+" : ""}{e.score}
+                        </td>
+                        <td style={{ ...tdStyle, textAlign: "right", color: "#b8b3a6", fontSize: "0.78rem" }}>
+                          {e.date ?? "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </section>
 
-          <section>
-            <p style={sectionLabel}>Bottom 5</p>
-            {data.bottom.length === 0 ? (
-              <p style={{ color: "#9ca3af", fontSize: "0.85rem", textAlign: "center", padding: "1rem 0" }}>Sin entradas aún</p>
-            ) : (
-              <table style={{ borderCollapse: "collapse", width: "100%" }}>
-                <thead>
-                  <tr>
-                    <th style={thStyle}>#</th>
-                    <th style={{ ...thStyle, textAlign: "left" }}>Nombre</th>
-                    <th style={{ ...thStyle, textAlign: "right" }}>Puntos</th>
-                    <th style={{ ...thStyle, textAlign: "right" }}>Fecha</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.bottom.map((e, i) => (
-                    <tr key={i} style={{ borderBottom: "1px solid rgba(96,165,250,0.12)" }}>
-                      <td style={{ ...tdStyle, color: i === 0 ? "#ef4444" : "#9ca3af", fontWeight: i === 0 ? 700 : 400 }}>{i + 1}</td>
-                      <td style={{ ...tdStyle, color: "#111827" }}>{e.name}</td>
-                      <td style={{ ...tdStyle, textAlign: "right", color: e.score < 0 ? "#ef4444" : "#6b7280", fontFamily: "var(--font-geist-mono, monospace)", fontWeight: 600 }}>
-                        {e.score >= 0 ? "+" : ""}{e.score}
-                      </td>
-                      <td style={{ ...tdStyle, textAlign: "right", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", fontSize: "0.78rem" }}>
-                        {e.date ?? "—"}
-                      </td>
+            <section>
+              <p style={sectionLabel}>bottom 5</p>
+              {data.bottom.length === 0 ? (
+                <p style={{ color: "#b8b3a6", fontSize: "0.85rem", textAlign: "center", padding: "1rem 0" }}>sin entradas aún</p>
+              ) : (
+                <table style={{ borderCollapse: "collapse", width: "100%" }}>
+                  <thead>
+                    <tr>
+                      <th style={thStyle}>#</th>
+                      <th style={{ ...thStyle, textAlign: "left" }}>nombre</th>
+                      <th style={{ ...thStyle, textAlign: "right" }}>puntos</th>
+                      <th style={{ ...thStyle, textAlign: "right" }}>fecha</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </section>
-        </div>
-      )}
+                  </thead>
+                  <tbody>
+                    {data.bottom.map((e, i) => (
+                      <tr key={i} style={{ borderBottom: "1px solid rgba(0,184,122,0.12)" }}>
+                        <td style={{ ...tdStyle, color: i === 0 ? "#ef4444" : "#b8b3a6", fontWeight: i === 0 ? 700 : 400 }}>{i + 1}</td>
+                        <td style={{ ...tdStyle, color: "#16140f" }}>{e.name}</td>
+                        <td style={{ ...tdStyle, textAlign: "right", color: e.score < 0 ? "#ef4444" : "#7a766b", fontWeight: 600 }}>
+                          {e.score >= 0 ? "+" : ""}{e.score}
+                        </td>
+                        <td style={{ ...tdStyle, textAlign: "right", color: "#b8b3a6", fontSize: "0.78rem" }}>
+                          {e.date ?? "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </section>
+          </div>
+        )}
 
-      <Link
-        href="/juegos/laberinto"
-        style={{ marginTop: "2.5rem", fontSize: "0.8rem", color: "#9ca3af", textDecoration: "none", fontFamily: "var(--font-geist-mono, monospace)", transition: "color 0.2s" }}
-        onMouseEnter={e => (e.currentTarget.style.color = "#3b82f6")}
-        onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}
-      >
-        ← volver al juego
-      </Link>
+        <Link
+          href="/juegos/laberinto"
+          style={{ marginTop: "2.5rem", fontSize: "0.8rem", color: "#b8b3a6", textDecoration: "none", transition: "color 0.2s" }}
+          onMouseEnter={e => (e.currentTarget.style.color = "#00b87a")}
+          onMouseLeave={e => (e.currentTarget.style.color = "#b8b3a6")}
+        >
+          ← volver al juego
+        </Link>
 
-      <a
-        href="/lab"
-        style={{ position: "absolute", bottom: "1.5rem", left: "50%", transform: "translateX(-50%)", fontSize: "0.75rem", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", textDecoration: "none", transition: "color 0.2s" }}
-        onMouseEnter={e => (e.currentTarget.style.color = "#3b82f6")}
-        onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}
-      >
-        pacr.es
-      </a>
-    </div>
+        <a
+          href="/lab"
+          style={{ position: "absolute", bottom: "1.5rem", left: "50%", transform: "translateX(-50%)", fontSize: "0.75rem", color: "#b8b3a6", textDecoration: "none", transition: "color 0.2s" }}
+          onMouseEnter={e => (e.currentTarget.style.color = "#00b87a")}
+          onMouseLeave={e => (e.currentTarget.style.color = "#b8b3a6")}
+        >
+          pacr.es
+        </a>
+      </div>
+    </>
   );
 }
 
 const sectionLabel: React.CSSProperties = {
   fontSize: "0.72rem",
-  color: "#9ca3af",
+  color: "#b8b3a6",
   fontWeight: 500,
   textTransform: "uppercase",
   letterSpacing: "0.05em",
@@ -136,7 +143,7 @@ const sectionLabel: React.CSSProperties = {
 const thStyle: React.CSSProperties = {
   padding: "0.4rem 0.75rem",
   fontSize: "0.72rem",
-  color: "#9ca3af",
+  color: "#b8b3a6",
   fontWeight: 500,
   textAlign: "center",
   textTransform: "uppercase",

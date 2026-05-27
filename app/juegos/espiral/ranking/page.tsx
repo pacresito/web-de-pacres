@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
+const MONO = '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace';
+
 interface Entry {
   name: string;
   date: string | null;
@@ -22,107 +24,111 @@ export default function Ranking() {
   }, []);
 
   return (
-    <div
-      style={{
-        minHeight: "100dvh",
-        background: "#ffffff",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "2rem 1rem",
-        position: "relative",
-      }}
-    >
-      <h1
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+      `}</style>
+      <div
         style={{
-          color: "#111827",
-          fontSize: "1.5rem",
-          fontWeight: 800,
-          letterSpacing: "-0.03em",
-          marginBottom: "2rem",
+          minHeight: "100dvh",
+          background: "#fafaf7",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "2rem 1rem",
+          position: "relative",
+          fontFamily: MONO,
         }}
       >
-        Ranking Espiral
-      </h1>
+        <h1
+          style={{
+            color: "#16140f",
+            fontSize: "1.5rem",
+            fontWeight: 800,
+            letterSpacing: "-0.03em",
+            marginBottom: "2rem",
+          }}
+        >
+          ranking espiral
+        </h1>
 
-      {loading ? (
-        <p style={{ color: "#9ca3af", fontSize: "0.85rem" }}>Cargando...</p>
-      ) : error ? (
-        <p style={{ color: "#9ca3af", fontSize: "0.85rem" }}>Error al cargar</p>
-      ) : entries.length === 0 ? (
-        <p style={{ color: "#9ca3af", fontSize: "0.85rem" }}>Sin entradas aún</p>
-      ) : (
-        <table style={{ borderCollapse: "collapse", width: "100%", maxWidth: "480px" }}>
-          <thead>
-            <tr>
-              <th style={thStyle}>#</th>
-              <th style={{ ...thStyle, textAlign: "left" }}>Nombre</th>
-              <th style={{ ...thStyle, textAlign: "right" }}>Tiempo</th>
-              <th style={{ ...thStyle, textAlign: "right" }}>Fecha</th>
-            </tr>
-          </thead>
-          <tbody>
-            {entries.map((e, i) => (
-              <tr key={i} style={{ borderBottom: "1px solid rgba(96,165,250,0.12)" }}>
-                <td style={{ ...tdStyle, color: i === 0 ? "#3b82f6" : "#9ca3af", fontWeight: i === 0 ? 700 : 400 }}>
-                  {i + 1}
-                </td>
-                <td style={{ ...tdStyle, color: "#111827" }}>{e.name}</td>
-                <td style={{ ...tdStyle, textAlign: "right", color: "#6b7280", fontFamily: "var(--font-geist-mono, monospace)" }}>
-                  {e.score.toFixed(1)}s
-                </td>
-                <td style={{ ...tdStyle, textAlign: "right", color: "#9ca3af", fontFamily: "var(--font-geist-mono, monospace)", fontSize: "0.78rem" }}>
-                  {e.date ?? "—"}
-                </td>
+        {loading ? (
+          <p style={{ color: "#b8b3a6", fontSize: "0.85rem" }}>cargando...</p>
+        ) : error ? (
+          <p style={{ color: "#b8b3a6", fontSize: "0.85rem" }}>error al cargar</p>
+        ) : entries.length === 0 ? (
+          <p style={{ color: "#b8b3a6", fontSize: "0.85rem" }}>sin entradas aún</p>
+        ) : (
+          <table style={{ borderCollapse: "collapse", width: "100%", maxWidth: "480px" }}>
+            <thead>
+              <tr>
+                <th style={thStyle}>#</th>
+                <th style={{ ...thStyle, textAlign: "left" }}>nombre</th>
+                <th style={{ ...thStyle, textAlign: "right" }}>tiempo</th>
+                <th style={{ ...thStyle, textAlign: "right" }}>fecha</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+            </thead>
+            <tbody>
+              {entries.map((e, i) => (
+                <tr key={i} style={{ borderBottom: "1px solid rgba(0,184,122,0.12)" }}>
+                  <td style={{ ...tdStyle, color: i === 0 ? "#00b87a" : "#b8b3a6", fontWeight: i === 0 ? 700 : 400 }}>
+                    {i + 1}
+                  </td>
+                  <td style={{ ...tdStyle, color: "#16140f" }}>{e.name}</td>
+                  <td style={{ ...tdStyle, textAlign: "right", color: "#7a766b" }}>
+                    {e.score.toFixed(1)}s
+                  </td>
+                  <td style={{ ...tdStyle, textAlign: "right", color: "#b8b3a6", fontSize: "0.78rem" }}>
+                    {e.date ?? "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
 
-      <Link
-        href="/juegos/espiral"
-        style={{
-          marginTop: "2.5rem",
-          fontSize: "0.8rem",
-          color: "#9ca3af",
-          textDecoration: "none",
-          fontFamily: "var(--font-geist-mono, monospace)",
-          transition: "color 0.2s",
-        }}
-        onMouseEnter={e => (e.currentTarget.style.color = "#3b82f6")}
-        onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}
-      >
-        ← volver al juego
-      </Link>
+        <Link
+          href="/juegos/espiral"
+          style={{
+            marginTop: "2.5rem",
+            fontSize: "0.8rem",
+            color: "#b8b3a6",
+            textDecoration: "none",
+            transition: "color 0.2s",
+          }}
+          onMouseEnter={e => (e.currentTarget.style.color = "#00b87a")}
+          onMouseLeave={e => (e.currentTarget.style.color = "#b8b3a6")}
+        >
+          ← volver al juego
+        </Link>
 
-      <a
-        href="/lab"
-        style={{
-          position: "absolute",
-          bottom: "1.5rem",
-          left: "50%",
-          transform: "translateX(-50%)",
-          fontSize: "0.75rem",
-          color: "#9ca3af",
-          fontFamily: "var(--font-geist-mono, monospace)",
-          textDecoration: "none",
-          transition: "color 0.2s",
-        }}
-        onMouseEnter={e => (e.currentTarget.style.color = "#3b82f6")}
-        onMouseLeave={e => (e.currentTarget.style.color = "#9ca3af")}
-      >
-        pacr.es
-      </a>
-    </div>
+        <a
+          href="/lab"
+          style={{
+            position: "absolute",
+            bottom: "1.5rem",
+            left: "50%",
+            transform: "translateX(-50%)",
+            fontSize: "0.75rem",
+            color: "#b8b3a6",
+            textDecoration: "none",
+            transition: "color 0.2s",
+          }}
+          onMouseEnter={e => (e.currentTarget.style.color = "#00b87a")}
+          onMouseLeave={e => (e.currentTarget.style.color = "#b8b3a6")}
+        >
+          pacr.es
+        </a>
+      </div>
+    </>
   );
 }
 
 const thStyle: React.CSSProperties = {
   padding: "0.4rem 0.75rem",
   fontSize: "0.72rem",
-  color: "#9ca3af",
+  color: "#b8b3a6",
   fontWeight: 500,
   textAlign: "center",
   textTransform: "uppercase",

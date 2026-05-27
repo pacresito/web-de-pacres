@@ -99,7 +99,7 @@ export default function CirculoPerfecto() {
     ctx.beginPath();
     ctx.moveTo(pts[0].x, pts[0].y);
     for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
-    ctx.strokeStyle = "#3b82f6";
+    ctx.strokeStyle = "#00b87a";
     ctx.lineWidth = 2.5;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
@@ -112,16 +112,16 @@ export default function CirculoPerfecto() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fillStyle = "rgba(59,130,246,0.09)";
+    ctx.fillStyle = "rgba(0,184,122,0.09)";
     ctx.fill();
-    ctx.strokeStyle = "#3b82f6";
+    ctx.strokeStyle = "#00b87a";
     ctx.lineWidth = 2.5;
-    ctx.shadowColor = "rgba(59,130,246,0.35)";
+    ctx.shadowColor = "rgba(0,184,122,0.35)";
     ctx.shadowBlur = 14;
     ctx.stroke();
     ctx.shadowBlur = 0;
     ctx.font = `600 ${Math.max(9, Math.round(r * 0.20))}px monospace`;
-    ctx.fillStyle = "rgba(59,130,246,0.8)";
+    ctx.fillStyle = "rgba(0,184,122,0.8)";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText("ATRÁPAME", x, y);
@@ -133,7 +133,7 @@ export default function CirculoPerfecto() {
       if (prog > 0) {
         ctx.beginPath();
         ctx.arc(x, y, r + 7, -Math.PI / 2, -Math.PI / 2 + prog * Math.PI * 2);
-        ctx.strokeStyle = "#3b82f6";
+        ctx.strokeStyle = "#00b87a";
         ctx.lineWidth = 3;
         ctx.lineCap = "round";
         ctx.stroke();
