@@ -93,16 +93,39 @@ export default function Fluidos() {
       const W = Math.floor(wrap.clientWidth  / CELL);
       const H = Math.floor(wrap.clientHeight / CELL);
       if (W === dimRef.current.W && H === dimRef.current.H) return;
+
+      const oldGrid = gridRef.current;
+      const oldAges = agesRef.current;
+      const oldComp = compRef.current;
+      const { W: oldW, H: oldH } = dimRef.current;
+
       canvas.width  = W * CELL;
       canvas.height = H * CELL;
-      initGrid(W, H);
+
+      dimRef.current = { W, H };
+      gridRef.current = new Uint8Array(W * H);
+      agesRef.current = new Uint8Array(W * H);
+      updRef.current  = new Uint8Array(W * H);
+      compRef.current = new Uint16Array(W * H);
+
+      if (oldGrid && oldAges && oldW > 0 && oldH > 0) {
+        const copyW = Math.min(W, oldW);
+        const copyH = Math.min(H, oldH);
+        for (let y = 0; y < copyH; y++) {
+          for (let x = 0; x < copyW; x++) {
+            gridRef.current[y * W + x] = oldGrid[y * oldW + x];
+            agesRef.current[y * W + x] = oldAges[y * oldW + x];
+            if (oldComp) compRef.current[y * W + x] = oldComp[y * oldW + x];
+          }
+        }
+      }
     };
 
     resize();
     const ro = new ResizeObserver(resize);
     ro.observe(wrap);
     return () => ro.disconnect();
-  }, [initGrid]);
+  }, []);
 
   // Paint cells at canvas pixel position — with material interaction rules
   const paintAt = useCallback((px: number, py: number) => {
@@ -825,7 +848,8 @@ export default function Fluidos() {
           if (fire > 0)  parts.push(`<span style="color:#f97316">fuego</span>: ${fire}`);
           if (sand > 0)  parts.push(`<span style="color:#c2a96e">tierra</span>: ${sand}`);
           if (wall > 0)  parts.push(`<span style="color:#8b5e3c">madera</span>: ${wall}`);
-          statsLabelRef.current.innerHTML = parts.length ? parts.join(" · ") : "";
+          const body = parts.length ? parts.join(" · ") : `<span style="color:var(--ts-ink4)">none</span>`;
+          statsLabelRef.current.innerHTML = `<span style="color:var(--ts-ink3)">↳ elements:</span> ${body}`;
         }
       }
     };
@@ -1124,13 +1148,11 @@ export default function Fluidos() {
       }}>
 
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", gap: "1rem", fontFamily: "var(--ts-mono)", paddingTop: "1rem", paddingBottom: "0.6rem" }}>
-          <span style={{ fontSize: "0.75rem", color: "var(--ts-ink3)" }}>
-            ↳ herramienta:{" "}
-            <span style={{ color: toolColor }}>{toolLabel}</span>
-          </span>
-          <span ref={statsLabelRef} style={{ fontSize: "0.75rem", color: "var(--ts-ink4)", fontVariantNumeric: "tabular-nums" }} />
-          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", fontFamily: "var(--ts-mono)", paddingTop: "1rem", paddingBottom: "0.6rem" }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <span ref={statsLabelRef} style={{ fontSize: "0.75rem", color: "var(--ts-ink4)", fontVariantNumeric: "tabular-nums" }} />
+          </div>
+          <div style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
             <button
               onClick={() => setFullscreen(f => !f)}
               title={fullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
