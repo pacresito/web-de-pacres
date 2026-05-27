@@ -78,7 +78,8 @@ export default function TerminalShell({
       setAnimClass("ts-win-unmaximizing");
       setTimeout(() => router.push(dest), 900);
     } else {
-      router.push(dest);
+      setAnimClass("ts-chrome-leaving");
+      setTimeout(() => router.push(dest), 280);
     }
   };
 
@@ -130,7 +131,7 @@ export default function TerminalShell({
 
   if (variant === "chrome") {
     return (
-      <>
+      <div className={animClass} style={{ minHeight: "100dvh" }}>
         <style>{`
           @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
           :root {
@@ -148,13 +149,17 @@ export default function TerminalShell({
           }
           .ts-nav-btn:hover { color: #16140f; }
           .ts-nav-btn:disabled { color: var(--ts-ink4); cursor: default; }
-          .ts-nav-collapsing { display: none; }
+          @keyframes ts-chrome-leave {
+            from { opacity: 1; transform: translateY(0); }
+            to   { opacity: 0; transform: translateY(-10px); }
+          }
+          .ts-chrome-leaving { animation: ts-chrome-leave 0.28s ease forwards; }
         `}</style>
         <div style={{ position: "sticky", top: 0, zIndex: 100 }}>
           {chromeBar}
         </div>
         {children}
-      </>
+      </div>
     );
   }
 
