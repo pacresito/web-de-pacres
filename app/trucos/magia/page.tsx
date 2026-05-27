@@ -581,7 +581,7 @@ export default function MagiaPage() {
         </button>
         {whyOpen && (
           <div ref={whyRef} className="ts-why-box" style={{ maxWidth: 420, textAlign: "left" }}>
-            <p>Me interesaba mezclar dos tipos de ilusión en el mismo truco. Uno funciona con matemáticas — la estructura del reparto tiene una propiedad que garantiza el resultado. El otro funciona con el idioma — el castellano, sin quererlo, nos deja pocas salidas en ciertos rincones del abecedario.</p>
+            <p>Me interesaba mezclar dos tipos de ilusión en el mismo truco. Uno funciona con matemáticas: la estructura del reparto tiene una propiedad que garantiza el resultado. El otro funciona con el idioma: el castellano, sin quererlo, nos deja pocas salidas en ciertos rincones del abecedario.</p>
             <p>Ninguno de los dos requiere habilidad. Solo diseño.</p>
             <p style={{ color: "var(--ts-ink4)", fontSize: "0.72rem" }}>↳ Creado el 6 de mayo de 2026</p>
           </div>
