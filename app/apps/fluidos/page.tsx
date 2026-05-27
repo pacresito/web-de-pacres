@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import TerminalShell from "../../components/TerminalShell";
+import WhyFooter from "../../components/WhyFooter";
 
 const CELL = 2;
 const EMPTY = 0, SAND = 1, WATER = 2, FIRE = 3, WALL = 4, VAPOR = 5;
@@ -23,7 +24,6 @@ const TOOL_DEFS: { id: Tool; label: string; key: string; color: string; border: 
 
 export default function Fluidos() {
   const [whyOpen, setWhyOpen] = useState(false);
-  const whyRef    = useRef<HTMLDivElement>(null);
   const whyOpenRef = useRef(false);
 
   useEffect(() => {
@@ -1198,26 +1198,12 @@ export default function Fluidos() {
             </div>
 
             {/* Footer */}
-            <footer style={{ marginTop: "auto", paddingTop: "1.5rem", paddingBottom: "1.25rem", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem" }}>
-              <button
-                className="ts-why-btn"
-                onClick={() => { const next = !whyOpen; setWhyOpen(next); if (next) setTimeout(() => whyRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }), 50); }}
-              >
-                ¿Por qué un simulador de fluidos?
-                <svg width="10" height="10" viewBox="0 0 10 10" style={{ transform: whyOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}>
-                  <path d="M1 3L5 7L9 3" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
-              {whyOpen && (
-                <div ref={whyRef} className="ts-why-box" style={{ maxWidth: 420, textAlign: "left" }}>
-                  <p>Un autómata celular de partículas es una simulación sobre una cuadrícula donde cada celda sigue reglas locales simples.</p>
-                  <p>De esas reglas emergen comportamientos complejos: agua fluyendo, arena acumulándose, fuego propagándose.</p>
-                  <p>Este enfoque se usa en videojuegos, simulaciones físicas y sistemas educativos por su simplicidad y eficiencia.</p>
-                  <p>En este experimento: la arena cae, el agua fluye, el fuego se expande, y cada elemento interactúa solo con sus vecinos inmediatos.</p>
-                  <p style={{ color: "var(--ts-ink4)", fontSize: "0.72rem" }}>↳ Creado el 8 de mayo de 2026</p>
-                </div>
-              )}
-            </footer>
+            <WhyFooter question="¿Por qué un simulador de fluidos?" date="8 de mayo de 2026" onOpenChange={setWhyOpen} style={{ marginTop: "auto" }}>
+              <p>Un autómata celular de partículas es una simulación sobre una cuadrícula donde cada celda sigue reglas locales simples.</p>
+              <p>De esas reglas emergen comportamientos complejos: agua fluyendo, arena acumulándose, fuego propagándose.</p>
+              <p>Este enfoque se usa en videojuegos, simulaciones físicas y sistemas educativos por su simplicidad y eficiencia.</p>
+              <p>En este experimento: la arena cae, el agua fluye, el fuego se expande, y cada elemento interactúa solo con sus vecinos inmediatos.</p>
+            </WhyFooter>
           </>
         )}
 

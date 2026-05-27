@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import TerminalShell from "../../components/TerminalShell";
+import WhyFooter from "../../components/WhyFooter";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -364,8 +365,6 @@ export default function MagiaPage() {
   const [deck, setDeck] = useState<Beast[]>(() => weave(buildBeastDeck()));
   const [round, setRound] = useState(0);
   const [guideIdx, setGuideIdx] = useState(0);
-  const [whyOpen, setWhyOpen] = useState(false);
-  const whyRef = useRef<HTMLDivElement>(null);
   const lastGuideIdxRef = useRef(-1);
   const [spinStarted, setSpinStarted] = useState(false);
   const [spinDone, setSpinDone] = useState(false);
@@ -569,24 +568,10 @@ export default function MagiaPage() {
       )}
 
       {/* footer */}
-      <div style={{ marginTop: "auto", paddingTop: "1.5rem", paddingBottom: "1.25rem", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem" }}>
-        <button
-          className="ts-why-btn"
-          onClick={() => { const next = !whyOpen; setWhyOpen(next); if (next) setTimeout(() => whyRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }), 50); }}
-        >
-          ¿Por qué un truco de magia?
-          <svg width="10" height="10" viewBox="0 0 10 10" style={{ transform: whyOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}>
-            <path d="M1 3L5 7L9 3" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
-        {whyOpen && (
-          <div ref={whyRef} className="ts-why-box" style={{ maxWidth: 420, textAlign: "left" }}>
-            <p>Me interesaba mezclar dos tipos de ilusión en el mismo truco. Uno funciona con matemáticas: la estructura del reparto tiene una propiedad que garantiza el resultado. El otro funciona con el idioma: el castellano, sin quererlo, nos deja pocas salidas en ciertos rincones del abecedario.</p>
-            <p>Ninguno de los dos requiere habilidad. Solo diseño.</p>
-            <p style={{ color: "var(--ts-ink4)", fontSize: "0.72rem" }}>↳ Creado el 6 de mayo de 2026</p>
-          </div>
-        )}
-      </div>
+      <WhyFooter question="¿Por qué un truco de magia?" date="6 de mayo de 2026" style={{ marginTop: "auto" }}>
+        <p>Me interesaba mezclar dos tipos de ilusión en el mismo truco. Uno funciona con matemáticas: la estructura del reparto tiene una propiedad que garantiza el resultado. El otro funciona con el idioma: el castellano, sin quererlo, nos deja pocas salidas en ciertos rincones del abecedario.</p>
+        <p>Ninguno de los dos requiere habilidad. Solo diseño.</p>
+      </WhyFooter>
     </div>
     </TerminalShell>
   );

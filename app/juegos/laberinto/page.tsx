@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import TerminalShell from "../../components/TerminalShell";
+import WhyFooter from "../../components/WhyFooter";
 
 const COLS = 9;
 const ROWS = 9;
@@ -242,8 +243,6 @@ export default function Laberinto() {
   const tiltYRef = useRef<HTMLSpanElement>(null);
   const tiltXRef = useRef<HTMLSpanElement>(null);
 
-  const [whyOpen, setWhyOpen] = useState(false);
-  const whyRef = useRef<HTMLDivElement>(null);
   const [score, setScore] = useState(0);
   const [timeLeft, setTimeLeft] = useState(GAME_DURATION);
   const [gameOver, setGameOver] = useState(false);
@@ -1115,24 +1114,12 @@ export default function Laberinto() {
                 ? "Toca el tablero para activar el giroscopio"
                 : "Mueve el ratón o toca el tablero para inclinar"}
             </p>
-            <button
-              className="ts-why-btn"
-              onClick={() => { const next = !whyOpen; setWhyOpen(next); if (next) setTimeout(() => whyRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }), 50); }}
-            >
-              ¿Por qué un laberinto?
-              <svg width="10" height="10" viewBox="0 0 10 10" style={{ transform: whyOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}>
-                <path d="M1 3L5 7L9 3" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-            {whyOpen && (
-              <div ref={whyRef} className="ts-why-box" style={{ maxWidth: 420, textAlign: "left" }}>
-                <p>El laberinto usa una variante de la heurística de Warnsdorff para generar un único corredor que recorre las 77 celdas disponibles exactamente una vez, sin bifurcaciones ni callejones sin salida.</p>
-                <p>Antes de generar el camino se colocan cuatro agujeros aleatorios. El sistema analiza los giros del recorrido y solo acepta laberintos donde al menos dos curvas apunten hacia un agujero, creando falsas pistas y aumentando la dificultad.</p>
-                <p>La salida siempre aparece al final del recorrido generado.</p>
-                <p>Aproximadamente 1 de cada 100 generaciones cumple esas condiciones.</p>
-                <p style={{ color: "var(--ts-ink4)", fontSize: "0.72rem" }}>↳ Creado el 1 de mayo de 2026</p>
-              </div>
-            )}
+            <WhyFooter question="¿Por qué un laberinto?" date="1 de mayo de 2026" style={{ paddingTop: 0, paddingBottom: 0 }}>
+              <p>El laberinto usa una variante de la heurística de Warnsdorff para generar un único corredor que recorre las 77 celdas disponibles exactamente una vez, sin bifurcaciones ni callejones sin salida.</p>
+              <p>Antes de generar el camino se colocan cuatro agujeros aleatorios. El sistema analiza los giros del recorrido y solo acepta laberintos donde al menos dos curvas apunten hacia un agujero, creando falsas pistas y aumentando la dificultad.</p>
+              <p>La salida siempre aparece al final del recorrido generado.</p>
+              <p>Aproximadamente 1 de cada 100 generaciones cumple esas condiciones.</p>
+            </WhyFooter>
           </div>
         </>
       )}

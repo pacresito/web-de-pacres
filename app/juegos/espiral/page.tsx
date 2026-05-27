@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import TerminalShell from "../../components/TerminalShell";
+import WhyFooter from "../../components/WhyFooter";
 
 // ─── Game logic ───────────────────────────────────────────────────────────────
 
@@ -276,8 +277,6 @@ export default function EspiralPage() {
   const router = useRouter();
 
   const [fullscreen, setFullscreen] = useState(false);
-  const [whyOpen, setWhyOpen] = useState(false);
-  const whyRef = useRef<HTMLDivElement>(null);
 
   const r0 = PATH_RIGHT[0], r1 = PATH_RIGHT[1];
   const rlen = Math.hypot(r1.x - r0.x, r1.y - r0.y);
@@ -537,27 +536,12 @@ export default function EspiralPage() {
 
         {/* footer */}
         {!fullscreen && (
-          <div style={{ marginTop: "auto", paddingTop: "1rem", width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
-            <button
-              className="ts-why-btn"
-              onClick={() => { const next = !whyOpen; setWhyOpen(next); if (next) setTimeout(() => whyRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }), 50); }}
-            >
-              ¿Por qué una espiral?
-              <svg width="10" height="10" viewBox="0 0 10 10" style={{ transform: whyOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}>
-                <path d="M1 3L5 7L9 3" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-
-            {whyOpen && (
-              <div ref={whyRef} className="ts-why-box">
-                <p>Este fue el primer experimento de la web. La idea era partir de una estructura mínima y fácil de entender, pero difícil de dominar.</p>
-                <p>Me gusta distinguir tres conceptos que se mezclan a menudo.</p>
-                <p>Simple se refiere a la cantidad de elementos y reglas: dos espirales, dos pelotas, dos controles. Sencillo describe lo fácil que es entender el objetivo: se comprende de inmediato. Difícil hace referencia a lo que cuesta dominarlo: coordinar ambas acciones a la vez exige atención y precisión.</p>
-                <p>En el extremo opuesto estaría un juego de rol con cien reglas cuya primera misión es "habla con el aldeano de enfrente": complejo, complicado, pero fácil.</p>
-                <p style={{ color: "var(--ts-ink4)", fontSize: "0.72rem" }}>↳ Creado el 30 de abril de 2026</p>
-              </div>
-            )}
-          </div>
+          <WhyFooter question="¿Por qué una espiral?" date="30 de abril de 2026" style={{ marginTop: "auto", width: "100%", paddingTop: "1rem" }}>
+            <p>Este fue el primer experimento de la web. La idea era partir de una estructura mínima y fácil de entender, pero difícil de dominar.</p>
+            <p>Me gusta distinguir tres conceptos que se mezclan a menudo.</p>
+            <p>Simple se refiere a la cantidad de elementos y reglas: dos espirales, dos pelotas, dos controles. Sencillo describe lo fácil que es entender el objetivo: se comprende de inmediato. Difícil hace referencia a lo que cuesta dominarlo: coordinar ambas acciones a la vez exige atención y precisión.</p>
+            <p>En el extremo opuesto estaría un juego de rol con cien reglas cuya primera misión es "habla con el aldeano de enfrente": complejo, complicado, pero fácil.</p>
+          </WhyFooter>
         )}
       </div>
     </TerminalShell>

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import TerminalShell from "../../components/TerminalShell";
+import WhyFooter from "../../components/WhyFooter";
 
 type Phase = "idle" | "drawing" | "score" | "alive" | "caught";
 
@@ -38,8 +39,6 @@ export default function CirculoPerfecto() {
   const circleHoldStartRef = useRef<number | null>(null);
 
   const [sz, setSz] = useState(0);
-  const [whyOpen, setWhyOpen] = useState(false);
-  const whyRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     certNumRef.current = Math.floor(Math.random() * 900000) + 100000;
@@ -438,26 +437,12 @@ export default function CirculoPerfecto() {
       </div>
 
       {/* Footer */}
-      <div style={{ marginTop: "auto", paddingTop: "1.5rem", paddingBottom: "0.5rem", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem", width: "100%" }}>
-        <button
-          className="ts-why-btn"
-          onClick={() => { const next = !whyOpen; setWhyOpen(next); if (next) setTimeout(() => whyRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }), 50); }}
-        >
-          ¿Por qué un círculo perfecto?
-          <svg width="10" height="10" viewBox="0 0 10 10" style={{ transform: whyOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}>
-            <path d="M1 3L5 7L9 3" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
-        {whyOpen && (
-          <div ref={whyRef} className="ts-why-box" style={{ maxWidth: 420, textAlign: "left" }}>
-            <p>Intentar dibujar un círculo perfecto a mano es una tarea condenada al fracaso, y precisamente por eso resulta interesante.</p>
-            <p>El sistema evalúa tu trazo, decide si se acerca lo suficiente a una circunferencia ideal y, cuando lo consigue, cambia las reglas.</p>
-            <p>Es una broma, pero también una forma de recordar que muchos objetivos «perfectos» funcionan así: parecen alcanzables hasta el momento exacto en el que llegas a ellos.</p>
-            <p>Hize otro «truco» similar, pero no funcionaba muy bien en mobile. Puedes probarlo aquí si tienes curiosidad: <a href="/trucos/objetivo" style={{ color: "var(--ts-accent)", textDecoration: "none" }}>Alcanza tus objetivos</a>.</p>
-            <p style={{ color: "var(--ts-ink4)", fontSize: "0.72rem" }}>↳ Creado el 6 de mayo de 2026</p>
-          </div>
-        )}
-      </div>
+      <WhyFooter question="¿Por qué un círculo perfecto?" date="6 de mayo de 2026" style={{ marginTop: "auto", width: "100%", paddingBottom: "0.5rem" }}>
+        <p>Intentar dibujar un círculo perfecto a mano es una tarea condenada al fracaso, y precisamente por eso resulta interesante.</p>
+        <p>El sistema evalúa tu trazo, decide si se acerca lo suficiente a una circunferencia ideal y, cuando lo consigue, cambia las reglas.</p>
+        <p>Es una broma, pero también una forma de recordar que muchos objetivos «perfectos» funcionan así: parecen alcanzables hasta el momento exacto en el que llegas a ellos.</p>
+        <p>Hize otro «truco» similar, pero no funcionaba muy bien en mobile. Puedes probarlo aquí si tienes curiosidad: <a href="/trucos/objetivo" style={{ color: "var(--ts-accent)", textDecoration: "none" }}>Alcanza tus objetivos</a>.</p>
+      </WhyFooter>
     </div>
     </TerminalShell>
   );
