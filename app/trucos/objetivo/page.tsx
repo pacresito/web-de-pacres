@@ -719,7 +719,7 @@ export default function SigueTusSuenos() {
             </div>
           </div>
           <button onClick={playAgain} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ts-ink3)", fontSize: "0.85rem", fontFamily: "var(--ts-mono)" }}>
-            Otra vez →
+            volver a intentarlo
           </button>
         </div>
       )}

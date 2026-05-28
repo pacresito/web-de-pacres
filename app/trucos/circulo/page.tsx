@@ -432,7 +432,7 @@ export default function CirculoPerfecto() {
                 </div>
               </div>
               <button onClick={reset} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ts-ink3)", fontSize: "0.78rem", fontFamily: "var(--ts-mono)", padding: "0.5rem" }}>
-                Volver a intentarlo
+                volver a intentarlo
               </button>
             </div>
           )}
