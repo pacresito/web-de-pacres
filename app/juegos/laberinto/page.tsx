@@ -1104,7 +1104,7 @@ export default function Laberinto() {
 
   return (
     <TerminalShell title="laberinto" prompt={{ host: "laberinto", path: "~/juegos", command: "./laberinto --holes=4" }} hideChrome={fullscreen}>
-    <main style={{ minHeight: "100%", position: "relative", userSelect: "none" }} className="flex flex-col items-center justify-start px-4 py-12 gap-8 overflow-x-auto">
+    <main style={{ minHeight: "100%", position: "relative", userSelect: "none" }} className={`flex flex-col items-center px-4 gap-8 overflow-x-auto ${fullscreen ? "justify-center py-4" : "justify-start py-12"}`}>
       {header}
 
       {boardEl}
