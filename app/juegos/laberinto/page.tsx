@@ -1004,9 +1004,7 @@ export default function Laberinto() {
             height={BOARD_H}
             style={{ display: "block", cursor: "pointer" }}
             onClick={() => {
-              if (!g.current.hasMouse && !g.current.hasOrient) {
-                g.current.hasMouse = true;
-              }
+              g.current.hasMouse = true;
             }}
             onTouchStart={(e) => {
               if (orientState === "on") { calibrateOrientation(); return; }
