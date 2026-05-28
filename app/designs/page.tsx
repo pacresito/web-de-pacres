@@ -147,7 +147,7 @@ function TabsBar({ onCvClick, onLabClick }: { onCvClick: () => void; onLabClick:
         ))}
       </div>
       <div style={{ fontFamily: "var(--t-mono)", fontSize: 10, color: "var(--t-ink3)", paddingBottom: 8 }} className="t-session-meta">
-        session #04 — bitácora
+        session #06 — terminal
       </div>
     </div>
   );

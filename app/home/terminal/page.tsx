@@ -364,7 +364,7 @@ function TabsBar({ onLabClick, onDesignsClick }: { onLabClick: () => void; onDes
         ))}
       </div>
       <div style={{ fontFamily: "var(--t-mono)", fontSize: 10, color: "var(--t-ink3)", paddingBottom: 8 }} className="t-session-meta">
-        session #04 — bitácora
+        session #06 — terminal
       </div>
     </div>
   );
