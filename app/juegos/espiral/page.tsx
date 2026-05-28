@@ -431,7 +431,7 @@ export default function EspiralPage() {
       `}</style>
 
       {/* game area */}
-      <div style={{ padding: "28px", display: "flex", flexDirection: "column", alignItems: "center", gap: "1.5rem" }}>
+      <div style={{ padding: fullscreen ? "16px" : "28px", display: "flex", flexDirection: "column", alignItems: "center", gap: "1.5rem", minHeight: fullscreen ? "100%" : undefined, justifyContent: fullscreen ? "center" : undefined }}>
 
         {/* status row */}
         <div style={{ display: "flex", alignItems: "center", gap: "1rem", fontFamily: MONO }}>
