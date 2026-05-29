@@ -1116,13 +1116,6 @@ export default function TerminalHome() {
   const [windowState, setWindowState] = useState<"normal" | "minimized" | "maximized">("normal");
   const [animClass, setAnimClass] = useState("");
   const [dockAnimOut, setDockAnimOut] = useState(false);
-  const [winWidth, setWinWidth] = useState(0);
-  useEffect(() => {
-    setWinWidth(window.innerWidth);
-    const onResize = () => setWinWidth(window.innerWidth);
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
   const toggleExpanded = (id: string, el?: HTMLElement) => {
     const isExpanding = expandedRow !== id;
     setExpandedRow((prev) => prev === id ? null : id);
@@ -1358,8 +1351,8 @@ export default function TerminalHome() {
           undefined,
       }}>
         <div className={animClass} style={{
-          "--win-w": winWidth ? `${winWidth}px` : "100vw",
-          width: winWidth ? (isMax ? winWidth : Math.min(920, winWidth)) : "100%",
+          "--win-w": "100vw",
+          width: isMax ? "100vw" : "min(920px, 100%)",
           maxWidth: "none",
           background: "var(--t-paper)",
           borderRadius: isMax ? 0 : 12,
