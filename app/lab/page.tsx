@@ -554,7 +554,7 @@ export default function Laboratorio() {
             isMaximized={windowState === "maximized" || animClass === "t-win-maximizing"}
           />
           <TabsBar
-            onCvClick={() => router.push("/home/terminal")}
+            onCvClick={() => router.push("/cv")}
             onDesignsClick={() => router.push("/designs")}
           />
 

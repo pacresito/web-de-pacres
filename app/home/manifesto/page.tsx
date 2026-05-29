@@ -1037,7 +1037,7 @@ export default function Manifesto() {
 
   const handleNavigateToTerminal = useCallback(() => {
     setFullWhite(true);
-    setTimeout(() => router.push("/home/terminal"), 2020);
+    setTimeout(() => router.push("/cv"), 2020);
   }, [router]);
 
   return (
@@ -1242,7 +1242,7 @@ export default function Manifesto() {
                       {ai > 0 && " "}
                       {a === "Resolución de problemas" ? (
                         <a
-                          href="/home/terminal"
+                          href="/cv"
                           className="vE-skill-shine"
                           {...(ai > 0 ? { "data-line-start": "0" } : {})}
                           onClick={(e) => { e.preventDefault(); const link = document.createElement("link"); link.rel = "stylesheet"; link.href = "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap"; document.head.appendChild(link); setSkillsMinHeight(skillsSectionRef.current?.offsetHeight); setSkillsMode("fading"); setTimeout(() => setSkillsMode("terminal"), 2000); }}
