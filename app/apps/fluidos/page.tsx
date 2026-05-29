@@ -11,7 +11,7 @@ const WATER_HEAT_MAX = 55;     // ticks for heated water to vaporize
 const VAPOR_CONDENSE_MAX = 90; // ticks for stuck vapor to condense back to water
 const SAND_EXCESS_MAX = 1700;  // max excess K above 300 K ambient (= 2000 K absolute)
 const SAND_HEAT_RATE = 50;     // excess K gained per tick (painting or fire adjacent)
-const SAND_COOL_RATE = 2;      // excess K lost per tick when cooling
+const SAND_COOL_RATE = 5;      // excess K lost per tick when cooling
 const MOVE = 98;
 
 // Piecewise-linear blackbody color ramp for sand (T in absolute Kelvin)
