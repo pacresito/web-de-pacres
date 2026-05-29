@@ -34,6 +34,8 @@ function calcCell(size: number) { return Math.floor(size / 12); }
 function calcTolerance(cell: number) { return Math.floor(cell * 0.36); }
 
 const SPEED = 0.8;
+const SPEED_MULTIPLIERS = { slow: 0.6, normal: 1.0, fast: 1.6 } as const;
+type SpeedLevel = keyof typeof SPEED_MULTIPLIERS;
 
 function buildPath() {
   const points: { x: number; y: number }[] = [];
@@ -147,7 +149,8 @@ function useBoard(
   path: typeof PATH_CELLS,
   turnDir: 1 | -1,
   initialVel: { x: number; y: number },
-  size: number
+  size: number,
+  speedRef: React.RefObject<number>
 ) {
   const originRef = useRef({ x: 0, y: 0 });
   const stateRef = useRef<BoardState>({ pos: { x: 0, y: 0 }, vel: { x: 0, y: 0 }, segIdx: 0, gameState: "idle" });
@@ -166,35 +169,51 @@ function useBoard(
     return pointToSegmentDist(pos, next, next2) < pointToSegmentDist(pos, cur, next) - 2;
   }
 
-  function loop() {
+  const lastTimeRef = useRef(0);
+  const accumRef = useRef(0);
+
+  function loop(now: number) {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d")!;
     const s = stateRef.current;
-    const origin = originRef.current;
-    const sz = canvas.width;
     const cs = cellRef.current;
 
-    if (s.gameState !== "playing") { drawBoard(ctx, sz, path, origin, s, goalCell, cs); return; }
-
-    s.pos.x += s.vel.x;
-    s.pos.y += s.vel.y;
-
-    while (s.segIdx < path.length - 2 && isCloserToNext(s.pos, s.segIdx)) s.segIdx++;
-
-    const goalPx = cellToPixel(goalCell, origin, cs);
-    if (Math.hypot(s.pos.x - goalPx.x, s.pos.y - goalPx.y) < cs / 2) {
-      s.gameState = "win"; setGameState("win");
-      drawBoard(ctx, sz, path, origin, s, goalCell, cs); return;
+    if (s.gameState !== "playing") {
+      drawBoard(ctx, canvas.width, path, originRef.current, s, goalCell, cs);
+      return;
     }
 
-    const offDist = pointToSegmentDist(s.pos, cellToPixel(path[s.segIdx], origin, cs), cellToPixel(path[s.segIdx + 1], origin, cs));
-    if (offDist > calcTolerance(cs)) {
-      s.gameState = "dead"; setGameState("dead");
-      drawBoard(ctx, sz, path, origin, s, goalCell, cs); return;
+    if (document.hidden) { lastTimeRef.current = now; accumRef.current = 0; animRef.current = requestAnimationFrame(loop); return; }
+
+    const STEP_MS = 1000 / 60;
+    const delta = now - lastTimeRef.current;
+    lastTimeRef.current = now;
+    accumRef.current = Math.min(accumRef.current + delta, STEP_MS * 5);
+
+    while (accumRef.current >= STEP_MS) {
+      const mult = speedRef.current ?? 1;
+      s.pos.x += s.vel.x * mult;
+      s.pos.y += s.vel.y * mult;
+
+      while (s.segIdx < path.length - 2 && isCloserToNext(s.pos, s.segIdx)) s.segIdx++;
+
+      const goalPx = cellToPixel(goalCell, originRef.current, cs);
+      if (Math.hypot(s.pos.x - goalPx.x, s.pos.y - goalPx.y) < cs / 2) {
+        s.gameState = "win"; setGameState("win");
+        drawBoard(ctx, canvas.width, path, originRef.current, s, goalCell, cs); return;
+      }
+
+      const offDist = pointToSegmentDist(s.pos, cellToPixel(path[s.segIdx], originRef.current, cs), cellToPixel(path[s.segIdx + 1], originRef.current, cs));
+      if (offDist > calcTolerance(cs)) {
+        s.gameState = "dead"; setGameState("dead");
+        drawBoard(ctx, canvas.width, path, originRef.current, s, goalCell, cs); return;
+      }
+
+      accumRef.current -= STEP_MS;
     }
 
-    drawBoard(ctx, sz, path, origin, s, goalCell, cs);
+    drawBoard(ctx, canvas.width, path, originRef.current, s, goalCell, cs);
     animRef.current = requestAnimationFrame(loop);
   }
 
@@ -234,6 +253,8 @@ function useBoard(
   useEffect(() => {
     if (gameState === "playing") {
       cancelAnimationFrame(animRef.current);
+      lastTimeRef.current = performance.now();
+      accumRef.current = 0;
       animRef.current = requestAnimationFrame(loop);
     }
     return () => cancelAnimationFrame(animRef.current);
@@ -282,9 +303,18 @@ export default function EspiralPage() {
   const rlen = Math.hypot(r1.x - r0.x, r1.y - r0.y);
   const rightVel = { x: ((r1.x - r0.x) / rlen) * SPEED, y: ((r1.y - r0.y) / rlen) * SPEED };
 
+  const [speed, setSpeed] = useState<SpeedLevel>("normal");
+  const speedRef = useRef<number>(SPEED_MULTIPLIERS.normal as number);
+  useEffect(() => { speedRef.current = SPEED_MULTIPLIERS[speed]; }, [speed]);
+
+  const SPEED_CYCLE: SpeedLevel[] = ["slow", "normal", "fast"];
+  function cycleSpeed() {
+    setSpeed(s => SPEED_CYCLE[(SPEED_CYCLE.indexOf(s) + 1) % SPEED_CYCLE.length]);
+  }
+
   const size = useCanvasSize();
-  const left = useBoard(canvasL, PATH_CELLS, -1, { x: SPEED, y: 0 }, size);
-  const right = useBoard(canvasR, PATH_RIGHT, -1, rightVel, size);
+  const left = useBoard(canvasL, PATH_CELLS, -1, { x: SPEED, y: 0 }, size, speedRef);
+  const right = useBoard(canvasR, PATH_RIGHT, -1, rightVel, size, speedRef);
 
   const bothWin = left.gameState === "win" && right.gameState === "win";
   const [firstWin, setFirstWin] = useState<"left" | "right" | null>(null);
@@ -444,6 +474,14 @@ export default function EspiralPage() {
             <span style={{ color: right.gameState === "win" ? "var(--ts-accent)" : right.gameState === "dead" ? "#e55" : "var(--ts-ink2)" }}>
               {right.gameState}
             </span>
+            {"  --speed: "}
+            <button
+              onClick={cycleSpeed}
+              style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: "inherit", fontSize: "inherit", color: "var(--ts-accent)", transition: "opacity 0.15s" }}
+              onMouseEnter={e => (e.currentTarget.style.opacity = "0.7")}
+              onMouseLeave={e => (e.currentTarget.style.opacity = "1")}
+              title="Cambiar velocidad"
+            >{speed}</button>
           </span>
           {(left.gameState !== "idle" || right.gameState !== "idle") && !bothWin && (
             <span style={{ fontSize: "0.75rem", color: "var(--ts-ink3)", fontVariantNumeric: "tabular-nums" }}>{elapsed}s</span>
