@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, Fragment, useCallback } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
 
 type Rec = { texto: string; autor: string; cargo: string; photo: string; href: string };
@@ -641,14 +641,116 @@ const STYLES = `
     transform: translateY(0);
   }
 }
+.vE-t-cursor { display: inline-block; width: 6px; height: 11px; background: #16140f; vertical-align: middle; margin-left: 1px; animation: vE-t-blink 0.7s steps(1) infinite; }
+@keyframes vE-t-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+@keyframes vE-skill-in { from { opacity: 0; transform: translateX(-4px); } to { opacity: 1; transform: none; } }
+.vE-secret-pill { position: relative; overflow: hidden; }
+.vE-secret-pill::after { content: ""; position: absolute; top: -50%; left: -75%; width: 50%; height: 200%; background: linear-gradient(120deg, transparent 0%, rgba(0,184,122,0.12) 40%, rgba(0,184,122,0.5) 50%, rgba(0,184,122,0.12) 60%, transparent 100%); transform: skewX(-20deg); animation: vE-lime-sweep 10s ease-in-out infinite; }
+@keyframes vE-lime-sweep { 0%, 88% { left: -75%; opacity: 1; } 97% { left: 150%; opacity: 1; } 98%, 100% { left: 150%; opacity: 0; } }
 `;
+
+const TERMINAL_CMD = "cv skills | sort -R";
+const pillBase: React.CSSProperties = {
+  fontFamily: '"JetBrains Mono", "IBM Plex Mono", monospace',
+  fontSize: 9,
+  padding: "2px 8px",
+  border: "1px solid #ebe6d9",
+  color: "#b8b3a6",
+  borderRadius: 999,
+  textTransform: "uppercase",
+  display: "inline-block",
+  letterSpacing: "0.04em",
+};
+
+function SkillsTerminalInline({ onNavigate }: { onNavigate: () => void }) {
+  const [displayed, setDisplayed] = useState("");
+  const [execMs, setExecMs] = useState<number | null>(null);
+  const [visibleCount, setVisibleCount] = useState(0);
+  const skills = APTITUDES.map(a => a.toLowerCase());
+  const cmdDone = displayed.length >= TERMINAL_CMD.length;
+
+  useEffect(() => {
+    let i = 0;
+    const t = setTimeout(() => {
+      const iv = setInterval(() => {
+        i++;
+        setDisplayed(TERMINAL_CMD.slice(0, i));
+        if (i >= TERMINAL_CMD.length) {
+          clearInterval(iv);
+          const ms = TERMINAL_CMD.length * 6 + Math.floor(Math.random() * 31) - 15;
+          setTimeout(() => setExecMs(ms), 90);
+        }
+      }, 52);
+      return () => clearInterval(iv);
+    }, 120);
+    return () => clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    if (!cmdDone) return;
+    let count = 0;
+    const iv = setInterval(() => {
+      count++;
+      setVisibleCount(count);
+      if (count >= skills.length) clearInterval(iv);
+    }, 70);
+    return () => clearInterval(iv);
+  }, [cmdDone]);
+
+  return (
+    <div style={{ padding: "18px 28px 8px", fontFamily: '"JetBrains Mono", "IBM Plex Mono", monospace' }}>
+      <div style={{ display: "grid", gridTemplateColumns: "44px 1fr auto", gap: "0 12px", alignItems: "baseline", marginBottom: 12 }}>
+        <span style={{ fontSize: 11, color: "#b8b3a6" }}>004</span>
+        <span style={{ fontSize: 13.5 }}>
+          <span style={{ color: "#009764" }}>pacres</span>
+          <span style={{ color: "#7a766b" }}>@resume</span>
+          <span style={{ color: "#3d3a32" }}>:~/cv</span>
+          <span style={{ color: "#7a766b" }}>$ </span>
+          <span style={{ color: "#16140f" }}>{displayed}</span>
+          {!cmdDone && <span className="vE-t-cursor" />}
+        </span>
+        <span style={{ fontSize: 10, color: "#7a766b", visibility: execMs !== null ? "visible" : "hidden" }}>
+          ↳ {execMs ?? 0}ms
+        </span>
+      </div>
+      {cmdDone && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 5, paddingLeft: 56 }}>
+          {skills.map((skill, idx) => {
+            const revealed = idx < visibleCount;
+            const isSecret = skill === "resolución de problemas";
+            return (
+              <span
+                key={skill}
+                onClick={isSecret && revealed ? onNavigate : undefined}
+                className={isSecret && revealed ? "vE-secret-pill" : undefined}
+                style={{
+                  ...pillBase,
+                  visibility: revealed ? undefined : "hidden",
+                  animation: revealed ? "vE-skill-in 0.15s ease-out both" : undefined,
+                  cursor: isSecret && revealed ? "pointer" : "default",
+                }}
+              >
+                {skill}
+              </span>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Manifesto() {
   const pathname = usePathname();
+  const router = useRouter();
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [navOpen, setNavOpen] = useState(false);
   const [palabraIdx, setPalabraIdx] = useState(0);
+  const [skillsMode, setSkillsMode] = useState<"default" | "terminal">("default");
+  const [fullWhite, setFullWhite] = useState(false);
+  const [skillsMinHeight, setSkillsMinHeight] = useState<number | undefined>();
   const skillsRef = useRef<HTMLParagraphElement>(null);
+  const skillsSectionRef = useRef<HTMLElement>(null);
   const physicsActiveRef = useRef(false);
   const restoreRef = useRef<(() => void) | null>(null);
 
@@ -932,8 +1034,20 @@ export default function Manifesto() {
     localStorage.setItem("manifesto-theme", t);
   };
 
+  const handleNavigateToTerminal = useCallback(() => {
+    setFullWhite(true);
+    setTimeout(() => router.push("/home/terminal"), 320);
+  }, [router]);
+
   return (
     <>
+      <div style={{
+        position: "fixed", inset: 0, background: "#f7f4ed",
+        opacity: fullWhite ? 1 : 0,
+        transition: "opacity 300ms",
+        zIndex: 9999,
+        pointerEvents: fullWhite ? "all" : "none",
+      }} />
       <style>{STYLES}</style>
       <div className="vE wf-page" data-theme={theme}>
 
@@ -1108,24 +1222,46 @@ export default function Manifesto() {
           </section>
 
           {/* APTITUDES */}
-          <section className="vE-skills vE-reveal" id="skills">
-            <div className="vE-skills__k">— APTITUDES —</div>
-            <p className="vE-skills__list" ref={skillsRef}>
-              {APTITUDES.map((a, ai) => (
-                <Fragment key={a}>
-                  {ai > 0 && " "}
-                  {a === "Resolución de problemas" ? (
-                    <a href="/home/terminal" className="vE-skill-shine" {...(ai > 0 ? { "data-line-start": "0" } : {})}>
-                      {ai > 0 && <em className="vE-dot">· </em>}{a}
-                    </a>
-                  ) : (
-                    <span {...(ai > 0 ? { "data-line-start": "0" } : {})}>
-                      {ai > 0 && <em className="vE-dot">· </em>}{a}
-                    </span>
-                  )}
-                </Fragment>
-              ))}
-            </p>
+          <section
+            ref={skillsSectionRef}
+            className="vE-skills vE-reveal"
+            id="skills"
+            style={skillsMode === "terminal" ? {
+              background: "#fafaf7",
+              transition: "background 0.3s",
+              borderBottom: "none",
+              marginTop: -1,
+              minHeight: skillsMinHeight,
+            } : undefined}
+          >
+            {skillsMode === "default" ? (
+              <>
+                <div className="vE-skills__k">— APTITUDES —</div>
+                <p className="vE-skills__list" ref={skillsRef}>
+                  {APTITUDES.map((a, ai) => (
+                    <Fragment key={a}>
+                      {ai > 0 && " "}
+                      {a === "Resolución de problemas" ? (
+                        <a
+                          href="/home/terminal"
+                          className="vE-skill-shine"
+                          {...(ai > 0 ? { "data-line-start": "0" } : {})}
+                          onClick={(e) => { e.preventDefault(); setSkillsMinHeight(skillsSectionRef.current?.offsetHeight); setSkillsMode("terminal"); }}
+                        >
+                          {ai > 0 && <em className="vE-dot">· </em>}{a}
+                        </a>
+                      ) : (
+                        <span {...(ai > 0 ? { "data-line-start": "0" } : {})}>
+                          {ai > 0 && <em className="vE-dot">· </em>}{a}
+                        </span>
+                      )}
+                    </Fragment>
+                  ))}
+                </p>
+              </>
+            ) : (
+              <SkillsTerminalInline onNavigate={handleNavigateToTerminal} />
+            )}
           </section>
 
           {/* CTA FINAL */}
