@@ -422,18 +422,7 @@ export default function EspiralPage() {
     <TerminalShell
       title="espiral"
       version="v4.0.0 · zsh"
-      prompt={{
-        host: "espiral", path: "~/juegos", command: "./espiral --mode=dual",
-        commandSuffix: (
-          <button
-            onClick={cycleSpeed}
-            style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: "inherit", fontSize: "inherit", color: "var(--ts-accent)", transition: "opacity 0.15s" }}
-            onMouseEnter={e => (e.currentTarget.style.opacity = "0.7")}
-            onMouseLeave={e => (e.currentTarget.style.opacity = "1")}
-            title="Cambiar velocidad"
-          >{` --speed=${speed}`}</button>
-        ),
-      }}
+      prompt={{ host: "espiral", path: "~/juegos", command: "./espiral --mode=dual" }}
       hideChrome={fullscreen}
     >
       <style>{`
@@ -485,6 +474,18 @@ export default function EspiralPage() {
             <span style={{ color: right.gameState === "win" ? "var(--ts-accent)" : right.gameState === "dead" ? "#e55" : "var(--ts-ink2)" }}>
               {right.gameState}
             </span>
+            {"  speed: "}
+            <button
+              onClick={cycleSpeed}
+              style={{
+                background: "none", border: "none", padding: 0, cursor: "pointer",
+                fontFamily: "inherit", fontSize: "inherit", transition: "opacity 0.15s",
+                color: speed === "slow" ? "#60a5fa" : speed === "fast" ? "#f97316" : "var(--ts-accent)",
+              }}
+              onMouseEnter={e => (e.currentTarget.style.opacity = "0.7")}
+              onMouseLeave={e => (e.currentTarget.style.opacity = "1")}
+              title="Cambiar velocidad"
+            >{speed}</button>
           </span>
           {(left.gameState !== "idle" || right.gameState !== "idle") && !bothWin && (
             <span style={{ fontSize: "0.75rem", color: "var(--ts-ink3)", fontVariantNumeric: "tabular-nums" }}>{elapsed}s</span>
