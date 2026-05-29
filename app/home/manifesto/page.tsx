@@ -285,7 +285,6 @@ function ThemeToggle({ theme, onChange }: { theme: "light" | "dark"; onChange: (
 }
 
 const STYLES = `
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 .vE {
   --ink:       #1a1a1a;
   --ink-2:     #2b2b2b;
@@ -1248,7 +1247,7 @@ export default function Manifesto() {
                           href="/home/terminal"
                           className="vE-skill-shine"
                           {...(ai > 0 ? { "data-line-start": "0" } : {})}
-                          onClick={(e) => { e.preventDefault(); setSkillsMinHeight(skillsSectionRef.current?.offsetHeight); setSkillsMode("fading"); setTimeout(() => setSkillsMode("terminal"), 2000); }}
+                          onClick={(e) => { e.preventDefault(); const link = document.createElement("link"); link.rel = "stylesheet"; link.href = "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap"; document.head.appendChild(link); setSkillsMinHeight(skillsSectionRef.current?.offsetHeight); setSkillsMode("fading"); setTimeout(() => setSkillsMode("terminal"), 2000); }}
                         >
                           {ai > 0 && <em className="vE-dot">· </em>}{a}
                         </a>
