@@ -33,8 +33,8 @@ function useCanvasSize() {
 function calcCell(size: number) { return Math.floor(size / 12); }
 function calcTolerance(cell: number) { return Math.floor(cell * 0.36); }
 
-const SPEED = 0.8;
-const SPEED_MULTIPLIERS = { slow: 0.6, normal: 1.0, fast: 1.6 } as const;
+const SPEED = 1.0;
+const SPEED_MULTIPLIERS = { slow: 1.0, normal: 1.5, fast: 2.0 } as const;
 type SpeedLevel = keyof typeof SPEED_MULTIPLIERS;
 
 function buildPath() {
@@ -303,7 +303,11 @@ export default function EspiralPage() {
   const rlen = Math.hypot(r1.x - r0.x, r1.y - r0.y);
   const rightVel = { x: ((r1.x - r0.x) / rlen) * SPEED, y: ((r1.y - r0.y) / rlen) * SPEED };
 
+<<<<<<< HEAD
   const [speed, setSpeed] = useState<SpeedLevel>("normal");
+=======
+  const [speed, setSpeed] = useState<SpeedLevel>("slow");
+>>>>>>> preview
   const speedRef = useRef<number>(SPEED_MULTIPLIERS.normal as number);
   useEffect(() => { speedRef.current = SPEED_MULTIPLIERS[speed]; }, [speed]);
 
@@ -474,10 +478,21 @@ export default function EspiralPage() {
             <span style={{ color: right.gameState === "win" ? "var(--ts-accent)" : right.gameState === "dead" ? "#e55" : "var(--ts-ink2)" }}>
               {right.gameState}
             </span>
+<<<<<<< HEAD
             {"  --speed: "}
             <button
               onClick={cycleSpeed}
               style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: "inherit", fontSize: "inherit", color: "var(--ts-accent)", transition: "opacity 0.15s" }}
+=======
+            {"  speed: "}
+            <button
+              onClick={cycleSpeed}
+              style={{
+                background: "none", border: "none", padding: 0, cursor: "pointer",
+                fontFamily: "inherit", fontSize: "inherit", transition: "opacity 0.15s",
+                color: speed === "slow" ? "#60a5fa" : speed === "fast" ? "#f97316" : "var(--ts-accent)",
+              }}
+>>>>>>> preview
               onMouseEnter={e => (e.currentTarget.style.opacity = "0.7")}
               onMouseLeave={e => (e.currentTarget.style.opacity = "1")}
               title="Cambiar velocidad"
