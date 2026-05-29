@@ -285,6 +285,7 @@ function ThemeToggle({ theme, onChange }: { theme: "light" | "dark"; onChange: (
 }
 
 const STYLES = `
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 .vE {
   --ink:       #1a1a1a;
   --ink-2:     #2b2b2b;
@@ -645,8 +646,9 @@ const STYLES = `
 @keyframes vE-t-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 @keyframes vE-skill-in { from { opacity: 0; transform: translateX(-4px); } to { opacity: 1; transform: none; } }
 .vE-secret-pill { position: relative; overflow: hidden; }
-.vE-secret-pill::after { content: ""; position: absolute; top: -50%; left: -75%; width: 50%; height: 200%; background: linear-gradient(120deg, transparent 0%, rgba(0,184,122,0.12) 40%, rgba(0,184,122,0.5) 50%, rgba(0,184,122,0.12) 60%, transparent 100%); transform: skewX(-20deg); animation: vE-lime-sweep 10s ease-in-out infinite; }
+.vE-secret-pill::after { content: ""; position: absolute; top: -50%; left: -75%; width: 50%; height: 200%; background: linear-gradient(120deg, transparent 0%, rgba(0,184,122,0.12) 40%, rgba(0,184,122,0.5) 50%, rgba(0,184,122,0.12) 60%, transparent 100%); transform: skewX(-20deg); animation: vE-lime-sweep 5s ease-in-out infinite; }
 @keyframes vE-lime-sweep { 0%, 88% { left: -75%; opacity: 1; } 97% { left: 150%; opacity: 1; } 98%, 100% { left: 150%; opacity: 0; } }
+@keyframes vE-section-in { from { opacity: 0; } to { opacity: 1; } }
 `;
 
 const TERMINAL_CMD = "cv skills | sort -R";
@@ -746,7 +748,7 @@ export default function Manifesto() {
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [navOpen, setNavOpen] = useState(false);
   const [palabraIdx, setPalabraIdx] = useState(0);
-  const [skillsMode, setSkillsMode] = useState<"default" | "terminal">("default");
+  const [skillsMode, setSkillsMode] = useState<"default" | "fading" | "terminal">("default");
   const [fullWhite, setFullWhite] = useState(false);
   const [skillsMinHeight, setSkillsMinHeight] = useState<number | undefined>();
   const skillsRef = useRef<HTMLParagraphElement>(null);
@@ -1036,7 +1038,7 @@ export default function Manifesto() {
 
   const handleNavigateToTerminal = useCallback(() => {
     setFullWhite(true);
-    setTimeout(() => router.push("/home/terminal"), 320);
+    setTimeout(() => router.push("/home/terminal"), 2020);
   }, [router]);
 
   return (
@@ -1044,7 +1046,7 @@ export default function Manifesto() {
       <div style={{
         position: "fixed", inset: 0, background: "#f7f4ed",
         opacity: fullWhite ? 1 : 0,
-        transition: "opacity 300ms",
+        transition: "opacity 2000ms",
         zIndex: 9999,
         pointerEvents: fullWhite ? "all" : "none",
       }} />
@@ -1226,12 +1228,12 @@ export default function Manifesto() {
             ref={skillsSectionRef}
             className="vE-skills vE-reveal"
             id="skills"
-            style={skillsMode === "terminal" ? {
-              background: "#fafaf7",
-              transition: "background 0.3s",
+            style={skillsMode !== "default" ? {
+              ...(skillsMode === "terminal" ? { background: "#fafaf7" } : {}),
               borderBottom: "none",
               marginTop: -1,
               minHeight: skillsMinHeight,
+              position: "relative",
             } : undefined}
           >
             {skillsMode === "default" ? (
@@ -1246,7 +1248,7 @@ export default function Manifesto() {
                           href="/home/terminal"
                           className="vE-skill-shine"
                           {...(ai > 0 ? { "data-line-start": "0" } : {})}
-                          onClick={(e) => { e.preventDefault(); setSkillsMinHeight(skillsSectionRef.current?.offsetHeight); setSkillsMode("terminal"); }}
+                          onClick={(e) => { e.preventDefault(); setSkillsMinHeight(skillsSectionRef.current?.offsetHeight); setSkillsMode("fading"); setTimeout(() => setSkillsMode("terminal"), 2000); }}
                         >
                           {ai > 0 && <em className="vE-dot">· </em>}{a}
                         </a>
@@ -1259,6 +1261,8 @@ export default function Manifesto() {
                   ))}
                 </p>
               </>
+            ) : skillsMode === "fading" ? (
+              <div style={{ position: "absolute", inset: 0, background: "#fafaf7", animation: "vE-section-in 2000ms ease-out both" }} />
             ) : (
               <SkillsTerminalInline onNavigate={handleNavigateToTerminal} />
             )}
