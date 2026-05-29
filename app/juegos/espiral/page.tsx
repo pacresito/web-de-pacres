@@ -33,8 +33,8 @@ function useCanvasSize() {
 function calcCell(size: number) { return Math.floor(size / 12); }
 function calcTolerance(cell: number) { return Math.floor(cell * 0.36); }
 
-const SPEED = 0.8;
-const SPEED_MULTIPLIERS = { slow: 0.6, normal: 1.0, fast: 1.6 } as const;
+const SPEED = 1.0;
+const SPEED_MULTIPLIERS = { slow: 1.0, normal: 1.5, fast: 2.0 } as const;
 type SpeedLevel = keyof typeof SPEED_MULTIPLIERS;
 
 function buildPath() {
@@ -303,7 +303,7 @@ export default function EspiralPage() {
   const rlen = Math.hypot(r1.x - r0.x, r1.y - r0.y);
   const rightVel = { x: ((r1.x - r0.x) / rlen) * SPEED, y: ((r1.y - r0.y) / rlen) * SPEED };
 
-  const [speed, setSpeed] = useState<SpeedLevel>("normal");
+  const [speed, setSpeed] = useState<SpeedLevel>("slow");
   const speedRef = useRef<number>(SPEED_MULTIPLIERS.normal as number);
   useEffect(() => { speedRef.current = SPEED_MULTIPLIERS[speed]; }, [speed]);
 
