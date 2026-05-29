@@ -10,6 +10,7 @@ interface PromptConfig {
   host: string;
   path: string;
   command: string;
+  commandSuffix?: ReactNode;
 }
 
 interface Props {
@@ -308,6 +309,7 @@ export default function TerminalShell({
                 <span style={{ color: "var(--ts-ink2)" }}>:{prompt.path}</span>
                 <span style={{ color: "var(--ts-ink3)" }}>$ </span>
                 <span style={{ color: "var(--ts-ink)" }}>{prompt.command.slice(0, typedLen)}</span>
+                {typingDone && prompt.commandSuffix}
                 {!typingDone && (
                   <span style={{ color: "var(--ts-accent)", animation: "ts-blink 1s steps(1) infinite", marginLeft: 2 }}>▍</span>
                 )}
