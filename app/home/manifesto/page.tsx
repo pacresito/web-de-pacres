@@ -1228,9 +1228,7 @@ export default function Manifesto() {
             className="vE-skills vE-reveal"
             id="skills"
             style={skillsMode !== "default" ? {
-              ...(skillsMode === "terminal" ? { background: "#fafaf7" } : {}),
-              borderBottom: "none",
-              marginTop: -1,
+              ...(skillsMode === "terminal" ? { background: "#fafaf7", borderBottom: "none", marginTop: -1 } : {}),
               minHeight: skillsMinHeight,
               position: "relative",
             } : undefined}
@@ -1261,7 +1259,7 @@ export default function Manifesto() {
                 </p>
               </>
             ) : skillsMode === "fading" ? (
-              <div style={{ position: "absolute", inset: 0, background: "#fafaf7", animation: "vE-section-in 2000ms ease-out both" }} />
+              <div style={{ position: "absolute", top: -1, left: 0, right: 0, bottom: -1, background: "#fafaf7", animation: "vE-section-in 2000ms ease-out both", zIndex: 1 }} />
             ) : (
               <SkillsTerminalInline onNavigate={handleNavigateToTerminal} />
             )}
