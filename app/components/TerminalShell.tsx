@@ -33,20 +33,11 @@ export default function TerminalShell({
 }: Props) {
   const router = useRouter();
   const [animClass, setAnimClass] = useState("");
-  const [winWidth, setWinWidth] = useState(0);
-
   const [typedLen, setTypedLen] = useState(0);
   const [typingDone, setTypingDone] = useState(false);
   const [elapsedMs, setElapsedMs] = useState<number | null>(null);
   const [contentVisible, setContentVisible] = useState(variant === "terminal" ? !prompt : false);
   const startRef = useRef(0);
-
-  useEffect(() => {
-    setWinWidth(window.innerWidth);
-    const onResize = () => setWinWidth(window.innerWidth);
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
 
   useEffect(() => {
     if (variant !== "chrome") return;
@@ -134,7 +125,7 @@ export default function TerminalShell({
     return (
       <div
         className={animClass === "ts-win-unmaximizing" ? "ts-outer-unmaximizing ts-chrome-outer" : ""}
-        style={{ "--ts-win-w": winWidth ? `${winWidth}px` : "100vw" } as React.CSSProperties}
+        style={{ "--ts-win-w": "100vw" } as React.CSSProperties}
       >
         <style>{`
           @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
@@ -285,8 +276,8 @@ export default function TerminalShell({
         <div
           className={animClass}
           style={{
-            "--ts-win-w": winWidth ? `${winWidth}px` : "100vw",
-            width: winWidth ? winWidth : "100%",
+            "--ts-win-w": "100vw",
+            width: "100vw",
             height: "100%",
             maxWidth: "none",
             background: "var(--ts-paper)",

@@ -345,14 +345,8 @@ export default function Laboratorio() {
   const [windowState, setWindowState] = useState<"normal" | "minimized" | "maximized">("normal");
   const [animClass, setAnimClass] = useState("");
   const [dockAnimOut, setDockAnimOut] = useState(false);
-  const [winWidth, setWinWidth] = useState(0);
-
   useEffect(() => {
     setMounted(true);
-    setWinWidth(window.innerWidth);
-    const onResize = () => setWinWidth(window.innerWidth);
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
   }, []);
 
   useEffect(() => {
@@ -542,8 +536,8 @@ export default function Laboratorio() {
           undefined,
       }}>
         <div className={animClass} style={{
-          "--win-w": winWidth ? `${winWidth}px` : "100vw",
-          width: winWidth ? (isMax ? winWidth : Math.min(920, winWidth)) : "100%",
+          "--win-w": "100vw",
+          width: isMax ? "100vw" : "min(920px, 100%)",
           maxWidth: "none",
           background: "var(--t-paper)",
           borderRadius: isMax ? 0 : 12,
