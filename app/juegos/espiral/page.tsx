@@ -292,6 +292,13 @@ function useBoard(
 
 const MONO = '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace';
 
+const STATE_LABEL: Record<GameState, string> = {
+  idle: "idle",
+  playing: "run",
+  dead: "dead",
+  win: "win",
+};
+
 export default function EspiralPage() {
   const canvasL = useRef<HTMLCanvasElement>(null);
   const canvasR = useRef<HTMLCanvasElement>(null);
@@ -465,16 +472,16 @@ export default function EspiralPage() {
 
         {/* status row */}
         <div style={{ display: "flex", alignItems: "center", gap: "1rem", fontFamily: MONO }}>
-          <span style={{ fontSize: "0.75rem", color: "var(--ts-ink3)" }}>
+          <span style={{ fontSize: "0.75rem", color: "var(--ts-ink3)", whiteSpace: "nowrap" }}>
             ↳ status:{" "}
             <span style={{ color: left.gameState === "win" ? "var(--ts-accent)" : left.gameState === "dead" ? "#e55" : "var(--ts-ink2)" }}>
-              {left.gameState}
+              {STATE_LABEL[left.gameState]}
             </span>
             {" / "}
             <span style={{ color: right.gameState === "win" ? "var(--ts-accent)" : right.gameState === "dead" ? "#e55" : "var(--ts-ink2)" }}>
-              {right.gameState}
+              {STATE_LABEL[right.gameState]}
             </span>
-            {"  speed: "}
+            <span style={{ marginLeft: "1.5rem" }}>{"speed: "}</span>
             <button
               onClick={cycleSpeed}
               style={{
