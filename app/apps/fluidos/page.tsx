@@ -899,16 +899,32 @@ export default function Fluidos() {
     }
   }, []);
 
-  // Animation loop
+  // Animation loop — fixed 60 steps/sec regardless of display refresh rate
   useEffect(() => {
-    const loop = () => {
+    const STEP_MS = 1000 / 60;
+    const MAX_ACCUM = STEP_MS * 5; // cap: never run more than 5 steps per frame
+    let accum = 0;
+    let lastTime = performance.now();
+
+    const loop = (now: number) => {
       rafRef.current = requestAnimationFrame(loop);
-      if (paintRef.current && lastPosRef.current && toolRef.current !== MOVE) {
-        paintAt(lastPosRef.current.x, lastPosRef.current.y);
+      if (document.hidden) { lastTime = now; accum = 0; return; }
+
+      const delta = now - lastTime;
+      lastTime = now;
+      accum = Math.min(accum + delta, MAX_ACCUM);
+
+      while (accum >= STEP_MS) {
+        if (paintRef.current && lastPosRef.current && toolRef.current !== MOVE) {
+          paintAt(lastPosRef.current.x, lastPosRef.current.y);
+        }
+        step();
+        statsFrameRef.current++;
+        accum -= STEP_MS;
       }
-      step();
+
       render();
-      statsFrameRef.current++;
+
       if (statsFrameRef.current % 20 === 0 && statsLabelRef.current) {
         const grid = gridRef.current;
         if (grid) {
