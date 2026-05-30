@@ -26,13 +26,15 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const { name, score } = await request.json();
+  const { name, score, speed } = await request.json();
 
   if (typeof name !== "string" || name.trim().length === 0 || typeof score !== "number") {
     return Response.json({ error: "Datos inválidos" }, { status: 400 });
   }
 
   const normalizedName = name.trim().slice(0, 20);
+  const validSpeed = ["slow", "normal", "fast"].includes(speed) ? speed : null;
+
   const existing = await findExistingMember(normalizedName);
   if (existing) {
     if (score >= existing.score) {
@@ -44,6 +46,7 @@ export async function POST(request: Request) {
   const member = JSON.stringify({
     name: normalizedName,
     date: new Date().toISOString().slice(0, 10),
+    ...(validSpeed && { speed: validSpeed }),
   });
 
   await redis.zadd(KEY, score, member);
@@ -59,7 +62,7 @@ export async function POST(request: Request) {
       from: "Web de Pacres <hola@pacr.es>",
       to: "pacres.g@gmail.com",
       subject: `${normalizedName} ha jugado al Espiral — ${score.toFixed(1)}s`,
-      text: `${normalizedName} ha conseguido ${score.toFixed(1)}s en el juego Espiral.\n\nVer ranking: https://pacr.es/juegos/espiral/ranking`,
+      text: `${normalizedName} ha conseguido ${score.toFixed(1)}s en el juego Espiral (velocidad: ${validSpeed ?? "—"}).\n\nVer ranking: https://pacr.es/juegos/espiral/ranking`,
     }).catch((err) => console.error("Resend error (espiral):", err));
   }
 

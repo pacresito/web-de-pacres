@@ -10,6 +10,7 @@ interface Entry {
   name: string;
   date: string | null;
   score: number;
+  speed: string | null;
 }
 
 export default function Ranking() {
@@ -64,9 +65,10 @@ export default function Ranking() {
           <table style={{ borderCollapse: "collapse", width: "100%", maxWidth: "480px" }}>
             <thead>
               <tr>
-                <th style={thStyle}>#</th>
+                <th style={{ ...thStyle, textAlign: "left" }}>#</th>
                 <th style={{ ...thStyle, textAlign: "left" }}>nombre</th>
-                <th style={{ ...thStyle, textAlign: "right" }}>tiempo</th>
+                <th style={{ ...thStyle, textAlign: "center" }}>tiempo</th>
+                <th style={{ ...thStyle, textAlign: "center" }}>velocidad</th>
                 <th style={{ ...thStyle, textAlign: "right" }}>fecha</th>
               </tr>
             </thead>
@@ -77,8 +79,11 @@ export default function Ranking() {
                     {i + 1}
                   </td>
                   <td style={{ ...tdStyle, color: "#16140f" }}>{e.name}</td>
-                  <td style={{ ...tdStyle, textAlign: "right", color: "#7a766b" }}>
+                  <td style={{ ...tdStyle, textAlign: "center", color: "#7a766b" }}>
                     {e.score.toFixed(1)}s
+                  </td>
+                  <td style={{ ...tdStyle, textAlign: "center", fontSize: "0.82rem", color: speedColor(e.speed) }}>
+                    {e.speed ?? "—"}
                   </td>
                   <td style={{ ...tdStyle, textAlign: "right", color: "#b8b3a6", fontSize: "0.78rem" }}>
                     {e.date ?? "—"}
@@ -109,12 +114,19 @@ export default function Ranking() {
   );
 }
 
+function speedColor(speed: string | null) {
+  if (speed === "slow") return "#60a5fa";
+  if (speed === "fast") return "#f97316";
+  if (speed === "normal") return "#00b87a";
+  return "#b8b3a6";
+}
+
 const thStyle: React.CSSProperties = {
   padding: "0.4rem 0.75rem",
   fontSize: "0.72rem",
   color: "#b8b3a6",
   fontWeight: 500,
-  textAlign: "center",
+  textAlign: "left",
   textTransform: "uppercase",
   letterSpacing: "0.05em",
 };

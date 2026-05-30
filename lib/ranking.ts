@@ -2,8 +2,8 @@
 export function parseEntry(member: string, score: number) {
   try {
     const parsed = JSON.parse(member);
-    return { name: parsed.name ?? member, date: parsed.date ?? null, score };
+    return { name: parsed.name ?? member, date: parsed.date ?? null, score, speed: parsed.speed ?? null };
   } catch {
-    return { name: member, date: null, score };
+    return { name: member, date: null, score, speed: null };
   }
 }

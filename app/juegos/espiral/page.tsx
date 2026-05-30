@@ -36,6 +36,7 @@ function calcTolerance(cell: number) { return Math.floor(cell * 0.36); }
 const SPEED = 1.0;
 const SPEED_MULTIPLIERS = { slow: 1.0, normal: 1.5, fast: 2.0 } as const;
 type SpeedLevel = keyof typeof SPEED_MULTIPLIERS;
+const SPEED_ORDER: Record<SpeedLevel, number> = { slow: 0, normal: 1, fast: 2 };
 
 function buildPath() {
   const points: { x: number; y: number }[] = [];
@@ -342,6 +343,29 @@ export default function EspiralPage() {
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  // Tracking de velocidad mínima por tablero (solo el run ganador)
+  const leftRunMinSpeedRef = useRef<SpeedLevel>("fast");
+  const rightRunMinSpeedRef = useRef<SpeedLevel>("fast");
+  const leftWinSpeedRef = useRef<SpeedLevel | null>(null);
+  const rightWinSpeedRef = useRef<SpeedLevel | null>(null);
+
+  useEffect(() => {
+    if (left.gameState === "playing") leftRunMinSpeedRef.current = speed;
+    if (left.gameState === "win") leftWinSpeedRef.current = leftRunMinSpeedRef.current;
+  }, [left.gameState]);
+
+  useEffect(() => {
+    if (right.gameState === "playing") rightRunMinSpeedRef.current = speed;
+    if (right.gameState === "win") rightWinSpeedRef.current = rightRunMinSpeedRef.current;
+  }, [right.gameState]);
+
+  useEffect(() => {
+    if (left.gameState === "playing" && SPEED_ORDER[speed] < SPEED_ORDER[leftRunMinSpeedRef.current])
+      leftRunMinSpeedRef.current = speed;
+    if (right.gameState === "playing" && SPEED_ORDER[speed] < SPEED_ORDER[rightRunMinSpeedRef.current])
+      rightRunMinSpeedRef.current = speed;
+  }, [speed]);
+
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
@@ -408,11 +432,21 @@ export default function EspiralPage() {
   async function submitScore(e: React.FormEvent) {
     e.preventDefault();
     if (!alias.trim() || finalTime === null) return;
+    const lws = leftWinSpeedRef.current;
+    const rws = rightWinSpeedRef.current;
+    let finalSpeed: SpeedLevel = speed;
+    if (lws && rws) {
+      finalSpeed = SPEED_ORDER[lws] <= SPEED_ORDER[rws] ? lws : rws;
+    } else if (lws) {
+      finalSpeed = lws;
+    } else if (rws) {
+      finalSpeed = rws;
+    }
     setSubmitting(true);
     await fetch("/api/ranking/espiral", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: alias.trim(), score: finalTime }),
+      body: JSON.stringify({ name: alias.trim(), score: finalTime, speed: finalSpeed }),
     });
     setSubmitted(true);
     setSubmitting(false);
@@ -423,6 +457,10 @@ export default function EspiralPage() {
     right.reset();
     setSubmitted(false);
     setAlias("");
+    leftWinSpeedRef.current = null;
+    rightWinSpeedRef.current = null;
+    leftRunMinSpeedRef.current = "fast";
+    rightRunMinSpeedRef.current = "fast";
   }
 
   return (
