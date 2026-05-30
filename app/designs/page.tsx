@@ -21,7 +21,7 @@ const ITEMS: DesignItem[] = [
   { id: "neon",        num: "03", title: "Neon",        description: "Opción hortera, atrevida con primeras animaciones.",                              date: "17 may 2026", status: "available", href: "/home/neon"        },
   { id: "editorial",   num: "04", title: "Editorial",   description: "Versión más profesional con estilo editorial como protagonista.",                 date: "19 may 2026", status: "available", href: "/home/editorial"  },
   { id: "timeline",    num: "05", title: "Timeline",    description: "Timeline horizontal arrastrable y slider de recomendaciones.",                    date: "19 may 2026", status: "available", href: "/home/timeline"   },
-  { id: "terminal",    num: "06", title: "Terminal",    description: "Terminal macOS con varias animaciones y guiños chulos.",                          date: "24 may 2026", status: "active",    href: "/cv"   },
+  { id: "terminal",    num: "06", title: "Terminal",    description: "Terminal macOS con varias animaciones y guiños chulos.",                          date: "24 may 2026", status: "active",    href: "/home/terminal"   },
   { id: "manifesto",   num: "07", title: "Manifesto",   description: "La home principal. Texto editorial, física de letras, Instrument Serif.",         date: "24 may 2026", status: "primary",   href: "/home/manifesto"  },
 ];
 

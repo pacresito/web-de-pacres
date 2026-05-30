@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
@@ -1037,8 +1037,8 @@ function ContactSection({ active = false, onDone }: { active?: boolean; onDone?:
   );
 }
 
-function FooterSection({ startAfter = false }: { startAfter?: boolean }) {
-  const TEXT = "↳ Bienvenido a la web de Pacres";
+function FooterSection({ startAfter = false, text = "↳ Bienvenido a la web de Pacres" }: { startAfter?: boolean; text?: string }) {
+  const TEXT = text;
   const [displayed, setDisplayed] = useState("");
   const [started, setStarted] = useState(false);
 
@@ -1101,6 +1101,7 @@ function Section({ n, cmd, highlight = false, children, contentStyle, noBorder =
 
 export default function TerminalHome() {
   const router = useRouter();
+  const pathname = usePathname();
   const [expandedDesktopId, setExpandedDesktopId] = useState<string | null>(null);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [contactDone, setContactDone] = useState(false);
@@ -1402,7 +1403,7 @@ export default function TerminalHome() {
           </Section>
 
           {/* Footer */}
-          <FooterSection startAfter={contactDone} />
+          <FooterSection startAfter={contactDone} text={pathname === "/home/terminal" ? "↳ Creado el 24 de mayo de 2026" : "↳ Bienvenido a la web de Pacres"} />
         </div>
       </div>
 
