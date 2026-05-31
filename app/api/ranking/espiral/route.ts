@@ -1,75 +1,37 @@
-import { Resend } from "resend";
-import redis from "@/lib/redis";
-import { parseEntry } from "@/lib/ranking";
+import { sendEmail } from "@/lib/notify";
+import { submitScore, pruneTop, readRanking } from "@/lib/ranking";
 
 const KEY = process.env.NODE_ENV === "development" ? "espiral-dev:ranking" : "espiral:ranking";
 const TOP = 10;
-
-async function findExistingMember(normalizedName: string): Promise<{ member: string; score: number } | null> {
-  const entries = await redis.zrange(KEY, 0, -1, "WITHSCORES");
-  for (let i = 0; i < entries.length; i += 2) {
-    const entry = parseEntry(entries[i], Number(entries[i + 1]));
-    if (entry.name === normalizedName) {
-      return { member: entries[i], score: entry.score };
-    }
-  }
-  return null;
-}
+const VALID_SPEEDS = ["slow", "normal", "fast"];
 
 export async function GET() {
-  const entries = await redis.zrange(KEY, 0, TOP - 1, "WITHSCORES");
-  const ranking = [];
-  for (let i = 0; i < entries.length; i += 2) {
-    ranking.push(parseEntry(entries[i], Number(entries[i + 1])));
-  }
-  return Response.json(ranking);
+  return Response.json(await readRanking(KEY, 0, TOP - 1));
 }
 
 export async function POST(request: Request) {
-  const { name, score, speed } = await request.json();
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return Response.json({ error: "JSON inválido" }, { status: 400 });
+  }
+  const { name, score, speed } = body;
 
-  if (typeof name !== "string" || name.trim().length === 0 || typeof score !== "number") {
-    return Response.json({ error: "Datos inválidos" }, { status: 400 });
+  // Espiral mide tiempo: menor es mejor.
+  const result = await submitScore({ key: KEY, name, score, speed, lowerIsBetter: true, min: 0, max: 100000 });
+  if (!result.ok) {
+    return Response.json({ error: result.error }, { status: 400 });
   }
 
-  const normalizedName = name.trim().slice(0, 20);
-  const validSpeed = ["slow", "normal", "fast"].includes(speed) ? speed : null;
-
-  const existing = await findExistingMember(normalizedName);
-  if (existing) {
-    if (score >= existing.score) {
-      return Response.json({ skipped: true });
-    }
-    await redis.zrem(KEY, existing.member);
+  if (result.stored) {
+    await pruneTop(KEY, TOP, true);
+    const validSpeed = VALID_SPEEDS.includes(speed) ? speed : null;
+    await sendEmail({
+      subject: `${result.name} ha jugado al Espiral — ${Number(score).toFixed(1)}s`,
+      text: `${result.name} ha conseguido ${Number(score).toFixed(1)}s en el juego Espiral (velocidad: ${validSpeed ?? "—"}).\n\nVer ranking: https://pacr.es/juegos/espiral/ranking`,
+    });
   }
 
-  const member = JSON.stringify({
-    name: normalizedName,
-    date: new Date().toISOString().slice(0, 10),
-    ...(validSpeed && { speed: validSpeed }),
-  });
-
-  await redis.zadd(KEY, score, member);
-
-  const count = await redis.zcard(KEY);
-  if (count > TOP) {
-    await redis.zremrangebyrank(KEY, TOP, -1);
-  }
-
-  if (process.env.NODE_ENV !== "development") {
-    const resend = new Resend(process.env.RESEND_API_KEY);
-    resend.emails.send({
-      from: "Web de Pacres <hola@pacr.es>",
-      to: "pacres.g@gmail.com",
-      subject: `${normalizedName} ha jugado al Espiral — ${score.toFixed(1)}s`,
-      text: `${normalizedName} ha conseguido ${score.toFixed(1)}s en el juego Espiral (velocidad: ${validSpeed ?? "—"}).\n\nVer ranking: https://pacr.es/juegos/espiral/ranking`,
-    }).catch((err) => console.error("Resend error (espiral):", err));
-  }
-
-  const entries = await redis.zrange(KEY, 0, TOP - 1, "WITHSCORES");
-  const ranking = [];
-  for (let i = 0; i < entries.length; i += 2) {
-    ranking.push(parseEntry(entries[i], Number(entries[i + 1])));
-  }
-  return Response.json(ranking);
+  return Response.json(await readRanking(KEY, 0, TOP - 1));
 }

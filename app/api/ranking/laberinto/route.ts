@@ -1,67 +1,44 @@
-import { Resend } from "resend";
-import redis from "@/lib/redis";
-import { parseEntry } from "@/lib/ranking";
+import { sendEmail } from "@/lib/notify";
+import { submitScore, pruneExtremes, readRanking, type RankEntry } from "@/lib/ranking";
 
 const KEY = process.env.NODE_ENV === "development" ? "laberinto-dev:ranking" : "laberinto:ranking";
 
-async function findExisting(normalizedName: string): Promise<{ member: string; score: number } | null> {
-  const entries = await redis.zrange(KEY, 0, -1, "WITHSCORES");
-  for (let i = 0; i < entries.length; i += 2) {
-    const entry = parseEntry(entries[i], Number(entries[i + 1]));
-    if (entry.name === normalizedName) {
-      return { member: entries[i], score: entry.score };
-    }
-  }
-  return null;
-}
-
-async function getAll() {
-  const entries = await redis.zrange(KEY, 0, -1, "WITHSCORES");
-  const all = [];
-  for (let i = 0; i < entries.length; i += 2) {
-    all.push(parseEntry(entries[i], Number(entries[i + 1])));
-  }
+async function getRanking(): Promise<{ top: RankEntry[]; bottom: RankEntry[] }> {
+  const all = await readRanking(KEY);
   all.sort((a, b) => b.score - a.score);
-  const positiveAll = all.filter(e => e.score > 0);
-  const negativeAll = all.filter(e => e.score < 0);
-  const top = positiveAll.slice(0, 5);
-  const bottom = negativeAll.slice(-5).reverse();
+  const top = all.filter((e) => e.score > 0).slice(0, 5);
+  const bottom = all.filter((e) => e.score < 0).slice(-5).reverse();
   return { top, bottom };
 }
 
 export async function GET() {
-  return Response.json(await getAll());
+  return Response.json(await getRanking());
 }
 
 export async function POST(request: Request) {
-  const { name, score } = await request.json();
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return Response.json({ error: "JSON inválido" }, { status: 400 });
+  }
+  const { name, score } = body;
 
-  if (typeof name !== "string" || name.trim().length === 0 || typeof score !== "number") {
-    return Response.json({ error: "Datos inválidos" }, { status: 400 });
+  // Laberinto mide puntos (pueden ser negativos): mayor es mejor.
+  const result = await submitScore({ key: KEY, name, score, lowerIsBetter: false, min: -100000, max: 100000 });
+  if (!result.ok) {
+    return Response.json({ error: result.error }, { status: 400 });
   }
 
-  const normalizedName = name.trim().slice(0, 20);
-  const existing = await findExisting(normalizedName);
-
-  if (existing) {
-    if (existing.score >= score) {
-      return Response.json(await getAll());
-    }
-    await redis.zrem(KEY, existing.member);
+  if (result.stored) {
+    // Mantiene acotado el zset conservando las 10 más altas y 10 más bajas
+    // (el ranking solo muestra top 5 / bottom 5).
+    await pruneExtremes(KEY, 10);
+    await sendEmail({
+      subject: `${result.name} ha jugado al Laberinto — ${score} pts`,
+      text: `${result.name} ha conseguido ${score} puntos en el Laberinto.\n\nVer ranking: https://pacr.es/juegos/laberinto/ranking`,
+    });
   }
 
-  const member = JSON.stringify({ name: normalizedName, date: new Date().toISOString().slice(0, 10) });
-  await redis.zadd(KEY, score, member);
-
-  if (process.env.NODE_ENV !== "development") {
-    const resend = new Resend(process.env.RESEND_API_KEY);
-    resend.emails.send({
-      from: "Web de Pacres <hola@pacr.es>",
-      to: "pacres.g@gmail.com",
-      subject: `${normalizedName} ha jugado al Laberinto — ${score} pts`,
-      text: `${normalizedName} ha conseguido ${score} puntos en el Laberinto.\n\nVer ranking: https://pacr.es/juegos/laberinto/ranking`,
-    }).catch((err) => console.error("Resend error (laberinto):", err));
-  }
-
-  return Response.json(await getAll());
+  return Response.json(await getRanking());
 }

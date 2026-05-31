@@ -1,61 +1,35 @@
-import { Resend } from "resend";
-import redis from "@/lib/redis";
+import { handleRegistroGet, handleRegistroPost } from "@/lib/registro";
+import {
+  type Animal,
+  ANIMALS,
+  ANIMAL_LABELS,
+  getDerived,
+  computeFinals,
+  computeWinner,
+} from "@/lib/agricola";
 
 const KEY =
   process.env.NODE_ENV === "development"
     ? "registro:agricola-dev"
     : "registro:agricola";
 
-const PASSWORD = process.env.REGISTRO_PASSWORD!;
-const PAGE_SIZE = 10;
-
-const PLAYERS = ["Lucas", "Pablo"];
-
-type Animal = "sheep" | "pig" | "cow" | "horse";
-const ANIMALS: Animal[] = ["sheep", "pig", "cow", "horse"];
-const ANIMAL_LABELS: Record<Animal, string> = {
-  sheep: "🐑",
-  pig: "🐷",
-  cow: "🐄",
-  horse: "🐴",
-};
-
-function calcTablePts(count: number, animal: Animal): number {
-  if (count <= 3) return -3;
-  const base3: Record<Animal, number> = { sheep: 13, pig: 11, cow: 10, horse: 9 };
-  if (count >= base3[animal]) return 3 + (count - base3[animal]);
-  const ranges: Record<Animal, [number, number][]> = {
-    sheep: [[4, 7], [8, 10], [11, 12]],
-    pig:   [[4, 6], [7, 8],  [9, 10]],
-    cow:   [[4, 5], [6, 7],  [8, 9]],
-    horse: [[4, 4], [5, 6],  [7, 8]],
-  };
-  for (let pts = 0; pts <= 2; pts++) {
-    const [lo, hi] = ranges[animal][pts];
-    if (count >= lo && count <= hi) return pts;
-  }
-  return 0;
-}
-
-function getDerived(inputs: number[]) {
-  const counts = inputs.slice(0, 4);
-  const tablePts = ANIMALS.map((a, i) => calcTablePts(counts[i], a));
-  const sigma1 = counts.reduce((a, b) => a + b, 0);
-  const sigma2 = tablePts.reduce((a, b) => a + b, 0);
-  const terrain = inputs[4];
-  const buildings = inputs[5];
-  const final = sigma1 + sigma2 + terrain + buildings;
-  return { counts, tablePts, sigma1, sigma2, terrain, buildings, final };
-}
-
-function buildEmail(record: {
+interface AgricolaRecord {
   date: string;
   players: string[];
   inputs: number[][];
   finals: number[];
   winner: string;
-}) {
-  const { date, players, inputs, finals, winner } = record;
+}
+
+type AgricolaPayload = {
+  date: string;
+  players: string[];
+  inputs: number[][];
+  password?: unknown;
+};
+
+function buildEmailHtml(record: AgricolaRecord) {
+  const { date, players, inputs, winner } = record;
   const derived = inputs.map((inp) => getDerived(inp));
 
   const C = {
@@ -173,68 +147,24 @@ function buildEmail(record: {
 }
 
 export async function GET(request: Request) {
-  const url = new URL(request.url);
-  const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10));
-  const total = await redis.llen(KEY);
-  const start = (page - 1) * PAGE_SIZE;
-  const end = start + PAGE_SIZE - 1;
-  const raw = await redis.lrange(KEY, start, end);
-  const records = raw.map((r) => JSON.parse(r));
-  return Response.json({
-    records,
-    total,
-    page,
-    totalPages: Math.max(1, Math.ceil(total / PAGE_SIZE)),
-  });
+  return handleRegistroGet(request, KEY);
 }
 
-const RATE_LIMIT_PREFIX = "ratelimit:registro:agricola:";
-const RATE_LIMIT_MAX = 5;
-const RATE_LIMIT_TTL = 900; // 15 min
-
 export async function POST(request: Request) {
-  const ip =
-    request.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
-  const rateLimitKey = RATE_LIMIT_PREFIX + ip;
-
-  const attempts = await redis.incr(rateLimitKey);
-  if (attempts === 1) await redis.expire(rateLimitKey, RATE_LIMIT_TTL);
-  if (attempts > RATE_LIMIT_MAX) {
-    return Response.json({ error: "Demasiados intentos. Espera 15 minutos." }, { status: 429 });
-  }
-
-  const body = await request.json();
-  const { password, date, players, inputs, finals, winner } = body;
-
-  if (password !== PASSWORD) {
-    return Response.json({ error: "Clave incorrecta" }, { status: 401 });
-  }
-
-  await redis.del(rateLimitKey);
-
-  if (!date || !players || !inputs || !finals || !winner) {
-    return Response.json({ error: "Datos incompletos" }, { status: 400 });
-  }
-
-  const record = { date, players, inputs, finals, winner };
-  await redis.lpush(KEY, JSON.stringify(record));
-
-  if (process.env.NODE_ENV !== "development") {
-    try {
-      const resend = new Resend(process.env.RESEND_API_KEY);
-      const html = buildEmail(record);
-      const text = `Agrícola — ${date}\n${players.map((p: string, i: number) => `${p}: ${finals[i]}`).join("  |  ")}\nGanador: ${winner}`;
-      await resend.emails.send({
-        from: "Web de Pacres <hola@pacr.es>",
-        to: "pacres.g@gmail.com",
-        subject: `Agrícola — ${date}`,
-        html,
-        text,
-      });
-    } catch (err) {
-      console.error("Resend error (registro agricola):", err);
-    }
-  }
-
-  return Response.json({ ok: true });
+  return handleRegistroPost<AgricolaPayload, AgricolaRecord>(request, {
+    key: KEY,
+    ratePrefix: "ratelimit:registro:agricola:",
+    requiredFields: ["date", "players", "inputs"],
+    // El servidor es la fuente única de finals y winner: los recalcula desde los
+    // inputs en vez de confiar en los que manda el cliente.
+    buildRecord: ({ date, players, inputs }) => {
+      const finals = computeFinals(inputs);
+      return { date, players, inputs, finals, winner: computeWinner(players, finals) };
+    },
+    buildEmail: (record) => ({
+      subject: `Agrícola — ${record.date}`,
+      html: buildEmailHtml(record),
+      text: `Agrícola — ${record.date}\n${record.players.map((p, i) => `${p}: ${record.finals[i]}`).join("  |  ")}\nGanador: ${record.winner}`,
+    }),
+  });
 }

@@ -1,13 +1,9 @@
-import { Resend } from "resend";
-import redis from "@/lib/redis";
+import { handleRegistroGet, handleRegistroPost } from "@/lib/registro";
 
 const KEY =
   process.env.NODE_ENV === "development"
     ? "registro:castle-combo-dev"
     : "registro:castle-combo";
-
-const PASSWORD = process.env.REGISTRO_PASSWORD!;
-const PAGE_SIZE = 10;
 
 const POSITIONS = [
   "↖️", "⬆️", "↗️",
@@ -16,13 +12,17 @@ const POSITIONS = [
   "🗝️",
 ];
 
-function buildEmail(record: {
+interface CastleRecord {
   date: string;
   players: string[];
   scores: number[][];
   totals: number[];
   winner: string;
-}) {
+}
+
+type CastlePayload = CastleRecord & { password?: unknown };
+
+function buildEmailHtml(record: CastleRecord) {
   const { date, players, scores, totals, winner } = record;
 
   const isEmpate = winner === "Empate";
@@ -83,67 +83,19 @@ function buildEmail(record: {
 }
 
 export async function GET(request: Request) {
-  const url = new URL(request.url);
-  const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10));
-  const total = await redis.llen(KEY);
-  const start = (page - 1) * PAGE_SIZE;
-  const end = start + PAGE_SIZE - 1;
-  const raw = await redis.lrange(KEY, start, end);
-  const records = raw.map((r) => JSON.parse(r));
-  return Response.json({
-    records,
-    total,
-    page,
-    totalPages: Math.max(1, Math.ceil(total / PAGE_SIZE)),
-  });
+  return handleRegistroGet(request, KEY);
 }
 
-const RATE_LIMIT_PREFIX = "ratelimit:registro:castle-combo:";
-const RATE_LIMIT_MAX = 5;
-const RATE_LIMIT_TTL = 900; // 15 min
-
 export async function POST(request: Request) {
-  const ip =
-    request.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
-  const rateLimitKey = RATE_LIMIT_PREFIX + ip;
-
-  const attempts = await redis.incr(rateLimitKey);
-  if (attempts === 1) await redis.expire(rateLimitKey, RATE_LIMIT_TTL);
-  if (attempts > RATE_LIMIT_MAX) {
-    return Response.json({ error: "Demasiados intentos. Espera 15 minutos." }, { status: 429 });
-  }
-
-  const body = await request.json();
-  const { password, date, players, scores, totals, winner } = body;
-
-  if (password !== PASSWORD) {
-    return Response.json({ error: "Clave incorrecta" }, { status: 401 });
-  }
-
-  await redis.del(rateLimitKey);
-  if (!date || !players || !scores || !totals || !winner) {
-    return Response.json({ error: "Datos incompletos" }, { status: 400 });
-  }
-
-  const record = { date, players, scores, totals, winner };
-  await redis.lpush(KEY, JSON.stringify(record));
-
-  if (process.env.NODE_ENV !== "development") {
-    try {
-      const resend = new Resend(process.env.RESEND_API_KEY);
-      const html = buildEmail(record);
-      const text = `Castle Combo — ${date}\n${players.map((p: string, i: number) => `${p}: ${totals[i]}`).join("  |  ")}\nGanador: ${winner}`;
-      await resend.emails.send({
-        from: "Web de Pacres <hola@pacr.es>",
-        to: "pacres.g@gmail.com",
-        subject: `Castle Combo — ${date}`,
-        html,
-        text,
-      });
-    } catch (err) {
-      console.error("Resend error (registro castle-combo):", err);
-    }
-  }
-
-  return Response.json({ ok: true });
+  return handleRegistroPost<CastlePayload, CastleRecord>(request, {
+    key: KEY,
+    ratePrefix: "ratelimit:registro:castle-combo:",
+    requiredFields: ["date", "players", "scores", "totals", "winner"],
+    buildRecord: ({ date, players, scores, totals, winner }) => ({ date, players, scores, totals, winner }),
+    buildEmail: (record) => ({
+      subject: `Castle Combo — ${record.date}`,
+      html: buildEmailHtml(record),
+      text: `Castle Combo — ${record.date}\n${record.players.map((p, i) => `${p}: ${record.totals[i]}`).join("  |  ")}\nGanador: ${record.winner}`,
+    }),
+  });
 }

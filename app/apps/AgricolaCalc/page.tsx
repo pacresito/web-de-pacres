@@ -3,29 +3,12 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import TerminalShell from "../../components/TerminalShell";
+import { type Animal, calcTablePts } from "@/lib/agricola";
 
 const PLAYERS = ["Lucas", "Pablo"];
 
-type Animal = "sheep" | "pig" | "cow" | "horse";
 const ANIMALS: Animal[] = ["sheep", "pig", "cow", "horse"];
 const ANIMAL_ICONS: Record<Animal, string> = { sheep: "🐑", pig: "🐷", cow: "🐄", horse: "🐴" };
-
-function calcTablePts(count: number, animal: Animal): number {
-  if (count <= 3) return -3;
-  const base3: Record<Animal, number> = { sheep: 13, pig: 11, cow: 10, horse: 9 };
-  if (count >= base3[animal]) return 3 + (count - base3[animal]);
-  const ranges: Record<Animal, [number, number][]> = {
-    sheep: [[4, 7], [8, 10], [11, 12]],
-    pig:   [[4, 6], [7,  8], [9,  10]],
-    cow:   [[4, 5], [6,  7], [8,   9]],
-    horse: [[4, 4], [5,  6], [7,   8]],
-  };
-  for (let pts = 0; pts <= 2; pts++) {
-    const [lo, hi] = ranges[animal][pts];
-    if (count >= lo && count <= hi) return pts;
-  }
-  return 0;
-}
 
 const STEP_TO_ROW = [0, 1, 2, 3, 10, 11];
 const STEP_LABELS = [
