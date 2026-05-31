@@ -3,14 +3,9 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ChromeBar, MinimizedBar, TabsBar } from "../components/Chrome";
+import { calcularEdad } from "@/lib/utils";
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
-
-function calcularEdad(nacimiento: Date): number {
-  const hoy = new Date();
-  const cumple = new Date(hoy.getFullYear(), nacimiento.getMonth(), nacimiento.getDate());
-  return hoy.getFullYear() - nacimiento.getFullYear() - (hoy < cumple ? 1 : 0);
-}
 
 type LabItem = {
   id: string;

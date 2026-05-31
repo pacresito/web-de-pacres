@@ -2,6 +2,7 @@
 
 import { useRef, useCallback, useState, useEffect } from "react";
 import Image from "next/image";
+import { RECOMENDACIONES, CERTIFICACIONES, PREMIOS, premioOrg } from "@/lib/perfil";
 
 const TIMELINE = [
   {
@@ -56,34 +57,9 @@ const TIMELINE = [
   },
 ];
 
-const RECS = [
-  { quote: "I had the privilege of working Pablo, a dynamic and proactive colleague. Pablo is a hands-on problem solver, consistently driving solutions and fostering collaboration across departments. His exceptional interpersonal skills create a positive work environment. I highly recommend Pablo for his dedication, teamwork, and ability to navigate challenges seamlessly.", author: "Kerem Kocak", role: "Head of Product · ex-OLX, CAFU, Turkcell", photo: "/recomendadores/kerem.jpg", url: "https://www.linkedin.com/in/kerem-product/" },
-  { quote: "Pablo and I worked together on letgo. I must say he is one of the best product managers I have worked with. His communication and prioritization skills, help team going forward a lot faster. He takes ownership on initiatives and deliveres valuable outcomes. Besides, he is very fun to work with. I believe he will be a great addition to any team.", author: "Yeliz Ustabas Lopez", role: "Risk and Fraud · Sr. Product Manager at Eventbrite", photo: "/recomendadores/yeliz.jpg", url: "https://www.linkedin.com/in/yeliz-ustabas/" },
-  { quote: "I've had the pleasure of working closely with Pablo for several years, and I can confidently say that he is an exceptional professional. Pablo possesses a unique skill set that makes him a valuable asset to any team. I want to highlight his exceptional ability to solve complex problems and find practical solutions, as well as his remarkable adaptability when taking on new assignments. Above all, what sets Pablo apart is his positive attitude and friendly demeanor, which not only make working with him enjoyable but also foster a collaborative and welcoming work environment.", author: "David Adalid", role: "QA Specialist · ISTQB Certified", photo: "/recomendadores/david.jpg", url: "https://www.linkedin.com/in/david-adalid/" },
-  { quote: "Pablo is a high-skilled one-man band. He is able to perform so many different roles but, at the same time, able to lead by example a group of ICs so they go the extra mile. He is easy-going, happy to negotiate and to reach agreements. He is not pure-techie, but you can throw him any kind of ball and he will be ready for it. I'd say of Pablo that he is one of a kind and I'd be delighted to work with him again.", author: "Jesús Rodríguez", role: "Agile Facilitator / People Developer", photo: "/recomendadores/jesus.jpg", url: "https://www.linkedin.com/in/jesusrh/" },
-  { quote: "I had the privilege of working with Pablo for several years at the hyper-fast-growing startup letgo. Pablo is not only incredibly smart but also exceptionally hardworking. He's the kind of guy who's there to get the job done, no matter the challenge. ANY, really! Throw him a challenge and he will solve it. His fantastic sense of humor and positive attitude also make working with him a breeze.", author: "Adrià Vallès", role: "Engineering Manager · Lingokids", photo: "/recomendadores/adria.jpg", url: "https://www.linkedin.com/in/adriavalles/" },
-  { quote: "Pablo showed unique skills for approaching challenges with pragmatism and out-of-the-box thinking that consistently resulted in innovative and effective solutions. Guided by Pablo's leadership, the team has had great business impact using complex technical initiatives like Home personalization and Search relevance. I have learned a lot from Pablo during this period, especially from his ability to quickly adapt to business changes.", author: "Julien Meynet", role: "AI/ML Leader · Search & Recommender Systems · PhD", photo: "/recomendadores/julien.jpg", url: "https://www.linkedin.com/in/julienmeynet/" },
-  { quote: "You need something done and you need it quick... but you also need to align many stakeholders, while understanding the customers' pains and keeping in mind the technical limitations... Then Pablo is your man! He gets things done. He gets features shipped. And all while keeping a smile on... I miss working with him!", author: "Arnau Tibau Puig", role: "Data & AI for climate · PhD", photo: "/recomendadores/arnau.jpg", url: "https://www.linkedin.com/in/atibaup/" },
-  { quote: "Es un honor recomendar a Pablo, una mente brillante con una habilidad asombrosa para simplificar problemas complejos y encontrar soluciones efectivas. Su curiosidad insaciable, proactividad y enfoque implacable en los objetivos hacen que sea un compañero excepcional. Gran líder y mentor, destaco su disposición constante para compartir conocimientos y desafiar ideas para encontrar las mejores soluciones.", author: "Janna Ubach", role: "Trust & Safety PM · N26 · ex-TikTok, ex-OLX", photo: "/recomendadores/janna.jpg", url: "https://www.linkedin.com/in/jannaubach/" },
-  { quote: "Lo que más aprendí de Pablo es que siempre tenía actitud positiva, te daba mucha confianza y te ayudaba a tener todo bajo control. Otra de las virtudes de Pablo es que es muy multidisciplinar. Sin duda una de las cosas que más aprendí fue todo el tema de metodologías Agile, teníamos unas metodologías muy dinámicas en los procesos de trabajo.", author: "Dani Cruz", role: "AI Advertising", photo: "/recomendadores/dani.jpg", url: "https://www.linkedin.com/in/danicruzpaidsocial/" },
-  { quote: "Pablo is a tenacious Product Owner and drives towards the best solutions with great efficiency. He considers all the possible outcomes and effects and will often think of issues in a solution that others will not. He's a great collaborator as well and will challenge you in your assumptions. He's also well versed technically and can get comfortably into the details with engineers.", author: "Mark Leung", role: "Principal Solution Strategist · Datavisor", photo: "/recomendadores/mark.jpg", url: "https://www.linkedin.com/in/mark-leung-8524105/" },
-  { quote: "Pablo es una de las personas con las que mejor he trabajado. Su capacidad de comunicación es excepcional. Su organización es envidiable, siempre mantiene un enfoque claro y estructurado y sobretodo, muy pragmático. Lo que más me impresiona de Pablo es su adaptabilidad. Siempre se muestra alegre y con energía, contagiando a todos los que están a su alrededor y creando una atmósfera de colaboración y buen rollo como muy pocas personas son capaces de generar.", author: "Cristian Martin Mouat", role: "From tech strategy to hands-on development", photo: "/recomendadores/cristian.jpg", url: "https://www.linkedin.com/in/cristian-martin-mouat/" },
-  { quote: "I thoroughly enjoyed meeting and working with Pablo for two years. He is an energetic, upbeat person who always lightens up any room he enters. Pablo has an inquisitive mind and sharp intellect and is a versatile problem solver. He has successfully found external providers, managed business operations, written SQL queries, and led mid-sized multidisciplinary teams. If this sounds too good to be true, just hop on a call with him and see for yourself.", author: "Jordi Escrich", role: "Data Specialist", photo: "/recomendadores/jordi.jpg", url: "https://www.linkedin.com/in/jordiescrich/" },
-  { quote: "Pablo gets straight to the point, simplifies what is difficult and focuses on what is important. He makes the way easier for everyone to deliver the task while listening to all points of view. Nothing escapes him. As a designer I recommend Pablo 100%.", author: "Iván Bayo", role: "Designing impactful user experiences", photo: "/recomendadores/ivan.jpg", url: "https://www.linkedin.com/in/ivanbayo/" },
-  { quote: "Pablo is a great professional. His strong analytical skills make him ready and able to solve every problem he has to face. He is able to manage huge work-load and to perform perfectly in stressful situations always keeping a smile on his face. I am sure he would be the perfect element for every team!", author: "Daniela Servi", role: "ESL Teacher · SCUOLA INTERNAZIONALE DI PAVIA", photo: "/recomendadores/daniela.jpg", url: "https://www.linkedin.com/in/danielaservi/" },
-  { quote: "Pablo, es sin duda, una de las personas más inteligentes, trabajadoras y profesionales con las que he tenido el placer de trabajar. Además de gestionar la logística de Nonabox de forma soberbia, aplica sus conocimientos de forma práctica y antepone lo que juzga es mejor para la empresa. Siempre he intentado tener en cuenta su opinión para cualquier desarrollo, pues sabe abstraerse y pensar siempre de la forma correcta.", author: "Mario Pérez Pereira", role: "Head of Product", photo: "/recomendadores/mario.jpg", url: "https://www.linkedin.com/in/marioperezpereira/" },
-];
+const RECS = RECOMENDACIONES;
 
-const CERTS = [
-  { label: "Product Executive Certificate", issuer: "Product School", year: "nov. 2021" },
-  { label: "Certified Scrum Product Owner", issuer: "Agilar Spain", year: "may. 2017" },
-  { label: "Certified Scrum Master", issuer: "Agilar Spain", year: "abr. 2017" },
-  { label: "Retention + Engagement Deep Dive", issuer: "Reforge", year: "nov. 2018" },
-  { label: "Certified Mentor", issuer: "Mentorloop", year: "abr. 2022" },
-  { label: "Diplôme d'Études en Langue Française", issuer: "Ministère de l'Éducation nationale", year: "jul. 2002" },
-  { label: "First Certificate Exam", issuer: "University of Cambridge", year: "jun. 2002" },
-  { label: "Advanced Open Water Diver", issuer: "PADI", year: "ago. 2009" },
-];
+const CERTS = CERTIFICACIONES;
 
 const LANGS = [
   { lang: "Español", level: "Competencia bilingüe o nativa" },
@@ -92,15 +68,9 @@ const LANGS = [
   { lang: "Lengua de signos", level: "Competencia básica" },
 ];
 
-const AWARDS = [
-  { title: "Best Startup Products & Services. Early Stage", org: "Spain Startup & Investor Summit · Nonabox", year: "oct. 2013" },
-  { title: "Finalista StartCamp Madrid 2013", org: "Wayra — Telefónica · Proyecto iVecinos", year: "mar. 2013" },
-  { title: "Tercer puesto campeonato nacional de capoeira", org: "", year: "may. 2009" },
-  { title: "Primer puesto campeonato local de ajedrez", org: "", year: "jun. 1995" },
-];
+const AWARDS = PREMIOS.map((p) => ({ title: p.title, org: premioOrg(p), year: p.date }));
 
 const CSS = `
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 :root {
   --bg: #fafaf8;
@@ -133,7 +103,7 @@ body {
 }
 .tl-identity { max-width: 580px; }
 .tl-meta {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-jetbrains-mono), monospace;
   font-size: 0.67rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -167,7 +137,7 @@ body {
   padding: 0.7rem 1.5rem;
   background: var(--accent);
   color: #fff;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-jetbrains-mono), monospace;
   font-size: 0.72rem;
   letter-spacing: 0.06em;
   text-decoration: none;
@@ -176,7 +146,7 @@ body {
 }
 .tl-btn:hover { opacity: 0.82; }
 .tl-scroll-hint {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-jetbrains-mono), monospace;
   font-size: 0.62rem;
   color: var(--text-3);
   letter-spacing: 0.04em;
@@ -200,7 +170,7 @@ body {
   letter-spacing: -0.01em;
 }
 .tl-hint {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-jetbrains-mono), monospace;
   font-size: 0.62rem;
   color: var(--text-3);
   letter-spacing: 0.04em;
@@ -276,7 +246,7 @@ body {
 }
 
 .tl-period {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-jetbrains-mono), monospace;
   font-size: 0.6rem;
   color: var(--text-3);
   margin-top: 12px;
@@ -294,7 +264,7 @@ body {
 .tl-entry.current .tl-role { color: var(--accent); }
 
 .tl-company {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-jetbrains-mono), monospace;
   font-size: 0.6rem;
   color: var(--text-3);
   margin-top: 3px;
@@ -338,7 +308,7 @@ body {
   font-style: italic;
 }
 .tl-quote-attr {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-jetbrains-mono), monospace;
   font-size: 0.62rem;
   color: var(--text-3);
   letter-spacing: 0.08em;
@@ -391,7 +361,7 @@ body {
   background: none;
   border: 1px solid var(--border);
   color: var(--text-3);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-jetbrains-mono), monospace;
   font-size: 0.7rem;
   width: 28px;
   height: 28px;
@@ -403,7 +373,7 @@ body {
 }
 .rec-slider-arrow:hover { border-color: var(--accent); color: var(--accent); }
 .rec-slider-count {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-jetbrains-mono), monospace;
   font-size: 0.58rem;
   color: var(--text-4);
   letter-spacing: 0.06em;
@@ -421,7 +391,7 @@ body {
   align-items: baseline;
 }
 .spec-label {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-jetbrains-mono), monospace;
   font-size: 0.62rem;
   font-weight: 600;
   letter-spacing: 0.2em;
@@ -443,14 +413,14 @@ body {
   padding-top: 0.1rem;
 }
 .spec-num {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-jetbrains-mono), monospace;
   font-size: 0.58rem;
   color: var(--accent);
   letter-spacing: 0.04em;
   flex-shrink: 0;
 }
 .spec-key {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-jetbrains-mono), monospace;
   font-size: 0.6rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -463,7 +433,7 @@ body {
 }
 .spec-pills { display: flex; flex-wrap: wrap; gap: 0.3rem; }
 .spec-pill {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-jetbrains-mono), monospace;
   font-size: 0.6rem;
   padding: 0.2rem 0.6rem;
   border: 1px solid var(--border);
@@ -478,14 +448,14 @@ body {
 }
 .spec-award-title { font-size: 0.83rem; font-weight: 500; color: var(--text); }
 .spec-award-year {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-jetbrains-mono), monospace;
   font-size: 0.58rem;
   color: var(--text-3);
   white-space: nowrap;
   flex-shrink: 0;
 }
 .spec-award-org {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-jetbrains-mono), monospace;
   font-size: 0.58rem;
   color: var(--text-3);
   line-height: 1.4;
@@ -565,13 +535,13 @@ body {
   border-top: 1px solid var(--border);
 }
 .tl-footer-brand {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-jetbrains-mono), monospace;
   font-size: 0.72rem;
   color: var(--text-3);
   text-decoration: none;
 }
 .tl-footer-link {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-jetbrains-mono), monospace;
   font-size: 0.72rem;
   color: var(--text-3);
   text-decoration: none;
@@ -624,7 +594,7 @@ body {
   .tl-year {
     grid-column: 1; grid-row: 1;
     font-size: 0.72rem; font-weight: 600;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--font-jetbrains-mono), monospace;
     color: var(--text-3); text-align: right;
     letter-spacing: 0; line-height: 1.5;
   }
@@ -832,7 +802,7 @@ export default function TempHome() {
       {/* FICHA TÉCNICA — idiomas, formación, certs, reconocimientos */}
       <section className="spec-section">
         <div className="spec-head">
-          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.62rem", fontWeight: 600, letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--accent)" }}>
+          <span style={{ fontFamily: "var(--font-jetbrains-mono), monospace", fontSize: "0.62rem", fontWeight: 600, letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--accent)" }}>
             Datos
           </span>
         </div>
@@ -886,7 +856,7 @@ export default function TempHome() {
 
       {/* APTITUDES — texto fluido */}
       <section className="skills-section">
-        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.62rem", fontWeight: 600, letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--accent)", display: "block", marginBottom: "1.5rem" }}>
+        <span style={{ fontFamily: "var(--font-jetbrains-mono), monospace", fontSize: "0.62rem", fontWeight: 600, letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--accent)", display: "block", marginBottom: "1.5rem" }}>
           Aptitudes
         </span>
         <p className="skills-flow">
@@ -924,7 +894,7 @@ export default function TempHome() {
       {/* FOOTER */}
       <footer className="tl-footer" style={{ paddingBottom: "4rem" }}>
         <a href="/designs" className="tl-footer-brand">pacr.es</a>
-        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.62rem", color: "var(--text-4)" }}>
+        <span style={{ fontFamily: "var(--font-jetbrains-mono), monospace", fontSize: "0.62rem", color: "var(--text-4)" }}>
           Creado el 19 de mayo de 2026
         </span>
         <a href="https://www.linkedin.com/in/pacres/" target="_blank" rel="noopener noreferrer" className="tl-footer-link">

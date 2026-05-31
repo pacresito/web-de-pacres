@@ -1,10 +1,5 @@
 import StarField from './StarField';
-
-function calcularEdad(nacimiento: Date): number {
-  const hoy = new Date();
-  const cumpleEsteAño = new Date(hoy.getFullYear(), nacimiento.getMonth(), nacimiento.getDate());
-  return hoy.getFullYear() - nacimiento.getFullYear() - (hoy < cumpleEsteAño ? 1 : 0);
-}
+import { calcularEdad } from '@/lib/utils';
 
 export default function Lucas() {
   const edad = calcularEdad(new Date(2020, 2, 30));
