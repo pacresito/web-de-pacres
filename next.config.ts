@@ -1,11 +1,5 @@
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {
-  async rewrites() {
-    return [
-      { source: '/home', destination: '/' },
-    ];
-  },
-};
+const nextConfig: NextConfig = {};
 
 export default nextConfig;

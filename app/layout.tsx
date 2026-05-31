@@ -52,6 +52,9 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "La web de Pacres",
   description: "Web personal de Pablo Crespo Velasco",
+  // Por defecto, ningún buscador indexa. Solo la raíz (app/page.tsx) lo sobrescribe.
+  // follow:true para que el rastreador siga enlaces internos sin indexar las páginas.
+  robots: { index: false, follow: true },
 };
 
 export const viewport: Viewport = {
