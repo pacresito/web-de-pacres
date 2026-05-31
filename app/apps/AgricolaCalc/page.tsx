@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import Link from "next/link";
 import TerminalShell from "../../components/TerminalShell";
 import { type Animal, calcTablePts } from "@/lib/agricola";
+import { useRegistroCalc, useRegistroHistorial } from "../../components/useRegistroCalc";
 
 const PLAYERS = ["Lucas", "Pablo"];
 
@@ -124,13 +124,6 @@ type RegistroRecord = {
   winner: string;
 };
 
-type RegistroPage = {
-  records: RegistroRecord[];
-  total: number;
-  page: number;
-  totalPages: number;
-};
-
 function DetailTable({ record }: { record: RegistroRecord }) {
   const { players, inputs, finals, winner } = record;
   const isEmpate = winner === "Empate";
@@ -174,27 +167,8 @@ function DetailTable({ record }: { record: RegistroRecord }) {
 }
 
 function RegistroSection() {
-  const [open, setOpen] = useState(false);
-  const [data, setData] = useState<RegistroPage | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [expanded, setExpanded] = useState<number | null>(null);
-
-  const load = async (page = 1) => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/registro/agricola?page=${page}`);
-      const json = await res.json();
-      setData(json);
-      setExpanded(null);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const toggle = () => {
-    if (!open && !data) load(1);
-    setOpen((v) => !v);
-  };
+  const { open, data, loading, expanded, setExpanded, load, toggle } =
+    useRegistroHistorial<RegistroRecord>("/api/registro/agricola");
 
   return (
     <div className="mt-4 text-center">
@@ -250,15 +224,30 @@ export default function AgricolaCalc() {
   const [scores, setScores] = useState(emptyScores());
   const [step, setStep] = useState(0);
   const [inputVal, setInputVal] = useState("");
-  const [done, setDone] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [showSavePrompt, setShowSavePrompt] = useState(false);
-  const [savePassword, setSavePassword] = useState("");
-  const [saveError, setSaveError] = useState(false);
-  const [saveAttempts, setSaveAttempts] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
-  const savePasswordRef = useRef<HTMLInputElement>(null);
+
+  const {
+    done, setDone,
+    saved, saving,
+    showSavePrompt, setShowSavePrompt,
+    savePassword, setSavePassword,
+    saveError, setSaveError,
+    saveAttempts,
+    savePasswordRef,
+    saveResult, resetSave,
+  } = useRegistroCalc({
+    endpoint: "/api/registro/agricola",
+    buildPayload: (password) => {
+      const derived = [0, 1].map((pi) => getDerived(scores[pi]));
+      const finals = derived.map((d) => d.final ?? 0);
+      const maxFinal = Math.max(...finals);
+      const winners = PLAYERS.filter((_, i) => finals[i] === maxFinal);
+      const winner = winners.length > 1 ? "Empate" : winners[0];
+      const date = new Date().toISOString().slice(0, 10);
+      const inputs = scores.map((ps) => ps.map((v) => (v === "heart" ? 0 : (v ?? 0))));
+      return { password, date, players: PLAYERS, inputs, finals, winner };
+    },
+  });
 
   const currentPlayer = Math.floor(step / 6);
   const localStep = step % 6;
@@ -267,10 +256,6 @@ export default function AgricolaCalc() {
   useEffect(() => {
     if (!done) inputRef.current?.focus();
   }, [step, done]);
-
-  useEffect(() => {
-    if (showSavePrompt) savePasswordRef.current?.focus();
-  }, [showSavePrompt]);
 
   const confirm = () => {
     const trimmed = inputVal.trim();
@@ -296,41 +281,7 @@ export default function AgricolaCalc() {
     setScores(emptyScores());
     setStep(0);
     setInputVal("");
-    setDone(false);
-    setSaved(false);
-    setShowSavePrompt(false);
-    setSavePassword("");
-    setSaveError(false);
-    setSaveAttempts(0);
-  };
-
-  const saveResult = async () => {
-    setSaving(true);
-    setSaveError(false);
-    try {
-      const derived = [0, 1].map((pi) => getDerived(scores[pi]));
-      const finals = derived.map((d) => d.final ?? 0);
-      const maxFinal = Math.max(...finals);
-      const winners = PLAYERS.filter((_, i) => finals[i] === maxFinal);
-      const winner = winners.length > 1 ? "Empate" : winners[0];
-      const date = new Date().toISOString().slice(0, 10);
-      const inputs = scores.map((ps) => ps.map((v) => (v === "heart" ? 0 : (v ?? 0))));
-
-      const res = await fetch("/api/registro/agricola", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: savePassword, date, players: PLAYERS, inputs, finals, winner }),
-      });
-      if (res.ok) {
-        setSaved(true);
-        setShowSavePrompt(false);
-      } else {
-        setSaveError(true);
-        setSaveAttempts((n) => n + 1);
-      }
-    } finally {
-      setSaving(false);
-    }
+    resetSave();
   };
 
   const derived = [0, 1].map((pi) => getDerived(scores[pi]));

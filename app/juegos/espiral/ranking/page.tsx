@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import TerminalShell from "../../../components/TerminalShell";
+import { thStyle, tdStyle, RankBackLink } from "../../../components/ranking";
 
 const MONO = '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace';
 
@@ -94,20 +94,7 @@ export default function Ranking() {
           </table>
         )}
 
-        <Link
-          href="/juegos/espiral"
-          style={{
-            marginTop: "2.5rem",
-            fontSize: "0.8rem",
-            color: "#b8b3a6",
-            textDecoration: "none",
-            transition: "color 0.2s",
-          }}
-          onMouseEnter={e => (e.currentTarget.style.color = "#00b87a")}
-          onMouseLeave={e => (e.currentTarget.style.color = "#b8b3a6")}
-        >
-          ← volver al juego
-        </Link>
+        <RankBackLink href="/juegos/espiral" />
 
       </main>
     </TerminalShell>
@@ -120,18 +107,3 @@ function speedColor(speed: string | null) {
   if (speed === "normal") return "#00b87a";
   return "#b8b3a6";
 }
-
-const thStyle: React.CSSProperties = {
-  padding: "0.4rem 0.75rem",
-  fontSize: "0.72rem",
-  color: "#b8b3a6",
-  fontWeight: 500,
-  textAlign: "left",
-  textTransform: "uppercase",
-  letterSpacing: "0.05em",
-};
-
-const tdStyle: React.CSSProperties = {
-  padding: "0.6rem 0.75rem",
-  fontSize: "0.9rem",
-};

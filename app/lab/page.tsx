@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { ChromeBar, MinimizedBar, TabsBar } from "../components/Chrome";
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -40,129 +41,6 @@ const CMD = "ls ~/lab --long --all";
 
 // ─── Subcomponents ────────────────────────────────────────────────────────────
 
-function WinIcon({ kind }: { kind: "close" | "minimize" | "maximize" | "restore" }) {
-  const f = "rgba(0,0,0,0.4)";
-  const s = { stroke: f, strokeWidth: 1.3, strokeLinecap: "round" as const, fill: "none" as const };
-  if (kind === "close") return (
-    <svg width="7" height="7" viewBox="0 0 8 8" style={{ display: "block" }}>
-      <path d="M1.5 1.5l5 5M6.5 1.5l-5 5" {...s} />
-    </svg>
-  );
-  if (kind === "minimize") return (
-    <svg width="7" height="7" viewBox="0 0 8 8" style={{ display: "block" }}>
-      <path d="M1.5 4h5" {...s} />
-    </svg>
-  );
-  return (
-    <svg width="7" height="7" viewBox="0 0 8 8" style={{ display: "block" }}>
-      <polygon points="1,1 5,1 1,5" fill={f} />
-      <polygon points="7,7 3,7 7,3" fill={f} />
-    </svg>
-  );
-}
-
-function WindowBtn({ color, onClick, title, kind, showIcon = false }: {
-  color: string; onClick: () => void; title: string;
-  kind: "close" | "minimize" | "maximize" | "restore"; showIcon?: boolean;
-}) {
-  return (
-    <button title={title} onClick={onClick} style={{
-      width: 12, height: 12, borderRadius: "50%", background: color,
-      border: "none", cursor: "pointer", padding: 0, flexShrink: 0,
-      display: "flex", alignItems: "center", justifyContent: "center",
-    }}>
-      {showIcon && <WinIcon kind={kind} />}
-    </button>
-  );
-}
-
-function ChromeBar({ onClose, onMinimize, onMaximize, isMaximized }: {
-  onClose: () => void; onMinimize: () => void; onMaximize: () => void; isMaximized: boolean;
-}) {
-  const [hot, setHot] = useState(false);
-  return (
-    <div style={{
-      background: "var(--t-paper2)", borderBottom: "1px solid var(--t-rule)",
-      padding: "14px 18px", display: "grid",
-      gridTemplateColumns: "140px 1fr 140px", alignItems: "center",
-    }}>
-      <div style={{ display: "flex", gap: 7, alignItems: "center" }}
-        onMouseEnter={() => setHot(true)} onMouseLeave={() => setHot(false)}>
-        <WindowBtn color="#ff5f57" onClick={onClose} title="Cerrar" kind="close" showIcon={hot} />
-        <WindowBtn color="#febc2e" onClick={onMinimize} title="Minimizar" kind="minimize" showIcon={hot} />
-        <WindowBtn color="#28c840" onClick={onMaximize} title={isMaximized ? "Restaurar" : "Maximizar"} kind={isMaximized ? "restore" : "maximize"} showIcon={hot} />
-      </div>
-      <div style={{ textAlign: "center", fontFamily: "var(--t-mono)", fontSize: 12, color: "var(--t-ink2)" }}>
-        ⌘&nbsp;&nbsp;pacr.es — lab
-      </div>
-      <div style={{ textAlign: "right", fontFamily: "var(--t-mono)", fontSize: 10, color: "var(--t-ink3)" }}>
-        v4.0.0 · zsh
-      </div>
-    </div>
-  );
-}
-
-function MinimizedBar({ onRestore, onMaximize, onClose, animatingOut = false }: {
-  onRestore: () => void; onMaximize: () => void; onClose: () => void; animatingOut?: boolean;
-}) {
-  const [hot, setHot] = useState(false);
-  return (
-    <div style={{
-      position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)",
-      background: "var(--t-paper2)", border: "1px solid var(--t-rule)", borderRadius: 10,
-      padding: "10px 16px", display: "flex", alignItems: "center", gap: 12,
-      boxShadow: "0 8px 32px rgba(0,0,0,0.18)", fontFamily: "var(--t-mono)",
-      fontSize: 12, color: "var(--t-ink2)", zIndex: 100,
-      animation: animatingOut ? "t-dock-out 0.22s ease-out forwards" : "t-dock-in 0.25s ease-out",
-      whiteSpace: "nowrap",
-    }}>
-      <div style={{ display: "flex", gap: 6, alignItems: "center" }}
-        onMouseEnter={() => setHot(true)} onMouseLeave={() => setHot(false)}>
-        <WindowBtn color="#ff5f57" onClick={onClose} title="Cerrar" kind="close" showIcon={hot} />
-        <WindowBtn color="#febc2e" onClick={onRestore} title="Restaurar" kind="minimize" showIcon={hot} />
-        <WindowBtn color="#28c840" onClick={onMaximize} title="Maximizar" kind="maximize" showIcon={hot} />
-      </div>
-      <span>pacr.es — lab</span>
-      <span style={{ color: "var(--t-ink4)", fontSize: 10 }}>· minimizado</span>
-    </div>
-  );
-}
-
-function TabsBar({ onCvClick, onDesignsClick }: { onCvClick: () => void; onDesignsClick: () => void }) {
-  const tabs = [
-    { label: "~/cv",      active: false, onClick: onCvClick },
-    { label: "~/lab",     active: true,  onClick: undefined },
-    { label: "~/designs", active: false, onClick: onDesignsClick },
-  ];
-  return (
-    <div style={{
-      background: "var(--t-paper2)", borderBottom: "1px solid var(--t-rule)",
-      padding: "0 14px", display: "flex", alignItems: "flex-end", justifyContent: "space-between",
-    }}>
-      <div style={{ display: "flex" }}>
-        {tabs.map((tab) => (
-          <div key={tab.label} onClick={tab.onClick} style={{
-            padding: "8px 14px",
-            fontFamily: "var(--t-mono)", fontSize: 11,
-            color: tab.active ? "var(--t-ink)" : "var(--t-ink3)",
-            borderTop: tab.active ? "2px solid var(--t-accent)" : "2px solid transparent",
-            borderLeft: tab.active ? "1px solid var(--t-rule)" : "none",
-            borderRight: tab.active ? "1px solid var(--t-rule)" : "none",
-            background: tab.active ? "var(--t-paper)" : "transparent",
-            marginBottom: tab.active ? -1 : 0,
-            cursor: tab.onClick ? "pointer" : "default",
-            userSelect: "none" as const,
-          }}>
-            {tab.label}
-          </div>
-        ))}
-      </div>
-      <div style={{ fontFamily: "var(--t-mono)", fontSize: 10, color: "var(--t-ink3)", paddingBottom: 8 }} className="t-session-meta">
-        session #06 — terminal
-      </div>
-    </div>
-  );
-}
 
 function PromptRow({ cmd, active }: { cmd: string; active: boolean }) {
   const [displayed, setDisplayed] = useState("");
@@ -518,7 +396,7 @@ export default function Laboratorio() {
         }
       `}</style>
 
-      {isMin && <MinimizedBar onRestore={handleRestore} onMaximize={handleRestoreMaximized} onClose={handleClose} animatingOut={dockAnimOut} />}
+      {isMin && <MinimizedBar title="lab" onRestore={handleRestore} onMaximize={handleRestoreMaximized} onClose={handleClose} animatingOut={dockAnimOut} />}
 
       <div className={`t-bg${animClass === "t-win-maximizing" ? " t-outer-maximizing" : animClass === "t-win-unmaximizing" ? " t-outer-unmaximizing" : ""}`} style={{
         minHeight: "100vh",
@@ -539,6 +417,7 @@ export default function Laboratorio() {
           "--win-w": "100vw",
           width: isMax ? "100vw" : "min(920px, 100%)",
           maxWidth: "none",
+          minHeight: isMax ? "100vh" : undefined,
           background: "var(--t-paper)",
           borderRadius: isMax ? 0 : 12,
           border: isMax ? "none" : "1px solid var(--t-rule)",
@@ -548,14 +427,18 @@ export default function Laboratorio() {
           transformOrigin: (animClass === "t-win-minimizing" || animClass === "t-win-restoring") ? "bottom center" : "center center",
         } as React.CSSProperties}>
           <ChromeBar
+            title="lab"
             onClose={handleClose}
             onMinimize={handleMinimize}
             onMaximize={handleMaximize}
             isMaximized={windowState === "maximized" || animClass === "t-win-maximizing"}
           />
           <TabsBar
-            onCvClick={() => router.push("/cv")}
-            onDesignsClick={() => router.push("/designs")}
+            tabs={[
+              { label: "~/cv",      active: false, onClick: () => router.push("/cv") },
+              { label: "~/lab",     active: true },
+              { label: "~/designs", active: false, onClick: () => router.push("/designs") },
+            ]}
           />
 
           <PromptRow cmd={CMD} active={mounted} />

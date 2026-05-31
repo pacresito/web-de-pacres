@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import TerminalShell from "../../../components/TerminalShell";
+import { thStyle, tdStyle, RankBackLink } from "../../../components/ranking";
 
 const MONO = '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace';
 
@@ -122,14 +122,7 @@ export default function RankingLaberinto() {
           </div>
         )}
 
-        <Link
-          href="/juegos/laberinto"
-          style={{ marginTop: "2.5rem", fontSize: "0.8rem", color: "#b8b3a6", textDecoration: "none", transition: "color 0.2s" }}
-          onMouseEnter={e => (e.currentTarget.style.color = "#00b87a")}
-          onMouseLeave={e => (e.currentTarget.style.color = "#b8b3a6")}
-        >
-          ← volver al juego
-        </Link>
+        <RankBackLink href="/juegos/laberinto" />
 
       </main>
     </TerminalShell>
@@ -143,19 +136,4 @@ const sectionLabel: React.CSSProperties = {
   textTransform: "uppercase",
   letterSpacing: "0.05em",
   marginBottom: "0.5rem",
-};
-
-const thStyle: React.CSSProperties = {
-  padding: "0.4rem 0.75rem",
-  fontSize: "0.72rem",
-  color: "#b8b3a6",
-  fontWeight: 500,
-  textAlign: "center",
-  textTransform: "uppercase",
-  letterSpacing: "0.05em",
-};
-
-const tdStyle: React.CSSProperties = {
-  padding: "0.6rem 0.75rem",
-  fontSize: "0.9rem",
 };
