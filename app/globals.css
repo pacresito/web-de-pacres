@@ -1,8 +1,31 @@
 @import "tailwindcss";
 
+/* ============================================================
+   Sistema de diseño · estilo terminal (única fuente)
+   Paleta y animaciones que antes estaban duplicadas en
+   TerminalShell.tsx y triplicadas en cv/lab/designs.
+   ============================================================ */
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* Paleta terminal (papel cálido + acento verde) */
+  --t-paper:       #fafaf7;
+  --t-paper2:      #f4f1ea;
+  --t-ink:         #16140f;
+  --t-ink2:        #3a382f;
+  --t-ink3:        #7a766b;
+  --t-ink4:        #b8b3a6;
+  --t-rule:        #d9d4c7;
+  --t-rule2:       #ebe6d9;
+  --t-accent:      #00b87a;
+  --t-accent2:     #009764;
+  --t-accent-soft: #d4f5e6;
+  --t-accent-bg:   #e8faf1;
+  --t-sans:  var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --t-serif: var(--font-instrument-serif), "Times New Roman", Georgia, serif;
+  --t-mono:  var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 @theme inline {
@@ -12,15 +35,180 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: ui-sans-serif, system-ui, sans-serif;
 }
+
+/* ============================================================
+   TerminalShell — chrome bar, navegación y animación de salida
+   ============================================================ */
+
+.ts-nav-btn {
+  background: none; border: none; cursor: pointer;
+  color: var(--t-ink2); padding: 4px;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: color 0.15s; border-radius: 4px;
+}
+.ts-nav-btn:hover { color: var(--t-ink); }
+.ts-nav-btn:disabled { color: var(--t-ink4); cursor: default; }
+
+@keyframes ts-blink { 50% { opacity: 0; } }
+
+@keyframes ts-win-unmaximize {
+  0%   { width: var(--ts-win-w); border-radius: 0; border: 1px solid transparent; box-shadow: none; }
+  45%  { width: var(--ts-win-w); border-radius: 12px; border: 1px solid var(--t-rule); box-shadow: 0 30px 80px -40px rgba(0,0,0,0.25), 0 2px 6px rgba(0,0,0,0.04); }
+  100% { width: 900px; border-radius: 12px; border: 1px solid var(--t-rule); box-shadow: 0 30px 80px -40px rgba(0,0,0,0.25), 0 2px 6px rgba(0,0,0,0.04); }
+}
+@keyframes ts-outer-unmaximize {
+  0%        { padding: 0; }
+  45%, 100% { padding: 2rem 1rem 3rem; }
+}
+@keyframes ts-content-fadeout {
+  0%, 45% { opacity: 1; }
+  100%    { opacity: 0; }
+}
+@keyframes ts-nav-collapse {
+  0%   { opacity: 1; max-width: 200px; }
+  40%  { opacity: 0; max-width: 200px; }
+  100% { opacity: 0; max-width: 0; overflow: hidden; }
+}
+.ts-win-unmaximizing   { animation: ts-win-unmaximize   0.9s ease forwards; overflow: hidden; }
+.ts-outer-unmaximizing { animation: ts-outer-unmaximize 0.9s ease forwards !important; }
+.ts-chrome-outer.ts-outer-unmaximizing {
+  background: #ece9e0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+.ts-content-unmaximizing { animation: ts-content-fadeout 0.9s ease forwards; }
+.ts-nav-collapsing { animation: ts-nav-collapse 0.9s ease forwards; }
+
+.ts-why-btn {
+  background: none; border: none; cursor: pointer;
+  font-family: var(--t-mono); font-size: 0.75rem;
+  color: var(--t-ink3); padding: 0;
+  display: flex; align-items: center; gap: 4px;
+  transition: color 0.15s;
+}
+.ts-why-btn:hover { color: var(--t-accent); }
+.ts-why-box {
+  margin-top: 1rem;
+  padding: 16px 20px;
+  border: 1px solid var(--t-rule);
+  border-left: 3px solid var(--t-accent);
+  border-radius: 8px;
+  background: var(--t-paper2);
+  font-family: var(--t-mono);
+  font-size: 0.78rem;
+  color: var(--t-ink2);
+  line-height: 1.65;
+  display: flex; flex-direction: column; gap: 0.65rem;
+}
+
+/* ============================================================
+   cv / lab / designs — ventana con chrome (maximizar, dock, etc.)
+   ============================================================ */
+
+.t-bg { background: #ece9e0 !important; }
+
+@keyframes t-blink { 50% { opacity: 0; } }
+
+@keyframes t-slideDown {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.t-slide-down { animation: t-slideDown 0.22s ease-out; }
+
+@keyframes t-row-in {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: none; }
+}
+.t-row-in   { animation: t-row-in 0.18s ease-out both; }
+.t-skill-in { animation: t-row-in 0.15s ease-out both; }
+
+@keyframes t-win-close {
+  from { opacity: 1; transform: scale(1); }
+  to   { opacity: 0; transform: scale(0.94); }
+}
+@keyframes t-win-minimize {
+  0%   { opacity: 1;   transform: scale(1) translateY(0); }
+  65%  { opacity: 0.4; transform: scaleX(0.35) scaleY(0.2) translateY(18vh); }
+  100% { opacity: 0;   transform: scaleX(0.07) scaleY(0.02) translateY(26vh); }
+}
+@keyframes t-win-restore {
+  0%   { opacity: 0;   transform: scaleX(0.07) scaleY(0.02) translateY(26vh); }
+  35%  { opacity: 0.4; transform: scaleX(0.35) scaleY(0.2) translateY(18vh); }
+  100% { opacity: 1;   transform: scale(1) translateY(0); }
+}
+@keyframes t-dock-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(12px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+@keyframes t-dock-out {
+  from { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+  to   { opacity: 0; transform: translateX(-50%) translateY(14px) scale(0.86); }
+}
+.t-win-closing    { animation: t-win-close    0.2s  ease-out forwards; }
+.t-win-minimizing { animation: t-win-minimize 0.38s ease-in  forwards; transform-origin: bottom center !important; }
+.t-win-restoring  { animation: t-win-restore  0.6s  ease-out forwards; transform-origin: bottom center !important; }
+
+@keyframes t-win-maximize {
+  0%  { width: 920px; border-radius: 12px; border: 1px solid var(--t-rule); box-shadow: 0 30px 80px -40px rgba(0,0,0,0.25), 0 2px 6px rgba(0,0,0,0.04); margin-bottom: 3rem; }
+  55% { width: var(--win-w); border-radius: 12px; border: 1px solid var(--t-rule); box-shadow: 0 30px 80px -40px rgba(0,0,0,0.25), 0 2px 6px rgba(0,0,0,0.04); margin-bottom: 3rem; }
+  100%{ width: var(--win-w); border-radius: 0; border: 1px solid transparent; box-shadow: none; margin-bottom: 0; }
+}
+@keyframes t-win-unmaximize {
+  0%  { width: var(--win-w); border-radius: 0; border: 1px solid transparent; box-shadow: none; margin-bottom: 0; }
+  45% { width: var(--win-w); border-radius: 12px; border: 1px solid var(--t-rule); box-shadow: 0 30px 80px -40px rgba(0,0,0,0.25), 0 2px 6px rgba(0,0,0,0.04); margin-bottom: 3rem; }
+  100%{ width: 920px; border-radius: 12px; border: 1px solid var(--t-rule); box-shadow: 0 30px 80px -40px rgba(0,0,0,0.25), 0 2px 6px rgba(0,0,0,0.04); margin-bottom: 3rem; }
+}
+@keyframes t-outer-maximize {
+  0%, 55% { padding: 2rem 1rem 3rem; }
+  100%    { padding: 0; }
+}
+@keyframes t-outer-unmaximize {
+  0%        { padding: 0; }
+  45%, 100% { padding: 2rem 1rem 3rem; }
+}
+.t-win-maximizing     { animation: t-win-maximize   1s ease forwards; }
+.t-win-unmaximizing   { animation: t-win-unmaximize 1s ease forwards; }
+.t-outer-maximizing   { animation: t-outer-maximize   1s ease forwards !important; }
+.t-outer-unmaximizing { animation: t-outer-unmaximize 1s ease forwards !important; }
+
+@keyframes t-bg-fade-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes t-bg-fade-in  { from { opacity: 0; } to { opacity: 1; } }
+
+@keyframes t-sectionIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.t-section-wrap {
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+}
+.t-section-wrap.t-in {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .t-section-wrap { opacity: 1 !important; transform: none !important; transition: none !important; }
+}
+
+.t-content-wrap {
+  opacity: 0; transform: translateY(12px);
+  transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+}
+.t-content-wrap.t-in { opacity: 1; transform: none; }
+
+.t-ibtn {
+  width: 30px; height: 30px; background: var(--t-paper);
+  border: 1px solid var(--t-rule); border-radius: 6px;
+  cursor: pointer; font-size: 16px; color: var(--t-ink3);
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+  font-family: var(--t-mono); padding: 0; line-height: 1;
+}
+.t-ibtn:hover { background: var(--t-paper2); border-color: var(--t-ink4); color: var(--t-ink); }

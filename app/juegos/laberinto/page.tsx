@@ -481,7 +481,9 @@ export default function Laberinto() {
       ctx.fillStyle = "rgba(250,250,247,0.78)";
       ctx.fillRect(0, 0, BOARD_W, BOARD_H);
       ctx.fillStyle = "#00b87a";
-      ctx.font = `bold ${Math.round(CELL * 0.33)}px JetBrains Mono, monospace`;
+      // La familia real de JetBrains Mono la asigna next/font; el canvas no resuelve var(), así que la leemos.
+      const monoFam = getComputedStyle(document.documentElement).getPropertyValue("--font-jetbrains-mono") || "monospace";
+      ctx.font = `bold ${Math.round(CELL * 0.33)}px ${monoFam}, monospace`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText("Haz clic para empezar", BOARD_W / 2, BOARD_H / 2);
@@ -851,8 +853,8 @@ export default function Laberinto() {
     }
   }, [attachOrientListener, calibrateOrientation]);
 
-  const scoreColor = score < 0 ? "#ef4444" : "var(--ts-accent)";
-  const timerColor = timeLeft <= 10 ? "#ef4444" : "var(--ts-ink3)";
+  const scoreColor = score < 0 ? "#ef4444" : "var(--t-accent)";
+  const timerColor = timeLeft <= 10 ? "#ef4444" : "var(--t-ink3)";
 
   const gameOverOverlay = gameOver ? (
     <div style={{
@@ -861,12 +863,12 @@ export default function Laberinto() {
       display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
       gap: "1rem", zIndex: 10,
     }}>
-      <p style={{ color: "var(--ts-accent)", fontSize: "1.1rem", fontWeight: 600, fontFamily: "var(--ts-mono)" }}>
+      <p style={{ color: "var(--t-accent)", fontSize: "1.1rem", fontWeight: 600, fontFamily: "var(--t-mono)" }}>
         ¡Tiempo!
       </p>
-      <p style={{ color: scoreColor, fontSize: "2rem", fontWeight: 800, fontFamily: "var(--ts-mono)", lineHeight: 1 }}>
+      <p style={{ color: scoreColor, fontSize: "2rem", fontWeight: 800, fontFamily: "var(--t-mono)", lineHeight: 1 }}>
         {score >= 0 ? "+" : ""}{score}
-        <span style={{ fontSize: "1rem", fontWeight: 400, color: "var(--ts-ink4)", marginLeft: "0.4rem" }}>pts</span>
+        <span style={{ fontSize: "1rem", fontWeight: 400, color: "var(--t-ink4)", marginLeft: "0.4rem" }}>pts</span>
       </p>
 
       {!submitted ? (
@@ -882,13 +884,13 @@ export default function Laberinto() {
               autoComplete="new-password"
               style={{
                 padding: "0.35rem 0.65rem",
-                border: "1px solid var(--ts-rule)",
+                border: "1px solid var(--t-rule)",
                 borderRadius: "6px",
                 fontSize: "0.85rem",
                 outline: "none",
-                color: "var(--ts-ink)",
-                background: "var(--ts-paper2)",
-                fontFamily: "var(--ts-mono)",
+                color: "var(--t-ink)",
+                background: "var(--t-paper2)",
+                fontFamily: "var(--t-mono)",
                 width: "130px",
               }}
             />
@@ -897,14 +899,14 @@ export default function Laberinto() {
               disabled={submitting || !alias.trim()}
               style={{
                 padding: "0.35rem 0.85rem",
-                background: "var(--ts-accent)",
+                background: "var(--t-accent)",
                 color: "#fff",
                 border: "none",
                 borderRadius: "6px",
                 fontSize: "0.85rem",
                 cursor: alias.trim() && !submitting ? "pointer" : "default",
                 opacity: alias.trim() && !submitting ? 1 : 0.4,
-                fontFamily: "var(--ts-mono)",
+                fontFamily: "var(--t-mono)",
               }}
             >
               {submitting ? "..." : "Guardar"}
@@ -912,7 +914,7 @@ export default function Laberinto() {
           </form>
           <button
             onClick={fullRestart}
-            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ts-ink3)", fontSize: "0.8rem", fontFamily: "var(--ts-mono)" }}
+            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--t-ink3)", fontSize: "0.8rem", fontFamily: "var(--t-mono)" }}
           >
             jugar de nuevo
           </button>
@@ -922,13 +924,13 @@ export default function Laberinto() {
           <div style={{ display: "flex", gap: "1rem" }}>
             <a
               href="/juegos/laberinto/ranking"
-              style={{ color: "var(--ts-accent)", fontSize: "0.85rem", fontFamily: "var(--ts-mono)", textDecoration: "none" }}
+              style={{ color: "var(--t-accent)", fontSize: "0.85rem", fontFamily: "var(--t-mono)", textDecoration: "none" }}
             >
               Ver ranking →
             </a>
             <button
               onClick={fullRestart}
-              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ts-ink3)", fontSize: "0.85rem", fontFamily: "var(--ts-mono)" }}
+              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--t-ink3)", fontSize: "0.85rem", fontFamily: "var(--t-mono)" }}
             >
               Repetir
             </button>
@@ -939,8 +941,8 @@ export default function Laberinto() {
   ) : null;
 
   const header = (
-    <div style={{ display: "flex", alignItems: "center", gap: "1rem", fontFamily: "var(--ts-mono)" }}>
-      <span style={{ fontSize: "0.75rem", color: "var(--ts-ink3)", fontVariantNumeric: "tabular-nums" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: "1rem", fontFamily: "var(--t-mono)" }}>
+      <span style={{ fontSize: "0.75rem", color: "var(--t-ink3)", fontVariantNumeric: "tabular-nums" }}>
         ↳ tilt: <span ref={tiltYRef}>+0°</span> / <span ref={tiltXRef}>+0°</span>
       </span>
       <span style={{ fontSize: "0.75rem", color: timerColor, fontVariantNumeric: "tabular-nums" }}>{timeLeft}s</span>
@@ -949,9 +951,9 @@ export default function Laberinto() {
         <a
           href="/juegos/laberinto/ranking"
           title="Ranking"
-          style={{ color: "var(--ts-ink3)", display: "flex", alignItems: "center", transition: "color 0.15s" }}
-          onMouseEnter={e => (e.currentTarget.style.color = "var(--ts-accent)")}
-          onMouseLeave={e => (e.currentTarget.style.color = "var(--ts-ink3)")}
+          style={{ color: "var(--t-ink3)", display: "flex", alignItems: "center", transition: "color 0.15s" }}
+          onMouseEnter={e => (e.currentTarget.style.color = "var(--t-accent)")}
+          onMouseLeave={e => (e.currentTarget.style.color = "var(--t-ink3)")}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
@@ -961,9 +963,9 @@ export default function Laberinto() {
         <button
           onClick={() => setFullscreen(f => !f)}
           title={fullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
-          style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ts-ink3)", padding: 0, display: "flex", alignItems: "center", transition: "color 0.15s" }}
-          onMouseEnter={e => (e.currentTarget.style.color = "var(--ts-accent)")}
-          onMouseLeave={e => (e.currentTarget.style.color = "var(--ts-ink3)")}
+          style={{ background: "none", border: "none", cursor: "pointer", color: "var(--t-ink3)", padding: 0, display: "flex", alignItems: "center", transition: "color 0.15s" }}
+          onMouseEnter={e => (e.currentTarget.style.color = "var(--t-accent)")}
+          onMouseLeave={e => (e.currentTarget.style.color = "var(--t-ink3)")}
         >
           {fullscreen ? (
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1044,17 +1046,17 @@ export default function Laberinto() {
         <div style={{ width: 120, flexShrink: 0 }} className="flex flex-col items-center justify-center gap-3 h-full">
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.35rem" }}>
             <div style={{ display: "flex", gap: "0.6rem", alignItems: "center" }}>
-              <span style={{ color: timerColor, fontSize: "0.8rem", fontFamily: "var(--ts-mono)" }}>{timeLeft}s</span>
-              <span style={{ color: scoreColor, fontSize: "0.8rem", fontFamily: "var(--ts-mono)", fontWeight: 600 }}>{score >= 0 ? "+" : ""}{score}</span>
+              <span style={{ color: timerColor, fontSize: "0.8rem", fontFamily: "var(--t-mono)" }}>{timeLeft}s</span>
+              <span style={{ color: scoreColor, fontSize: "0.8rem", fontFamily: "var(--t-mono)", fontWeight: 600 }}>{score >= 0 ? "+" : ""}{score}</span>
             </div>
           </div>
           <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
             <a
               href="/juegos/laberinto/ranking"
               title="Ranking"
-              style={{ color: "var(--ts-ink3)", display: "flex", alignItems: "center", transition: "color 0.15s" }}
-              onMouseEnter={e => (e.currentTarget.style.color = "var(--ts-accent)")}
-              onMouseLeave={e => (e.currentTarget.style.color = "var(--ts-ink3)")}
+              style={{ color: "var(--t-ink3)", display: "flex", alignItems: "center", transition: "color 0.15s" }}
+              onMouseEnter={e => (e.currentTarget.style.color = "var(--t-accent)")}
+              onMouseLeave={e => (e.currentTarget.style.color = "var(--t-ink3)")}
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
@@ -1063,9 +1065,9 @@ export default function Laberinto() {
             </a>
             <button
               onClick={() => setFullscreen(f => !f)}
-              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ts-ink3)", padding: 0, display: "flex", alignItems: "center", transition: "color 0.15s" }}
-              onMouseEnter={e => (e.currentTarget.style.color = "var(--ts-accent)")}
-              onMouseLeave={e => (e.currentTarget.style.color = "var(--ts-ink3)")}
+              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--t-ink3)", padding: 0, display: "flex", alignItems: "center", transition: "color 0.15s" }}
+              onMouseEnter={e => (e.currentTarget.style.color = "var(--t-accent)")}
+              onMouseLeave={e => (e.currentTarget.style.color = "var(--t-ink3)")}
             >
               {fullscreen ? (
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1080,7 +1082,7 @@ export default function Laberinto() {
               )}
             </button>
           </div>
-          <p style={{ fontSize: "0.65rem", color: "var(--ts-ink4)", textAlign: "center", lineHeight: 1.4, fontFamily: "var(--ts-mono)" }}>
+          <p style={{ fontSize: "0.65rem", color: "var(--t-ink4)", textAlign: "center", lineHeight: 1.4, fontFamily: "var(--t-mono)" }}>
             {orientState === "on" ? "Toca para calibrar · Inclina el móvil" : orientState === "needs-permission" ? "Toca el tablero para activar el giroscopio" : "Mueve el ratón o toca para inclinar"}
           </p>
         </div>
@@ -1122,7 +1124,7 @@ export default function Laberinto() {
           )}
 
           <div className="mt-auto flex flex-col items-center gap-6 pb-10">
-            <p className="md:hidden" style={{ fontSize: "0.75rem", color: "var(--ts-ink4)", fontFamily: "var(--ts-mono)", textAlign: "center", lineHeight: 1.6 }}>
+            <p className="md:hidden" style={{ fontSize: "0.75rem", color: "var(--t-ink4)", fontFamily: "var(--t-mono)", textAlign: "center", lineHeight: 1.6 }}>
               {orientState === "on" ? (
                 <>{`Toca el tablero para calibrar`}<br />{`Inclina el móvil para mover la bola`}</>
               ) : orientState === "needs-permission" ? (

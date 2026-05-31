@@ -33,7 +33,7 @@ export default function WhyFooter({ question, date, children, onOpenChange, styl
       {open && (
         <div ref={ref} className="ts-why-box" style={{ maxWidth: 420, textAlign: "left" }}>
           {children}
-          {date && <p style={{ color: "var(--ts-ink4)", fontSize: "0.72rem" }}>↳ Creado el {date}</p>}
+          {date && <p style={{ color: "var(--t-ink4)", fontSize: "0.72rem" }}>↳ Creado el {date}</p>}
         </div>
       )}
     </div>

@@ -26,7 +26,7 @@ function CursorIcon() {
     <svg width="22" height="22" viewBox="0 0 22 22" fill="none" style={{ display: "block" }}>
       <path
         d="M4 2L4 18L8 14L12 21L14.5 20L10.5 13L17 13Z"
-        fill="var(--ts-ink)"
+        fill="var(--t-ink)"
         stroke="white"
         strokeWidth="1.5"
         strokeLinejoin="round"
@@ -559,7 +559,7 @@ export default function SigueTusSuenos() {
             willChange: "transform",
             width: TARGET_R * 2, height: TARGET_R * 2,
             borderRadius: "50%",
-            border: "1px solid var(--ts-accent)",
+            border: "1px solid var(--t-accent)",
             pointerEvents: "none", zIndex: 100,
           }}
         >
@@ -577,7 +577,7 @@ export default function SigueTusSuenos() {
               cy={TARGET_R}
               r={TARGET_R - 4}
               fill="none"
-              stroke="var(--ts-accent)"
+              stroke="var(--t-accent)"
               strokeWidth="3"
               strokeDasharray={`0 ${ARC_C}`}
               strokeLinecap="round"
@@ -603,10 +603,10 @@ export default function SigueTusSuenos() {
                 position: "absolute",
                 left: 20,
                 top: -32,
-                background: "var(--ts-ink)",
-                color: "var(--ts-paper)",
+                background: "var(--t-ink)",
+                color: "var(--t-paper)",
                 fontSize: "0.72rem",
-                fontFamily: "var(--ts-mono)",
+                fontFamily: "var(--t-mono)",
                 padding: "0.35rem 0.65rem",
                 borderRadius: "4px",
                 whiteSpace: "nowrap",
@@ -629,9 +629,9 @@ export default function SigueTusSuenos() {
             top: "50%",
             left: "50%",
             transform: "translate(-50%, calc(-50% - 55px))",
-            color: "var(--ts-accent)",
+            color: "var(--t-accent)",
             fontSize: "0.82rem",
-            fontFamily: "var(--ts-mono)",
+            fontFamily: "var(--t-mono)",
             pointerEvents: "none",
             zIndex: 9999,
             whiteSpace: "nowrap",
@@ -660,8 +660,8 @@ export default function SigueTusSuenos() {
       {/* Idle */}
       {gameState === "idle" && (
         <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "0.75rem", pointerEvents: "none" }}>
-          <p style={{ fontSize: "1.5rem", fontWeight: 800, color: "var(--ts-ink)", letterSpacing: "-0.03em", fontFamily: "var(--ts-mono)" }}>Alcanza tus objetivos</p>
-          <p style={{ fontSize: "0.85rem", color: "var(--ts-ink3)", fontFamily: "var(--ts-mono)" }}>
+          <p style={{ fontSize: "1.5rem", fontWeight: 800, color: "var(--t-ink)", letterSpacing: "-0.03em", fontFamily: "var(--t-mono)" }}>Alcanza tus objetivos</p>
+          <p style={{ fontSize: "0.85rem", color: "var(--t-ink3)", fontFamily: "var(--t-mono)" }}>
             {isMobile ? "Toca la pantalla para empezar" : "Mueve el ratón para empezar"}
           </p>
         </div>
@@ -671,17 +671,17 @@ export default function SigueTusSuenos() {
       {(gameState === "playing" || gameState === "lost") && (
         <div style={{ position: "absolute", top: "2rem", left: 0, right: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: "0.35rem", pointerEvents: "none" }}>
           {isMobile ? (
-            <p style={{ fontSize: "0.78rem", color: "var(--ts-ink4)", fontFamily: "var(--ts-mono)" }}>
+            <p style={{ fontSize: "0.78rem", color: "var(--t-ink4)", fontFamily: "var(--t-mono)" }}>
               Mantén el dedo sobre la diana
             </p>
           ) : (
             <>
-              <p style={{ fontSize: "0.78rem", color: "var(--ts-ink4)", fontFamily: "var(--ts-mono)" }}>
+              <p style={{ fontSize: "0.78rem", color: "var(--t-ink4)", fontFamily: "var(--t-mono)" }}>
                 Haz clic en el objetivo con el cursor correcto
               </p>
-              {attempts === 1 && <p style={{ fontSize: "0.68rem", color: "var(--ts-ink4)", fontFamily: "var(--ts-mono)" }}>Tienes que estar solo en el objetivo...</p>}
-              {attempts === 2 && <p style={{ fontSize: "0.68rem", color: "var(--ts-ink4)", fontFamily: "var(--ts-mono)" }}>Muévete rápido. Deja a las réplicas atrás.</p>}
-              {attempts >= 3 && <p style={{ fontSize: "0.68rem", color: "var(--ts-ink4)", fontFamily: "var(--ts-mono)" }}>El cursor real debe llegar solo al objetivo.</p>}
+              {attempts === 1 && <p style={{ fontSize: "0.68rem", color: "var(--t-ink4)", fontFamily: "var(--t-mono)" }}>Tienes que estar solo en el objetivo...</p>}
+              {attempts === 2 && <p style={{ fontSize: "0.68rem", color: "var(--t-ink4)", fontFamily: "var(--t-mono)" }}>Muévete rápido. Deja a las réplicas atrás.</p>}
+              {attempts >= 3 && <p style={{ fontSize: "0.68rem", color: "var(--t-ink4)", fontFamily: "var(--t-mono)" }}>El cursor real debe llegar solo al objetivo.</p>}
             </>
           )}
         </div>
@@ -690,35 +690,35 @@ export default function SigueTusSuenos() {
       {/* Certificate */}
       {gameState === "certificate" && (
         <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "1rem", animation: "certAppear 0.4s ease" }}>
-          <div style={{ border: "2px solid var(--ts-accent)", borderRadius: "4px", padding: "1.75rem 2rem", width: "82%", maxWidth: "300px", textAlign: "center", position: "relative" }}>
-            <div style={{ position: "absolute", inset: 5, border: "1px solid var(--ts-rule)", borderRadius: "3px", pointerEvents: "none" }} />
-            <p style={{ fontSize: "0.55rem", letterSpacing: "0.22em", textTransform: "uppercase", fontFamily: "var(--ts-mono)", color: "var(--ts-accent)", marginBottom: "0.75rem" }}>
+          <div style={{ border: "2px solid var(--t-accent)", borderRadius: "4px", padding: "1.75rem 2rem", width: "82%", maxWidth: "300px", textAlign: "center", position: "relative" }}>
+            <div style={{ position: "absolute", inset: 5, border: "1px solid var(--t-rule)", borderRadius: "3px", pointerEvents: "none" }} />
+            <p style={{ fontSize: "0.55rem", letterSpacing: "0.22em", textTransform: "uppercase", fontFamily: "var(--t-mono)", color: "var(--t-accent)", marginBottom: "0.75rem" }}>
               Certificado oficial
             </p>
-            <p style={{ fontSize: "1.15rem", fontWeight: 800, letterSpacing: "-0.02em", color: "var(--ts-ink)", fontFamily: "var(--ts-mono)" }}>
+            <p style={{ fontSize: "1.15rem", fontWeight: 800, letterSpacing: "-0.02em", color: "var(--t-ink)", fontFamily: "var(--t-mono)" }}>
               Perseverancia certificada
             </p>
-            <p style={{ fontSize: "0.68rem", color: "var(--ts-ink3)", margin: "0.75rem 0 1.25rem", lineHeight: 2.0, fontFamily: "var(--ts-mono)" }}>
+            <p style={{ fontSize: "0.68rem", color: "var(--t-ink3)", margin: "0.75rem 0 1.25rem", lineHeight: 2.0, fontFamily: "var(--t-mono)" }}>
               Se certifica que el portador<br />
               consiguió lo que se propuso.<br />
               Eso no le pasa a todo el mundo.
             </p>
-            <div style={{ borderTop: "1px solid var(--ts-rule)", paddingTop: "0.9rem", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
-              <p style={{ fontSize: "0.58rem", color: "var(--ts-ink4)", fontFamily: "var(--ts-mono)" }}>
+            <div style={{ borderTop: "1px solid var(--t-rule)", paddingTop: "0.9rem", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+              <p style={{ fontSize: "0.58rem", color: "var(--t-ink4)", fontFamily: "var(--t-mono)" }}>
                 Nº {certNumRef.current}
               </p>
               <div style={{ textAlign: "right" }}>
-                <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: "0.88rem", color: "var(--ts-ink2)" }}>
+                <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: "0.88rem", color: "var(--t-ink2)" }}>
                   Pablo Crespo
                 </p>
-                <div style={{ width: 76, height: 1, background: "var(--ts-rule)", margin: "0.15rem 0 0 auto" }} />
-                <p style={{ fontSize: "0.52rem", color: "var(--ts-ink4)", fontFamily: "var(--ts-mono)", marginTop: "0.15rem" }}>
+                <div style={{ width: 76, height: 1, background: "var(--t-rule)", margin: "0.15rem 0 0 auto" }} />
+                <p style={{ fontSize: "0.52rem", color: "var(--t-ink4)", fontFamily: "var(--t-mono)", marginTop: "0.15rem" }}>
                   Autoridad certificadora
                 </p>
               </div>
             </div>
           </div>
-          <button onClick={playAgain} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ts-ink3)", fontSize: "0.85rem", fontFamily: "var(--ts-mono)" }}>
+          <button onClick={playAgain} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--t-ink3)", fontSize: "0.85rem", fontFamily: "var(--t-mono)" }}>
             volver a intentarlo
           </button>
         </div>

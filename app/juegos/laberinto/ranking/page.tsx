@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import TerminalShell from "../../../components/TerminalShell";
 import { thStyle, tdStyle, RankBackLink } from "../../../components/ranking";
 
-const MONO = '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace';
+const MONO = "var(--t-mono)";
 
 interface Entry {
   name: string;

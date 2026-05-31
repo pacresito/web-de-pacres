@@ -238,25 +238,25 @@ export default function CalculadoraRPN() {
           font-weight: 800;
           letter-spacing: -0.03em;
           line-height: 1;
-          color: var(--ts-ink);
-          font-family: var(--ts-mono);
+          color: var(--t-ink);
+          font-family: var(--t-mono);
         }
         .page-title span {
-          color: var(--ts-accent);
+          color: var(--t-accent);
         }
 
         .page-subtitle {
           margin-top: 1rem;
           font-size: 0.9rem;
-          color: var(--ts-ink3);
+          color: var(--t-ink3);
           line-height: 1.65;
           max-width: 560px;
-          font-family: var(--ts-mono);
+          font-family: var(--t-mono);
         }
 
         .divider {
           border: none;
-          border-top: 1px solid var(--ts-rule);
+          border-top: 1px solid var(--t-rule);
         }
 
         /* ── Fullscreen wrapper ── */
@@ -672,17 +672,17 @@ export default function CalculadoraRPN() {
 
         .legend-title {
           font-size: 0.55rem;
-          font-family: var(--ts-mono);
+          font-family: var(--t-mono);
           letter-spacing: 0.2em;
           text-transform: uppercase;
-          color: var(--ts-ink4);
+          color: var(--t-ink4);
           margin-bottom: 0.5rem;
         }
 
         .legend-keys {
           font-size: 0.7rem;
-          font-family: var(--ts-mono);
-          color: var(--ts-ink3);
+          font-family: var(--t-mono);
+          color: var(--t-ink3);
           line-height: 1.9;
           display: flex;
           flex-wrap: wrap;
@@ -691,23 +691,23 @@ export default function CalculadoraRPN() {
 
         .key {
           display: inline-block;
-          border: 1px solid var(--ts-rule);
+          border: 1px solid var(--t-rule);
           padding: 0 0.35rem;
           border-radius: 3px;
           font-size: 0.6rem;
-          color: var(--ts-ink2);
-          background: var(--ts-paper2);
+          color: var(--t-ink2);
+          background: var(--t-paper2);
           margin-right: 0.15rem;
         }
 
         .pacres-link {
           font-size: 0.75rem;
-          color: var(--ts-ink4);
-          font-family: var(--ts-mono);
+          color: var(--t-ink4);
+          font-family: var(--t-mono);
           text-decoration: none;
           transition: color 0.2s;
         }
-        .pacres-link:hover { color: var(--ts-accent); }
+        .pacres-link:hover { color: var(--t-accent); }
       `}</style>
 
       <main className="calc-page">
@@ -848,11 +848,11 @@ export default function CalculadoraRPN() {
         </div>
 
         {/* Otras calculadoras */}
-        <div style={{ marginTop: "2rem", textAlign: "center", fontSize: "0.75rem", color: "var(--ts-ink4)", fontFamily: "var(--ts-mono)" }}>
+        <div style={{ marginTop: "2rem", textAlign: "center", fontSize: "0.75rem", color: "var(--t-ink4)", fontFamily: "var(--t-mono)" }}>
           Otras calculadoras:{" "}
-          <Link href="/apps/CastleComboCalc" style={{ color: "var(--ts-accent)" }}>Castle Combo</Link>
+          <Link href="/apps/CastleComboCalc" style={{ color: "var(--t-accent)" }}>Castle Combo</Link>
           {" · "}
-          <Link href="/apps/AgricolaCalc" style={{ color: "var(--ts-accent)" }}>Agrícola</Link>
+          <Link href="/apps/AgricolaCalc" style={{ color: "var(--t-accent)" }}>Agrícola</Link>
         </div>
 
         {/* Footer */}

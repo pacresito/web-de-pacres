@@ -944,7 +944,7 @@ export default function Fluidos() {
             wrap("#c2a96e", "tierra", sand),
             wrap("#8b5e3c", "madera", wall),
           ].join(" · ");
-          statsLabelRef.current.innerHTML = `<span style="color:var(--ts-ink3)">↳ elements:</span> ${body}`;
+          statsLabelRef.current.innerHTML = `<span style="color:var(--t-ink3)">↳ elements:</span> ${body}`;
         }
       }
     };
@@ -1121,16 +1121,16 @@ export default function Fluidos() {
 
   const currentToolDef = TOOL_DEFS.find(t => t.id === tool);
   const toolLabel = currentToolDef?.label ?? "—";
-  const toolColor = currentToolDef?.color ?? "var(--ts-ink3)";
+  const toolColor = currentToolDef?.color ?? "var(--t-ink3)";
 
   return (
     <TerminalShell title="fluidos" prompt={{ host: "fluidos", path: "~/apps", command: "./fluidos --elementos=4" }} hideChrome={fullscreen}>
       <style>{`
         :root {
-          --blue:    var(--ts-accent);
-          --text:    var(--ts-ink);
-          --muted:   var(--ts-ink3);
-          --border:  var(--ts-rule);
+          --blue:    var(--t-accent);
+          --text:    var(--t-ink);
+          --muted:   var(--t-ink3);
+          --border:  var(--t-rule);
           --sim-bg:  #0f1117;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1142,7 +1142,7 @@ export default function Fluidos() {
           font-weight: 800; letter-spacing: -0.03em; line-height: 1;
         }
         .sim-title span {
-          color: var(--ts-ink);
+          color: var(--t-ink);
         }
         .sim-sub {
           margin-top: 0.5rem;
@@ -1159,7 +1159,7 @@ export default function Fluidos() {
           border-radius: 4px; border: 1px solid var(--border);
           background: transparent; cursor: pointer;
           font-size: 0.72rem; font-weight: 600;
-          font-family: var(--ts-mono);
+          font-family: var(--t-mono);
           letter-spacing: 0.05em; color: var(--text);
           transition: border-color 0.15s, background 0.15s;
           -webkit-user-select: none; user-select: none;
@@ -1180,7 +1180,7 @@ export default function Fluidos() {
           padding: 0.4rem 0.75rem; border-radius: 4px;
           border: 1px solid var(--border); background: transparent;
           cursor: pointer; font-size: 0.72rem; font-weight: 600;
-          font-family: var(--ts-mono);
+          font-family: var(--t-mono);
           color: var(--muted); letter-spacing: 0.05em;
           transition: color 0.15s, border-color 0.15s;
           -webkit-user-select: none; user-select: none;
@@ -1207,7 +1207,7 @@ export default function Fluidos() {
         .hint-row {
           padding: 0.55rem 0 0;
           font-size: 0.7rem; color: var(--muted);
-          font-family: var(--ts-mono);
+          font-family: var(--t-mono);
           display: flex; gap: 1.2rem; flex-wrap: wrap;
         }
         .hint-item { display: flex; gap: 0.35rem; align-items: center; }
@@ -1218,7 +1218,7 @@ export default function Fluidos() {
 
         .pacres-link {
           font-size: 0.75rem; color: var(--muted);
-          font-family: var(--ts-mono);
+          font-family: var(--t-mono);
           text-decoration: none; transition: color 0.2s;
         }
         .pacres-link:hover { color: var(--blue); }
@@ -1245,17 +1245,17 @@ export default function Fluidos() {
       }}>
 
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", fontFamily: "var(--ts-mono)", paddingTop: "1rem", paddingBottom: "0.6rem" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", fontFamily: "var(--t-mono)", paddingTop: "1rem", paddingBottom: "0.6rem" }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <span ref={statsLabelRef} style={{ fontSize: "0.75rem", color: "var(--ts-ink4)", fontVariantNumeric: "tabular-nums" }} />
+            <span ref={statsLabelRef} style={{ fontSize: "0.75rem", color: "var(--t-ink4)", fontVariantNumeric: "tabular-nums" }} />
           </div>
           <div style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
             <button
               onClick={() => setFullscreen(f => !f)}
               title={fullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
-              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ts-ink3)", padding: 0, display: "flex", alignItems: "center", transition: "color 0.15s" }}
-              onMouseEnter={e => (e.currentTarget.style.color = "var(--ts-accent)")}
-              onMouseLeave={e => (e.currentTarget.style.color = "var(--ts-ink3)")}
+              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--t-ink3)", padding: 0, display: "flex", alignItems: "center", transition: "color 0.15s" }}
+              onMouseEnter={e => (e.currentTarget.style.color = "var(--t-accent)")}
+              onMouseLeave={e => (e.currentTarget.style.color = "var(--t-ink3)")}
             >
               {fullscreen ? (
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

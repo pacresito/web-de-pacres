@@ -102,8 +102,8 @@ function cardArticle(beast: Beast): string {
 
 function CardFace({ beast, w }: { beast: Beast; w: number }) {
   const h = Math.floor(w * 1.42);
-  const mono = "var(--ts-mono)";
-  const color = beast.red ? "#ef4444" : "var(--ts-ink)";
+  const mono = "var(--t-mono)";
+  const color = beast.red ? "#ef4444" : "var(--t-ink)";
   const borderColor = beast.red ? "rgba(239,68,68,0.22)" : "rgba(0,0,0,0.1)";
   const csz = Math.max(8, Math.floor(w * 0.19));
   const isFace = ["J", "Q", "K"].includes(beast.value);
@@ -302,7 +302,7 @@ function SpellWheel({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-      <div style={{ width: 0, height: 0, borderLeft: "7px solid transparent", borderRight: "7px solid transparent", borderTop: "11px solid var(--ts-accent)" }} />
+      <div style={{ width: 0, height: 0, borderLeft: "7px solid transparent", borderRight: "7px solid transparent", borderTop: "11px solid var(--t-accent)" }} />
       <div
         ref={containerRef}
         onPointerDown={onPointerDown}
@@ -311,7 +311,7 @@ function SpellWheel({
         onPointerLeave={onPointerUp}
         style={{
           width: size, height: size, borderRadius: "50%",
-          border: "1px solid var(--ts-rule)", background: "var(--ts-paper)",
+          border: "1px solid var(--t-rule)", background: "var(--t-paper)",
           position: "relative", cursor: settled.current ? "default" : "grab",
           touchAction: "none", userSelect: "none",
         }}
@@ -327,8 +327,8 @@ function SpellWheel({
               transform: "translate(-50%, -50%)",
               fontSize: isActive ? "1.05rem" : "0.62rem",
               fontWeight: isActive ? 800 : 400,
-              color: isActive ? "var(--ts-accent)" : "var(--ts-ink4)",
-              fontFamily: "var(--ts-mono)",
+              color: isActive ? "var(--t-accent)" : "var(--t-ink4)",
+              fontFamily: "var(--t-mono)",
               transition: "font-size 0.08s, color 0.08s",
               pointerEvents: "none", lineHeight: 1,
             }}>
@@ -341,7 +341,7 @@ function SpellWheel({
         ref={forceContainerRef}
         style={{
           width: size, height: 4, borderRadius: 2,
-          background: "var(--ts-paper2)",
+          background: "var(--t-paper2)",
           opacity: 0, transition: "opacity 0.2s",
           overflow: "hidden",
         }}
@@ -350,7 +350,7 @@ function SpellWheel({
           ref={forceBarRef}
           style={{
             height: "100%", width: "0%",
-            background: "var(--ts-accent)", borderRadius: 2,
+            background: "var(--t-accent)", borderRadius: 2,
           }}
         />
       </div>
@@ -409,7 +409,7 @@ export default function MagiaPage() {
   const onWheelStart = useCallback(() => setSpinStarted(true), []);
   const onWheelSettle = useCallback(() => setSpinDone(true), []);
 
-  const mono = "var(--ts-mono)";
+  const mono = "var(--t-mono)";
   const cardGap = Math.max(3, Math.floor(cardW * 0.07));
 
   return (
@@ -439,16 +439,16 @@ export default function MagiaPage() {
       {phase === "intro" && (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "2rem", marginTop: "5rem", animation: "fadeUp 0.5s ease" }}>
           <div style={{ textAlign: "center" }}>
-            <h1 style={{ color: "var(--ts-ink)", fontSize: "1.6rem", fontWeight: 800, letterSpacing: "-0.03em", fontFamily: mono }}>
+            <h1 style={{ color: "var(--t-ink)", fontSize: "1.6rem", fontWeight: 800, letterSpacing: "-0.03em", fontFamily: mono }}>
               Piensa en una carta
             </h1>
-            <p style={{ color: "var(--ts-ink4)", fontSize: "0.88rem", marginTop: "0.75rem", fontFamily: mono }}>
+            <p style={{ color: "var(--t-ink4)", fontSize: "0.88rem", marginTop: "0.75rem", fontFamily: mono }}>
               No me la digas
             </p>
           </div>
           <button
             onClick={beginSpell}
-            style={{ padding: "0.6rem 1.6rem", background: "var(--ts-ink)", color: "var(--ts-paper)", border: "none", borderRadius: 8, fontSize: "0.88rem", fontFamily: mono, cursor: "pointer" }}
+            style={{ padding: "0.6rem 1.6rem", background: "var(--t-ink)", color: "var(--t-paper)", border: "none", borderRadius: 8, fontSize: "0.88rem", fontFamily: mono, cursor: "pointer" }}
           >
             Estoy listo
           </button>
@@ -459,11 +459,11 @@ export default function MagiaPage() {
       {phase === "dealing" && (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1rem", width: "100%", animation: "fadeUp 0.3s ease" }}>
           <div style={{ textAlign: "center" }}>
-            <p style={{ color: "var(--ts-ink4)", fontSize: "0.7rem", fontFamily: mono }}>Ronda {round + 1} de 3</p>
-            <p style={{ color: "var(--ts-ink)", fontSize: "1rem", fontWeight: 600, marginTop: "0.3rem", fontFamily: mono }}>
+            <p style={{ color: "var(--t-ink4)", fontSize: "0.7rem", fontFamily: mono }}>Ronda {round + 1} de 3</p>
+            <p style={{ color: "var(--t-ink)", fontSize: "1rem", fontWeight: 600, marginTop: "0.3rem", fontFamily: mono }}>
               ¿En qué columna está tu carta?
             </p>
-            <p style={{ color: "var(--ts-ink3)", fontSize: "0.78rem", fontFamily: mono, marginTop: "0.3rem" }}>
+            <p style={{ color: "var(--t-ink3)", fontSize: "0.78rem", fontFamily: mono, marginTop: "0.3rem" }}>
               {round === 0 ? "Elige una carta. Grábatela en la mente." : ROUND_HINTS[round]}
             </p>
           </div>
@@ -475,11 +475,11 @@ export default function MagiaPage() {
                 style={{
                   display: "flex", flexDirection: "column", gap: cardGap,
                   padding: "8px 6px", borderRadius: 8,
-                  border: "1px solid var(--ts-rule)",
+                  border: "1px solid var(--t-rule)",
                   cursor: "pointer", transition: "border-color 0.15s, background 0.15s",
                 }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = "var(--ts-accent)"; (e.currentTarget as HTMLDivElement).style.background = "rgba(0,184,122,0.04)"; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = "var(--ts-rule)"; (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = "var(--t-accent)"; (e.currentTarget as HTMLDivElement).style.background = "rgba(0,184,122,0.04)"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = "var(--t-rule)"; (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
               >
                 {getCharm(deck, col).map((beast, i) => (
                   <CardFace key={i} beast={beast} w={cardW} />
@@ -498,8 +498,8 @@ export default function MagiaPage() {
             transition: "opacity 0.5s ease",
             pointerEvents: spinStarted ? "none" : "auto",
           }}>
-            <p style={{ color: "var(--ts-ink)", fontSize: "1rem", fontWeight: 600, fontFamily: mono }}>Ya tengo lo que necesito.</p>
-            <p style={{ color: "var(--ts-ink3)", fontSize: "0.82rem", fontFamily: mono, marginTop: "0.4rem" }}>
+            <p style={{ color: "var(--t-ink)", fontSize: "1rem", fontWeight: 600, fontFamily: mono }}>Ya tengo lo que necesito.</p>
+            <p style={{ color: "var(--t-ink3)", fontSize: "0.82rem", fontFamily: mono, marginTop: "0.4rem" }}>
               Olvida tu carta. Arrastra la ruleta para continuar.
             </p>
           </div>
@@ -512,13 +512,13 @@ export default function MagiaPage() {
 
           {spinDone && (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1rem", animation: "fadeUp 0.4s ease" }}>
-              <p style={{ color: "var(--ts-ink)", fontSize: "1.05rem", fontWeight: 600, textAlign: "center", lineHeight: 1.5, fontFamily: mono }}>
+              <p style={{ color: "var(--t-ink)", fontSize: "1.05rem", fontWeight: 600, textAlign: "center", lineHeight: 1.5, fontFamily: mono }}>
                 ¡La letra {guide.rune}!<br />
                 Piensa en un animal que empiece por {guide.rune}.
               </p>
               <button
                 onClick={() => setPhase("reveal")}
-                style={{ padding: "0.6rem 1.6rem", background: "var(--ts-accent)", color: "#fff", border: "none", borderRadius: 8, fontSize: "0.88rem", fontFamily: mono, cursor: "pointer" }}
+                style={{ padding: "0.6rem 1.6rem", background: "var(--t-accent)", color: "#fff", border: "none", borderRadius: 8, fontSize: "0.88rem", fontFamily: mono, cursor: "pointer" }}
               >
                 Ya lo tengo
               </button>
@@ -540,7 +540,7 @@ export default function MagiaPage() {
             <CardFace beast={revealBeast} w={90} />
           </div>
           <p style={{
-            color: "var(--ts-ink2)", fontSize: "1rem", fontWeight: 600,
+            color: "var(--t-ink2)", fontSize: "1rem", fontWeight: 600,
             maxWidth: 300, lineHeight: 1.5, textAlign: "center",
             fontFamily: mono,
             animation: "spellFade 0.5s ease 6s both",
@@ -550,7 +550,7 @@ export default function MagiaPage() {
             {guide.article.toLowerCase()}{" "}
             <span style={{ color: guide.color }}>{guide.name}</span>
             {" "}te trae tu{" "}
-            <span style={{ color: revealBeast.red ? "#dc2626" : "var(--ts-ink)" }}>
+            <span style={{ color: revealBeast.red ? "#dc2626" : "var(--t-ink)" }}>
               {spellName(revealBeast)}
             </span>
           </p>
@@ -558,7 +558,7 @@ export default function MagiaPage() {
             onClick={beginSpell}
             style={{
               background: "none", border: "none", cursor: "pointer",
-              color: "var(--ts-ink3)", fontSize: "0.78rem", fontFamily: mono,
+              color: "var(--t-ink3)", fontSize: "0.78rem", fontFamily: mono,
               animation: "spellFade 0.5s ease 6.5s both",
             }}
           >

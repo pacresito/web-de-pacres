@@ -291,7 +291,7 @@ function useBoard(
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-const MONO = '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace';
+const MONO = "var(--t-mono)";
 
 const STATE_LABEL: Record<GameState, string> = {
   idle: "idle",
@@ -473,32 +473,32 @@ export default function EspiralPage() {
       <style>{`
         .esp-btn {
           background: none; border: none; cursor: pointer;
-          font-family: var(--ts-mono); font-size: 0.75rem;
-          color: var(--ts-ink3); padding: 0;
+          font-family: var(--t-mono); font-size: 0.75rem;
+          color: var(--t-ink3); padding: 0;
           transition: color 0.15s;
         }
-        .esp-btn:hover { color: var(--ts-accent); }
+        .esp-btn:hover { color: var(--t-accent); }
 
         .esp-input {
           padding: 0.35rem 0.65rem;
-          border: 1px solid var(--ts-rule);
+          border: 1px solid var(--t-rule);
           border-radius: 4px;
           font-size: 0.85rem;
           outline: none;
-          color: var(--ts-ink);
-          background: var(--ts-paper);
-          font-family: var(--ts-mono);
+          color: var(--t-ink);
+          background: var(--t-paper);
+          font-family: var(--t-mono);
         }
-        .esp-input:focus { border-color: var(--ts-accent); }
+        .esp-input:focus { border-color: var(--t-accent); }
 
         .esp-submit {
           padding: 0.35rem 0.85rem;
-          background: var(--ts-accent);
+          background: var(--t-accent);
           color: #fff;
           border: none;
           border-radius: 4px;
           font-size: 0.85rem;
-          font-family: var(--ts-mono);
+          font-family: var(--t-mono);
           cursor: pointer;
           transition: opacity 0.15s;
         }
@@ -510,13 +510,13 @@ export default function EspiralPage() {
 
         {/* status row */}
         <div style={{ display: "flex", alignItems: "center", gap: "1rem", fontFamily: MONO }}>
-          <span style={{ fontSize: "0.75rem", color: "var(--ts-ink3)", whiteSpace: "nowrap" }}>
+          <span style={{ fontSize: "0.75rem", color: "var(--t-ink3)", whiteSpace: "nowrap" }}>
             ↳ status:{" "}
-            <span style={{ color: left.gameState === "win" ? "var(--ts-accent)" : left.gameState === "dead" ? "#e55" : "var(--ts-ink2)" }}>
+            <span style={{ color: left.gameState === "win" ? "var(--t-accent)" : left.gameState === "dead" ? "#e55" : "var(--t-ink2)" }}>
               {STATE_LABEL[left.gameState]}
             </span>
             {" / "}
-            <span style={{ color: right.gameState === "win" ? "var(--ts-accent)" : right.gameState === "dead" ? "#e55" : "var(--ts-ink2)" }}>
+            <span style={{ color: right.gameState === "win" ? "var(--t-accent)" : right.gameState === "dead" ? "#e55" : "var(--t-ink2)" }}>
               {STATE_LABEL[right.gameState]}
             </span>
             <span style={{ marginLeft: "1.5rem" }}>{"speed: "}</span>
@@ -525,7 +525,7 @@ export default function EspiralPage() {
               style={{
                 background: "none", border: "none", padding: 0, cursor: "pointer",
                 fontFamily: "inherit", fontSize: "inherit", transition: "opacity 0.15s",
-                color: speed === "slow" ? "#60a5fa" : speed === "fast" ? "#f97316" : "var(--ts-accent)",
+                color: speed === "slow" ? "#60a5fa" : speed === "fast" ? "#f97316" : "var(--t-accent)",
               }}
               onMouseEnter={e => (e.currentTarget.style.opacity = "0.7")}
               onMouseLeave={e => (e.currentTarget.style.opacity = "1")}
@@ -533,15 +533,15 @@ export default function EspiralPage() {
             >{speed}</button>
           </span>
           {(left.gameState !== "idle" || right.gameState !== "idle") && !bothWin && (
-            <span style={{ fontSize: "0.75rem", color: "var(--ts-ink3)", fontVariantNumeric: "tabular-nums" }}>{elapsed}s</span>
+            <span style={{ fontSize: "0.75rem", color: "var(--t-ink3)", fontVariantNumeric: "tabular-nums" }}>{elapsed}s</span>
           )}
           <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "1rem" }}>
             <a
               href="/juegos/espiral/ranking"
               title="Ranking"
-              style={{ color: "var(--ts-ink3)", display: "flex", alignItems: "center", transition: "color 0.15s" }}
-              onMouseEnter={e => (e.currentTarget.style.color = "var(--ts-accent)")}
-              onMouseLeave={e => (e.currentTarget.style.color = "var(--ts-ink3)")}
+              style={{ color: "var(--t-ink3)", display: "flex", alignItems: "center", transition: "color 0.15s" }}
+              onMouseEnter={e => (e.currentTarget.style.color = "var(--t-accent)")}
+              onMouseLeave={e => (e.currentTarget.style.color = "var(--t-ink3)")}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
@@ -572,7 +572,7 @@ export default function EspiralPage() {
         {/* win panel */}
         {bothWin && (
           <div style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem" }}>
-            <p style={{ color: "var(--ts-accent)", fontSize: "1rem", fontWeight: 600, fontFamily: MONO }}>
+            <p style={{ color: "var(--t-accent)", fontSize: "1rem", fontWeight: 600, fontFamily: MONO }}>
               ✓ completed in {finalTime?.toFixed(1)}s
             </p>
 
@@ -648,35 +648,35 @@ function Board({
 }) {
   return (
     <div className="flex flex-col items-center gap-2">
-      <p style={{ color: "var(--ts-ink4)", fontSize: "0.75rem", fontFamily: monoFont }} className="landscape:block hidden">{label}</p>
+      <p style={{ color: "var(--t-ink4)", fontSize: "0.75rem", fontFamily: monoFont }} className="landscape:block hidden">{label}</p>
       <div className="relative" onClick={onPress} style={{ cursor: "pointer" }}>
         <canvas
           ref={canvasRef}
           style={{
             display: "block",
             borderRadius: "6px",
-            border: "1px solid var(--ts-rule)",
+            border: "1px solid var(--t-rule)",
           }}
         />
         {gameState === "idle" && (
           <Overlay monoFont={monoFont}>
-            <p style={{ color: "var(--ts-ink3)", fontSize: "0.8rem" }}>
-              <span style={{ color: "var(--ts-accent2)" }}>$</span> toca {label}
+            <p style={{ color: "var(--t-ink3)", fontSize: "0.8rem" }}>
+              <span style={{ color: "var(--t-accent2)" }}>$</span> toca {label}
             </p>
           </Overlay>
         )}
         {gameState === "dead" && (
           <Overlay monoFont={monoFont}>
             <p style={{ color: "#cc3333", fontSize: "0.9rem", fontWeight: 600 }}>✗ fuera</p>
-            <p style={{ color: "var(--ts-ink3)", fontSize: "0.7rem", marginTop: "0.2rem" }}>toca {label} para reintentar</p>
+            <p style={{ color: "var(--t-ink3)", fontSize: "0.7rem", marginTop: "0.2rem" }}>toca {label} para reintentar</p>
           </Overlay>
         )}
         {gameState === "win" && (
           <Overlay monoFont={monoFont}>
-            <p style={{ color: "var(--ts-accent)", fontSize: "1rem", fontWeight: 600 }}>
+            <p style={{ color: "var(--t-accent)", fontSize: "1rem", fontWeight: 600 }}>
               {bothWin ? "✓ listo" : isFirst ? "ya falta poco..." : "✓ listo"}
             </p>
-            {bothWin && <p style={{ color: "var(--ts-ink3)", fontSize: "0.7rem", marginTop: "0.2rem" }}>toca para repetir</p>}
+            {bothWin && <p style={{ color: "var(--t-ink3)", fontSize: "0.7rem", marginTop: "0.2rem" }}>toca para repetir</p>}
           </Overlay>
         )}
       </div>
