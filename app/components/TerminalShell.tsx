@@ -38,6 +38,7 @@ export default function TerminalShell({
   const [elapsedMs, setElapsedMs] = useState<number | null>(null);
   const [contentVisible, setContentVisible] = useState(variant === "terminal" ? !prompt : false);
   const startRef = useRef(0);
+  const cmd = prompt?.command;
 
   useEffect(() => {
     if (variant !== "chrome") return;
@@ -46,8 +47,7 @@ export default function TerminalShell({
   }, [variant]);
 
   useEffect(() => {
-    if (!prompt || variant !== "terminal") return;
-    const cmd = prompt.command;
+    if (!cmd || variant !== "terminal") return;
     let i = 0;
     startRef.current = Date.now();
     const init = setTimeout(() => {
@@ -67,7 +67,7 @@ export default function TerminalShell({
       return () => clearInterval(id);
     }, 150);
     return () => clearTimeout(init);
-  }, []);
+  }, [cmd, variant]);
 
   const handleBack = () => {
     const dest = backUrl ?? "/lab";

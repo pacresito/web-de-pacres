@@ -191,6 +191,7 @@ export default function SigueTusSuenos() {
     };
   }, [gameState, fakeEls]);
 
+  const loopRef = useRef<() => void>(() => {});
   const loop = useCallback(() => {
     const now = performance.now();
     const dt = Math.min((now - lastFrameTimeRef.current) / 1000, 0.1);
@@ -204,7 +205,7 @@ export default function SigueTusSuenos() {
     }
 
     if (s === "confessing" || s === "certificate") {
-      animRef.current = requestAnimationFrame(loop);
+      animRef.current = requestAnimationFrame(loopRef.current);
       return;
     }
 
@@ -270,7 +271,7 @@ export default function SigueTusSuenos() {
               touchPos.current = null;
               holdStart.current = null;
               go("confessing");
-              animRef.current = requestAnimationFrame(loop);
+              animRef.current = requestAnimationFrame(loopRef.current);
               return;
             }
           } else {
@@ -329,10 +330,11 @@ export default function SigueTusSuenos() {
       winkEl.current.style.top = f.y - 8 + "px";
     }
 
-    animRef.current = requestAnimationFrame(loop);
+    animRef.current = requestAnimationFrame(loopRef.current);
   }, [fakeEls]);
 
   useEffect(() => {
+    loopRef.current = loop;
     animRef.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animRef.current);
   }, [loop]);

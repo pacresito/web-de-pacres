@@ -31,12 +31,11 @@ const CMD = "ls ~/designs --format=grid";
 // ─── Subcomponents ────────────────────────────────────────────────────────────
 
 
-function PromptRow({ cmd, active }: { cmd: string; active: boolean }) {
+function PromptRow({ cmd }: { cmd: string }) {
   const [displayed, setDisplayed] = useState("");
   const [execMs, setExecMs] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!active) return;
     let i = 0;
     const t = setTimeout(() => {
       const iv = setInterval(() => {
@@ -51,7 +50,7 @@ function PromptRow({ cmd, active }: { cmd: string; active: boolean }) {
       return () => clearInterval(iv);
     }, 120);
     return () => clearTimeout(t);
-  }, [active, cmd]);
+  }, [cmd]);
 
   return (
     <div style={{
@@ -169,18 +168,13 @@ function DesignsCards({ items, visible }: { items: DesignItem[]; visible: number
 
 export default function Designs() {
   const router = useRouter();
-  const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(0);
   const [contentReady, setContentReady] = useState(false);
   const [windowState, setWindowState] = useState<"normal" | "minimized" | "maximized">("normal");
   const [animClass, setAnimClass] = useState("");
   const [dockAnimOut, setDockAnimOut] = useState(false);
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   useEffect(() => {
-    if (!mounted) return;
     const delay = 120 + CMD.length * 26 + 200 + 90 + 200;
     const t = setTimeout(() => {
       setContentReady(true);
@@ -193,7 +187,7 @@ export default function Designs() {
       return () => clearInterval(iv);
     }, delay);
     return () => clearTimeout(t);
-  }, [mounted]);
+  }, []);
 
   const handleClose = () => {
     const nav = () => {
@@ -315,7 +309,7 @@ export default function Designs() {
             ]}
           />
 
-          <PromptRow cmd={CMD} active={mounted} />
+          <PromptRow cmd={CMD} />
 
           <div className={`t-content-wrap${contentReady ? " t-in" : ""}`}>
             <div className="t-content" style={{ padding: "0 28px 32px 86px" }}>

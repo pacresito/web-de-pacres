@@ -589,14 +589,22 @@ function RecoCarousel({ active = false }: { active?: boolean }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const [displayedQuote, setDisplayedQuote] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [typingKey, setTypingKey] = useState<string | null>(null);
 
   const prev = () => setI((c) => (c - 1 + RECOS.length) % RECOS.length);
   const next = () => setI((c) => (c + 1) % RECOS.length);
 
+  // Reset el tipeo al cambiar de recomendación o al activarse (ajuste de estado en render,
+  // evita el flash del quote completo sin setState síncrono dentro del effect).
+  const activeKey = active ? String(i) : null;
+  if (activeKey !== typingKey) {
+    setTypingKey(activeKey);
+    setDisplayedQuote("");
+    setIsTyping(activeKey !== null);
+  }
+
   useEffect(() => {
     if (!active) return;
-    setDisplayedQuote("");
-    setIsTyping(true);
     const quote = RECOS[i].quote;
     let charIdx = 0;
     const iv = setInterval(() => {
@@ -810,6 +818,8 @@ function ContactSection({ active = false, onDone }: { active?: boolean; onDone?:
   const LINE2 = "linkedin.com/in/pacres";
   const [line1, setLine1] = useState("");
   const [line2, setLine2] = useState("");
+  const onDoneRef = useRef(onDone);
+  useEffect(() => { onDoneRef.current = onDone; });
 
   useEffect(() => {
     if (!active) return;
@@ -822,7 +832,7 @@ function ContactSection({ active = false, onDone }: { active?: boolean; onDone?:
       } else {
         setLine2(LINE2.slice(0, idx - LINE1.length));
       }
-      if (idx >= total) { clearInterval(iv); onDone?.(); }
+      if (idx >= total) { clearInterval(iv); onDoneRef.current?.(); }
     }, 25);
     return () => clearInterval(iv);
   }, [active]);

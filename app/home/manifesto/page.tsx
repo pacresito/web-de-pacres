@@ -146,13 +146,14 @@ function RecsCarousel({ recs }: { recs: Rec[] }) {
   const go = (next: number) => setI(((next % total) + total) % total);
 
   useEffect(() => {
+    const wrap = (next: number) => ((next % total) + total) % total;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "ArrowLeft") go(i - 1);
-      if (e.key === "ArrowRight") go(i + 1);
+      if (e.key === "ArrowLeft") setI((c) => wrap(c - 1));
+      if (e.key === "ArrowRight") setI((c) => wrap(c + 1));
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [i]);
+  }, [total]);
 
   return (
     <section className="vE-recs" id="recomendaciones">
@@ -216,13 +217,17 @@ function AnimatedCyclingWord({ words, index }: { words: string[]; index: number 
   const [shownIdx, setShownIdx] = useState(index);
   const [phase, setPhase] = useState<"idle" | "out" | "in">("idle");
 
-  useEffect(() => {
-    if (index === shownIdx) return;
+  // Nueva palabra → arrancar la salida (ajuste de estado en render, sin setState síncrono en effect)
+  if (index !== shownIdx && phase !== "out") {
     setPhase("out");
+  }
+
+  useEffect(() => {
+    if (phase !== "out") return;
     const exitMs = words[shownIdx].length * 45 + 80;
     const t = setTimeout(() => { setShownIdx(index); setPhase("in"); }, exitMs);
     return () => clearTimeout(t);
-  }, [index]);
+  }, [phase, shownIdx, words, index]);
 
   const word = words[shownIdx];
   return (

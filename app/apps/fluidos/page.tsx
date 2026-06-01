@@ -939,7 +939,7 @@ export default function Fluidos() {
     };
     rafRef.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(rafRef.current);
-  }, [step, render]);
+  }, [step, render, paintAt]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -1100,7 +1100,7 @@ export default function Fluidos() {
       canvas.removeEventListener("touchmove",  onMove);
       canvas.removeEventListener("touchend",   onUp);
     };
-  }, [getCanvasPos, paintAt]);
+  }, [getCanvasPos, paintAt, moveAt]);
 
   const clearAll = () => {
     gridRef.current?.fill(0);

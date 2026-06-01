@@ -187,7 +187,7 @@ export default function CirculoPerfecto() {
     animRef.current = requestAnimationFrame(aliveLoop);
   }, []);
 
-  function launchAlive(canvasCx: number, canvasCy: number, r: number) {
+  const launchAlive = useCallback((canvasCx: number, canvasCy: number, r: number) => {
     const baseCanvas = canvasRef.current!;
     const rect = baseCanvas.getBoundingClientRect();
     // Limpiar el dibujo
@@ -267,7 +267,7 @@ export default function CirculoPerfecto() {
 
     go("alive");
     animRef.current = requestAnimationFrame(aliveLoop);
-  }
+  }, [aliveLoop]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -338,7 +338,7 @@ export default function CirculoPerfecto() {
       window.removeEventListener("mouseup", onUp);
       window.removeEventListener("touchend", onUp);
     };
-  }, [aliveLoop]);
+  }, [aliveLoop, launchAlive]);
 
   function reset() {
     cancelAnimationFrame(animRef.current);
