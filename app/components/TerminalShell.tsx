@@ -43,7 +43,7 @@ export default function TerminalShell({
     if (variant !== "chrome") return;
     const t = setTimeout(() => setContentVisible(true), 30);
     return () => clearTimeout(t);
-  }, []);
+  }, [variant]);
 
   useEffect(() => {
     if (!prompt || variant !== "terminal") return;

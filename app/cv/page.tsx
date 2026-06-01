@@ -726,7 +726,7 @@ function StackSection({ active = false }: { active?: boolean }) {
   return (
     <div className="t-stack-grid">
       <div>
-        <div style={{ fontFamily: "var(--t-mono)", fontSize: 11, color: "var(--t-accent2)", marginBottom: 10, visibility: langsVisible > 0 ? undefined : "hidden" }}>// langs.json</div>
+        <div style={{ fontFamily: "var(--t-mono)", fontSize: 11, color: "var(--t-accent2)", marginBottom: 10, visibility: langsVisible > 0 ? undefined : "hidden" }}>{"// langs.json"}</div>
         {LANGUAGES.map((l, idx) => {
           const revealed = idx < langsVisible;
           return (
@@ -738,7 +738,7 @@ function StackSection({ active = false }: { active?: boolean }) {
         })}
       </div>
       <div>
-        <div style={{ fontFamily: "var(--t-mono)", fontSize: 11, color: "var(--t-accent2)", marginBottom: 10, visibility: certsVisible > 0 ? undefined : "hidden" }}>// certs.txt</div>
+        <div style={{ fontFamily: "var(--t-mono)", fontSize: 11, color: "var(--t-accent2)", marginBottom: 10, visibility: certsVisible > 0 ? undefined : "hidden" }}>{"// certs.txt"}</div>
         {CERTS.map((cert, i) => {
           const revealed = i < certsVisible;
           return (
@@ -750,7 +750,7 @@ function StackSection({ active = false }: { active?: boolean }) {
         })}
       </div>
       <div>
-        <div style={{ fontFamily: "var(--t-mono)", fontSize: 11, color: "var(--t-accent2)", marginBottom: 10, visibility: awardsVisible > 0 ? undefined : "hidden" }}>// awards.log</div>
+        <div style={{ fontFamily: "var(--t-mono)", fontSize: 11, color: "var(--t-accent2)", marginBottom: 10, visibility: awardsVisible > 0 ? undefined : "hidden" }}>{"// awards.log"}</div>
         {AWARDS.map((a, i) => {
           const revealed = i < awardsVisible;
           return (
@@ -873,7 +873,7 @@ function FooterSection({ startAfter = false, text = "↳ Bienvenido a la web de 
       if (idx >= TEXT.length) clearInterval(iv);
     }, 100);
     return () => clearInterval(iv);
-  }, [started]);
+  }, [started, TEXT]);
 
   return (
     <div>

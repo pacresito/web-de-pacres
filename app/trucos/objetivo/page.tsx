@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import TerminalShell from "../../components/TerminalShell";
 
 type GameState = "idle" | "playing" | "lost" | "confessing" | "certificate";
@@ -52,7 +52,7 @@ export default function SigueTusSuenos() {
   const fake1El = useRef<HTMLDivElement>(null);
   const fake2El = useRef<HTMLDivElement>(null);
   const fake3El = useRef<HTMLDivElement>(null);
-  const fakeEls = [fake1El, fake2El, fake3El];
+  const fakeEls = useMemo(() => [fake1El, fake2El, fake3El], []);
 
   const winkEl = useRef<HTMLDivElement>(null);
   const winkingIdxRef = useRef(-1);
@@ -70,11 +70,11 @@ export default function SigueTusSuenos() {
   const holdArcEl = useRef<SVGCircleElement>(null);
 
   const animRef = useRef(0);
-  const lastFrameTimeRef = useRef(performance.now());
+  const lastFrameTimeRef = useRef(0);
   const [attempts, setAttempts] = useState(0);
 
   // Certificate
-  const certNumRef = useRef(Math.floor(Math.random() * 900000) + 100000);
+  const [certNum] = useState(() => Math.floor(Math.random() * 900000) + 100000);
 
   // Desktop confession state
   const frozenFakePositions = useRef<{ x: number; y: number }[]>([]);
@@ -189,7 +189,7 @@ export default function SigueTusSuenos() {
       clearTimeout(tP3Show); clearTimeout(tP3Hide);
       clearTimeout(tCert);
     };
-  }, [gameState]);
+  }, [gameState, fakeEls]);
 
   const loop = useCallback(() => {
     const now = performance.now();
@@ -330,7 +330,7 @@ export default function SigueTusSuenos() {
     }
 
     animRef.current = requestAnimationFrame(loop);
-  }, []);
+  }, [fakeEls]);
 
   useEffect(() => {
     animRef.current = requestAnimationFrame(loop);
@@ -704,7 +704,7 @@ export default function SigueTusSuenos() {
             </p>
             <div style={{ borderTop: "1px solid var(--t-rule)", paddingTop: "0.9rem", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
               <p style={{ fontSize: "0.58rem", color: "var(--t-ink4)", fontFamily: "var(--t-mono)" }}>
-                Nº {certNumRef.current}
+                Nº {certNum}
               </p>
               <div style={{ textAlign: "right" }}>
                 <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: "0.88rem", color: "var(--t-ink2)" }}>

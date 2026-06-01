@@ -494,7 +494,7 @@ function SLabel({ children }: { children: React.ReactNode }) {
       gap: "0.7rem",
       textShadow: "0 0 10px rgba(0,255,255,0.6), 0 0 20px rgba(0,255,255,0.3)",
     }}>
-      <span style={{ color: "rgba(0,255,255,0.4)" }}>//</span>
+      <span style={{ color: "rgba(0,255,255,0.4)" }}>{"//"}</span>
       {children}
       <span style={{
         flex: 1, height: "1px",

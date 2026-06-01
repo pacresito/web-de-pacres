@@ -667,7 +667,7 @@ function SkillsTerminalInline({ onNavigate }: { onNavigate: () => void }) {
       if (count >= skills.length) clearInterval(iv);
     }, 70);
     return () => clearInterval(iv);
-  }, [cmdDone]);
+  }, [cmdDone, skills.length]);
 
   return (
     <div style={{ padding: "18px 28px 8px", fontFamily: '"JetBrains Mono", "IBM Plex Mono", monospace' }}>
