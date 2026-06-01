@@ -240,8 +240,6 @@ function RecsSlider() {
 }
 
 const CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap');
-
 :root {
   --bg: #080810;
   --bg-card: #0d0d1c;

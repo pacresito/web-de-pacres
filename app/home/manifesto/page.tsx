@@ -1216,7 +1216,7 @@ export default function Manifesto() {
                           href="/cv"
                           className="vE-skill-shine"
                           {...(ai > 0 ? { "data-line-start": "0" } : {})}
-                          onClick={(e) => { e.preventDefault(); const link = document.createElement("link"); link.rel = "stylesheet"; link.href = "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap"; document.head.appendChild(link); setSkillsMinHeight(skillsSectionRef.current?.offsetHeight); setSkillsMode("fading"); setTimeout(() => setSkillsMode("terminal"), 2000); }}
+                          onClick={(e) => { e.preventDefault(); setSkillsMinHeight(skillsSectionRef.current?.offsetHeight); setSkillsMode("fading"); setTimeout(() => setSkillsMode("terminal"), 2000); }}
                         >
                           {ai > 0 && <em className="vE-dot">· </em>}{a}
                         </a>

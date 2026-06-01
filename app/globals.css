@@ -7,9 +7,6 @@
    ============================================================ */
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-
   /* Paleta terminal (papel cálido + acento verde) */
   --t-paper:       #fafaf7;
   --t-paper2:      #f4f1ea;
@@ -29,15 +26,13 @@
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: #ffffff;
+  color: #171717;
   font-family: ui-sans-serif, system-ui, sans-serif;
 }
 
