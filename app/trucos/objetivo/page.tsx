@@ -180,8 +180,8 @@ export default function SigueTusSuenos() {
         targetEl.current.style.transition = "transform 0.6s ease";
         targetEl.current.style.transform = `translate(${cx - TARGET_R}px, ${cy - TARGET_R}px)`;
       }
-      // Show text once target has arrived
-      const t1 = setTimeout(() => setMobileCaughtVisible(true), 700);
+      // Show text once target has arrived (~1s pause before message)
+      const t1 = setTimeout(() => setMobileCaughtVisible(true), 1700);
       // Confetti + hide target simultaneously (target "explodes" into confetti)
       const t2 = setTimeout(() => {
         explodeAt(cx, cy);
@@ -189,11 +189,11 @@ export default function SigueTusSuenos() {
           targetEl.current.style.transition = "transform 0.6s ease, opacity 0.15s ease";
           targetEl.current.style.opacity = "0";
         }
-      }, 1000);
+      }, 2000);
       // Hide text
-      const t3 = setTimeout(() => setMobileCaughtVisible(false), 2400);
+      const t3 = setTimeout(() => setMobileCaughtVisible(false), 3400);
       // Certificate
-      const t4 = setTimeout(() => go("certificate"), 2900);
+      const t4 = setTimeout(() => go("certificate"), 3900);
       return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); };
     }
 
