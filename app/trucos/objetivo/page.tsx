@@ -1,7 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import TerminalShell from "../../components/TerminalShell";
+
+// Detección de puntero grueso (móvil/táctil) compatible con SSR: el server ve `false`
+// y el cliente corrige tras hidratar, sin setState-en-effect ni hydration mismatch.
+const subscribeNoop = () => () => {};
+function useIsCoarsePointer() {
+  return useSyncExternalStore(
+    subscribeNoop,
+    () => "ontouchstart" in window && window.matchMedia("(pointer: coarse)").matches,
+    () => false,
+  );
+}
 
 type GameState = "idle" | "playing" | "lost" | "confessing" | "certificate";
 
@@ -38,7 +49,7 @@ function CursorIcon() {
 export default function SigueTusSuenos() {
   const [gameState, setGameState] = useState<GameState>("idle");
   const stateRef = useRef<GameState>("idle");
-  const [isMobile, setIsMobile] = useState(false);
+  const isMobile = useIsCoarsePointer();
   const isMobileRef = useRef(false);
 
   const mouse = useRef({ x: -200, y: -200 });
@@ -49,10 +60,7 @@ export default function SigueTusSuenos() {
   ]);
 
   const cursorRealEl = useRef<HTMLDivElement>(null);
-  const fake1El = useRef<HTMLDivElement>(null);
-  const fake2El = useRef<HTMLDivElement>(null);
-  const fake3El = useRef<HTMLDivElement>(null);
-  const fakeEls = useMemo(() => [fake1El, fake2El, fake3El], []);
+  const fakeEls = useRef<(HTMLDivElement | null)[]>([]);
 
   const winkEl = useRef<HTMLDivElement>(null);
   const winkingIdxRef = useRef(-1);
@@ -84,11 +92,7 @@ export default function SigueTusSuenos() {
   // Mobile catch state
   const [mobileCaughtVisible, setMobileCaughtVisible] = useState(false);
 
-  useEffect(() => {
-    const mobile = "ontouchstart" in window && window.matchMedia("(pointer: coarse)").matches;
-    setIsMobile(mobile);
-    isMobileRef.current = mobile;
-  }, []);
+  useEffect(() => { isMobileRef.current = isMobile; }, [isMobile]);
 
   useEffect(() => {
     const cx = window.innerWidth / 2;
@@ -102,6 +106,62 @@ export default function SigueTusSuenos() {
     stateRef.current = s;
     setGameState(s);
   }
+
+  const explodeAt = useCallback(async (x: number, y: number) => {
+    let M: any;
+    try {
+      const mod = await import("matter-js");
+      M = (mod as any).default ?? mod;
+    } catch { return; }
+    const { Engine, Bodies, Body, World, Runner } = M;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    canvas.style.cssText = "position:fixed;inset:0;pointer-events:none;z-index:9999;";
+    document.body.appendChild(canvas);
+    const ctx = canvas.getContext("2d")!;
+
+    const engine = Engine.create({ gravity: { x: 0, y: 2 } });
+    World.add(engine.world, Bodies.rectangle(window.innerWidth / 2, window.innerHeight + 30, window.innerWidth * 3, 60, { isStatic: true }));
+
+    const pieces: { body: any; w: number; h: number }[] = [];
+    for (let i = 0; i < 10; i++) {
+      const angle = (i / 10) * Math.PI * 2 + (Math.random() - 0.5) * 0.4;
+      const speed = 4 + Math.random() * 7;
+      const w = 5 + Math.random() * 8;
+      const h = 5 + Math.random() * 8;
+      const b = Bodies.rectangle(x, y, w, h, { restitution: 0.5, friction: 0.4 });
+      Body.setVelocity(b, { x: Math.cos(angle) * speed, y: Math.sin(angle) * speed - 3 });
+      Body.setAngularVelocity(b, (Math.random() - 0.5) * 0.4);
+      World.add(engine.world, b);
+      pieces.push({ body: b, w, h });
+    }
+
+    const runner = Runner.create();
+    Runner.run(runner, engine);
+    const start = Date.now();
+    let frame: number;
+
+    const draw = () => {
+      const elapsed = Date.now() - start;
+      const alpha = Math.max(0, 1 - elapsed / 1800);
+      if (alpha <= 0) { cancelAnimationFrame(frame); Runner.stop(runner); canvas.remove(); return; }
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.globalAlpha = alpha;
+      for (const { body: b, w, h } of pieces) {
+        ctx.save();
+        ctx.translate(b.position.x, b.position.y);
+        ctx.rotate(b.angle);
+        ctx.fillStyle = "#00b87a";
+        ctx.fillRect(-w / 2, -h / 2, w, h);
+        ctx.restore();
+      }
+      ctx.globalAlpha = 1;
+      frame = requestAnimationFrame(draw);
+    };
+    draw();
+  }, []);
 
   // Confession animation sequence
   useEffect(() => {
@@ -148,8 +208,7 @@ export default function SigueTusSuenos() {
     frozenFakePositions.current.forEach(pos => explodeAt(pos.x, pos.y));
 
     // Movement starts immediately (t=0)
-    fakeEls.forEach((ref, i) => {
-      const el = ref.current;
+    fakeEls.current.forEach((el, i) => {
       if (!el) return;
       const dur = MOVE_DURATIONS[i];
       el.style.transition = `transform ${dur}s ease, opacity 2s ease`;
@@ -161,7 +220,7 @@ export default function SigueTusSuenos() {
     // Phrase 1 ends + fake 1 fades at t=2500ms
     const tP1Hide = setTimeout(() => {
       setConfessionVisible([false, false, false]);
-      if (fake1El.current) fake1El.current.style.opacity = "0";
+      if (fakeEls.current[0]) fakeEls.current[0].style.opacity = "0";
     }, 2500);
 
     // Phrase 2 at t=2800ms
@@ -169,7 +228,7 @@ export default function SigueTusSuenos() {
     // Phrase 2 ends + fake 2 fades at t=4300ms
     const tP2Hide = setTimeout(() => {
       setConfessionVisible([false, false, false]);
-      if (fake2El.current) fake2El.current.style.opacity = "0";
+      if (fakeEls.current[1]) fakeEls.current[1].style.opacity = "0";
     }, 4300);
 
     // Phrase 3 at t=4600ms
@@ -177,7 +236,7 @@ export default function SigueTusSuenos() {
     // Phrase 3 ends + fake 3 fades at t=6100ms
     const tP3Hide = setTimeout(() => {
       setConfessionVisible([false, false, false]);
-      if (fake3El.current) fake3El.current.style.opacity = "0";
+      if (fakeEls.current[2]) fakeEls.current[2].style.opacity = "0";
     }, 6100);
 
     // Certificate at t=8100ms
@@ -189,7 +248,7 @@ export default function SigueTusSuenos() {
       clearTimeout(tP3Show); clearTimeout(tP3Hide);
       clearTimeout(tCert);
     };
-  }, [gameState, fakeEls]);
+  }, [gameState, explodeAt]);
 
   const loopRef = useRef<() => void>(() => {});
   const loop = useCallback(() => {
@@ -293,7 +352,7 @@ export default function SigueTusSuenos() {
         fakes.current.forEach((f, i) => {
           f.x += (mouse.current.x - f.x) * dtAlphas[i];
           f.y += (mouse.current.y - f.y) * dtAlphas[i];
-          const el = fakeEls[i].current;
+          const el = fakeEls.current[i];
           if (el) {
             let ox = 0, oy = 0;
             if (i === 0) {
@@ -331,69 +390,13 @@ export default function SigueTusSuenos() {
     }
 
     animRef.current = requestAnimationFrame(loopRef.current);
-  }, [fakeEls]);
+  }, []);
 
   useEffect(() => {
     loopRef.current = loop;
     animRef.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animRef.current);
   }, [loop]);
-
-  async function explodeAt(x: number, y: number) {
-    let M: any;
-    try {
-      const mod = await import("matter-js");
-      M = (mod as any).default ?? mod;
-    } catch { return; }
-    const { Engine, Bodies, Body, World, Runner } = M;
-
-    const canvas = document.createElement("canvas");
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    canvas.style.cssText = "position:fixed;inset:0;pointer-events:none;z-index:9999;";
-    document.body.appendChild(canvas);
-    const ctx = canvas.getContext("2d")!;
-
-    const engine = Engine.create({ gravity: { x: 0, y: 2 } });
-    World.add(engine.world, Bodies.rectangle(window.innerWidth / 2, window.innerHeight + 30, window.innerWidth * 3, 60, { isStatic: true }));
-
-    const pieces: { body: any; w: number; h: number }[] = [];
-    for (let i = 0; i < 10; i++) {
-      const angle = (i / 10) * Math.PI * 2 + (Math.random() - 0.5) * 0.4;
-      const speed = 4 + Math.random() * 7;
-      const w = 5 + Math.random() * 8;
-      const h = 5 + Math.random() * 8;
-      const b = Bodies.rectangle(x, y, w, h, { restitution: 0.5, friction: 0.4 });
-      Body.setVelocity(b, { x: Math.cos(angle) * speed, y: Math.sin(angle) * speed - 3 });
-      Body.setAngularVelocity(b, (Math.random() - 0.5) * 0.4);
-      World.add(engine.world, b);
-      pieces.push({ body: b, w, h });
-    }
-
-    const runner = Runner.create();
-    Runner.run(runner, engine);
-    const start = Date.now();
-    let frame: number;
-
-    const draw = () => {
-      const elapsed = Date.now() - start;
-      const alpha = Math.max(0, 1 - elapsed / 1800);
-      if (alpha <= 0) { cancelAnimationFrame(frame); Runner.stop(runner); canvas.remove(); return; }
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.globalAlpha = alpha;
-      for (const { body: b, w, h } of pieces) {
-        ctx.save();
-        ctx.translate(b.position.x, b.position.y);
-        ctx.rotate(b.angle);
-        ctx.fillStyle = "#00b87a";
-        ctx.fillRect(-w / 2, -h / 2, w, h);
-        ctx.restore();
-      }
-      ctx.globalAlpha = 1;
-      frame = requestAnimationFrame(draw);
-    };
-    draw();
-  }
 
   useEffect(() => {
     function onMove(e: MouseEvent | TouchEvent) {
@@ -500,8 +503,7 @@ export default function SigueTusSuenos() {
 
   function playAgain() {
     cancelAnimationFrame(animRef.current);
-    fakeEls.forEach(ref => {
-      const el = ref.current;
+    fakeEls.current.forEach((el) => {
       if (!el) return;
       el.style.transition = "";
       el.style.opacity = "";
@@ -597,8 +599,8 @@ export default function SigueTusSuenos() {
       {/* Fakes — desktop only, hidden during certificate. Tooltips embedded so they follow. */}
       {gameState !== "certificate" && !isMobile && (
         <>
-          {([fake1El, fake2El, fake3El] as const).map((ref, i) => (
-            <div key={i} ref={ref} style={{ position: "fixed", left: 0, top: 0, transform: "translate(-9999px,-9999px)", willChange: "transform", pointerEvents: "none", zIndex: 9997 - i }}>
+          {[0, 1, 2].map((i) => (
+            <div key={i} ref={(el) => { fakeEls.current[i] = el; }} style={{ position: "fixed", left: 0, top: 0, transform: "translate(-9999px,-9999px)", willChange: "transform", pointerEvents: "none", zIndex: 9997 - i }}>
               <CursorIcon />
               <div style={{
                 position: "absolute",
