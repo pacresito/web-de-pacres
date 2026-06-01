@@ -2,14 +2,22 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Instrument_Serif, IBM_Plex_Sans, IBM_Plex_Mono, JetBrains_Mono, Inter } from "next/font/google";
 import "./globals.css";
 
+// Geist / Geist Mono solo los usan páginas secundarias (original, neon, RPNcalc
+// y las calcs). preload:false → no se precargan en todas las páginas (incluida
+// la home y las terminal que no los usan); se cargan on-demand con swap allí
+// donde sí aparecen.
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  display: "swap",
+  preload: false,
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  display: "swap",
+  preload: false,
 });
 
 const instrumentSerif = Instrument_Serif({
