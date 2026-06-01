@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import TerminalShell from "../../components/TerminalShell";
 import WhyFooter from "../../components/WhyFooter";
@@ -16,18 +16,20 @@ function calcSize() {
 }
 
 function useCanvasSize() {
-  const [size, setSize] = useState(0);
-  useEffect(() => {
-    setSize(calcSize());
-    const onResize = () => setSize(calcSize());
-    window.addEventListener("resize", onResize);
-    window.addEventListener("orientationchange", onResize);
-    return () => {
-      window.removeEventListener("resize", onResize);
-      window.removeEventListener("orientationchange", onResize);
-    };
-  }, []);
-  return size;
+  // El tamaño depende de `window`, que no existe en el server: useSyncExternalStore
+  // devuelve 0 en SSR y el valor real tras hidratar, suscrito a resize/orientación.
+  return useSyncExternalStore(
+    (onChange) => {
+      window.addEventListener("resize", onChange);
+      window.addEventListener("orientationchange", onChange);
+      return () => {
+        window.removeEventListener("resize", onChange);
+        window.removeEventListener("orientationchange", onChange);
+      };
+    },
+    calcSize,
+    () => 0,
+  );
 }
 
 function calcCell(size: number) { return Math.floor(size / 12); }
@@ -55,6 +57,15 @@ function buildPath() {
 
 const PATH_CELLS = buildPath();
 const PATH_RIGHT = [...PATH_CELLS].reverse().map(p => ({ x: -p.x, y: p.y }));
+
+// Velocidades iniciales de cada tablero: derivadas solo de constantes, así que son
+// estables y viven fuera del render (necesario para que el effect de init no se reinicie).
+const LEFT_INITIAL_VEL = { x: SPEED, y: 0 };
+const RIGHT_INITIAL_VEL = (() => {
+  const [r0, r1] = PATH_RIGHT;
+  const len = Math.hypot(r1.x - r0.x, r1.y - r0.y);
+  return { x: ((r1.x - r0.x) / len) * SPEED, y: ((r1.y - r0.y) / len) * SPEED };
+})();
 
 function pathCenter(path: { x: number; y: number }[]) {
   const xs = path.map(p => p.x), ys = path.map(p => p.y);
@@ -151,7 +162,7 @@ function useBoard(
   turnDir: 1 | -1,
   initialVel: { x: number; y: number },
   size: number,
-  speedRef: React.RefObject<number>
+  speedRef: React.RefObject<SpeedLevel>
 ) {
   const originRef = useRef({ x: 0, y: 0 });
   const stateRef = useRef<BoardState>({ pos: { x: 0, y: 0 }, vel: { x: 0, y: 0 }, segIdx: 0, gameState: "idle" });
@@ -161,19 +172,25 @@ function useBoard(
   const [startCount, setStartCount] = useState(0);
   const goalCell = path[path.length - 1];
 
-  function isCloserToNext(pos: { x: number; y: number }, segIdx: number) {
+  // Velocidad mínima usada durante el run (para el ranking): la rastrea el propio loop,
+  // que ya lee la velocidad cada frame. `winSpeedRef` la congela al ganar.
+  const runMinSpeedRef = useRef<SpeedLevel>("fast");
+  const winSpeedRef = useRef<SpeedLevel | null>(null);
+
+  const isCloserToNext = useCallback((pos: { x: number; y: number }, segIdx: number) => {
     const origin = originRef.current;
     const cs = cellRef.current;
     const cur = cellToPixel(path[segIdx], origin, cs);
     const next = cellToPixel(path[segIdx + 1], origin, cs);
     const next2 = cellToPixel(path[Math.min(segIdx + 2, path.length - 1)], origin, cs);
     return pointToSegmentDist(pos, next, next2) < pointToSegmentDist(pos, cur, next) - 2;
-  }
+  }, [path]);
 
   const lastTimeRef = useRef(0);
   const accumRef = useRef(0);
+  const loopRef = useRef<(now: number) => void>(() => {});
 
-  function loop(now: number) {
+  const loop = useCallback((now: number) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d")!;
@@ -185,7 +202,10 @@ function useBoard(
       return;
     }
 
-    if (document.hidden) { lastTimeRef.current = now; accumRef.current = 0; animRef.current = requestAnimationFrame(loop); return; }
+    if (document.hidden) { lastTimeRef.current = now; accumRef.current = 0; animRef.current = requestAnimationFrame(loopRef.current); return; }
+
+    // Rastrea el mínimo de velocidad del run (solo baja).
+    if (SPEED_ORDER[speedRef.current] < SPEED_ORDER[runMinSpeedRef.current]) runMinSpeedRef.current = speedRef.current;
 
     const STEP_MS = 1000 / 60;
     const delta = now - lastTimeRef.current;
@@ -193,7 +213,7 @@ function useBoard(
     accumRef.current = Math.min(accumRef.current + delta, STEP_MS * 5);
 
     while (accumRef.current >= STEP_MS) {
-      const mult = speedRef.current ?? 1;
+      const mult = SPEED_MULTIPLIERS[speedRef.current] ?? 1;
       s.pos.x += s.vel.x * mult;
       s.pos.y += s.vel.y * mult;
 
@@ -201,7 +221,7 @@ function useBoard(
 
       const goalPx = cellToPixel(goalCell, originRef.current, cs);
       if (Math.hypot(s.pos.x - goalPx.x, s.pos.y - goalPx.y) < cs / 2) {
-        s.gameState = "win"; setGameState("win");
+        s.gameState = "win"; winSpeedRef.current = runMinSpeedRef.current; setGameState("win");
         drawBoard(ctx, canvas.width, path, originRef.current, s, goalCell, cs); return;
       }
 
@@ -215,13 +235,16 @@ function useBoard(
     }
 
     drawBoard(ctx, canvas.width, path, originRef.current, s, goalCell, cs);
-    animRef.current = requestAnimationFrame(loop);
-  }
+    animRef.current = requestAnimationFrame(loopRef.current);
+  }, [path, goalCell, isCloserToNext, speedRef, canvasRef]);
+  useEffect(() => { loopRef.current = loop; }, [loop]);
 
   function start() {
     cancelAnimationFrame(animRef.current);
     stateRef.current = initBoard(path, originRef.current, initialVel, cellRef.current);
     stateRef.current.gameState = "playing";
+    runMinSpeedRef.current = speedRef.current;
+    winSpeedRef.current = null;
     setGameState("playing");
     setStartCount((c) => c + 1);
   }
@@ -249,7 +272,7 @@ function useBoard(
     }
     const ctx = canvas.getContext("2d")!;
     drawBoard(ctx, size, path, originRef.current, stateRef.current, goalCell, cs);
-  }, [size]);
+  }, [size, path, initialVel, goalCell, canvasRef]);
 
   useEffect(() => {
     if (gameState === "playing") {
@@ -259,11 +282,13 @@ function useBoard(
       animRef.current = requestAnimationFrame(loop);
     }
     return () => cancelAnimationFrame(animRef.current);
-  }, [gameState, startCount]);
+  }, [gameState, startCount, loop]);
 
   function reset() {
     cancelAnimationFrame(animRef.current);
     stateRef.current = initBoard(path, originRef.current, initialVel, cellRef.current);
+    winSpeedRef.current = null;
+    runMinSpeedRef.current = "fast";
     setGameState("idle");
     const canvas = canvasRef.current;
     if (canvas) {
@@ -277,6 +302,7 @@ function useBoard(
     if (s.gameState === "win") return;
     cancelAnimationFrame(animRef.current);
     s.gameState = "win";
+    winSpeedRef.current = runMinSpeedRef.current;
     s.pos = cellToPixel(goalCell, originRef.current, cellRef.current);
     setGameState("win");
     const canvas = canvasRef.current;
@@ -286,7 +312,7 @@ function useBoard(
     }
   }
 
-  return { gameState, press, start, reset, cheat };
+  return { gameState, press, start, reset, cheat, winSpeedRef };
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -307,13 +333,9 @@ export default function EspiralPage() {
 
   const [fullscreen, setFullscreen] = useState(false);
 
-  const r0 = PATH_RIGHT[0], r1 = PATH_RIGHT[1];
-  const rlen = Math.hypot(r1.x - r0.x, r1.y - r0.y);
-  const rightVel = { x: ((r1.x - r0.x) / rlen) * SPEED, y: ((r1.y - r0.y) / rlen) * SPEED };
-
   const [speed, setSpeed] = useState<SpeedLevel>("slow");
-  const speedRef = useRef<number>(SPEED_MULTIPLIERS.normal as number);
-  useEffect(() => { speedRef.current = SPEED_MULTIPLIERS[speed]; }, [speed]);
+  const speedRef = useRef<SpeedLevel>("slow");
+  useEffect(() => { speedRef.current = speed; }, [speed]);
 
   const SPEED_CYCLE: SpeedLevel[] = ["slow", "normal", "fast"];
   function cycleSpeed() {
@@ -321,17 +343,20 @@ export default function EspiralPage() {
   }
 
   const size = useCanvasSize();
-  const left = useBoard(canvasL, PATH_CELLS, -1, { x: SPEED, y: 0 }, size, speedRef);
-  const right = useBoard(canvasR, PATH_RIGHT, -1, rightVel, size, speedRef);
+  const left = useBoard(canvasL, PATH_CELLS, -1, LEFT_INITIAL_VEL, size, speedRef);
+  const right = useBoard(canvasR, PATH_RIGHT, -1, RIGHT_INITIAL_VEL, size, speedRef);
 
   const bothWin = left.gameState === "win" && right.gameState === "win";
   const [firstWin, setFirstWin] = useState<"left" | "right" | null>(null);
 
-  useEffect(() => {
-    if (left.gameState === "win" && right.gameState !== "win" && firstWin === null) setFirstWin("left");
-    else if (right.gameState === "win" && left.gameState !== "win" && firstWin === null) setFirstWin("right");
-    if (left.gameState !== "win" && right.gameState !== "win") setFirstWin(null);
-  }, [left.gameState, right.gameState]);
+  // Quién ganó primero: se ajusta durante el render cuando cambian los estados (sin effect).
+  // El guardado solo al estar en null da la memoria de "primero"; se resetea al volver a no-win.
+  if (left.gameState !== "win" && right.gameState !== "win") {
+    if (firstWin !== null) setFirstWin(null);
+  } else if (firstWin === null) {
+    if (left.gameState === "win" && right.gameState !== "win") setFirstWin("left");
+    else if (right.gameState === "win" && left.gameState !== "win") setFirstWin("right");
+  }
 
   const STORAGE_KEY = "espiral_start_time";
   const [elapsed, setElapsed] = useState(0);
@@ -343,29 +368,6 @@ export default function EspiralPage() {
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // Tracking de velocidad mínima por tablero (solo el run ganador)
-  const leftRunMinSpeedRef = useRef<SpeedLevel>("fast");
-  const rightRunMinSpeedRef = useRef<SpeedLevel>("fast");
-  const leftWinSpeedRef = useRef<SpeedLevel | null>(null);
-  const rightWinSpeedRef = useRef<SpeedLevel | null>(null);
-
-  useEffect(() => {
-    if (left.gameState === "playing") leftRunMinSpeedRef.current = speed;
-    if (left.gameState === "win") leftWinSpeedRef.current = leftRunMinSpeedRef.current;
-  }, [left.gameState]);
-
-  useEffect(() => {
-    if (right.gameState === "playing") rightRunMinSpeedRef.current = speed;
-    if (right.gameState === "win") rightWinSpeedRef.current = rightRunMinSpeedRef.current;
-  }, [right.gameState]);
-
-  useEffect(() => {
-    if (left.gameState === "playing" && SPEED_ORDER[speed] < SPEED_ORDER[leftRunMinSpeedRef.current])
-      leftRunMinSpeedRef.current = speed;
-    if (right.gameState === "playing" && SPEED_ORDER[speed] < SPEED_ORDER[rightRunMinSpeedRef.current])
-      rightRunMinSpeedRef.current = speed;
-  }, [speed]);
-
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
@@ -374,6 +376,7 @@ export default function EspiralPage() {
         localStorage.removeItem(STORAGE_KEY);
       } else {
         startTimeRef.current = savedStart;
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- init en mount: localStorage no existe en SSR; es una lectura única con removeItem, no un store reactivo
         setElapsed(Math.floor((Date.now() - savedStart) / 1000));
       }
     }
@@ -432,8 +435,8 @@ export default function EspiralPage() {
   async function submitScore(e: React.FormEvent) {
     e.preventDefault();
     if (!alias.trim() || finalTime === null) return;
-    const lws = leftWinSpeedRef.current;
-    const rws = rightWinSpeedRef.current;
+    const lws = left.winSpeedRef.current;
+    const rws = right.winSpeedRef.current;
     let finalSpeed: SpeedLevel = speed;
     if (lws && rws) {
       finalSpeed = SPEED_ORDER[lws] <= SPEED_ORDER[rws] ? lws : rws;
@@ -457,10 +460,6 @@ export default function EspiralPage() {
     right.reset();
     setSubmitted(false);
     setAlias("");
-    leftWinSpeedRef.current = null;
-    rightWinSpeedRef.current = null;
-    leftRunMinSpeedRef.current = "fast";
-    rightRunMinSpeedRef.current = "fast";
   }
 
   return (

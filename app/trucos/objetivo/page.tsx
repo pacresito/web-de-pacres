@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import type Matter from "matter-js";
 import TerminalShell from "../../components/TerminalShell";
 
 // Detección de puntero grueso (móvil/táctil) compatible con SSR: el server ve `false`
@@ -108,10 +109,10 @@ export default function SigueTusSuenos() {
   }
 
   const explodeAt = useCallback(async (x: number, y: number) => {
-    let M: any;
+    let M: typeof import("matter-js");
     try {
-      const mod = await import("matter-js");
-      M = (mod as any).default ?? mod;
+      const mod = await import("matter-js") as typeof import("matter-js") & { default?: typeof import("matter-js") };
+      M = mod.default ?? mod;
     } catch { return; }
     const { Engine, Bodies, Body, World, Runner } = M;
 
@@ -125,7 +126,7 @@ export default function SigueTusSuenos() {
     const engine = Engine.create({ gravity: { x: 0, y: 2 } });
     World.add(engine.world, Bodies.rectangle(window.innerWidth / 2, window.innerHeight + 30, window.innerWidth * 3, 60, { isStatic: true }));
 
-    const pieces: { body: any; w: number; h: number }[] = [];
+    const pieces: { body: Matter.Body; w: number; h: number }[] = [];
     for (let i = 0; i < 10; i++) {
       const angle = (i / 10) * Math.PI * 2 + (Math.random() - 0.5) * 0.4;
       const speed = 4 + Math.random() * 7;

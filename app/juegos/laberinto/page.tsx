@@ -815,6 +815,7 @@ export default function Laberinto() {
     const isIOS = typeof (DeviceOrientationEvent as unknown as { requestPermission?: unknown }).requestPermission === "function";
     if (!isIOS && window.DeviceOrientationEvent) {
       const cleanup = attachOrientListener();
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- init en mount por capacidad del device; DeviceOrientationEvent no existe en SSR
       setOrientState("on");
       draw();
       startLoop();
@@ -838,6 +839,7 @@ export default function Laberinto() {
       window.removeEventListener("resize", updateScale);
       releaseWakeLock();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only: inicializa el juego una vez; startLoop/attachOrientListener cierran sobre refs
   }, []);
 
   const requestOrientPermission = useCallback(async () => {

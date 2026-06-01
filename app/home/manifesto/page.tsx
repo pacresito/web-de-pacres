@@ -740,6 +740,7 @@ export default function Manifesto() {
 
   useEffect(() => {
     const saved = localStorage.getItem("manifesto-theme");
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- init en mount: localStorage no existe en SSR; lectura única de preferencia, no un store reactivo
     if (saved === "light" || saved === "dark") setTheme(saved);
   }, []);
 
@@ -813,8 +814,8 @@ export default function Manifesto() {
         World: typeof import("matter-js").World,
         Runner: typeof import("matter-js").Runner;
     try {
-      const mod = await import("matter-js");
-      const M = (mod as any).default ?? mod;
+      const mod = await import("matter-js") as typeof import("matter-js") & { default?: typeof import("matter-js") };
+      const M = mod.default ?? mod;
       Engine = M.Engine; Bodies = M.Bodies; Body = M.Body; World = M.World; Runner = M.Runner;
       if (!Engine) throw new Error("matter-js no cargó");
     } catch (e) {
