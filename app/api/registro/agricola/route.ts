@@ -48,7 +48,7 @@ function buildEmailHtml(record: AgricolaRecord) {
 
   const isEmpate = winner === "Empate";
   const headerCols = players
-    .map((p, pi) => {
+    .map((p) => {
       const hl = !isEmpate && p === winner;
       return `<th style="padding:10px 14px;text-align:center;color:${hl ? C.cream : "#e8d5b0"};background:${hl ? C.amber : "rgba(255,255,255,0.07)"};border-left:1px solid rgba(255,255,255,0.12);">${p}</th>`;
     })

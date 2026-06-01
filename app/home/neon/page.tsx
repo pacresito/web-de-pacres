@@ -146,13 +146,11 @@ function Starfield() {
     let shootTimer = 0;
 
     let raf: number;
-    let frame = 0;
 
     const draw = () => {
       ctx.fillStyle = "rgba(10, 10, 15, 0.18)";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      frame++;
 
       // Shooting stars
       shootTimer++;

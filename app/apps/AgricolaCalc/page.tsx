@@ -125,7 +125,7 @@ type RegistroRecord = {
 };
 
 function DetailTable({ record }: { record: RegistroRecord }) {
-  const { players, inputs, finals, winner } = record;
+  const { players, inputs, winner } = record;
   const isEmpate = winner === "Empate";
   const scores = inputs.map((inp) => inp.map((v) => v as number | null | "heart"));
   const derived = scores.map((s) => getDerived(s));

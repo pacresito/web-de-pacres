@@ -3,7 +3,6 @@ import Redis from "ioredis";
 // Cacheamos la instancia en globalThis para no abrir una conexión nueva en cada
 // recarga de Turbopack (HMR) ni en cada invocación de función serverless.
 declare global {
-  // eslint-disable-next-line no-var
   var __redis: Redis | undefined;
 }
 

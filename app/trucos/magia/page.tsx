@@ -28,11 +28,6 @@ const SPIRIT_GUIDES = [
   { article: "El", name: "koala",  emoji: "🐨", rune: "K", color: "#7a6a5a" },
 ];
 
-const VALUE_ARTICLE: Record<string, string> = {
-  "A": "el", "2": "el", "3": "el", "4": "el", "5": "el",
-  "J": "la", "Q": "la", "K": "el",
-};
-
 const SUIT_ES: Record<string, string> = {
   "♠": "picas", "♥": "corazones", "♦": "diamantes", "♣": "tréboles",
 };
@@ -92,10 +87,6 @@ function castSpell(deck: Beast[], col: number): Beast[] {
 
 function spellName(beast: Beast): string {
   return `${VALUE_ES[beast.value]} de ${SUIT_ES[beast.suit]}`;
-}
-
-function cardArticle(beast: Beast): string {
-  return VALUE_ARTICLE[beast.value];
 }
 
 // ─── CardFace ─────────────────────────────────────────────────────────────────
@@ -182,7 +173,7 @@ function SpellWheel({
   const smoothVelRef = useRef(0);
   const forceRafRef = useRef(0);
 
-  useEffect(() => { updateRot(0); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { updateRot(0); }, []);
 
   function getPtrAngle(cx: number, cy: number): number {
     const el = containerRef.current;

@@ -249,7 +249,7 @@ export default function Laberinto() {
   const [alias, setAlias] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [ranking, setRanking] = useState<RankingData | null>(null);
+  const [, setRanking] = useState<RankingData | null>(null);
 
   const [fullscreen, setFullscreen] = useState(false);
   const [orientState, setOrientState] = useState<"off" | "needs-permission" | "on">("off");

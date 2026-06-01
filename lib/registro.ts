@@ -81,7 +81,7 @@ export async function handleRegistroPost<T extends RegistroBody, R>(
     return Response.json({ error: "JSON inválido" }, { status: 400 });
   }
 
-  if (body.password !== PASSWORD) {
+  if (!PASSWORD || body.password !== PASSWORD) {
     return Response.json({ error: "Clave incorrecta" }, { status: 401 });
   }
   await clearRateLimit(ip, config.ratePrefix);

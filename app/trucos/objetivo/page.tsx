@@ -82,7 +82,6 @@ export default function SigueTusSuenos() {
   const [confessionVisible, setConfessionVisible] = useState([false, false, false]);
 
   // Mobile catch state
-  const capturedTargetPos = useRef({ x: 0, y: 0 });
   const [mobileCaughtVisible, setMobileCaughtVisible] = useState(false);
 
   useEffect(() => {

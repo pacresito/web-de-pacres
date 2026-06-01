@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import StarField from './StarField';
 import { calcularEdad } from '@/lib/utils';
 
@@ -518,7 +519,7 @@ export default function Lucas() {
           <p className="lc-contact-sub">Disponible para proyectos, misiones espaciales y partidas de Castle Combo</p>
           <a href="mailto:lucas@cohete.space" className="lc-contact-btn">Contactar</a>
           <p className="lc-footer" style={{ marginTop: "3rem" }}>
-            <a href="/">pacr.es</a> · © {new Date().getFullYear()} Dr. Lucas Crespo · Todos los derechos reservados (excepto el último trozo de pizza)
+            <Link href="/">pacr.es</Link> · © {new Date().getFullYear()} Dr. Lucas Crespo · Todos los derechos reservados (excepto el último trozo de pizza)
           </p>
         </section>
 

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import Link from "next/link";
 import TerminalShell from "../../components/TerminalShell";
 import WhyFooter from "../../components/WhyFooter";
 
@@ -101,16 +100,6 @@ export default function Fluidos() {
     toolRef.current = t;
     brushRef.current = (t === MOVE || t === 99) ? 8 : 5;
     setTool(t);
-  }, []);
-
-  // Init grid
-  const initGrid = useCallback((W: number, H: number) => {
-    dimRef.current = { W, H };
-    gridRef.current    = new Uint8Array(W * H);
-    agesRef.current    = new Uint8Array(W * H);
-    updRef.current     = new Uint8Array(W * H);
-    compRef.current    = new Uint16Array(W * H);
-    sandHeatRef.current = new Uint16Array(W * H);
   }, []);
 
   // Resize observer
@@ -1118,10 +1107,6 @@ export default function Fluidos() {
     agesRef.current?.fill(0);
     sandHeatRef.current?.fill(0);
   };
-
-  const currentToolDef = TOOL_DEFS.find(t => t.id === tool);
-  const toolLabel = currentToolDef?.label ?? "—";
-  const toolColor = currentToolDef?.color ?? "var(--t-ink3)";
 
   return (
     <TerminalShell title="fluidos" prompt={{ host: "fluidos", path: "~/apps", command: "./fluidos --elementos=4" }} hideChrome={fullscreen}>
