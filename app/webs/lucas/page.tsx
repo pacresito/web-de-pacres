@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import StarField from './StarField';
 import { calcularEdad } from '@/lib/utils';
@@ -128,6 +129,7 @@ export default function Lucas() {
         }
         .lc-photo-wrap img {
           width: 100%;
+          height: auto;
           display: block;
           object-fit: cover;
           object-position: top center;
@@ -377,9 +379,11 @@ export default function Lucas() {
         {/* ── FOTO ── */}
         <div style={{ maxWidth: 780, margin: "0 auto", padding: "0 2rem" }}>
           <div className="lc-photo-wrap">
-            <img
-              src="https://upload.wikimedia.org/wikipedia/commons/4/4a/SpaceX_Starship_ignition_during_IFT-5.jpg"
+            <Image
+              src="/lucas/starship-ift5.jpg"
               alt="Starship IFT-5 — SpaceX"
+              width={2308}
+              height={2470}
             />
             <p className="lc-photo-caption">Starship IFT-5 · Boca Chica, Texas · Oct 2024 — el cohete que Lucas mantiene en perfecto estado</p>
           </div>

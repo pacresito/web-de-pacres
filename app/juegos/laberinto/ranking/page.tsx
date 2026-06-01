@@ -3,18 +3,13 @@
 import { useEffect, useState } from "react";
 import TerminalShell from "../../../components/TerminalShell";
 import { thStyle, tdStyle, RankBackLink } from "../../../components/ranking";
+import type { RankEntry } from "@/lib/ranking";
 
 const MONO = "var(--t-mono)";
 
-interface Entry {
-  name: string;
-  score: number;
-  date: string | null;
-}
-
 interface RankingData {
-  top: Entry[];
-  bottom: Entry[];
+  top: RankEntry[];
+  bottom: RankEntry[];
 }
 
 export default function RankingLaberinto() {

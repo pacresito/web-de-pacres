@@ -56,7 +56,7 @@ export interface SubmitOptions {
 
 export type SubmitResult =
   | { ok: false; error: string }
-  | { ok: true; stored: boolean; name: string };
+  | { ok: true; stored: boolean; name: string; speed: string | null };
 
 /**
  * Valida y guarda una puntuación. Mantiene una sola entrada por nombre, quedándose
@@ -79,7 +79,7 @@ export async function submitScore(opts: SubmitOptions): Promise<SubmitResult> {
   const existing = await findMember(key, name);
   if (existing) {
     const isBetter = lowerIsBetter ? score < existing.score : score > existing.score;
-    if (!isBetter) return { ok: true, stored: false, name };
+    if (!isBetter) return { ok: true, stored: false, name, speed };
     await redis.zrem(key, existing.member);
   }
 
@@ -90,7 +90,7 @@ export async function submitScore(opts: SubmitOptions): Promise<SubmitResult> {
   });
   await redis.zadd(key, score, member);
 
-  return { ok: true, stored: true, name };
+  return { ok: true, stored: true, name, speed };
 }
 
 /** Poda dejando solo las `keep` mejores entradas (Espiral: top‑N). */

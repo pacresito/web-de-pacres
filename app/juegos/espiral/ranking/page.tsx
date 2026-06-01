@@ -3,18 +3,12 @@
 import { useEffect, useState } from "react";
 import TerminalShell from "../../../components/TerminalShell";
 import { thStyle, tdStyle, RankBackLink } from "../../../components/ranking";
+import type { RankEntry } from "@/lib/ranking";
 
 const MONO = "var(--t-mono)";
 
-interface Entry {
-  name: string;
-  date: string | null;
-  score: number;
-  speed: string | null;
-}
-
 export default function Ranking() {
-  const [entries, setEntries] = useState<Entry[]>([]);
+  const [entries, setEntries] = useState<RankEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 

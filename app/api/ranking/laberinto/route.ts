@@ -1,7 +1,7 @@
 import { sendEmail } from "@/lib/notify";
 import { submitScore, pruneExtremes, readRanking, type RankEntry } from "@/lib/ranking";
 
-const KEY = process.env.NODE_ENV === "development" ? "laberinto-dev:ranking" : "laberinto:ranking";
+const KEY = process.env.NODE_ENV === "development" ? "laberinto:ranking-dev" : "laberinto:ranking";
 
 async function getRanking(): Promise<{ top: RankEntry[]; bottom: RankEntry[] }> {
   const all = await readRanking(KEY);

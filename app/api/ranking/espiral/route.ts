@@ -1,9 +1,8 @@
 import { sendEmail } from "@/lib/notify";
 import { submitScore, pruneTop, readRanking } from "@/lib/ranking";
 
-const KEY = process.env.NODE_ENV === "development" ? "espiral-dev:ranking" : "espiral:ranking";
+const KEY = process.env.NODE_ENV === "development" ? "espiral:ranking-dev" : "espiral:ranking";
 const TOP = 10;
-const VALID_SPEEDS = ["slow", "normal", "fast"];
 
 export async function GET() {
   return Response.json(await readRanking(KEY, 0, TOP - 1));
@@ -26,10 +25,9 @@ export async function POST(request: Request) {
 
   if (result.stored) {
     await pruneTop(KEY, TOP, true);
-    const validSpeed = VALID_SPEEDS.includes(speed) ? speed : null;
     await sendEmail({
       subject: `${result.name} ha jugado al Espiral — ${Number(score).toFixed(1)}s`,
-      text: `${result.name} ha conseguido ${Number(score).toFixed(1)}s en el juego Espiral (velocidad: ${validSpeed ?? "—"}).\n\nVer ranking: https://pacr.es/juegos/espiral/ranking`,
+      text: `${result.name} ha conseguido ${Number(score).toFixed(1)}s en el juego Espiral (velocidad: ${result.speed ?? "—"}).\n\nVer ranking: https://pacr.es/juegos/espiral/ranking`,
     });
   }
 
