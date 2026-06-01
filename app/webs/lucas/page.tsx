@@ -384,6 +384,7 @@ export default function Lucas() {
               alt="Starship IFT-5 — SpaceX"
               width={2308}
               height={2470}
+              sizes="(max-width: 640px) 100vw, 640px"
             />
             <p className="lc-photo-caption">Starship IFT-5 · Boca Chica, Texas · Oct 2024 — el cohete que Lucas mantiene en perfecto estado</p>
           </div>
