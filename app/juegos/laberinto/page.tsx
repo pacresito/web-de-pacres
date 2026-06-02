@@ -27,11 +27,6 @@ type MazeCell = { walls: number };
 type Seg = { x1: number; y1: number; x2: number; y2: number };
 type Hole = { row: number; col: number; cx: number; cy: number; radius: number; fallCount: number };
 
-interface RankingData {
-  top: { name: string; score: number; date: string | null }[];
-  bottom: { name: string; score: number; date: string | null }[];
-}
-
 // ─── Maze generators ─────────────────────────────────────────────────────────
 
 const DIRS4 = [
@@ -236,45 +231,77 @@ function initMaze() {
   return { maze, goalX: gx, goalY: gy, holes };
 }
 
-export default function Laberinto() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const boardRef = useRef<HTMLDivElement>(null);
-  const loopRef = useRef<(t: number) => void>(() => {});
-  const tiltYRef = useRef<HTMLSpanElement>(null);
-  const tiltXRef = useRef<HTMLSpanElement>(null);
+/** Pre-renderiza las capas estáticas del laberinto (sombras + muros + highlights) a
+ *  un canvas offscreen. Son fijas dentro de un laberinto; dibujarlas cada frame era
+ *  el grueso del coste de draw(). Replica exactamente el dibujo directo: el alpha de
+ *  la sombra queda incrustado en la capa y al pegarla (source-over) da el mismo color. */
+function buildStaticLayer(segs: Seg[]): HTMLCanvasElement {
+  const layer = document.createElement("canvas");
+  layer.width = BOARD_W;
+  layer.height = BOARD_H;
+  const lctx = layer.getContext("2d")!;
 
-  const [score, setScore] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(GAME_DURATION);
-  const [gameOver, setGameOver] = useState(false);
-  const [alias, setAlias] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [, setRanking] = useState<RankingData | null>(null);
-
-  const [fullscreen, setFullscreen] = useState(false);
-  const [orientState, setOrientState] = useState<"off" | "needs-permission" | "on">("off");
-  const [scale, setScale] = useState(1);
-  const [isLandscape, setIsLandscape] = useState(false);
-  const landscapeRef = useRef(false);
-  const wakeLockRef = useRef<{ release: () => Promise<void> } | null>(null);
-
-  function acquireWakeLock() {
-    const nav = navigator as Navigator & { wakeLock?: { request: (type: string) => Promise<{ release: () => Promise<void> }> } };
-    if (!nav.wakeLock) return;
-    nav.wakeLock.request("screen").then(lock => { wakeLockRef.current = lock; }).catch(() => {});
+  // Sombras de muro — sobre un offscreen propio para no acumular alpha en esquinas.
+  const sc = document.createElement("canvas");
+  sc.width = BOARD_W;
+  sc.height = BOARD_H;
+  const sctx = sc.getContext("2d")!;
+  sctx.strokeStyle = "#0f172a";
+  sctx.lineWidth = WALL_W + 1;
+  sctx.lineCap = "square";
+  sctx.lineJoin = "miter";
+  sctx.beginPath();
+  for (const seg of segs) {
+    sctx.moveTo(seg.x1 + 3.5, seg.y1 + 4.5);
+    sctx.lineTo(seg.x2 + 3.5, seg.y2 + 4.5);
   }
+  sctx.stroke();
+  lctx.save();
+  lctx.globalAlpha = 0.22;
+  lctx.drawImage(sc, 0, 0);
+  lctx.restore();
 
-  function releaseWakeLock() {
-    if (wakeLockRef.current) {
-      wakeLockRef.current.release().catch(() => {});
-      wakeLockRef.current = null;
+  // Muros con gradiente por segmento.
+  lctx.save();
+  lctx.lineWidth = WALL_W;
+  lctx.lineCap = "square";
+  const halfW = WALL_W / 2;
+  for (const seg of segs) {
+    const isHoriz = Math.abs(seg.y2 - seg.y1) < 0.001;
+    const grad = isHoriz
+      ? lctx.createLinearGradient(0, seg.y1 - halfW, 0, seg.y1 + halfW)
+      : lctx.createLinearGradient(seg.x1 - halfW, 0, seg.x1 + halfW, 0);
+    grad.addColorStop(0, "#a8e6d0");
+    grad.addColorStop(0.45, "#00b87a");
+    grad.addColorStop(1, "#004433");
+    lctx.strokeStyle = grad;
+    lctx.beginPath();
+    lctx.moveTo(seg.x1, seg.y1);
+    lctx.lineTo(seg.x2, seg.y2);
+    lctx.stroke();
+  }
+  // Highlights — fillRect evita solapamiento en esquinas.
+  lctx.fillStyle = "rgba(255,255,255,0.55)";
+  for (const seg of segs) {
+    const isHoriz = Math.abs(seg.y2 - seg.y1) < 0.001;
+    if (isHoriz) {
+      lctx.fillRect(seg.x1, seg.y1 - halfW + 0.5, seg.x2 - seg.x1, 1);
+    } else {
+      lctx.fillRect(seg.x1 - halfW + 0.5, seg.y1, 1, seg.y2 - seg.y1);
     }
   }
+  lctx.restore();
 
-  const initial = initMaze();
-  const g = useRef({
-    ...initial,
+  return layer;
+}
+
+/** Estado inicial del juego (incluye un laberinto generado). Se llama una sola vez
+ *  vía lazy-init del ref: initMaze() es caro (Warnsdorff) y no debe correr por render. */
+function makeInitialState() {
+  return {
+    ...initMaze(),
     segs: [] as Seg[],
+    staticLayer: null as HTMLCanvasElement | null,
     bx: START_X, by: START_Y,
     vx: 0, vy: 0,
     tiltX: 0, tiltY: 0,
@@ -301,7 +328,50 @@ export default function Laberinto() {
     fallingT: 0,
     holeTargetX: 0,
     holeTargetY: 0,
-  });
+  };
+}
+
+export default function Laberinto() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const boardRef = useRef<HTMLDivElement>(null);
+  const loopRef = useRef<(t: number) => void>(() => {});
+  const tiltYRef = useRef<HTMLSpanElement>(null);
+  const tiltXRef = useRef<HTMLSpanElement>(null);
+
+  const [score, setScore] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(GAME_DURATION);
+  const [gameOver, setGameOver] = useState(false);
+  const [alias, setAlias] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState(false);
+
+  const [fullscreen, setFullscreen] = useState(false);
+  const [orientState, setOrientState] = useState<"off" | "needs-permission" | "on">("off");
+  const [scale, setScale] = useState(1);
+  const [isLandscape, setIsLandscape] = useState(false);
+  const landscapeRef = useRef(false);
+  const wakeLockRef = useRef<{ release: () => Promise<void> } | null>(null);
+
+  function acquireWakeLock() {
+    const nav = navigator as Navigator & { wakeLock?: { request: (type: string) => Promise<{ release: () => Promise<void> }> } };
+    if (!nav.wakeLock) return;
+    nav.wakeLock.request("screen").then(lock => { wakeLockRef.current = lock; }).catch(() => {});
+  }
+
+  function releaseWakeLock() {
+    if (wakeLockRef.current) {
+      wakeLockRef.current.release().catch(() => {});
+      wakeLockRef.current = null;
+    }
+  }
+
+  // Lazy-init: makeInitialState() (que genera el laberinto, caro) corre una sola vez,
+  // no por render. Patrón canónico de React 19 (ref nullable + check === null);
+  // `g` reexpone el ref ya inicializado sin `| null` para los usos de g.current.
+  const gRef = useRef<ReturnType<typeof makeInitialState> | null>(null);
+  if (gRef.current === null) gRef.current = makeInitialState();
+  const g = gRef as { current: ReturnType<typeof makeInitialState> };
 
   function draw(time?: number) {
     const canvas = canvasRef.current;
@@ -309,7 +379,7 @@ export default function Laberinto() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     const t = time ?? Date.now();
-    const { bx, by, segs, goalX, goalY, holes, falling, fallingT, trail, celebrating, celebrateStartTime, lastMazePoints, gameOver: go } = g.current;
+    const { bx, by, staticLayer, goalX, goalY, holes, falling, fallingT, trail, celebrating, celebrateStartTime, lastMazePoints, gameOver: go } = g.current;
 
     ctx.clearRect(0, 0, BOARD_W, BOARD_H);
 
@@ -363,57 +433,9 @@ export default function Laberinto() {
     ctx.arc(goalX, goalY, goalR, 0, Math.PI * 2);
     ctx.fill();
 
-    // Wall shadows — offscreen canvas para evitar acumulación de alpha
-    {
-      const sc = document.createElement("canvas");
-      sc.width = BOARD_W; sc.height = BOARD_H;
-      const sctx = sc.getContext("2d")!;
-      sctx.strokeStyle = "#0f172a";
-      sctx.lineWidth = WALL_W + 1;
-      sctx.lineCap = "square";
-      sctx.lineJoin = "miter";
-      sctx.beginPath();
-      for (const seg of segs) {
-        sctx.moveTo(seg.x1 + 3.5, seg.y1 + 4.5);
-        sctx.lineTo(seg.x2 + 3.5, seg.y2 + 4.5);
-      }
-      sctx.stroke();
-      ctx.save();
-      ctx.globalAlpha = 0.22;
-      ctx.drawImage(sc, 0, 0);
-      ctx.restore();
-    }
-
-    // Walls
-    ctx.save();
-    ctx.lineWidth = WALL_W;
-    ctx.lineCap = "square";
-    const halfW = WALL_W / 2;
-    for (const seg of segs) {
-      const isHoriz = Math.abs(seg.y2 - seg.y1) < 0.001;
-      const grad = isHoriz
-        ? ctx.createLinearGradient(0, seg.y1 - halfW, 0, seg.y1 + halfW)
-        : ctx.createLinearGradient(seg.x1 - halfW, 0, seg.x1 + halfW, 0);
-      grad.addColorStop(0, "#a8e6d0");
-      grad.addColorStop(0.45, "#00b87a");
-      grad.addColorStop(1, "#004433");
-      ctx.strokeStyle = grad;
-      ctx.beginPath();
-      ctx.moveTo(seg.x1, seg.y1);
-      ctx.lineTo(seg.x2, seg.y2);
-      ctx.stroke();
-    }
-    // Highlights — fillRect evita solapamiento en esquinas
-    ctx.fillStyle = "rgba(255,255,255,0.55)";
-    for (const seg of segs) {
-      const isHoriz = Math.abs(seg.y2 - seg.y1) < 0.001;
-      if (isHoriz) {
-        ctx.fillRect(seg.x1, seg.y1 - halfW + 0.5, seg.x2 - seg.x1, 1);
-      } else {
-        ctx.fillRect(seg.x1 - halfW + 0.5, seg.y1, 1, seg.y2 - seg.y1);
-      }
-    }
-    ctx.restore();
+    // Sombras + muros + highlights: capa estática pre-renderizada (buildStaticLayer).
+    // Se pega en su posición exacta del pipeline (tras holes/goal, antes de la bola).
+    if (staticLayer) ctx.drawImage(staticLayer, 0, 0);
 
     // Ball trail
     for (let i = 0; i < trail.length; i++) {
@@ -517,6 +539,7 @@ export default function Laberinto() {
     state.goalY = goalY;
     state.holes = holes;
     state.segs = buildSegs(state.maze);
+    state.staticLayer = buildStaticLayer(state.segs);
     state.bx = START_X; state.by = START_Y;
     state.vx = 0; state.vy = 0;
     state.tiltX = 0; state.tiltY = 0;
@@ -726,32 +749,31 @@ export default function Laberinto() {
     setTimeLeft(GAME_DURATION);
     setGameOver(false);
     setSubmitted(false);
+    setSubmitError(false);
     setAlias("");
-    setRanking(null);
     if (tiltYRef.current) { tiltYRef.current.textContent = "+0°"; tiltYRef.current.style.color = ""; }
     if (tiltXRef.current) { tiltXRef.current.textContent = "+0°"; tiltXRef.current.style.color = ""; }
     startLoop();
   }
 
-  useEffect(() => {
-    if (!gameOver) return;
-    fetch("/api/ranking/laberinto")
-      .then(r => r.json())
-      .then(data => setRanking(data));
-  }, [gameOver]);
-
   async function submitScore(e: React.FormEvent) {
     e.preventDefault();
     if (!alias.trim()) return;
     setSubmitting(true);
-    const data = await fetch("/api/ranking/laberinto", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: alias.trim(), score: g.current.score }),
-    }).then(r => r.json());
-    setRanking(data);
-    setSubmitted(true);
-    setSubmitting(false);
+    setSubmitError(false);
+    try {
+      const res = await fetch("/api/ranking/laberinto", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: alias.trim(), score: g.current.score }),
+      });
+      if (!res.ok) { setSubmitError(true); return; }
+      setSubmitted(true);
+    } catch {
+      setSubmitError(true);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   const attachOrientListener = useCallback(() => {
@@ -772,7 +794,7 @@ export default function Laberinto() {
     };
     window.addEventListener("deviceorientation", onOrient);
     return () => window.removeEventListener("deviceorientation", onOrient);
-  }, []);
+  }, [g]);
 
   const calibrateOrientation = useCallback(() => {
     const onFirst = (e: DeviceOrientationEvent) => {
@@ -782,11 +804,12 @@ export default function Laberinto() {
       window.removeEventListener("deviceorientation", onFirst);
     };
     window.addEventListener("deviceorientation", onFirst);
-  }, []);
+  }, [g]);
 
   useEffect(() => {
     const state = g.current;
     state.segs = buildSegs(state.maze);
+    state.staticLayer = buildStaticLayer(state.segs);
 
     const onMouseMove = (e: MouseEvent) => {
       state.mouseX = e.clientX;
@@ -914,6 +937,11 @@ export default function Laberinto() {
               {submitting ? "..." : "Guardar"}
             </button>
           </form>
+          {submitError && (
+            <p style={{ color: "#ef4444", fontSize: "0.78rem", fontFamily: "var(--t-mono)", margin: 0 }}>
+              No se pudo guardar. Inténtalo de nuevo.
+            </p>
+          )}
           <button
             onClick={fullRestart}
             style={{ background: "none", border: "none", cursor: "pointer", color: "var(--t-ink3)", fontSize: "0.8rem", fontFamily: "var(--t-mono)" }}
