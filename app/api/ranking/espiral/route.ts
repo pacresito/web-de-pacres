@@ -17,8 +17,9 @@ export async function POST(request: Request) {
   }
   const { name, score, speed } = body;
 
-  // Espiral mide tiempo: menor es mejor.
-  const result = await submitScore({ key: KEY, name, score, speed, lowerIsBetter: true, min: 0, max: 100000 });
+  // Espiral mide tiempo: menor es mejor. min 0.5s: 0.0s es imposible jugando y
+  // un POST directo con score:0 liderará el ranking para siempre.
+  const result = await submitScore({ key: KEY, name, score, speed, lowerIsBetter: true, min: 0.5, max: 100000 });
   if (!result.ok) {
     return Response.json({ error: result.error }, { status: 400 });
   }

@@ -32,7 +32,13 @@ export async function paginatedList<T>(key: string, page: number): Promise<Pagin
   const start = (page - 1) * PAGE_SIZE;
   const raw = await redis.lrange(key, start, start + PAGE_SIZE - 1);
   return {
-    records: raw.map((r) => JSON.parse(r) as T),
+    records: raw.flatMap((r) => {
+      try {
+        return [JSON.parse(r) as T];
+      } catch {
+        return [];
+      }
+    }),
     total,
     page,
     totalPages: Math.max(1, Math.ceil(total / PAGE_SIZE)),
@@ -68,7 +74,13 @@ export async function handleRegistroPost<T extends RegistroBody, R>(
   request: Request,
   config: RegistroPostConfig<T, R>,
 ): Promise<Response> {
-  const ip = request.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
+  // x-real-ip lo fija Vercel y no es spoofeable. Como fallback usamos el ÚLTIMO
+  // segmento de x-forwarded-for (el que añade el proxy), no el primero: el cliente
+  // puede inyectar XFF y el primer valor sería el suyo, saltándose el rate-limit.
+  const ip =
+    request.headers.get("x-real-ip")?.trim() ||
+    request.headers.get("x-forwarded-for")?.split(",").pop()?.trim() ||
+    "unknown";
 
   if (!(await checkRateLimit(ip, config.ratePrefix))) {
     return Response.json({ error: "Demasiados intentos. Espera 15 minutos." }, { status: 429 });
@@ -97,4 +109,12 @@ export async function handleRegistroPost<T extends RegistroBody, R>(
   await sendEmail(config.buildEmail(record));
 
   return Response.json({ ok: true });
+}
+
+/** Ganador a partir de los totales: empate si hay más de un máximo. Compartido
+ *  por Castle Combo y Agrícola (idéntico en ambos). */
+export function computeWinner(players: string[], totals: number[]): string {
+  const max = Math.max(...totals);
+  const winners = players.filter((_, i) => totals[i] === max);
+  return winners.length > 1 ? "Empate" : winners[0];
 }

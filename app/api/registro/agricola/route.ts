@@ -1,11 +1,10 @@
-import { handleRegistroGet, handleRegistroPost } from "@/lib/registro";
+import { handleRegistroGet, handleRegistroPost, computeWinner } from "@/lib/registro";
 import {
   type Animal,
   ANIMALS,
   ANIMAL_LABELS,
   getDerived,
   computeFinals,
-  computeWinner,
 } from "@/lib/agricola";
 
 const KEY =

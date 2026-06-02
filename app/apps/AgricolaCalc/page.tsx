@@ -238,14 +238,10 @@ export default function AgricolaCalc() {
   } = useRegistroCalc({
     endpoint: "/api/registro/agricola",
     buildPayload: (password) => {
-      const derived = [0, 1].map((pi) => getDerived(scores[pi]));
-      const finals = derived.map((d) => d.final ?? 0);
-      const maxFinal = Math.max(...finals);
-      const winners = PLAYERS.filter((_, i) => finals[i] === maxFinal);
-      const winner = winners.length > 1 ? "Empate" : winners[0];
       const date = new Date().toISOString().slice(0, 10);
       const inputs = scores.map((ps) => ps.map((v) => (v === "heart" ? 0 : (v ?? 0))));
-      return { password, date, players: PLAYERS, inputs, finals, winner };
+      // El servidor deriva finals y winner desde inputs.
+      return { password, date, players: PLAYERS, inputs };
     },
   });
 

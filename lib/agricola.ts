@@ -58,10 +58,3 @@ export function getDerived(inputs: number[]): Derived {
 export function computeFinals(inputs: number[][]): number[] {
   return inputs.map((inp) => getDerived(inp).final);
 }
-
-/** Ganador a partir de las finales: empate si hay más de un máximo. */
-export function computeWinner(players: string[], finals: number[]): string {
-  const max = Math.max(...finals);
-  const winners = players.filter((_, i) => finals[i] === max);
-  return winners.length > 1 ? "Empate" : winners[0];
-}

@@ -1,4 +1,4 @@
-import { handleRegistroGet, handleRegistroPost } from "@/lib/registro";
+import { handleRegistroGet, handleRegistroPost, computeWinner } from "@/lib/registro";
 
 const KEY =
   process.env.NODE_ENV === "development"
@@ -20,7 +20,14 @@ interface CastleRecord {
   winner: string;
 }
 
-type CastlePayload = CastleRecord & { password?: unknown };
+// El cliente manda solo los datos crudos (scores que teclea el usuario); el
+// servidor deriva totals y winner. No confiamos en lo que calcula el cliente.
+type CastlePayload = {
+  date: string;
+  players: string[];
+  scores: number[][];
+  password?: unknown;
+};
 
 function buildEmailHtml(record: CastleRecord) {
   const { date, players, scores, totals, winner } = record;
@@ -90,8 +97,11 @@ export async function POST(request: Request) {
   return handleRegistroPost<CastlePayload, CastleRecord>(request, {
     key: KEY,
     ratePrefix: "ratelimit:registro:castle-combo:",
-    requiredFields: ["date", "players", "scores", "totals", "winner"],
-    buildRecord: ({ date, players, scores, totals, winner }) => ({ date, players, scores, totals, winner }),
+    requiredFields: ["date", "players", "scores"],
+    buildRecord: ({ date, players, scores }) => {
+      const totals = scores.map((ps) => ps.reduce((a, b) => a + b, 0));
+      return { date, players, scores, totals, winner: computeWinner(players, totals) };
+    },
     buildEmail: (record) => ({
       subject: `Castle Combo — ${record.date}`,
       html: buildEmailHtml(record),

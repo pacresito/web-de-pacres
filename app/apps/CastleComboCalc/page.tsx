@@ -205,12 +205,9 @@ export default function CastleComboCalc() {
     buildPayload: (password) => {
       const players = ALL_PLAYERS.slice(0, numPlayers);
       const numericScores = scores.map((ps) => ps.map((v) => (v === "heart" ? 0 : (v ?? 0))));
-      const totals = numericScores.map((ps) => ps.reduce((a, b) => a + b, 0));
-      const maxTotal = Math.max(...totals);
-      const winners = players.filter((_, i) => totals[i] === maxTotal);
-      const winner = winners.length > 1 ? "Empate" : winners[0];
       const date = new Date().toISOString().slice(0, 10);
-      return { password, date, players, scores: numericScores, totals, winner };
+      // El servidor deriva totals y winner desde scores.
+      return { password, date, players, scores: numericScores };
     },
   });
 

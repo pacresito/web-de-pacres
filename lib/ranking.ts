@@ -76,6 +76,10 @@ export async function submitScore(opts: SubmitOptions): Promise<SubmitResult> {
   const score = opts.score;
   const speed = VALID_SPEEDS.includes(opts.speed as string) ? (opts.speed as string) : null;
 
+  // Nota: este read-modify-write (findMember → zrem → zadd) no es atómico. Dos
+  // envíos concurrentes del mismo nombre podrían pisarse. Aceptable a este volumen
+  // (web personal, sin concurrencia real). Si algún día escala, mover a un script
+  // Lua (CAS).
   const existing = await findMember(key, name);
   if (existing) {
     const isBetter = lowerIsBetter ? score < existing.score : score > existing.score;
