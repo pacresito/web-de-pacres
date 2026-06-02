@@ -28,6 +28,7 @@ export default function RankingLaberinto() {
       title="ranking laberinto"
       prompt={{ host: "laberinto", path: "~/juegos", command: "cat ranking.json" }}
       backUrl="/juegos/laberinto"
+      destMaximized
     >
       <main
         style={{

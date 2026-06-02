@@ -18,6 +18,7 @@ interface Props {
   variant?: "terminal" | "chrome";
   prompt?: PromptConfig;
   backUrl?: string;
+  destMaximized?: boolean;
   hideChrome?: boolean;
   children: ReactNode;
 }
@@ -28,6 +29,7 @@ export default function TerminalShell({
   variant = "terminal",
   prompt,
   backUrl,
+  destMaximized = false,
   hideChrome = false,
   children,
 }: Props) {
@@ -71,6 +73,7 @@ export default function TerminalShell({
 
   const handleBack = () => {
     const dest = backUrl ?? "/lab";
+    if (destMaximized) { router.push(dest); return; }
     setAnimClass("ts-win-unmaximizing");
     setTimeout(() => router.push(dest), 900);
   };

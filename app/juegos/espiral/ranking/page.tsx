@@ -24,6 +24,7 @@ export default function Ranking() {
       title="ranking espiral"
       prompt={{ host: "espiral", path: "~/juegos", command: "cat ranking.json" }}
       backUrl="/juegos/espiral"
+      destMaximized
     >
       <main
         style={{
