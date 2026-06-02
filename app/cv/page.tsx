@@ -931,6 +931,7 @@ export default function TerminalHome() {
   const [expandedDesktopId, setExpandedDesktopId] = useState<string | null>(null);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [contactDone, setContactDone] = useState(false);
+  const winRef = useRef<HTMLDivElement>(null);
 
   const handleExpandDesktop = (id: string | null, el: HTMLElement) => {
     setExpandedDesktopId(id);
@@ -981,6 +982,7 @@ export default function TerminalHome() {
   const handleMaximize = () => {
     if (animClass.includes("maximiz")) return;
     if (windowState !== "maximized") {
+      if (winRef.current) winRef.current.style.setProperty("--start-h", `${winRef.current.clientHeight}px`);
       setAnimClass("t-win-maximizing");
       setTimeout(() => { setWindowState("maximized"); setAnimClass(""); }, 1020);
     } else {
@@ -1058,7 +1060,7 @@ export default function TerminalHome() {
           animClass === "t-win-restoring"  ? "t-bg-fade-in  0.6s  ease-out"           :
           undefined,
       }}>
-        <div className={animClass} style={{
+        <div ref={winRef} className={animClass} style={{
           "--win-w": "100vw",
           width: isMax ? "100vw" : "min(920px, 100%)",
           maxWidth: "none",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { ChromeBar, MinimizedBar, TabsBar } from "../components/Chrome";
 
@@ -173,6 +173,7 @@ export default function Designs() {
   const [windowState, setWindowState] = useState<"normal" | "minimized" | "maximized">("normal");
   const [animClass, setAnimClass] = useState("");
   const [dockAnimOut, setDockAnimOut] = useState(false);
+  const winRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const delay = 120 + CMD.length * 26 + 200 + 90 + 200;
@@ -215,6 +216,7 @@ export default function Designs() {
   const handleMaximize = () => {
     if (animClass.includes("maximiz")) return;
     if (windowState !== "maximized") {
+      if (winRef.current) winRef.current.style.setProperty("--start-h", `${winRef.current.clientHeight}px`);
       setAnimClass("t-win-maximizing");
       setTimeout(() => { setWindowState("maximized"); setAnimClass(""); }, 1020);
     } else {
@@ -281,7 +283,7 @@ export default function Designs() {
           animClass === "t-win-restoring"  ? "t-bg-fade-in  0.6s  ease-out"           :
           undefined,
       }}>
-        <div className={animClass} style={{
+        <div ref={winRef} className={animClass} style={{
           "--win-w": "100vw",
           width: isMax ? "100vw" : "min(920px, 100%)",
           maxWidth: "none",
