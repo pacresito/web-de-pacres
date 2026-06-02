@@ -38,6 +38,8 @@ export default function CirculoPerfecto() {
   const animRef = useRef(0);
   const aliveOverlayRef = useRef<HTMLCanvasElement | null>(null);
   const circleHoldStartRef = useRef<number | null>(null);
+  // setTimeout pendientes (fases éxito/fallo) para cancelarlos en unmount.
+  const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const [sz, setSz] = useState(0);
 
@@ -72,9 +74,11 @@ export default function CirculoPerfecto() {
 
   // Cleanup overlay on unmount
   useEffect(() => {
+    const timeouts = timeoutsRef.current;
     return () => {
       cancelAnimationFrame(animRef.current);
       aliveOverlayRef.current?.remove();
+      timeouts.forEach(clearTimeout);
     };
   }, []);
 
@@ -274,7 +278,9 @@ export default function CirculoPerfecto() {
     if (!canvas) return;
 
     function onMove(e: MouseEvent | TouchEvent) {
-      const src = e instanceof TouchEvent ? (e.touches[0] ?? e.changedTouches[0]) : e;
+      // "touches" in e en vez de instanceof TouchEvent: TouchEvent no es global en
+      // algunos navegadores (Safari desktop) y instanceof lanzaría ReferenceError.
+      const src = "touches" in e ? (e.touches[0] ?? e.changedTouches[0]) : e;
       mouseScreenRef.current = { x: src.clientX, y: src.clientY };
 
       if (phaseRef.current === "drawing") {
@@ -290,7 +296,7 @@ export default function CirculoPerfecto() {
 
     function onDown(e: MouseEvent | TouchEvent) {
       if (phaseRef.current !== "idle" && phaseRef.current !== "score") return;
-      const src = e instanceof TouchEvent ? (e.touches[0] ?? e.changedTouches[0]) : e;
+      const src = "touches" in e ? (e.touches[0] ?? e.changedTouches[0]) : e;
       const rect = canvas!.getBoundingClientRect();
       ptsRef.current = [{ x: src.clientX - rect.left, y: src.clientY - rect.top }];
       setLiveRoundness(null);
@@ -304,7 +310,7 @@ export default function CirculoPerfecto() {
       go("score");
 
       if (score >= THRESHOLD) {
-        setTimeout(() => {
+        timeoutsRef.current.push(setTimeout(() => {
           if (phaseRef.current !== "score") return;
           const pts = ptsRef.current;
           const cx = pts.reduce((s, p) => s + p.x, 0) / pts.length;
@@ -312,14 +318,14 @@ export default function CirculoPerfecto() {
           const dists = pts.map(p => Math.hypot(p.x - cx, p.y - cy));
           const r = Math.max(30, Math.min(100, dists.reduce((s, d) => s + d, 0) / dists.length));
           launchAlive(cx, cy, r);
-        }, 700);
+        }, 700));
       } else {
-        setTimeout(() => {
+        timeoutsRef.current.push(setTimeout(() => {
           if (phaseRef.current !== "score") return;
           go("idle");
           const c = canvasRef.current;
           if (c) drawIdle(c);
-        }, 2000);
+        }, 2000));
       }
     }
 

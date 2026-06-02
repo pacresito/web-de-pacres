@@ -367,6 +367,7 @@ export default function EspiralPage() {
   const [alias, setAlias] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -414,12 +415,20 @@ export default function EspiralPage() {
       setElapsed(0);
       setFinalTime(null);
       setSubmitted(false);
+      setSubmitError(false);
       setAlias("");
     }
   }, [left.gameState, right.gameState, bothWin]);
 
+  // `left`/`right` son objetos nuevos en cada render: si fueran deps del effect,
+  // re-suscribiríamos el listener ~1/seg (tick del cronómetro). Lo leemos vía ref
+  // (actualizado en un effect, no en render) y suscribimos el listener una sola vez.
+  const kbRef = useRef({ left, right, bothWin });
+  useEffect(() => { kbRef.current = { left, right, bothWin }; });
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      const { left, right, bothWin } = kbRef.current;
       if (process.env.NODE_ENV === "development" && e.key === "q") { left.cheat(); return; }
       if (process.env.NODE_ENV === "development" && e.key === "p") { right.cheat(); return; }
       if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
@@ -430,7 +439,7 @@ export default function EspiralPage() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [left, right, bothWin]);
+  }, []);
 
   async function submitScore(e: React.FormEvent) {
     e.preventDefault();
@@ -446,19 +455,27 @@ export default function EspiralPage() {
       finalSpeed = rws;
     }
     setSubmitting(true);
-    await fetch("/api/ranking/espiral", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: alias.trim(), score: finalTime, speed: finalSpeed }),
-    });
-    setSubmitted(true);
-    setSubmitting(false);
+    setSubmitError(false);
+    try {
+      const res = await fetch("/api/ranking/espiral", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: alias.trim(), score: finalTime, speed: finalSpeed }),
+      });
+      if (!res.ok) { setSubmitError(true); return; }
+      setSubmitted(true);
+    } catch {
+      setSubmitError(true);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   function replay() {
     left.reset();
     right.reset();
     setSubmitted(false);
+    setSubmitError(false);
     setAlias("");
   }
 
@@ -597,6 +614,11 @@ export default function EspiralPage() {
                     {submitting ? "..." : "$ guardar"}
                   </button>
                 </form>
+                {submitError && (
+                  <span style={{ color: "#e55", fontSize: "0.72rem", fontFamily: MONO }}>
+                    No se pudo guardar. Inténtalo de nuevo.
+                  </span>
+                )}
                 <button onClick={replay} className="esp-btn" style={{ fontSize: "0.72rem", marginTop: "0.5rem" }}>
                   jugar de nuevo
                 </button>
