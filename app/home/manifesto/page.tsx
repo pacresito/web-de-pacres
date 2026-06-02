@@ -1004,8 +1004,25 @@ export default function Manifesto() {
         restore();
       }, { once: true });
     }
-    restoreRef.current = restore;
+    // restoreRef guarda un teardown DURO (sin animación) para el unmount: corta el
+    // loop, el Runner, el engine y los 3 listeners de window. Los handlers de descarte
+    // en página siguen usando restore() (cierre con animación). Idempotente: tras un
+    // restore() ya completado, remove/stop/clear sobre nodos ya retirados son no-op.
+    restoreRef.current = () => {
+      cleanupListeners();
+      stopped = true;
+      cancelAnimationFrame(animFrame);
+      Runner.stop(runner);
+      Engine.clear(engine);
+      overlay.remove();
+      if (main) main.style.opacity = "1";
+      physicsActiveRef.current = false;
+    };
   }, []);
+
+  // Si el componente se desmonta con la física activa (navegar sin descartar), el
+  // teardown duro corta loop/Runner/listeners; si no, es no-op (restoreRef es null).
+  useEffect(() => () => { restoreRef.current?.(); }, []);
 
   const handleThemeChange = (t: "light" | "dark") => {
     setTheme(t);
