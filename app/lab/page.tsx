@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { ChromeBar, MinimizedBar, TabsBar } from "../components/Chrome";
-import { calcularEdad } from "@/lib/utils";
+import { calcularEdad, saveRestoredHeight } from "@/lib/utils";
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -157,11 +157,11 @@ function LabTable({ items, visible }: { items: LabItem[]; visible: number }) {
         );
       })}
 
-      {visible >= items.length && (
-        <div style={{ padding: "10px 18px", borderTop: "1px dashed var(--t-rule)", fontFamily: "var(--t-mono)", fontSize: 11, color: "var(--t-ink3)" }}>
-          ↳ {available} disponibles · {hidden} ocultos
-        </div>
-      )}
+      {/* visibility (no render condicional) para que la ventana tenga altura estable
+          desde el montaje: así la altura que /lab guarda en sessionStorage es la final. */}
+      <div style={{ padding: "10px 18px", borderTop: "1px dashed var(--t-rule)", fontFamily: "var(--t-mono)", fontSize: 11, color: "var(--t-ink3)", visibility: visible >= items.length ? undefined : "hidden" }}>
+        ↳ {available} disponibles · {hidden} ocultos
+      </div>
     </div>
   );
 }
@@ -232,6 +232,18 @@ export default function Laboratorio() {
     }, delay);
     return () => clearTimeout(t);
   }, []);
+
+  // Guardar la altura de la ventana restaurada para que la animación de "atrás"
+  // de las páginas de item (TerminalShell) termine a esta misma altura, sin salto.
+  useEffect(() => {
+    const el = winRef.current;
+    if (!el || windowState !== "normal" || animClass) return;
+    const store = () => saveRestoredHeight("/lab", el.offsetHeight);
+    store();
+    const ro = new ResizeObserver(store);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [windowState, animClass]);
 
   const handleClose = () => {
     const nav = () => {

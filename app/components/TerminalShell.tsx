@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
+import { readRestoredHeight } from "@/lib/utils";
 
 const MONO = "var(--t-mono)";
 
@@ -35,6 +36,7 @@ export default function TerminalShell({
 }: Props) {
   const router = useRouter();
   const [animClass, setAnimClass] = useState("");
+  const [winH, setWinH] = useState<string | null>(null);
   const [typedLen, setTypedLen] = useState(0);
   const [typingDone, setTypingDone] = useState(false);
   const [elapsedMs, setElapsedMs] = useState<number | null>(null);
@@ -74,6 +76,10 @@ export default function TerminalShell({
   const handleBack = () => {
     const dest = backUrl ?? "/lab";
     if (destMaximized) { router.push(dest); return; }
+    // El destino renderiza la ventana a altura de contenido; la guardó al montarse.
+    // Leerla para que la animación de restaurar termine a esa misma altura (sin salto).
+    const h = readRestoredHeight(dest);
+    if (h) setWinH(`${h}px`);
     setAnimClass("ts-win-unmaximizing");
     setTimeout(() => router.push(dest), 900);
   };
@@ -161,6 +167,7 @@ export default function TerminalShell({
           className={animClass}
           style={{
             "--ts-win-w": "100vw",
+            ...(winH ? { "--ts-win-h": winH } : {}),
             width: "100vw",
             height: "100%",
             maxWidth: "none",
