@@ -1,4 +1,4 @@
-import { handleRegistroGet, handleRegistroPost, computeWinner } from "@/lib/registro";
+import { handleRegistroGet, handleRegistroPost, computeWinner, isStringArray, isNumberMatrix } from "@/lib/registro";
 import {
   type Animal,
   ANIMALS,
@@ -154,6 +154,8 @@ export async function POST(request: Request) {
     key: KEY,
     ratePrefix: "ratelimit:registro:agricola:",
     requiredFields: ["date", "players", "inputs"],
+    validate: ({ players, inputs }) =>
+      isStringArray(players) && isNumberMatrix(inputs) && inputs.length === players.length,
     // El servidor es la fuente única de finals y winner: los recalcula desde los
     // inputs en vez de confiar en los que manda el cliente.
     buildRecord: ({ date, players, inputs }) => {

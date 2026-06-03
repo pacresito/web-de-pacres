@@ -86,6 +86,7 @@ export function useRegistroHistorial<R>(endpoint: string) {
     setLoading(true);
     try {
       const res = await fetch(`${endpoint}?page=${page}`);
+      if (!res.ok) return;
       const json = await res.json();
       setData(json);
       setExpanded(null);

@@ -1,4 +1,4 @@
-import { handleRegistroGet, handleRegistroPost, computeWinner } from "@/lib/registro";
+import { handleRegistroGet, handleRegistroPost, computeWinner, isStringArray, isNumberMatrix } from "@/lib/registro";
 
 const KEY =
   process.env.NODE_ENV === "development"
@@ -98,6 +98,8 @@ export async function POST(request: Request) {
     key: KEY,
     ratePrefix: "ratelimit:registro:castle-combo:",
     requiredFields: ["date", "players", "scores"],
+    validate: ({ players, scores }) =>
+      isStringArray(players) && isNumberMatrix(scores) && scores.length === players.length,
     buildRecord: ({ date, players, scores }) => {
       const totals = scores.map((ps) => ps.reduce((a, b) => a + b, 0));
       return { date, players, scores, totals, winner: computeWinner(players, totals) };

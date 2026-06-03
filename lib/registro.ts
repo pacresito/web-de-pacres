@@ -19,6 +19,28 @@ export async function clearRateLimit(ip: string, prefix: string): Promise<void> 
   await redis.del(prefix + ip);
 }
 
+/** IP del cliente. x-real-ip lo fija Vercel y no es spoofeable; como fallback usamos el
+ *  ÚLTIMO segmento de x-forwarded-for (el que añade el proxy), no el primero: el cliente
+ *  puede inyectar XFF y el primer valor sería el suyo, saltándose el rate-limit. */
+export function clientIp(request: Request): string {
+  return (
+    request.headers.get("x-real-ip")?.trim() ||
+    request.headers.get("x-forwarded-for")?.split(",").pop()?.trim() ||
+    "unknown"
+  );
+}
+
+/** request.json() no valida la forma del body; estos predicados sí. */
+export function isStringArray(v: unknown): v is string[] {
+  return Array.isArray(v) && v.every((x) => typeof x === "string");
+}
+export function isNumberMatrix(v: unknown): v is number[][] {
+  return (
+    Array.isArray(v) &&
+    v.every((row) => Array.isArray(row) && row.every((n) => typeof n === "number" && Number.isFinite(n)))
+  );
+}
+
 export interface PaginatedList<T> {
   records: T[];
   total: number;
@@ -59,6 +81,9 @@ export interface RegistroPostConfig<T extends RegistroBody, R> {
   key: string;
   ratePrefix: string;
   requiredFields: (keyof T & string)[];
+  /** Valida la FORMA del body (no solo la presencia): evita un 500 si, p.ej., la matriz
+   *  numérica llega mal formada. Devuelve false → 400. */
+  validate?: (body: T) => boolean;
   /** Construye el record a guardar a partir del body validado. */
   buildRecord: (body: T) => R;
   /** Construye el email de notificación a partir del record. */
@@ -74,13 +99,7 @@ export async function handleRegistroPost<T extends RegistroBody, R>(
   request: Request,
   config: RegistroPostConfig<T, R>,
 ): Promise<Response> {
-  // x-real-ip lo fija Vercel y no es spoofeable. Como fallback usamos el ÚLTIMO
-  // segmento de x-forwarded-for (el que añade el proxy), no el primero: el cliente
-  // puede inyectar XFF y el primer valor sería el suyo, saltándose el rate-limit.
-  const ip =
-    request.headers.get("x-real-ip")?.trim() ||
-    request.headers.get("x-forwarded-for")?.split(",").pop()?.trim() ||
-    "unknown";
+  const ip = clientIp(request);
 
   if (!(await checkRateLimit(ip, config.ratePrefix))) {
     return Response.json({ error: "Demasiados intentos. Espera 15 minutos." }, { status: 429 });
@@ -102,6 +121,10 @@ export async function handleRegistroPost<T extends RegistroBody, R>(
     if (body[field] === undefined || body[field] === null) {
       return Response.json({ error: "Datos incompletos" }, { status: 400 });
     }
+  }
+
+  if (config.validate && !config.validate(body)) {
+    return Response.json({ error: "Datos con formato inválido" }, { status: 400 });
   }
 
   const record = config.buildRecord(body);

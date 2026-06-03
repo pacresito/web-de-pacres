@@ -14,7 +14,7 @@ export default function Ranking() {
 
   useEffect(() => {
     fetch("/api/ranking/espiral")
-      .then((r) => r.json())
+      .then((r) => { if (!r.ok) throw new Error("fetch failed"); return r.json(); })
       .then((data) => { setEntries(data); setLoading(false); })
       .catch(() => { setError(true); setLoading(false); });
   }, []);

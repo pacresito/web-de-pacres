@@ -1,5 +1,6 @@
 import { sendEmail } from "@/lib/notify";
 import { submitScore, pruneExtremes, readRanking, type RankEntry } from "@/lib/ranking";
+import { checkRateLimit, clientIp } from "@/lib/registro";
 
 const KEY = process.env.NODE_ENV === "development" ? "laberinto:ranking-dev" : "laberinto:ranking";
 
@@ -16,6 +17,12 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  // Cada score guardado dispara un email; mismo límite que los registros de las calcs
+  // (5 envíos / 15 min por IP) evita que una IP inunde el correo. Sin reset (no hay "acierto").
+  if (!(await checkRateLimit(clientIp(request), "ratelimit:ranking:laberinto:"))) {
+    return Response.json({ error: "Demasiados envíos. Espera 15 minutos." }, { status: 429 });
+  }
+
   let body;
   try {
     body = await request.json();
