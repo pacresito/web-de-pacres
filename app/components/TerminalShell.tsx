@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { readRestoredHeight } from "@/lib/utils";
+import { useTypewriter } from "./useTypewriter";
 
 const MONO = "var(--t-mono)";
 
@@ -37,41 +38,25 @@ export default function TerminalShell({
   const router = useRouter();
   const [animClass, setAnimClass] = useState("");
   const [winH, setWinH] = useState<string | null>(null);
-  const [typedLen, setTypedLen] = useState(0);
-  const [typingDone, setTypingDone] = useState(false);
-  const [elapsedMs, setElapsedMs] = useState<number | null>(null);
   const [contentVisible, setContentVisible] = useState(variant === "terminal" ? !prompt : false);
-  const startRef = useRef(0);
   const cmd = prompt?.command;
+
+  // Tecleo del prompt (solo variante terminal). Al fijarse el execMs revela el
+  // contenido 250ms después, conservando la coreografía de entrada de las /lab.
+  const { typed, execMs } = useTypewriter(cmd ?? "", {
+    active: variant === "terminal" && !!cmd,
+    startDelay: 150,
+    charMs: 20,
+    postDelay: 80,
+    execBase: 3,
+    onDone: () => setTimeout(() => setContentVisible(true), 250),
+  });
 
   useEffect(() => {
     if (variant !== "chrome") return;
     const t = setTimeout(() => setContentVisible(true), 30);
     return () => clearTimeout(t);
   }, [variant]);
-
-  useEffect(() => {
-    if (!cmd || variant !== "terminal") return;
-    let i = 0;
-    startRef.current = Date.now();
-    const init = setTimeout(() => {
-      const id = setInterval(() => {
-        i++;
-        setTypedLen(i);
-        if (i >= cmd.length) {
-          clearInterval(id);
-          const ms = cmd.length * 3 + Math.floor(Math.random() * 31) - 15;
-          setTimeout(() => {
-            setTypingDone(true);
-            setElapsedMs(ms);
-            setTimeout(() => setContentVisible(true), 250);
-          }, 80);
-        }
-      }, 20);
-      return () => clearInterval(id);
-    }, 150);
-    return () => clearTimeout(init);
-  }, [cmd, variant]);
 
   const handleBack = () => {
     const dest = backUrl ?? "/lab";
@@ -198,13 +183,13 @@ export default function TerminalShell({
                 <span style={{ color: "var(--t-ink3)" }}>@{prompt.host}</span>
                 <span style={{ color: "var(--t-ink2)" }}>:{prompt.path}</span>
                 <span style={{ color: "var(--t-ink3)" }}>$ </span>
-                <span style={{ color: "var(--t-ink)" }}>{prompt.command.slice(0, typedLen)}</span>
-                {!typingDone && (
+                <span style={{ color: "var(--t-ink)" }}>{typed}</span>
+                {execMs === null && (
                   <span style={{ color: "var(--t-accent)", animation: "ts-blink 1s steps(1) infinite", marginLeft: 2 }}>▍</span>
                 )}
               </span>
-              <span style={{ fontFamily: MONO, fontSize: 10, color: "var(--t-ink4)", visibility: elapsedMs !== null ? "visible" : "hidden", whiteSpace: "nowrap" }}>
-                ↳ {elapsedMs ?? 0}ms
+              <span style={{ fontFamily: MONO, fontSize: 10, color: "var(--t-ink4)", visibility: execMs !== null ? "visible" : "hidden", whiteSpace: "nowrap" }}>
+                ↳ {execMs ?? 0}ms
               </span>
             </div>
           )}

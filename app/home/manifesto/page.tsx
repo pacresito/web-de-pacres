@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, Fragment, useCallback } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
+import { useTypewriter } from "../../components/useTypewriter";
 import { RECOMENDACIONES, CERTIFICACIONES as CERTS_PERFIL, PREMIOS, premioOrg } from "@/lib/perfil";
 
 type Rec = { texto: string; autor: string; cargo: string; photo: string; href: string };
@@ -640,28 +641,9 @@ const pillBase: React.CSSProperties = {
 };
 
 function SkillsTerminalInline({ onNavigate }: { onNavigate: () => void }) {
-  const [displayed, setDisplayed] = useState("");
-  const [execMs, setExecMs] = useState<number | null>(null);
   const [visibleCount, setVisibleCount] = useState(0);
   const skills = APTITUDES.map(a => a.toLowerCase());
-  const cmdDone = displayed.length >= TERMINAL_CMD.length;
-
-  useEffect(() => {
-    let i = 0;
-    const t = setTimeout(() => {
-      const iv = setInterval(() => {
-        i++;
-        setDisplayed(TERMINAL_CMD.slice(0, i));
-        if (i >= TERMINAL_CMD.length) {
-          clearInterval(iv);
-          const ms = TERMINAL_CMD.length * 6 + Math.floor(Math.random() * 31) - 15;
-          setTimeout(() => setExecMs(ms), 90);
-        }
-      }, 52);
-      return () => clearInterval(iv);
-    }, 120);
-    return () => clearTimeout(t);
-  }, []);
+  const { typed: displayed, done: cmdDone, execMs } = useTypewriter(TERMINAL_CMD, { charMs: 52, execBase: 6 });
 
   useEffect(() => {
     if (!cmdDone) return;

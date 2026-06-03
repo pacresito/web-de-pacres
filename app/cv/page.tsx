@@ -3,7 +3,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
-import { ChromeBar, MinimizedBar, TabsBar } from "../components/Chrome";
+import ChromeWindow from "../components/ChromeWindow";
+import { useTypewriter } from "../components/useTypewriter";
 import { RECOMENDACIONES, CERTIFICACIONES, PREMIOS, premioOrg } from "@/lib/perfil";
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
@@ -187,28 +188,7 @@ function Pill({ type }: { type: string }) {
 // vive ahora en components/Chrome.tsx, compartido con lab y designs (I5).
 
 function PromptRow({ n, cmd, highlight = false, active = false }: { n: string; cmd: string; highlight?: boolean; active?: boolean }) {
-  const [displayed, setDisplayed] = useState("");
-  const [execMs, setExecMs] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (!active) return;
-    let i = 0;
-    const t = setTimeout(() => {
-      const iv = setInterval(() => {
-        i++;
-        setDisplayed(cmd.slice(0, i));
-        if (i >= cmd.length) {
-          clearInterval(iv);
-          const ms = cmd.length * 3 + Math.floor(Math.random() * 31) - 15;
-          setTimeout(() => setExecMs(ms), 90);
-        }
-      }, 26);
-      return () => clearInterval(iv);
-    }, 120);
-    return () => clearTimeout(t);
-  }, [active, cmd]);
-
-  const done = displayed.length >= cmd.length;
+  const { typed: displayed, done, execMs } = useTypewriter(cmd, { active });
 
   return (
     <div style={{
@@ -627,7 +607,7 @@ function RecoCarousel({ active = false }: { active?: boolean }) {
     };
     el.addEventListener("keydown", handleKey);
     return () => el.removeEventListener("keydown", handleKey);
-  });
+  }, []);
 
   const r = RECOS[i];
   const idStr = String(i + 1).padStart(2, "0");
@@ -931,7 +911,6 @@ export default function TerminalHome() {
   const [expandedDesktopId, setExpandedDesktopId] = useState<string | null>(null);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [contactDone, setContactDone] = useState(false);
-  const winRef = useRef<HTMLDivElement>(null);
 
   const handleExpandDesktop = (id: string | null, el: HTMLElement) => {
     setExpandedDesktopId(id);
@@ -941,9 +920,6 @@ export default function TerminalHome() {
       });
     }
   };
-  const [windowState, setWindowState] = useState<"normal" | "minimized" | "maximized">("normal");
-  const [animClass, setAnimClass] = useState("");
-  const [dockAnimOut, setDockAnimOut] = useState(false);
   const toggleExpanded = (id: string, el?: HTMLElement) => {
     const isExpanding = expandedRow !== id;
     setExpandedRow((prev) => prev === id ? null : id);
@@ -954,65 +930,7 @@ export default function TerminalHome() {
     }
   };
 
-  const handleClose = () => {
-    const nav = () => {
-      if ("startViewTransition" in document) {
-        (document as unknown as { startViewTransition: (cb: () => void) => void }).startViewTransition(() => router.push("/"));
-      } else {
-        router.push("/");
-      }
-    };
-    if (windowState === "minimized") {
-      setDockAnimOut(true);
-      setTimeout(() => {
-        document.body.style.transition = "background 0.3s ease";
-        document.body.style.background = "#f7f4ed";
-        setTimeout(nav, 300);
-      }, 220);
-      return;
-    }
-    document.body.style.background = "#f7f4ed";
-    setAnimClass("t-win-closing");
-    setTimeout(nav, 500);
-  };
-  const handleMinimize = () => {
-    setAnimClass("t-win-minimizing");
-    setTimeout(() => { setWindowState("minimized"); setAnimClass(""); }, 390);
-  };
-  const handleMaximize = () => {
-    if (animClass.includes("maximiz")) return;
-    if (windowState !== "maximized") {
-      if (winRef.current) winRef.current.style.setProperty("--start-h", `${winRef.current.clientHeight}px`);
-      setAnimClass("t-win-maximizing");
-      setTimeout(() => { setWindowState("maximized"); setAnimClass(""); }, 1020);
-    } else {
-      setAnimClass("t-win-unmaximizing");
-      setTimeout(() => { setWindowState("normal"); setAnimClass(""); }, 1020);
-    }
-  };
-  const handleRestore = () => {
-    setDockAnimOut(true);
-    setTimeout(() => {
-      setWindowState("normal");
-      setAnimClass("t-win-restoring");
-      setDockAnimOut(false);
-      setTimeout(() => setAnimClass(""), 640);
-    }, 220);
-  };
-  const handleRestoreMaximized = () => {
-    setDockAnimOut(true);
-    setTimeout(() => {
-      setWindowState("maximized");
-      setAnimClass("t-win-restoring");
-      setDockAnimOut(false);
-      setTimeout(() => setAnimClass(""), 640);
-    }, 220);
-  };
-
   const CONTENT_STYLE: React.CSSProperties = { padding: "0 28px 32px 86px" };
-
-  const isMax = windowState === "maximized";
-  const isMin = windowState === "minimized";
 
   return (
     <>
@@ -1044,44 +962,15 @@ export default function TerminalHome() {
         }
       `}</style>
 
-      {isMin && <MinimizedBar title="cv" onRestore={handleRestore} onMaximize={handleRestoreMaximized} onClose={handleClose} animatingOut={dockAnimOut} />}
-
-      <div className={`t-bg${animClass === "t-win-maximizing" ? " t-outer-maximizing" : animClass === "t-win-unmaximizing" ? " t-outer-unmaximizing" : ""}`} style={{
-        minHeight: "100vh",
-        padding: isMax ? 0 : "2rem 1rem 3rem",
-        display: (isMin && !animClass) ? "none" : "flex",
-        justifyContent: "center",
-        alignItems: "flex-start",
-        fontFamily: "var(--t-sans)",
-        transition: "padding 1.1s ease",
-        animation:
-          animClass === "t-win-closing"    ? "t-bg-fade-out 0.2s ease-out  forwards" :
-          animClass === "t-win-minimizing" ? "t-bg-fade-out 0.38s ease-in   forwards" :
-          animClass === "t-win-restoring"  ? "t-bg-fade-in  0.6s  ease-out"           :
-          undefined,
-      }}>
-        <div ref={winRef} className={animClass} style={{
-          "--win-w": "100vw",
-          width: isMax ? "100vw" : "min(920px, 100%)",
-          maxWidth: "none",
-          minHeight: isMax ? "100vh" : undefined,
-          background: "var(--t-paper)",
-          borderRadius: isMax ? 0 : 12,
-          border: isMax ? "none" : "1px solid var(--t-rule)",
-          boxShadow: isMax ? "none" : "0 30px 80px -40px rgba(0,0,0,0.25), 0 2px 6px rgba(0,0,0,0.04)",
-          overflow: "hidden",
-          marginBottom: isMax ? 0 : "3rem",
-          transformOrigin: (animClass === "t-win-minimizing" || animClass === "t-win-restoring") ? "bottom center" : "center center",
-        } as React.CSSProperties}>
-          <ChromeBar title="cv" onClose={handleClose} onMinimize={handleMinimize} onMaximize={handleMaximize}
-            isMaximized={windowState === "maximized" || animClass === "t-win-maximizing"} />
-          <TabsBar
-            tabs={[
-              { label: "~/cv",      active: true },
-              { label: "~/lab",     active: false, dot: true, onClick: () => router.push("/lab") },
-              { label: "~/designs", active: false, onClick: () => router.push("/designs") },
-            ]}
-          />
+      <ChromeWindow
+        title="cv"
+        closeTo="/"
+        tabs={[
+          { label: "~/cv",      active: true },
+          { label: "~/lab",     active: false, dot: true, onClick: () => router.push("/lab") },
+          { label: "~/designs", active: false, onClick: () => router.push("/designs") },
+        ]}
+      >
 
           {/* 000 — whoami */}
           <Section n="000" cmd="whoami --pretty" contentStyle={CONTENT_STYLE} noBorder>
@@ -1120,9 +1009,7 @@ export default function TerminalHome() {
 
           {/* Footer */}
           <FooterSection startAfter={contactDone} text={pathname === "/home/terminal" ? "↳ Creado el 24 de mayo de 2026" : "↳ Bienvenido a la web de Pacres"} />
-        </div>
-      </div>
-
+      </ChromeWindow>
     </>
   );
 }

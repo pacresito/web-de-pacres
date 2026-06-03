@@ -1,22 +1,12 @@
-import { Fraunces, Inter, JetBrains_Mono } from "next/font/google";
+import { Fraunces } from "next/font/google";
 
+// Inter y JetBrains Mono (--font-inter / --font-jetbrains-mono) ya los provee el
+// layout raíz en <html>; aquí solo se añade Fraunces, propia de editorial (I 5.2).
 const fraunces = Fraunces({
   subsets: ["latin"],
   style: ["normal", "italic"],
   axes: ["SOFT", "WONK"],
   variable: "--font-fraunces",
-  display: "swap",
-});
-
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-  display: "swap",
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
-  variable: "--font-jetbrains-mono",
   display: "swap",
 });
 
@@ -27,7 +17,7 @@ export default function EditorialLayout({
 }) {
   return (
     <div
-      className={`${fraunces.variable} ${inter.variable} ${jetbrainsMono.variable}`}
+      className={fraunces.variable}
       style={{ minHeight: "100vh" }}
     >
       {children}
