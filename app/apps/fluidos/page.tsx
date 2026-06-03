@@ -5,13 +5,13 @@ import TerminalShell from "../../components/TerminalShell";
 import WhyFooter from "../../components/WhyFooter";
 
 const CELL = 2;
-const EMPTY = 0, SAND = 1, WATER = 2, FIRE = 3, WALL = 4, VAPOR = 5;
+const EMPTY: Mat = 0, SAND: Mat = 1, WATER: Mat = 2, FIRE: Mat = 3, WALL: Mat = 4, VAPOR: Mat = 5;
 const WATER_HEAT_MAX = 55;     // ticks for heated water to vaporize
 const VAPOR_CONDENSE_MAX = 90; // ticks for stuck vapor to condense back to water
 const SAND_EXCESS_MAX = 1700;  // max excess K above 300 K ambient (= 2000 K absolute)
 const SAND_HEAT_RATE = 50;     // excess K gained per tick (painting or fire adjacent)
 const SAND_COOL_RATE = 5;      // excess K lost per tick when cooling
-const MOVE = 98;
+const MOVE: Tool = 98;
 
 // Piecewise-linear blackbody color ramp for sand (T in absolute Kelvin)
 // Stops: 600 K → #220000 … 1700 K → #FFF8E8
@@ -42,11 +42,11 @@ type Mat = 0 | 1 | 2 | 3 | 4 | 5;
 type Tool = Mat | 98 | 99;
 
 const TOOL_DEFS: { id: Tool; label: string; key: string; color: string; border: string }[] = [
-  { id: WATER as Tool, label: "Agua",  key: "1", color: "#3b82f6", border: "rgba(59,130,246,0.4)" },
-  { id: FIRE  as Tool, label: "Fuego", key: "2", color: "#f97316", border: "rgba(249,115,22,0.4)" },
-  { id: SAND  as Tool, label: "Tierra",key: "3", color: "#c2a96e", border: "rgba(194,169,110,0.4)" },
-  { id: WALL  as Tool, label: "Madera",key: "4", color: "#8b5e3c", border: "rgba(139,94,60,0.4)" },
-  { id: MOVE  as Tool, label: "Mover", key: "5", color: "#a78bfa", border: "rgba(167,139,250,0.4)" },
+  { id: WATER, label: "Agua",  key: "1", color: "#3b82f6", border: "rgba(59,130,246,0.4)" },
+  { id: FIRE,  label: "Fuego", key: "2", color: "#f97316", border: "rgba(249,115,22,0.4)" },
+  { id: SAND,  label: "Tierra",key: "3", color: "#c2a96e", border: "rgba(194,169,110,0.4)" },
+  { id: WALL,  label: "Madera",key: "4", color: "#8b5e3c", border: "rgba(139,94,60,0.4)" },
+  { id: MOVE,  label: "Mover", key: "5", color: "#a78bfa", border: "rgba(167,139,250,0.4)" },
   { id: 99    as Tool, label: "Borrar",key: "6", color: "#111827", border: "rgba(17,24,39,0.4)" },
 ];
 
@@ -80,7 +80,7 @@ export default function Fluidos() {
   const sandHeatRef    = useRef<Uint16Array | null>(null); // excess K above 300 K for each sand cell
   const nextCompRef    = useRef(1);                        // next component ID counter
   const dimRef         = useRef({ W: 0, H: 0 });
-  const toolRef        = useRef<Tool>(WATER as Tool);
+  const toolRef        = useRef<Tool>(WATER);
   const brushRef       = useRef(5);
   const paintRef       = useRef(false);
   const lastPosRef     = useRef<{ x: number; y: number } | null>(null);
@@ -93,7 +93,7 @@ export default function Fluidos() {
   const carriedRef     = useRef<{dx: number; dy: number; type: Mat; age: number}[]>([]);
   const carryPosRef    = useRef<{ x: number; y: number } | null>(null);
 
-  const [tool, setTool] = useState<Tool>(WATER as Tool);
+  const [tool, setTool] = useState<Tool>(WATER);
   const [fullscreen, setFullscreen] = useState(false);
 
   const setToolSync = useCallback((t: Tool) => {
@@ -941,25 +941,29 @@ export default function Fluidos() {
     return () => cancelAnimationFrame(rafRef.current);
   }, [step, render, paintAt]);
 
+  // Vacía los 4 buffers de la simulación (grid, ages, comp, sandHeat). Compartida por
+  // el atajo "c" y el botón Limpiar; antes el botón olvidaba compRef (I 2.1).
+  const clearGrid = useCallback(() => {
+    gridRef.current?.fill(0);
+    agesRef.current?.fill(0);
+    compRef.current?.fill(0);
+    sandHeatRef.current?.fill(0);
+  }, []);
+
   // Keyboard shortcuts
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "1") setToolSync(WATER as Tool);
-      if (e.key === "2") setToolSync(FIRE  as Tool);
-      if (e.key === "3") setToolSync(SAND  as Tool);
-      if (e.key === "4") setToolSync(WALL  as Tool);
-      if (e.key === "5") setToolSync(MOVE  as Tool);
+      if (e.key === "1") setToolSync(WATER);
+      if (e.key === "2") setToolSync(FIRE);
+      if (e.key === "3") setToolSync(SAND);
+      if (e.key === "4") setToolSync(WALL);
+      if (e.key === "5") setToolSync(MOVE);
       if (e.key === "6" || e.key === "e") setToolSync(99 as Tool);
-      if (e.key === "c" || e.key === "C") {
-        gridRef.current?.fill(0);
-        agesRef.current?.fill(0);
-        compRef.current?.fill(0);
-        sandHeatRef.current?.fill(0);
-      }
+      if (e.key === "c" || e.key === "C") clearGrid();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [setToolSync]);
+  }, [setToolSync, clearGrid]);
 
   // Canvas input events (mouse + touch, native to avoid passive issues)
   const getCanvasPos = useCallback((e: MouseEvent | TouchEvent) => {
@@ -1101,12 +1105,6 @@ export default function Fluidos() {
       canvas.removeEventListener("touchend",   onUp);
     };
   }, [getCanvasPos, paintAt, moveAt]);
-
-  const clearAll = () => {
-    gridRef.current?.fill(0);
-    agesRef.current?.fill(0);
-    sandHeatRef.current?.fill(0);
-  };
 
   return (
     <TerminalShell title="fluidos" prompt={{ host: "fluidos", path: "~/apps", command: "./fluidos --elementos=4" }} hideChrome={fullscreen}>
@@ -1282,7 +1280,7 @@ export default function Fluidos() {
             );
           })}
 
-          <button className="clear-btn" onClick={clearAll}>
+          <button className="clear-btn" onClick={clearGrid}>
             <span className="tool-label">Limpiar </span><span className="tool-key">C</span>
           </button>
         </div>
