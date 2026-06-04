@@ -485,6 +485,15 @@ export default function EspiralPage() {
     setAlias("");
   }
 
+  function resetTimer() {
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+    localStorage.removeItem(STORAGE_KEY);
+    startTimeRef.current = null;
+    setElapsed(0);
+    left.reset();
+    right.reset();
+  }
+
   return (
     <TerminalShell
       title="espiral"
@@ -593,7 +602,10 @@ export default function EspiralPage() {
         </div>
         {elapsed >= 100 && !bothWin && (
           <span style={{ fontSize: "0.72rem", color: "var(--t-ink4)", fontFamily: MONO }}>
-            puedes hacer refresh para resetear el contador
+            ¿Quieres empezar de cero?{" "}
+            <button className="esp-btn" onClick={resetTimer} style={{ fontSize: "0.72rem" }}>
+              Reiniciar cronómetro
+            </button>
           </span>
         )}
         </div>
