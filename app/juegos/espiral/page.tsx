@@ -379,6 +379,12 @@ export default function EspiralPage() {
         startTimeRef.current = savedStart;
         // eslint-disable-next-line react-hooks/set-state-in-effect -- init en mount: localStorage no existe en SSR; es una lectura única con removeItem, no un store reactivo
         setElapsed(Math.floor((Date.now() - savedStart) / 1000));
+        // Con ambos tableros en idle tras el refresh, el effect de gameState no arranca
+        // el interval. Lo iniciamos aquí directamente para que el crono siga subiendo.
+        timerRef.current = setInterval(() => {
+          if (startTimeRef.current !== null)
+            setElapsed(Math.floor((Date.now() - startTimeRef.current) / 1000));
+        }, 500);
       }
     }
   }, []);
@@ -525,7 +531,7 @@ export default function EspiralPage() {
       <div style={{ padding: fullscreen ? "16px" : "28px", display: "flex", flexDirection: "column", alignItems: "center", gap: "1.5rem", minHeight: fullscreen ? "100%" : undefined, justifyContent: fullscreen ? "center" : undefined }}>
 
         {/* status row + hint */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem", width: "100%" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "1rem", fontFamily: MONO }}>
           <span style={{ fontSize: "0.75rem", color: "var(--t-ink3)", whiteSpace: "nowrap" }}>
             ↳ status:{" "}
@@ -549,7 +555,7 @@ export default function EspiralPage() {
               title="Cambiar velocidad"
             >{speed}</button>
           </span>
-          {elapsed > 0 && !bothWin && (
+          {(elapsed > 0 || left.gameState !== "idle" || right.gameState !== "idle") && !bothWin && (
             <span style={{ fontSize: "0.75rem", color: "var(--t-ink3)", fontVariantNumeric: "tabular-nums" }}>{elapsed}s</span>
           )}
           <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "1rem" }}>

@@ -46,12 +46,14 @@ export async function POST(request: Request) {
     entry.name === cleanName && (s >= 0 ? "positive" : "negative") === sign
   ) ?? null;
 
+  // Positivo: guarda el más alto (lowerIsBetter=false).
+  // Negativo: guarda el más bajo/negativo (lowerIsBetter=true).
   const stored = await upsertScore(
     KEY,
     makeMember(cleanName, { sign }),
     score,
     existing ? { member: existing.member, score: existing.score } : null,
-    false,
+    sign === "negative",
   );
 
   if (stored) {
