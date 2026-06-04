@@ -1,4 +1,3 @@
-// Lógica compartida entre los rankings de Espiral y Laberinto.
 import redis from "./redis";
 
 export interface RankEntry {
@@ -8,7 +7,8 @@ export interface RankEntry {
   speed: string | null;
 }
 
-const VALID_SPEEDS = ["slow", "normal", "fast"];
+export const VALID_SPEEDS = ["slow", "normal", "fast"] as const;
+export type SpeedLevel = (typeof VALID_SPEEDS)[number];
 
 export function parseEntry(member: string, score: number): RankEntry {
   try {
@@ -29,80 +29,55 @@ export async function readRanking(key: string, start = 0, stop = -1): Promise<Ra
   return out;
 }
 
-/** Busca la entrada (member crudo + score) de un nombre ya normalizado. */
-export async function findMember(
-  key: string,
-  name: string,
-): Promise<{ member: string; score: number } | null> {
+export interface Slot {
+  member: string;
+  score: number;
+  entry: RankEntry;
+}
+
+/** Lee todos los miembros del zset con sus scores y entries parseadas. */
+export async function findAll(key: string): Promise<Slot[]> {
   const raw = await redis.zrange(key, 0, -1, "WITHSCORES");
+  const out: Slot[] = [];
   for (let i = 0; i < raw.length; i += 2) {
-    if (parseEntry(raw[i], Number(raw[i + 1])).name === name) {
-      return { member: raw[i], score: Number(raw[i + 1]) };
-    }
+    const score = Number(raw[i + 1]);
+    out.push({ member: raw[i], score, entry: parseEntry(raw[i], score) });
   }
-  return null;
+  return out;
 }
 
-export interface SubmitOptions {
-  key: string;
-  name: unknown;
-  score: unknown;
-  speed?: unknown;
-  /** true → menor es mejor (Espiral, tiempo); false → mayor es mejor (Laberinto, puntos). */
-  lowerIsBetter: boolean;
-  min?: number;
-  max?: number;
-}
-
-export type SubmitResult =
-  | { ok: false; error: string }
-  | { ok: true; stored: boolean; name: string; speed: string | null };
-
-/**
- * Valida y guarda una puntuación. Mantiene una sola entrada por nombre, quedándose
- * con la mejor según `lowerIsBetter`. No envía email ni poda: eso lo decide el route.
- */
-export async function submitScore(opts: SubmitOptions): Promise<SubmitResult> {
-  const { key, lowerIsBetter, min = -Infinity, max = Infinity } = opts;
-
-  if (typeof opts.name !== "string" || opts.name.trim().length === 0) {
-    return { ok: false, error: "Datos inválidos" };
-  }
-  if (typeof opts.score !== "number" || !Number.isFinite(opts.score) || opts.score < min || opts.score > max) {
-    return { ok: false, error: "Datos inválidos" };
-  }
-
-  const name = opts.name.trim().slice(0, 20);
-  const score = opts.score;
-  const speed = VALID_SPEEDS.includes(opts.speed as string) ? (opts.speed as string) : null;
-
-  // Nota: este read-modify-write (findMember → zrem → zadd) no es atómico. Dos
-  // envíos concurrentes del mismo nombre podrían pisarse. Aceptable a este volumen
-  // (web personal, sin concurrencia real). Si algún día escala, mover a un script
-  // Lua (CAS).
-  const existing = await findMember(key, name);
-  if (existing) {
-    const isBetter = lowerIsBetter ? score < existing.score : score > existing.score;
-    if (!isBetter) return { ok: true, stored: false, name, speed };
-    await redis.zrem(key, existing.member);
-  }
-
-  const member = JSON.stringify({
+/** Construye el string miembro del zset. `extras` permite añadir campos de dedup (speed, sign…). */
+export function makeMember(name: string, extras?: Record<string, string>): string {
+  return JSON.stringify({
     name,
     date: new Date().toISOString().slice(0, 10),
-    ...(speed ? { speed } : {}),
+    ...extras,
   });
-  await redis.zadd(key, score, member);
-
-  return { ok: true, stored: true, name, speed };
 }
 
-/** Poda dejando solo las `keep` mejores entradas (Espiral: top‑N). */
+/**
+ * Guarda `score` si mejora al existente. Devuelve true si se almacenó.
+ * `existing` es la entrada actual para la misma clave de unicidad (nombre, nombre+velocidad, etc.).
+ */
+export async function upsertScore(
+  key: string,
+  member: string,
+  score: number,
+  existing: { member: string; score: number } | null,
+  lowerIsBetter: boolean,
+): Promise<boolean> {
+  if (existing) {
+    if (lowerIsBetter ? score >= existing.score : score <= existing.score) return false;
+    await redis.zrem(key, existing.member);
+  }
+  await redis.zadd(key, score, member);
+  return true;
+}
+
+/** Poda dejando solo las `keep` mejores entradas (Espiral: top‑N por tiempo). */
 export async function pruneTop(key: string, keep: number, lowerIsBetter: boolean): Promise<void> {
   const count = await redis.zcard(key);
   if (count <= keep) return;
-  // El zset está en orden ascendente: si menor es mejor, las mejores son las
-  // primeras y se descartan las de cola; si mayor es mejor, al revés.
   if (lowerIsBetter) await redis.zremrangebyrank(key, keep, -1);
   else await redis.zremrangebyrank(key, 0, count - keep - 1);
 }

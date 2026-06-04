@@ -1,5 +1,5 @@
 import { sendEmail } from "@/lib/notify";
-import { submitScore, pruneTop, readRanking } from "@/lib/ranking";
+import { findAll, makeMember, upsertScore, pruneTop, readRanking, VALID_SPEEDS } from "@/lib/ranking";
 import { checkRateLimit, clientIp } from "@/lib/registro";
 
 const KEY = process.env.NODE_ENV === "development" ? "espiral:ranking-dev" : "espiral:ranking";
@@ -10,8 +10,6 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  // Cada score guardado dispara un email; mismo límite que los registros de las calcs
-  // (5 envíos / 15 min por IP) evita que una IP inunde el correo. Sin reset (no hay "acierto").
   if (!(await checkRateLimit(clientIp(request), "ratelimit:ranking:espiral:"))) {
     return Response.json({ error: "Demasiados envíos. Espera 15 minutos." }, { status: 429 });
   }
@@ -22,20 +20,36 @@ export async function POST(request: Request) {
   } catch {
     return Response.json({ error: "JSON inválido" }, { status: 400 });
   }
+
   const { name, score, speed } = body;
 
-  // Espiral mide tiempo: menor es mejor. min 0.5s: 0.0s es imposible jugando y
-  // un POST directo con score:0 liderará el ranking para siempre.
-  const result = await submitScore({ key: KEY, name, score, speed, lowerIsBetter: true, min: 0.5, max: 100000 });
-  if (!result.ok) {
-    return Response.json({ error: result.error }, { status: 400 });
+  if (typeof name !== "string" || name.trim().length === 0) {
+    return Response.json({ error: "Datos inválidos" }, { status: 400 });
+  }
+  if (typeof score !== "number" || !Number.isFinite(score) || score < 0.5 || score > 100000) {
+    return Response.json({ error: "Datos inválidos" }, { status: 400 });
+  }
+  if (!(VALID_SPEEDS as readonly string[]).includes(speed)) {
+    return Response.json({ error: "Datos inválidos" }, { status: 400 });
   }
 
-  if (result.stored) {
+  const cleanName = name.trim().slice(0, 20);
+  const all = await findAll(KEY);
+  const existing = all.find(({ entry }) => entry.name === cleanName && entry.speed === speed) ?? null;
+
+  const stored = await upsertScore(
+    KEY,
+    makeMember(cleanName, { speed }),
+    score,
+    existing ? { member: existing.member, score: existing.score } : null,
+    true,
+  );
+
+  if (stored) {
     await pruneTop(KEY, TOP, true);
     await sendEmail({
-      subject: `${result.name} ha jugado al Espiral — ${Number(score).toFixed(1)}s`,
-      text: `${result.name} ha conseguido ${Number(score).toFixed(1)}s en el juego Espiral (velocidad: ${result.speed ?? "—"}).\n\nVer ranking: https://pacr.es/juegos/espiral/ranking`,
+      subject: `${cleanName} ha jugado al Espiral — ${score.toFixed(1)}s`,
+      text: `${cleanName} ha conseguido ${score.toFixed(1)}s en el juego Espiral (velocidad: ${speed}).\n\nVer ranking: https://pacr.es/juegos/espiral/ranking`,
     });
   }
 

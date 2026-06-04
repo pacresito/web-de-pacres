@@ -373,7 +373,7 @@ export default function EspiralPage() {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       const savedStart = parseInt(saved, 10);
-      if (Date.now() - savedStart > 10 * 60 * 1000) {
+      if (Date.now() - savedStart > 100 * 1000) {
         localStorage.removeItem(STORAGE_KEY);
       } else {
         startTimeRef.current = savedStart;
@@ -524,7 +524,8 @@ export default function EspiralPage() {
       {/* game area */}
       <div style={{ padding: fullscreen ? "16px" : "28px", display: "flex", flexDirection: "column", alignItems: "center", gap: "1.5rem", minHeight: fullscreen ? "100%" : undefined, justifyContent: fullscreen ? "center" : undefined }}>
 
-        {/* status row */}
+        {/* status row + hint */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem", width: "100%" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "1rem", fontFamily: MONO }}>
           <span style={{ fontSize: "0.75rem", color: "var(--t-ink3)", whiteSpace: "nowrap" }}>
             ↳ status:{" "}
@@ -548,7 +549,7 @@ export default function EspiralPage() {
               title="Cambiar velocidad"
             >{speed}</button>
           </span>
-          {(left.gameState !== "idle" || right.gameState !== "idle") && !bothWin && (
+          {elapsed > 0 && !bothWin && (
             <span style={{ fontSize: "0.75rem", color: "var(--t-ink3)", fontVariantNumeric: "tabular-nums" }}>{elapsed}s</span>
           )}
           <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "1rem" }}>
@@ -583,6 +584,12 @@ export default function EspiralPage() {
               )}
             </button>
           </div>
+        </div>
+        {elapsed >= 100 && !bothWin && (
+          <span style={{ fontSize: "0.72rem", color: "var(--t-ink4)", fontFamily: MONO }}>
+            puedes hacer refresh para resetear el contador
+          </span>
+        )}
         </div>
 
         {/* win panel */}
