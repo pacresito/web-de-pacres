@@ -601,7 +601,7 @@ export default function EspiralPage() {
           </div>
         </div>
         {elapsed >= 100 && !bothWin && (
-          <span style={{ fontSize: "0.72rem", color: "var(--t-ink4)", fontFamily: MONO }}>
+          <span style={{ fontSize: "0.72rem", color: "var(--t-ink4)", fontFamily: MONO, textAlign: "center" }}>
             ¿Quieres empezar de cero?{" "}
             <button className="esp-btn" onClick={resetTimer} style={{ fontSize: "0.72rem" }}>
               Reiniciar cronómetro
