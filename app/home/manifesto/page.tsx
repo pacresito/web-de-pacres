@@ -1221,7 +1221,27 @@ export default function Manifesto() {
                           href="/cv"
                           className="vE-skill-shine"
                           {...(ai > 0 ? { "data-line-start": "0" } : {})}
-                          onClick={(e) => { e.preventDefault(); setSkillsMinHeight(skillsSectionRef.current?.offsetHeight); setSkillsMode("fading"); setTimeout(() => setSkillsMode("terminal"), 2000); }}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setSkillsMinHeight(skillsSectionRef.current?.offsetHeight);
+                            setSkillsMode("fading");
+                            setTimeout(() => setSkillsMode("terminal"), 2000);
+                            if (skillsSectionRef.current) {
+                              const offset = window.innerWidth <= 900 ? 90 : 60;
+                              const target = skillsSectionRef.current.getBoundingClientRect().top + window.scrollY - offset;
+                              const start = window.scrollY;
+                              const dist = target - start;
+                              const duration = 2000;
+                              const t0 = performance.now();
+                              const step = (now: number) => {
+                                const p = Math.min((now - t0) / duration, 1);
+                                const ease = p < 0.5 ? 2 * p * p : -1 + (4 - 2 * p) * p;
+                                window.scrollTo(0, start + dist * ease);
+                                if (p < 1) requestAnimationFrame(step);
+                              };
+                              requestAnimationFrame(step);
+                            }
+                          }}
                         >
                           {ai > 0 && <em className="vE-dot">· </em>}{a}
                         </a>
