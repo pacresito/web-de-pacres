@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import TerminalShell from "../../components/TerminalShell";
 import WhyFooter from "../../components/WhyFooter";
 
@@ -22,10 +23,12 @@ const RUNES = [
 ];
 const RUNE_COUNT = RUNES.length;
 
+// `mouth` es la posición de la boca dentro del cuadro 1:1 de cada PNG (0–1):
+// el origen de la animación de la carta saliendo del animal.
 const SPIRIT_GUIDES = [
-  { article: "La", name: "iguana", emoji: "🦎", rune: "I", color: "#16a34a" },
-  { article: "El", name: "ñu",     emoji: "🐃", rune: "Ñ", color: "#b45309" },
-  { article: "El", name: "koala",  emoji: "🐨", rune: "K", color: "#7a6a5a" },
+  { article: "La", name: "iguana", img: "/trucos/magia/iguana.png", mouth: [0.62, 0.58], rune: "I", color: "#16a34a" },
+  { article: "El", name: "ñu",     img: "/trucos/magia/nu.png",     mouth: [0.67, 0.54], rune: "Ñ", color: "#b45309" },
+  { article: "El", name: "koala",  img: "/trucos/magia/koala.png",  mouth: [0.57, 0.66], rune: "K", color: "#7a6a5a" },
 ];
 
 const SUIT_ES: Record<string, string> = {
@@ -47,6 +50,7 @@ const CHARM_POSITIONS: Record<string, [number, number][]> = {
 
 const WHEEL_R = 120;
 const LETTER_R = 96;
+const ANIMAL_SIZE = 184;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -412,16 +416,17 @@ export default function MagiaPage() {
       <style>{`
         @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
         @keyframes beastEnter {
-          0%   { opacity:0; transform:translate(-180px, 0) scale(0.08); }
-          15%  { opacity:1; }
-          85%  { transform:translate(0, 0) scale(1); }
+          0%   { opacity:0; transform:translate(-140px, 0) scale(0.4); }
+          18%  { opacity:1; }
           100% { opacity:1; transform:translate(0, 0) scale(1); }
         }
-        @keyframes cardFromBeast {
-          0%   { opacity:0; transform:translateY(-84px) scale(0.07); }
-          10%  { opacity:1; }
-          30%  { transform:translateY(0) scale(0.4); }
-          100% { transform:translateY(0) scale(1); }
+        /* la carta nace dentro de la boca (escala 0, oculta) y es escupida:
+           se desliza hacia abajo girando ligeramente hasta su tamaño final */
+        @keyframes cardSpit {
+          0%   { opacity:0; transform:translate(-50%,-50%) scale(0.04) rotate(-10deg); }
+          18%  { opacity:1; }
+          60%  { transform:translate(-50%, calc(-50% + 56px)) scale(1.06) rotate(9deg); }
+          100% { opacity:1; transform:translate(-50%, calc(-50% + 84px)) scale(1) rotate(6deg); }
         }
         @keyframes spellFade { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
       `}</style>
@@ -521,20 +526,33 @@ export default function MagiaPage() {
       {/* REVEAL */}
       {phase === "reveal" && (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1.25rem", marginTop: "3rem", textAlign: "center" }}>
-          <div style={{
-            fontSize: "5.5rem", lineHeight: 1,
-            animation: "beastEnter 3.5s cubic-bezier(0.25,0.1,0.25,1) both",
-          }}>
-            {guide.emoji}
-          </div>
-          <div style={{ animation: "cardFromBeast 3.5s ease-out 3s both" }}>
-            <CardFace beast={revealBeast} w={90} />
+          <div style={{ position: "relative", width: ANIMAL_SIZE, height: ANIMAL_SIZE + 96 }}>
+            <Image
+              src={guide.img}
+              alt={guide.name}
+              width={ANIMAL_SIZE}
+              height={ANIMAL_SIZE}
+              priority
+              style={{
+                position: "absolute", top: 0, left: 0,
+                animation: "beastEnter 1.8s cubic-bezier(0.34,1.1,0.4,1) both",
+              }}
+            />
+            <div style={{
+              position: "absolute",
+              left: guide.mouth[0] * ANIMAL_SIZE,
+              top: guide.mouth[1] * ANIMAL_SIZE,
+              zIndex: 2,
+              animation: "cardSpit 1.5s cubic-bezier(0.34,1.15,0.5,1) 1.5s both",
+            }}>
+              <CardFace beast={revealBeast} w={72} />
+            </div>
           </div>
           <p style={{
             color: "var(--t-ink2)", fontSize: "1rem", fontWeight: 600,
             maxWidth: 300, lineHeight: 1.5, textAlign: "center",
             fontFamily: mono,
-            animation: "spellFade 0.5s ease 6s both",
+            animation: "spellFade 0.5s ease 3.4s both",
           }}>
             Desde algún lugar de la magia,
             <br />
@@ -550,7 +568,7 @@ export default function MagiaPage() {
             style={{
               background: "none", border: "none", cursor: "pointer",
               color: "var(--t-ink3)", fontSize: "0.78rem", fontFamily: mono,
-              animation: "spellFade 0.5s ease 6.5s both",
+              animation: "spellFade 0.5s ease 3.9s both",
             }}
           >
             Volver a intentarlo →
