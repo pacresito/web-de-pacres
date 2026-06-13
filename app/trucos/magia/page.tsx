@@ -474,9 +474,9 @@ export default function MagiaPage() {
         @keyframes cardSpit {
           0%   { opacity:0; transform:translate(-50%,-50%) scale(0.04) rotate(-10deg); }
           16%  { opacity:1; }
-          42%  { transform:translate(-50%, calc(-50% + 36px)) scale(1.08) rotate(9deg); }
-          64%  { transform:translate(-50%, calc(-50% + 40px)) scale(1.08) rotate(7deg); }
-          100% { opacity:1; transform:translate(-50%, calc(-50% + 110px)) scale(1) rotate(5deg); }
+          42%  { transform:translate(-50%, calc(-50% + 36px)) scale(1.1) rotate(8deg); }
+          64%  { transform:translate(-50%, calc(-50% + 36px)) scale(1.1) rotate(8deg); }
+          100% { opacity:1; transform:translate(-50%, calc(-50% + 110px)) scale(1) rotate(-20deg); }
         }
         @keyframes spellFade { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
       `}</style>
@@ -494,7 +494,9 @@ export default function MagiaPage() {
           </div>
           <button
             onClick={beginSpell}
-            style={{ padding: "0.6rem 1.6rem", background: "var(--t-ink)", color: "var(--t-paper)", border: "none", borderRadius: 8, fontSize: "0.88rem", fontFamily: mono, cursor: "pointer" }}
+            style={{ padding: "0.6rem 1.6rem", background: "transparent", color: "var(--t-ink)", border: "1px solid var(--t-rule)", borderRadius: 8, fontSize: "0.88rem", fontFamily: mono, cursor: "pointer", transition: "border-color 0.15s, color 0.15s, background 0.15s" }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--t-accent)"; e.currentTarget.style.color = "var(--t-accent)"; e.currentTarget.style.background = "rgba(0,184,122,0.04)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--t-rule)"; e.currentTarget.style.color = "var(--t-ink)"; e.currentTarget.style.background = "transparent"; }}
           >
             Estoy listo
           </button>
@@ -564,7 +566,9 @@ export default function MagiaPage() {
               </p>
               <button
                 onClick={() => setPhase("reveal")}
-                style={{ padding: "0.6rem 1.6rem", background: "var(--t-accent)", color: "#fff", border: "none", borderRadius: 8, fontSize: "0.88rem", fontFamily: mono, cursor: "pointer" }}
+                style={{ padding: "0.6rem 1.6rem", background: "transparent", color: "var(--t-accent)", border: "1px solid var(--t-accent)", borderRadius: 8, fontSize: "0.88rem", fontFamily: mono, cursor: "pointer", transition: "background 0.15s" }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(0,184,122,0.08)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
               >
                 Ya lo tengo
               </button>
