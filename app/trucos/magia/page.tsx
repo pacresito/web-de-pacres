@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import TerminalShell from "../../components/TerminalShell";
 import WhyFooter from "../../components/WhyFooter";
 
@@ -402,6 +401,9 @@ export default function MagiaPage() {
   const [spinStarted, setSpinStarted] = useState(false);
   const [spinDone, setSpinDone] = useState(false);
   const [cardW, setCardW] = useState(54);
+  // El animal se precarga en beginSpell; la animación del reveal espera a que
+  // esté listo para no salir cortada en la primera carga.
+  const [animalReady, setAnimalReady] = useState(false);
 
   useEffect(() => {
     function calc() {
@@ -426,6 +428,13 @@ export default function MagiaPage() {
     setSpinStarted(false);
     setSpinDone(false);
     setPhase("dealing");
+
+    // Precarga del animal elegido: hay reparto + ruleta por delante, así que
+    // para cuando se llega al reveal la imagen ya está en caché.
+    setAnimalReady(false);
+    const pre = new window.Image();
+    pre.onload = () => setAnimalReady(true);
+    pre.src = SPIRIT_GUIDES[newIdx].img;
   }
 
   function onCharmClick(col: number) {
@@ -568,26 +577,30 @@ export default function MagiaPage() {
       {phase === "reveal" && (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1.25rem", marginTop: "3rem", textAlign: "center" }}>
           <div style={{ position: "relative", width: ANIMAL_SIZE, height: ANIMAL_SIZE + 128 }}>
-            <Image
-              src={guide.img}
-              alt={guide.name}
-              width={ANIMAL_SIZE}
-              height={ANIMAL_SIZE}
-              priority
-              style={{
-                position: "absolute", top: 0, left: 0,
-                animation: "beastEnter 2.4s cubic-bezier(0.34,1.1,0.4,1) both",
-              }}
-            />
-            <div style={{
-              position: "absolute",
-              left: guide.mouth[0] * ANIMAL_SIZE,
-              top: guide.mouth[1] * ANIMAL_SIZE,
-              zIndex: 2,
-              animation: "cardSpit 2.2s cubic-bezier(0.34,1.15,0.5,1) 1.9s both",
-            }}>
-              <CardFace beast={revealBeast} w={72} />
-            </div>
+            {animalReady && (
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element -- imagen decorativa post-interacción, precargada a mano para sincronizar la animación; no es LCP */}
+                <img
+                  src={guide.img}
+                  alt={guide.name}
+                  width={ANIMAL_SIZE}
+                  height={ANIMAL_SIZE}
+                  style={{
+                    position: "absolute", top: 0, left: 0,
+                    animation: "beastEnter 2.4s cubic-bezier(0.34,1.1,0.4,1) both",
+                  }}
+                />
+                <div style={{
+                  position: "absolute",
+                  left: guide.mouth[0] * ANIMAL_SIZE,
+                  top: guide.mouth[1] * ANIMAL_SIZE,
+                  zIndex: 2,
+                  animation: "cardSpit 2.2s cubic-bezier(0.34,1.15,0.5,1) 1.9s both",
+                }}>
+                  <CardFace beast={revealBeast} w={72} />
+                </div>
+              </>
+            )}
           </div>
           <p style={{
             color: "var(--t-ink2)", fontSize: "1rem", fontWeight: 600,
