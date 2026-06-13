@@ -41,11 +41,18 @@ const VALUE_ES: Record<string, string> = {
 
 const ROUND_HINTS = ["", "No cambies de idea.", "La primera impresión es la correcta."];
 
-const CHARM_POSITIONS: Record<string, [number, number][]> = {
-  "2": [[0.3, 0.5], [0.7, 0.5]],
-  "3": [[0.22, 0.5], [0.5, 0.5], [0.78, 0.5]],
-  "4": [[0.24, 0.3], [0.24, 0.7], [0.76, 0.3], [0.76, 0.7]],
-  "5": [[0.22, 0.3], [0.22, 0.7], [0.5, 0.5], [0.78, 0.3], [0.78, 0.7]],
+// Palo → símbolo SVG (definidos en <SuitDefs>).
+const SUIT_SYMBOL: Record<string, string> = {
+  "♠": "sym-s", "♥": "sym-h", "♦": "sym-d", "♣": "sym-c",
+};
+
+// Pipas editoriales: centro [cx, cy] de cada palo (viewBox 100×142, escala 13).
+// La fila inferior (cy > 71) se gira 180° para imitar un naipe real.
+const PIP_LAYOUT: Record<string, [number, number][]> = {
+  "2": [[50, 54], [50, 88]],
+  "3": [[50, 54], [50, 71], [50, 88]],
+  "4": [[36, 54], [64, 54], [36, 88], [64, 88]],
+  "5": [[36, 54], [64, 54], [50, 71], [36, 88], [64, 88]],
 };
 
 const WHEEL_R = 120;
@@ -95,55 +102,86 @@ function spellName(beast: Beast): string {
 
 // ─── CardFace ─────────────────────────────────────────────────────────────────
 
+// Símbolos SVG de los palos (handoff editorial). Se renderiza una vez por página;
+// `<use href="#sym-X">` los referencia desde cada carta.
+function SuitDefs() {
+  return (
+    <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden="true">
+      <defs>
+        <symbol id="sym-s" viewBox="0 0 24 24">
+          <path d="M12 2.2 C9.6 6.8 4.6 9.6 4.6 14 C4.6 16.8 6.7 18.8 9.1 18.8 C10.3 18.8 11.2 18.4 11.9 17.7 C11.6 19.4 10.9 20.7 9.8 21.6 L14.2 21.6 C13.1 20.7 12.4 19.4 12.1 17.7 C12.8 18.4 13.7 18.8 14.9 18.8 C17.3 18.8 19.4 16.8 19.4 14 C19.4 9.6 14.4 6.8 12 2.2 Z" />
+        </symbol>
+        <symbol id="sym-h" viewBox="0 0 24 24">
+          <path d="M12 21 C6.8 16.6 3.2 13.4 3.2 9.2 C3.2 6.2 5.4 4 8.1 4 C9.8 4 11.3 4.9 12 6.3 C12.7 4.9 14.2 4 15.9 4 C18.6 4 20.8 6.2 20.8 9.2 C20.8 13.4 17.2 16.6 12 21 Z" />
+        </symbol>
+        <symbol id="sym-d" viewBox="0 0 24 24">
+          <path d="M12 2 C13.4 5.8 16.2 9.4 19 12 C16.2 14.6 13.4 18.2 12 22 C10.6 18.2 7.8 14.6 5 12 C7.8 9.4 10.6 5.8 12 2 Z" />
+        </symbol>
+        <symbol id="sym-c" viewBox="0 0 24 24">
+          <circle cx="12" cy="6.9" r="4.5" />
+          <circle cx="6.7" cy="13.7" r="4.5" />
+          <circle cx="17.3" cy="13.7" r="4.5" />
+          <path d="M12 11 C12 15.2 11.1 19.1 9.4 21.6 L14.6 21.6 C12.9 19.1 12 15.2 12 11 Z" />
+        </symbol>
+      </defs>
+    </svg>
+  );
+}
+
 function CardFace({ beast, w }: { beast: Beast; w: number }) {
-  const h = Math.floor(w * 1.42);
-  const mono = "var(--t-mono)";
-  const color = beast.red ? "#ef4444" : "var(--t-ink)";
-  const borderColor = beast.red ? "rgba(239,68,68,0.22)" : "rgba(0,0,0,0.1)";
-  const csz = Math.max(8, Math.floor(w * 0.19));
+  const symbol = `#${SUIT_SYMBOL[beast.suit]}`;
+  const suitColor = beast.red ? "#ef4444" : "#1c1c1a";
   const isFace = ["J", "Q", "K"].includes(beast.value);
   const isAce = beast.value === "A";
+  const pips = PIP_LAYOUT[beast.value];
 
   return (
     <div style={{
-      width: w, height: h, border: `1px solid ${borderColor}`,
-      borderRadius: 5, background: "#fff", position: "relative",
+      width: w, aspectRatio: "100 / 142", position: "relative",
       flexShrink: 0, overflow: "hidden",
-      boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+      background: "#fffdf6", border: "1px solid #ddd8c9", borderRadius: 6,
+      boxShadow: "0 1px 2px rgba(28,28,26,0.05), 0 6px 14px rgba(28,28,26,0.05)",
     }}>
-      <span style={{ position: "absolute", top: 2, left: 4, fontSize: csz, color, fontFamily: mono, fontWeight: 700, lineHeight: 1, userSelect: "none" }}>{beast.value}</span>
-      <span style={{ position: "absolute", top: 2 + csz, left: 4, fontSize: Math.max(6, csz - 2), color, lineHeight: 1, userSelect: "none" }}>{beast.suit}</span>
-      <span style={{ position: "absolute", bottom: 2, right: 4, fontSize: csz, color, fontFamily: mono, fontWeight: 700, lineHeight: 1, transform: "rotate(180deg)", userSelect: "none" }}>{beast.value}</span>
-      <span style={{ position: "absolute", bottom: 2 + csz, right: 4, fontSize: Math.max(6, csz - 2), color, lineHeight: 1, transform: "rotate(180deg)", userSelect: "none" }}>{beast.suit}</span>
+      <svg viewBox="0 0 100 142" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}>
+        <g fontFamily="var(--t-mono)">
+          {/* doble marco editorial */}
+          <rect x="5.5" y="5.5" width="89" height="131" rx="3" fill="none" stroke="#1c1c1a" strokeWidth="0.9" />
+          <rect x="8.5" y="8.5" width="83" height="125" rx="2" fill="none" stroke="#1c1c1a" strokeWidth="0.45" />
 
-      {isAce && (
-        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
-          <span style={{ fontSize: Math.floor(h * 0.58), color, lineHeight: 1, userSelect: "none" }}>{beast.suit}</span>
-        </div>
-      )}
-
-      {isFace && (
-        <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 0, pointerEvents: "none", transform: `translateY(${Math.floor(h * 0.06)}px)` }}>
-          <span style={{ fontSize: Math.floor(h * 0.28), fontFamily: "Georgia, serif", color, lineHeight: 0.7, fontWeight: 700, userSelect: "none" }}>{beast.value}</span>
-          <span style={{ fontSize: Math.floor(h * 0.40), color, lineHeight: 1, userSelect: "none" }}>{beast.suit}</span>
-        </div>
-      )}
-
-      {!isAce && !isFace && CHARM_POSITIONS[beast.value] && (
-        <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
-          {CHARM_POSITIONS[beast.value].map(([ry, rx], i) => (
-            <span key={i} style={{
-              position: "absolute",
-              left: `${rx * 100}%`, top: `${ry * 100}%`,
-              transform: `translate(-50%, -50%)${ry > 0.5 ? " rotate(180deg)" : ""}`,
-              fontSize: Math.max(9, Math.floor(w * 0.34)),
-              color, lineHeight: 1, userSelect: "none",
-            }}>
-              {beast.suit}
-            </span>
+          {/* valor centrado + separador con rombo, arriba y (rotado) abajo */}
+          {[false, true].map((flip) => (
+            <g key={String(flip)} transform={flip ? "rotate(180 50 71)" : undefined}>
+              <text x="51.5" y="33" textAnchor="middle" fontSize="20" fontWeight="500" letterSpacing="3" fill={suitColor}>{beast.value}</text>
+              <path d="M30 40 H45 M55 40 H70" stroke="#1c1c1a" strokeWidth="0.7" />
+              <rect x="48" y="38" width="4" height="4" transform="rotate(45 50 40)" fill="#00b87a" />
+            </g>
           ))}
-        </div>
-      )}
+
+          {/* contenido central */}
+          {isAce && <use href={symbol} x="33" y="54" width="34" height="34" fill={suitColor} />}
+
+          {isFace && (
+            <>
+              <circle cx="50" cy="71" r="20" fill="none" stroke="#1c1c1a" strokeWidth="0.8" />
+              <circle cx="50" cy="71" r="17" fill="none" stroke="#1c1c1a" strokeWidth="0.4" />
+              <use href={symbol} x="42" y="63" width="16" height="16" fill={suitColor} />
+            </>
+          )}
+
+          {pips?.map(([cx, cy], i) => (
+            <use
+              key={i}
+              href={symbol}
+              x={cx - 6.5}
+              y={cy - 6.5}
+              width="13"
+              height="13"
+              fill={suitColor}
+              transform={cy > 71 ? `rotate(180 ${cx} ${cy})` : undefined}
+            />
+          ))}
+        </g>
+      </svg>
     </div>
   );
 }
@@ -413,6 +451,7 @@ export default function MagiaPage() {
       display: "flex", flexDirection: "column", alignItems: "center",
       padding: "2rem 1rem 4rem", flex: 1,
     }}>
+      <SuitDefs />
       <style>{`
         @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
         @keyframes beastEnter {
@@ -421,12 +460,14 @@ export default function MagiaPage() {
           100% { opacity:1; transform:translate(0, 0) scale(1); }
         }
         /* la carta nace dentro de la boca (escala 0, oculta) y es escupida:
-           se desliza hacia abajo girando ligeramente hasta su tamaño final */
+           emerge despacio, se mantiene grande encima del animal y luego
+           baja girando ligeramente hasta despejarlo */
         @keyframes cardSpit {
           0%   { opacity:0; transform:translate(-50%,-50%) scale(0.04) rotate(-10deg); }
-          18%  { opacity:1; }
-          60%  { transform:translate(-50%, calc(-50% + 56px)) scale(1.06) rotate(9deg); }
-          100% { opacity:1; transform:translate(-50%, calc(-50% + 84px)) scale(1) rotate(6deg); }
+          16%  { opacity:1; }
+          42%  { transform:translate(-50%, calc(-50% + 36px)) scale(1.08) rotate(9deg); }
+          64%  { transform:translate(-50%, calc(-50% + 40px)) scale(1.08) rotate(7deg); }
+          100% { opacity:1; transform:translate(-50%, calc(-50% + 110px)) scale(1) rotate(5deg); }
         }
         @keyframes spellFade { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
       `}</style>
@@ -526,7 +567,7 @@ export default function MagiaPage() {
       {/* REVEAL */}
       {phase === "reveal" && (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1.25rem", marginTop: "3rem", textAlign: "center" }}>
-          <div style={{ position: "relative", width: ANIMAL_SIZE, height: ANIMAL_SIZE + 96 }}>
+          <div style={{ position: "relative", width: ANIMAL_SIZE, height: ANIMAL_SIZE + 128 }}>
             <Image
               src={guide.img}
               alt={guide.name}
@@ -535,7 +576,7 @@ export default function MagiaPage() {
               priority
               style={{
                 position: "absolute", top: 0, left: 0,
-                animation: "beastEnter 1.8s cubic-bezier(0.34,1.1,0.4,1) both",
+                animation: "beastEnter 2.4s cubic-bezier(0.34,1.1,0.4,1) both",
               }}
             />
             <div style={{
@@ -543,7 +584,7 @@ export default function MagiaPage() {
               left: guide.mouth[0] * ANIMAL_SIZE,
               top: guide.mouth[1] * ANIMAL_SIZE,
               zIndex: 2,
-              animation: "cardSpit 1.5s cubic-bezier(0.34,1.15,0.5,1) 1.5s both",
+              animation: "cardSpit 2.2s cubic-bezier(0.34,1.15,0.5,1) 1.9s both",
             }}>
               <CardFace beast={revealBeast} w={72} />
             </div>
@@ -552,7 +593,7 @@ export default function MagiaPage() {
             color: "var(--t-ink2)", fontSize: "1rem", fontWeight: 600,
             maxWidth: 300, lineHeight: 1.5, textAlign: "center",
             fontFamily: mono,
-            animation: "spellFade 0.5s ease 3.4s both",
+            animation: "spellFade 0.5s ease 4.4s both",
           }}>
             Desde algún lugar de la magia,
             <br />
@@ -568,7 +609,7 @@ export default function MagiaPage() {
             style={{
               background: "none", border: "none", cursor: "pointer",
               color: "var(--t-ink3)", fontSize: "0.78rem", fontFamily: mono,
-              animation: "spellFade 0.5s ease 3.9s both",
+              animation: "spellFade 0.5s ease 4.9s both",
             }}
           >
             Volver a intentarlo →
