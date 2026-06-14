@@ -46,7 +46,6 @@ body {
   display: inline-flex; align-items: center; justify-content: center;
   transition: color 0.15s; border-radius: 4px;
 }
-.ts-nav-btn:hover { color: var(--t-ink); }
 .ts-nav-btn:disabled { color: var(--t-ink4); cursor: default; }
 
 @keyframes ts-blink { 50% { opacity: 0; } }
@@ -87,7 +86,6 @@ body {
   display: flex; align-items: center; gap: 4px;
   transition: color 0.15s;
 }
-.ts-why-btn:hover { color: var(--t-accent); }
 .ts-why-box {
   margin-top: 1rem;
   padding: 16px 20px;
@@ -206,4 +204,21 @@ body {
   transition: background 0.12s, border-color 0.12s, color 0.12s;
   font-family: var(--t-mono); padding: 0; line-height: 1;
 }
-.t-ibtn:hover { background: var(--t-paper2); border-color: var(--t-ink4); color: var(--t-ink); }
+/* ============================================================
+   Hover sin "sticky" en táctil
+   En pantallas táctiles, un tap dispara un mouseenter sintético
+   pero nunca el mouseleave → el estado :hover se queda pegado
+   (p. ej. un icono que se queda en verde tras tocarlo).
+   Aplicando el hover solo donde hay puntero real se evita.
+   `.hover-accent` / `.hover-fade`: utilidades para botones-icono
+   que antes resolvían el hover con onMouseEnter/onMouseLeave.
+   ============================================================ */
+.win-icon { opacity: 0; transition: opacity 0.12s; display: flex; }
+@media (hover: hover) {
+  .ts-nav-btn:hover { color: var(--t-ink); }
+  .ts-why-btn:hover { color: var(--t-accent); }
+  .t-ibtn:hover { background: var(--t-paper2); border-color: var(--t-ink4); color: var(--t-ink); }
+  .hover-accent:hover { color: var(--t-accent); }
+  .hover-fade:hover { opacity: 0.7; }
+  .win-dots:hover .win-icon { opacity: 1; }
+}

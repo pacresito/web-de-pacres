@@ -380,7 +380,7 @@ export default function CalculadoraRPN() {
           touch-action: manipulation;
           transition: opacity 0.15s;
         }
-        .hp-badge:hover { opacity: 0.75; }
+        @media (hover: hover) { .hp-badge:hover { opacity: 0.75; } }
         .hp-badge-text {
           font-size: 0.55rem;
           font-weight: 900;
@@ -566,7 +566,7 @@ export default function CalculadoraRPN() {
           -webkit-tap-highlight-color: transparent;
           touch-action: manipulation;
         }
-        button.hp-softkey:hover { opacity: 0.75; }
+        @media (hover: hover) { button.hp-softkey:hover { opacity: 0.75; } }
         button.hp-softkey:active { opacity: 0.5; }
 
         /* ── Button grid ── */
@@ -707,7 +707,7 @@ export default function CalculadoraRPN() {
           text-decoration: none;
           transition: color 0.2s;
         }
-        .pacres-link:hover { color: var(--t-accent); }
+        @media (hover: hover) { .pacres-link:hover { color: var(--t-accent); } }
       `}</style>
 
       <main className="calc-page">

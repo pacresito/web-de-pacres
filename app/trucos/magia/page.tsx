@@ -463,6 +463,12 @@ export default function MagiaPage() {
       <SuitDefs />
       <style>{`
         @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+        /* hover solo con puntero real: en táctil un tap dejaría el resalte pegado */
+        @media (hover: hover) {
+          .magia-btn:hover { border-color: var(--t-accent); color: var(--t-accent); background: rgba(0,184,122,0.04); }
+          .magia-col:hover { border-color: var(--t-accent); background: rgba(0,184,122,0.04); }
+          .magia-reveal-btn:hover { background: rgba(0,184,122,0.08); }
+        }
         @keyframes beastEnter {
           0%   { opacity:0; transform:translate(-140px, 0) scale(0.4); }
           18%  { opacity:1; }
@@ -493,10 +499,9 @@ export default function MagiaPage() {
             </p>
           </div>
           <button
+            className="magia-btn"
             onClick={beginSpell}
             style={{ padding: "0.6rem 1.6rem", background: "transparent", color: "var(--t-ink)", border: "1px solid var(--t-rule)", borderRadius: 8, fontSize: "0.88rem", fontFamily: mono, cursor: "pointer", transition: "border-color 0.15s, color 0.15s, background 0.15s" }}
-            onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--t-accent)"; e.currentTarget.style.color = "var(--t-accent)"; e.currentTarget.style.background = "rgba(0,184,122,0.04)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--t-rule)"; e.currentTarget.style.color = "var(--t-ink)"; e.currentTarget.style.background = "transparent"; }}
           >
             Estoy listo
           </button>
@@ -519,6 +524,7 @@ export default function MagiaPage() {
             {[0, 1, 2].map((col) => (
               <div
                 key={col}
+                className="magia-col"
                 onClick={() => onCharmClick(col)}
                 style={{
                   display: "flex", flexDirection: "column", gap: cardGap,
@@ -526,8 +532,6 @@ export default function MagiaPage() {
                   border: "1px solid var(--t-rule)",
                   cursor: "pointer", transition: "border-color 0.15s, background 0.15s",
                 }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = "var(--t-accent)"; (e.currentTarget as HTMLDivElement).style.background = "rgba(0,184,122,0.04)"; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = "var(--t-rule)"; (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
               >
                 {getCharm(deck, col).map((beast, i) => (
                   <CardFace key={i} beast={beast} w={cardW} />
@@ -565,10 +569,9 @@ export default function MagiaPage() {
                 Piensa en un animal que empiece por {guide.rune}.
               </p>
               <button
+                className="magia-reveal-btn"
                 onClick={() => setPhase("reveal")}
                 style={{ padding: "0.6rem 1.6rem", background: "transparent", color: "var(--t-accent)", border: "1px solid var(--t-accent)", borderRadius: 8, fontSize: "0.88rem", fontFamily: mono, cursor: "pointer", transition: "background 0.15s" }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(0,184,122,0.08)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
               >
                 Ya lo tengo
               </button>

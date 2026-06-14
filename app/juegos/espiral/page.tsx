@@ -508,7 +508,7 @@ export default function EspiralPage() {
           color: var(--t-ink3); padding: 0;
           transition: color 0.15s;
         }
-        .esp-btn:hover { color: var(--t-accent); }
+        @media (hover: hover) { .esp-btn:hover { color: var(--t-accent); } }
 
         .esp-input {
           padding: 0.35rem 0.65rem;
@@ -553,14 +553,13 @@ export default function EspiralPage() {
             </span>
             <span style={{ marginLeft: "1.5rem" }}>{"speed: "}</span>
             <button
+              className="hover-fade"
               onClick={cycleSpeed}
               style={{
                 background: "none", border: "none", padding: 0, cursor: "pointer",
                 fontFamily: "inherit", fontSize: "inherit", transition: "opacity 0.15s",
                 color: speed === "slow" ? "#60a5fa" : speed === "fast" ? "#f97316" : "var(--t-accent)",
               }}
-              onMouseEnter={e => (e.currentTarget.style.opacity = "0.7")}
-              onMouseLeave={e => (e.currentTarget.style.opacity = "1")}
               title="Cambiar velocidad"
             >{speed}</button>
           </span>
@@ -569,11 +568,10 @@ export default function EspiralPage() {
           )}
           <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "1rem" }}>
             <a
+              className="hover-accent"
               href="/juegos/espiral/ranking"
               title="Ranking"
               style={{ color: "var(--t-ink3)", display: "flex", alignItems: "center", transition: "color 0.15s" }}
-              onMouseEnter={e => (e.currentTarget.style.color = "var(--t-accent)")}
-              onMouseLeave={e => (e.currentTarget.style.color = "var(--t-ink3)")}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>

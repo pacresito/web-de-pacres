@@ -23,6 +23,7 @@ export const tdStyle: React.CSSProperties = {
 export function RankBackLink({ href }: { href: string }) {
   return (
     <Link
+      className="hover-accent"
       href={href}
       style={{
         marginTop: "2.5rem",
@@ -31,8 +32,6 @@ export function RankBackLink({ href }: { href: string }) {
         textDecoration: "none",
         transition: "color 0.2s",
       }}
-      onMouseEnter={(e) => (e.currentTarget.style.color = "#00b87a")}
-      onMouseLeave={(e) => (e.currentTarget.style.color = "#b8b3a6")}
     >
       ← volver al juego
     </Link>

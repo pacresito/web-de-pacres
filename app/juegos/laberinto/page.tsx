@@ -979,11 +979,10 @@ export default function Laberinto() {
       <span style={{ fontSize: "0.75rem", color: scoreColor, fontWeight: 600 }}>{score >= 0 ? "+" : ""}{score}</span>
       <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "1rem" }}>
         <a
+          className="hover-accent"
           href="/juegos/laberinto/ranking"
           title="Ranking"
           style={{ color: "var(--t-ink3)", display: "flex", alignItems: "center", transition: "color 0.15s" }}
-          onMouseEnter={e => (e.currentTarget.style.color = "var(--t-accent)")}
-          onMouseLeave={e => (e.currentTarget.style.color = "var(--t-ink3)")}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
@@ -991,11 +990,10 @@ export default function Laberinto() {
           </svg>
         </a>
         <button
+          className="hover-accent"
           onClick={() => setFullscreen(f => !f)}
           title={fullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
           style={{ background: "none", border: "none", cursor: "pointer", color: "var(--t-ink3)", padding: 0, display: "flex", alignItems: "center", transition: "color 0.15s" }}
-          onMouseEnter={e => (e.currentTarget.style.color = "var(--t-accent)")}
-          onMouseLeave={e => (e.currentTarget.style.color = "var(--t-ink3)")}
         >
           {fullscreen ? (
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1082,11 +1080,10 @@ export default function Laberinto() {
           </div>
           <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
             <a
+              className="hover-accent"
               href="/juegos/laberinto/ranking"
               title="Ranking"
               style={{ color: "var(--t-ink3)", display: "flex", alignItems: "center", transition: "color 0.15s" }}
-              onMouseEnter={e => (e.currentTarget.style.color = "var(--t-accent)")}
-              onMouseLeave={e => (e.currentTarget.style.color = "var(--t-ink3)")}
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
@@ -1094,10 +1091,9 @@ export default function Laberinto() {
               </svg>
             </a>
             <button
+              className="hover-accent"
               onClick={() => setFullscreen(f => !f)}
               style={{ background: "none", border: "none", cursor: "pointer", color: "var(--t-ink3)", padding: 0, display: "flex", alignItems: "center", transition: "color 0.15s" }}
-              onMouseEnter={e => (e.currentTarget.style.color = "var(--t-accent)")}
-              onMouseLeave={e => (e.currentTarget.style.color = "var(--t-ink3)")}
             >
               {fullscreen ? (
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

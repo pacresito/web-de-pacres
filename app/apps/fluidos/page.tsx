@@ -289,7 +289,7 @@ export default function Fluidos() {
           transition: border-color 0.15s, background 0.15s;
           -webkit-user-select: none; user-select: none;
         }
-        .tool-btn:hover { border-color: rgba(0,184,122,0.4); background: rgba(0,184,122,0.04); }
+        @media (hover: hover) { .tool-btn:hover { border-color: rgba(0,184,122,0.4); background: rgba(0,184,122,0.04); } }
         .tool-btn.active { border-color: var(--active-border); background: var(--active-bg); color: var(--active-color); }
         .tool-dot {
           width: 8px; height: 8px; border-radius: 50%;
@@ -310,7 +310,7 @@ export default function Fluidos() {
           transition: color 0.15s, border-color 0.15s;
           -webkit-user-select: none; user-select: none;
         }
-        .clear-btn:hover { color: var(--text); border-color: rgba(55,65,81,0.4); }
+        @media (hover: hover) { .clear-btn:hover { color: var(--text); border-color: rgba(55,65,81,0.4); } }
 
         .sim-wrap {
           flex: 1;
@@ -376,11 +376,10 @@ export default function Fluidos() {
           </div>
           <div style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
             <button
+              className="hover-accent"
               onClick={() => setFullscreen(f => !f)}
               title={fullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
               style={{ background: "none", border: "none", cursor: "pointer", color: "var(--t-ink3)", padding: 0, display: "flex", alignItems: "center", transition: "color 0.15s" }}
-              onMouseEnter={e => (e.currentTarget.style.color = "var(--t-accent)")}
-              onMouseLeave={e => (e.currentTarget.style.color = "var(--t-ink3)")}
             >
               {fullscreen ? (
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

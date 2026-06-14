@@ -1,7 +1,5 @@
 "use client";
 
-import { useState } from "react";
-
 // Cromo de ventana macOS compartido por las páginas con pestañas (cv, lab, designs).
 // Antes estaba triplicado en cada una (I5). Los keyframes de dock (t-dock-in/out, etc.)
 // siguen definidos en el <style> de cada página.
@@ -29,9 +27,8 @@ function WinIcon({ kind }: { kind: WinKind }) {
   );
 }
 
-function WindowBtn({ color, onClick, title, kind, showIcon = false }: {
-  color: string; onClick: () => void; title: string;
-  kind: WinKind; showIcon?: boolean;
+function WindowBtn({ color, onClick, title, kind }: {
+  color: string; onClick: () => void; title: string; kind: WinKind;
 }) {
   return (
     <button title={title} onClick={onClick} style={{
@@ -39,7 +36,9 @@ function WindowBtn({ color, onClick, title, kind, showIcon = false }: {
       border: "none", cursor: "pointer", padding: 0, flexShrink: 0,
       display: "flex", alignItems: "center", justifyContent: "center",
     }}>
-      {showIcon && <WinIcon kind={kind} />}
+      {/* El símbolo se revela al pasar el cursor sobre el grupo (.win-dots),
+          solo en dispositivos con puntero real — en táctil se quedaría pegado. */}
+      <span className="win-icon"><WinIcon kind={kind} /></span>
     </button>
   );
 }
@@ -47,18 +46,16 @@ function WindowBtn({ color, onClick, title, kind, showIcon = false }: {
 export function ChromeBar({ title, onClose, onMinimize, onMaximize, isMaximized }: {
   title: string; onClose: () => void; onMinimize: () => void; onMaximize: () => void; isMaximized: boolean;
 }) {
-  const [hot, setHot] = useState(false);
   return (
     <div style={{
       background: "var(--t-paper2)", borderBottom: "1px solid var(--t-rule)",
       padding: "14px 18px", display: "grid",
       gridTemplateColumns: "140px 1fr 140px", alignItems: "center",
     }}>
-      <div style={{ display: "flex", gap: 7, alignItems: "center" }}
-        onMouseEnter={() => setHot(true)} onMouseLeave={() => setHot(false)}>
-        <WindowBtn color="#ff5f57" onClick={onClose} title="Cerrar" kind="close" showIcon={hot} />
-        <WindowBtn color="#febc2e" onClick={onMinimize} title="Minimizar" kind="minimize" showIcon={hot} />
-        <WindowBtn color="#28c840" onClick={onMaximize} title={isMaximized ? "Restaurar" : "Maximizar"} kind={isMaximized ? "restore" : "maximize"} showIcon={hot} />
+      <div className="win-dots" style={{ display: "flex", gap: 7, alignItems: "center" }}>
+        <WindowBtn color="#ff5f57" onClick={onClose} title="Cerrar" kind="close" />
+        <WindowBtn color="#febc2e" onClick={onMinimize} title="Minimizar" kind="minimize" />
+        <WindowBtn color="#28c840" onClick={onMaximize} title={isMaximized ? "Restaurar" : "Maximizar"} kind={isMaximized ? "restore" : "maximize"} />
       </div>
       <div style={{ textAlign: "center", fontFamily: "var(--t-mono)", fontSize: 12, color: "var(--t-ink2)" }}>
         ⌘&nbsp;&nbsp;pacr.es — {title}
@@ -73,7 +70,6 @@ export function ChromeBar({ title, onClose, onMinimize, onMaximize, isMaximized 
 export function MinimizedBar({ title, onRestore, onMaximize, onClose, animatingOut = false }: {
   title: string; onRestore: () => void; onMaximize: () => void; onClose: () => void; animatingOut?: boolean;
 }) {
-  const [hot, setHot] = useState(false);
   return (
     <div style={{
       position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)",
@@ -84,11 +80,10 @@ export function MinimizedBar({ title, onRestore, onMaximize, onClose, animatingO
       animation: animatingOut ? "t-dock-out 0.22s ease-out forwards" : "t-dock-in 0.25s ease-out",
       whiteSpace: "nowrap",
     }}>
-      <div style={{ display: "flex", gap: 6, alignItems: "center" }}
-        onMouseEnter={() => setHot(true)} onMouseLeave={() => setHot(false)}>
-        <WindowBtn color="#ff5f57" onClick={onClose} title="Cerrar" kind="close" showIcon={hot} />
-        <WindowBtn color="#febc2e" onClick={onRestore} title="Restaurar" kind="minimize" showIcon={hot} />
-        <WindowBtn color="#28c840" onClick={onMaximize} title="Maximizar" kind="maximize" showIcon={hot} />
+      <div className="win-dots" style={{ display: "flex", gap: 6, alignItems: "center" }}>
+        <WindowBtn color="#ff5f57" onClick={onClose} title="Cerrar" kind="close" />
+        <WindowBtn color="#febc2e" onClick={onRestore} title="Restaurar" kind="minimize" />
+        <WindowBtn color="#28c840" onClick={onMaximize} title="Maximizar" kind="maximize" />
       </div>
       <span>pacr.es — {title}</span>
       <span style={{ color: "var(--t-ink4)", fontSize: 10 }}>· minimizado</span>
