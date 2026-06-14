@@ -7,9 +7,27 @@ import {
   type Carried, type Sim,
 } from "./engine";
 
-// Rampa lineal a trozos de color de cuerpo negro para la tierra (T en Kelvin absolutos)
-// Paradas: 600 K → #220000 … 1700 K → #FFF8E8
-const THERMAL_STOPS: [number, number, number, number][] = [
+// Una rampa de color lineal a trozos: paradas [posición, r, g, b] ordenadas por posición.
+type ColorStop = [number, number, number, number];
+
+// Muestrea la rampa en `at` (aclampado a los extremos) y devuelve [r, g, b].
+function sampleRamp(stops: ColorStop[], at: number): [number, number, number] {
+  if (at <= stops[0][0]) { const [, r, g, b] = stops[0]; return [r, g, b]; }
+  const last = stops[stops.length - 1];
+  if (at >= last[0]) { const [, r, g, b] = last; return [r, g, b]; }
+  for (let i = 1; i < stops.length; i++) {
+    const [t0, r0, g0, b0] = stops[i - 1];
+    const [t1, r1, g1, b1] = stops[i];
+    if (at <= t1) {
+      const p = (at - t0) / (t1 - t0);
+      return [Math.round(r0 + p * (r1 - r0)), Math.round(g0 + p * (g1 - g0)), Math.round(b0 + p * (b1 - b0))];
+    }
+  }
+  const [, r, g, b] = last; return [r, g, b];
+}
+
+// Color de cuerpo negro para la tierra caliente (T en Kelvin): 600 K → #220000 … 1700 K → #FFF8E8
+const THERMAL_STOPS: ColorStop[] = [
   [ 600,  34,   0,   0],
   [ 800, 102,  17,   0],
   [1000, 170,  51,   0],
@@ -18,21 +36,6 @@ const THERMAL_STOPS: [number, number, number, number][] = [
   [1600, 255, 241, 184],
   [1700, 255, 248, 232],
 ];
-
-function thermalRGB(T: number): [number, number, number] {
-  if (T <= THERMAL_STOPS[0][0]) return [THERMAL_STOPS[0][1], THERMAL_STOPS[0][2], THERMAL_STOPS[0][3]];
-  const last = THERMAL_STOPS[THERMAL_STOPS.length - 1];
-  if (T >= last[0]) return [last[1], last[2], last[3]];
-  for (let k = 0; k < THERMAL_STOPS.length - 1; k++) {
-    const [t0, r0, g0, b0] = THERMAL_STOPS[k];
-    const [t1, r1, g1, b1] = THERMAL_STOPS[k + 1];
-    if (T >= t0 && T <= t1) {
-      const p = (T - t0) / (t1 - t0);
-      return [Math.round(r0 + p * (r1 - r0)), Math.round(g0 + p * (g1 - g0)), Math.round(b0 + p * (b1 - b0))];
-    }
-  }
-  return [last[1], last[2], last[3]];
-}
 
 // Grano de tierra: hash estable por celda (textura constante entre frames),
 // fundido hacia el color de cuerpo negro según su exceso de K
@@ -43,7 +46,7 @@ function sandColor(x: number, y: number, excessK: number): string {
   if (excessK <= 0) return `rgb(${nr},${ng},${nb})`;
 
   const T = 300 + excessK;
-  const [tr, tg, tb] = thermalRGB(T);
+  const [tr, tg, tb] = sampleRamp(THERMAL_STOPS, T);
   // fundido: 0 a 600 K, 1 a 1700 K — el brillo visible empieza en rojo cereza
   const blend = Math.min(1, Math.max(0, (T - 600) / 1100));
   // ruido por grano: baja un poco la saturación (±8 % del canal térmico)
@@ -80,22 +83,37 @@ function fireColor(x: number, y: number, t: number, age: number): string {
   return `rgb(${Math.floor(120 + p * 135)},${Math.floor(p * 40)},0)`;
 }
 
-// Veta de madera con hash por celda; al arder pasa por naranja caliente → rojo →
-// brasa → ceniza según se consume (burnAge baja de ~700 a 0)
+// La madera ardiendo recorre una rampa de hoguera: rojo tenue al prender, pico amarillo en
+// plena combustión y descenso a rojo profundo y ceniza. La posición en la rampa es el tiempo
+// desde la ignición (0 = recién prendida, 1 = a punto de desaparecer).
+const BURN_STOPS: ColorStop[] = [
+  [0.00, 0x8b, 0x1a, 0x00], // ignición: rojo oscuro
+  [0.10, 0xff, 0x55, 0x00], // naranja oscuro
+  [0.18, 0xff, 0x88, 0x00], // naranja
+  [0.26, 0xff, 0xaa, 0x00], // naranja amarillo
+  [0.34, 0xff, 0xbb, 0x00], // amarillo naranja
+  [0.42, 0xff, 0xd0, 0x33], // pico: amarillo brillante
+  [0.50, 0xff, 0x66, 0x00], // carbón con fuego
+  [0.58, 0xcc, 0x22, 0x00], // rojo intenso
+  [0.66, 0xaa, 0x22, 0x00], // rojo naranja oscuro
+  [0.74, 0x77, 0x00, 0x00], // rojo profundo
+  [0.82, 0x55, 0x00, 0x00], // rojo oscuro
+  [0.88, 0x44, 0x00, 0x00], // rojo apagado
+  [0.93, 0x3a, 0x16, 0x00], // marrón quemado
+  [0.97, 0x33, 0x00, 0x00], // rojo muy oscuro
+  [1.00, 0x2e, 0x2a, 0x28], // guiño a ceniza antes de desaparecer
+];
+
+// burnAge cuenta hacia atrás desde ~600–800 al prender (ver engine.ts); ~700 es su vida típica.
+const BURN_LIFETIME = 700;
+
 function woodColor(x: number, y: number, burnAge: number): string {
   if (burnAge > 0) {
-    const h = ((x * 1664525 + y * 1013904223) >>> 0) & 0xff;
-    const p = Math.min(1, burnAge / 700) * 0.92 + (h % 24) / 300; // +textura por celda
-    if (p > 0.6) {              // recién prendida: naranja caliente
-      const k = (p - 0.6) / 0.4;
-      return `rgb(${205 + Math.floor(k * 40)},${70 + Math.floor(k * 70)},${15 + Math.floor(k * 35)})`;
-    }
-    if (p > 0.25) {             // ardiendo: naranja → rojo
-      const k = (p - 0.25) / 0.35;
-      return `rgb(${150 + Math.floor(k * 55)},${30 + Math.floor(k * 40)},${10 + Math.floor(k * 5)})`;
-    }
-    const k = p / 0.25;         // brasa → ceniza
-    return `rgb(${48 + Math.floor(k * 102)},${38 - Math.floor(k * 8)},${34 - Math.floor(k * 24)})`;
+    const hash = ((x * 1664525 + y * 1013904223) >>> 0) & 0xff;
+    // tiempo desde la ignición ∈ [0,1] + ruido por celda → moteado de brasas (sampleRamp aclampa)
+    const elapsed = (BURN_LIFETIME - burnAge) / BURN_LIFETIME + ((hash % 32) - 16) / 240;
+    const [r, g, b] = sampleRamp(BURN_STOPS, elapsed);
+    return `rgb(${r},${g},${b})`;
   }
   const grain = ((y * 4 + (x >> 3)) & 0xff) % 4;
   const h = ((x * 1664525 + y * 1013904223) >>> 0) & 0xff;
