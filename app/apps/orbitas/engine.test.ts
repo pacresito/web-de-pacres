@@ -2,7 +2,7 @@
 // No es parte del build; verifica la física pura sin navegador.
 import {
   createWorld, addBody, makeBody, step, merge, detectCollisions,
-  totalMass, totalMomentum, presetSolar, G,
+  totalMass, totalMomentum, presetSolar, presetThreeBody, G,
 } from "./engine";
 
 let fails = 0;
@@ -71,20 +71,53 @@ function check(name: string, ok: boolean, detail = "") {
   check("colisiones: masa total preservada", Math.abs(totalMass(world) - mBefore) < 1e-9);
 }
 
-// 5. Preset solar: cabe y orbita razonablemente estable
+// 5. Preset solar: sol fijo + 3–5 planetas; el sol no se mueve y los planetas quedan ligados
 {
   const world = presetSolar(900, 600);
-  check("preset solar: 1 central + 3 satélites", world.bodies.length === 4);
+  const n = world.bodies.length;
+  check("preset solar: sol + 3–5 planetas", n >= 4 && n <= 6, `cuerpos=${n}`);
   const sun = world.bodies[0];
-  const radii0 = world.bodies.slice(1).map(b => Math.hypot(b.x - sun.x, b.y - sun.y));
-  for (let s = 0; s < 3000; s++) step(world, 1);
-  const sun2 = world.bodies[0];
-  let stable = world.bodies.length === 4;
-  if (stable) {
-    const radii1 = world.bodies.slice(1).map(b => Math.hypot(b.x - sun2.x, b.y - sun2.y));
-    stable = radii0.every((r0, k) => Math.abs(radii1[k] - r0) / r0 < 0.25);
+  check("preset solar: el sol es fijo", sun.fixed === true);
+  const x0 = sun.x, y0 = sun.y;
+  let maxDist = 0;
+  for (let s = 0; s < 3000; s++) {
+    step(world, 1);
+    for (const b of world.bodies.slice(1)) maxDist = Math.max(maxDist, Math.hypot(b.x - sun.x, b.y - sun.y));
   }
-  check("preset solar: satélites siguen orbitando estables", stable);
+  check("preset solar: el sol no se ha movido", sun.x === x0 && sun.y === y0);
+  // los planetas siguen ligados (ninguno se ha disparado lejísimos)
+  check("preset solar: planetas ligados", maxDist < Math.min(900, 600) * 0.7, `maxDist=${maxDist.toFixed(0)}`);
+}
+
+// 6. Cuerpo fijo: atrae pero no se mueve, y absorbe sin desplazarse al fusionar
+{
+  const world = createWorld();
+  addBody(world, makeBody(450, 300, 0, 0, 4000, true)); // fijo
+  addBody(world, makeBody(100, 300, 6, 0, 30));         // lanzado directo hacia él
+  const m0 = world.bodies[0].mass;
+  for (let s = 0; s < 4000; s++) step(world, 1);
+  const fix = world.bodies[0];
+  check("fijo: no se mueve aunque absorba masa",
+    fix.fixed === true && fix.x === 450 && fix.y === 300,
+    `(450,300) → (${fix.x.toFixed(1)},${fix.y.toFixed(1)})`);
+  check("fijo: absorbe masa al fusionar", fix.mass > m0);
+}
+
+// 7. Tres cuerpos: la coreografía en ocho se mantiene acotada (no se desintegra ni escapa)
+{
+  const W = 900, H = 600;
+  const world = presetThreeBody(W, H);
+  check("tres cuerpos: tres masas", world.bodies.length === 3);
+  const cx = W / 2, cy = H / 2;
+  let maxDist = 0;
+  for (let s = 0; s < 4000; s++) {
+    step(world, 1);
+    for (const b of world.bodies) maxDist = Math.max(maxDist, Math.hypot(b.x - cx, b.y - cy));
+  }
+  // se mantiene ligada (los cuerpos no se alejan indefinidamente) y no se fusiona
+  check("tres cuerpos: órbita acotada y sin fusión",
+    world.bodies.length === 3 && maxDist < Math.min(W, H) * 0.6,
+    `cuerpos=${world.bodies.length} maxDist=${maxDist.toFixed(0)}`);
 }
 
 console.log(fails === 0 ? "\nTODO OK" : `\n${fails} FALLO(S)`);

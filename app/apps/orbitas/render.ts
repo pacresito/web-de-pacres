@@ -34,6 +34,28 @@ export function massToColor(mass: number, scale = 1): [number, number, number] {
   return [last[1], last[2], last[3]];
 }
 
+// Variante legible de la rampa para texto sobre el fondo claro (papel), p. ej. las etiquetas
+// de los botones: los extremos fríos (azul/blanco) son ilegibles ahí, así que oscurecemos el
+// color (manteniendo el tono) solo cuando supera un techo de luminancia. El rojo/naranja ya
+// contrastan y no se tocan.
+export function massToReadableColor(mass: number, scale = 1): [number, number, number] {
+  const [r, g, b] = massToColor(mass, scale);
+  const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  const MAX_LUM = 150; // techo de luminancia para contrastar sobre --t-paper
+  if (lum <= MAX_LUM) return [r, g, b];
+  const t = MAX_LUM / lum; // escalar hacia 0 conserva el tono, solo baja el brillo
+  return [Math.round(r * t), Math.round(g * t), Math.round(b * t)];
+}
+
+// Color de la masa total en la línea de estado: el color real de la estrella, pero los valores
+// bajos (≲1000) son demasiado claros sobre el papel, así que se oscurecen un poco (sin cambiar el
+// tono). El factor sube de 0.7 a 1 conforme la masa va de 0 a 1000; por encima no se toca.
+export function massToStatusColor(mass: number, scale = 1): [number, number, number] {
+  const [r, g, b] = massToColor(mass, scale);
+  const f = 0.7 + 0.3 * Math.min(1, mass / 1000);
+  return [Math.round(r * f), Math.round(g * f), Math.round(b * f)];
+}
+
 // Estelas: en vez de borrar a negro opaco, se pinta un velo negro semitransparente cada
 // frame → las posiciones viejas se desvanecen solas. α menor = estela más larga. Se funde
 // a negro PURO (no a un gris) para que la estela no deje un rastro permanente por el camino.
@@ -114,6 +136,35 @@ export function drawRadarArrow(ctx: CanvasRenderingContext2D, W: number, H: numb
   ctx.fill();
   ctx.restore();
   ctx.globalAlpha = 1;
+}
+
+// Explosión al eliminar una estrella (clic): destello que se hincha + onda expansiva que se
+// abre y desvanece. `p` es el progreso 0→1; el color es el de la estrella que desaparece.
+export function drawExplosion(
+  ctx: CanvasRenderingContext2D,
+  x: number, y: number, baseR: number,
+  color: [number, number, number], p: number,
+) {
+  const [r, g, b] = color;
+  const ease = 1 - Math.pow(1 - p, 3); // ease-out: rápido al principio
+  const alpha = 1 - p;
+
+  // destello central que se hincha y se apaga
+  const flashR = baseR * (1 + ease * 2.5);
+  const flash = ctx.createRadialGradient(x, y, 0, x, y, flashR);
+  flash.addColorStop(0, `rgba(255,255,255,${0.9 * alpha})`);
+  flash.addColorStop(0.4, `rgba(${r},${g},${b},${0.55 * alpha})`);
+  flash.addColorStop(1, `rgba(${r},${g},${b},0)`);
+  ctx.fillStyle = flash;
+  ctx.beginPath(); ctx.arc(x, y, flashR, 0, TAU); ctx.fill();
+
+  // onda expansiva (anillo que se abre y adelgaza)
+  ctx.save();
+  ctx.globalAlpha = alpha * 0.7;
+  ctx.strokeStyle = `rgb(${r},${g},${b})`;
+  ctx.lineWidth = Math.max(0.5, baseR * 0.5 * (1 - p));
+  ctx.beginPath(); ctx.arc(x, y, baseR * (1 + ease * 6), 0, TAU); ctx.stroke();
+  ctx.restore();
 }
 
 // Preview del gesto de creación: bola-fantasma latiendo en el origen + flecha de

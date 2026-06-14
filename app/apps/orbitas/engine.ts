@@ -9,7 +9,9 @@ export const ESCAPE_MARGIN = 1600; // px fuera del viewport a los que un cuerpo 
 const RADIUS_K = 2.4;          // radio = RADIUS_K · masa^(1/3) → conserva "volumen" al fusionar
 
 // Masa del cuerpo más pesado de cada preset (fuente única para colorear su botón).
-export const PRESET_MAX_MASS = { solar: 2600, binary: 1200, cluster: 16 } as const;
+export const PRESET_MAX_MASS = { solar: 2600, binary: 1200, cluster: 16, threebody: 120 } as const;
+
+const TAU = Math.PI * 2;
 // Fusión solo cuando se solapan de verdad, no al rozarse: centros más cerca que la mitad
 // de la suma de radios. Así dos cuerpos pueden pasar muy juntos sin fundirse.
 const MERGE_FACTOR = 0.5;
@@ -19,6 +21,7 @@ export type Body = {
   vx: number; vy: number; // velocidad
   mass: number;
   radius: number;         // derivado de la masa; se recomputa al fusionar
+  fixed?: boolean;        // si es true, atrae a los demás pero nunca se mueve (agujero negro)
 };
 
 export type World = { bodies: Body[] };
@@ -28,8 +31,8 @@ export function radiusForMass(mass: number): number {
   return RADIUS_K * Math.cbrt(mass);
 }
 
-export function makeBody(x: number, y: number, vx: number, vy: number, mass: number): Body {
-  return { x, y, vx, vy, mass, radius: radiusForMass(mass) };
+export function makeBody(x: number, y: number, vx: number, vy: number, mass: number, fixed = false): Body {
+  return { x, y, vx, vy, mass, radius: radiusForMass(mass), fixed };
 }
 
 export function createWorld(): World {
@@ -76,6 +79,7 @@ export function step(world: World, dt: number) {
 
   let acc = accelerations(bodies);              // a(t)
   for (let i = 0; i < bodies.length; i++) {
+    if (bodies[i].fixed) continue;              // el agujero negro atrae pero no se mueve
     bodies[i].vx += 0.5 * acc[i].ax * dt;       // medio kick
     bodies[i].vy += 0.5 * acc[i].ay * dt;
     bodies[i].x += bodies[i].vx * dt;           // drift
@@ -83,6 +87,7 @@ export function step(world: World, dt: number) {
   }
   acc = accelerations(bodies);                  // a(t+dt)
   for (let i = 0; i < bodies.length; i++) {
+    if (bodies[i].fixed) continue;
     bodies[i].vx += 0.5 * acc[i].ax * dt;       // medio kick
     bodies[i].vy += 0.5 * acc[i].ay * dt;
   }
@@ -93,6 +98,11 @@ export function step(world: World, dt: number) {
 // Fusiona dos cuerpos: centro de masas, momento conservado, masa sumada, radio recomputado.
 export function merge(a: Body, b: Body): Body {
   const mass = a.mass + b.mass;
+  // Si uno es fijo (agujero negro), absorbe al otro sin moverse: conserva su posición y queda quieto.
+  if (a.fixed || b.fixed) {
+    const anchor = a.fixed ? a : b;
+    return { x: anchor.x, y: anchor.y, vx: 0, vy: 0, mass, radius: radiusForMass(mass), fixed: true };
+  }
   return {
     x: (a.mass * a.x + b.mass * b.x) / mass,
     y: (a.mass * a.y + b.mass * b.y) / mass,
@@ -149,41 +159,59 @@ export function totalMomentum(world: World): { px: number; py: number } {
 
 // ── Presets ──────────────────────────────────────────────────────────────────
 
-// Sistema solar: un cuerpo central masivo en reposo + satélites en órbita circular.
-// Velocidad tangencial de órbita circular: v = √(G·M/r) (ε despreciable a estos radios).
+// Sistema solar: un sol central masivo y FIJO (no se mueve ni recula) + 3–5 planetas.
+// Cada vez sale distinto: nº de planetas, radios, tamaños y excentricidad varían al azar.
+// Órbita circular: v = √(G·M/r); un factor k≠1 la vuelve elíptica (k<1 cae hacia dentro).
 export function presetSolar(W: number, H: number): World {
   const world = createWorld();
   const cx = W / 2, cy = H / 2;
+  const minWH = Math.min(W, H);
   const M = PRESET_MAX_MASS.solar;
-  addBody(world, makeBody(cx, cy, 0, 0, M));
+  addBody(world, makeBody(cx, cy, 0, 0, M, true)); // sol fijo
 
-  const satellites = [
-    { r: Math.min(W, H) * 0.18, mass: 6 },
-    { r: Math.min(W, H) * 0.30, mass: 10 },
-    { r: Math.min(W, H) * 0.42, mass: 4 },
-  ];
-  for (const { r, mass } of satellites) {
-    const v = Math.sqrt(G * M / r);
-    addBody(world, makeBody(cx, cy - r, v, 0, mass)); // arriba del centro, velocidad hacia +x
+  const n = 3 + Math.floor(Math.random() * 3); // 3, 4 ó 5 planetas
+  for (let i = 0; i < n; i++) {
+    const r = minWH * (0.16 + 0.30 * (i / (n - 1))) * (0.9 + Math.random() * 0.2); // radios escalonados con jitter
+    const ang = Math.random() * TAU;                                                // posición al azar en la órbita
+    const k = 0.82 + Math.random() * 0.26;                                          // 0.82–1.08 → algo elípticas
+    const v = Math.sqrt(G * M / r) * k;
+    const mass = 3 + Math.random() * 12;                                            // tamaños dispares
+    addBody(world, makeBody(
+      cx + Math.cos(ang) * r, cy + Math.sin(ang) * r,
+      -Math.sin(ang) * v, Math.cos(ang) * v, mass, // velocidad tangencial (perpendicular al radio)
+    ));
   }
   return world;
 }
 
-// Binario: dos estrellas iguales orbitando su centro común + un planeta circumbinario.
-// Órbita circular de dos masas iguales m a separación d: v = √(G·m / 2d).
+// Binario: dos estrellas orbitando su centro de masas común + 1–2 planetas circumbinarios.
+// Aleatorio: masas algo desiguales, separación y planetas varían. Órbita circular de dos
+// masas m1,m2 a separación d: v_rel = √(G·(m1+m2)/d), repartida inversa a la masa de cada una.
 export function presetBinary(W: number, H: number): World {
   const world = createWorld();
   const cx = W / 2, cy = H / 2;
-  const m = PRESET_MAX_MASS.binary;
-  const d = Math.min(W, H) * 0.22;
-  const v = Math.sqrt(G * m / (2 * d));
-  addBody(world, makeBody(cx - d / 2, cy, 0, -v, m)); // izquierda, baja
-  addBody(world, makeBody(cx + d / 2, cy, 0, v, m));  // derecha, sube
+  const minWH = Math.min(W, H);
+  const base = PRESET_MAX_MASS.binary;
+  const m1 = base * (0.7 + Math.random() * 0.3);
+  const m2 = base * (0.7 + Math.random() * 0.3);
+  const Mtot = m1 + m2;
+  const d = minWH * (0.18 + Math.random() * 0.1);
+  const r1 = d * m2 / Mtot, r2 = d * m1 / Mtot; // distancias al centro de masas (en el centro)
+  const vrel = Math.sqrt(G * Mtot / d);
+  addBody(world, makeBody(cx - r1, cy, 0, -vrel * m2 / Mtot, m1)); // izquierda, baja
+  addBody(world, makeBody(cx + r2, cy, 0,  vrel * m1 / Mtot, m2)); // derecha, sube
 
-  // planeta lejano que ve al par como una masa central 2m
-  const R = Math.min(W, H) * 0.46;
-  const vp = Math.sqrt(G * 2 * m / R);
-  addBody(world, makeBody(cx, cy - R, vp, 0, 8));
+  const planets = 1 + Math.floor(Math.random() * 2); // 1 ó 2 planetas que ven al par como masa Mtot
+  for (let i = 0; i < planets; i++) {
+    const R = minWH * (0.40 + 0.10 * i + Math.random() * 0.06);
+    const ang = Math.random() * TAU;
+    const k = 0.85 + Math.random() * 0.2;
+    const v = Math.sqrt(G * Mtot / R) * k;
+    addBody(world, makeBody(
+      cx + Math.cos(ang) * R, cy + Math.sin(ang) * R,
+      -Math.sin(ang) * v, Math.cos(ang) * v, 4 + Math.random() * 8,
+    ));
+  }
   return world;
 }
 
@@ -192,7 +220,7 @@ export function presetBinary(W: number, H: number): World {
 export function presetCluster(W: number, H: number): World {
   const world = createWorld();
   const cx = W / 2, cy = H / 2;
-  const R = Math.min(W, H) * 0.36;
+  const R = Math.min(W, H) * 0.46;
   const N = 16;
   for (let i = 0; i < N; i++) {
     const ang = Math.random() * Math.PI * 2;
@@ -205,5 +233,25 @@ export function presetCluster(W: number, H: number): World {
       6 + Math.random() * (PRESET_MAX_MASS.cluster - 6),
     ));
   }
+  return world;
+}
+
+// Tres cuerpos: la coreografía en forma de ocho de Chenciner–Montgomery. Tres masas iguales
+// recorren la misma curva, persiguiéndose a un tercio de periodo. Las condiciones iniciales
+// clásicas (G=1, m=1) se reescalan a píxeles con X = c + L·p y, para conservar la órbita,
+// V = √(G·M/L)·u. Con L grande el softening es despreciable.
+export function presetThreeBody(W: number, H: number): World {
+  const world = createWorld();
+  const cx = W / 2, cy = H / 2;
+  const L = Math.min(W, H) * 0.34;        // tamaño del ocho en píxeles
+  const M = PRESET_MAX_MASS.threebody;
+  const k = Math.sqrt(G * M / L);         // factor de velocidad del reescalado
+
+  // Chenciner–Montgomery: r1=(0.9700,−0.2431)=−r2, r3=0; v1=v2=−v3/2, v3=(−0.9324,−0.8647).
+  const rx = 0.97000436, ry = 0.24308753;
+  const vx = 0.93240737, vy = 0.86473146;
+  addBody(world, makeBody(cx + L * rx, cy - L * ry,  k * vx / 2,  k * vy / 2, M));
+  addBody(world, makeBody(cx - L * rx, cy + L * ry,  k * vx / 2,  k * vy / 2, M));
+  addBody(world, makeBody(cx,          cy,          -k * vx,     -k * vy,     M));
   return world;
 }

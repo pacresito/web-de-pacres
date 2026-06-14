@@ -5,17 +5,27 @@ import TerminalShell from "../../components/TerminalShell";
 import WhyFooter from "../../components/WhyFooter";
 import {
   createWorld, clearWorld, addBody, makeBody, step, pruneEscaped,
-  radiusForMass, totalMass, presetSolar, presetBinary, presetCluster, PRESET_MAX_MASS,
+  radiusForMass, totalMass, presetSolar, presetBinary, presetCluster,
+  presetThreeBody, PRESET_MAX_MASS,
   type World,
 } from "./engine";
-import { fadeCanvas, drawBody, drawRadarArrow, drawDragPreview, massToColor } from "./render";
+import {
+  fadeCanvas, drawBody, drawRadarArrow, drawDragPreview, drawExplosion,
+  massToColor, massToReadableColor, massToStatusColor,
+} from "./render";
 
 // Presets: cada botón se colorea con el color del cuerpo más pesado que genera.
 const PRESETS: { label: string; build: (W: number, H: number) => World; maxMass: number }[] = [
-  { label: "Sistema solar", build: presetSolar,   maxMass: PRESET_MAX_MASS.solar },
-  { label: "Binario",       build: presetBinary,  maxMass: PRESET_MAX_MASS.binary },
-  { label: "Cúmulo",        build: presetCluster, maxMass: PRESET_MAX_MASS.cluster },
+  { label: "Sistema solar", build: presetSolar,    maxMass: PRESET_MAX_MASS.solar },
+  { label: "Binario",       build: presetBinary,   maxMass: PRESET_MAX_MASS.binary },
+  { label: "Cúmulo",        build: presetCluster,  maxMass: PRESET_MAX_MASS.cluster },
+  { label: "Tres cuerpos",  build: presetThreeBody, maxMass: PRESET_MAX_MASS.threebody },
 ];
+
+// Explosión visual al eliminar una estrella (clic). Vive fuera del motor: es solo pintado.
+type Explosion = { x: number; y: number; r: number; color: [number, number, number]; start: number };
+const EXPLOSION_MS = 480;
+const HIT_PAD = 6; // margen extra para acertar al pinchar estrellas pequeñas
 
 // Gesto de creación
 const MASS_MIN = 4;        // masa al tocar (pulsación instantánea)
@@ -60,6 +70,7 @@ export default function Orbitas() {
   const dprRef        = useRef(1);
   const statsLabelRef = useRef<HTMLSpanElement>(null);
   const frameRef      = useRef(0);
+  const explosionsRef = useRef<Explosion[]>([]);
 
   // Gesto: estado del puntero mientras se mantiene pulsado
   const creatingRef = useRef(false);
@@ -129,6 +140,15 @@ export default function Orbitas() {
       fadeCanvas(ctx, W, H);
       for (const b of world.bodies) drawBody(ctx, b);
       for (const b of world.bodies) drawRadarArrow(ctx, W, H, b);
+
+      // estrellas eliminadas con clic: explosión que se desvanece y luego se descarta
+      for (let i = explosionsRef.current.length - 1; i >= 0; i--) {
+        const ex = explosionsRef.current[i];
+        const p = (now - ex.start) / EXPLOSION_MS;
+        if (p >= 1) { explosionsRef.current.splice(i, 1); continue; }
+        drawExplosion(ctx, ex.x, ex.y, ex.r, ex.color, p);
+      }
+
       if (creatingRef.current) {
         const mass = heldMass(now - pressTsRef.current);
         drawDragPreview(ctx, originRef.current, pointerRef.current, mass, radiusForMass(mass));
@@ -137,7 +157,7 @@ export default function Orbitas() {
       if (++frameRef.current % 15 === 0 && statsLabelRef.current) {
         const n = world.bodies.length;
         const M = Math.round(totalMass(world));
-        const [cr, cg, cb] = massToColor(M, 2); // masa total: rojo a partir de 6000 (el doble)
+        const [cr, cg, cb] = massToStatusColor(M, 2); // color real; los valores bajos se oscurecen un poco para leerse
         // verde = sistema estable (1-3 cuerpos); rojo = más de 3 (propenso al caos)
         const nColor = n === 0 ? "var(--t-ink2)" : n <= 3 ? "var(--t-accent)" : "#e55";
         statsLabelRef.current.innerHTML =
@@ -167,6 +187,19 @@ export default function Orbitas() {
       if (e.button !== 0) return; // solo botón principal / toque
       e.preventDefault();
       const pos = getPos(e);
+
+      // ¿se pincha sobre una estrella existente? → desaparece con explosión, sin crear nada.
+      // De atrás hacia delante: se elimina la de encima (la última dibujada).
+      const bodies = worldRef.current.bodies;
+      for (let i = bodies.length - 1; i >= 0; i--) {
+        const b = bodies[i];
+        if (Math.hypot(b.x - pos.x, b.y - pos.y) <= b.radius + HIT_PAD) {
+          explosionsRef.current.push({ x: b.x, y: b.y, r: b.radius, color: massToColor(b.mass), start: performance.now() });
+          bodies.splice(i, 1);
+          return;
+        }
+      }
+
       creatingRef.current = true;
       originRef.current = pos;
       pointerRef.current = pos;
@@ -277,7 +310,7 @@ export default function Orbitas() {
         {/* Toolbar: presets + borrar */}
         <div className="toolbar">
           {PRESETS.map(({ label, build, maxMass }) => {
-            const [r, g, b] = massToColor(maxMass);
+            const [r, g, b] = massToReadableColor(maxMass);
             return (
               <button key={label} className="orb-btn" style={{ color: `rgb(${r},${g},${b})` }} onClick={() => loadPreset(build)}>
                 {label}
