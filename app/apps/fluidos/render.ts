@@ -80,11 +80,22 @@ function fireColor(x: number, y: number, t: number, age: number): string {
   return `rgb(${Math.floor(120 + p * 135)},${Math.floor(p * 40)},0)`;
 }
 
-// Veta de madera con hash por celda; carbonizada con brillo naranja cuando arde
+// Veta de madera con hash por celda; al arder pasa por naranja caliente → rojo →
+// brasa → ceniza según se consume (burnAge baja de ~700 a 0)
 function woodColor(x: number, y: number, burnAge: number): string {
   if (burnAge > 0) {
-    const glow = Math.floor(Math.min(1, burnAge / 180) * 110);
-    return `rgb(${38 + glow},${18 + Math.floor(glow * 0.25)},8)`;
+    const h = ((x * 1664525 + y * 1013904223) >>> 0) & 0xff;
+    const p = Math.min(1, burnAge / 700) * 0.92 + (h % 24) / 300; // +textura por celda
+    if (p > 0.6) {              // recién prendida: naranja caliente
+      const k = (p - 0.6) / 0.4;
+      return `rgb(${205 + Math.floor(k * 40)},${70 + Math.floor(k * 70)},${15 + Math.floor(k * 35)})`;
+    }
+    if (p > 0.25) {             // ardiendo: naranja → rojo
+      const k = (p - 0.25) / 0.35;
+      return `rgb(${150 + Math.floor(k * 55)},${30 + Math.floor(k * 40)},${10 + Math.floor(k * 5)})`;
+    }
+    const k = p / 0.25;         // brasa → ceniza
+    return `rgb(${48 + Math.floor(k * 102)},${38 - Math.floor(k * 8)},${34 - Math.floor(k * 24)})`;
   }
   const grain = ((y * 4 + (x >> 3)) & 0xff) % 4;
   const h = ((x * 1664525 + y * 1013904223) >>> 0) & 0xff;
