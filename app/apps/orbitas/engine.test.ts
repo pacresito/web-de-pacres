@@ -71,21 +71,20 @@ function check(name: string, ok: boolean, detail = "") {
   check("colisiones: masa total preservada", Math.abs(totalMass(world) - mBefore) < 1e-9);
 }
 
-// 5. Preset solar: sol fijo + 3–5 planetas; el sol no se mueve y los planetas quedan ligados
+// 5. Preset solar: sol libre + 3–5 planetas; el sol arranca sin fijar y los planetas quedan ligados
 {
   const world = presetSolar(900, 600);
   const n = world.bodies.length;
   check("preset solar: sol + 3–5 planetas", n >= 4 && n <= 6, `cuerpos=${n}`);
   const sun = world.bodies[0];
-  check("preset solar: el sol es fijo", sun.fixed === true);
-  const x0 = sun.x, y0 = sun.y;
+  check("preset solar: el sol arranca libre", sun.fixed !== true);
   let maxDist = 0;
   for (let s = 0; s < 3000; s++) {
     step(world, 1);
+    // distancia planeta→sol (relativa: el sol puede recular/derivar un poco al ser libre)
     for (const b of world.bodies.slice(1)) maxDist = Math.max(maxDist, Math.hypot(b.x - sun.x, b.y - sun.y));
   }
-  check("preset solar: el sol no se ha movido", sun.x === x0 && sun.y === y0);
-  // los planetas siguen ligados (ninguno se ha disparado lejísimos)
+  // los planetas siguen ligados al sol (ninguno se ha disparado lejísimos)
   check("preset solar: planetas ligados", maxDist < Math.min(900, 600) * 0.7, `maxDist=${maxDist.toFixed(0)}`);
 }
 

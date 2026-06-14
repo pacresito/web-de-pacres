@@ -87,6 +87,18 @@ export function drawBody(ctx: CanvasRenderingContext2D, b: Body) {
   core.addColorStop(1, "rgba(255,255,255,0)");
   ctx.fillStyle = core;
   ctx.beginPath(); ctx.arc(b.x, b.y, b.radius, 0, TAU); ctx.fill();
+
+  // cuerpo fijo (congelado al tocarlo, o sol de un preset): punto negro sutil en el centro
+  // — la marca visual de "agujero negro" que ya no se mueve. Borde suave para no chocar.
+  if (b.fixed) {
+    const dotR = Math.max(1.5, b.radius * 0.22);
+    const dot = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, dotR);
+    dot.addColorStop(0, "rgba(0,0,0,0.85)");
+    dot.addColorStop(0.65, "rgba(0,0,0,0.85)");
+    dot.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = dot;
+    ctx.beginPath(); ctx.arc(b.x, b.y, dotR, 0, TAU); ctx.fill();
+  }
 }
 
 // Intersección del rayo centro→cuerpo con el borde del viewport (inset por `margin`).

@@ -159,7 +159,8 @@ export function totalMomentum(world: World): { px: number; py: number } {
 
 // ── Presets ──────────────────────────────────────────────────────────────────
 
-// Sistema solar: un sol central masivo y FIJO (no se mueve ni recula) + 3–5 planetas.
+// Sistema solar: un sol central masivo + 3–5 planetas. El sol arranca libre (no fijo): al
+// ser ~200× más pesado que los planetas casi no recula, pero puede tocarse para congelarlo.
 // Cada vez sale distinto: nº de planetas, radios, tamaños y excentricidad varían al azar.
 // Órbita circular: v = √(G·M/r); un factor k≠1 la vuelve elíptica (k<1 cae hacia dentro).
 export function presetSolar(W: number, H: number): World {
@@ -167,7 +168,7 @@ export function presetSolar(W: number, H: number): World {
   const cx = W / 2, cy = H / 2;
   const minWH = Math.min(W, H);
   const M = PRESET_MAX_MASS.solar;
-  addBody(world, makeBody(cx, cy, 0, 0, M, true)); // sol fijo
+  addBody(world, makeBody(cx, cy, 0, 0, M)); // sol central (libre)
 
   const n = 3 + Math.floor(Math.random() * 3); // 3, 4 ó 5 planetas
   for (let i = 0; i < n; i++) {

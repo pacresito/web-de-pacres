@@ -15,11 +15,25 @@ import {
 } from "./render";
 
 // Presets: cada botón se colorea con el color del cuerpo más pesado que genera.
-const PRESETS: { label: string; build: (W: number, H: number) => World; maxMass: number }[] = [
-  { label: "Sistema solar", build: presetSolar,    maxMass: PRESET_MAX_MASS.solar },
-  { label: "Binario",       build: presetBinary,   maxMass: PRESET_MAX_MASS.binary },
-  { label: "Cúmulo",        build: presetCluster,  maxMass: PRESET_MAX_MASS.cluster },
-  { label: "Tres cuerpos",  build: presetThreeBody, maxMass: PRESET_MAX_MASS.threebody },
+// `dots` es el icono mínimo (en viewBox 24×24) para los botones sutiles de pantalla completa:
+// tantos puntos como evoca el preset — 1 sol, 2 del binario, 3 del problema de tres cuerpos,
+// un puñado del cúmulo — pintados con el mismo color que su botón.
+type PresetDef = {
+  label: string;
+  build: (W: number, H: number) => World;
+  maxMass: number;
+  dots: { cx: number; cy: number; r: number }[];
+};
+const PRESETS: PresetDef[] = [
+  { label: "Sistema solar", build: presetSolar,    maxMass: PRESET_MAX_MASS.solar,
+    dots: [{ cx: 12, cy: 12, r: 4.5 }] },
+  { label: "Binario",       build: presetBinary,   maxMass: PRESET_MAX_MASS.binary,
+    dots: [{ cx: 8, cy: 12, r: 3.4 }, { cx: 16, cy: 12, r: 3.4 }] },
+  { label: "Tres cuerpos",  build: presetThreeBody, maxMass: PRESET_MAX_MASS.threebody,
+    dots: [{ cx: 12, cy: 7, r: 3 }, { cx: 7.5, cy: 16, r: 3 }, { cx: 16.5, cy: 16, r: 3 }] },
+  { label: "Cúmulo",        build: presetCluster,  maxMass: PRESET_MAX_MASS.cluster,
+    dots: [{ cx: 7, cy: 8, r: 2 }, { cx: 13, cy: 6, r: 2 }, { cx: 17, cy: 11, r: 2 },
+           { cx: 9, cy: 14, r: 2 }, { cx: 16, cy: 16, r: 2 }, { cx: 11, cy: 18, r: 2 }] },
 ];
 
 // Explosión visual al eliminar una estrella (clic). Vive fuera del motor: es solo pintado.
@@ -188,14 +202,21 @@ export default function Orbitas() {
       e.preventDefault();
       const pos = getPos(e);
 
-      // ¿se pincha sobre una estrella existente? → desaparece con explosión, sin crear nada.
-      // De atrás hacia delante: se elimina la de encima (la última dibujada).
+      // ¿se pincha sobre una estrella existente? Dos toques, sin crear nada:
+      //  1º — se congela (fixed): deja de moverse y atrae como un sol; le sale un punto negro.
+      //  2º — explota y desaparece.
+      // De atrás hacia delante: actúa sobre la de encima (la última dibujada).
       const bodies = worldRef.current.bodies;
       for (let i = bodies.length - 1; i >= 0; i--) {
         const b = bodies[i];
         if (Math.hypot(b.x - pos.x, b.y - pos.y) <= b.radius + HIT_PAD) {
-          explosionsRef.current.push({ x: b.x, y: b.y, r: b.radius, color: massToColor(b.mass), start: performance.now() });
-          bodies.splice(i, 1);
+          if (!b.fixed) {
+            b.fixed = true; b.vx = 0; b.vy = 0; // primer toque: congelar en el sitio
+          } else {
+            // segundo toque: explosión y se elimina
+            explosionsRef.current.push({ x: b.x, y: b.y, r: b.radius, color: massToColor(b.mass), start: performance.now() });
+            bodies.splice(i, 1);
+          }
           return;
         }
       }
@@ -268,6 +289,18 @@ export default function Orbitas() {
         }
         .fs-exit:hover { opacity: 1; }
 
+        /* Acceso sutil a los presets en pantalla completa: iconos minúsculos arriba a la izquierda */
+        .fs-presets {
+          position: fixed; top: 14px; left: 16px; z-index: 1001;
+          display: flex; align-items: center; gap: 6px;
+        }
+        .fs-preset-btn {
+          background: none; border: none; cursor: pointer; padding: 4px; display: flex;
+          align-items: center; justify-content: center; opacity: 0.4; transition: opacity 0.15s;
+          -webkit-user-select: none; user-select: none;
+        }
+        .fs-preset-btn:hover { opacity: 1; }
+
         .hint-row { padding: 0.55rem 0 0; font-size: 0.7rem; color: var(--muted); font-family: var(--t-mono); }
 
         @media (max-width: 500px) { .toolbar { gap: 0.25rem; } .orb-btn { padding: 0.4rem 0.55rem; } }
@@ -324,6 +357,28 @@ export default function Orbitas() {
         <div className={`sim-wrap${fullscreen ? " fs" : ""}`} ref={wrapRef}>
           <canvas className="sim-canvas" ref={canvasRef} />
         </div>
+
+        {fullscreen && (
+          <div className="fs-presets">
+            {PRESETS.map(({ label, build, maxMass, dots }) => {
+              const [r, g, b] = massToColor(maxMass);
+              return (
+                <button key={label} className="fs-preset-btn" title={label} aria-label={label} onClick={() => loadPreset(build)}>
+                  <svg width="22" height="22" viewBox="0 0 24 24">
+                    {dots.map((d, i) => (
+                      <circle key={i} cx={d.cx} cy={d.cy} r={d.r} fill={`rgb(${r},${g},${b})`} />
+                    ))}
+                  </svg>
+                </button>
+              );
+            })}
+            <button className="fs-preset-btn" title="Vaciar" aria-label="Vaciar" onClick={clearAll}>
+              <svg width="22" height="22" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="6.5" fill="none" stroke="var(--t-ink3)" strokeWidth="1.6" />
+              </svg>
+            </button>
+          </div>
+        )}
 
         {fullscreen && (
           <button className="fs-exit" onClick={() => setFullscreen(false)} title="Salir de pantalla completa">
