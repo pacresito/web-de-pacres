@@ -176,9 +176,8 @@ function RecsSlider() {
           </a>
           <div>
             <a href={rec.url} target="_blank" rel="noopener noreferrer"
+              className="rec-author"
               style={{ fontSize: "0.85rem", fontWeight: 600, color: "#1e3a5f", textDecoration: "none", transition: "color 0.2s" }}
-              onMouseEnter={e => (e.currentTarget.style.color = "var(--blue-accent)")}
-              onMouseLeave={e => (e.currentTarget.style.color = "#1e3a5f")}
             >
               {rec.author}
             </a>
@@ -204,14 +203,11 @@ function RecsSlider() {
         </div>
         <div style={{ display: "flex", gap: "0.4rem" }}>
           {([["←", prev], ["→", next]] as [string, () => void][]).map(([label, fn]) => (
-            <button key={label} onClick={fn} style={{
+            <button key={label} onClick={fn} className="rec-arrow" style={{
               background: "none", border: "1px solid rgba(96,165,250,0.25)",
               color: "#6b7280", width: 32, height: 32, cursor: "pointer",
               fontSize: "0.75rem", borderRadius: "2px", transition: "border-color 0.2s, color 0.2s",
-            }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--blue-accent)"; e.currentTarget.style.color = "var(--blue-accent)"; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(96,165,250,0.25)"; e.currentTarget.style.color = "#6b7280"; }}
-            >{label}</button>
+            }}>{label}</button>
           ))}
         </div>
       </div>
@@ -465,7 +461,7 @@ export default function Home() {
           transition: border-color 0.25s;
         }
         .job-item:last-child { border-bottom: none; }
-        .job-item:hover { border-color: rgba(96,165,250,0.3); }
+        @media (hover: hover) { .job-item:hover { border-color: rgba(96,165,250,0.3); } }
 
         .job-title {
           font-size: 1rem; font-weight: 600; color: var(--text);
@@ -475,7 +471,7 @@ export default function Home() {
           content: ""; position: absolute; bottom: -2px; left: 0;
           width: 0; height: 1px; background: var(--blue-accent); transition: width 0.35s ease;
         }
-        .job-item:hover .job-title::after { width: 100%; }
+        @media (hover: hover) { .job-item:hover .job-title::after { width: 100%; } }
 
         .job-company {
           font-size: 0.78rem; color: var(--text-muted); margin-top: 0.2rem;
@@ -506,7 +502,7 @@ export default function Home() {
           border-radius: 3px; font-family: var(--font-geist-mono), monospace;
           letter-spacing: 0.02em; transition: border-color 0.2s, color 0.2s, background 0.2s; cursor: default;
         }
-        .cert-tag:hover { border-color: var(--blue-accent); color: var(--blue-accent); background: rgba(96,165,250,0.05); }
+        @media (hover: hover) { .cert-tag:hover { border-color: var(--blue-accent); color: var(--blue-accent); background: rgba(96,165,250,0.05); } }
 
         .skill-tag {
           display: inline-block; font-size: 0.72rem; color: var(--text-muted);
@@ -515,7 +511,7 @@ export default function Home() {
           letter-spacing: 0.02em; background: #f9fafb;
           transition: border-color 0.2s, color 0.2s, background 0.2s; cursor: default;
         }
-        .skill-tag:hover { border-color: rgba(96,165,250,0.4); color: var(--blue-accent); background: rgba(96,165,250,0.05); }
+        @media (hover: hover) { .skill-tag:hover { border-color: rgba(96,165,250,0.4); color: var(--blue-accent); background: rgba(96,165,250,0.05); } }
         .skill-tag.skill-shine {
           text-decoration: none;
           position: relative;
@@ -561,7 +557,7 @@ export default function Home() {
           transition: background 0.2s, border-color 0.2s;
           font-family: var(--font-geist-mono), monospace;
         }
-        .cta-button:hover { background: rgba(96,165,250,0.08); border-color: var(--blue-accent); }
+        @media (hover: hover) { .cta-button:hover { background: rgba(96,165,250,0.08); border-color: var(--blue-accent); } }
 
         .bg-blobs { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
         .blob { position: absolute; border-radius: 50%; filter: blur(90px); }
@@ -573,6 +569,13 @@ export default function Home() {
         @keyframes progress {
           from { width: 0; }
           to   { width: 100%; }
+        }
+        /* !important: el color/borde base va inline (style=) y ganaría al :hover.
+           Gateado a punteros reales para que en táctil no se quede pegado. */
+        @media (hover: hover) {
+          .rec-author:hover { color: var(--blue-accent) !important; }
+          .rec-arrow:hover { border-color: var(--blue-accent) !important; color: var(--blue-accent) !important; }
+          .footer-ln:hover { color: var(--blue-accent) !important; }
         }
       `}</style>
 
@@ -701,9 +704,8 @@ export default function Home() {
               pacr.es
             </a>
             <a href="https://www.linkedin.com/in/pacres/" target="_blank" rel="noopener noreferrer"
+              className="footer-ln"
               style={{fontSize:"0.78rem",color:"var(--text-muted)",fontFamily:"var(--font-geist-mono),monospace",textDecoration:"none",transition:"color 0.2s"}}
-              onMouseEnter={e => (e.currentTarget.style.color = "var(--blue-accent)")}
-              onMouseLeave={e => (e.currentTarget.style.color = "var(--text-muted)")}
             >LinkedIn →</a>
           </div>
           <p style={{textAlign:"center",fontSize:"0.72rem",color:"var(--text-muted)",fontFamily:"var(--font-geist-mono),monospace",margin:0}}>

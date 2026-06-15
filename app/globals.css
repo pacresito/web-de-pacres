@@ -214,11 +214,18 @@ body {
    que antes resolvían el hover con onMouseEnter/onMouseLeave.
    ============================================================ */
 .win-icon { opacity: 0; transition: opacity 0.12s; display: flex; }
+/* Fila de índice (lab/designs): el fondo va por clase, no inline, para que
+   el :hover pueda ganarle (un background inline tendría más prioridad). */
+.t-rowhover-active { background: color-mix(in srgb, var(--t-accent) 6%, var(--t-paper)); }
 @media (hover: hover) {
   .ts-nav-btn:hover { color: var(--t-ink); }
   .ts-why-btn:hover { color: var(--t-accent); }
   .t-ibtn:hover { background: var(--t-paper2); border-color: var(--t-ink4); color: var(--t-ink); }
-  .hover-accent:hover { color: var(--t-accent); }
+  /* !important: estos botones fijan su color base inline (style=), que de
+     otro modo ganaría al :hover de la hoja. Va gateado, así que en táctil
+     ni se aplica (no se queda pegado). */
+  .hover-accent:hover { color: var(--t-accent) !important; }
   .hover-fade:hover { opacity: 0.7; }
   .win-dots:hover .win-icon { opacity: 1; }
+  .t-rowhover:hover { background: var(--t-paper2); }
 }

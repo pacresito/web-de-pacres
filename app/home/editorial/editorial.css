@@ -103,9 +103,11 @@
   transition: all 0.18s ease;
 }
 
-.editorial .chip:hover {
-  border-color: var(--ink-2);
-  color: var(--ink);
+@media (hover: hover) {
+  .editorial .chip:hover {
+    border-color: var(--ink-2);
+    color: var(--ink);
+  }
 }
 
 .editorial .chip.lab {
@@ -135,9 +137,11 @@
   animation: goldSweep 10s ease-in-out infinite;
 }
 
-.editorial .chip.lab:hover {
-  border-color: var(--ink-2);
-  color: var(--ink);
+@media (hover: hover) {
+  .editorial .chip.lab:hover {
+    border-color: var(--ink-2);
+    color: var(--ink);
+  }
 }
 
 @keyframes goldSweep {
@@ -163,9 +167,11 @@
   transition: all 0.18s ease;
 }
 
-.editorial .btn:hover {
-  background: var(--ink);
-  color: var(--paper);
+@media (hover: hover) {
+  .editorial .btn:hover {
+    background: var(--ink);
+    color: var(--paper);
+  }
 }
 
 .editorial .btn.fill {
@@ -173,9 +179,11 @@
   color: var(--paper);
 }
 
-.editorial .btn.fill:hover {
-  background: var(--accent);
-  border-color: var(--accent);
+@media (hover: hover) {
+  .editorial .btn.fill:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
 }
 
 /* ── Links ── */
@@ -188,9 +196,11 @@
   border-bottom: 1px solid var(--ink-4);
 }
 
-.editorial a.link-underline:hover {
-  border-bottom-color: var(--accent);
-  color: var(--accent);
+@media (hover: hover) {
+  .editorial a.link-underline:hover {
+    border-bottom-color: var(--accent);
+    color: var(--accent);
+  }
 }
 
 /* ── Photo duotone ── */
@@ -387,9 +397,11 @@
   transition: all 0.18s ease;
 }
 
-.editorial .reco-arrow:hover:not(:disabled) {
-  background: var(--ink);
-  color: var(--paper);
+@media (hover: hover) {
+  .editorial .reco-arrow:hover:not(:disabled) {
+    background: var(--ink);
+    color: var(--paper);
+  }
 }
 
 .editorial .reco-arrow:disabled {

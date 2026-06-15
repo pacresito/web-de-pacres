@@ -144,7 +144,7 @@ body {
   text-transform: uppercase;
   transition: opacity 0.2s;
 }
-.tl-btn:hover { opacity: 0.82; }
+@media (hover: hover) { .tl-btn:hover { opacity: 0.82; } }
 .tl-scroll-hint {
   font-family: var(--font-jetbrains-mono), monospace;
   font-size: 0.62rem;
@@ -284,11 +284,17 @@ body {
   overflow: hidden;
   transition: max-height 0.28s ease, opacity 0.22s ease, margin-top 0.22s ease;
 }
-.tl-entry:hover .tl-desc,
 .tl-entry.expanded .tl-desc {
   max-height: 120px;
   opacity: 1;
   margin-top: 5px;
+}
+@media (hover: hover) {
+  .tl-entry:hover .tl-desc {
+    max-height: 120px;
+    opacity: 1;
+    margin-top: 5px;
+  }
 }
 
 /* ── RECOMMENDATIONS SLIDER ── */
@@ -371,7 +377,7 @@ body {
   justify-content: center;
   transition: border-color 0.18s, color 0.18s;
 }
-.rec-slider-arrow:hover { border-color: var(--accent); color: var(--accent); }
+@media (hover: hover) { .rec-slider-arrow:hover { border-color: var(--accent); color: var(--accent); } }
 .rec-slider-count {
   font-family: var(--font-jetbrains-mono), monospace;
   font-size: 0.58rem;
@@ -547,7 +553,7 @@ body {
   text-decoration: none;
   transition: color 0.2s;
 }
-.tl-footer-link:hover { color: var(--accent); }
+@media (hover: hover) { .tl-footer-link:hover { color: var(--accent); } }
 
 /* ── MOBILE ── */
 @media (max-width: 640px) {

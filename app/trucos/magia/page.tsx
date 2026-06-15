@@ -463,11 +463,12 @@ export default function MagiaPage() {
       <SuitDefs />
       <style>{`
         @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
-        /* hover solo con puntero real: en táctil un tap dejaría el resalte pegado */
+        /* hover solo con puntero real: en táctil un tap dejaría el resalte pegado.
+           !important porque estos elementos fijan su estilo base inline (style=). */
         @media (hover: hover) {
-          .magia-btn:hover { border-color: var(--t-accent); color: var(--t-accent); background: rgba(0,184,122,0.04); }
-          .magia-col:hover { border-color: var(--t-accent); background: rgba(0,184,122,0.04); }
-          .magia-reveal-btn:hover { background: rgba(0,184,122,0.08); }
+          .magia-btn:hover { border-color: var(--t-accent) !important; color: var(--t-accent) !important; background: rgba(0,184,122,0.04) !important; }
+          .magia-col:hover { border-color: var(--t-accent) !important; background: rgba(0,184,122,0.04) !important; }
+          .magia-reveal-btn:hover { background: rgba(0,184,122,0.08) !important; }
         }
         @keyframes beastEnter {
           0%   { opacity:0; transform:translate(-140px, 0) scale(0.4); }

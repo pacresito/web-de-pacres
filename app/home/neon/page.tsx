@@ -282,11 +282,12 @@ function JobItem({ job, index }: { job: typeof JOBS[0]; index: number }) {
         background: open ? "rgba(255,0,110,0.03)" : "transparent",
         animationDelay: `${index * 0.08}s`,
       }}
-      onMouseEnter={e => {
+      onPointerEnter={e => {
+        if (e.pointerType === "touch") return;
         (e.currentTarget as HTMLDivElement).style.borderLeftColor = "#ff006e";
         (e.currentTarget as HTMLDivElement).style.background = "rgba(255,0,110,0.04)";
       }}
-      onMouseLeave={e => {
+      onPointerLeave={e => {
         if (!open) {
           (e.currentTarget as HTMLDivElement).style.borderLeftColor = "transparent";
           (e.currentTarget as HTMLDivElement).style.background = "transparent";
@@ -450,12 +451,13 @@ function RecsSlider() {
               fontFamily: "var(--font-geist-mono), monospace",
               transition: "border-color 0.2s, color 0.2s, box-shadow 0.2s",
             }}
-              onMouseEnter={e => {
+              onPointerEnter={e => {
+                if (e.pointerType === "touch") return;
                 (e.currentTarget as HTMLButtonElement).style.borderColor = "#bf5af2";
                 (e.currentTarget as HTMLButtonElement).style.color = "#bf5af2";
                 (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 10px rgba(191,90,242,0.4)";
               }}
-              onMouseLeave={e => {
+              onPointerLeave={e => {
                 (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(191,90,242,0.3)";
                 (e.currentTarget as HTMLButtonElement).style.color = "rgba(191,90,242,0.6)";
                 (e.currentTarget as HTMLButtonElement).style.boxShadow = "none";
@@ -643,19 +645,19 @@ export default function HomeTempPage() {
 
         /* ── Skill tags ── */
         .nt-skill { display: inline-block; font-family: var(--font-geist-mono), monospace; font-size: 0.68rem; padding: 0.28rem 0.7rem; letter-spacing: 0.04em; transition: all 0.2s; cursor: default; }
-        .nt-skill:hover { transform: scale(1.06) translateY(-2px); }
+        @media (hover: hover) { .nt-skill:hover { transform: scale(1.06) translateY(-2px); } }
 
         .nt-skill.c-mag { border: 1px solid rgba(255,0,110,0.5); color: #ff006e; background: rgba(255,0,110,0.07); }
-        .nt-skill.c-mag:hover { background: #ff006e; color: #0a0a0f; box-shadow: 0 0 18px #ff006e; }
+        @media (hover: hover) { .nt-skill.c-mag:hover { background: #ff006e; color: #0a0a0f; box-shadow: 0 0 18px #ff006e; } }
 
         .nt-skill.c-cyan { border: 1px solid rgba(0,255,255,0.4); color: #00ffff; background: rgba(0,255,255,0.06); }
-        .nt-skill.c-cyan:hover { background: #00ffff; color: #0a0a0f; box-shadow: 0 0 18px #00ffff; }
+        @media (hover: hover) { .nt-skill.c-cyan:hover { background: #00ffff; color: #0a0a0f; box-shadow: 0 0 18px #00ffff; } }
 
         .nt-skill.c-acid { border: 1px solid rgba(200,255,0,0.4); color: #c8ff00; background: rgba(200,255,0,0.06); }
-        .nt-skill.c-acid:hover { background: #c8ff00; color: #0a0a0f; box-shadow: 0 0 18px #c8ff00; }
+        @media (hover: hover) { .nt-skill.c-acid:hover { background: #c8ff00; color: #0a0a0f; box-shadow: 0 0 18px #c8ff00; } }
 
         .nt-skill.c-purp { border: 1px solid rgba(191,90,242,0.4); color: #bf5af2; background: rgba(191,90,242,0.06); }
-        .nt-skill.c-purp:hover { background: #bf5af2; color: #0a0a0f; box-shadow: 0 0 18px #bf5af2; }
+        @media (hover: hover) { .nt-skill.c-purp:hover { background: #bf5af2; color: #0a0a0f; box-shadow: 0 0 18px #bf5af2; } }
         /* ── Skill shine (Resolución de problemas) ── */
         .nt-skill-shine { position: relative; overflow: hidden; }
         .nt-skill-shine::after {
@@ -674,11 +676,11 @@ export default function HomeTempPage() {
         }
         /* ── CTA button ── */
         .nt-cta { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.9rem 2.2rem; border: 1.5px solid #ff006e; color: #ff006e; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; font-family: var(--font-geist-mono), monospace; background: rgba(255,0,110,0.07); transition: background 0.25s, color 0.25s; animation: neonPulseMag 3s ease-in-out infinite; cursor: none; }
-        .nt-cta:hover { background: #ff006e; color: #0a0a0f; box-shadow: 0 0 30px #ff006e, 0 0 60px #ff006e40; }
+        @media (hover: hover) { .nt-cta:hover { background: #ff006e; color: #0a0a0f; box-shadow: 0 0 30px #ff006e, 0 0 60px #ff006e40; } }
 
         /* ── Cert chip ── */
         .nt-cert { display: inline-block; font-family: var(--font-geist-mono), monospace; font-size: 0.68rem; padding: 0.3rem 0.75rem; border: 1px solid rgba(0,255,255,0.3); color: #00ffff; background: rgba(0,255,255,0.05); letter-spacing: 0.03em; transition: all 0.25s; cursor: default; }
-        .nt-cert:hover { border-color: #00ffff; box-shadow: 0 0 14px rgba(0,255,255,0.4), inset 0 0 8px rgba(0,255,255,0.08); transform: translateY(-2px); }
+        @media (hover: hover) { .nt-cert:hover { border-color: #00ffff; box-shadow: 0 0 14px rgba(0,255,255,0.4), inset 0 0 8px rgba(0,255,255,0.08); transform: translateY(-2px); } }
 
         /* ── Grid overlay ── */
         .nt-grid-bg {
@@ -915,8 +917,8 @@ export default function HomeTempPage() {
                 borderBottom: i < 3 ? "1px solid rgba(191,90,242,0.15)" : "none",
                 transition: "border-color 0.3s",
               }}
-                onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(191,90,242,0.5)"}
-                onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(191,90,242,0.15)"}
+                onPointerEnter={e => { if (e.pointerType !== "touch") (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(191,90,242,0.5)"; }}
+                onPointerLeave={e => (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(191,90,242,0.15)"}
               >
                 <div>
                   <p style={{ fontWeight: 600, fontSize: "0.95rem", color: "#fff" }}>{award.title}</p>
@@ -988,8 +990,8 @@ export default function HomeTempPage() {
                 textShadow: "0 0 8px rgba(0,255,255,0.5)",
                 transition: "text-shadow 0.2s",
               }}
-              onMouseEnter={e => (e.currentTarget as HTMLAnchorElement).style.textShadow = "0 0 20px rgba(0,255,255,1), 0 0 40px rgba(0,255,255,0.5)"}
-              onMouseLeave={e => (e.currentTarget as HTMLAnchorElement).style.textShadow = "0 0 8px rgba(0,255,255,0.5)"}
+              onPointerEnter={e => { if (e.pointerType !== "touch") (e.currentTarget as HTMLAnchorElement).style.textShadow = "0 0 20px rgba(0,255,255,1), 0 0 40px rgba(0,255,255,0.5)"; }}
+              onPointerLeave={e => (e.currentTarget as HTMLAnchorElement).style.textShadow = "0 0 8px rgba(0,255,255,0.5)"}
             >
               LinkedIn →
             </a>

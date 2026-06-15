@@ -110,14 +110,13 @@ function LabTable({ items, visible }: { items: LabItem[]; visible: number }) {
           <div key={item.id} className={revealed ? "t-row-in" : undefined}
             style={{ visibility: revealed ? undefined : "hidden" }}>
             <div
+              className={clickable ? "t-rowhover" : undefined}
               onClick={() => { if (clickable) router.push(item.href!); }}
-              onMouseEnter={(e) => { if (clickable) e.currentTarget.style.background = "var(--t-paper2)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
               style={{
                 display: "grid", gridTemplateColumns: "38px 100px 160px 1fr 80px 24px",
                 gap: "0 16px", padding: "10px 18px",
                 borderTop: idx === 0 ? "none" : "1px dashed var(--t-rule)",
-                background: "transparent", alignItems: "center",
+                alignItems: "center",
                 cursor: clickable ? "pointer" : "default",
                 transition: "background 0.15s",
               }}>

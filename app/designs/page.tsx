@@ -88,14 +88,12 @@ function DesignsTable({ items, visible }: { items: DesignItem[]; visible: number
           <div key={item.id} className={revealed ? "t-row-in" : undefined}
             style={{ visibility: revealed ? undefined : "hidden" }}>
             <div
+              className={`t-rowhover${item.status === "active" ? " t-rowhover-active" : ""}`}
               onClick={() => router.push(item.href)}
-              onMouseEnter={(e) => { e.currentTarget.style.background = "var(--t-paper2)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
               style={{
                 display: "grid", gridTemplateColumns: "38px 120px 1fr 90px 80px 24px",
                 gap: "0 16px", padding: "10px 18px",
                 borderTop: idx === 0 ? "none" : "1px dashed var(--t-rule)",
-                background: item.status === "active" ? "color-mix(in srgb, var(--t-accent) 6%, var(--t-paper))" : "transparent",
                 alignItems: "center", cursor: "pointer", transition: "background 0.15s",
               }}>
               <span style={{ fontFamily: "var(--t-mono)", fontSize: 12, color: "var(--t-ink4)" }}>{item.num}</span>

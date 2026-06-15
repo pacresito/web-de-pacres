@@ -364,10 +364,12 @@ body {
   text-decoration: none;
   transition: background 0.2s, border-color 0.2s, color 0.2s;
 }
-.cta-btn:hover {
-  background: var(--accent-dim);
-  border-color: var(--accent);
-  color: var(--text);
+@media (hover: hover) {
+  .cta-btn:hover {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: var(--text);
+  }
 }
 
 /* ── CONTENT ── */
@@ -413,7 +415,7 @@ body {
   transition: border-color 0.3s;
 }
 .job-item:first-of-type { border-top: 1px solid var(--border); }
-.job-item:hover { border-color: rgba(59,130,246,0.18); }
+@media (hover: hover) { .job-item:hover { border-color: rgba(59,130,246,0.18); } }
 
 .job-header {
   display: flex;
@@ -435,7 +437,7 @@ body {
   color: var(--text);
   transition: color 0.2s;
 }
-.job-item:hover .job-title { color: var(--accent-bright); }
+@media (hover: hover) { .job-item:hover .job-title { color: var(--accent-bright); } }
 .job-company {
   font-family: var(--font-jetbrains-mono), monospace;
   font-size: 0.67rem;
@@ -463,7 +465,7 @@ body {
   line-height: 1;
   font-weight: 300;
 }
-.job-item:hover .job-toggle { opacity: 1; }
+@media (hover: hover) { .job-item:hover .job-toggle { opacity: 1; } }
 .job-content {
   padding-bottom: 1.4rem;
   font-size: 0.875rem;
@@ -534,7 +536,7 @@ body {
   justify-content: space-between;
   transition: border-color 0.3s;
 }
-.slider-quote:hover { border-color: rgba(59,130,246,0.35); border-left-color: var(--accent-bright); }
+@media (hover: hover) { .slider-quote:hover { border-color: rgba(59,130,246,0.35); border-left-color: var(--accent-bright); } }
 
 @keyframes slideIn {
   from { opacity: 0; transform: translateX(18px); }
@@ -576,7 +578,7 @@ body {
   color: var(--text);
   transition: color 0.2s;
 }
-.author-link:hover .author-name { color: var(--accent-bright); }
+@media (hover: hover) { .author-link:hover .author-name { color: var(--accent-bright); } }
 .author-role {
   display: block;
   font-family: var(--font-jetbrains-mono), monospace;
@@ -620,7 +622,7 @@ body {
   transition: border-color 0.2s, color 0.2s;
   font-family: var(--font-jetbrains-mono), monospace;
 }
-.arrow-btn:hover { border-color: var(--border-accent); color: var(--accent-bright); }
+@media (hover: hover) { .arrow-btn:hover { border-color: var(--border-accent); color: var(--accent-bright); } }
 
 .progress-track {
   position: absolute;
@@ -654,10 +656,12 @@ body {
   cursor: default;
   transition: border-color 0.2s, color 0.2s, background 0.2s;
 }
-.cert-tag:hover {
-  border-color: var(--border-accent);
-  color: var(--accent-bright);
-  background: var(--accent-dim);
+@media (hover: hover) {
+  .cert-tag:hover {
+    border-color: var(--border-accent);
+    color: var(--accent-bright);
+    background: var(--accent-dim);
+  }
 }
 .skill-tag {
   font-family: var(--font-jetbrains-mono), monospace;
@@ -672,7 +676,7 @@ body {
   text-decoration: none;
   display: inline-block;
 }
-.skill-tag:hover { border-color: rgba(59,130,246,0.18); color: var(--text-dim); }
+@media (hover: hover) { .skill-tag:hover { border-color: rgba(59,130,246,0.18); color: var(--text-dim); } }
 .skill-tag.skill-shine {
   text-decoration: none;
   position: relative;
@@ -758,7 +762,7 @@ body {
   transition: color 0.2s;
   text-decoration: none;
 }
-.footer-brand:hover { color: var(--accent-bright); }
+@media (hover: hover) { .footer-brand:hover { color: var(--accent-bright); } }
 .footer-link {
   font-family: var(--font-jetbrains-mono), monospace;
   font-size: 0.72rem;
@@ -767,7 +771,7 @@ body {
   transition: color 0.2s;
   flex-shrink: 0;
 }
-.footer-link:hover { color: var(--accent-bright); }
+@media (hover: hover) { .footer-link:hover { color: var(--accent-bright); } }
 
 /* ── RESPONSIVE ── */
 @media (max-width: 640px) {

@@ -341,9 +341,11 @@ export default function Lucas() {
           text-decoration: none;
           transition: border-color 0.2s, color 0.2s;
         }
-        .lc-contact-btn:hover {
-          border-color: #378ADD;
-          color: #b8d4f0;
+        @media (hover: hover) {
+          .lc-contact-btn:hover {
+            border-color: #378ADD;
+            color: #b8d4f0;
+          }
         }
         .lc-footer {
           margin-top: 3rem;
@@ -357,7 +359,7 @@ export default function Lucas() {
           text-decoration: none;
           transition: color 0.2s;
         }
-        .lc-footer a:hover { color: #378ADD; }
+        @media (hover: hover) { .lc-footer a:hover { color: #378ADD; } }
       `}</style>
 
       <StarField />
