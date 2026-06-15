@@ -364,6 +364,7 @@ body {
   text-decoration: none;
   transition: background 0.2s, border-color 0.2s, color 0.2s;
 }
+.cta-btn:active { background: var(--accent-dim); border-color: var(--accent); color: var(--text); }
 @media (hover: hover) {
   .cta-btn:hover {
     background: var(--accent-dim);
@@ -536,6 +537,7 @@ body {
   justify-content: space-between;
   transition: border-color 0.3s;
 }
+.slider-quote:active { border-color: rgba(59,130,246,0.35); border-left-color: var(--accent-bright); }
 @media (hover: hover) { .slider-quote:hover { border-color: rgba(59,130,246,0.35); border-left-color: var(--accent-bright); } }
 
 @keyframes slideIn {
@@ -578,6 +580,7 @@ body {
   color: var(--text);
   transition: color 0.2s;
 }
+.author-link:active .author-name { color: var(--accent-bright); }
 @media (hover: hover) { .author-link:hover .author-name { color: var(--accent-bright); } }
 .author-role {
   display: block;
@@ -622,6 +625,7 @@ body {
   transition: border-color 0.2s, color 0.2s;
   font-family: var(--font-jetbrains-mono), monospace;
 }
+.arrow-btn:active { border-color: var(--border-accent); color: var(--accent-bright); }
 @media (hover: hover) { .arrow-btn:hover { border-color: var(--border-accent); color: var(--accent-bright); } }
 
 .progress-track {
@@ -656,6 +660,7 @@ body {
   cursor: default;
   transition: border-color 0.2s, color 0.2s, background 0.2s;
 }
+.cert-tag:active { border-color: var(--border-accent); color: var(--accent-bright); background: var(--accent-dim); }
 @media (hover: hover) {
   .cert-tag:hover {
     border-color: var(--border-accent);
@@ -676,6 +681,7 @@ body {
   text-decoration: none;
   display: inline-block;
 }
+.skill-tag:active { border-color: rgba(59,130,246,0.18); color: var(--text-dim); }
 @media (hover: hover) { .skill-tag:hover { border-color: rgba(59,130,246,0.18); color: var(--text-dim); } }
 .skill-tag.skill-shine {
   text-decoration: none;
@@ -762,6 +768,7 @@ body {
   transition: color 0.2s;
   text-decoration: none;
 }
+.footer-brand:active { color: var(--accent-bright); }
 @media (hover: hover) { .footer-brand:hover { color: var(--accent-bright); } }
 .footer-link {
   font-family: var(--font-jetbrains-mono), monospace;
@@ -771,6 +778,7 @@ body {
   transition: color 0.2s;
   flex-shrink: 0;
 }
+.footer-link:active { color: var(--accent-bright); }
 @media (hover: hover) { .footer-link:hover { color: var(--accent-bright); } }
 
 /* ── RESPONSIVE ── */

@@ -217,14 +217,17 @@ body {
 /* Fila de índice (lab/designs): el fondo va por clase, no inline, para que
    el :hover pueda ganarle (un background inline tendría más prioridad). */
 .t-rowhover-active { background: color-mix(in srgb, var(--t-accent) 6%, var(--t-paper)); }
+.t-rowhover:active { background: var(--t-paper2); }
+/* Botón-icono que vira a acento: color base en la clase (no inline) para que
+   :hover/:active le ganen sin !important. :hover gateado a puntero real;
+   :active da el equivalente táctil (se ilumina al tocar, se apaga al soltar). */
+.hover-accent { color: var(--t-ink3); transition: color 0.15s; }
+.hover-accent:active { color: var(--t-accent); }
 @media (hover: hover) {
   .ts-nav-btn:hover { color: var(--t-ink); }
   .ts-why-btn:hover { color: var(--t-accent); }
   .t-ibtn:hover { background: var(--t-paper2); border-color: var(--t-ink4); color: var(--t-ink); }
-  /* !important: estos botones fijan su color base inline (style=), que de
-     otro modo ganaría al :hover de la hoja. Va gateado, así que en táctil
-     ni se aplica (no se queda pegado). */
-  .hover-accent:hover { color: var(--t-accent) !important; }
+  .hover-accent:hover { color: var(--t-accent); }
   .hover-fade:hover { opacity: 0.7; }
   .win-dots:hover .win-icon { opacity: 1; }
   .t-rowhover:hover { background: var(--t-paper2); }

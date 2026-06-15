@@ -177,7 +177,7 @@ function RecsSlider() {
           <div>
             <a href={rec.url} target="_blank" rel="noopener noreferrer"
               className="rec-author"
-              style={{ fontSize: "0.85rem", fontWeight: 600, color: "#1e3a5f", textDecoration: "none", transition: "color 0.2s" }}
+              style={{ fontSize: "0.85rem", fontWeight: 600, textDecoration: "none" }}
             >
               {rec.author}
             </a>
@@ -203,11 +203,7 @@ function RecsSlider() {
         </div>
         <div style={{ display: "flex", gap: "0.4rem" }}>
           {([["←", prev], ["→", next]] as [string, () => void][]).map(([label, fn]) => (
-            <button key={label} onClick={fn} className="rec-arrow" style={{
-              background: "none", border: "1px solid rgba(96,165,250,0.25)",
-              color: "#6b7280", width: 32, height: 32, cursor: "pointer",
-              fontSize: "0.75rem", borderRadius: "2px", transition: "border-color 0.2s, color 0.2s",
-            }}>{label}</button>
+            <button key={label} onClick={fn} className="rec-arrow">{label}</button>
           ))}
         </div>
       </div>
@@ -461,6 +457,7 @@ export default function Home() {
           transition: border-color 0.25s;
         }
         .job-item:last-child { border-bottom: none; }
+        .job-item:active { border-color: rgba(96,165,250,0.3); }
         @media (hover: hover) { .job-item:hover { border-color: rgba(96,165,250,0.3); } }
 
         .job-title {
@@ -471,6 +468,7 @@ export default function Home() {
           content: ""; position: absolute; bottom: -2px; left: 0;
           width: 0; height: 1px; background: var(--blue-accent); transition: width 0.35s ease;
         }
+        .job-item:active .job-title::after { width: 100%; }
         @media (hover: hover) { .job-item:hover .job-title::after { width: 100%; } }
 
         .job-company {
@@ -502,6 +500,7 @@ export default function Home() {
           border-radius: 3px; font-family: var(--font-geist-mono), monospace;
           letter-spacing: 0.02em; transition: border-color 0.2s, color 0.2s, background 0.2s; cursor: default;
         }
+        .cert-tag:active { border-color: var(--blue-accent); color: var(--blue-accent); background: rgba(96,165,250,0.05); }
         @media (hover: hover) { .cert-tag:hover { border-color: var(--blue-accent); color: var(--blue-accent); background: rgba(96,165,250,0.05); } }
 
         .skill-tag {
@@ -511,6 +510,7 @@ export default function Home() {
           letter-spacing: 0.02em; background: #f9fafb;
           transition: border-color 0.2s, color 0.2s, background 0.2s; cursor: default;
         }
+        .skill-tag:active { border-color: rgba(96,165,250,0.4); color: var(--blue-accent); background: rgba(96,165,250,0.05); }
         @media (hover: hover) { .skill-tag:hover { border-color: rgba(96,165,250,0.4); color: var(--blue-accent); background: rgba(96,165,250,0.05); } }
         .skill-tag.skill-shine {
           text-decoration: none;
@@ -557,6 +557,7 @@ export default function Home() {
           transition: background 0.2s, border-color 0.2s;
           font-family: var(--font-geist-mono), monospace;
         }
+        .cta-button:active { background: rgba(96,165,250,0.08); border-color: var(--blue-accent); }
         @media (hover: hover) { .cta-button:hover { background: rgba(96,165,250,0.08); border-color: var(--blue-accent); } }
 
         .bg-blobs { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
@@ -570,12 +571,22 @@ export default function Home() {
           from { width: 0; }
           to   { width: 100%; }
         }
-        /* !important: el color/borde base va inline (style=) y ganaría al :hover.
-           Gateado a punteros reales para que en táctil no se quede pegado. */
+        /* Base en la clase (no inline) para que :hover/:active ganen sin
+           !important. :hover gateado a puntero real; :active da el equivalente
+           táctil. */
+        .rec-author { color: #1e3a5f; transition: color 0.2s; }
+        .rec-arrow {
+          background: none; border: 1px solid rgba(96,165,250,0.25); color: #6b7280;
+          width: 32px; height: 32px; cursor: pointer; font-size: 0.75rem;
+          border-radius: 2px; transition: border-color 0.2s, color 0.2s;
+        }
+        .footer-ln { color: var(--text-muted); transition: color 0.2s; }
+        .rec-author:active, .footer-ln:active { color: var(--blue-accent); }
+        .rec-arrow:active { border-color: var(--blue-accent); color: var(--blue-accent); }
         @media (hover: hover) {
-          .rec-author:hover { color: var(--blue-accent) !important; }
-          .rec-arrow:hover { border-color: var(--blue-accent) !important; color: var(--blue-accent) !important; }
-          .footer-ln:hover { color: var(--blue-accent) !important; }
+          .rec-author:hover { color: var(--blue-accent); }
+          .rec-arrow:hover { border-color: var(--blue-accent); color: var(--blue-accent); }
+          .footer-ln:hover { color: var(--blue-accent); }
         }
       `}</style>
 
@@ -705,7 +716,7 @@ export default function Home() {
             </a>
             <a href="https://www.linkedin.com/in/pacres/" target="_blank" rel="noopener noreferrer"
               className="footer-ln"
-              style={{fontSize:"0.78rem",color:"var(--text-muted)",fontFamily:"var(--font-geist-mono),monospace",textDecoration:"none",transition:"color 0.2s"}}
+              style={{fontSize:"0.78rem",fontFamily:"var(--font-geist-mono),monospace",textDecoration:"none"}}
             >LinkedIn →</a>
           </div>
           <p style={{textAlign:"center",fontSize:"0.72rem",color:"var(--text-muted)",fontFamily:"var(--font-geist-mono),monospace",margin:0}}>

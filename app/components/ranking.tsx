@@ -28,9 +28,7 @@ export function RankBackLink({ href }: { href: string }) {
       style={{
         marginTop: "2.5rem",
         fontSize: "0.8rem",
-        color: "#b8b3a6",
         textDecoration: "none",
-        transition: "color 0.2s",
       }}
     >
       ← volver al juego

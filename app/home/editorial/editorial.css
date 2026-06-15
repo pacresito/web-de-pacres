@@ -103,6 +103,10 @@
   transition: all 0.18s ease;
 }
 
+.editorial .chip:active {
+  border-color: var(--ink-2);
+  color: var(--ink);
+}
 @media (hover: hover) {
   .editorial .chip:hover {
     border-color: var(--ink-2);
@@ -137,6 +141,10 @@
   animation: goldSweep 10s ease-in-out infinite;
 }
 
+.editorial .chip.lab:active {
+  border-color: var(--ink-2);
+  color: var(--ink);
+}
 @media (hover: hover) {
   .editorial .chip.lab:hover {
     border-color: var(--ink-2);
@@ -167,6 +175,10 @@
   transition: all 0.18s ease;
 }
 
+.editorial .btn:active {
+  background: var(--ink);
+  color: var(--paper);
+}
 @media (hover: hover) {
   .editorial .btn:hover {
     background: var(--ink);
@@ -179,6 +191,10 @@
   color: var(--paper);
 }
 
+.editorial .btn.fill:active {
+  background: var(--accent);
+  border-color: var(--accent);
+}
 @media (hover: hover) {
   .editorial .btn.fill:hover {
     background: var(--accent);
@@ -196,6 +212,10 @@
   border-bottom: 1px solid var(--ink-4);
 }
 
+.editorial a.link-underline:active {
+  border-bottom-color: var(--accent);
+  color: var(--accent);
+}
 @media (hover: hover) {
   .editorial a.link-underline:hover {
     border-bottom-color: var(--accent);
@@ -397,6 +417,10 @@
   transition: all 0.18s ease;
 }
 
+.editorial .reco-arrow:active:not(:disabled) {
+  background: var(--ink);
+  color: var(--paper);
+}
 @media (hover: hover) {
   .editorial .reco-arrow:hover:not(:disabled) {
     background: var(--ink);

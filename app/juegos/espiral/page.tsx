@@ -571,7 +571,7 @@ export default function EspiralPage() {
               className="hover-accent"
               href="/juegos/espiral/ranking"
               title="Ranking"
-              style={{ color: "var(--t-ink3)", display: "flex", alignItems: "center", transition: "color 0.15s" }}
+              style={{ display: "flex", alignItems: "center" }}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>

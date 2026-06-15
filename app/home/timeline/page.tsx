@@ -144,6 +144,7 @@ body {
   text-transform: uppercase;
   transition: opacity 0.2s;
 }
+.tl-btn:active { opacity: 0.82; }
 @media (hover: hover) { .tl-btn:hover { opacity: 0.82; } }
 .tl-scroll-hint {
   font-family: var(--font-jetbrains-mono), monospace;
@@ -377,6 +378,7 @@ body {
   justify-content: center;
   transition: border-color 0.18s, color 0.18s;
 }
+.rec-slider-arrow:active { border-color: var(--accent); color: var(--accent); }
 @media (hover: hover) { .rec-slider-arrow:hover { border-color: var(--accent); color: var(--accent); } }
 .rec-slider-count {
   font-family: var(--font-jetbrains-mono), monospace;
@@ -553,6 +555,7 @@ body {
   text-decoration: none;
   transition: color 0.2s;
 }
+.tl-footer-link:active { color: var(--accent); }
 @media (hover: hover) { .tl-footer-link:hover { color: var(--accent); } }
 
 /* ── MOBILE ── */

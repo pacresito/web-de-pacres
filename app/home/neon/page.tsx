@@ -244,7 +244,7 @@ function NeonCursor() {
 
   return (
     <>
-      <div ref={cursorRef} style={{
+      <div ref={cursorRef} className="nt-cursor" style={{
         position: "fixed", top: 0, left: 0, width: 40, height: 40,
         border: "1px solid rgba(255,0,110,0.6)",
         borderRadius: "50%",
@@ -252,7 +252,7 @@ function NeonCursor() {
         transition: "transform 0.08s ease",
         mixBlendMode: "screen",
       }} />
-      <div ref={dotRef} style={{
+      <div ref={dotRef} className="nt-cursor" style={{
         position: "fixed", top: 0, left: 0, width: 6, height: 6,
         background: "#ff006e",
         borderRadius: "50%",
@@ -272,27 +272,8 @@ function JobItem({ job, index }: { job: typeof JOBS[0]; index: number }) {
   return (
     <div
       onClick={() => setOpen((v) => !v)}
-      style={{
-        borderBottom: "1px solid rgba(255,0,110,0.2)",
-        padding: "1.5rem 0",
-        cursor: "pointer",
-        transition: "border-color 0.3s, background 0.3s",
-        paddingLeft: "1rem",
-        borderLeft: open ? "2px solid #ff006e" : "2px solid transparent",
-        background: open ? "rgba(255,0,110,0.03)" : "transparent",
-        animationDelay: `${index * 0.08}s`,
-      }}
-      onPointerEnter={e => {
-        if (e.pointerType === "touch") return;
-        (e.currentTarget as HTMLDivElement).style.borderLeftColor = "#ff006e";
-        (e.currentTarget as HTMLDivElement).style.background = "rgba(255,0,110,0.04)";
-      }}
-      onPointerLeave={e => {
-        if (!open) {
-          (e.currentTarget as HTMLDivElement).style.borderLeftColor = "transparent";
-          (e.currentTarget as HTMLDivElement).style.background = "transparent";
-        }
-      }}
+      className={`nt-job${open ? " nt-open" : ""}`}
+      style={{ animationDelay: `${index * 0.08}s` }}
     >
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1.5rem" }}>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -444,25 +425,7 @@ function RecsSlider() {
         </div>
         <div style={{ display: "flex", gap: "0.35rem" }}>
           {([["←", prev], ["→", next]] as [string, () => void][]).map(([label, fn]) => (
-            <button key={label} onClick={fn} style={{
-              background: "none", border: "1px solid rgba(191,90,242,0.3)",
-              color: "rgba(191,90,242,0.6)", width: 30, height: 30,
-              cursor: "pointer", fontSize: "0.75rem",
-              fontFamily: "var(--font-geist-mono), monospace",
-              transition: "border-color 0.2s, color 0.2s, box-shadow 0.2s",
-            }}
-              onPointerEnter={e => {
-                if (e.pointerType === "touch") return;
-                (e.currentTarget as HTMLButtonElement).style.borderColor = "#bf5af2";
-                (e.currentTarget as HTMLButtonElement).style.color = "#bf5af2";
-                (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 10px rgba(191,90,242,0.4)";
-              }}
-              onPointerLeave={e => {
-                (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(191,90,242,0.3)";
-                (e.currentTarget as HTMLButtonElement).style.color = "rgba(191,90,242,0.6)";
-                (e.currentTarget as HTMLButtonElement).style.boxShadow = "none";
-              }}
-            >{label}</button>
+            <button key={label} onClick={fn} className="nt-rec-arrow">{label}</button>
           ))}
         </div>
       </div>
@@ -643,20 +606,25 @@ export default function HomeTempPage() {
 
         .nt-page a { color: inherit; }
 
-        /* ── Skill tags ── */
+        /* ── Skill tags ── (chips decorativos: :hover para ratón, :active para tacto) */
         .nt-skill { display: inline-block; font-family: var(--font-geist-mono), monospace; font-size: 0.68rem; padding: 0.28rem 0.7rem; letter-spacing: 0.04em; transition: all 0.2s; cursor: default; }
+        .nt-skill:active { transform: scale(1.06) translateY(-2px); }
         @media (hover: hover) { .nt-skill:hover { transform: scale(1.06) translateY(-2px); } }
 
         .nt-skill.c-mag { border: 1px solid rgba(255,0,110,0.5); color: #ff006e; background: rgba(255,0,110,0.07); }
+        .nt-skill.c-mag:active { background: #ff006e; color: #0a0a0f; box-shadow: 0 0 18px #ff006e; }
         @media (hover: hover) { .nt-skill.c-mag:hover { background: #ff006e; color: #0a0a0f; box-shadow: 0 0 18px #ff006e; } }
 
         .nt-skill.c-cyan { border: 1px solid rgba(0,255,255,0.4); color: #00ffff; background: rgba(0,255,255,0.06); }
+        .nt-skill.c-cyan:active { background: #00ffff; color: #0a0a0f; box-shadow: 0 0 18px #00ffff; }
         @media (hover: hover) { .nt-skill.c-cyan:hover { background: #00ffff; color: #0a0a0f; box-shadow: 0 0 18px #00ffff; } }
 
         .nt-skill.c-acid { border: 1px solid rgba(200,255,0,0.4); color: #c8ff00; background: rgba(200,255,0,0.06); }
+        .nt-skill.c-acid:active { background: #c8ff00; color: #0a0a0f; box-shadow: 0 0 18px #c8ff00; }
         @media (hover: hover) { .nt-skill.c-acid:hover { background: #c8ff00; color: #0a0a0f; box-shadow: 0 0 18px #c8ff00; } }
 
         .nt-skill.c-purp { border: 1px solid rgba(191,90,242,0.4); color: #bf5af2; background: rgba(191,90,242,0.06); }
+        .nt-skill.c-purp:active { background: #bf5af2; color: #0a0a0f; box-shadow: 0 0 18px #bf5af2; }
         @media (hover: hover) { .nt-skill.c-purp:hover { background: #bf5af2; color: #0a0a0f; box-shadow: 0 0 18px #bf5af2; } }
         /* ── Skill shine (Resolución de problemas) ── */
         .nt-skill-shine { position: relative; overflow: hidden; }
@@ -676,11 +644,36 @@ export default function HomeTempPage() {
         }
         /* ── CTA button ── */
         .nt-cta { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.9rem 2.2rem; border: 1.5px solid #ff006e; color: #ff006e; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; font-family: var(--font-geist-mono), monospace; background: rgba(255,0,110,0.07); transition: background 0.25s, color 0.25s; animation: neonPulseMag 3s ease-in-out infinite; cursor: none; }
+        .nt-cta:active { background: #ff006e; color: #0a0a0f; box-shadow: 0 0 30px #ff006e, 0 0 60px #ff006e40; }
         @media (hover: hover) { .nt-cta:hover { background: #ff006e; color: #0a0a0f; box-shadow: 0 0 30px #ff006e, 0 0 60px #ff006e40; } }
 
         /* ── Cert chip ── */
         .nt-cert { display: inline-block; font-family: var(--font-geist-mono), monospace; font-size: 0.68rem; padding: 0.3rem 0.75rem; border: 1px solid rgba(0,255,255,0.3); color: #00ffff; background: rgba(0,255,255,0.05); letter-spacing: 0.03em; transition: all 0.25s; cursor: default; }
+        .nt-cert:active { border-color: #00ffff; box-shadow: 0 0 14px rgba(0,255,255,0.4), inset 0 0 8px rgba(0,255,255,0.08); transform: translateY(-2px); }
         @media (hover: hover) { .nt-cert:hover { border-color: #00ffff; box-shadow: 0 0 14px rgba(0,255,255,0.4), inset 0 0 8px rgba(0,255,255,0.08); transform: translateY(-2px); } }
+
+        /* ── Cursor neón: oculto en táctil (sin ratón, el div se quedaría fijo en la esquina) ── */
+        @media (hover: none) { .nt-cursor { display: none; } }
+
+        /* ── Elementos antes con hover por JS (ahora base en clase: :hover ratón, :active tacto) ── */
+        /* JobItem es expandible al tocar (la excepción del plan): solo :hover, sin :active. */
+        .nt-job { border-bottom: 1px solid rgba(255,0,110,0.2); padding: 1.5rem 0 1.5rem 1rem; cursor: pointer; border-left: 2px solid transparent; background: transparent; transition: border-color 0.3s, background 0.3s; }
+        .nt-job.nt-open { border-left-color: #ff006e; background: rgba(255,0,110,0.03); }
+        @media (hover: hover) { .nt-job:hover { border-left-color: #ff006e; background: rgba(255,0,110,0.04); } }
+
+        .nt-rec-arrow { background: none; border: 1px solid rgba(191,90,242,0.3); color: rgba(191,90,242,0.6); width: 30px; height: 30px; cursor: pointer; font-size: 0.75rem; font-family: var(--font-geist-mono), monospace; transition: border-color 0.2s, color 0.2s, box-shadow 0.2s; }
+        .nt-rec-arrow:active { border-color: #bf5af2; color: #bf5af2; box-shadow: 0 0 10px rgba(191,90,242,0.4); }
+        @media (hover: hover) { .nt-rec-arrow:hover { border-color: #bf5af2; color: #bf5af2; box-shadow: 0 0 10px rgba(191,90,242,0.4); } }
+
+        .nt-award { display: flex; justify-content: space-between; align-items: flex-start; gap: 2rem; padding: 1.2rem 0; border-bottom: 1px solid rgba(191,90,242,0.15); transition: border-color 0.3s; }
+        .nt-award:last-child { border-bottom: none; }
+        .nt-award:active { border-color: rgba(191,90,242,0.5); }
+        @media (hover: hover) { .nt-award:hover { border-color: rgba(191,90,242,0.5); } }
+
+        /* color se queda inline (lo pisaría .nt-page a); solo el text-shadow base sale a la clase para que :hover/:active ganen. */
+        .nt-ln { text-shadow: 0 0 8px rgba(0,255,255,0.5); transition: text-shadow 0.2s; }
+        .nt-ln:active { text-shadow: 0 0 20px rgba(0,255,255,1), 0 0 40px rgba(0,255,255,0.5); }
+        @media (hover: hover) { .nt-ln:hover { text-shadow: 0 0 20px rgba(0,255,255,1), 0 0 40px rgba(0,255,255,0.5); } }
 
         /* ── Grid overlay ── */
         .nt-grid-bg {
@@ -910,16 +903,8 @@ export default function HomeTempPage() {
         <section style={{ paddingBottom: "5rem" }}>
           <SLabel>Reconocimientos</SLabel>
           <div>
-            {PREMIOS.map((award, i) => (
-              <div key={award.title} style={{
-                display: "flex", justifyContent: "space-between", alignItems: "flex-start",
-                gap: "2rem", padding: "1.2rem 0",
-                borderBottom: i < 3 ? "1px solid rgba(191,90,242,0.15)" : "none",
-                transition: "border-color 0.3s",
-              }}
-                onPointerEnter={e => { if (e.pointerType !== "touch") (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(191,90,242,0.5)"; }}
-                onPointerLeave={e => (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(191,90,242,0.15)"}
-              >
+            {PREMIOS.map((award) => (
+              <div key={award.title} className="nt-award">
                 <div>
                   <p style={{ fontWeight: 600, fontSize: "0.95rem", color: "#fff" }}>{award.title}</p>
                   {(award.issuer || award.note) && (
@@ -985,13 +970,8 @@ export default function HomeTempPage() {
               pacr.es<span style={{ animation: "blink 1s step-end infinite", color: "rgba(255,255,255,0.9)" }}>_</span>
             </a>
             <a href="https://www.linkedin.com/in/pacres/" target="_blank" rel="noopener noreferrer"
-              style={{
-                color: "#00ffff", textDecoration: "none",
-                textShadow: "0 0 8px rgba(0,255,255,0.5)",
-                transition: "text-shadow 0.2s",
-              }}
-              onPointerEnter={e => { if (e.pointerType !== "touch") (e.currentTarget as HTMLAnchorElement).style.textShadow = "0 0 20px rgba(0,255,255,1), 0 0 40px rgba(0,255,255,0.5)"; }}
-              onPointerLeave={e => (e.currentTarget as HTMLAnchorElement).style.textShadow = "0 0 8px rgba(0,255,255,0.5)"}
+              className="nt-ln"
+              style={{ color: "#00ffff", textDecoration: "none" }}
             >
               LinkedIn →
             </a>

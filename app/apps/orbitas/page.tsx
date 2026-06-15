@@ -323,7 +323,7 @@ export default function Orbitas() {
             className="hover-accent"
             onClick={() => setFullscreen(f => !f)}
             title={fullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
-            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--t-ink3)", padding: 0, display: "flex", alignItems: "center", transition: "color 0.15s" }}
+            style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center" }}
           >
             {fullscreen ? (
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

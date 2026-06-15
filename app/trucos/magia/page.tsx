@@ -463,12 +463,32 @@ export default function MagiaPage() {
       <SuitDefs />
       <style>{`
         @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
-        /* hover solo con puntero real: en táctil un tap dejaría el resalte pegado.
-           !important porque estos elementos fijan su estilo base inline (style=). */
+        /* Base en la clase (no inline) para que :hover/:active le ganen sin
+           !important. :hover gateado a puntero real; :active da el feedback
+           táctil (resalta al tocar, se apaga al soltar). */
+        .magia-btn {
+          padding: 0.6rem 1.6rem; background: transparent; color: var(--t-ink);
+          border: 1px solid var(--t-rule); border-radius: 8px; font-size: 0.88rem;
+          font-family: var(--t-mono); cursor: pointer;
+          transition: border-color 0.15s, color 0.15s, background 0.15s;
+        }
+        .magia-col {
+          display: flex; flex-direction: column; padding: 8px 6px; border-radius: 8px;
+          border: 1px solid var(--t-rule); cursor: pointer;
+          transition: border-color 0.15s, background 0.15s;
+        }
+        .magia-reveal-btn {
+          padding: 0.6rem 1.6rem; background: transparent; color: var(--t-accent);
+          border: 1px solid var(--t-accent); border-radius: 8px; font-size: 0.88rem;
+          font-family: var(--t-mono); cursor: pointer; transition: background 0.15s;
+        }
+        .magia-btn:active { border-color: var(--t-accent); color: var(--t-accent); background: rgba(0,184,122,0.04); }
+        .magia-col:active { border-color: var(--t-accent); background: rgba(0,184,122,0.04); }
+        .magia-reveal-btn:active { background: rgba(0,184,122,0.08); }
         @media (hover: hover) {
-          .magia-btn:hover { border-color: var(--t-accent) !important; color: var(--t-accent) !important; background: rgba(0,184,122,0.04) !important; }
-          .magia-col:hover { border-color: var(--t-accent) !important; background: rgba(0,184,122,0.04) !important; }
-          .magia-reveal-btn:hover { background: rgba(0,184,122,0.08) !important; }
+          .magia-btn:hover { border-color: var(--t-accent); color: var(--t-accent); background: rgba(0,184,122,0.04); }
+          .magia-col:hover { border-color: var(--t-accent); background: rgba(0,184,122,0.04); }
+          .magia-reveal-btn:hover { background: rgba(0,184,122,0.08); }
         }
         @keyframes beastEnter {
           0%   { opacity:0; transform:translate(-140px, 0) scale(0.4); }
@@ -499,11 +519,7 @@ export default function MagiaPage() {
               No me la digas
             </p>
           </div>
-          <button
-            className="magia-btn"
-            onClick={beginSpell}
-            style={{ padding: "0.6rem 1.6rem", background: "transparent", color: "var(--t-ink)", border: "1px solid var(--t-rule)", borderRadius: 8, fontSize: "0.88rem", fontFamily: mono, cursor: "pointer", transition: "border-color 0.15s, color 0.15s, background 0.15s" }}
-          >
+          <button className="magia-btn" onClick={beginSpell}>
             Estoy listo
           </button>
         </div>
@@ -527,12 +543,7 @@ export default function MagiaPage() {
                 key={col}
                 className="magia-col"
                 onClick={() => onCharmClick(col)}
-                style={{
-                  display: "flex", flexDirection: "column", gap: cardGap,
-                  padding: "8px 6px", borderRadius: 8,
-                  border: "1px solid var(--t-rule)",
-                  cursor: "pointer", transition: "border-color 0.15s, background 0.15s",
-                }}
+                style={{ gap: cardGap }}
               >
                 {getCharm(deck, col).map((beast, i) => (
                   <CardFace key={i} beast={beast} w={cardW} />
@@ -569,11 +580,7 @@ export default function MagiaPage() {
                 ¡La letra {guide.rune}!<br />
                 Piensa en un animal que empiece por {guide.rune}.
               </p>
-              <button
-                className="magia-reveal-btn"
-                onClick={() => setPhase("reveal")}
-                style={{ padding: "0.6rem 1.6rem", background: "transparent", color: "var(--t-accent)", border: "1px solid var(--t-accent)", borderRadius: 8, fontSize: "0.88rem", fontFamily: mono, cursor: "pointer", transition: "background 0.15s" }}
-              >
+              <button className="magia-reveal-btn" onClick={() => setPhase("reveal")}>
                 Ya lo tengo
               </button>
             </div>
