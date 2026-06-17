@@ -34,23 +34,12 @@ export function massToColor(mass: number, scale = 1): [number, number, number] {
   return [last[1], last[2], last[3]];
 }
 
-// Variante legible de la rampa para texto sobre el fondo claro (papel), p. ej. las etiquetas
-// de los botones: los extremos fríos (azul/blanco) son ilegibles ahí, así que oscurecemos el
-// color (manteniendo el tono) solo cuando supera un techo de luminancia. El rojo/naranja ya
-// contrastan y no se tocan.
+// Variante de la rampa para texto sobre el fondo claro (papel): las etiquetas de los botones de
+// preset y la masa total de la línea de estado. Los valores bajos (estrellas ligeras, azul/blanco)
+// son demasiado claros para leerse sobre el papel, así que se oscurecen sin cambiar el tono: el
+// factor sube de 0.7 a 1 conforme la masa va de 0 a 1000; por encima el rojo/naranja ya contrasta
+// y no se toca.
 export function massToReadableColor(mass: number, scale = 1): [number, number, number] {
-  const [r, g, b] = massToColor(mass, scale);
-  const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-  const MAX_LUM = 150; // techo de luminancia para contrastar sobre --t-paper
-  if (lum <= MAX_LUM) return [r, g, b];
-  const t = MAX_LUM / lum; // escalar hacia 0 conserva el tono, solo baja el brillo
-  return [Math.round(r * t), Math.round(g * t), Math.round(b * t)];
-}
-
-// Color de la masa total en la línea de estado: el color real de la estrella, pero los valores
-// bajos (≲1000) son demasiado claros sobre el papel, así que se oscurecen un poco (sin cambiar el
-// tono). El factor sube de 0.7 a 1 conforme la masa va de 0 a 1000; por encima no se toca.
-export function massToStatusColor(mass: number, scale = 1): [number, number, number] {
   const [r, g, b] = massToColor(mass, scale);
   const f = 0.7 + 0.3 * Math.min(1, mass / 1000);
   return [Math.round(r * f), Math.round(g * f), Math.round(b * f)];

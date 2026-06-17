@@ -11,7 +11,7 @@ import {
 } from "./engine";
 import {
   fadeCanvas, drawBody, drawRadarArrow, drawDragPreview, drawExplosion,
-  massToColor, massToReadableColor, massToStatusColor,
+  massToColor, massToReadableColor,
 } from "./render";
 
 // Presets: cada botón se colorea con el color del cuerpo más pesado que genera.
@@ -185,7 +185,7 @@ export default function Orbitas() {
       if (++frameRef.current % 15 === 0 && statsLabelRef.current) {
         const n = world.bodies.length;
         const M = Math.round(totalMass(world));
-        const [cr, cg, cb] = massToStatusColor(M, 2); // color real; los valores bajos se oscurecen un poco para leerse
+        const [cr, cg, cb] = massToReadableColor(M, 2); // color real; los valores bajos se oscurecen un poco para leerse
         // verde = sistema estable (1-3 cuerpos); rojo = más de 3 (propenso al caos)
         const nColor = n === 0 ? "var(--t-ink2)" : n <= 3 ? "var(--t-accent)" : "#e55";
         statsLabelRef.current.innerHTML =
