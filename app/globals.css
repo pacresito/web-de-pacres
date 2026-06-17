@@ -30,12 +30,6 @@
   --font-mono: var(--font-geist-mono);
 }
 
-body {
-  background: #ffffff;
-  color: #171717;
-  font-family: ui-sans-serif, system-ui, sans-serif;
-}
-
 /* ============================================================
    TerminalShell — chrome bar, navegación y animación de salida
    ============================================================ */
