@@ -1,8 +1,19 @@
 // Lógica compartida entre los registros de partidas (Castle Combo y Agrícola).
+import { timingSafeEqual } from "crypto";
 import redis from "./redis";
 import { sendEmail, type SendEmailOptions } from "./notify";
 
 const PASSWORD = process.env.REGISTRO_PASSWORD;
+
+/** Compara la clave en tiempo constante. Si difieren las longitudes devuelve false
+ *  sin comparar (timingSafeEqual lanzaría); como el largo de PASSWORD es fijo, esto
+ *  no reintroduce timing explotable. */
+function passwordOk(input: unknown): boolean {
+  if (!PASSWORD || typeof input !== "string") return false;
+  const a = Buffer.from(input);
+  const b = Buffer.from(PASSWORD);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
 const PAGE_SIZE = 10;
 const RATE_MAX = 5;
 const RATE_TTL = 900; // 15 min
@@ -67,7 +78,9 @@ export async function paginatedList<T>(key: string, page: number): Promise<Pagin
   };
 }
 
-/** GET de registro: lee `?page=` y devuelve la página. */
+/** GET de registro: lee `?page=` y devuelve la página.
+ *  Público a propósito: alimenta el historial de partidas dentro de la calc. El dato
+ *  (nombres de pila + puntuaciones) no es sensible; solo el POST (escritura) pide clave. */
 export async function handleRegistroGet(request: Request, key: string): Promise<Response> {
   const page = Math.max(1, parseInt(new URL(request.url).searchParams.get("page") ?? "1", 10));
   return Response.json(await paginatedList(key, page));
@@ -112,7 +125,7 @@ export async function handleRegistroPost<T extends RegistroBody, R>(
     return Response.json({ error: "JSON inválido" }, { status: 400 });
   }
 
-  if (!PASSWORD || body.password !== PASSWORD) {
+  if (!passwordOk(body.password)) {
     return Response.json({ error: "Clave incorrecta" }, { status: 401 });
   }
   await clearRateLimit(ip, config.ratePrefix);
