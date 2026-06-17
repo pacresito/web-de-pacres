@@ -251,8 +251,20 @@ export function presetThreeBody(W: number, H: number): World {
   // Chenciner–Montgomery: r1=(0.9700,−0.2431)=−r2, r3=0; v1=v2=−v3/2, v3=(−0.9324,−0.8647).
   const rx = 0.97000436, ry = 0.24308753;
   const vx = 0.93240737, vy = 0.86473146;
-  addBody(world, makeBody(cx + L * rx, cy - L * ry,  k * vx / 2,  k * vy / 2, M));
-  addBody(world, makeBody(cx - L * rx, cy + L * ry,  k * vx / 2,  k * vy / 2, M));
-  addBody(world, makeBody(cx,          cy,          -k * vx,     -k * vy,     M));
+
+  // Las condiciones iniciales relativas son sagradas (perturbarlas rompe la órbita y cae en caos),
+  // pero la gravedad es invariante por rotación: giramos posiciones y velocidades el mismo ángulo
+  // al azar → la misma figura-ocho, ladeada distinto cada vez.
+  const theta = Math.random() * TAU;
+  const c = Math.cos(theta), s = Math.sin(theta);
+  const place = (px: number, py: number, qx: number, qy: number) =>
+    addBody(world, makeBody(
+      cx + L * (px * c - py * s), cy + L * (px * s + py * c), // posición rotada
+      k * (qx * c - qy * s),      k * (qx * s + qy * c),      // velocidad rotada igual
+      M,
+    ));
+  place( rx, -ry,  vx / 2,  vy / 2);
+  place(-rx,  ry,  vx / 2,  vy / 2);
+  place(  0,   0, -vx,     -vy);
   return world;
 }

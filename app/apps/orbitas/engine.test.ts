@@ -84,8 +84,10 @@ function check(name: string, ok: boolean, detail = "") {
     // distancia planeta→sol (relativa: el sol puede recular/derivar un poco al ser libre)
     for (const b of world.bodies.slice(1)) maxDist = Math.max(maxDist, Math.hypot(b.x - sun.x, b.y - sun.y));
   }
-  // los planetas siguen ligados al sol (ninguno se ha disparado lejísimos)
-  check("preset solar: planetas ligados", maxDist < Math.min(900, 600) * 0.7, `maxDist=${maxDist.toFixed(0)}`);
+  // los planetas siguen ligados al sol (ninguno se ha disparado lejísimos). El umbral es 0.9·minWH,
+  // no 0.7: una órbita elíptica legítima (k hasta 1.08) tiene su afelio en ~0.71·minWH, así que 0.7
+  // daría falsos negativos. Un planeta que escapa de verdad se dispara mucho más lejos (≈1600 px).
+  check("preset solar: planetas ligados", maxDist < Math.min(900, 600) * 0.9, `maxDist=${maxDist.toFixed(0)}`);
 }
 
 // 6. Cuerpo fijo: atrae pero no se mueve, y absorbe sin desplazarse al fusionar
