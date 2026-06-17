@@ -571,6 +571,7 @@ export default function EspiralPage() {
               className="hover-accent"
               href="/juegos/espiral/ranking"
               title="Ranking"
+              aria-label="Ranking"
               style={{ display: "flex", alignItems: "center" }}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -582,6 +583,7 @@ export default function EspiralPage() {
               className="esp-btn"
               onClick={() => setFullscreen(f => !f)}
               title={fullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
+              aria-label={fullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
               style={{ display: "flex", alignItems: "center" }}
             >
               {fullscreen ? (

@@ -668,7 +668,7 @@ function RecoCarousel({ active = false }: { active?: boolean }) {
 
       <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 12 }}>
         {RECOS.map((_, idx) => (
-          <button key={idx} onClick={() => setI(idx)} style={{
+          <button key={idx} onClick={() => setI(idx)} aria-label={`Ir a la recomendación ${idx + 1}`} style={{
             width: idx === i ? 18 : 8, height: 8, borderRadius: 4,
             border: "none", background: idx === i ? "var(--t-accent)" : "var(--t-rule)",
             cursor: "pointer", padding: 0,

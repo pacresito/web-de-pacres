@@ -89,17 +89,17 @@ export default function TerminalShell({
         style={{ display: "flex", gap: 7, alignItems: "center", flexShrink: 0, overflow: "hidden" }}
       >
         <div style={{ width: 1, height: 16, background: "var(--t-rule)", margin: "0 6px", flexShrink: 0 }} />
-        <button className="ts-nav-btn" onClick={handleBack} title="Volver a /lab">
+        <button className="ts-nav-btn" onClick={handleBack} title="Volver a /lab" aria-label="Volver a /lab">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
             <path d="M19 12H5M5 12l7 7M5 12l7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </button>
-        <button className="ts-nav-btn" disabled title="Adelante">
+        <button className="ts-nav-btn" disabled title="Adelante" aria-label="Adelante">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
             <path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </button>
-        <button className="ts-nav-btn" onClick={() => window.location.reload()} title="Recargar">
+        <button className="ts-nav-btn" onClick={() => window.location.reload()} title="Recargar" aria-label="Recargar">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
             <polyline points="23 4 23 10 17 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>

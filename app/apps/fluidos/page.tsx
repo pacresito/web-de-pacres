@@ -379,6 +379,7 @@ export default function Fluidos() {
               className="hover-accent"
               onClick={() => setFullscreen(f => !f)}
               title={fullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
+              aria-label={fullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
               style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center" }}
             >
               {fullscreen ? (

@@ -339,6 +339,7 @@ export default function Orbitas() {
             className="hover-accent"
             onClick={() => setFullscreen(true)}
             title="Pantalla completa"
+            aria-label="Pantalla completa"
             style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center" }}
           >
             <ExpandIcon />
@@ -386,7 +387,7 @@ export default function Orbitas() {
         )}
 
         {fullscreen && (
-          <button className="fs-exit" onClick={() => setFullscreen(false)} title="Salir de pantalla completa">
+          <button className="fs-exit" onClick={() => setFullscreen(false)} title="Salir de pantalla completa" aria-label="Salir de pantalla completa">
             <CollapseIcon />
           </button>
         )}

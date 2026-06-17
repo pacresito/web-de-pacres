@@ -221,6 +221,7 @@ function RecsSlider() {
               key={i}
               className={`dot${i === current ? " dot-active" : ""}`}
               onClick={() => setCurrent(i)}
+              aria-label={`Ir a la recomendación ${i + 1}`}
             />
           ))}
         </div>

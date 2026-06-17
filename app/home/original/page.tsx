@@ -192,7 +192,7 @@ function RecsSlider() {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "1rem" }}>
         <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap", maxWidth: "75%" }}>
           {RECS.map((_, i) => (
-            <button key={i} onClick={() => setCurrent(i)} style={{
+            <button key={i} onClick={() => setCurrent(i)} aria-label={`Ir a la recomendación ${i + 1}`} style={{
               width: i === current ? "1.4rem" : "0.45rem",
               height: "0.45rem", borderRadius: "2px", border: "none",
               background: i === current ? "var(--blue-accent)" : "rgba(96,165,250,0.25)",

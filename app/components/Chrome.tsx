@@ -31,7 +31,7 @@ function WindowBtn({ color, onClick, title, kind }: {
   color: string; onClick: () => void; title: string; kind: WinKind;
 }) {
   return (
-    <button title={title} onClick={onClick} style={{
+    <button title={title} aria-label={title} onClick={onClick} style={{
       width: 12, height: 12, borderRadius: "50%", background: color,
       border: "none", cursor: "pointer", padding: 0, flexShrink: 0,
       display: "flex", alignItems: "center", justifyContent: "center",
