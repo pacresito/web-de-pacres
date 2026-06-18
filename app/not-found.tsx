@@ -35,11 +35,14 @@ export default function NotFound() {
   return (
     <main
       style={{
-        minHeight: "100vh",
+        // 100dvh (no 100vh): en móvil la barra del navegador hace que 100vh
+        // sea mayor que el área visible y empujaría el contenido hacia abajo.
+        // El padding inferior mayor lo deja un punto por encima del centro.
+        minHeight: "100dvh",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        padding: "2rem",
+        padding: "2rem 2rem 14vh",
         background: "var(--t-paper)",
         fontFamily: "var(--t-mono)",
       }}
