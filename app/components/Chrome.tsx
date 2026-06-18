@@ -43,9 +43,11 @@ function WindowBtn({ color, onClick, title, kind }: {
   );
 }
 
-export function ChromeBar({ title, onClose, onMinimize, onMaximize, isMaximized }: {
+export function ChromeBar({ title, onClose, onMinimize, onMaximize, isMaximized, theme, onThemeChange }: {
   title: string; onClose: () => void; onMinimize: () => void; onMaximize: () => void; isMaximized: boolean;
+  theme: "light" | "dark"; onThemeChange: (t: "light" | "dark") => void;
 }) {
+  const nextTheme = theme === "dark" ? "light" : "dark";
   return (
     <div style={{
       background: "var(--t-paper2)", borderBottom: "1px solid var(--t-rule)",
@@ -60,18 +62,27 @@ export function ChromeBar({ title, onClose, onMinimize, onMaximize, isMaximized 
       <div style={{ textAlign: "center", fontFamily: "var(--t-mono)", fontSize: 12, color: "var(--t-ink2)" }}>
         ⌘&nbsp;&nbsp;pacr.es — {title}
       </div>
-      <div style={{ textAlign: "right", fontFamily: "var(--t-mono)", fontSize: 10, color: "var(--t-ink3)" }}>
-        v4.0.0 · zsh
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8, fontFamily: "var(--t-mono)", fontSize: 10, color: "var(--t-ink3)" }}>
+        <button
+          className="t-theme-btn"
+          onClick={() => onThemeChange(nextTheme)}
+          title={nextTheme === "dark" ? "Tema oscuro" : "Tema claro"}
+          aria-label={nextTheme === "dark" ? "Activar tema oscuro" : "Activar tema claro"}
+        >
+          <i className={`t-theme-ico t-theme-ico--${theme === "dark" ? "sun" : "moon"}`} aria-hidden="true" />
+        </button>
+        <span>v4.0.0 · zsh</span>
       </div>
     </div>
   );
 }
 
-export function MinimizedBar({ title, onRestore, onMaximize, onClose, animatingOut = false }: {
+export function MinimizedBar({ title, onRestore, onMaximize, onClose, animatingOut = false, theme }: {
   title: string; onRestore: () => void; onMaximize: () => void; onClose: () => void; animatingOut?: boolean;
+  theme: "light" | "dark";
 }) {
   return (
-    <div style={{
+    <div data-theme={theme} style={{
       position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)",
       background: "var(--t-paper2)", border: "1px solid var(--t-rule)", borderRadius: 10,
       padding: "10px 16px", display: "flex", alignItems: "center", gap: 12,

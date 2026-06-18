@@ -20,9 +20,32 @@
   --t-accent2:     #009764;
   --t-accent-soft: #d4f5e6;
   --t-accent-bg:   #e8faf1;
+  --t-canvas:      #ece9e0;   /* fondo exterior de la ventana (cv/lab/designs) */
+  --t-bodybg:      #f7f4ed;   /* fondo del body durante las transiciones de ventana */
   --t-sans:  var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --t-serif: var(--font-instrument-serif), "Times New Roman", Georgia, serif;
   --t-mono:  var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* Tema oscuro del estilo terminal. Se activa con data-theme="dark" en el wrapper
+   de página (no en <html>): así solo afecta a cv/lab/designs y nunca a los
+   experimentos, que viven en otra ruta sin el atributo. Solo redefine color;
+   las fuentes no cambian. Paleta de partida, afinada en el navegador. */
+[data-theme="dark"] {
+  --t-paper:       #1a1a1a;
+  --t-paper2:      #232323;
+  --t-ink:         #ededed;
+  --t-ink2:        #c8c8c8;
+  --t-ink3:        #888888;
+  --t-ink4:        #555555;
+  --t-rule:        #333333;
+  --t-rule2:       #2a2a2a;
+  --t-accent:      #1fd897;
+  --t-accent2:     #19b87f;
+  --t-accent-soft: #123a2c;
+  --t-accent-bg:   #0f261d;
+  --t-canvas:      #0d0d0d;
+  --t-bodybg:      #0d0d0d;
 }
 
 @theme inline {
@@ -41,6 +64,26 @@
   transition: color 0.15s; border-radius: 4px;
 }
 .ts-nav-btn:disabled { color: var(--t-ink4); cursor: default; }
+
+/* Toggle de tema (sol/luna) de la chrome bar de cv/lab/designs. El icono se dibuja
+   con box-shadow sobre currentColor (mismo truco que el toggle del manifiesto), así
+   que no trae assets nuevos y vira de color con el botón. */
+.t-theme-btn {
+  background: none; border: none; cursor: pointer;
+  color: var(--t-ink3); padding: 4px; border-radius: 4px;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: color 0.15s;
+}
+.t-theme-btn:active { color: var(--t-ink); }
+.t-theme-ico { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: currentColor; position: relative; }
+.t-theme-ico--sun {
+  width: 8px; height: 8px;
+  box-shadow: 0 -5px 0 -2.5px currentColor, 0 5px 0 -2.5px currentColor,
+              -5px 0 0 -2.5px currentColor, 5px 0 0 -2.5px currentColor,
+              -4px -4px 0 -2.5px currentColor, 4px 4px 0 -2.5px currentColor,
+              -4px 4px 0 -2.5px currentColor, 4px -4px 0 -2.5px currentColor;
+}
+.t-theme-ico--moon { background: transparent; box-shadow: inset -3px -1px 0 0 currentColor; transform: rotate(-25deg); }
 
 @keyframes ts-blink { 50% { opacity: 0; } }
 
@@ -65,7 +108,7 @@
 .ts-win-unmaximizing   { animation: ts-win-unmaximize   0.9s ease forwards; overflow: hidden; }
 .ts-outer-unmaximizing { animation: ts-outer-unmaximize 0.9s ease forwards !important; }
 .ts-chrome-outer.ts-outer-unmaximizing {
-  background: #ece9e0;
+  background: var(--t-canvas);
   display: flex;
   justify-content: center;
   align-items: flex-start;
@@ -98,7 +141,7 @@
    cv / lab / designs — ventana con chrome (maximizar, dock, etc.)
    ============================================================ */
 
-.t-bg { background: #ece9e0 !important; }
+.t-bg { background: var(--t-canvas) !important; }
 
 @keyframes t-blink { 50% { opacity: 0; } }
 
@@ -219,6 +262,7 @@
 .hover-accent:active { color: var(--t-accent); }
 @media (hover: hover) {
   .ts-nav-btn:hover { color: var(--t-ink); }
+  .t-theme-btn:hover { color: var(--t-ink); }
   .ts-why-btn:hover { color: var(--t-accent); }
   .t-ibtn:hover { background: var(--t-paper2); border-color: var(--t-ink4); color: var(--t-ink); }
   .hover-accent:hover { color: var(--t-accent); }
