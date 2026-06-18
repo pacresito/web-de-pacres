@@ -8,7 +8,7 @@ const PASSWORD = process.env.REGISTRO_PASSWORD;
 /** Compara la clave en tiempo constante. Si difieren las longitudes devuelve false
  *  sin comparar (timingSafeEqual lanzaría); como el largo de PASSWORD es fijo, esto
  *  no reintroduce timing explotable. */
-function passwordOk(input: unknown): boolean {
+export function passwordOk(input: unknown): boolean {
   if (!PASSWORD || typeof input !== "string") return false;
   const a = Buffer.from(input);
   const b = Buffer.from(PASSWORD);
@@ -16,7 +16,7 @@ function passwordOk(input: unknown): boolean {
 }
 const PAGE_SIZE = 10;
 const RATE_MAX = 5;
-const RATE_TTL = 900; // 15 min
+const RATE_TTL = 1800; // 30 min
 
 /** Incrementa el contador por IP y devuelve si sigue dentro del límite. */
 export async function checkRateLimit(ip: string, prefix: string, max = RATE_MAX, ttl = RATE_TTL): Promise<boolean> {
@@ -115,7 +115,7 @@ export async function handleRegistroPost<T extends RegistroBody, R>(
   const ip = clientIp(request);
 
   if (!(await checkRateLimit(ip, config.ratePrefix))) {
-    return Response.json({ error: "Demasiados intentos. Espera 15 minutos." }, { status: 429 });
+    return Response.json({ error: "Demasiados intentos. Espera 30 minutos." }, { status: 429 });
   }
 
   let body: T;

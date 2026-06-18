@@ -31,6 +31,7 @@ const ITEMS: LabItem[] = [
   { id: "magia",       num: "09", type: "truco",      title: "Magia de la buena",     description: "Piensa en una carta. No me la digas.",                                                status: "available", href: "/trucos/magia",     cta: "Probar →" },
   { id: "letras",      num: "10", type: "easter-egg", title: "Las letras caen",       description: "Algo pasa si sabes dónde pinchar.",                                                   status: "hidden",    href: "/",                cta: "Ir a probarlo →" },
   { id: "color",       num: "11", type: "easter-egg", title: "Cambio de tema",        description: `Cambio de tema dinámico en el diseño "Original".`,                                                               status: "hidden", href: "/home/original", cta: "Ir a probarlo →" },
+  { id: "guestbook",   num: "12", type: "easter-egg", title: "Libro de firmas",       description: "Deja tu firma. Como los de toda la vida.",                                            status: "available", href: "/guestbook",       cta: "Firmar →" },
 ];
 
 const CMD = "ls ~/lab --long --all";

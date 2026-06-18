@@ -19,7 +19,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   if (!(await checkRateLimit(clientIp(request), "ratelimit:ranking:laberinto:"))) {
-    return Response.json({ error: "Demasiados envíos. Espera 15 minutos." }, { status: 429 });
+    return Response.json({ error: "Demasiados envíos. Espera 30 minutos." }, { status: 429 });
   }
 
   let body;
