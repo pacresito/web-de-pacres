@@ -736,7 +736,7 @@ function Overlay({ children, monoFont }: { children: React.ReactNode; monoFont: 
       className="absolute inset-0 flex flex-col items-center justify-center"
       style={{
         borderRadius: "6px",
-        background: "rgba(250,250,247,0.88)",
+        background: "color-mix(in srgb, var(--t-paper) 88%, transparent)",
         backdropFilter: "blur(4px)",
         fontFamily: monoFont,
       }}

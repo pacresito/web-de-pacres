@@ -8,7 +8,7 @@ import Link from "next/link";
 export const thStyle: React.CSSProperties = {
   padding: "0.4rem 0.75rem",
   fontSize: "0.72rem",
-  color: "#b8b3a6",
+  color: "var(--t-ink4)",
   fontWeight: 500,
   textAlign: "center",
   textTransform: "uppercase",

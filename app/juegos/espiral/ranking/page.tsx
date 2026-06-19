@@ -40,7 +40,7 @@ export default function Ranking() {
       >
         <h1
           style={{
-            color: "#16140f",
+            color: "var(--t-ink)",
             fontSize: "1.5rem",
             fontWeight: 800,
             letterSpacing: "-0.03em",
@@ -51,11 +51,11 @@ export default function Ranking() {
         </h1>
 
         {loading ? (
-          <p style={{ color: "#b8b3a6", fontSize: "0.85rem" }}>cargando...</p>
+          <p style={{ color: "var(--t-ink4)", fontSize: "0.85rem" }}>cargando...</p>
         ) : error ? (
-          <p style={{ color: "#b8b3a6", fontSize: "0.85rem" }}>error al cargar</p>
+          <p style={{ color: "var(--t-ink4)", fontSize: "0.85rem" }}>error al cargar</p>
         ) : entries.length === 0 ? (
-          <p style={{ color: "#b8b3a6", fontSize: "0.85rem" }}>sin entradas aún</p>
+          <p style={{ color: "var(--t-ink4)", fontSize: "0.85rem" }}>sin entradas aún</p>
         ) : (
           <table style={{ borderCollapse: "collapse", width: "100%", maxWidth: "480px" }}>
             <thead>
@@ -70,17 +70,17 @@ export default function Ranking() {
             <tbody>
               {entries.map((e, i) => (
                 <tr key={i} style={{ borderBottom: "1px solid rgba(0,184,122,0.12)" }}>
-                  <td style={{ ...tdStyle, color: i === 0 ? "#00b87a" : "#b8b3a6", fontWeight: i === 0 ? 700 : 400 }}>
+                  <td style={{ ...tdStyle, color: i === 0 ? "var(--t-accent)" : "var(--t-ink4)", fontWeight: i === 0 ? 700 : 400 }}>
                     {i + 1}
                   </td>
-                  <td style={{ ...tdStyle, color: "#16140f" }}>{e.name}</td>
-                  <td style={{ ...tdStyle, textAlign: "center", color: "#7a766b" }}>
+                  <td style={{ ...tdStyle, color: "var(--t-ink)" }}>{e.name}</td>
+                  <td style={{ ...tdStyle, textAlign: "center", color: "var(--t-ink3)" }}>
                     {e.score.toFixed(1)}s
                   </td>
                   <td style={{ ...tdStyle, textAlign: "center", fontSize: "0.82rem", color: speedColor(e.speed) }}>
                     {e.speed ?? "—"}
                   </td>
-                  <td style={{ ...tdStyle, textAlign: "right", color: "#b8b3a6", fontSize: "0.78rem" }}>
+                  <td style={{ ...tdStyle, textAlign: "right", color: "var(--t-ink4)", fontSize: "0.78rem" }}>
                     {e.date ?? "—"}
                   </td>
                 </tr>
@@ -99,6 +99,6 @@ export default function Ranking() {
 function speedColor(speed: string | null) {
   if (speed === "slow") return "#60a5fa";
   if (speed === "fast") return "#f97316";
-  if (speed === "normal") return "#00b87a";
-  return "#b8b3a6";
+  if (speed === "normal") return "var(--t-accent)";
+  return "var(--t-ink4)";
 }

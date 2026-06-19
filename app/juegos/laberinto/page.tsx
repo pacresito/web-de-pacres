@@ -884,7 +884,7 @@ export default function Laberinto() {
   const gameOverOverlay = gameOver ? (
     <div style={{
       position: "absolute", inset: 0,
-      background: "rgba(250,250,247,0.93)",
+      background: "color-mix(in srgb, var(--t-paper) 93%, transparent)",
       display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
       gap: "1rem", zIndex: 10,
     }}>
