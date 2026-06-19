@@ -15,6 +15,7 @@ type Lagartija = {
   tipo: "estándar" | "llavero";
   giro: number;
   cinta: string;
+  ocultarEnMovil?: boolean; // en móvil sobran fotos: se ocultan las redundantes
 };
 
 const LAGARTIJAS: Lagartija[] = [
@@ -23,8 +24,8 @@ const LAGARTIJAS: Lagartija[] = [
   { src: "/lagartijas/verde-naranja.jpeg",    nombre: "Verde barriga naranja",  nota: "con llavero",          tipo: "llavero",  giro: -3, cinta: "#ff8a3d" },
   { src: "/lagartijas/azul-naranja.jpeg",     nombre: "Azul y naranja",         nota: "con llavero",          tipo: "llavero",  giro:  6, cinta: "#4cc3ff" },
   { src: "/lagartijas/verde-azulada-1.jpg",   nombre: "Verde azulada",          nota: "de frente",            tipo: "estándar", giro: -6, cinta: "#9b5de5" },
-  { src: "/lagartijas/verde-azulada-2.jpg",   nombre: "Verde azulada",          nota: "del otro lado",        tipo: "estándar", giro:  5, cinta: "#ffd23f" },
-  { src: "/lagartijas/rosa-y-verde.avif",     nombre: "Rosa y verde",           nota: "las dos con llavero",  tipo: "llavero",  giro: -4, cinta: "#ff5ca8" },
+  { src: "/lagartijas/verde-azulada-2.jpg",   nombre: "Verde azulada",          nota: "del otro lado",        tipo: "estándar", giro:  5, cinta: "#ffd23f", ocultarEnMovil: true },
+  { src: "/lagartijas/rosa-y-verde.avif",     nombre: "Rosa y verde",           nota: "las dos con llavero",  tipo: "llavero",  giro: -4, cinta: "#ff5ca8", ocultarEnMovil: true },
 ];
 
 const PALETA = ["#ff5ca8", "#29c2c9", "#a4e44b", "#ffd23f", "#ff8a3d", "#9b5de5", "#4cc3ff", "#ff4d4d"];
@@ -168,6 +169,20 @@ export default function Lagartijas() {
           .lg-anim-popin   { animation: lg-popin .3s ease-out; }
           .lg-anim-crawl   { animation: lg-crawl 2.6s ease-in-out infinite; }
         }
+
+        /* Ajustes solo de móvil: menos fotos, encuadernación más fina y línea roja
+           pegada al margen (como el mockup de Claude Design). */
+        @media (max-width: 640px) {
+          .lg-hide-mobile { display: none; }
+          .lg-page {
+            background-image:
+              linear-gradient(90deg, transparent 0, transparent 24px, rgba(246,140,160,.55) 24px, rgba(246,140,160,.55) 27px, transparent 27px),
+              repeating-linear-gradient(180deg, #fdf9ec 0, #fdf9ec 33px, #d2e6f0 33px, #d2e6f0 34px);
+          }
+          /* Menos anillas y menos cuentas: la fila no abarca todo el ancho. */
+          .lg-rings .lg-ring:nth-child(n+10) { display: none; }
+          .lg-bead-row .lg-bead:nth-child(n+15) { display: none; }
+        }
       `}</style>
 
       <div className="lg-page">
@@ -179,7 +194,7 @@ export default function Lagartijas() {
 
         {/* ── PORTADA ── */}
         <section className="lg-section" style={{ maxWidth: 920, padding: "clamp(22px,6vw,56px) clamp(20px,5vw,44px) clamp(8px,3vw,24px)" }}>
-          {/* sol y estrella decorativos */}
+          {/* sol decorativo */}
           <div className="lg-anim-spin" style={{ position: "absolute", top: "6%", right: "6%", width: "clamp(54px,12vw,86px)", pointerEvents: "none" }}>
             <svg viewBox="0 0 100 100" style={{ width: "100%", overflow: "visible" }}>
               <g stroke="#ffae00" strokeWidth={7} strokeLinecap="round">
@@ -191,12 +206,6 @@ export default function Lagartijas() {
               <circle cx="50" cy="50" r="22" fill="#ffd23f" stroke="#ffae00" strokeWidth={5} />
             </svg>
           </div>
-          <div className="lg-anim-twinkle" style={{ position: "absolute", top: "30%", left: "3%", width: "clamp(26px,6vw,40px)", pointerEvents: "none" }}>
-            <svg viewBox="0 0 24 24" style={{ width: "100%" }}>
-              <path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 21.2 7.3 14.4 2.2 9.7l6.9-.7z" fill="#9b5de5" stroke="#2b2b2b" strokeWidth={1.4} strokeLinejoin="round" />
-            </svg>
-          </div>
-
           <div className="lg-marker" style={{ color: "#ff5ca8", fontSize: "clamp(14px,3.6vw,20px)", transform: "rotate(-3deg)", margin: "0 0 6px 4px" }}>
             el cuaderno de las lagartijas de…
           </div>
@@ -263,7 +272,7 @@ export default function Lagartijas() {
 
           <div style={{ display: "flex", flexWrap: "wrap", gap: "clamp(20px,4.5vw,40px)", justifyContent: "center", marginTop: "clamp(26px,6vw,46px)" }}>
             {LAGARTIJAS.map((liz) => (
-              <figure key={liz.src} className="lg-card" style={{ transform: `rotate(${liz.giro}deg)` }}>
+              <figure key={liz.src} className={"lg-card" + (liz.ocultarEnMovil ? " lg-hide-mobile" : "")} style={{ transform: `rotate(${liz.giro}deg)` }}>
                 <div className="lg-washi" style={{ width: 94, background: liz.cinta }} />
                 <Image src={liz.src} alt={liz.nombre} width={244} height={244} className="lg-photo" style={{ height: "clamp(196px,70vw,244px)" }} />
                 <figcaption style={{ textAlign: "center", padding: "10px 4px 15px" }}>
@@ -280,7 +289,7 @@ export default function Lagartijas() {
 
         {/* ── QUÉ PUEDES PEDIR ── */}
         <section className="lg-section" style={{ maxWidth: 960, padding: "clamp(14px,3vw,26px) clamp(20px,5vw,44px) clamp(20px,5vw,40px)" }}>
-          <div className="lg-anim-twinkle" style={{ position: "absolute", top: "8%", left: "1%", width: "clamp(26px,6vw,40px)", animationDelay: ".4s", pointerEvents: "none" }}>
+          <div className="lg-anim-twinkle" style={{ position: "absolute", top: "8%", right: "2%", width: "clamp(26px,6vw,40px)", animationDelay: ".4s", pointerEvents: "none" }}>
             <svg viewBox="0 0 24 24" style={{ width: "100%" }}>
               <path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 21.2 7.3 14.4 2.2 9.7l6.9-.7z" fill="#29c2c9" stroke="#2b2b2b" strokeWidth={1.4} strokeLinejoin="round" />
             </svg>
@@ -347,7 +356,7 @@ export default function Lagartijas() {
             <div style={{ position: "absolute", bottom: -18, left: 54, width: 0, height: 0, borderLeft: "18px solid transparent", borderTop: "24px solid #2b2b2b" }} />
             <div style={{ position: "absolute", bottom: -13, left: 58, width: 0, height: 0, borderLeft: "13px solid transparent", borderTop: "18px solid #fff" }} />
             <p style={{ fontSize: "clamp(19px,4.8vw,28px)", lineHeight: 1.5, margin: 0 }}>
-              No hay carrito, ni botón de comprar, ni nada de eso. Yo las hago a mano cuando me las encargas. <strong style={{ color: "#ff8a3d" }}>Búscame en el cole o por el barrio</strong> y dime dos cosas: <strong style={{ color: "#29c2c9" }}>de qué color</strong> la quieres y <strong style={{ color: "#ff5ca8" }}>qué le pongo en la cola</strong>. ¡Y yo te la hago! Tardo un poquito, porque van una a una.
+              No hay carrito, ni botón de comprar, ni nada de eso. Yo las hago a mano cuando me las encargas. <strong style={{ color: "#ff8a3d" }}>Búscame por la playa o la piscina</strong> y dime dos cosas: <strong style={{ color: "#29c2c9" }}>de qué color</strong> la quieres y <strong style={{ color: "#ff5ca8" }}>qué le pongo en la cola</strong>. ¡Y yo te la hago! Tardo un poquito, porque van una a una.
             </p>
           </div>
 

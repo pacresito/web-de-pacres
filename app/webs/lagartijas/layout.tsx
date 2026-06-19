@@ -1,4 +1,22 @@
+import type { Metadata } from "next";
 import { Shantell_Sans, Patrick_Hand, Permanent_Marker } from "next/font/google";
+
+// Única ruta indexable además de la raíz: sobrescribe el noindex global del layout.
+export const metadata: Metadata = {
+  title: "Las lagartijas de Lucas",
+  description:
+    "Lagartijas de cuentas hechas a mano, una a una, por Lucas. Elige el color y qué le pongo en la cola; ninguna es igual a otra.",
+  robots: { index: true, follow: true },
+  alternates: { canonical: "https://pacr.es/webs/lagartijas" },
+  openGraph: {
+    title: "Las lagartijas de Lucas",
+    description: "Lagartijas de cuentas hechas a mano, una a una. Ninguna es igual a otra.",
+    url: "https://pacr.es/webs/lagartijas",
+    type: "website",
+    locale: "es_ES",
+    images: ["https://pacr.es/lagartijas/verde-amarilla.webp"],
+  },
+};
 
 // Las tres fuentes de Google son propias de esta web (un cuaderno de cole), no las
 // usa nada más. Se cargan aquí, scoped a la ruta, no en el layout raíz.
