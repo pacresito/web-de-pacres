@@ -3,14 +3,14 @@ import { Shantell_Sans, Patrick_Hand, Permanent_Marker } from "next/font/google"
 
 // Única ruta indexable además de la raíz: sobrescribe el noindex global del layout.
 export const metadata: Metadata = {
-  title: "Las lagartijas de Lucas",
+  title: "Las lagartijas de Lucas · hechas a mano en La Manga",
   description:
-    "Lagartijas de cuentas hechas a mano, una a una, por Lucas. Elige el color y qué le pongo en la cola; ninguna es igual a otra.",
+    "Lagartijas de cuentas hechas a mano, una a una, por Lucas en La Manga. Elige el color y qué le pongo en la cola; ninguna es igual a otra.",
   robots: { index: true, follow: true },
   alternates: { canonical: "https://pacr.es/webs/lagartijas" },
   openGraph: {
-    title: "Las lagartijas de Lucas",
-    description: "Lagartijas de cuentas hechas a mano, una a una. Ninguna es igual a otra.",
+    title: "Las lagartijas de Lucas · hechas a mano en La Manga",
+    description: "Lagartijas de cuentas hechas a mano, una a una, en La Manga. Ninguna es igual a otra.",
     url: "https://pacr.es/webs/lagartijas",
     type: "website",
     locale: "es_ES",

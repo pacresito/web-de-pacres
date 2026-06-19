@@ -356,7 +356,7 @@ export default function Lagartijas() {
             <div style={{ position: "absolute", bottom: -18, left: 54, width: 0, height: 0, borderLeft: "18px solid transparent", borderTop: "24px solid #2b2b2b" }} />
             <div style={{ position: "absolute", bottom: -13, left: 58, width: 0, height: 0, borderLeft: "13px solid transparent", borderTop: "18px solid #fff" }} />
             <p style={{ fontSize: "clamp(19px,4.8vw,28px)", lineHeight: 1.5, margin: 0 }}>
-              No hay carrito, ni botón de comprar, ni nada de eso. Yo las hago a mano cuando me las encargas. <strong style={{ color: "#ff8a3d" }}>Búscame por la playa o la piscina</strong> y dime dos cosas: <strong style={{ color: "#29c2c9" }}>de qué color</strong> la quieres y <strong style={{ color: "#ff5ca8" }}>qué le pongo en la cola</strong>. ¡Y yo te la hago! Tardo un poquito, porque van una a una.
+              No hay carrito, ni botón de comprar, ni nada de eso. Yo las hago a mano cuando me las encargas. <strong style={{ color: "#ff8a3d" }}>Búscame por La Manga en la playa o la piscina</strong> y dime dos cosas: <strong style={{ color: "#29c2c9" }}>de qué color</strong> la quieres y <strong style={{ color: "#ff5ca8" }}>qué le pongo en la cola</strong>. ¡Y yo te la hago! Tardo un poquito, porque van una a una.
             </p>
           </div>
 
