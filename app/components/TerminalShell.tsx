@@ -38,18 +38,24 @@ export default function TerminalShell({
   const router = useRouter();
   const [animClass, setAnimClass] = useState("");
   const [winH, setWinH] = useState<string | null>(null);
-  const [theme, setTheme] = useState<"light" | "dark">("light");
   const [contentVisible, setContentVisible] = useState(variant === "terminal" ? !prompt : false);
+  const [theme, setTheme] = useState<"light" | "dark">("light");
   const cmd = prompt?.command;
 
-  // Hereda el tema elegido en cv/lab/designs (mismo patrón que ChromeWindow). Default
-  // claro; solo vira a oscuro si el usuario lo eligió antes. No hay toggle aquí: el tema
-  // se cambia en la chrome de cv/lab/designs y los experimentos solo lo heredan.
+  // Tema scoped: data-theme va en el wrapper de esta página, no en <html>, para no
+  // bleed-ear el fondo del tema terminal sobre las landings theme-agnósticas. Default
+  // claro; solo viramos a oscuro si el usuario lo eligió antes (localStorage).
   useEffect(() => {
-    const saved = localStorage.getItem("pacres-theme");
     // eslint-disable-next-line react-hooks/set-state-in-effect -- init en mount: localStorage no existe en SSR; lectura única de preferencia
-    if (saved === "dark") setTheme("dark");
+    if (localStorage.getItem("pacres-theme") === "dark") setTheme("dark");
   }, []);
+
+  // El toggle "zsh" invierte ese estado y lo persiste; los tokens CSS del wrapper reaccionan.
+  const toggleTheme = () => {
+    const next = theme === "dark" ? "light" : "dark";
+    setTheme(next);
+    localStorage.setItem("pacres-theme", next);
+  };
 
   // Tecleo del prompt (solo variante terminal). Al fijarse el execMs revela el
   // contenido 250ms después, conservando la coreografía de entrada de las /lab.
@@ -120,7 +126,13 @@ export default function TerminalShell({
         ⌘&nbsp;&nbsp;pacr.es — {title}
       </div>
       <div style={{ flexShrink: 0, fontFamily: MONO, fontSize: 10, color: "var(--t-ink4)", whiteSpace: "nowrap" }}>
-        {version}
+        {version.endsWith("zsh") ? (
+          <>
+            {version.slice(0, -3)}
+            {/* Toggle oculto dark/claro: sin cursor ni estilo que delate que es clickable. */}
+            <span onClick={toggleTheme} style={{ cursor: "default" }}>zsh</span>
+          </>
+        ) : version}
       </div>
     </div>
   );

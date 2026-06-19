@@ -27,10 +27,11 @@
   --t-mono:  var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
-/* Tema oscuro del estilo terminal. Se activa con data-theme="dark" en el wrapper
-   de página (no en <html>): así solo afecta a cv/lab/designs y nunca a los
-   experimentos, que viven en otra ruta sin el atributo. Solo redefine color;
-   las fuentes no cambian. Paleta de partida, afinada en el navegador. */
+/* Tema oscuro del estilo terminal. Se activa con data-theme="dark" en el wrapper de cada
+   página (no en <html>): lo ponen ChromeWindow y TerminalShell, y lo togglean la chrome de
+   cv/lab/designs y el "zsh". Scoped a propósito, para no bleed-ear este fondo sobre las
+   landings /home/* y /webs/*, que pintan su propio body y no usan estos tokens.
+   Solo redefine color; las fuentes no cambian. Paleta de partida, afinada en el navegador. */
 [data-theme="dark"] {
   --t-paper:       #1a1a1a;
   --t-paper2:      #232323;

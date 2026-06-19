@@ -122,7 +122,13 @@ function drawBoard(
   cell_size: number
 ) {
   ctx.clearRect(0, 0, size, size);
-  ctx.fillStyle = "#fafaf7";
+  // El fondo es el papel de la terminal y el jugador el verde de acento: los leemos de
+  // los tokens (el canvas hereda el data-theme del wrapper de página) para que viren en
+  // dark — en oscuro el acento es más claro y la bola resalta. La espiral y la meta se quedan.
+  const cs = getComputedStyle(ctx.canvas);
+  const paper = cs.getPropertyValue("--t-paper").trim() || "#fafaf7";
+  const accent = cs.getPropertyValue("--t-accent").trim() || "#00b87a";
+  ctx.fillStyle = paper;
   ctx.fillRect(0, 0, size, size);
 
   ctx.strokeStyle = "rgba(0,184,122,0.18)";
@@ -148,7 +154,7 @@ function drawBoard(
   if (state.gameState !== "idle") {
     ctx.beginPath();
     ctx.arc(state.pos.x, state.pos.y, Math.max(5, cell_size / 4.5), 0, Math.PI * 2);
-    ctx.fillStyle = "#006644";
+    ctx.fillStyle = accent;
     ctx.shadowColor = "#00b87a";
     ctx.shadowBlur = 16;
     ctx.fill();

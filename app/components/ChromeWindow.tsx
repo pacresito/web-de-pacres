@@ -42,11 +42,17 @@ export default function ChromeWindow({
     if (saved === "dark") setTheme("dark");
   }, []);
 
-  // Pinta el body con el canvas del tema mientras la página está montada.
+  // Pinta el body con el canvas del tema mientras la página está montada. Al desmontar
+  // limpia el inline: si no, al navegar por SPA a una página con su propio body (p. ej.
+  // /webs/lucas, oscuro fijo) este background ganaría sobre su stylesheet.
   useEffect(() => {
     document.body.style.background = bodyBg;
+    return () => { document.body.style.background = ""; };
   }, [bodyBg]);
 
+  // Tema scoped: data-theme va en el wrapper de esta ventana (no en <html>), para no
+  // bleed-ear el fondo terminal sobre las landings theme-agnósticas. El estado alimenta
+  // el wrapper, el icono sol/luna y el fondo del body; al togglear, los tokens reaccionan.
   const handleThemeChange = (t: "light" | "dark") => {
     setTheme(t);
     localStorage.setItem("pacres-theme", t);

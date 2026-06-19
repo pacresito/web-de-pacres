@@ -251,7 +251,10 @@ export default function Fluidos() {
   return (
     <TerminalShell title="fluidos" prompt={{ host: "fluidos", path: "~/apps", command: "./fluidos --elementos=4" }} hideChrome={fullscreen}>
       <style>{`
-        :root {
+        /* Los alias se definen en main (bajo el wrapper con data-theme), no en :root:
+           en modo scoped <html> no tiene data-theme, y ahí var(--t-ink) resolvería en
+           claro y heredaría texto negro en dark. --sim-bg es color fijo, no token. */
+        main {
           --blue:    var(--t-accent);
           --text:    var(--t-ink);
           --muted:   var(--t-ink3);

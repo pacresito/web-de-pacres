@@ -276,7 +276,9 @@ export default function Orbitas() {
       hideChrome={fullscreen}
     >
       <style>{`
-        :root { --accent: var(--t-accent); --muted: var(--t-ink3); --border: var(--t-rule); --sim-bg: #000; }
+        /* Alias en main (bajo el wrapper con data-theme), no en :root: en modo scoped
+           <html> no tiene data-theme y var(--t-*) resolvería en claro. --sim-bg es fijo. */
+        main { --accent: var(--t-accent); --muted: var(--t-ink3); --border: var(--t-rule); --sim-bg: #000; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         html, body { height: 100%; overflow: hidden; }
 
