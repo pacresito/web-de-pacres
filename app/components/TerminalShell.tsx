@@ -38,8 +38,18 @@ export default function TerminalShell({
   const router = useRouter();
   const [animClass, setAnimClass] = useState("");
   const [winH, setWinH] = useState<string | null>(null);
+  const [theme, setTheme] = useState<"light" | "dark">("light");
   const [contentVisible, setContentVisible] = useState(variant === "terminal" ? !prompt : false);
   const cmd = prompt?.command;
+
+  // Hereda el tema elegido en cv/lab/designs (mismo patrón que ChromeWindow). Default
+  // claro; solo vira a oscuro si el usuario lo eligió antes. No hay toggle aquí: el tema
+  // se cambia en la chrome de cv/lab/designs y los experimentos solo lo heredan.
+  useEffect(() => {
+    const saved = localStorage.getItem("pacres-theme");
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- init en mount: localStorage no existe en SSR; lectura única de preferencia
+    if (saved === "dark") setTheme("dark");
+  }, []);
 
   // Tecleo del prompt (solo variante terminal). Al fijarse el execMs revela el
   // contenido 250ms después, conservando la coreografía de entrada de las /lab.
@@ -118,6 +128,7 @@ export default function TerminalShell({
   if (variant === "chrome") {
     return (
       <div
+        data-theme={theme}
         className={animClass === "ts-win-unmaximizing" ? "ts-outer-unmaximizing ts-chrome-outer" : ""}
         style={{ "--ts-win-w": "100vw" } as React.CSSProperties}
       >
@@ -145,8 +156,9 @@ export default function TerminalShell({
   return (
     <>
       <div
+        data-theme={theme}
         className={animClass === "ts-win-unmaximizing" ? "ts-outer-unmaximizing" : ""}
-        style={{ height: "100dvh", overflow: "hidden", background: "#ece9e0", display: "flex", justifyContent: "center", alignItems: "flex-start", padding: 0 }}
+        style={{ height: "100dvh", overflow: "hidden", background: "var(--t-canvas)", display: "flex", justifyContent: "center", alignItems: "flex-start", padding: 0 }}
       >
         <div
           className={animClass}

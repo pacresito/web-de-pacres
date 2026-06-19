@@ -398,7 +398,7 @@ export default function CirculoPerfecto() {
           )}
 
           {phase === "score" && (
-            <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "rgba(250,250,247,0.92)", backdropFilter: "blur(6px)", borderRadius: "8px" }}>
+            <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "color-mix(in srgb, var(--t-paper) 92%, transparent)", backdropFilter: "blur(6px)", borderRadius: "8px" }}>
               <p style={{ fontSize: "4.5rem", fontWeight: 800, fontFamily: "var(--t-mono)", color: displayScore >= THRESHOLD ? "var(--t-accent)" : "var(--t-ink)", lineHeight: 1 }}>
                 {pct}%
               </p>
@@ -409,7 +409,7 @@ export default function CirculoPerfecto() {
           )}
 
           {phase === "caught" && (
-            <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "rgba(250,250,247,0.97)", borderRadius: "8px", gap: "1.5rem" }}>
+            <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "color-mix(in srgb, var(--t-paper) 97%, transparent)", borderRadius: "8px", gap: "1.5rem" }}>
               <Certificado
                 titulo="Círculo Perfecto"
                 num={certNumRef.current}

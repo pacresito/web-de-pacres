@@ -628,7 +628,7 @@ export default function MagiaPage() {
             {guide.article.toLowerCase()}{" "}
             <span style={{ color: guide.color }}>{guide.name}</span>
             {" "}te trae tu{" "}
-            <span style={{ color: revealBeast.red ? "#dc2626" : "var(--t-ink)" }}>
+            <span style={{ color: revealBeast.red ? "#ef4444" : "var(--t-ink)" }}>
               {spellName(revealBeast)}
             </span>
           </p>
