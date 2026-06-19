@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
-import { readRestoredHeight } from "@/lib/utils";
+import { readRestoredHeight, SHELL_VERSION } from "@/lib/utils";
 import { useTypewriter } from "./useTypewriter";
 
 const MONO = "var(--t-mono)";
@@ -27,7 +27,7 @@ interface Props {
 
 export default function TerminalShell({
   title,
-  version = "v1.0.0 · zsh",
+  version = SHELL_VERSION,
   variant = "terminal",
   prompt,
   backUrl,

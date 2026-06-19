@@ -1,5 +1,7 @@
 "use client";
 
+import { SHELL_VERSION } from "@/lib/utils";
+
 // Cromo de ventana macOS compartido por las páginas con pestañas (cv, lab, designs).
 // Antes estaba triplicado en cada una (I5). Los keyframes de dock (t-dock-in/out, etc.)
 // siguen definidos en el <style> de cada página.
@@ -62,7 +64,7 @@ export function ChromeBar({ title, onClose, onMinimize, onMaximize, isMaximized,
       <div style={{ textAlign: "center", fontFamily: "var(--t-mono)", fontSize: 12, color: "var(--t-ink2)" }}>
         ⌘&nbsp;&nbsp;pacr.es — {title}
       </div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8, fontFamily: "var(--t-mono)", fontSize: 10, color: "var(--t-ink3)" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8, fontFamily: "var(--t-mono)", fontSize: 10, color: "var(--t-ink4)" }}>
         <button
           className="t-theme-btn"
           onClick={() => onThemeChange(nextTheme)}
@@ -71,7 +73,7 @@ export function ChromeBar({ title, onClose, onMinimize, onMaximize, isMaximized,
         >
           <i className={`t-theme-ico t-theme-ico--${theme === "dark" ? "sun" : "moon"}`} aria-hidden="true" />
         </button>
-        <span>v4.0.0 · zsh</span>
+        <span>{SHELL_VERSION}</span>
       </div>
     </div>
   );

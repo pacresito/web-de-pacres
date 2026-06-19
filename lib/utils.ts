@@ -1,5 +1,9 @@
 // Utilidades compartidas de front.
 
+// Etiqueta de versión de la barra de la shell. Fuente única: la muestran tanto la
+// chrome de cv/lab/designs (Chrome.tsx) como la de los experimentos (TerminalShell.tsx).
+export const SHELL_VERSION = "v1.0.0 · zsh";
+
 /** Edad en años cumplidos a partir de la fecha de nacimiento. */
 export function calcularEdad(nacimiento: Date): number {
   const hoy = new Date();
