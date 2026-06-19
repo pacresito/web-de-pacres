@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { ChromeBar, MinimizedBar, TabsBar } from "./Chrome";
 import type { ChromeTab } from "./Chrome";
+import { usePersistedTheme } from "./usePersistedTheme";
 import { saveRestoredHeight } from "@/lib/utils";
 
 // Ventana macOS con su máquina de estado (normal / minimizado / maximizado) y las
@@ -28,19 +29,15 @@ export default function ChromeWindow({
   const [windowState, setWindowState] = useState<"normal" | "minimized" | "maximized">("normal");
   const [animClass, setAnimClass] = useState("");
   const [dockAnimOut, setDockAnimOut] = useState(false);
-  const [theme, setTheme] = useState<"light" | "dark">("light");
+  // Tema scoped: data-theme va en el wrapper de esta ventana (no en <html>), para no
+  // bleed-ear el fondo terminal sobre las landings theme-agnósticas. El estado alimenta
+  // el wrapper, el icono sol/luna y el fondo del body; al togglear, los tokens reaccionan.
+  const [theme, setTheme] = usePersistedTheme();
   const winRef = useRef<HTMLDivElement>(null);
 
   // Fondo del body según el tema activo (asoma tras el wrapper durante las
   // animaciones de ventana). Color claro hardcodeado antes; ahora sigue al tema.
   const bodyBg = theme === "dark" ? "#0d0d0d" : "#f7f4ed";
-
-  // Default claro; solo viramos a oscuro si el usuario lo eligió antes (localStorage).
-  useEffect(() => {
-    const saved = localStorage.getItem("pacres-theme");
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- init en mount: localStorage no existe en SSR; lectura única de preferencia
-    if (saved === "dark") setTheme("dark");
-  }, []);
 
   // Pinta el body con el canvas del tema mientras la página está montada. Al desmontar
   // limpia el inline: si no, al navegar por SPA a una página con su propio body (p. ej.
@@ -49,14 +46,6 @@ export default function ChromeWindow({
     document.body.style.background = bodyBg;
     return () => { document.body.style.background = ""; };
   }, [bodyBg]);
-
-  // Tema scoped: data-theme va en el wrapper de esta ventana (no en <html>), para no
-  // bleed-ear el fondo terminal sobre las landings theme-agnósticas. El estado alimenta
-  // el wrapper, el icono sol/luna y el fondo del body; al togglear, los tokens reaccionan.
-  const handleThemeChange = (t: "light" | "dark") => {
-    setTheme(t);
-    localStorage.setItem("pacres-theme", t);
-  };
 
   // Guardar la altura de la ventana restaurada para que la animación de "atrás" de las
   // páginas de item (TerminalShell) termine a esta misma altura, sin salto.
@@ -160,7 +149,7 @@ export default function ChromeWindow({
         } as React.CSSProperties}>
           <ChromeBar title={title} onClose={handleClose} onMinimize={handleMinimize} onMaximize={handleMaximize}
             isMaximized={windowState === "maximized" || animClass === "t-win-maximizing"}
-            theme={theme} onThemeChange={handleThemeChange} />
+            theme={theme} onThemeChange={setTheme} />
           <TabsBar tabs={tabs} />
           {children}
         </div>

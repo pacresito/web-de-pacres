@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { readRestoredHeight, SHELL_VERSION } from "@/lib/utils";
 import { useTypewriter } from "./useTypewriter";
+import { usePersistedTheme } from "./usePersistedTheme";
 
 const MONO = "var(--t-mono)";
 
@@ -39,23 +40,13 @@ export default function TerminalShell({
   const [animClass, setAnimClass] = useState("");
   const [winH, setWinH] = useState<string | null>(null);
   const [contentVisible, setContentVisible] = useState(variant === "terminal" ? !prompt : false);
-  const [theme, setTheme] = useState<"light" | "dark">("light");
+  // Tema scoped: data-theme va en el wrapper de esta página (lo hereda el contenido), no en
+  // <html>, para no bleed-ear el fondo terminal sobre las landings theme-agnósticas.
+  const [theme, setTheme] = usePersistedTheme();
   const cmd = prompt?.command;
 
-  // Tema scoped: data-theme va en el wrapper de esta página, no en <html>, para no
-  // bleed-ear el fondo del tema terminal sobre las landings theme-agnósticas. Default
-  // claro; solo viramos a oscuro si el usuario lo eligió antes (localStorage).
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- init en mount: localStorage no existe en SSR; lectura única de preferencia
-    if (localStorage.getItem("pacres-theme") === "dark") setTheme("dark");
-  }, []);
-
-  // El toggle "zsh" invierte ese estado y lo persiste; los tokens CSS del wrapper reaccionan.
-  const toggleTheme = () => {
-    const next = theme === "dark" ? "light" : "dark";
-    setTheme(next);
-    localStorage.setItem("pacres-theme", next);
-  };
+  // El toggle "zsh" invierte el tema; el hook lo persiste y los tokens del wrapper reaccionan.
+  const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark");
 
   // Tecleo del prompt (solo variante terminal). Al fijarse el execMs revela el
   // contenido 250ms después, conservando la coreografía de entrada de las /lab.
