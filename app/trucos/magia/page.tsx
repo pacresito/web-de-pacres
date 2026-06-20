@@ -25,9 +25,9 @@ const RUNE_COUNT = RUNES.length;
 // `mouth` es la posición de la boca dentro del cuadro 1:1 de cada PNG (0–1):
 // el origen de la animación de la carta saliendo del animal.
 const SPIRIT_GUIDES = [
-  { article: "La", name: "iguana", img: "/trucos/magia/iguana.png", mouth: [0.62, 0.58], rune: "I", color: "#16a34a" },
+  { article: "La", name: "iguana", img: "/trucos/magia/iguana.png", mouth: [0.74, 0.52], rune: "I", color: "#16a34a" },
   { article: "El", name: "ñu",     img: "/trucos/magia/nu.png",     mouth: [0.67, 0.54], rune: "Ñ", color: "#b45309" },
-  { article: "El", name: "koala",  img: "/trucos/magia/koala.png",  mouth: [0.57, 0.66], rune: "K", color: "#7a6a5a" },
+  { article: "El", name: "koala",  img: "/trucos/magia/koala.png",  mouth: [0.63, 0.59], rune: "K", color: "#7a6a5a" },
 ];
 
 const SUIT_ES: Record<string, string> = {
