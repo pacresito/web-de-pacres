@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, Fragment, useCallback } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
 import { useTypewriter } from "../../components/useTypewriter";
+import { usePersistedTheme } from "../../components/usePersistedTheme";
 import { RECOMENDACIONES, CERTIFICACIONES as CERTS_PERFIL, PREMIOS, premioOrg } from "@/lib/perfil";
 
 type Rec = { texto: string; autor: string; cargo: string; photo: string; href: string };
@@ -262,7 +263,11 @@ function ThemeToggle({ theme, onChange }: { theme: "light" | "dark"; onChange: (
 }
 
 const STYLES = `
-.vE {
+/* Paleta del manifesto. Se define en <html> (no en .vE) para que el body —la franja de
+   overscroll— herede los tokens; :has(.vE.wf-page) la acota a esta home y deja intactas
+   las páginas terminal. El tema oscuro lo activa data-theme="dark" en <html>, que escribe
+   el script anti-FOUC del root layout antes del primer pintado: sin destello al recargar. */
+html:has(.vE.wf-page) {
   --ink:       #1a1a1a;
   --ink-2:     #2b2b2b;
   --ink-3:     #555;
@@ -277,7 +282,7 @@ const STYLES = `
   --hl:        #f7d774;
   --ok:        #3a7a4f;
 }
-.vE[data-theme="dark"] {
+html:has(.vE.wf-page)[data-theme="dark"] {
   --ink:       #f1ebe0;
   --ink-2:     #d8d2c6;
   --ink-3:     #a39c8d;
@@ -292,6 +297,10 @@ const STYLES = `
   --hl:        #b58f1e;
   --ok:        #6fcf97;
 }
+
+/* El body hereda el fondo del manifesto para que la franja de overscroll no destelle en
+   blanco (antes lo hacía un useEffect por JS). Acotado con :has() a esta home. */
+body:has(.vE.wf-page) { background: var(--bg); }
 
 .vE.wf-page {
   background: var(--bg);
@@ -448,7 +457,7 @@ const STYLES = `
 .vE-rec__link { color: var(--accent); font: 500 12px "IBM Plex Mono", monospace; letter-spacing: .12em; text-transform: uppercase; padding: 8px 12px; border: 1px solid rgba(210,74,26,.4); border-radius: 999px; white-space: nowrap; text-decoration: none; }
 .vE-rec__link:active { background: var(--accent); color: var(--ink); border-color: var(--accent); }
 @media (hover: hover) { .vE-rec__link:hover { background: var(--accent); color: var(--ink); border-color: var(--accent); } }
-.vE[data-theme="dark"] .vE-rec__link { border-color: rgba(255,106,53,.4); }
+[data-theme="dark"] .vE-rec__link { border-color: rgba(255,106,53,.4); }
 .vE-recs__dots { display: grid; gap: 4px; margin-top: 24px; padding: 0 68px; }
 .vE-recs__dot { appearance: none; background: transparent; border: 0; padding: 10px 0 6px; cursor: pointer; border-top: 2px solid var(--line-soft); transition: border-color .15s, color .15s; font: 500 9px "IBM Plex Mono", monospace; letter-spacing: .08em; color: var(--ink-4); }
 .vE-recs__dot:active { border-top-color: var(--ink-3); color: var(--ink-3); }
@@ -624,7 +633,7 @@ const STYLES = `
     transform: translateY(0);
   }
 }
-.vE-t-cursor { display: inline-block; width: 6px; height: 11px; background: #16140f; vertical-align: middle; margin-left: 1px; animation: vE-t-blink 0.7s steps(1) infinite; }
+.vE-t-cursor { display: inline-block; width: 6px; height: 11px; background: var(--t-ink); vertical-align: middle; margin-left: 1px; animation: vE-t-blink 0.7s steps(1) infinite; }
 @keyframes vE-t-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 @keyframes vE-skill-in { from { opacity: 0; transform: translateX(-4px); } to { opacity: 1; transform: none; } }
 .vE-secret-pill { position: relative; overflow: hidden; }
@@ -638,8 +647,8 @@ const pillBase: React.CSSProperties = {
   fontFamily: '"JetBrains Mono", "IBM Plex Mono", monospace',
   fontSize: 9,
   padding: "2px 8px",
-  border: "1px solid #ebe6d9",
-  color: "#b8b3a6",
+  border: "1px solid var(--t-rule2)",
+  color: "var(--t-ink4)",
   borderRadius: 999,
   textTransform: "uppercase",
   display: "inline-block",
@@ -665,16 +674,16 @@ function SkillsTerminalInline({ onNavigate }: { onNavigate: () => void }) {
   return (
     <div style={{ padding: "18px 28px 8px", fontFamily: '"JetBrains Mono", "IBM Plex Mono", monospace' }}>
       <div style={{ display: "grid", gridTemplateColumns: "44px 1fr auto", gap: "0 12px", alignItems: "baseline", marginBottom: 12 }}>
-        <span style={{ fontSize: 11, color: "#b8b3a6" }}>004</span>
+        <span style={{ fontSize: 11, color: "var(--t-ink4)" }}>004</span>
         <span style={{ fontSize: 13.5 }}>
-          <span style={{ color: "#009764" }}>pacres</span>
-          <span style={{ color: "#7a766b" }}>@resume</span>
-          <span style={{ color: "#3d3a32" }}>:~/cv</span>
-          <span style={{ color: "#7a766b" }}>$ </span>
-          <span style={{ color: "#16140f" }}>{displayed}</span>
+          <span style={{ color: "var(--t-accent2)" }}>pacres</span>
+          <span style={{ color: "var(--t-ink3)" }}>@resume</span>
+          <span style={{ color: "var(--t-ink2)" }}>:~/cv</span>
+          <span style={{ color: "var(--t-ink3)" }}>$ </span>
+          <span style={{ color: "var(--t-ink)" }}>{displayed}</span>
           {!cmdDone && <span className="vE-t-cursor" />}
         </span>
-        <span style={{ fontSize: 10, color: "#7a766b", visibility: execMs !== null ? "visible" : "hidden" }}>
+        <span style={{ fontSize: 10, color: "var(--t-ink3)", visibility: execMs !== null ? "visible" : "hidden" }}>
           ↳ {execMs ?? 0}ms
         </span>
       </div>
@@ -708,7 +717,11 @@ function SkillsTerminalInline({ onNavigate }: { onNavigate: () => void }) {
 export default function Manifesto() {
   const pathname = usePathname();
   const router = useRouter();
-  const [theme, setTheme] = useState<"light" | "dark">("light");
+  // Tema compartido con el resto del sitio (cv/lab/designs): clave única `pacres-theme` y
+  // atributo en <html>. El anti-FOUC del root layout lo deja correcto antes del primer
+  // pintado, así que no hay destello al recargar en oscuro. Heredar el tema entre manifesto
+  // y terminal sale gratis: ambos leen el mismo atributo.
+  const [theme, setTheme] = usePersistedTheme();
   const [navOpen, setNavOpen] = useState(false);
   const [palabraIdx, setPalabraIdx] = useState(0);
   const [skillsMode, setSkillsMode] = useState<"default" | "fading" | "terminal">("default");
@@ -725,17 +738,6 @@ export default function Manifesto() {
     }
     window.scrollTo(0, 0);
   }, []);
-
-  useEffect(() => {
-    const saved = localStorage.getItem("manifesto-theme");
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- init en mount: localStorage no existe en SSR; lectura única de preferencia, no un store reactivo
-    if (saved === "light" || saved === "dark") setTheme(saved);
-  }, []);
-
-  useEffect(() => {
-    document.body.style.background = theme === "dark" ? "#14130f" : "#f7f4ed";
-    return () => { document.body.style.background = ""; };
-  }, [theme]);
 
   useEffect(() => {
     const t = setInterval(() => setPalabraIdx(p => (p + 1) % PALABRAS_FIN.length), 4000);
@@ -1012,11 +1014,6 @@ export default function Manifesto() {
   // teardown duro corta loop/Runner/listeners; si no, es no-op (restoreRef es null).
   useEffect(() => () => { restoreRef.current?.(); }, []);
 
-  const handleThemeChange = (t: "light" | "dark") => {
-    setTheme(t);
-    localStorage.setItem("manifesto-theme", t);
-  };
-
   const handleNavigateToTerminal = useCallback(() => {
     setFullWhite(true);
     setTimeout(() => router.push("/cv"), 2020);
@@ -1025,14 +1022,14 @@ export default function Manifesto() {
   return (
     <>
       <div style={{
-        position: "fixed", inset: 0, background: "#f7f4ed",
+        position: "fixed", inset: 0, background: "var(--bg)",
         opacity: fullWhite ? 1 : 0,
         transition: "opacity 2000ms",
         zIndex: 9999,
         pointerEvents: fullWhite ? "all" : "none",
       }} />
       <style>{STYLES}</style>
-      <div className="vE wf-page" data-theme={theme}>
+      <div className="vE wf-page">
 
         {/* RAIL LATERAL FIJO */}
         <aside className="vE-rail" data-nav-open={navOpen ? "1" : "0"}>
@@ -1058,7 +1055,7 @@ export default function Manifesto() {
             <a href="#contacto"><i>05</i>Contacto</a>
           </nav>
           <div className="vE-rail__bot">
-            <ThemeToggle theme={theme} onChange={handleThemeChange} />
+            <ThemeToggle theme={theme} onChange={setTheme} />
             <div className="vE-rail__loc">
               <div>Madrid</div>
               <div>UTC+1</div>
@@ -1210,7 +1207,7 @@ export default function Manifesto() {
             className="vE-skills vE-reveal"
             id="skills"
             style={skillsMode !== "default" ? {
-              ...(skillsMode === "terminal" ? { background: "#fafaf7", borderBottom: "none", marginTop: -1 } : {}),
+              ...(skillsMode === "terminal" ? { background: "var(--t-paper)", borderBottom: "none", marginTop: -1 } : {}),
               minHeight: skillsMinHeight,
               position: "relative",
             } : undefined}
@@ -1261,7 +1258,7 @@ export default function Manifesto() {
                 </p>
               </>
             ) : skillsMode === "fading" ? (
-              <div style={{ position: "absolute", top: -1, left: 0, right: 0, bottom: -1, background: "#fafaf7", animation: "vE-section-in 2000ms ease-out both", zIndex: 1 }} />
+              <div style={{ position: "absolute", top: -1, left: 0, right: 0, bottom: -1, background: "var(--t-paper)", animation: "vE-section-in 2000ms ease-out both", zIndex: 1 }} />
             ) : (
               <SkillsTerminalInline onNavigate={handleNavigateToTerminal} />
             )}
