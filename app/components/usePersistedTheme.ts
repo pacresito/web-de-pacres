@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 
 export type Theme = "light" | "dark";
 
+// OJO: duplicada como string crudo en el script inline de app/layout.tsx (que corre antes
+// del bundle y no puede importar esta constante). Si cambias la clave, cámbiala en los dos sitios.
 const STORAGE_KEY = "pacres-theme";
 
 // Tema persistido en localStorage y reflejado en `data-theme` del <html>. El destello al
