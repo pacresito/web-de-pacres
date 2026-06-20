@@ -40,8 +40,7 @@ export default function TerminalShell({
   const [animClass, setAnimClass] = useState("");
   const [winH, setWinH] = useState<string | null>(null);
   const [contentVisible, setContentVisible] = useState(variant === "terminal" ? !prompt : false);
-  // Tema scoped: data-theme va en el wrapper de esta página (lo hereda el contenido), no en
-  // <html>, para no bleed-ear el fondo terminal sobre las landings theme-agnósticas.
+  // El tema vive en data-theme de <html> (lo pone el hook); el wrapper hereda los tokens.
   const [theme, setTheme] = usePersistedTheme();
   const cmd = prompt?.command;
 
@@ -131,7 +130,6 @@ export default function TerminalShell({
   if (variant === "chrome") {
     return (
       <div
-        data-theme={theme}
         className={animClass === "ts-win-unmaximizing" ? "ts-outer-unmaximizing ts-chrome-outer" : ""}
         style={{ "--ts-win-w": "100vw" } as React.CSSProperties}
       >
@@ -159,7 +157,6 @@ export default function TerminalShell({
   return (
     <>
       <div
-        data-theme={theme}
         className={animClass === "ts-win-unmaximizing" ? "ts-outer-unmaximizing" : ""}
         style={{ height: "100dvh", overflow: "hidden", background: "var(--t-canvas)", display: "flex", justifyContent: "center", alignItems: "flex-start", padding: 0 }}
       >

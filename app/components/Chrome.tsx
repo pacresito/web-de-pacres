@@ -71,7 +71,9 @@ export function ChromeBar({ title, onClose, onMinimize, onMaximize, isMaximized,
           title={nextTheme === "dark" ? "Tema oscuro" : "Tema claro"}
           aria-label={nextTheme === "dark" ? "Activar tema oscuro" : "Activar tema claro"}
         >
-          <i className={`t-theme-ico t-theme-ico--${theme === "dark" ? "sun" : "moon"}`} aria-hidden="true" />
+          {/* La forma (luna en claro, sol en oscuro) la decide el CSS según data-theme de
+              <html> — así es correcta desde el primer pintado, sin depender del estado React. */}
+          <i className="t-theme-ico" aria-hidden="true" />
         </button>
         <span>{SHELL_VERSION}</span>
       </div>
@@ -79,12 +81,11 @@ export function ChromeBar({ title, onClose, onMinimize, onMaximize, isMaximized,
   );
 }
 
-export function MinimizedBar({ title, onRestore, onMaximize, onClose, animatingOut = false, theme }: {
+export function MinimizedBar({ title, onRestore, onMaximize, onClose, animatingOut = false }: {
   title: string; onRestore: () => void; onMaximize: () => void; onClose: () => void; animatingOut?: boolean;
-  theme: "light" | "dark";
 }) {
   return (
-    <div data-theme={theme} style={{
+    <div style={{
       position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)",
       background: "var(--t-paper2)", border: "1px solid var(--t-rule)", borderRadius: 10,
       padding: "10px 16px", display: "flex", alignItems: "center", gap: 12,

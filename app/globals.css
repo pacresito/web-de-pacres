@@ -21,17 +21,16 @@
   --t-accent-soft: #d4f5e6;
   --t-accent-bg:   #e8faf1;
   --t-canvas:      #ece9e0;   /* fondo exterior de la ventana (cv/lab/designs) */
-  --t-bodybg:      #f7f4ed;   /* fondo del body durante las transiciones de ventana */
   --t-sans:  var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --t-serif: var(--font-instrument-serif), "Times New Roman", Georgia, serif;
   --t-mono:  var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
-/* Tema oscuro del estilo terminal. Se activa con data-theme="dark" en el wrapper de cada
-   página (no en <html>): lo ponen ChromeWindow y TerminalShell, y lo togglean la chrome de
-   cv/lab/designs y el "zsh". Scoped a propósito, para no bleed-ear este fondo sobre las
-   landings /home/* y /webs/*, que pintan su propio body y no usan estos tokens.
-   Solo redefine color; las fuentes no cambian. Paleta de partida, afinada en el navegador. */
+/* Tema oscuro del estilo terminal. Se activa con data-theme="dark" en <html>, que lo pone
+   un script inline antes del primer pintado (anti-FOUC) y lo togglean el hook usePersistedTheme,
+   la chrome de cv/lab/designs y el "zsh". No bleed-ea sobre las landings /home/* y /webs/*
+   porque estas pintan su propio body y no consumen estos tokens (selector sin cualificar,
+   solo redefine variables, no fondos). Solo redefine color; las fuentes no cambian. */
 [data-theme="dark"] {
   --t-paper:       #1a1a1a;
   --t-paper2:      #232323;
@@ -46,7 +45,6 @@
   --t-accent-soft: #123a2c;
   --t-accent-bg:   #0f261d;
   --t-canvas:      #0d0d0d;
-  --t-bodybg:      #0d0d0d;
 }
 
 @theme inline {
@@ -76,15 +74,20 @@
   transition: color 0.15s;
 }
 .t-theme-btn:active { color: var(--t-ink); }
-.t-theme-ico { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: currentColor; position: relative; }
-.t-theme-ico--sun {
-  width: 8px; height: 8px;
+/* Base = luna (tema claro: el botón ofrece pasar a oscuro). La variante la decide el CSS
+   según data-theme de <html>, no el estado React → correcta ya en el primer pintado. */
+.t-theme-ico {
+  display: inline-block; width: 10px; height: 10px; border-radius: 50%; position: relative;
+  background: transparent; box-shadow: inset -3px -1px 0 0 currentColor; transform: rotate(-25deg);
+}
+/* Tema oscuro: sol (ofrece volver a claro). */
+[data-theme="dark"] .t-theme-ico {
+  width: 8px; height: 8px; background: currentColor; transform: none;
   box-shadow: 0 -5px 0 -2.5px currentColor, 0 5px 0 -2.5px currentColor,
               -5px 0 0 -2.5px currentColor, 5px 0 0 -2.5px currentColor,
               -4px -4px 0 -2.5px currentColor, 4px 4px 0 -2.5px currentColor,
               -4px 4px 0 -2.5px currentColor, 4px -4px 0 -2.5px currentColor;
 }
-.t-theme-ico--moon { background: transparent; box-shadow: inset -3px -1px 0 0 currentColor; transform: rotate(-25deg); }
 
 @keyframes ts-blink { 50% { opacity: 0; } }
 

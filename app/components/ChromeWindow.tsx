@@ -29,9 +29,8 @@ export default function ChromeWindow({
   const [windowState, setWindowState] = useState<"normal" | "minimized" | "maximized">("normal");
   const [animClass, setAnimClass] = useState("");
   const [dockAnimOut, setDockAnimOut] = useState(false);
-  // Tema scoped: data-theme va en el wrapper de esta ventana (no en <html>), para no
-  // bleed-ear el fondo terminal sobre las landings theme-agnósticas. El estado alimenta
-  // el wrapper, el icono sol/luna y el fondo del body; al togglear, los tokens reaccionan.
+  // El tema vive en data-theme de <html> (lo pone el hook); la ventana hereda los tokens.
+  // El estado aquí solo alimenta el fondo del body y el title/aria del botón de tema.
   const [theme, setTheme] = usePersistedTheme();
   const winRef = useRef<HTMLDivElement>(null);
 
@@ -118,9 +117,9 @@ export default function ChromeWindow({
 
   return (
     <>
-      {isMin && <MinimizedBar title={title} onRestore={handleRestore} onMaximize={handleRestoreMaximized} onClose={handleClose} animatingOut={dockAnimOut} theme={theme} />}
+      {isMin && <MinimizedBar title={title} onRestore={handleRestore} onMaximize={handleRestoreMaximized} onClose={handleClose} animatingOut={dockAnimOut} />}
 
-      <div data-theme={theme} className={`t-bg${animClass === "t-win-maximizing" ? " t-outer-maximizing" : animClass === "t-win-unmaximizing" ? " t-outer-unmaximizing" : ""}`} style={{
+      <div className={`t-bg${animClass === "t-win-maximizing" ? " t-outer-maximizing" : animClass === "t-win-unmaximizing" ? " t-outer-unmaximizing" : ""}`} style={{
         minHeight: "100vh",
         padding: isMax ? 0 : "2rem 1rem 3rem",
         display: (isMin && !animClass) ? "none" : "flex",

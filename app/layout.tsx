@@ -78,8 +78,21 @@ export default function RootLayout({
   return (
     <html
       lang="es"
+      suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} ${instrumentSerif.variable} ${ibmPlexSans.variable} ${ibmPlexMono.variable} ${jetbrainsMono.variable} ${inter.variable} h-full antialiased`}
     >
+      <head>
+        {/* Anti-FOUC: aplica el tema oscuro en <html> antes del primer pintado, leyendo
+            la preferencia de localStorage. Así los tokens --t-* cascadean ya en oscuro y
+            no hay destello claro al recargar. El servidor no conoce el tema (sitio estático,
+            sin cookies) → suppressHydrationWarning en <html>. try/catch por si localStorage
+            lanza (modo privado). Solo escribe el atributo en dark; claro es el default. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{if(localStorage.getItem('pacres-theme')==='dark')document.documentElement.dataset.theme='dark'}catch(e){}`,
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col">
         {children}
       </body>

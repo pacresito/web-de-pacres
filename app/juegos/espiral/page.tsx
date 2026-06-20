@@ -123,7 +123,7 @@ function drawBoard(
 ) {
   ctx.clearRect(0, 0, size, size);
   // El fondo es el papel de la terminal y el jugador el verde de acento: los leemos de
-  // los tokens (el canvas hereda el data-theme del wrapper de página) para que viren en
+  // los tokens (el canvas hereda los tokens del tema, en data-theme de <html>) para que viren en
   // dark — en oscuro el acento es más claro y la bola resalta. La espiral y la meta se quedan.
   const cs = getComputedStyle(ctx.canvas);
   const paper = cs.getPropertyValue("--t-paper").trim() || "#fafaf7";
