@@ -13,7 +13,7 @@ export default async function FarmaPage() {
   const rol = await getRol();
   if (!rol) return <LoginForm />;
 
-  const raw = await redis.get(KEYS.refPrioridades());
+  const raw = await redis.get(KEYS.descuentos());
   const data: Record<string, LabDescuento[]> = raw ? JSON.parse(raw) : {};
 
   return (
@@ -23,6 +23,7 @@ export default async function FarmaPage() {
         <nav className="flex items-center gap-4 text-sm text-neutral-600">
           {rol === "admin" && (
             <>
+              <Link href="/farma/descuentos" className="hover:text-neutral-900">Descuentos</Link>
               <Link href="/farma/pedidos" className="hover:text-neutral-900">Pedidos</Link>
               <Link href="/farma/pvp" className="hover:text-neutral-900">PVP</Link>
               <Link href="/farma/minimos" className="hover:text-neutral-900">Mínimos</Link>

@@ -10,19 +10,31 @@ import { KEYS } from "../lib/farma/keys";
 
 async function main(): Promise<void> {
   const prod = process.argv.includes("--prod");
+  const dev = !prod; // dev por defecto; --prod escribe las claves de prod
 
   const url = process.env.REDIS_URL;
   if (!url) throw new Error("REDIS_URL no definida — usa --env-file=.env.local.");
 
-  const ruta = resolve("seed/prioridades.json");
-  const prioridades = JSON.parse(readFileSync(ruta, "utf-8")) as Record<string, unknown>;
-  const n = Object.keys(prioridades).length;
-
   const redis = new Redis(url);
-  const key = KEYS.refPrioridades(!prod); // dev por defecto; --prod escribe la clave de prod
-  await redis.set(key, JSON.stringify(prioridades));
+
+  // Descuentos (Prioridades).
+  const prioridades = JSON.parse(readFileSync(resolve("seed/prioridades.json"), "utf-8")) as Record<string, unknown>;
+  await redis.set(KEYS.descuentos(dev), JSON.stringify(prioridades));
+  console.log(`Sembrados ${Object.keys(prioridades).length} principios en ${KEYS.descuentos(dev)}.`);
+
+  // Ventas: ref:pedidos (blob) + stmin (hash). El StMín lo gobierna María a partir de
+  // aquí; solo se siembran los > 0 (StMín 0 = nunca rotura, no aporta a Pedidos ni a Mínimos).
+  const ventas = JSON.parse(readFileSync(resolve("seed/ventas.json"), "utf-8")) as {
+    ref_pedidos: Record<string, unknown>;
+    stmin: Record<string, number>;
+  };
+  await redis.set(KEYS.refPedidos(dev), JSON.stringify(ventas.ref_pedidos));
+  const stmin = Object.fromEntries(Object.entries(ventas.stmin).filter(([, v]) => v > 0));
+  await redis.del(KEYS.stmin(dev));
+  await redis.hset(KEYS.stmin(dev), stmin);
+  console.log(`Sembrados ${Object.keys(ventas.ref_pedidos).length} artículos en ${KEYS.refPedidos(dev)} y ${Object.keys(stmin).length} StMín en ${KEYS.stmin(dev)}.`);
+
   await redis.quit();
-  console.log(`Sembrados ${n} principios en ${key}.`);
 }
 
 main().catch((e) => {

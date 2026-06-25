@@ -1,0 +1,92 @@
+// Subida de inventario (admin). Una sola subida alimenta Pedidos y PVP:
+//   1. parsea el .xls (firma de fila, cubre los 3 formatos),
+//   2. reescribe el snapshot de stock (farma:stock) y los metadatos (farma:meta),
+//   3. diff de PVP contra el histórico (farma:pvp): marca `pending` lo que cambió,
+//   4. cuenta la acción,
+// y responde el delta de confirmación (±artículos vs la subida anterior + total),
+// un chequeo rápido de que el parseo fue bien. El recálculo de pedidos lo hace la
+// página al refrescar (cargarEstadoPedidos), no hace falta devolverlo aquí.
+import { getRol } from "../../auth";
+import redis from "@/lib/redis";
+import { KEYS } from "@/lib/farma/keys";
+import { parseInventario, type ArticuloInventario } from "@/lib/farma/inventario";
+import { incrStat } from "@/lib/farma/stats";
+
+interface RegistroPvp {
+  denominacion: string;
+  oldPrice: number; // PVP anterior (la línea base previa)
+  newPrice: number; // PVP actual
+  firstSeen: string; // fecha del informe en que apareció el newPrice
+  lastSeen: string; // fecha del último informe en que se vio el artículo
+  pending: boolean; // cambió y aún no se han reetiquetado
+}
+
+// Aplica el diff de PVP de un artículo contra su histórico. Devuelve el registro
+// actualizado: primera vez = línea base sin cambio; mismo precio = solo refresca
+// lastSeen; precio distinto = el anterior pasa a oldPrice y queda pendiente.
+function diffPvp(art: ArticuloInventario, fecha: string, previo: RegistroPvp | null): RegistroPvp {
+  if (!previo) {
+    return { denominacion: art.denominacion, oldPrice: art.pvp, newPrice: art.pvp, firstSeen: fecha, lastSeen: fecha, pending: false };
+  }
+  if (art.pvp === previo.newPrice) {
+    return { ...previo, denominacion: art.denominacion, lastSeen: fecha };
+  }
+  return { denominacion: art.denominacion, oldPrice: previo.newPrice, newPrice: art.pvp, firstSeen: fecha, lastSeen: fecha, pending: true };
+}
+
+export async function POST(request: Request): Promise<Response> {
+  if ((await getRol()) !== "admin") {
+    return Response.json({ error: "No autorizado" }, { status: 403 });
+  }
+
+  const form = await request.formData().catch(() => null);
+  const file = form?.get("file");
+  if (!(file instanceof File)) {
+    return Response.json({ error: "Falta el archivo de inventario" }, { status: 400 });
+  }
+
+  let items: ArticuloInventario[];
+  let fechaInforme: string;
+  try {
+    const inv = parseInventario(Buffer.from(await file.arrayBuffer()));
+    items = inv.items;
+    fechaInforme = inv.fechaInforme;
+  } catch (err) {
+    console.error("parseInventario falló:", err);
+    return Response.json({ error: "No se pudo leer el inventario" }, { status: 422 });
+  }
+  if (items.length === 0) {
+    return Response.json({ error: "El inventario no tiene artículos: ¿formato correcto?" }, { status: 422 });
+  }
+
+  // Delta de confirmación contra la subida anterior.
+  const metaRaw = await redis.get(KEYS.meta());
+  const totalPrevio: number | null = metaRaw ? JSON.parse(metaRaw).totalArticulos : null;
+
+  // Snapshot de stock: se reescribe entero (DEL + HSET en pipeline).
+  const stockFlat = Object.fromEntries(items.map((a) => [a.codigo, a.stock]));
+
+  // Diff de PVP contra el histórico.
+  const pvpPrevio = await redis.hgetall(KEYS.pvp());
+  const pvpFlat: Record<string, string> = {};
+  for (const art of items) {
+    const previo = pvpPrevio[art.codigo] ? (JSON.parse(pvpPrevio[art.codigo]) as RegistroPvp) : null;
+    pvpFlat[art.codigo] = JSON.stringify(diffPvp(art, fechaInforme, previo));
+  }
+
+  const pipe = redis.pipeline();
+  pipe.del(KEYS.stock());
+  pipe.hset(KEYS.stock(), stockFlat);
+  pipe.hset(KEYS.pvp(), pvpFlat);
+  pipe.set(KEYS.meta(), JSON.stringify({ fechaInforme, loadedAt: Date.now(), totalArticulos: items.length }));
+  await pipe.exec();
+
+  await incrStat("inventario-subido");
+
+  return Response.json({
+    ok: true,
+    fechaInforme,
+    totalArticulos: items.length,
+    delta: totalPrevio === null ? null : items.length - totalPrevio,
+  });
+}
