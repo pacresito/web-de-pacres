@@ -2,12 +2,19 @@ import Link from "next/link";
 import { getRol } from "./auth";
 import LoginForm from "./LoginForm";
 import LogoutButton from "./LogoutButton";
+import Prioridades from "./Prioridades";
+import redis from "@/lib/redis";
+import { KEYS } from "@/lib/farma/keys";
+import type { LabDescuento } from "@/lib/farma/prioridades";
 
-// Landing de /farma: sin sesión → login; con sesión → Prioridades (placeholder
-// en Fase 1). El admin ve además los accesos a Pedidos/PVP/Mínimos.
+// Landing de /farma: sin sesión → login; con sesión → Prioridades. El admin ve
+// además los accesos a Pedidos/PVP/Mínimos.
 export default async function FarmaPage() {
   const rol = await getRol();
   if (!rol) return <LoginForm />;
+
+  const raw = await redis.get(KEYS.refPrioridades());
+  const data: Record<string, LabDescuento[]> = raw ? JSON.parse(raw) : {};
 
   return (
     <main className="flex flex-col gap-6">
@@ -24,7 +31,7 @@ export default async function FarmaPage() {
           <LogoutButton />
         </nav>
       </header>
-      <p className="text-neutral-500">Buscador de principios activos — próximamente.</p>
+      <Prioridades data={data} />
     </main>
   );
 }
