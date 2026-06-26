@@ -1,22 +1,29 @@
 // Cálculo de pedidos a partir del snapshot de inventario y la referencia de Ventas.
 // Lógica pura, testeable con `npx tsx lib/farma/pedidos.test.ts`. Fuera del build.
 //
-// Reglas (del plan):
-// - Rotura: stock < StMín ⟹ el artículo entra en pedido.
-// - Cantidad: ceil(consumo_mensual) − stock, nunca negativa. El objetivo es solo
-//   el consumo, nunca el StMín. Si sale ≤ 0 (ya cubres el mes pese a la rotura) la
-//   línea va con cantidad 0: María decide, y Unycop no deja pedir 0 → avisa sola.
-// - Stock mínimo > consumo: señal de stock mínimo mal puesto (heredado/desubicado).
-//   Se cuenta sobre TODO el universo de stock mínimo, haya rotura o no (lo revisa
-//   María en la pantalla Mínimos); aquí solo va el total para la línea-resumen.
-// - Ciclo de vida por LABORATORIO (María hace check a nivel de lab):
-//     · pendiente: el lab tiene ≥1 artículo en rotura y no está fichado, o lo está
-//       pero ya pasaron 5 días y sigue la rotura (se reabre).
+// Reglas (del plan, cambios jun-26 #1/#2/#3):
+// - Línea para pedir: cantidad > 0, i.e. existencias < max(StMín, ceil(consumo)).
+//   Incluye artículos sin rotura pero por debajo del consumo (no solo los rotos).
+// - Cantidad (#2): max(0, max(StMín, ceil(consumo_mensual)) − stock). El objetivo
+//   es el máximo entre stock mínimo y consumo (ya no solo el consumo).
+// - Rotura: stock < StMín. Ya no decide por sí sola si hay línea; solo cuenta para
+//   la condición #1a de que el pedido sea pendiente.
+// - Pedido pendiente (#1): un pedido entra en la lista solo si cumple LAS DOS:
+//   (a) ≥1 artículo en rotura  y  (b) ≥6 líneas para pedir (≥6 artículos con
+//   cantidad > 0). El umbral de 6 evita disparar pedidos minúsculos.
+// - Stock mínimo > consumo (#3): ya no es un error (con el objetivo = max, pides
+//   hasta el StMín). Aviso informativo: se cuenta sobre TODO el universo de stock
+//   mínimo, haya rotura o no (lo revisa María en la pantalla Inventario); aquí solo
+//   va el total para la línea-resumen sutil.
+// - Ciclo de vida por LABORATORIO (María hace check a nivel de lab); solo se
+//   construyen los pedidos que cumplen #1:
+//     · pendiente: cumple #1 y no está fichado, o lo está pero pasaron 5 días.
 //     · ya hecho: fichado hace < 5 días.
-//     · resuelto: si un inventario nuevo quita la rotura, el lab no se construye
-//       (desaparece de ambas listas).
+//     · resuelto: si un inventario nuevo deja de cumplir #1 (se quita la rotura o
+//       caen las líneas por debajo de 6), el lab no se construye (desaparece).
 
 const CINCO_DIAS_MS = 5 * 24 * 60 * 60 * 1000;
+const MIN_LINEAS_PEDIDO = 6; // #1b: un pedido con menos líneas no se considera pendiente
 
 export interface RefArticulo {
   denominacion: string;
@@ -58,7 +65,7 @@ export function calcularPedidos(
   hechos: Hechos,
   now: number,
 ): ResultadoPedidos {
-  const porLab = new Map<string, LineaPedido[]>();
+  const porLab = new Map<string, { lineas: LineaPedido[]; hayRotura: boolean }>();
   const huerfanos: string[] = [];
   let alertasStockMinimo = 0;
 
@@ -66,32 +73,40 @@ export function calcularPedidos(
   for (const [codigo, min] of Object.entries(stMin)) {
     const ref = refPedidos[codigo];
 
-    // Stock mínimo > consumo: cuenta sobre todo el universo, haya rotura o no.
+    // Stock mínimo > consumo (#3): cuenta sobre todo el universo, haya rotura o no.
     if (ref && min > ref.consumoMensual) alertasStockMinimo++;
 
     const existencias = stock[codigo] ?? 0; // ausente del inventario = 0 unidades
-    if (existencias >= min) continue; // sin rotura
+
+    // Cantidad (#2): subir hasta el máximo entre stock mínimo y consumo mensual.
+    const objetivo = ref ? Math.max(min, Math.ceil(ref.consumoMensual)) : min;
+    const cantidad = Math.max(0, objetivo - existencias);
+    if (cantidad <= 0) continue; // ya cubierto: no es línea para pedir
 
     if (!ref) {
-      huerfanos.push(codigo); // en rotura pero sin datos de Ventas
+      huerfanos.push(codigo); // hay que pedir pero no está en la referencia de Ventas
       continue;
     }
 
-    const cantidad = Math.max(0, Math.ceil(ref.consumoMensual) - existencias);
-    if (!porLab.has(ref.lab)) porLab.set(ref.lab, []);
-    porLab.get(ref.lab)!.push({ codigo, denominacion: ref.denominacion, cantidad });
+    const grupo = porLab.get(ref.lab) ?? { lineas: [], hayRotura: false };
+    grupo.lineas.push({ codigo, denominacion: ref.denominacion, cantidad });
+    if (existencias < min) grupo.hayRotura = true; // rotura (#1a)
+    porLab.set(ref.lab, grupo);
   }
 
   const pendientes: BolsaLab[] = [];
   const hechosOut: PedidoHecho[] = [];
 
-  for (const [lab, lineas] of porLab) {
+  for (const [lab, { lineas, hayRotura }] of porLab) {
+    // #1: solo es pedido si tiene ≥1 rotura Y ≥6 líneas para pedir.
+    if (!hayRotura || lineas.length < MIN_LINEAS_PEDIDO) continue;
+
     lineas.sort((a, b) => a.denominacion.localeCompare(b.denominacion, "es"));
     const orderedAt = hechos[lab];
     if (orderedAt && now - orderedAt < CINCO_DIAS_MS) {
       hechosOut.push({ lab, orderedAt, lineas });
     } else {
-      pendientes.push({ lab, lineas }); // sin fichar, o fichado hace ≥5 días con rotura → reabre
+      pendientes.push({ lab, lineas }); // sin fichar, o fichado hace ≥5 días → reabre
     }
   }
 

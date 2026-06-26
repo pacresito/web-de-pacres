@@ -1,84 +1,105 @@
 // Test de lógica pura: `npx tsx lib/farma/pedidos.test.ts`. Fuera del build.
 import assert from "assert";
-import { calcularPedidos, type RefPedidos, type StMins } from "./pedidos";
+import { calcularPedidos, type RefPedidos, type Stocks, type StMins } from "./pedidos";
 
 const AHORA = Date.parse("2026-06-26T10:00:00Z");
 const haceDias = (n: number) => AHORA - n * 24 * 60 * 60 * 1000;
 
-const ref: RefPedidos = {
-  "000001": { denominacion: "AMLODIPINO 5MG", lab: "CINFA", consumoMensual: 10 },
-  "000002": { denominacion: "BISOPROLOL 5MG", lab: "CINFA", consumoMensual: 8 },
-  "000003": { denominacion: "OMEPRAZOL 20MG", lab: "NORMON", consumoMensual: 20 },
-  "000004": { denominacion: "PARACETAMOL 1G", lab: "NORMON", consumoMensual: 4 },
-};
-const stMin: StMins = { "000001": 5, "000002": 5, "000003": 10, "000004": 8 };
+const C = Array.from({ length: 6 }, (_, i) => String(i + 1).padStart(6, "0")); // 000001..000006
 
-// --- Rotura, cantidad y agrupación por lab ---
-{
-  // stock: 001 roto (2<5) → 10-2=8 ; 002 ok (6≥5) ; 003 roto (3<10) → 20-3=17 ; 004 roto (1<8)
-  const r = calcularPedidos({ "000001": 2, "000002": 6, "000003": 3, "000004": 1 }, ref, stMin, {}, AHORA);
-
-  assert.strictEqual(r.pendientes.length, 2, "dos labs en rotura");
-  const cinfa = r.pendientes.find((b) => b.lab === "CINFA")!;
-  assert.deepStrictEqual(cinfa.lineas.map((l) => [l.codigo, l.cantidad]), [["000001", 8]], "CINFA: solo 001, cantidad 8");
-  const normon = r.pendientes.find((b) => b.lab === "NORMON")!;
-  // 004: stMin 8 > consumo 4 → cantidad = max(0, 4-1)=3, pero alerta
-  assert.deepStrictEqual(
-    normon.lineas.map((l) => [l.codigo, l.cantidad]),
-    [["000003", 17], ["000004", 3]],
-    "NORMON: 003 y 004 ordenados por denominación",
+// 6 artículos del lab CINFA (denominaciones A..F) con el mismo consumo mensual.
+const seisCinfa = (consumo: number): RefPedidos =>
+  Object.fromEntries(
+    C.map((codigo, i) => [
+      codigo,
+      { denominacion: `CINFA-${String.fromCharCode(65 + i)}`, lab: "CINFA", consumoMensual: consumo },
+    ]),
   );
+const todos = (v: number): Stocks => Object.fromEntries(C.map((c) => [c, v]));
+
+// --- #1+#2: 6 roturas → pendiente; cantidad = max(StMín, consumo) − stock ---
+{
+  const r = calcularPedidos(todos(2), seisCinfa(10), todos(5), {}, AHORA);
+  assert.strictEqual(r.pendientes.length, 1, "un pedido pendiente");
+  const cinfa = r.pendientes[0];
+  assert.strictEqual(cinfa.lab, "CINFA");
+  assert.strictEqual(cinfa.lineas.length, 6, "6 líneas");
+  assert.ok(cinfa.lineas.every((l) => l.cantidad === 8), "cantidad max(5,10)−2 = 8");
 }
 
-// --- Cantidad 0 cuando ya cubres el consumo pese a la rotura (StMín > consumo) ---
+// --- #2: con StMín > consumo el objetivo es el StMín; #3 cuenta la alerta ---
 {
-  // 004: stock 5 < stMin 8 (rotura) pero 5 ≥ ceil(consumo 4) → cantidad max(0, 4-5)=0
-  const r = calcularPedidos({ "000004": 5 }, ref, { "000004": 8 }, {}, AHORA);
-  const normon = r.pendientes.find((b) => b.lab === "NORMON")!;
-  assert.deepStrictEqual(normon.lineas, [{ codigo: "000004", denominacion: "PARACETAMOL 1G", cantidad: 0 }], "línea con cantidad 0");
-  assert.strictEqual(r.alertasStockMinimo, 1, "004: stMin 8 > consumo 4");
+  const r = calcularPedidos(todos(2), seisCinfa(4), todos(8), {}, AHORA);
+  assert.ok(r.pendientes[0].lineas.every((l) => l.cantidad === 6), "max(8,4)−2 = 6 (manda el StMín)");
+  assert.strictEqual(r.alertasStockMinimo, 6, "los 6 tienen StMín 8 > consumo 4");
 }
 
-// --- alertasStockMinimo cuenta todo el universo, haya rotura o no ---
+// --- #1: una línea para pedir no necesita rotura (existencias bajo el consumo) ---
 {
-  // stMin > consumo en 003 (10>… no: consumo 20) y 004 (8>4). Sin rotura (stock alto).
-  const r = calcularPedidos({ "000003": 99, "000004": 99 }, ref, { "000003": 25, "000004": 8 }, {}, AHORA);
-  assert.strictEqual(r.pendientes.length, 0, "sin rotura: ningún pedido");
-  assert.strictEqual(r.alertasStockMinimo, 2, "003 (25>20) y 004 (8>4) cuentan sin estar en rotura");
+  // 000001 roto (2<5) → cantidad 8 ; 000002..006 sin rotura (7≥5) pero bajo consumo → cantidad 3
+  const stock: Stocks = { ...todos(7), "000001": 2 };
+  const r = calcularPedidos(stock, seisCinfa(10), todos(5), {}, AHORA);
+  assert.strictEqual(r.pendientes.length, 1, "rotura en 000001 + 6 líneas → pendiente");
+  const lineas = Object.fromEntries(r.pendientes[0].lineas.map((l) => [l.codigo, l.cantidad]));
+  assert.strictEqual(lineas["000001"], 8, "roto: max(5,10)−2");
+  assert.strictEqual(lineas["000002"], 3, "sin rotura pero bajo consumo: max(5,10)−7");
 }
 
-// --- Ciclo de vida: fichado hace <5 días → ya hecho; ≥5 días con rotura → reabre ---
+// --- #1b: con < 6 líneas no es pendiente aunque haya roturas ---
 {
-  const stock = { "000001": 2 }; // CINFA en rotura
-  const soloCinfa = { "000001": 5 };
-  const reciente = calcularPedidos(stock, ref, soloCinfa, { CINFA: haceDias(2) }, AHORA);
+  // 5 roturas (000001..005) + 1 cubierto (000006 sin línea) = 5 líneas < 6
+  const stock: Stocks = { ...todos(2), "000006": 99 };
+  const r = calcularPedidos(stock, seisCinfa(10), todos(5), {}, AHORA);
+  assert.strictEqual(r.pendientes.length, 0, "5 líneas: por debajo del umbral");
+}
+
+// --- #1a: con 6 líneas pero 0 roturas tampoco es pendiente ---
+{
+  // todos a 7: 7≥5 (sin rotura) y 7<10 → 6 líneas de cantidad 3, pero ninguna rotura
+  const r = calcularPedidos(todos(7), seisCinfa(10), todos(5), {}, AHORA);
+  assert.strictEqual(r.pendientes.length, 0, "sin rotura: no se dispara el pedido");
+}
+
+// --- #3: alertasStockMinimo cuenta todo el universo, sin rotura ---
+{
+  const stMin: StMins = { ...todos(5), "000001": 25 }; // solo 000001 con StMín > consumo (25>10)
+  const r = calcularPedidos(todos(99), seisCinfa(10), stMin, {}, AHORA);
+  assert.strictEqual(r.pendientes.length, 0, "stock alto: ningún pedido");
+  assert.strictEqual(r.alertasStockMinimo, 1, "solo 000001 (25 > 10)");
+}
+
+// --- Ciclo de vida: fichado < 5 días → ya hecho; ≥ 5 días → reabre ---
+{
+  const ref = seisCinfa(10);
+  const reciente = calcularPedidos(todos(2), ref, todos(5), { CINFA: haceDias(2) }, AHORA);
   assert.strictEqual(reciente.pendientes.length, 0, "fichado hace 2 días: no pendiente");
   assert.strictEqual(reciente.hechos.length, 1, "aparece en ya hechos");
-  assert.strictEqual(reciente.hechos[0].lab, "CINFA");
 
-  const viejo = calcularPedidos(stock, ref, soloCinfa, { CINFA: haceDias(6) }, AHORA);
-  assert.strictEqual(viejo.pendientes.length, 1, "fichado hace 6 días y sigue rotura: reabre");
+  const viejo = calcularPedidos(todos(2), ref, todos(5), { CINFA: haceDias(6) }, AHORA);
+  assert.strictEqual(viejo.pendientes.length, 1, "fichado hace 6 días y sigue cumpliendo #1: reabre");
   assert.strictEqual(viejo.hechos.length, 0);
 }
 
-// --- Resuelto: si el inventario nuevo quita la rotura, el lab desaparece aunque esté fichado ---
+// --- Resuelto: si el inventario nuevo deja de cumplir #1, desaparece aunque esté fichado ---
 {
-  const r = calcularPedidos({ "000001": 9 }, ref, { "000001": 5 }, { CINFA: haceDias(1) }, AHORA);
+  // todos a 9: sin rotura (9≥5), 6 líneas de cantidad 1 → falla #1a → ni pendiente ni hecho
+  const r = calcularPedidos(todos(9), seisCinfa(10), todos(5), { CINFA: haceDias(1) }, AHORA);
   assert.strictEqual(r.pendientes.length, 0);
-  assert.strictEqual(r.hechos.length, 0, "sin rotura: ni pendiente ni hecho");
+  assert.strictEqual(r.hechos.length, 0, "sin rotura: desaparece de ambas listas");
 }
 
-// --- Huérfano: en rotura pero sin entrada en refPedidos ---
+// --- Huérfano: hay que pedir (rotura) pero el código no está en la referencia ---
 {
-  const r = calcularPedidos({ "999999": 0 }, ref, { "999999": 3 }, {}, AHORA);
+  const r = calcularPedidos({ "999999": 0 }, seisCinfa(10), { "999999": 3 }, {}, AHORA);
   assert.deepStrictEqual(r.huerfanos, ["999999"]);
   assert.strictEqual(r.pendientes.length, 0);
 }
 
-// --- Stock ausente del inventario = 0 unidades → rotura ---
+// --- Stock ausente del inventario = 0 unidades → rotura, pide el objetivo entero ---
 {
-  const r = calcularPedidos({}, ref, { "000001": 5 }, {}, AHORA);
-  assert.strictEqual(r.pendientes[0].lineas[0].cantidad, 10, "ausente = 0 stock → pide consumo entero");
+  const r = calcularPedidos({}, seisCinfa(10), todos(5), {}, AHORA);
+  assert.strictEqual(r.pendientes.length, 1, "ausentes = 0 → 6 roturas");
+  assert.ok(r.pendientes[0].lineas.every((l) => l.cantidad === 10), "max(5,10)−0 = 10");
 }
 
 console.log("pedidos.test.ts ✓");

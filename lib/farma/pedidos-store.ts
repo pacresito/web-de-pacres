@@ -1,5 +1,5 @@
 // Carga el estado de Pedidos desde Redis y lo recalcula. Lo comparten la página
-// /farma/pedidos (lo pinta) y la ruta de descarga xls (saca la bolsa de un lab):
+// /farma/maria (lo pinta) y la ruta de descarga xls (saca la bolsa de un lab):
 // ambas parten del mismo snapshot, así que el read-and-compute vive en un sitio.
 import redis from "@/lib/redis";
 import { KEYS } from "./keys";
