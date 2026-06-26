@@ -1,7 +1,6 @@
-import Link from "next/link";
-import { requireAdmin } from "../auth";
-import LogoutButton from "../LogoutButton";
-import Minimos, { type ArticuloMin } from "../Minimos";
+import { requireAdmin } from "../../auth";
+import SubpageNav from "../../SubpageNav";
+import Minimos, { type ArticuloMin } from "../../Minimos";
 import redis from "@/lib/redis";
 import { KEYS } from "@/lib/farma/keys";
 import type { RefPedidos } from "@/lib/farma/pedidos";
@@ -29,10 +28,7 @@ export default async function MinimosPage() {
     <main className="flex flex-col gap-6">
       <header className="flex items-baseline justify-between">
         <h1 className="text-xl font-medium">Mínimos</h1>
-        <nav className="flex items-center gap-4 text-sm text-neutral-600">
-          <Link href="/farma/pedidos" className="hover:text-neutral-900">Pedidos</Link>
-          <LogoutButton />
-        </nav>
+        <SubpageNav />
       </header>
       <p className="text-sm text-neutral-500">
         Ajusta el stock mínimo de cada artículo. Las líneas

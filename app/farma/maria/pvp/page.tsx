@@ -1,7 +1,6 @@
-import Link from "next/link";
-import { requireAdmin } from "../auth";
-import LogoutButton from "../LogoutButton";
-import Pvp from "../Pvp";
+import { requireAdmin } from "../../auth";
+import SubpageNav from "../../SubpageNav";
+import Pvp from "../../Pvp";
 import { cargarPvpPendientes } from "@/lib/farma/pvp";
 
 // PVP (admin): cambios de precio detectados en la última subida de inventario,
@@ -15,11 +14,7 @@ export default async function PvpPage() {
     <main className="flex flex-col gap-6">
       <header className="flex items-baseline justify-between">
         <h1 className="text-xl font-medium">PVP</h1>
-        <nav className="flex items-center gap-4 text-sm text-neutral-600">
-          <Link href="/farma/pedidos" className="hover:text-neutral-900">Pedidos</Link>
-          <Link href="/farma" className="hover:text-neutral-900">Prioridades</Link>
-          <LogoutButton />
-        </nav>
+        <SubpageNav />
       </header>
       <Pvp pendientes={pendientes} />
     </main>

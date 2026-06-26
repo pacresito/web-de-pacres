@@ -9,7 +9,7 @@ export async function getRol(): Promise<Rol | null> {
   return verifySession(cookie)?.rol ?? null;
 }
 
-/** Páginas solo-admin (pedidos, pvp, mínimos): si no es admin, vuelve a /farma. */
+/** Páginas solo-admin (panel /farma/maria y sus subpáginas): si no es admin, vuelve a /farma. */
 export async function requireAdmin(): Promise<void> {
   if ((await getRol()) !== "admin") redirect("/farma");
 }

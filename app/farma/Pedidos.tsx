@@ -102,7 +102,7 @@ export default function Pedidos({
         </p>
         <p className="text-neutral-600">
           {pvpCambiados > 0 ? (
-            <Link href="/farma/pvp" className="text-amber-700 hover:underline">
+            <Link href="/farma/maria/pvp" className="text-amber-700 hover:underline">
               {pvpCambiados} {pvpCambiados === 1 ? "precio cambiado" : "precios cambiados"} →
             </Link>
           ) : (
@@ -157,7 +157,7 @@ export default function Pedidos({
       {/* Stock mínimo > consumo: en vez del muro de líneas, una línea-resumen que
           enlaza a Mínimos, donde María las revisa y edita. */}
       {alertasStockMinimo > 0 && (
-        <Link href="/farma/minimos" className="text-sm text-amber-700 hover:underline">
+        <Link href="/farma/maria/inventario" className="text-sm text-amber-700 hover:underline">
           {alertasStockMinimo} {alertasStockMinimo === 1 ? "artículo" : "artículos"} con stock mínimo mayor que el consumo →
         </Link>
       )}

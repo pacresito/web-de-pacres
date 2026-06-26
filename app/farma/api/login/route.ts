@@ -45,7 +45,7 @@ export async function POST(request: Request): Promise<Response> {
     `farma_session=${valor}; Path=/farma; Expires=${expira.toUTCString()}; ` +
     `HttpOnly; SameSite=Lax${PROD ? "; Secure" : ""}`;
 
-  const res = Response.json({ destino: rol === "admin" ? "/farma/pedidos" : "/farma" });
+  const res = Response.json({ destino: rol === "admin" ? "/farma/maria" : "/farma" });
   res.headers.set("Set-Cookie", cookie);
   return res;
 }
