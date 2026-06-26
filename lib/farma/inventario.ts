@@ -53,6 +53,23 @@ export function parseInventario(data: Buffer | Uint8Array | ArrayBuffer): Invent
   return { fechaInforme, items };
 }
 
+// Guarda de carga (#7): un inventario completo cae dentro de unos rangos conocidos.
+// Fuera de ellos algo huele mal (archivo equivocado, export parcial…). Dos niveles:
+//   · aviso   — fuera del rango normal pero plausible: se puede confirmar y seguir.
+//   · bloqueo — tan fuera que casi seguro es un error: no se deja actualizar.
+// El bloqueo es duro: ni confirmándolo se actualiza.
+export type VeredictoCarga = "ok" | "aviso" | "bloqueo";
+
+export function evaluarCarga(articulos: number, unidades: number): VeredictoCarga {
+  if (articulos < 1000 || articulos > 6000 || unidades < 10000 || unidades > 40000) return "bloqueo";
+  if (articulos < 2000 || articulos > 5000 || unidades < 15000 || unidades > 35000) return "aviso";
+  return "ok";
+}
+
+// Unidades totales del inventario (suma de existencias): alimenta la guarda y el panel.
+export const totalUnidades = (items: ArticuloInventario[]): number =>
+  items.reduce((suma, a) => suma + a.stock, 0);
+
 // Localiza la fila "Fecha del Informe:" y convierte su serial Excel a ISO.
 function leerFechaInforme(rows: unknown[][]): string {
   const fila = rows.find((r) => r.some((c) => typeof c === "string" && c.includes("Fecha del Informe")));

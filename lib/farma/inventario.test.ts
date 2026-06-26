@@ -4,7 +4,20 @@
 // si no están, el test se salta solo.
 import assert from "assert";
 import { readFileSync, existsSync } from "fs";
-import { parseInventario } from "./inventario";
+import { parseInventario, evaluarCarga } from "./inventario";
+
+// --- Guarda de carga (#7): veredicto por rangos. No necesita fixtures. ---
+assert.strictEqual(evaluarCarga(3500, 25000), "ok", "centro del rango normal");
+assert.strictEqual(evaluarCarga(2000, 15000), "ok", "límite inferior del rango normal (inclusive)");
+assert.strictEqual(evaluarCarga(5000, 35000), "ok", "límite superior del rango normal (inclusive)");
+assert.strictEqual(evaluarCarga(1500, 25000), "aviso", "pocos artículos pero plausible");
+assert.strictEqual(evaluarCarga(3500, 12000), "aviso", "pocas unidades pero plausible");
+assert.strictEqual(evaluarCarga(5500, 25000), "aviso", "demasiados artículos pero plausible");
+assert.strictEqual(evaluarCarga(3500, 38000), "aviso", "demasiadas unidades pero plausible");
+assert.strictEqual(evaluarCarga(900, 25000), "bloqueo", "artículos bajo el mínimo duro");
+assert.strictEqual(evaluarCarga(7000, 25000), "bloqueo", "artículos sobre el máximo duro");
+assert.strictEqual(evaluarCarga(3500, 9000), "bloqueo", "unidades bajo el mínimo duro");
+assert.strictEqual(evaluarCarga(3500, 45000), "bloqueo", "unidades sobre el máximo duro");
 
 const dir = "/Users/pacres/Documents/Claude/Pacres/WEB/material/farmacia/Ejemplos inventario/";
 

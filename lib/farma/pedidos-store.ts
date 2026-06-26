@@ -9,6 +9,7 @@ export interface MetaInventario {
   fechaInforme: string;
   loadedAt: number;
   totalArticulos: number;
+  unidades: number; // suma de existencias del último inventario (guarda de carga + panel)
 }
 
 export interface EstadoPedidos {

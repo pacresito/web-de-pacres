@@ -23,6 +23,7 @@ export default function Pedidos({
   const fileRef = useRef<HTMLInputElement>(null);
   const [subiendo, setSubiendo] = useState(false);
   const [confirmacion, setConfirmacion] = useState<{ total: number; delta: number | null } | null>(null);
+  const [aviso, setAviso] = useState<{ articulos: number; unidades: number } | null>(null); // guarda de carga (#7)
   const [error, setError] = useState("");
   const [nombre, setNombre] = useState(""); // nombre del archivo elegido
   const [abierto, setAbierto] = useState<string | null>(null); // lab expandido
@@ -33,19 +34,35 @@ export default function Pedidos({
   const [ahora, setAhora] = useState<number | null>(null);
   useEffect(() => setAhora(Date.now()), []);
 
-  async function subir() {
+  // `confirmar` lo pone el botón del aviso de la guarda de carga (#7): reenvía el
+  // mismo archivo saltándose el aviso. El bloqueo es duro, no se confirma.
+  async function subir(confirmar = false) {
     const file = fileRef.current?.files?.[0];
     if (!file) {
       setError("Elige un archivo de inventario.");
       return;
     }
     setError("");
+    setAviso(null);
     setSubiendo(true);
     try {
       const fd = new FormData();
       fd.append("file", file);
+      if (confirmar) fd.append("confirmar", "true");
       const res = await fetch("/farma/api/inventario", { method: "POST", body: fd });
       const d = await res.json().catch(() => ({}));
+      if (d.estado === "bloqueo") {
+        setError(
+          `El inventario tiene ${d.articulos.toLocaleString("es-ES")} artículos y ` +
+            `${d.unidades.toLocaleString("es-ES")} unidades, fuera de los límites razonables ` +
+            `(1.000–6.000 artículos, 10.000–40.000 unidades). Revisa que sea el archivo correcto.`,
+        );
+        return;
+      }
+      if (d.estado === "aviso") {
+        setAviso({ articulos: d.articulos, unidades: d.unidades }); // pide confirmación
+        return;
+      }
       if (!res.ok) {
         setError(d.error ?? "No se pudo subir el inventario.");
         return;
@@ -133,13 +150,40 @@ export default function Pedidos({
           <span className="text-sm text-neutral-500">{nombre || "Ningún archivo elegido"}</span>
           <button
             type="button"
-            onClick={subir}
+            onClick={() => subir()}
             disabled={subiendo || !nombre}
             className="rounded bg-neutral-900 px-3 py-1.5 text-sm text-white hover:bg-neutral-700 disabled:opacity-40"
           >
             {subiendo ? "Subiendo…" : "Subir inventario"}
           </button>
         </div>
+        {aviso && (
+          <div className="flex flex-col gap-2 rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+            <p>
+              En este excel hay <strong>{aviso.articulos.toLocaleString("es-ES")} artículos</strong> y{" "}
+              <strong>{aviso.unidades.toLocaleString("es-ES")} unidades</strong>; normalmente hay entre
+              3.000–4.000 artículos y 20.000–30.000 unidades. ¿Seguro que has subido el archivo correcto?
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => subir(true)}
+                disabled={subiendo}
+                className="rounded bg-amber-700 px-3 py-1.5 text-white hover:bg-amber-800 disabled:opacity-40"
+              >
+                Sí, actualizar igualmente
+              </button>
+              <button
+                type="button"
+                onClick={() => setAviso(null)}
+                disabled={subiendo}
+                className="rounded border border-amber-300 px-3 py-1.5 hover:bg-amber-100 disabled:opacity-40"
+              >
+                No, lo compruebo y te digo
+              </button>
+            </div>
+          </div>
+        )}
         {confirmacion && (
           <p className="text-sm text-neutral-600">
             Cargados {confirmacion.total} artículos

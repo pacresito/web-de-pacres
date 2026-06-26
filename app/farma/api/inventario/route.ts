@@ -1,15 +1,17 @@
 // Subida de inventario (admin). Una sola subida alimenta Pedidos y PVP:
 //   1. parsea el .xls (firma de fila, cubre los 3 formatos),
-//   2. reescribe el snapshot de stock (farma:stock) y los metadatos (farma:meta),
-//   3. diff de PVP contra el histórico (farma:pvp): marca `pending` lo que cambió,
-//   4. cuenta la acción,
-// y responde el delta de confirmación (±artículos vs la subida anterior + total),
-// un chequeo rápido de que el parseo fue bien. El recálculo de pedidos lo hace la
-// página al refrescar (cargarEstadoPedidos), no hace falta devolverlo aquí.
+//   2. guarda de carga (#7): si los artículos/unidades quedan fuera de rango,
+//      responde `estado: "aviso"` (confirmable) o `"bloqueo"` (duro) SIN escribir,
+//   3. reescribe el snapshot de stock (farma:stock) y los metadatos (farma:meta),
+//   4. diff de PVP contra el histórico (farma:pvp): marca `pending` lo que cambió,
+//   5. cuenta la acción,
+// y responde `estado: "ok"` con el delta de confirmación (±artículos vs la subida
+// anterior + total + unidades), un chequeo rápido de que el parseo fue bien. El
+// recálculo de pedidos lo hace la página al refrescar, no hace falta devolverlo.
 import { getRol } from "../../auth";
 import redis from "@/lib/redis";
 import { KEYS } from "@/lib/farma/keys";
-import { parseInventario, type ArticuloInventario } from "@/lib/farma/inventario";
+import { parseInventario, evaluarCarga, totalUnidades, type ArticuloInventario } from "@/lib/farma/inventario";
 import { incrStat } from "@/lib/farma/stats";
 import type { RegistroPvp } from "@/lib/farma/pvp";
 
@@ -51,6 +53,15 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ error: "El inventario no tiene artículos: ¿formato correcto?" }, { status: 422 });
   }
 
+  // Guarda de carga (#7): rangos esperados de un inventario completo.
+  const articulos = items.length;
+  const unidades = totalUnidades(items);
+  const veredicto = evaluarCarga(articulos, unidades);
+  const confirmar = form?.get("confirmar") === "true"; // el aviso lo confirma María; el bloqueo es duro
+  if (veredicto === "bloqueo" || (veredicto === "aviso" && !confirmar)) {
+    return Response.json({ estado: veredicto, articulos, unidades });
+  }
+
   // Delta de confirmación contra la subida anterior.
   const metaRaw = await redis.get(KEYS.meta());
   const totalPrevio: number | null = metaRaw ? JSON.parse(metaRaw).totalArticulos : null;
@@ -70,15 +81,16 @@ export async function POST(request: Request): Promise<Response> {
   pipe.del(KEYS.stock());
   pipe.hset(KEYS.stock(), stockFlat);
   pipe.hset(KEYS.pvp(), pvpFlat);
-  pipe.set(KEYS.meta(), JSON.stringify({ fechaInforme, loadedAt: Date.now(), totalArticulos: items.length }));
+  pipe.set(KEYS.meta(), JSON.stringify({ fechaInforme, loadedAt: Date.now(), totalArticulos: articulos, unidades }));
   await pipe.exec();
 
   await incrStat("inventario-subido");
 
   return Response.json({
-    ok: true,
+    estado: "ok",
     fechaInforme,
-    totalArticulos: items.length,
-    delta: totalPrevio === null ? null : items.length - totalPrevio,
+    totalArticulos: articulos,
+    unidades,
+    delta: totalPrevio === null ? null : articulos - totalPrevio,
   });
 }
