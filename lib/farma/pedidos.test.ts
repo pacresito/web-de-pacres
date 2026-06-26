@@ -32,12 +32,19 @@ const stMin: StMins = { "000001": 5, "000002": 5, "000003": 10, "000004": 8 };
 
 // --- Cantidad 0 cuando ya cubres el consumo pese a la rotura (StMín > consumo) ---
 {
-  // 004: stock 5 < stMin 8 (rotura) pero 5 ≥ ceil(consumo 4) → cantidad max(0, 4-5)=0 + alerta
+  // 004: stock 5 < stMin 8 (rotura) pero 5 ≥ ceil(consumo 4) → cantidad max(0, 4-5)=0
   const r = calcularPedidos({ "000004": 5 }, ref, { "000004": 8 }, {}, AHORA);
   const normon = r.pendientes.find((b) => b.lab === "NORMON")!;
   assert.deepStrictEqual(normon.lineas, [{ codigo: "000004", denominacion: "PARACETAMOL 1G", cantidad: 0 }], "línea con cantidad 0");
-  assert.strictEqual(r.alertas.length, 1, "una alerta StMín>consumo");
-  assert.strictEqual(r.alertas[0].codigo, "000004");
+  assert.strictEqual(r.alertasStockMinimo, 1, "004: stMin 8 > consumo 4");
+}
+
+// --- alertasStockMinimo cuenta todo el universo, haya rotura o no ---
+{
+  // stMin > consumo en 003 (10>… no: consumo 20) y 004 (8>4). Sin rotura (stock alto).
+  const r = calcularPedidos({ "000003": 99, "000004": 99 }, ref, { "000003": 25, "000004": 8 }, {}, AHORA);
+  assert.strictEqual(r.pendientes.length, 0, "sin rotura: ningún pedido");
+  assert.strictEqual(r.alertasStockMinimo, 2, "003 (25>20) y 004 (8>4) cuentan sin estar en rotura");
 }
 
 // --- Ciclo de vida: fichado hace <5 días → ya hecho; ≥5 días con rotura → reabre ---

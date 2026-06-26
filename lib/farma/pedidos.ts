@@ -6,7 +6,9 @@
 // - Cantidad: ceil(consumo_mensual) − stock, nunca negativa. El objetivo es solo
 //   el consumo, nunca el StMín. Si sale ≤ 0 (ya cubres el mes pese a la rotura) la
 //   línea va con cantidad 0: María decide, y Unycop no deja pedir 0 → avisa sola.
-// - Alerta: StMín > consumo_mensual (no debería pasar; sería pedir de más).
+// - Stock mínimo > consumo: señal de stock mínimo mal puesto (heredado/desubicado).
+//   Se cuenta sobre TODO el universo de stock mínimo, haya rotura o no (lo revisa
+//   María en la pantalla Mínimos); aquí solo va el total para la línea-resumen.
 // - Ciclo de vida por LABORATORIO (María hace check a nivel de lab):
 //     · pendiente: el lab tiene ≥1 artículo en rotura y no está fichado, o lo está
 //       pero ya pasaron 5 días y sigue la rotura (se reabre).
@@ -42,18 +44,10 @@ export interface PedidoHecho extends BolsaLab {
   orderedAt: number;
 }
 
-export interface Alerta {
-  codigo: string;
-  denominacion: string;
-  lab: string;
-  stMin: number;
-  consumoMensual: number;
-}
-
 export interface ResultadoPedidos {
   pendientes: BolsaLab[];
   hechos: PedidoHecho[];
-  alertas: Alerta[];
+  alertasStockMinimo: number; // artículos con stock mínimo > consumo (todo el universo) → Mínimos
   huerfanos: string[]; // códigos en rotura sin entrada en refPedidos → avisar a Pablo
 }
 
@@ -65,15 +59,19 @@ export function calcularPedidos(
   now: number,
 ): ResultadoPedidos {
   const porLab = new Map<string, LineaPedido[]>();
-  const alertas: Alerta[] = [];
   const huerfanos: string[] = [];
+  let alertasStockMinimo = 0;
 
   // El universo gestionado es el de artículos con StMín definido.
   for (const [codigo, min] of Object.entries(stMin)) {
+    const ref = refPedidos[codigo];
+
+    // Stock mínimo > consumo: cuenta sobre todo el universo, haya rotura o no.
+    if (ref && min > ref.consumoMensual) alertasStockMinimo++;
+
     const existencias = stock[codigo] ?? 0; // ausente del inventario = 0 unidades
     if (existencias >= min) continue; // sin rotura
 
-    const ref = refPedidos[codigo];
     if (!ref) {
       huerfanos.push(codigo); // en rotura pero sin datos de Ventas
       continue;
@@ -82,10 +80,6 @@ export function calcularPedidos(
     const cantidad = Math.max(0, Math.ceil(ref.consumoMensual) - existencias);
     if (!porLab.has(ref.lab)) porLab.set(ref.lab, []);
     porLab.get(ref.lab)!.push({ codigo, denominacion: ref.denominacion, cantidad });
-
-    if (min > ref.consumoMensual) {
-      alertas.push({ codigo, denominacion: ref.denominacion, lab: ref.lab, stMin: min, consumoMensual: ref.consumoMensual });
-    }
   }
 
   const pendientes: BolsaLab[] = [];
@@ -103,5 +97,5 @@ export function calcularPedidos(
 
   pendientes.sort((a, b) => a.lab.localeCompare(b.lab, "es"));
   hechosOut.sort((a, b) => b.orderedAt - a.orderedAt); // más reciente primero
-  return { pendientes, hechos: hechosOut, alertas, huerfanos };
+  return { pendientes, hechos: hechosOut, alertasStockMinimo, huerfanos };
 }

@@ -83,7 +83,7 @@ export default function Pedidos({
     }
   }
 
-  const { pendientes, hechos, alertas, huerfanos } = resultado;
+  const { pendientes, hechos, alertasStockMinimo, huerfanos } = resultado;
 
   return (
     <div className="flex flex-col gap-6">
@@ -154,18 +154,12 @@ export default function Pedidos({
         {error && <p className="text-sm text-red-600">{error}</p>}
       </section>
 
-      {/* Alertas: StMín > consumo (no debería pasar; sería pedir de más) */}
-      {alertas.length > 0 && (
-        <section className="rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-          <p className="font-medium">Revisar StMín (mayor que el consumo mensual):</p>
-          <ul className="mt-1 list-disc pl-5">
-            {alertas.map((a) => (
-              <li key={a.codigo}>
-                {a.denominacion} — StMín {a.stMin}, consumo {a.consumoMensual}
-              </li>
-            ))}
-          </ul>
-        </section>
+      {/* Stock mínimo > consumo: en vez del muro de líneas, una línea-resumen que
+          enlaza a Mínimos, donde María las revisa y edita. */}
+      {alertasStockMinimo > 0 && (
+        <Link href="/farma/minimos" className="text-sm text-amber-700 hover:underline">
+          {alertasStockMinimo} {alertasStockMinimo === 1 ? "artículo" : "artículos"} con stock mínimo mayor que el consumo →
+        </Link>
       )}
 
       {/* Huérfanos: en rotura pero sin datos de Ventas → avisar a Pablo */}

@@ -11,15 +11,7 @@ import redis from "@/lib/redis";
 import { KEYS } from "@/lib/farma/keys";
 import { parseInventario, type ArticuloInventario } from "@/lib/farma/inventario";
 import { incrStat } from "@/lib/farma/stats";
-
-interface RegistroPvp {
-  denominacion: string;
-  oldPrice: number; // PVP anterior (la línea base previa)
-  newPrice: number; // PVP actual
-  firstSeen: string; // fecha del informe en que apareció el newPrice
-  lastSeen: string; // fecha del último informe en que se vio el artículo
-  pending: boolean; // cambió y aún no se han reetiquetado
-}
+import type { RegistroPvp } from "@/lib/farma/pvp";
 
 // Aplica el diff de PVP de un artículo contra su histórico. Devuelve el registro
 // actualizado: primera vez = línea base sin cambio; mismo precio = solo refresca
