@@ -34,6 +34,12 @@ async function main(): Promise<void> {
   await redis.hset(KEYS.stmin(dev), stmin);
   console.log(`Sembrados ${Object.keys(ventas.ref_pedidos).length} artículos en ${KEYS.refPedidos(dev)} y ${Object.keys(stmin).length} StMín en ${KEYS.stmin(dev)}.`);
 
+  // Pedidos: mapa codigo → [pedidos] (eje de agrupación de Pedidos, de la carpeta de María).
+  const pedidos = JSON.parse(readFileSync(resolve("seed/pedidos.json"), "utf-8")) as Record<string, string[]>;
+  await redis.set(KEYS.pedidoCodigos(dev), JSON.stringify(pedidos));
+  const nPedidos = new Set(Object.values(pedidos).flat()).size;
+  console.log(`Sembrados ${Object.keys(pedidos).length} códigos en ${nPedidos} pedidos en ${KEYS.pedidoCodigos(dev)}.`);
+
   await redis.quit();
 }
 

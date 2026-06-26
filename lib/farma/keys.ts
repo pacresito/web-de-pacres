@@ -12,6 +12,9 @@ export const KEYS = {
 
   // Referencia de Ventas (estática, sembrada): blob JSON codigo → {denominacion, lab, consumoMensual}.
   refPedidos: (dev: boolean = esDev) => farmaKey("farma:ref:pedidos", dev),
+  // Mapa código → [pedidos] (estático, sembrado): a qué pedido(s) pertenece cada artículo.
+  // Eje de agrupación de Pedidos (la carpeta de pedidos de María). Blob JSON.
+  pedidoCodigos: (dev: boolean = esDev) => farmaKey("farma:ref:pedido-codigos", dev),
   // StMín por artículo (mutable, lo edita María): hash codigo → stMin.
   stmin: (dev: boolean = esDev) => farmaKey("farma:stmin", dev),
   // Snapshot del último inventario: hash codigo → stock. Se reescribe en cada subida.
@@ -20,7 +23,7 @@ export const KEYS = {
   meta: (dev: boolean = esDev) => farmaKey("farma:meta", dev),
   // Histórico de PVP: hash codigo → JSON {denominacion, oldPrice, newPrice, firstSeen, lastSeen, pending}.
   pvp: (dev: boolean = esDev) => farmaKey("farma:pvp", dev),
-  // Pedidos fichados por María: hash lab → orderedAt (epoch ms del check).
+  // Pedidos fichados por María: hash pedido → orderedAt (epoch ms del check).
   pedidosHechos: (dev: boolean = esDev) => farmaKey("farma:pedidos-hechos", dev),
   // Contadores de uso por acción y mes (YYYY-MM, Madrid). No se exponen en la web.
   stats: (accion: string, mes: string, dev: boolean = esDev) =>

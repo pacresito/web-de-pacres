@@ -14,7 +14,7 @@ import type { LabDescuento } from "@/lib/farma/prioridades";
 // desde el snapshot de Redis. Desde aquí cuelgan el resto de subpáginas.
 export default async function MariaPage() {
   await requireAdmin();
-  const [{ resultado, meta, pvpCambiados, labs }, descRaw] = await Promise.all([
+  const [{ resultado, meta, pvpCambiados, pedidos }, descRaw] = await Promise.all([
     cargarEstadoPedidos(),
     redis.get(KEYS.descuentos()),
   ]);
@@ -39,7 +39,7 @@ export default async function MariaPage() {
         pvpCambiados={pvpCambiados}
         descuentosInferidos={descuentosInferidos}
       />
-      <Pedidos resultado={resultado} labs={labs} />
+      <Pedidos resultado={resultado} pedidos={pedidos} />
     </main>
   );
 }

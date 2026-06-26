@@ -2,16 +2,16 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { BolsaLab, ResultadoPedidos } from "@/lib/farma/pedidos";
+import type { BolsaPedido, ResultadoPedidos } from "@/lib/farma/pedidos";
 import { haceX } from "@/lib/farma/tiempo";
 import Buscador from "./Buscador";
 
-// Pedidos (admin): subida de inventario + bolsas por lab. El estado de cabecera lo
+// Pedidos (admin): subida de inventario + bolsas por pedido. El estado de cabecera lo
 // resume <PanelResumen> arriba de la página.
 // El cálculo lo hace el servidor (cargarEstadoPedidos); aquí va solo la interacción
 // —subir un inventario, fichar un pedido, descargar su .xls, generar un pedido manual—
 // y el refresco tras cada acción. Estilo neutro y minimalista (no es la pantalla skin Unycop).
-export default function Pedidos({ resultado, labs }: { resultado: ResultadoPedidos; labs: string[] }) {
+export default function Pedidos({ resultado, pedidos }: { resultado: ResultadoPedidos; pedidos: string[] }) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [subiendo, setSubiendo] = useState(false);
@@ -19,27 +19,27 @@ export default function Pedidos({ resultado, labs }: { resultado: ResultadoPedid
   const [aviso, setAviso] = useState<{ articulos: number; unidades: number } | null>(null); // guarda de carga (#7)
   const [error, setError] = useState("");
   const [nombre, setNombre] = useState(""); // nombre del archivo elegido
-  const [abierto, setAbierto] = useState<string | null>(null); // lab expandido
+  const [abierto, setAbierto] = useState<string | null>(null); // pedido expandido
   const [fichando, setFichando] = useState<string | null>(null);
 
-  // Pedido manual (B5): bolsa del lab elegido en el buscador. `manualVacio` guarda el
-  // lab cuando no hay nada que pedir, para avisar sin confundirlo con "no buscado".
-  const [manual, setManual] = useState<BolsaLab | null>(null);
+  // Pedido manual (B5): bolsa del pedido elegido en el buscador. `manualVacio` guarda el
+  // pedido cuando no hay nada que pedir, para avisar sin confundirlo con "no buscado".
+  const [manual, setManual] = useState<BolsaPedido | null>(null);
   const [manualVacio, setManualVacio] = useState<string | null>(null);
   const [buscandoManual, setBuscandoManual] = useState(false);
 
-  async function pedirManual(lab: string) {
+  async function pedirManual(pedido: string) {
     setManual(null);
     setManualVacio(null);
     setBuscandoManual(true);
     try {
-      const res = await fetch(`/farma/api/pedidos/manual?lab=${encodeURIComponent(lab)}`);
+      const res = await fetch(`/farma/api/pedidos/manual?pedido=${encodeURIComponent(pedido)}`);
       const d = await res.json().catch(() => ({}));
       if (d.bolsa) {
         setManual(d.bolsa);
-        setAbierto(d.bolsa.lab); // recién elegido → expandido
+        setAbierto(d.bolsa.pedido); // recién elegido → expandido
       } else {
-        setManualVacio(lab);
+        setManualVacio(pedido);
       }
     } catch {
       setError("No se pudo conectar.");
@@ -97,13 +97,13 @@ export default function Pedidos({ resultado, labs }: { resultado: ResultadoPedid
     }
   }
 
-  async function fichar(lab: string) {
-    setFichando(lab);
+  async function fichar(pedido: string) {
+    setFichando(pedido);
     try {
       const res = await fetch("/farma/api/pedidos/done", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lab }),
+        body: JSON.stringify({ pedido }),
       });
       if (res.ok) {
         setAbierto(null);
@@ -205,17 +205,17 @@ export default function Pedidos({ resultado, labs }: { resultado: ResultadoPedid
       <section className="flex flex-col gap-2">
         <h2 className="text-sm font-medium text-neutral-700">Pedidos pendientes</h2>
         {pendientes.length === 0 ? (
-          <p className="text-sm text-neutral-400">Ningún laboratorio en rotura.</p>
+          <p className="text-sm text-neutral-400">Ningún pedido en rotura.</p>
         ) : (
           <ul className="flex flex-col divide-y divide-neutral-100 rounded border border-neutral-200 bg-white">
             {pendientes.map((b) => (
               <BolsaItem
-                key={b.lab}
+                key={b.pedido}
                 bolsa={b}
-                abierto={abierto === b.lab}
-                onToggle={() => setAbierto(abierto === b.lab ? null : b.lab)}
-                onFichar={() => fichar(b.lab)}
-                fichando={fichando === b.lab}
+                abierto={abierto === b.pedido}
+                onToggle={() => setAbierto(abierto === b.pedido ? null : b.pedido)}
+                onFichar={() => fichar(b.pedido)}
+                fichando={fichando === b.pedido}
               />
             ))}
           </ul>
@@ -229,11 +229,11 @@ export default function Pedidos({ resultado, labs }: { resultado: ResultadoPedid
           <ul className="flex flex-col divide-y divide-neutral-100 rounded border border-neutral-200 bg-neutral-50">
             {hechos.map((b) => (
               <BolsaItem
-                key={b.lab}
+                key={b.pedido}
                 bolsa={b}
                 hecho={ahora !== null ? haceX(b.orderedAt, ahora) : undefined}
-                abierto={abierto === b.lab}
-                onToggle={() => setAbierto(abierto === b.lab ? null : b.lab)}
+                abierto={abierto === b.pedido}
+                onToggle={() => setAbierto(abierto === b.pedido ? null : b.pedido)}
               />
             ))}
           </ul>
@@ -247,14 +247,14 @@ export default function Pedidos({ resultado, labs }: { resultado: ResultadoPedid
         <p className="text-xs text-neutral-400">
           Genera la bolsa de un pedido aunque no haya roturas (por ejemplo, para reponer antes de tiempo).
         </p>
-        <Buscador items={labs} onSelect={pedirManual} placeholder="Buscar pedido…" />
+        <Buscador items={pedidos} onSelect={pedirManual} placeholder="Buscar pedido…" />
         {buscandoManual && <p className="text-sm text-neutral-400">Calculando…</p>}
         {manual && (
           <ul className="flex flex-col rounded border border-neutral-200 bg-white">
             <BolsaItem
               bolsa={manual}
-              abierto={abierto === manual.lab}
-              onToggle={() => setAbierto(abierto === manual.lab ? null : manual.lab)}
+              abierto={abierto === manual.pedido}
+              onToggle={() => setAbierto(abierto === manual.pedido ? null : manual.pedido)}
             />
           </ul>
         )}
@@ -266,8 +266,8 @@ export default function Pedidos({ resultado, labs }: { resultado: ResultadoPedid
   );
 }
 
-// Una fila de laboratorio: cabecera clicable que expande sus líneas, descarga del
-// .xls y (si está pendiente) botón para fichar el pedido como hecho.
+// Una fila de pedido: cabecera clicable que expande sus líneas, descarga del .xls y
+// (si está pendiente) botón para fichar el pedido como hecho.
 function BolsaItem({
   bolsa,
   abierto,
@@ -276,7 +276,7 @@ function BolsaItem({
   fichando,
   hecho,
 }: {
-  bolsa: BolsaLab;
+  bolsa: BolsaPedido;
   abierto: boolean;
   onToggle: () => void;
   onFichar?: () => void;
@@ -286,7 +286,7 @@ function BolsaItem({
   return (
     <li className="flex flex-col">
       <button type="button" onClick={onToggle} className="flex items-baseline justify-between px-4 py-2.5 text-left text-sm hover:bg-neutral-50">
-        <span className="font-medium text-neutral-800">{bolsa.lab}</span>
+        <span className="font-medium text-neutral-800">{bolsa.pedido}</span>
         <span className="text-neutral-400">
           {hecho ? `${hecho} · ` : ""}
           {bolsa.lineas.length} {bolsa.lineas.length === 1 ? "artículo" : "artículos"}
@@ -305,7 +305,7 @@ function BolsaItem({
             </tbody>
           </table>
           <div className="flex items-center gap-4 text-sm">
-            <a href={`/farma/api/pedidos/xls?lab=${encodeURIComponent(bolsa.lab)}`} className="text-neutral-700 hover:underline">
+            <a href={`/farma/api/pedidos/xls?pedido=${encodeURIComponent(bolsa.pedido)}`} className="text-neutral-700 hover:underline">
               Descargar xls
             </a>
             {onFichar && (
