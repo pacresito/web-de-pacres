@@ -54,8 +54,47 @@ export interface PedidoHecho extends BolsaLab {
 export interface ResultadoPedidos {
   pendientes: BolsaLab[];
   hechos: PedidoHecho[];
-  alertasStockMinimo: number; // artículos con stock mínimo > consumo (todo el universo) → Mínimos
+  alertasStockMinimo: number; // artículos con stock mínimo > consumo (todo el universo) → Inventario
   huerfanos: string[]; // códigos en rotura sin entrada en refPedidos → avisar a Pablo
+}
+
+// Cantidad a pedir de un artículo (#2): subir hasta max(StMín, ceil(consumo)) − stock,
+// nunca negativo. Sin ref de Ventas, el objetivo es solo el StMín.
+function cantidadAPedir(min: number, ref: RefArticulo | undefined, existencias: number): number {
+  const objetivo = ref ? Math.max(min, Math.ceil(ref.consumoMensual)) : min;
+  return Math.max(0, objetivo - existencias);
+}
+
+// Lista de pedidos (labs) del universo gestionado, ordenada. Alimenta el buscador del
+// pedido manual (B5): María puede elegir cualquiera, tenga rotura o no.
+export function listarLabs(refPedidos: RefPedidos, stMin: StMins): string[] {
+  const labs = new Set<string>();
+  for (const codigo of Object.keys(stMin)) {
+    const ref = refPedidos[codigo];
+    if (ref) labs.add(ref.lab);
+  }
+  return [...labs].sort((a, b) => a.localeCompare(b, "es"));
+}
+
+// Bolsa de un pedido (lab) concreto saltándose la condición #1: para el pedido manual
+// que María genera aunque nada haya roto stock. Mismas líneas (cantidad > 0) y orden
+// que tendría en `pendientes`. Devuelve null si no hay nada que pedir en ese lab.
+export function bolsaDeLab(
+  lab: string,
+  stock: Stocks,
+  refPedidos: RefPedidos,
+  stMin: StMins,
+): BolsaLab | null {
+  const lineas: LineaPedido[] = [];
+  for (const [codigo, min] of Object.entries(stMin)) {
+    const ref = refPedidos[codigo];
+    if (!ref || ref.lab !== lab) continue;
+    const cantidad = cantidadAPedir(min, ref, stock[codigo] ?? 0);
+    if (cantidad > 0) lineas.push({ codigo, denominacion: ref.denominacion, cantidad });
+  }
+  if (lineas.length === 0) return null;
+  lineas.sort((a, b) => a.denominacion.localeCompare(b.denominacion, "es"));
+  return { lab, lineas };
 }
 
 export function calcularPedidos(
@@ -78,9 +117,7 @@ export function calcularPedidos(
 
     const existencias = stock[codigo] ?? 0; // ausente del inventario = 0 unidades
 
-    // Cantidad (#2): subir hasta el máximo entre stock mínimo y consumo mensual.
-    const objetivo = ref ? Math.max(min, Math.ceil(ref.consumoMensual)) : min;
-    const cantidad = Math.max(0, objetivo - existencias);
+    const cantidad = cantidadAPedir(min, ref, existencias);
     if (cantidad <= 0) continue; // ya cubierto: no es línea para pedir
 
     if (!ref) {

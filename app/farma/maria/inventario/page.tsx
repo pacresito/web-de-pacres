@@ -1,15 +1,15 @@
 import { requireAdmin } from "../../auth";
 import SubpageNav from "../../SubpageNav";
-import Minimos, { type ArticuloMin } from "../../Minimos";
+import Inventario, { type ArticuloMin } from "../../Inventario";
 import redis from "@/lib/redis";
 import { KEYS } from "@/lib/farma/keys";
 import type { RefPedidos } from "@/lib/farma/pedidos";
 
-// Mínimos (admin): ajustar el stock mínimo de cada artículo (hash mutable
+// Inventario (admin): ajustar el stock mínimo de cada artículo (hash mutable
 // farma:stmin) junto a su consumo mensual (de la referencia de Ventas, solo
 // lectura). El universo es el de artículos con stock mínimo definido; los que no
 // están en la referencia se omiten (sin denominación ni consumo que mostrar).
-export default async function MinimosPage() {
+export default async function InventarioPage() {
   await requireAdmin();
 
   const [refRaw, stmin] = await Promise.all([
@@ -27,7 +27,7 @@ export default async function MinimosPage() {
   return (
     <main className="flex flex-col gap-6">
       <header className="flex items-baseline justify-between">
-        <h1 className="text-xl font-medium">Mínimos</h1>
+        <h1 className="text-xl font-medium">Inventario</h1>
         <SubpageNav />
       </header>
       <p className="text-sm text-neutral-500">
@@ -35,7 +35,7 @@ export default async function MinimosPage() {
         <span className="text-amber-800"> resaltadas</span> tienen el stock mínimo por encima
         del consumo mensual: revísalas.
       </p>
-      <Minimos articulos={articulos} />
+      <Inventario articulos={articulos} />
     </main>
   );
 }

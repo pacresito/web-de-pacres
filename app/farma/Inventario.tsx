@@ -2,12 +2,12 @@
 
 import { useMemo, useState } from "react";
 
-// Mínimos: María revisa y ajusta el stock mínimo de cada artículo. La columna
-// Consumo (mensual, de Ventas) es solo lectura; las líneas con stock mínimo mayor
-// que el consumo se resaltan —son las que Pedidos resume en su línea-enlace—. Por
-// defecto se muestran solo esas (el trabajo real); el buscador rastrea todo el
-// universo para corregir un artículo concreto. La edición inline escribe en el
-// hash farma:stmin. Estilo neutro (no es la pantalla con skin Unycop).
+// Inventario: el listado de artículos donde María revisa y ajusta el stock mínimo de
+// cada uno. La columna Consumo (mensual, de Ventas) es solo lectura; las líneas con
+// stock mínimo mayor que el consumo se resaltan —son las que Pedidos resume en su
+// línea-enlace—. Por defecto se muestran solo esas (el trabajo real); el buscador
+// rastrea todo el universo para corregir un artículo concreto. La edición inline
+// escribe en el hash farma:stmin. Estilo neutro (no es la pantalla con skin Unycop).
 
 export interface ArticuloMin {
   codigo: string;
@@ -16,12 +16,12 @@ export interface ArticuloMin {
   consumoMensual: number;
 }
 
-const LIMITE = 300; // tope de filas pintadas: el universo son miles, María afina con el buscador
+const LIMITE = 100; // tope de filas pintadas: el universo son miles, María afina con el buscador
 
 const sinAcentos = (s: string) =>
   s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
-export default function Minimos({ articulos }: { articulos: ArticuloMin[] }) {
+export default function Inventario({ articulos }: { articulos: ArticuloMin[] }) {
   const [items, setItems] = useState(articulos);
   const [soloAlertas, setSoloAlertas] = useState(true);
   const [q, setQ] = useState("");

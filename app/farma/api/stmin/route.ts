@@ -1,5 +1,5 @@
 // Edita el stock mínimo de un artículo en el hash mutable farma:stmin (lo ajusta
-// María en la pantalla Mínimos). Única admin = María, sin concurrencia → hset
+// María en la pantalla Inventario). Única admin = María, sin concurrencia → hset
 // directo. El universo editable son los artículos que ya tienen stock mínimo > 0
 // (los sembrados): se valida que el código exista en el hash. Solo admin.
 import { getRol } from "../../auth";

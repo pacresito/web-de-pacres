@@ -3,7 +3,14 @@
 // ambas parten del mismo snapshot, así que el read-and-compute vive en un sitio.
 import redis from "@/lib/redis";
 import { KEYS } from "./keys";
-import { calcularPedidos, type RefPedidos, type ResultadoPedidos } from "./pedidos";
+import {
+  bolsaDeLab,
+  calcularPedidos,
+  listarLabs,
+  type BolsaLab,
+  type RefPedidos,
+  type ResultadoPedidos,
+} from "./pedidos";
 
 export interface MetaInventario {
   fechaInforme: string;
@@ -16,6 +23,7 @@ export interface EstadoPedidos {
   resultado: ResultadoPedidos;
   meta: MetaInventario | null; // null hasta la primera subida de inventario
   pvpCambiados: number; // artículos con cambio de PVP pendiente de reetiquetar
+  labs: string[]; // todos los pedidos del universo (buscador del pedido manual, B5)
 }
 
 // Hash de Redis (valores string) → Record<string, number>.
@@ -34,8 +42,27 @@ export async function cargarEstadoPedidos(now: number = Date.now()): Promise<Est
   ]);
 
   const refPedidos: RefPedidos = refRaw ? JSON.parse(refRaw) : {};
-  const resultado = calcularPedidos(numHash(stock), refPedidos, numHash(stmin), numHash(hechos), now);
+  const stMin = numHash(stmin);
+  const resultado = calcularPedidos(numHash(stock), refPedidos, stMin, numHash(hechos), now);
   const pvpCambiados = Object.values(pvp).filter((v) => JSON.parse(v).pending).length;
 
-  return { resultado, meta: metaRaw ? JSON.parse(metaRaw) : null, pvpCambiados };
+  return {
+    resultado,
+    meta: metaRaw ? JSON.parse(metaRaw) : null,
+    pvpCambiados,
+    labs: listarLabs(refPedidos, stMin),
+  };
+}
+
+// Bolsa de un pedido concreto recalculada desde el snapshot, sin exigir la condición
+// #1 (la usa el pedido manual de B5 y, como fallback, la descarga del .xls). Devuelve
+// null si en ese lab no hay nada que pedir.
+export async function cargarBolsaManual(lab: string): Promise<BolsaLab | null> {
+  const [refRaw, stock, stmin] = await Promise.all([
+    redis.get(KEYS.refPedidos()),
+    redis.hgetall(KEYS.stock()),
+    redis.hgetall(KEYS.stmin()),
+  ]);
+  const refPedidos: RefPedidos = refRaw ? JSON.parse(refRaw) : {};
+  return bolsaDeLab(lab, numHash(stock), refPedidos, numHash(stmin));
 }

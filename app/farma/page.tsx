@@ -22,7 +22,7 @@ export default async function FarmaPage() {
         <h1 className="text-xl font-medium">Prioridades</h1>
         <nav className="flex items-center gap-4 text-sm text-neutral-600">
           {rol === "admin" && (
-            <Link href="/farma/maria" className="hover:text-neutral-900">Panel</Link>
+            <Link href="/farma/maria" className="hover:text-neutral-900">Volver</Link>
           )}
           <LogoutButton />
         </nav>

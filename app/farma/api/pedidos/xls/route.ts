@@ -2,7 +2,7 @@
 // UnycopWin. Recalcula los pedidos desde el snapshot actual y saca la bolsa del lab
 // (pendiente o ya hecho); el nombre es `AAAA-MM-DD Laboratorio.xls`.
 import { getRol } from "../../../auth";
-import { cargarEstadoPedidos } from "@/lib/farma/pedidos-store";
+import { cargarBolsaManual, cargarEstadoPedidos } from "@/lib/farma/pedidos-store";
 import { generarBolsa } from "@/lib/farma/xls";
 
 export async function GET(request: Request): Promise<Response> {
@@ -16,7 +16,11 @@ export async function GET(request: Request): Promise<Response> {
   }
 
   const { resultado, meta } = await cargarEstadoPedidos();
-  const bolsa = [...resultado.pendientes, ...resultado.hechos].find((b) => b.lab === lab);
+  // Pendiente/hecho lo da el estado; si no, es un pedido manual (no cumple #1) y se
+  // recalcula su bolsa desde el snapshot. Mismas líneas en ambos casos.
+  const bolsa =
+    [...resultado.pendientes, ...resultado.hechos].find((b) => b.lab === lab) ??
+    (await cargarBolsaManual(lab));
   if (!bolsa) {
     return Response.json({ error: "El laboratorio no tiene pedido" }, { status: 404 });
   }

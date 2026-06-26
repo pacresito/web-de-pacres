@@ -1,24 +1,17 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { BolsaLab, ResultadoPedidos } from "@/lib/farma/pedidos";
-import type { MetaInventario } from "@/lib/farma/pedidos-store";
+import { haceX } from "@/lib/farma/tiempo";
+import Buscador from "./Buscador";
 
-// Pedidos (admin): cabecera de estado + subida de inventario + bolsas por lab.
+// Pedidos (admin): subida de inventario + bolsas por lab. El estado de cabecera lo
+// resume <PanelResumen> arriba de la página.
 // El cálculo lo hace el servidor (cargarEstadoPedidos); aquí va solo la interacción
-// —subir un inventario, fichar un pedido, descargar su .xls— y el refresco tras cada
-// acción. Estilo neutro y minimalista (no es la pantalla con skin Unycop).
-export default function Pedidos({
-  resultado,
-  meta,
-  pvpCambiados,
-}: {
-  resultado: ResultadoPedidos;
-  meta: MetaInventario | null;
-  pvpCambiados: number;
-}) {
+// —subir un inventario, fichar un pedido, descargar su .xls, generar un pedido manual—
+// y el refresco tras cada acción. Estilo neutro y minimalista (no es la pantalla skin Unycop).
+export default function Pedidos({ resultado, labs }: { resultado: ResultadoPedidos; labs: string[] }) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [subiendo, setSubiendo] = useState(false);
@@ -28,6 +21,32 @@ export default function Pedidos({
   const [nombre, setNombre] = useState(""); // nombre del archivo elegido
   const [abierto, setAbierto] = useState<string | null>(null); // lab expandido
   const [fichando, setFichando] = useState<string | null>(null);
+
+  // Pedido manual (B5): bolsa del lab elegido en el buscador. `manualVacio` guarda el
+  // lab cuando no hay nada que pedir, para avisar sin confundirlo con "no buscado".
+  const [manual, setManual] = useState<BolsaLab | null>(null);
+  const [manualVacio, setManualVacio] = useState<string | null>(null);
+  const [buscandoManual, setBuscandoManual] = useState(false);
+
+  async function pedirManual(lab: string) {
+    setManual(null);
+    setManualVacio(null);
+    setBuscandoManual(true);
+    try {
+      const res = await fetch(`/farma/api/pedidos/manual?lab=${encodeURIComponent(lab)}`);
+      const d = await res.json().catch(() => ({}));
+      if (d.bolsa) {
+        setManual(d.bolsa);
+        setAbierto(d.bolsa.lab); // recién elegido → expandido
+      } else {
+        setManualVacio(lab);
+      }
+    } catch {
+      setError("No se pudo conectar.");
+    } finally {
+      setBuscandoManual(false);
+    }
+  }
 
   // "hace X" depende de la hora actual: se calcula solo tras montar para no romper la
   // hidratación (el HTML del servidor no conoce la hora del cliente).
@@ -100,34 +119,10 @@ export default function Pedidos({
     }
   }
 
-  const { pendientes, hechos, alertasStockMinimo, huerfanos } = resultado;
+  const { pendientes, hechos, huerfanos } = resultado;
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Cabecera de estado */}
-      <section className="flex flex-col gap-1 text-sm">
-        <p className="text-neutral-600">
-          {meta ? (
-            <>
-              Inventario del <span className="text-neutral-900">{meta.fechaInforme}</span>
-              {ahora !== null && <span className="text-neutral-400"> · cargado {haceX(meta.loadedAt, ahora)}</span>}
-              <span className="text-neutral-400"> · {meta.totalArticulos} artículos</span>
-            </>
-          ) : (
-            "Aún no se ha subido ningún inventario."
-          )}
-        </p>
-        <p className="text-neutral-600">
-          {pvpCambiados > 0 ? (
-            <Link href="/farma/maria/pvp" className="text-amber-700 hover:underline">
-              {pvpCambiados} {pvpCambiados === 1 ? "precio cambiado" : "precios cambiados"} →
-            </Link>
-          ) : (
-            <span className="text-neutral-400">Ningún precio ha cambiado.</span>
-          )}
-        </p>
-      </section>
-
       {/* Subida de inventario */}
       <section className="flex flex-col gap-2 rounded border border-neutral-200 bg-white p-4">
         <div className="flex flex-wrap items-center gap-3">
@@ -198,14 +193,6 @@ export default function Pedidos({
         {error && <p className="text-sm text-red-600">{error}</p>}
       </section>
 
-      {/* Stock mínimo > consumo: en vez del muro de líneas, una línea-resumen que
-          enlaza a Mínimos, donde María las revisa y edita. */}
-      {alertasStockMinimo > 0 && (
-        <Link href="/farma/maria/inventario" className="text-sm text-amber-700 hover:underline">
-          {alertasStockMinimo} {alertasStockMinimo === 1 ? "artículo" : "artículos"} con stock mínimo mayor que el consumo →
-        </Link>
-      )}
-
       {/* Huérfanos: en rotura pero sin datos de Ventas → avisar a Pablo */}
       {huerfanos.length > 0 && (
         <section className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-800">
@@ -252,6 +239,29 @@ export default function Pedidos({
           </ul>
         </section>
       )}
+
+      {/* Pedido manual (B5): generar un pedido aunque nada haya roto stock. Uso poco
+          habitual → al final y discreto. */}
+      <section className="flex flex-col gap-2 border-t border-neutral-100 pt-4">
+        <h2 className="text-sm font-medium text-neutral-500">Pedido manual</h2>
+        <p className="text-xs text-neutral-400">
+          Genera la bolsa de un pedido aunque no haya roturas (por ejemplo, para reponer antes de tiempo).
+        </p>
+        <Buscador items={labs} onSelect={pedirManual} placeholder="Buscar pedido…" />
+        {buscandoManual && <p className="text-sm text-neutral-400">Calculando…</p>}
+        {manual && (
+          <ul className="flex flex-col rounded border border-neutral-200 bg-white">
+            <BolsaItem
+              bolsa={manual}
+              abierto={abierto === manual.lab}
+              onToggle={() => setAbierto(abierto === manual.lab ? null : manual.lab)}
+            />
+          </ul>
+        )}
+        {manualVacio && (
+          <p className="text-sm text-neutral-400">No hay nada que pedir en «{manualVacio}».</p>
+        )}
+      </section>
     </div>
   );
 }
@@ -308,16 +318,4 @@ function BolsaItem({
       )}
     </li>
   );
-}
-
-// "hace X" en español, redondeado a la unidad mayor (min / h / días).
-function haceX(epoch: number, ahora: number): string {
-  const s = Math.max(0, ahora - epoch) / 1000;
-  if (s < 60) return "hace un momento";
-  const m = Math.floor(s / 60);
-  if (m < 60) return `hace ${m} min`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `hace ${h} h`;
-  const d = Math.floor(h / 24);
-  return `hace ${d} ${d === 1 ? "día" : "días"}`;
 }
