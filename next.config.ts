@@ -5,6 +5,13 @@ import type { NextConfig } from "next";
 // o nonces. No hay login ni datos de terceros, así que una CSP añadiría
 // complejidad sin beneficio real. Las cabeceras de abajo cubren lo barato.
 const nextConfig: NextConfig = {
+  async redirects() {
+    return [
+      { source: "/l", destination: "/webs/lagartijas", permanent: false },
+      { source: "/a", destination: "/apps/AgricolaCalc", permanent: false },
+      { source: "/c", destination: "/apps/CastleComboCalc", permanent: false },
+    ];
+  },
   async headers() {
     return [
       {
