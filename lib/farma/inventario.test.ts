@@ -1,6 +1,6 @@
 // Test del parser contra los tres formatos reales de UnycopWin:
 //   `npx tsx lib/farma/inventario.test.ts`. Fuera del build.
-// Los .xls de ejemplo viven en material/farmacia (gitignoreado, datos privados);
+// Los .xls de ejemplo viven en farma (gitignoreado, datos privados);
 // si no están, el test se salta solo.
 import assert from "assert";
 import { readFileSync, existsSync } from "fs";
@@ -19,7 +19,7 @@ assert.strictEqual(evaluarCarga(7000, 25000), "bloqueo", "artículos sobre el m�
 assert.strictEqual(evaluarCarga(3500, 9000), "bloqueo", "unidades bajo el mínimo duro");
 assert.strictEqual(evaluarCarga(3500, 45000), "bloqueo", "unidades sobre el máximo duro");
 
-const dir = "/Users/pacres/Documents/Claude/Pacres/WEB/material/farmacia/Ejemplos inventario/";
+const dir = "/Users/pacres/Documents/Claude/Pacres/WEB/farma/Ejemplos inventario/";
 
 // [fichero, nº de artículos esperado (= "Nº Items" del preámbulo), fecha del informe]
 const casos: [string, number, string][] = [

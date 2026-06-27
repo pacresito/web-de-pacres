@@ -1,10 +1,12 @@
 // Edita el stock mínimo de un artículo en el hash mutable farma:stmin (lo ajusta
 // María en la pantalla Inventario). Única admin = María, sin concurrencia → hset
-// directo. El universo editable son los artículos que ya tienen stock mínimo > 0
-// (los sembrados): se valida que el código exista en el hash. Solo admin.
+// directo. El universo editable es todo lo que Inventario muestra: artículos de
+// Ventas (ref) —tengan o no stMín— y los que están en stock pero fuera de Ventas
+// ("sin historial"). Se valida contra ambos para rechazar códigos inventados. Solo admin.
 import { getRol } from "../../auth";
 import redis from "@/lib/redis";
 import { KEYS } from "@/lib/farma/keys";
+import type { RefPedidos } from "@/lib/farma/pedidos";
 
 export async function POST(request: Request): Promise<Response> {
   if ((await getRol()) !== "admin") {
@@ -25,7 +27,10 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ error: "Stock mínimo entero ≥ 0" }, { status: 400 });
   }
 
-  if (!(await redis.hexists(KEYS.stmin(), codigo))) {
+  const refRaw = await redis.get(KEYS.refPedidos());
+  const ref: RefPedidos = refRaw ? JSON.parse(refRaw) : {};
+  const conocido = codigo in ref || (await redis.hexists(KEYS.stock(), codigo));
+  if (!conocido) {
     return Response.json({ error: "Artículo desconocido" }, { status: 404 });
   }
 

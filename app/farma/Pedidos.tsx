@@ -245,7 +245,7 @@ export default function Pedidos({ resultado, pedidos }: { resultado: ResultadoPe
       <section className="flex flex-col gap-2 border-t border-neutral-100 pt-4">
         <h2 className="text-sm font-medium text-neutral-500">Pedido manual</h2>
         <p className="text-xs text-neutral-400">
-          Genera la bolsa de un pedido aunque no haya roturas (por ejemplo, para reponer antes de tiempo).
+          Genera la bolsa de un pedido aunque no haya roturas.
         </p>
         <Buscador items={pedidos} onSelect={pedirManual} placeholder="Buscar pedido…" />
         {buscandoManual && <p className="text-sm text-neutral-400">Calculando…</p>}

@@ -53,7 +53,7 @@ export async function cargarEstadoPedidos(now: number = Date.now()): Promise<Est
     resultado,
     meta: metaRaw ? JSON.parse(metaRaw) : null,
     pvpCambiados,
-    pedidos: listarPedidos(pedidosDeCodigo, stMin),
+    pedidos: listarPedidos(pedidosDeCodigo, refPedidos),
   };
 }
 

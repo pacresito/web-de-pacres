@@ -2,24 +2,27 @@
 // Lógica pura, testeable con `npx tsx lib/farma/pedidos.test.ts`. Fuera del build.
 //
 // El eje de agrupación es el PEDIDO, no el laboratorio del producto: la lista de
-// pedidos es la carpeta `material/farmacia/Datos iniciales/Pedidos - …` (un mismo lab
+// pedidos es la carpeta `farma/Datos iniciales/Pedidos - …` (un mismo lab
 // puede partirse en varios pedidos). El mapa `pedidosDeCodigo` (codigo → [pedidos],
 // clave Redis `farma:ref:pedido-codigos`) dice a qué pedido(s) va cada artículo; un
 // código puede ir en varios (colisión almacén ↔ marca, decisión jun-26). El `lab` del
 // `RefArticulo` es otro eje (el del producto en Ventas) y aquí ya no agrupa.
 //
-// Reglas (del plan, cambios jun-26 #1/#2/#3):
+// Reglas (del plan, cambios jun-26 #1/#2/#3; universo = Ventas, jun-27):
+// - Universo: todo artículo de Ventas (ref) es reponible por su consumo, tenga o no
+//   StMín. El StMín es opcional: sin él, el objetivo es solo el consumo.
 // - Línea para pedir: cantidad > 0, i.e. existencias < max(StMín, ceil(consumo)).
 //   Incluye artículos sin rotura pero por debajo del consumo (no solo los rotos).
 // - Cantidad (#2): max(0, max(StMín, ceil(consumo_mensual)) − stock). El objetivo
 //   es el máximo entre stock mínimo y consumo (ya no solo el consumo).
-// - Rotura: stock < StMín. Ya no decide por sí sola si hay línea; solo cuenta para
-//   la condición #1a de que el pedido sea pendiente.
+// - Rotura: stock < StMín. Solo cuenta para la condición #1a de pedido pendiente.
+//   Un artículo sin StMín nunca rompe: añade su línea por consumo pero no dispara el
+//   pedido por sí solo (sí es pedible siempre por el pedido manual).
 // - Pedido pendiente (#1): un pedido entra en la lista solo si cumple LAS DOS:
 //   (a) ≥1 artículo en rotura  y  (b) ≥6 líneas para pedir (≥6 artículos con
 //   cantidad > 0). El umbral de 6 evita disparar pedidos minúsculos.
-// - Sin pedido en la carpeta: un artículo gestionado (con StMín) que no esté en ningún
-//   pedido se IGNORA (decisión jun-26): no se puede reponer por la herramienta.
+// - Sin pedido en la carpeta: un artículo de Ventas que no esté en ningún pedido se
+//   IGNORA (decisión jun-26): no se puede reponer por la herramienta.
 // - Stock mínimo > consumo (#3): ya no es un error (con el objetivo = max, pides
 //   hasta el StMín). Aviso informativo: se cuenta sobre TODO el universo de stock
 //   mínimo, haya rotura o no (lo revisa María en la pantalla Inventario); aquí solo
@@ -75,12 +78,12 @@ function cantidadAPedir(min: number, ref: RefArticulo | undefined, existencias: 
   return Math.max(0, objetivo - existencias);
 }
 
-// Lista de pedidos del universo gestionado, ordenada. Alimenta el buscador del pedido
-// manual (B5): María puede elegir cualquiera, tenga rotura o no. Solo entran pedidos
-// con al menos un artículo gestionado (con StMín).
-export function listarPedidos(pedidosDeCodigo: PedidosDeCodigo, stMin: StMins): string[] {
+// Lista de pedidos del universo de Ventas, ordenada. Alimenta el buscador del pedido
+// manual (B5): María puede elegir cualquiera, tenga rotura o no. Entran los pedidos
+// con al menos un artículo de Ventas.
+export function listarPedidos(pedidosDeCodigo: PedidosDeCodigo, refPedidos: RefPedidos): string[] {
   const pedidos = new Set<string>();
-  for (const codigo of Object.keys(stMin)) {
+  for (const codigo of Object.keys(refPedidos)) {
     for (const pedido of pedidosDeCodigo[codigo] ?? []) pedidos.add(pedido);
   }
   return [...pedidos].sort((a, b) => a.localeCompare(b, "es"));
@@ -97,10 +100,9 @@ export function bolsaDePedido(
   pedidosDeCodigo: PedidosDeCodigo,
 ): BolsaPedido | null {
   const lineas: LineaPedido[] = [];
-  for (const [codigo, min] of Object.entries(stMin)) {
-    const ref = refPedidos[codigo];
-    if (!ref || !(pedidosDeCodigo[codigo] ?? []).includes(pedido)) continue;
-    const cantidad = cantidadAPedir(min, ref, stock[codigo] ?? 0);
+  for (const [codigo, ref] of Object.entries(refPedidos)) {
+    if (!(pedidosDeCodigo[codigo] ?? []).includes(pedido)) continue;
+    const cantidad = cantidadAPedir(stMin[codigo] ?? 0, ref, stock[codigo] ?? 0);
     if (cantidad > 0) lineas.push({ codigo, denominacion: ref.denominacion, cantidad });
   }
   if (lineas.length === 0) return null;
@@ -120,8 +122,12 @@ export function calcularPedidos(
   const huerfanos: string[] = [];
   let alertasStockMinimo = 0;
 
-  // El universo gestionado es el de artículos con StMín definido.
-  for (const [codigo, min] of Object.entries(stMin)) {
+  // El universo es el de Ventas (ref): todo artículo con consumo es reponible, tenga
+  // o no StMín. Se suman los códigos con StMín fuera de Ventas (sin historial al que
+  // María puso mínimo) para detectarlos como huérfanos.
+  const codigos = new Set([...Object.keys(refPedidos), ...Object.keys(stMin)]);
+  for (const codigo of codigos) {
+    const min = stMin[codigo] ?? 0; // sin StMín definido = 0 (el objetivo lo pone el consumo)
     const ref = refPedidos[codigo];
 
     // Stock mínimo > consumo (#3): cuenta sobre todo el universo, haya rotura o no.
@@ -145,7 +151,7 @@ export function calcularPedidos(
     for (const pedido of pedidos) {
       const grupo = porPedido.get(pedido) ?? { lineas: [], hayRotura: false };
       grupo.lineas.push({ codigo, denominacion: ref.denominacion, cantidad });
-      if (existencias < min) grupo.hayRotura = true; // rotura (#1a)
+      if (existencias < min) grupo.hayRotura = true; // rotura (#1a): solo dispara con StMín definido
       porPedido.set(pedido, grupo);
     }
   }

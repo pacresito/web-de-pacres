@@ -2,18 +2,19 @@
 
 import { useMemo, useState } from "react";
 
-// Inventario: el listado de artículos donde María revisa y ajusta el stock mínimo de
-// cada uno. La columna Consumo (mensual, de Ventas) es solo lectura; las líneas con
-// stock mínimo mayor que el consumo se resaltan —son las que Pedidos resume en su
-// línea-enlace—. Por defecto se muestran solo esas (el trabajo real); el buscador
-// rastrea todo el universo para corregir un artículo concreto. La edición inline
-// escribe en el hash farma:stmin. Estilo neutro (no es la pantalla con skin Unycop).
+// Inventario: catálogo completo de artículos con los datos usados para calcular pedidos.
+// Highlight = existencias bajo objetivo (max(stMín, consumo)). Tres filtros opcionales:
+// "Stock mínimo > consumo", "Reponer" y "Sin historial" (en stock pero fuera de Ventas:
+// consumo desconocido, "?"). El stMín sin definir se muestra "—". El buscador rastrea
+// todo el universo. La edición inline de stMín escribe en farma:stmin. Estilo neutro.
 
 export interface ArticuloMin {
   codigo: string;
   denominacion: string;
-  stMin: number;
+  stMin: number | null; // null = sin mínimo definido (solo en artículos sin historial)
   consumoMensual: number;
+  existencias: number;
+  sinHistorial?: boolean;
 }
 
 const LIMITE = 100; // tope de filas pintadas: el universo son miles, María afina con el buscador
@@ -21,9 +22,29 @@ const LIMITE = 100; // tope de filas pintadas: el universo son miles, María afi
 const sinAcentos = (s: string) =>
   s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
+const PencilIcon = () => (
+  <svg className="h-4 w-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M11 2.5l2.5 2.5L5 13.5H2.5V11L11 2.5z" />
+  </svg>
+);
+
+const CheckIcon = () => (
+  <svg className="h-4 w-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M2.5 8l4 4 7-7" />
+  </svg>
+);
+
+const XIcon = () => (
+  <svg className="h-4 w-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 3l10 10M13 3L3 13" />
+  </svg>
+);
+
 export default function Inventario({ articulos }: { articulos: ArticuloMin[] }) {
   const [items, setItems] = useState(articulos);
-  const [soloAlertas, setSoloAlertas] = useState(true);
+  const [soloStMinAlto, setSoloStMinAlto] = useState(false);
+  const [soloBajoObjetivo, setSoloBajoObjetivo] = useState(false);
+  const [soloSinHistorial, setSoloSinHistorial] = useState(false);
   const [q, setQ] = useState("");
   const [editando, setEditando] = useState<string | null>(null); // codigo en edición
   const [draft, setDraft] = useState("");
@@ -31,24 +52,40 @@ export default function Inventario({ articulos }: { articulos: ArticuloMin[] }) 
   const [error, setError] = useState("");
 
   const consulta = sinAcentos(q.trim());
-  const totalAlertas = useMemo(
-    () => items.filter((a) => a.stMin > a.consumoMensual).length,
+
+  const totalStMinAlto = useMemo(
+    () => items.filter((a) => !a.sinHistorial && (a.stMin ?? 0) > a.consumoMensual).length,
+    [items],
+  );
+  const totalBajoObjetivo = useMemo(
+    () => items.filter((a) => !a.sinHistorial && a.existencias < Math.max(a.stMin ?? 0, a.consumoMensual)).length,
+    [items],
+  );
+  const totalSinHistorial = useMemo(
+    () => items.filter((a) => a.sinHistorial).length,
     [items],
   );
 
-  // Buscar manda sobre el filtro: si hay consulta, rastrea todo el universo.
+  // Buscar manda sobre los filtros: si hay consulta, rastrea todo el universo (incluyendo sin historial).
   const filtrados = useMemo(() => {
     let xs = items;
-    if (consulta) xs = xs.filter((a) => sinAcentos(a.denominacion).includes(consulta));
-    else if (soloAlertas) xs = xs.filter((a) => a.stMin > a.consumoMensual);
+    if (consulta) {
+      xs = xs.filter((a) => sinAcentos(a.denominacion).includes(consulta));
+    } else if (soloSinHistorial) {
+      xs = xs.filter((a) => a.sinHistorial);
+    } else {
+      xs = xs.filter((a) => !a.sinHistorial);
+      if (soloStMinAlto) xs = xs.filter((a) => (a.stMin ?? 0) > a.consumoMensual);
+      if (soloBajoObjetivo) xs = xs.filter((a) => a.existencias < Math.max(a.stMin ?? 0, a.consumoMensual));
+    }
     return [...xs].sort((a, b) => a.denominacion.localeCompare(b.denominacion, "es"));
-  }, [items, consulta, soloAlertas]);
+  }, [items, consulta, soloStMinAlto, soloBajoObjetivo, soloSinHistorial]);
 
   const visibles = filtrados.slice(0, LIMITE);
 
-  function empezar(codigo: string, stMin: number) {
+  function empezar(codigo: string, stMin: number | null) {
     setError("");
-    setDraft(String(stMin));
+    setDraft(stMin === null ? "" : String(stMin));
     setEditando(codigo);
   }
 
@@ -92,33 +129,61 @@ export default function Inventario({ articulos }: { articulos: ArticuloMin[] }) 
         <label className="flex items-center gap-2 text-sm text-neutral-600">
           <input
             type="checkbox"
-            checked={soloAlertas}
-            onChange={(e) => setSoloAlertas(e.target.checked)}
+            checked={soloStMinAlto}
+            onChange={(e) => setSoloStMinAlto(e.target.checked)}
+            disabled={consulta !== "" || soloSinHistorial}
+          />
+          Stock mínimo &gt; consumo ({totalStMinAlto})
+        </label>
+        <label className="flex items-center gap-2 text-sm text-neutral-600">
+          <input
+            type="checkbox"
+            checked={soloBajoObjetivo}
+            onChange={(e) => setSoloBajoObjetivo(e.target.checked)}
+            disabled={consulta !== "" || soloSinHistorial}
+          />
+          Reponer ({totalBajoObjetivo})
+        </label>
+        <label className="flex items-center gap-2 text-sm text-neutral-600">
+          <input
+            type="checkbox"
+            checked={soloSinHistorial}
+            onChange={(e) => {
+              setSoloSinHistorial(e.target.checked);
+              if (e.target.checked) { setSoloStMinAlto(false); setSoloBajoObjetivo(false); }
+            }}
             disabled={consulta !== ""}
           />
-          Solo stock mínimo &gt; consumo ({totalAlertas})
+          Sin historial ({totalSinHistorial})
         </label>
       </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 
-      <table className="w-full border-collapse text-sm">
+      <table className="w-full table-fixed border-collapse text-sm">
         <thead>
           <tr className="border-b border-neutral-300 text-left text-neutral-500">
+            <th className="py-2 font-medium w-20">Código</th>
             <th className="py-2 font-medium">Denominación</th>
-            <th className="py-2 text-right font-medium">Stock mínimo</th>
-            <th className="py-2 text-right font-medium">Consumo</th>
-            <th className="py-2 text-right font-medium"></th>
+            <th className="py-2 text-right font-medium w-24">Existencias</th>
+            <th className="py-2 text-right font-medium w-24">Consumo</th>
+            <th className="py-2 text-right font-medium w-28">Stock mínimo</th>
+            <th className="py-2 pl-6 w-14"></th>
           </tr>
         </thead>
         <tbody>
           {visibles.map((a) => {
             const enEdicion = editando === a.codigo;
             const trabajando = ocupado === a.codigo;
-            const alerta = a.stMin > a.consumoMensual;
+            const bajoObjetivo = a.existencias < Math.max(a.stMin ?? 0, a.consumoMensual);
             return (
-              <tr key={a.codigo} className={`border-b border-neutral-100 ${alerta ? "bg-amber-50" : ""}`}>
+              <tr key={a.codigo} className={`border-b border-neutral-100 ${bajoObjetivo ? "bg-amber-50" : ""}`}>
+                <td className="py-2 tabular-nums text-neutral-400 text-xs">{a.codigo}</td>
                 <td className="py-2">{a.denominacion}</td>
+                <td className={`py-2 text-right tabular-nums ${bajoObjetivo ? "font-medium text-amber-800" : "text-neutral-600"}`}>
+                  {a.existencias}
+                </td>
+                <td className={`py-2 text-right tabular-nums ${a.sinHistorial ? "font-medium text-amber-800" : "text-neutral-600"}`}>{a.sinHistorial ? "?" : a.consumoMensual}</td>
                 <td className="py-2 text-right tabular-nums">
                   {enEdicion ? (
                     <input
@@ -135,37 +200,36 @@ export default function Inventario({ articulos }: { articulos: ArticuloMin[] }) 
                       className="w-20 rounded border border-neutral-300 px-2 py-1 text-right outline-none focus:border-neutral-500"
                     />
                   ) : (
-                    <span className={alerta ? "font-medium text-amber-800" : ""}>{a.stMin}</span>
+                    <span className={!a.sinHistorial && (a.stMin ?? 0) > a.consumoMensual ? "font-medium text-amber-800" : "text-neutral-600"}>{a.stMin === null ? "—" : a.stMin}</span>
                   )}
                 </td>
-                <td className="py-2 text-right tabular-nums text-neutral-600">{a.consumoMensual}</td>
-                <td className="py-2 text-right">
+                <td className="py-2 pl-6 w-14 text-right">
                   {enEdicion ? (
                     <span className="flex justify-end gap-3">
                       <button
                         type="button"
                         onClick={() => guardar(a.codigo)}
                         disabled={trabajando}
-                        className="text-neutral-900 hover:underline disabled:opacity-40"
+                        className="text-green-600 hover:text-green-800 disabled:opacity-40"
                       >
-                        {trabajando ? "Guardando…" : "Guardar"}
+                        {trabajando ? "…" : <CheckIcon />}
                       </button>
                       <button
                         type="button"
                         onClick={() => setEditando(null)}
                         disabled={trabajando}
-                        className="text-neutral-500 hover:underline disabled:opacity-40"
+                        className="text-neutral-400 hover:text-neutral-600 disabled:opacity-40"
                       >
-                        Cancelar
+                        <XIcon />
                       </button>
                     </span>
                   ) : (
                     <button
                       type="button"
                       onClick={() => empezar(a.codigo, a.stMin)}
-                      className="text-neutral-500 hover:underline"
+                      className="text-neutral-300 hover:text-neutral-600 transition-colors"
                     >
-                      Editar
+                      <PencilIcon />
                     </button>
                   )}
                 </td>
@@ -177,7 +241,7 @@ export default function Inventario({ articulos }: { articulos: ArticuloMin[] }) 
 
       {visibles.length === 0 ? (
         <p className="text-sm text-neutral-400">
-          {consulta ? "Ningún artículo coincide." : "Ningún artículo con stock mínimo mayor que el consumo."}
+          {consulta ? "Ningún artículo coincide." : "Sin artículos en inventario."}
         </p>
       ) : filtrados.length > LIMITE ? (
         <p className="text-sm text-neutral-400">

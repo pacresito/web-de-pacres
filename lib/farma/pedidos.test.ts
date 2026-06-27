@@ -1,6 +1,6 @@
 // Test de lógica pura: `npx tsx lib/farma/pedidos.test.ts`. Fuera del build.
 import assert from "assert";
-import { calcularPedidos, type PedidosDeCodigo, type RefPedidos, type Stocks, type StMins } from "./pedidos";
+import { bolsaDePedido, calcularPedidos, listarPedidos, type PedidosDeCodigo, type RefPedidos, type Stocks, type StMins } from "./pedidos";
 
 const AHORA = Date.parse("2026-06-26T10:00:00Z");
 const haceDias = (n: number) => AHORA - n * 24 * 60 * 60 * 1000;
@@ -112,6 +112,23 @@ const pedCinfa: PedidosDeCodigo = Object.fromEntries(C.map((c) => [c, ["CINFA"]]
   assert.strictEqual(r.huerfanos.length, 0, "no es huérfano (sí está en Ventas), solo sin pedido");
 }
 
+// --- jun-27: artículo de Ventas SIN StMín se pide por consumo ---
+{
+  // 000001 con StMín 5 y roto (2<5) dispara; 000002..006 SIN StMín, stock 2 < consumo 10.
+  const r = calcularPedidos(todos(2), seisCinfa(10), { "000001": 5 }, pedCinfa, {}, AHORA);
+  assert.strictEqual(r.pendientes.length, 1, "la rotura de 000001 dispara el pedido");
+  assert.strictEqual(r.pendientes[0].lineas.length, 6, "los 6 entran, tengan StMín o no");
+  const lineas = Object.fromEntries(r.pendientes[0].lineas.map((l) => [l.codigo, l.cantidad]));
+  assert.strictEqual(lineas["000001"], 8, "con StMín: max(5,10)−2");
+  assert.strictEqual(lineas["000002"], 8, "sin StMín: objetivo = consumo, max(0,10)−2");
+}
+
+// --- jun-27: un pedido sin ninguna rotura (nadie tiene StMín) no se auto-dispara ---
+{
+  const r = calcularPedidos(todos(2), seisCinfa(10), {}, pedCinfa, {}, AHORA);
+  assert.strictEqual(r.pendientes.length, 0, "sin StMín no hay rotura: solo pedible en manual");
+}
+
 // --- jun-26: un código en varios pedidos suma su línea a cada uno (colisión) ---
 {
   // 000001 pertenece a CINFA y a ALMACEN; el resto solo a CINFA. Ambos pedidos llegan a 6
@@ -122,6 +139,20 @@ const pedCinfa: PedidosDeCodigo = Object.fromEntries(C.map((c) => [c, ["CINFA"]]
   assert.strictEqual(r.pendientes.length, 2, "el código va a los dos pedidos");
   assert.deepStrictEqual(r.pendientes.map((b) => b.pedido), ["ALMACEN", "CINFA"], "ordenados");
   assert.ok(r.pendientes.every((b) => b.lineas.length === 6), "cada pedido con sus 6 líneas");
+}
+
+// --- pedido manual (jun-27): incluye artículos por consumo aunque ninguno tenga StMín ---
+{
+  // Sin StMín en nadie y sin rotura: calcularPedidos no lo dispara, pero el manual sí lo arma.
+  const bolsa = bolsaDePedido("CINFA", todos(2), seisCinfa(10), {}, pedCinfa);
+  assert.ok(bolsa, "el pedido manual se arma sin StMín");
+  assert.strictEqual(bolsa!.lineas.length, 6, "6 líneas por consumo");
+  assert.ok(bolsa!.lineas.every((l) => l.cantidad === 8), "objetivo = consumo: max(0,10)−2");
+}
+
+// --- listarPedidos (jun-27): parte de Ventas, no de StMín ---
+{
+  assert.deepStrictEqual(listarPedidos(pedCinfa, seisCinfa(10)), ["CINFA"], "pedido listado sin StMín");
 }
 
 console.log("pedidos.test.ts ✓");
