@@ -10,6 +10,7 @@ const nextConfig: NextConfig = {
       { source: "/l", destination: "/webs/lagartijas", permanent: false },
       { source: "/a", destination: "/apps/AgricolaCalc", permanent: false },
       { source: "/c", destination: "/apps/CastleComboCalc", permanent: false },
+      { source: "/farmacia", destination: "/farma", permanent: false },
     ];
   },
   async headers() {
