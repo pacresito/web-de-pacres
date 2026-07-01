@@ -18,10 +18,10 @@ const th: React.CSSProperties = {
   background: NAVY,
   color: "#fff",
   fontWeight: 700,
-  padding: "3px 5px",
+  padding: "5px 8px",
   borderRight: "1px solid #3557A8",
 };
-const cell: React.CSSProperties = { padding: "2px 5px", borderBottom: `1px solid ${ROW_BORDER}` };
+const cell: React.CSSProperties = { padding: "4px 8px", borderBottom: `1px solid ${ROW_BORDER}` };
 
 export default function Prioridades({ data }: { data: Record<string, LabDescuento[]> }) {
   const [principio, setPrincipio] = useState<string | null>(null);
@@ -32,10 +32,10 @@ export default function Prioridades({ data }: { data: Record<string, LabDescuent
   const fecha = new Date().toLocaleDateString("es-ES");
 
   return (
-    <div style={{ background: "#E8E4DC", fontFamily: "Tahoma, Arial, sans-serif" }} className="p-4 text-[11px]">
+    <div style={{ fontFamily: "Tahoma, Arial, sans-serif" }} className="text-[13px]">
       {/* Título de la ventana */}
-      <div className="mb-2.5 flex items-center gap-1.5 text-neutral-600">
-        <span style={{ color: "#00008B" }} className="text-[13px] font-bold">Prioridades</span>
+      <div className="mb-3 flex items-center gap-1.5 text-neutral-600">
+        <span style={{ color: "#00008B" }} className="text-[17px] font-bold">Prioridades</span>
         <span>·</span>
         <span>Medicamentos por principio activo</span>
       </div>
@@ -54,10 +54,10 @@ export default function Prioridades({ data }: { data: Record<string, LabDescuent
         {/* Barra de búsqueda */}
         <div
           style={{ background: "#D4D0C8", borderBottom: "1px solid #ACA899" }}
-          className="flex flex-wrap items-center gap-2 px-2.5 py-1.5"
+          className="flex flex-wrap items-center gap-2 px-3 py-2"
         >
           <label style={{ color: "#00008B" }} className="whitespace-nowrap font-bold">Principio activo:</label>
-          <div className="w-56">
+          <div className="w-64">
             <Buscador
               items={principios}
               onSelect={(p) => {
@@ -66,23 +66,23 @@ export default function Prioridades({ data }: { data: Record<string, LabDescuent
               }}
               placeholder="Ej: AMLODIPINO"
               autoFocus
-              inputClassName="w-full rounded-none border border-neutral-500 bg-white px-1.5 py-0.5 text-[11px] outline-none"
+              inputClassName="w-full rounded-none border border-neutral-500 bg-white px-2 py-1 text-[13px] outline-none"
             />
           </div>
           {filas.length > 0 && (
-            <span className="ml-1 text-[10px] text-neutral-600">{filas.length} resultados</span>
+            <span className="ml-1 text-[12px] text-neutral-600">{filas.length} resultados</span>
           )}
         </div>
 
         {/* Tabla */}
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-[11px]">
+          <table className="w-full border-collapse text-[13px]">
             <colgroup>
-              <col style={{ width: 24 }} />
               <col style={{ width: 30 }} />
-              <col style={{ width: 24 }} />
+              <col style={{ width: 40 }} />
+              <col style={{ width: 30 }} />
               <col />
-              <col style={{ width: 68 }} />
+              <col style={{ width: 90 }} />
             </colgroup>
             <thead>
               <tr>
@@ -130,7 +130,7 @@ export default function Prioridades({ data }: { data: Record<string, LabDescuent
       </div>
 
       {/* Barra de estado */}
-      <div className="mt-1 flex justify-between text-[10px] text-neutral-600">
+      <div className="mt-1.5 flex justify-between text-[12px] text-neutral-600">
         <span>
           {seleccionada
             ? `Seleccionado: ${seleccionada.denominacion}`
