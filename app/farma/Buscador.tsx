@@ -12,11 +12,13 @@ export default function Buscador({
   onSelect,
   placeholder,
   autoFocus,
+  inputClassName,
 }: {
   items: string[];
   onSelect: (item: string) => void;
   placeholder?: string;
   autoFocus?: boolean;
+  inputClassName?: string; // sobreescribe el estilo del campo (p. ej. skin UnycopWin en Prioridades)
 }) {
   const [q, setQ] = useState("");
   const [abierto, setAbierto] = useState(false);
@@ -52,7 +54,10 @@ export default function Buscador({
         }}
         placeholder={placeholder}
         autoFocus={autoFocus}
-        className="w-full rounded border border-neutral-300 px-3 py-2 outline-none focus:border-neutral-500"
+        className={
+          inputClassName ??
+          "w-full rounded border border-neutral-300 px-3 py-2 outline-none focus:border-neutral-500"
+        }
       />
       {abierto && coincidencias.length > 0 && (
         <ul className="absolute z-10 mt-1 max-h-72 w-full overflow-auto rounded border border-neutral-200 bg-white shadow">

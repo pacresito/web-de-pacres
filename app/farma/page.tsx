@@ -17,16 +17,13 @@ export default async function FarmaPage() {
   const data: Record<string, LabDescuento[]> = raw ? JSON.parse(raw) : {};
 
   return (
-    <main className="flex flex-col gap-6">
-      <header className="flex items-baseline justify-between">
-        <h1 className="text-xl font-medium">Prioridades</h1>
-        <nav className="flex items-center gap-4 text-sm text-neutral-600">
-          {rol === "admin" && (
-            <Link href="/farma/maria" className="hover:text-neutral-900">Volver</Link>
-          )}
-          <LogoutButton />
-        </nav>
-      </header>
+    <main className="flex flex-col gap-3">
+      <nav className="flex items-center justify-end gap-4 text-sm text-neutral-600">
+        {rol === "admin" && (
+          <Link href="/farma/maria" className="hover:text-neutral-900">Volver</Link>
+        )}
+        <LogoutButton />
+      </nav>
       <Prioridades data={data} />
     </main>
   );
