@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     url: "https://pacr.es/webs/lagartijas",
     type: "website",
     locale: "es_ES",
-    images: ["https://pacr.es/lagartijas/verde-amarilla.webp"],
+    images: ["https://pacr.es/lagartijas/sample-verde-amarilla.webp"],
   },
 };
 
