@@ -14,7 +14,7 @@ type LabItem = {
   type: string;
   title: string;
   description: string;
-  status: "available" | "hidden" | "soon";
+  status: "available" | "hidden" | "soon" | "private";
   href: string | null;
   cta: string;
 };
@@ -22,17 +22,18 @@ type LabItem = {
 const ITEMS: LabItem[] = [
   { id: "lucas",       num: "01", type: "web",        title: "Dr. Lucas Crespo",     description: `Perfil profesional de un aeronáutico de ${calcularEdad(new Date(2020, 2, 30))} años.`, status: "available", href: "/webs/lucas",       cta: "Ver perfil →" },
   { id: "lagartijas",  num: "02", type: "web",        title: "Lagartijas de Lucas",  description: "Las lagartijas de cuentas que hace a mano, una a una.",                             status: "available", href: "/webs/lagartijas",  cta: "Verlas →" },
-  { id: "placeholder", num: "03", type: "web",        title: "Aquí va lo importante", description: "Aquí podría ir tu web. Dime tu idea y lo implementamos.",                            status: "soon",      href: null,               cta: "En construcción" },
-  { id: "rpncalc",     num: "04", type: "app",        title: "Calculadora RPN",       description: "Para los que piensan en pila.",                                                       status: "available", href: "/apps/RPNcalc",     cta: "Abrir →" },
-  { id: "fluidos",     num: "05", type: "app",        title: "Fluidos",               description: "Agua, fuego, tierra. Controla los elementos.",                                        status: "available", href: "/apps/fluidos",     cta: "Abrir →" },
-  { id: "orbitas",     num: "06", type: "app",        title: "Órbitas",               description: "Lanza cuerpos y míralos orbitar, chocar y escapar.",                                  status: "available", href: "/apps/orbitas",     cta: "Abrir →" },
-  { id: "espiral",     num: "07", type: "juego",      title: "Espiral",               description: "Dos caminos distintos, una sola decisión.",                                        status: "available", href: "/juegos/espiral",   cta: "Jugar →" },
-  { id: "laberinto",   num: "08", type: "juego",      title: "Laberinto",             description: "Inclina el móvil o usa el ratón.",                                                    status: "available", href: "/juegos/laberinto", cta: "Jugar →" },
-  { id: "circulo",     num: "09", type: "truco",      title: "Círculo perfecto",      description: "Dibuja el círculo más perfecto que puedas.",                                          status: "available", href: "/trucos/circulo",   cta: "Probar →" },
-  { id: "magia",       num: "10", type: "truco",      title: "Magia de la buena",     description: "Piensa en una carta. No me la digas.",                                                status: "available", href: "/trucos/magia",     cta: "Probar →" },
-  { id: "letras",      num: "11", type: "easter-egg", title: "Las letras caen",       description: "Algo pasa si sabes dónde pinchar.",                                                   status: "hidden",    href: "/",                cta: "Ir a probarlo →" },
-  { id: "color",       num: "12", type: "easter-egg", title: "Cambio de tema",        description: `Cambio de tema dinámico en el diseño "Original".`,                                                               status: "hidden", href: "/home/original", cta: "Ir a probarlo →" },
-  { id: "guestbook",   num: "13", type: "easter-egg", title: "Libro de firmas",       description: "Deja tu firma. Como los de toda la vida.",                                            status: "available", href: "/guestbook",       cta: "Firmar →" },
+  { id: "farma",       num: "03", type: "web",        title: "Farmacia",             description: "Control de la medicación de la familia. Solo con clave.",                           status: "private",   href: "/farma",           cta: "Privada" },
+  { id: "placeholder", num: "04", type: "web",        title: "Aquí va lo importante", description: "Aquí podría ir tu web. Dime tu idea y lo implementamos.",                            status: "soon",      href: null,               cta: "En construcción" },
+  { id: "rpncalc",     num: "05", type: "app",        title: "Calculadora RPN",       description: "Para los que piensan en pila.",                                                       status: "available", href: "/apps/RPNcalc",     cta: "Abrir →" },
+  { id: "fluidos",     num: "06", type: "app",        title: "Fluidos",               description: "Agua, fuego, tierra. Controla los elementos.",                                        status: "available", href: "/apps/fluidos",     cta: "Abrir →" },
+  { id: "orbitas",     num: "07", type: "app",        title: "Órbitas",               description: "Lanza cuerpos y míralos orbitar, chocar y escapar.",                                  status: "available", href: "/apps/orbitas",     cta: "Abrir →" },
+  { id: "espiral",     num: "08", type: "juego",      title: "Espiral",               description: "Dos caminos distintos, una sola decisión.",                                        status: "available", href: "/juegos/espiral",   cta: "Jugar →" },
+  { id: "laberinto",   num: "09", type: "juego",      title: "Laberinto",             description: "Inclina el móvil o usa el ratón.",                                                    status: "available", href: "/juegos/laberinto", cta: "Jugar →" },
+  { id: "circulo",     num: "10", type: "truco",      title: "Círculo perfecto",      description: "Dibuja el círculo más perfecto que puedas.",                                          status: "available", href: "/trucos/circulo",   cta: "Probar →" },
+  { id: "magia",       num: "11", type: "truco",      title: "Magia de la buena",     description: "Piensa en una carta. No me la digas.",                                                status: "available", href: "/trucos/magia",     cta: "Probar →" },
+  { id: "letras",      num: "12", type: "easter-egg", title: "Las letras caen",       description: "Algo pasa si sabes dónde pinchar.",                                                   status: "hidden",    href: "/",                cta: "Ir a probarlo →" },
+  { id: "color",       num: "13", type: "easter-egg", title: "Cambio de tema",        description: `Cambio de tema dinámico en el diseño "Original".`,                                                               status: "hidden", href: "/home/original", cta: "Ir a probarlo →" },
+  { id: "guestbook",   num: "14", type: "easter-egg", title: "Libro de firmas",       description: "Deja tu firma. Como los de toda la vida.",                                            status: "available", href: "/guestbook",       cta: "Firmar →" },
 ];
 
 const CMD = "ls ~/lab --long --all";
@@ -63,16 +64,17 @@ function PromptRow({ cmd }: { cmd: string }) {
   );
 }
 
-function StatusTag({ status }: { status: "available" | "hidden" | "soon" }) {
+function StatusTag({ status }: { status: "available" | "hidden" | "soon" | "private" }) {
   const cfg = {
-    available: { label: "● live",   color: "var(--t-accent2)" },
-    hidden:    { label: "◌ hidden", color: "var(--t-ink4)"    },
-    soon:      { label: "○ soon",   color: "var(--t-ink3)"    },
+    available: { label: "● live",    color: "var(--t-accent2)" },
+    hidden:    { label: "◌ hidden",  color: "var(--t-ink4)"    },
+    soon:      { label: "○ soon",    color: "var(--t-ink3)"    },
+    private:   { label: "◌ private", color: "var(--t-ink3)"    },
   }[status];
   return <span style={{ fontFamily: "var(--t-mono)", fontSize: 10, color: cfg.color }}>{cfg.label}</span>;
 }
 
-function TypePill({ type, status }: { type: string; status: "available" | "hidden" | "soon" }) {
+function TypePill({ type, status }: { type: string; status: "available" | "hidden" | "soon" | "private" }) {
   const live = status === "available";
   return (
     <span style={{
