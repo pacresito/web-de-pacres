@@ -32,21 +32,22 @@ export default function PanelResumen({
         <p><Cuenta n={descuentosInferidos} uno="descuento por revisar" varios="descuentos por revisar" /></p>
         <p><Cuenta n={pvpCambiados} uno="precio cambiado" varios="precios cambiados" /></p>
       </div>
-      <p className="fa-t-ink3 mt-3 border-t pt-3 text-[13px] leading-[1.55]" style={{ borderColor: "var(--fa-rule)" }}>
+      <div className="fa-t-ink3 mt-3 border-t pt-3 text-[13px] leading-[1.55]" style={{ borderColor: "var(--fa-rule)" }}>
         {meta ? (
           <>
-            Inventario del{" "}
-            <span className={invViejo ? "fa-t-amber font-semibold" : "font-semibold"} style={invViejo ? undefined : { color: "var(--fa-ink)" }}>
-              {meta.fechaInforme}
-            </span>
-            {ahora !== null && <> subido <span className="fa-t-muted2">{haceX(meta.loadedAt, ahora)}</span></>}
-            <br />
-            {meta.totalArticulos.toLocaleString("es-ES")} artículos · {meta.unidades.toLocaleString("es-ES")} unidades
+            <p>
+              Inventario del{" "}
+              <span className={invViejo ? "fa-t-amber font-semibold" : "font-semibold"} style={invViejo ? undefined : { color: "var(--fa-ink)" }}>
+                {meta.fechaInforme}
+              </span>
+              {ahora !== null && <> subido <span className="fa-t-muted2">{haceX(meta.loadedAt, ahora)}</span></>}
+            </p>
+            <p>{meta.totalArticulos.toLocaleString("es-ES")} artículos · {meta.unidades.toLocaleString("es-ES")} unidades</p>
           </>
         ) : (
-          <span className="fa-t-muted2">Aún no se ha subido ningún inventario.</span>
+          <p className="fa-t-muted2">Aún no se ha subido ningún inventario.</p>
         )}
-      </p>
+      </div>
     </section>
   );
 }

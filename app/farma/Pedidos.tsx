@@ -220,15 +220,16 @@ export default function Pedidos({
               </div>
             )}
             {confirmacion && (
-              <p className="fa-t-green mt-2.5 text-[13px] leading-[1.5]">
-                ✓ Inventario actualizado · {confirmacion.total.toLocaleString("es-ES")} artículos
-                {confirmacion.delta !== null && (
-                  <> · <Delta n={confirmacion.delta} sustantivo="artículos" /></>
+              <div className="fa-t-green mt-2.5 text-[13px] leading-[1.5]">
+                <p>✓ Inventario actualizado · {confirmacion.total.toLocaleString("es-ES")} artículos</p>
+                {(confirmacion.delta !== null || confirmacion.deltaUnidades !== null) && (
+                  <p>
+                    {confirmacion.delta !== null && <Delta n={confirmacion.delta} sustantivo="artículos" />}
+                    {confirmacion.delta !== null && confirmacion.deltaUnidades !== null && " · "}
+                    {confirmacion.deltaUnidades !== null && <Delta n={confirmacion.deltaUnidades} sustantivo="unidades" />}
+                  </p>
                 )}
-                {confirmacion.deltaUnidades !== null && (
-                  <> · <Delta n={confirmacion.deltaUnidades} sustantivo="unidades" /></>
-                )}
-              </p>
+              </div>
             )}
             {error && <p className="fa-t-red mt-2 text-[13px]">{error}</p>}
           </section>
