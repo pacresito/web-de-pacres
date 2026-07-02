@@ -1,5 +1,4 @@
 import { requireAdmin } from "../../auth";
-import SubpageNav from "../../SubpageNav";
 import Inventario, { type ArticuloMin } from "../../Inventario";
 import redis from "@/lib/redis";
 import { KEYS } from "@/lib/farma/keys";
@@ -54,15 +53,7 @@ export default async function InventarioPage() {
   const articulos = [...articulosNormales, ...articulosSinHistorial];
 
   return (
-    <main className="flex flex-col gap-6">
-      <header className="flex items-baseline justify-between">
-        <h1 className="text-xl font-medium">Inventario</h1>
-        <SubpageNav />
-      </header>
-      <p className="text-sm text-neutral-500">
-        Todos los productos con los que trabajamos y los datos con los que se calculan los pedidos.
-        Las líneas <span className="text-amber-800">resaltadas</span> tienen existencias por debajo del objetivo.
-      </p>
+    <main className="p-[16px]">
       <Inventario articulos={articulos} />
     </main>
   );

@@ -42,64 +42,75 @@ export default function Pvp({ pendientes }: { pendientes: LineaPvp[] }) {
 
   if (pendientes.length === 0) {
     return (
-      <p className="text-sm text-neutral-400">
-        Ningún precio ha cambiado desde la última comprobación.
-      </p>
+      <div className="fa-panel">
+        <div className="fa-t-green px-6 py-14 text-center text-sm leading-[1.6]">
+          ✓ Todo reetiquetado.
+          <br />
+          <span className="fa-t-muted2">No hay precios pendientes.</span>
+        </div>
+      </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-neutral-600">
-          {pendientes.length} {pendientes.length === 1 ? "precio cambiado" : "precios cambiados"} pendiente
-          {pendientes.length === 1 ? "" : "s"} de reetiquetar.
+    <div>
+      <div className="mb-3.5 flex flex-wrap items-center justify-between gap-3">
+        <p className="fa-t-ink2 text-sm">
+          <b className="font-semibold" style={{ color: "var(--fa-ink)" }}>{pendientes.length}</b>{" "}
+          {pendientes.length === 1 ? "precio cambiado pendiente" : "precios cambiados pendientes"} de reetiquetar
         </p>
-        <button
-          type="button"
-          onClick={() => marcar()}
-          disabled={ocupado !== null}
-          className="rounded bg-neutral-900 px-3 py-1.5 text-sm text-white hover:bg-neutral-700 disabled:opacity-40"
-        >
+        <button type="button" onClick={() => marcar()} disabled={ocupado !== null} className="fa-btn fa-btn-primary px-[15px] py-[9px]">
           {ocupado === TODAS ? "Guardando…" : "Ya cambié todas las etiquetas"}
         </button>
       </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="fa-t-red mb-2 text-[13px]">{error}</p>}
 
-      <table className="w-full border-collapse text-sm">
-        <thead>
-          <tr className="border-b border-neutral-300 text-left text-neutral-500">
-            <th className="py-2 pr-4 font-medium">Código</th>
-            <th className="py-2 font-medium">Denominación</th>
-            <th className="py-2 text-right font-medium">PVP antiguo</th>
-            <th className="py-2 text-right font-medium">PVP nuevo</th>
-            <th className="py-2 pl-4 text-right font-medium">Fecha</th>
-            <th className="py-2 text-right font-medium"></th>
-          </tr>
-        </thead>
-        <tbody>
-          {pendientes.map((a) => (
-            <tr key={a.codigo} className="border-b border-neutral-100">
-              <td className="py-2 pr-4 font-mono text-xs text-neutral-400">{a.codigo}</td>
-              <td className="py-2">{a.denominacion}</td>
-              <td className="py-2 text-right tabular-nums text-neutral-500">{euro(a.oldPrice)}</td>
-              <td className="py-2 text-right font-medium tabular-nums text-neutral-900">{euro(a.newPrice)}</td>
-              <td className="py-2 pl-4 text-right tabular-nums whitespace-nowrap text-neutral-500">{a.firstSeen}</td>
-              <td className="py-2 pl-4 text-right">
-                <button
-                  type="button"
-                  onClick={() => marcar(a.codigo)}
-                  disabled={ocupado !== null}
-                  className="text-neutral-500 hover:underline disabled:opacity-40"
-                >
-                  {ocupado === a.codigo ? "Guardando…" : "Hecho"}
-                </button>
-              </td>
+      <div className="fa-panel overflow-x-auto">
+        <table className="fa-table" style={{ minWidth: 720 }}>
+          <thead>
+            <tr>
+              <th className="fa-th">Código</th>
+              <th className="fa-th">Denominación</th>
+              <th className="fa-th fa-th-r">PVP antiguo</th>
+              <th className="fa-th fa-th-r">PVP nuevo</th>
+              <th className="fa-th">Fecha</th>
+              <th className="fa-th" style={{ width: 96 }}></th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {pendientes.map((a) => {
+              const delta = a.newPrice - a.oldPrice;
+              const sube = delta >= 0;
+              return (
+                <tr key={a.codigo} className="fa-row">
+                  <td className="fa-td fa-mono fa-t-ink3 whitespace-nowrap">{a.codigo}</td>
+                  <td className="fa-td">{a.denominacion}</td>
+                  <td className="fa-td fa-mono fa-th-r fa-t-muted2 line-through">{euro(a.oldPrice)}</td>
+                  <td className="fa-td fa-th-r whitespace-nowrap">
+                    <span className="fa-mono text-[14px] font-semibold" style={{ color: "var(--fa-ink)" }}>{euro(a.newPrice)}</span>
+                    <span className={`fa-mono ml-2 text-[11.5px] ${sube ? "fa-t-green" : "fa-t-red"}`}>
+                      {sube ? "+" : "−"}
+                      {euro(Math.abs(delta))}
+                    </span>
+                  </td>
+                  <td className="fa-td fa-mono fa-t-ink3 whitespace-nowrap">{a.firstSeen}</td>
+                  <td className="fa-td fa-th-r">
+                    <button
+                      type="button"
+                      onClick={() => marcar(a.codigo)}
+                      disabled={ocupado !== null}
+                      className="fa-btn-soft-green px-3 py-1.5 text-[12.5px]"
+                    >
+                      {ocupado === a.codigo ? "…" : "Hecho"}
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

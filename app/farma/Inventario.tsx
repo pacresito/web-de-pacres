@@ -106,140 +106,125 @@ export default function Inventario({ articulos }: { articulos: ArticuloMin[] }) 
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3">
-        <SearchBox
-          value={q}
-          onChange={setQ}
-          placeholder="Buscar por denominación o código…"
-        />
-        <div className="flex flex-wrap items-center gap-4">
-          <label className="flex items-center gap-2 text-sm text-neutral-600">
-            <input
-              type="checkbox"
-              checked={soloStMinAlto}
-              onChange={(e) => {
-                setSoloStMinAlto(e.target.checked);
-                if (e.target.checked) setSoloSinHistorial(false);
-              }}
-            />
-            Stock mínimo &gt; consumo ({totalStMinAlto})
-          </label>
-          <label className="flex items-center gap-2 text-sm text-neutral-600">
-            <input
-              type="checkbox"
-              checked={soloBajoObjetivo}
-              onChange={(e) => {
-                setSoloBajoObjetivo(e.target.checked);
-                if (e.target.checked) setSoloSinHistorial(false);
-              }}
-            />
-            Reponer ({totalBajoObjetivo})
-          </label>
-          <label className="flex items-center gap-2 text-sm text-neutral-600">
-            <input
-              type="checkbox"
-              checked={soloSinHistorial}
-              onChange={(e) => {
-                setSoloSinHistorial(e.target.checked);
-                if (e.target.checked) { setSoloStMinAlto(false); setSoloBajoObjetivo(false); }
-              }}
-            />
-            Sin historial ({totalSinHistorial})
-          </label>
+    <div className="fa-panel">
+      <div className="flex flex-col gap-3 border-b p-4" style={{ borderColor: "var(--fa-border)" }}>
+        <SearchBox value={q} onChange={setQ} placeholder="Buscar por denominación o código…" />
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              const v = !soloStMinAlto;
+              setSoloStMinAlto(v);
+              if (v) setSoloSinHistorial(false);
+            }}
+            className={`fa-chip ${soloStMinAlto ? "fa-chip-on" : ""}`}
+          >
+            <span className="fa-chip-box"><CheckIcon /></span>
+            Stock mínimo &gt; consumo <span className="fa-chip-count">({totalStMinAlto})</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const v = !soloBajoObjetivo;
+              setSoloBajoObjetivo(v);
+              if (v) setSoloSinHistorial(false);
+            }}
+            className={`fa-chip ${soloBajoObjetivo ? "fa-chip-on" : ""}`}
+          >
+            <span className="fa-chip-box"><CheckIcon /></span>
+            Reponer <span className="fa-chip-count">({totalBajoObjetivo})</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const v = !soloSinHistorial;
+              setSoloSinHistorial(v);
+              if (v) { setSoloStMinAlto(false); setSoloBajoObjetivo(false); }
+            }}
+            className={`fa-chip ${soloSinHistorial ? "fa-chip-on" : ""}`}
+          >
+            <span className="fa-chip-box"><CheckIcon /></span>
+            Sin historial <span className="fa-chip-count">({totalSinHistorial})</span>
+          </button>
         </div>
+        {error && <p className="fa-t-red text-[13px]">{error}</p>}
       </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
-
-      <table className="w-full table-fixed border-collapse text-sm">
-        <thead>
-          <tr className="border-b border-neutral-300 text-left text-neutral-500">
-            <th className="py-2 font-medium w-20">Código</th>
-            <th className="py-2 font-medium">Denominación</th>
-            <th className="py-2 text-right font-medium w-24">Existencias</th>
-            <th className="py-2 text-right font-medium w-24">Consumo</th>
-            <th className="py-2 text-right font-medium w-28">Stock mínimo</th>
-            <th className="py-2 pl-6 w-14"></th>
-          </tr>
-        </thead>
-        <tbody>
-          {visibles.map((a) => {
-            const enEdicion = editando === a.codigo;
-            const trabajando = ocupado === a.codigo;
-            const bajoObjetivo = a.existencias < Math.max(a.stMin ?? 0, a.consumoMensual);
-            return (
-              <tr key={a.codigo} className={`border-b border-neutral-100 ${bajoObjetivo ? "bg-amber-50" : ""}`}>
-                <td className="py-2 tabular-nums text-neutral-400 text-xs">{a.codigo}</td>
-                <td className="py-2">{a.denominacion}</td>
-                <td className={`py-2 text-right tabular-nums ${bajoObjetivo ? "font-medium text-amber-800" : "text-neutral-600"}`}>
-                  {a.existencias}
-                </td>
-                <td className={`py-2 text-right tabular-nums ${a.sinHistorial ? "font-medium text-amber-800" : "text-neutral-600"}`}>{a.sinHistorial ? "?" : a.consumoMensual}</td>
-                <td className="py-2 text-right tabular-nums">
-                  {enEdicion ? (
-                    <input
-                      type="number"
-                      min={0}
-                      step={1}
-                      value={draft}
-                      onChange={(e) => setDraft(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") guardar(a.codigo);
-                        else if (e.key === "Escape") setEditando(null);
-                      }}
-                      autoFocus
-                      className="w-20 rounded border border-neutral-300 px-2 py-1 text-right outline-none focus:border-neutral-500"
-                    />
-                  ) : (
-                    <span className={!a.sinHistorial && (a.stMin ?? 0) > a.consumoMensual ? "font-medium text-amber-800" : "text-neutral-600"}>{a.stMin === null ? "—" : a.stMin}</span>
-                  )}
-                </td>
-                <td className="py-2 pl-6 w-14 text-right">
-                  {enEdicion ? (
-                    <span className="flex justify-end gap-3">
-                      <button
-                        type="button"
-                        onClick={() => guardar(a.codigo)}
-                        disabled={trabajando}
-                        className="text-green-600 hover:text-green-800 disabled:opacity-40"
-                      >
-                        {trabajando ? "…" : <CheckIcon />}
+      <div className="overflow-x-auto">
+        <table className="fa-table" style={{ minWidth: 720 }}>
+          <thead>
+            <tr>
+              <th className="fa-th">Código</th>
+              <th className="fa-th">Denominación</th>
+              <th className="fa-th fa-th-r">Existencias</th>
+              <th className="fa-th fa-th-r">Consumo</th>
+              <th className="fa-th fa-th-r">Stock mínimo</th>
+              <th className="fa-th" style={{ width: 48 }}></th>
+            </tr>
+          </thead>
+          <tbody>
+            {visibles.map((a) => {
+              const enEdicion = editando === a.codigo;
+              const trabajando = ocupado === a.codigo;
+              const bajoObjetivo = a.existencias < Math.max(a.stMin ?? 0, a.consumoMensual);
+              const stMinAlto = !a.sinHistorial && (a.stMin ?? 0) > a.consumoMensual;
+              return (
+                <tr key={a.codigo} className={`fa-row ${bajoObjetivo ? "fa-row-low" : ""}`}>
+                  <td className="fa-td fa-mono fa-t-ink3 whitespace-nowrap text-[13px]">{a.codigo}</td>
+                  <td className="fa-td" style={{ color: "var(--fa-ink)" }}>{a.denominacion}</td>
+                  <td className={`fa-td fa-mono fa-th-r ${bajoObjetivo ? "fa-t-amber font-semibold" : "fa-t-ink3"}`}>{a.existencias}</td>
+                  <td className={`fa-td fa-mono fa-th-r ${a.sinHistorial ? "fa-t-muted" : "fa-t-ink3"}`}>{a.sinHistorial ? "?" : a.consumoMensual}</td>
+                  <td className="fa-td fa-th-r">
+                    {enEdicion ? (
+                      <span className="inline-flex items-center justify-end gap-1">
+                        <input
+                          type="number"
+                          min={0}
+                          step={1}
+                          value={draft}
+                          onChange={(e) => setDraft(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") guardar(a.codigo);
+                            else if (e.key === "Escape") setEditando(null);
+                          }}
+                          autoFocus
+                          className="fa-edit-input fa-mono"
+                        />
+                        <button type="button" onClick={() => guardar(a.codigo)} disabled={trabajando} className="fa-iconbtn fa-iconbtn-accept">
+                          {trabajando ? "…" : <CheckIcon />}
+                        </button>
+                        <button type="button" onClick={() => setEditando(null)} disabled={trabajando} className="fa-iconbtn fa-iconbtn-cancel">
+                          <XIcon />
+                        </button>
+                      </span>
+                    ) : (
+                      <span className={`fa-mono ${stMinAlto ? "fa-t-amber font-semibold" : ""}`} style={stMinAlto ? undefined : { color: "var(--fa-ink)" }}>
+                        {a.stMin === null ? "—" : a.stMin}
+                      </span>
+                    )}
+                  </td>
+                  <td className="fa-td fa-th-r">
+                    {!enEdicion && (
+                      <button type="button" onClick={() => empezar(a.codigo, a.stMin)} className="fa-iconbtn fa-iconbtn-edit" title="Editar">
+                        <PencilIcon />
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => setEditando(null)}
-                        disabled={trabajando}
-                        className="text-neutral-400 hover:text-neutral-600 disabled:opacity-40"
-                      >
-                        <XIcon />
-                      </button>
-                    </span>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => empezar(a.codigo, a.stMin)}
-                      className="text-neutral-300 hover:text-neutral-600 transition-colors"
-                    >
-                      <PencilIcon />
-                    </button>
-                  )}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
 
-      {visibles.length === 0 ? (
-        <p className="text-sm text-neutral-400">
-          {consulta ? "Ningún artículo coincide." : "Sin artículos en inventario."}
-        </p>
-      ) : filtrados.length > LIMITE ? (
-        <p className="text-sm text-neutral-400">
-          Mostrando {LIMITE} de {filtrados.length}. Busca para afinar.
-        </p>
-      ) : null}
+      {visibles.length === 0 && (
+        <div className="fa-t-muted2 p-11 text-center text-sm">
+          {consulta ? "Sin resultados. Prueba otra búsqueda o cambia los filtros." : "Sin artículos en inventario."}
+        </div>
+      )}
+      <div className="fa-t-muted border-t p-3.5 text-[13px]" style={{ borderColor: "var(--fa-rule)", background: "var(--fa-inset)" }}>
+        Mostrando {visibles.length} de {items.length.toLocaleString("es-ES")}. Busca para afinar.
+      </div>
     </div>
   );
 }

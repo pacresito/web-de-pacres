@@ -1,0 +1,240 @@
+/* ============================================================
+   Farma · panel de administración (María)
+   Sistema de diseño propio (IBM Plex + acento azul), aislado del
+   estilo terminal (.ts-*) y del skin UnycopWin de la vista de
+   usuario. Se activa envolviendo la superficie en .fa-admin; las
+   clases .fa-* son inertes en el resto del sitio.
+   ============================================================ */
+
+.fa-admin {
+  --fa-bg: #f6f7f9;
+  --fa-surface: #fff;
+  --fa-inset: #fafbfc;
+  --fa-ink: #16191d;
+  --fa-ink2: #4b5058;
+  --fa-ink3: #6b7280;
+  --fa-muted: #8a919c;
+  --fa-muted2: #9aa1ab;
+  --fa-border: #e5e7eb;
+  --fa-border-strong: #d7dbe0;
+  --fa-rule: #eef0f2;
+  --fa-accent: #2f6fed;
+  --fa-accent-hover: #2a63d6;
+  --fa-accent-bg: #eef3fe;
+  --fa-amber: #b45309;
+  --fa-amber-ink: #8a5a12;
+  --fa-amber-bg: #fdf7ee;
+  --fa-amber-border: #f3d79a;
+  --fa-amber-rule: #f5e6cd;
+  --fa-red: #dc2626;
+  --fa-red-bg: #fef2f2;
+  --fa-green: #15803d;
+  --fa-green-bg: #f0fdf4;
+  --fa-green-border: #cfe0d4;
+  --fa-green-hover: #dcfce7;
+
+  min-height: 100vh;
+  background: var(--fa-bg);
+  color: var(--fa-ink);
+  font-family: var(--font-ibm-plex-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Numérico: códigos, cantidades, precios, stock — alineados con tabular-nums. */
+.fa-mono {
+  font-family: var(--font-ibm-plex-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Colores de texto (repetidos por todo el panel). */
+.fa-t-ink2 { color: var(--fa-ink2); }
+.fa-t-ink3 { color: var(--fa-ink3); }
+.fa-t-muted { color: var(--fa-muted); }
+.fa-t-muted2 { color: var(--fa-muted2); }
+.fa-t-amber { color: var(--fa-amber); }
+.fa-t-green { color: var(--fa-green); }
+.fa-t-red { color: var(--fa-red); }
+.fa-t-accent { color: var(--fa-accent); }
+
+/* Inputs de texto. */
+.fa-input {
+  width: 100%;
+  height: 40px;
+  border: 1px solid var(--fa-border-strong);
+  border-radius: 6px;
+  padding: 0 13px;
+  font-size: 14px;
+  font-family: inherit;
+  background: var(--fa-inset);
+  color: var(--fa-ink);
+  outline: none;
+  transition: border-color 0.12s, box-shadow 0.12s, background 0.12s;
+}
+.fa-input::placeholder { color: #a7adb6; }
+.fa-input:focus {
+  border-color: var(--fa-accent);
+  background: var(--fa-surface);
+  box-shadow: 0 0 0 3px rgba(47, 111, 237, 0.12);
+}
+
+/* Botones. */
+.fa-btn {
+  font-size: 13.5px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.12s;
+}
+.fa-btn:disabled { opacity: 0.45; cursor: default; }
+.fa-btn-primary { border: none; background: var(--fa-accent); color: #fff; font-weight: 600; }
+.fa-btn-primary:hover:not(:disabled) { background: var(--fa-accent-hover); }
+.fa-btn-outline { border: 1px solid var(--fa-border-strong); background: var(--fa-surface); color: var(--fa-ink); font-weight: 500; }
+.fa-btn-outline:hover:not(:disabled) { background: #f4f6f8; }
+.fa-btn-amber { border: none; background: var(--fa-amber); color: #fff; font-weight: 600; }
+.fa-btn-amber:hover:not(:disabled) { background: #9a4708; }
+
+/* "Hecho" / confirmar en verde suave. */
+.fa-btn-soft-green {
+  border: 1px solid var(--fa-green-border);
+  background: var(--fa-green-bg);
+  color: var(--fa-green);
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: 500;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.fa-btn-soft-green:hover:not(:disabled) { background: var(--fa-green-hover); }
+.fa-btn-soft-green:disabled { opacity: 0.5; cursor: default; }
+
+/* Tarjeta y panel. */
+.fa-card { background: var(--fa-surface); border: 1px solid var(--fa-border); border-radius: 8px; padding: 15px; }
+.fa-card-label { font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--fa-muted); }
+.fa-panel { background: var(--fa-surface); border: 1px solid var(--fa-border); border-radius: 8px; overflow: hidden; }
+
+/* Tabla. */
+.fa-table { width: 100%; border-collapse: collapse; }
+.fa-th {
+  text-align: left;
+  padding: 9px 14px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--fa-muted);
+  background: var(--fa-inset);
+  border-bottom: 1px solid var(--fa-border);
+  white-space: nowrap;
+}
+.fa-th-r { text-align: right; }
+.fa-td { padding: 9px 14px; font-size: 13.5px; border-bottom: 1px solid var(--fa-rule); }
+.fa-row:hover { box-shadow: inset 0 0 0 9999px rgba(0, 0, 0, 0.018); }
+.fa-row-low { background: var(--fa-amber-bg); }
+.fa-row-low .fa-td { border-bottom-color: var(--fa-amber-rule); }
+
+.fa-panel > .fa-bolsa:last-child { border-bottom: none !important; }
+
+/* Chip de filtro (checkbox con aspecto de botón). */
+.fa-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 12px;
+  border: 1px solid var(--fa-border-strong);
+  border-radius: 6px;
+  background: var(--fa-surface);
+  font-size: 13px;
+  color: var(--fa-ink2);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.12s;
+}
+.fa-chip:hover { background: #f4f6f8; }
+.fa-chip-box {
+  position: relative;
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid #b6bcc4;
+  border-radius: 4px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: transparent;
+}
+.fa-chip-on .fa-chip-box { background: var(--fa-accent); border-color: var(--fa-accent); color: #fff; }
+.fa-chip-count { color: var(--fa-muted2); }
+
+/* Pill de prioridad. */
+.fa-pill { display: inline-block; font-size: 11.5px; font-weight: 500; padding: 2px 9px; border-radius: 5px; }
+.fa-pill-alta { background: var(--fa-red-bg); color: var(--fa-red); }
+.fa-pill-media { background: var(--fa-amber-bg); color: var(--fa-amber); }
+.fa-pill-baja { background: #f2f4f7; color: var(--fa-ink3); }
+
+/* Etiqueta "inferido". */
+.fa-tag { font-size: 10.5px; padding: 1px 6px; border-radius: 4px; background: #f2f4f7; color: var(--fa-muted); letter-spacing: 0.02em; }
+
+/* Botones-icono de las tablas editables (28×28). */
+.fa-iconbtn {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  background: transparent;
+  transition: background 0.12s, color 0.12s;
+}
+.fa-iconbtn:disabled { opacity: 0.5; cursor: default; }
+.fa-iconbtn-edit { color: #aab0b9; }
+.fa-iconbtn-edit:hover:not(:disabled) { background: var(--fa-accent-bg); color: var(--fa-accent); }
+.fa-iconbtn-accept { background: var(--fa-accent); color: #fff; }
+.fa-iconbtn-accept:hover:not(:disabled) { background: var(--fa-accent-hover); }
+.fa-iconbtn-cancel { border-color: var(--fa-border-strong); background: var(--fa-surface); color: var(--fa-ink3); }
+.fa-iconbtn-cancel:hover:not(:disabled) { background: #f4f6f8; }
+.fa-iconbtn-confirm { border-color: var(--fa-green-border); background: var(--fa-green-bg); color: var(--fa-green); }
+.fa-iconbtn-confirm:hover:not(:disabled) { background: var(--fa-green-hover); }
+
+/* Editor numérico inline. */
+.fa-edit-input {
+  width: 56px;
+  height: 28px;
+  border: 1px solid var(--fa-accent);
+  border-radius: 5px;
+  padding: 0 6px;
+  font-size: 13px;
+  text-align: right;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(47, 111, 237, 0.12);
+}
+
+/* Cabecera común (sticky). */
+.fa-header { background: var(--fa-surface); border-bottom: 1px solid var(--fa-border); position: sticky; top: 0; z-index: 5; }
+.fa-nav-item {
+  padding: 7px 12px;
+  font-size: 13px;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  color: #5b616b;
+  text-decoration: none;
+  transition: background 0.12s, color 0.12s;
+}
+.fa-nav-item:hover { background: #f4f6f8; }
+.fa-nav-item-active { background: var(--fa-accent-bg); color: var(--fa-ink); font-weight: 600; }
+
+/* Aviso ámbar / error rojo (cajas). */
+.fa-note-amber { border: 1px solid var(--fa-amber-border); background: var(--fa-amber-bg); border-radius: 6px; color: var(--fa-amber-ink); }
+.fa-note-red { border: 1px solid #f3c4c4; background: var(--fa-red-bg); border-radius: 6px; color: var(--fa-red); }
+
+@keyframes fa-spin { to { transform: rotate(360deg); } }
+.fa-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  border-top-color: #fff;
+  border-radius: 50%;
+  display: inline-block;
+  animation: fa-spin 0.7s linear infinite;
+}

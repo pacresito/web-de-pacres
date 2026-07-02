@@ -123,137 +123,114 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
   }
 
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex flex-col gap-3">
+    <div className="fa-panel">
+      <div className="flex flex-col gap-3 border-b p-4" style={{ borderColor: "var(--fa-border)" }}>
         <SearchBox
           value={q}
           onChange={setQ}
           placeholder="Buscar por principio activo o laboratorio…"
           autoFocus
         />
-        <div className="flex flex-wrap items-center gap-4">
-          <label className="flex items-center gap-2 text-sm text-neutral-600">
-            <input
-              type="checkbox"
-              checked={soloInferidos}
-              onChange={(e) => setSoloInferidos(e.target.checked)}
-            />
-            Inferidos ({totalInferidos})
-          </label>
-          <label className="flex items-center gap-2 text-sm text-neutral-600">
-            <input
-              type="checkbox"
-              checked={soloUno}
-              onChange={(e) => setSoloUno(e.target.checked)}
-            />
-            Sólo uno ({totalUno})
-          </label>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={() => setSoloInferidos(!soloInferidos)} className={`fa-chip ${soloInferidos ? "fa-chip-on" : ""}`}>
+            <span className="fa-chip-box"><CheckIcon /></span>
+            Inferidos <span className="fa-chip-count">({totalInferidos})</span>
+          </button>
+          <button type="button" onClick={() => setSoloUno(!soloUno)} className={`fa-chip ${soloUno ? "fa-chip-on" : ""}`}>
+            <span className="fa-chip-box"><CheckIcon /></span>
+            Sólo uno <span className="fa-chip-count">({totalUno})</span>
+          </button>
         </div>
+        {error && <p className="fa-t-red text-[13px]">{error}</p>}
       </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
-
-      {activo && (
-        <table className="w-full border-collapse text-sm">
-          <thead>
-            <tr className="border-b border-neutral-300 text-left text-neutral-500">
-              <th className="py-2 font-medium">Denominación</th>
-              <th className="py-2 text-right font-medium">Descuento</th>
-              <th className="py-2 text-right font-medium">Prioridad</th>
-              <th className="py-2 text-right font-medium"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {visibles.map((f) => {
-              const enEdicion = editando === f.denominacion;
-              const trabajando = ocupado === f.denominacion;
-              return (
-                <tr key={f.denominacion} className="border-b border-neutral-100">
-                  <td className="py-2">{f.denominacion}</td>
-                  <td className="py-2 text-right tabular-nums">
-                    {enEdicion ? (
-                      <input
-                        type="number"
-                        min={0}
-                        max={100}
-                        value={draft}
-                        onChange={(e) => setDraft(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") guardar(f);
-                          else if (e.key === "Escape") setEditando(null);
-                        }}
-                        autoFocus
-                        className="w-20 rounded border border-neutral-300 px-2 py-1 text-right outline-none focus:border-neutral-500"
-                      />
-                    ) : f.descuento === null ? (
-                      <span className="text-neutral-400">—</span>
-                    ) : (
-                      // Inferido: número sutil (lo decidimos nosotros, sin validar)
-                      <span className={f.inferido ? "text-neutral-400" : ""}>{f.descuento}%</span>
-                    )}
-                  </td>
-                  <td className="py-2 text-right tabular-nums">{f.prioridad ?? "—"}</td>
-                  <td className="py-2 text-right">
-                    {enEdicion ? (
-                      <span className="flex justify-end gap-3">
-                        <button
-                          type="button"
-                          title="Guardar"
-                          onClick={() => guardar(f)}
-                          disabled={trabajando}
-                          className="text-green-600 hover:text-green-800 disabled:opacity-40"
-                        >
-                          {trabajando ? "…" : <CheckIcon />}
-                        </button>
-                        <button
-                          type="button"
-                          title="Cancelar"
-                          onClick={() => setEditando(null)}
-                          disabled={trabajando}
-                          className="text-neutral-400 hover:text-neutral-600 disabled:opacity-40"
-                        >
-                          <XIcon />
-                        </button>
-                      </span>
-                    ) : (
-                      <span className="flex justify-end gap-3">
-                        {f.inferido && (
-                          <button
-                            type="button"
-                            title="Confirmar"
-                            onClick={() => confirmar(f)}
-                            disabled={trabajando}
-                            className="text-neutral-400 hover:text-neutral-600 disabled:opacity-40"
-                          >
-                            {trabajando ? "…" : <ConfirmarIcon />}
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          title="Editar"
-                          onClick={() => empezar(f)}
-                          disabled={trabajando}
-                          className="text-neutral-300 hover:text-neutral-600 transition-colors disabled:opacity-40"
-                        >
-                          <PencilIcon />
-                        </button>
-                      </span>
-                    )}
-                  </td>
+      {!activo ? (
+        <div className="fa-t-muted2 px-6 py-14 text-center text-sm leading-[1.6]">
+          Busca por principio activo o laboratorio,<br />o activa un filtro para ver los descuentos.
+        </div>
+      ) : (
+        <>
+          <div className="overflow-x-auto">
+            <table className="fa-table" style={{ minWidth: 620 }}>
+              <thead>
+                <tr>
+                  <th className="fa-th">Denominación</th>
+                  <th className="fa-th fa-th-r">Descuento</th>
+                  <th className="fa-th">Prioridad</th>
+                  <th className="fa-th" style={{ width: 96 }}></th>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
+              </thead>
+              <tbody>
+                {visibles.map((f) => {
+                  const enEdicion = editando === f.denominacion;
+                  const trabajando = ocupado === f.denominacion;
+                  return (
+                    <tr key={f.denominacion} className="fa-row">
+                      <td className="fa-td">
+                        <span className={f.inferido ? "fa-t-muted2" : "font-medium"} style={f.inferido ? undefined : { color: "var(--fa-ink)" }}>
+                          {f.denominacion}
+                        </span>
+                        {f.inferido && <span className="fa-tag ml-1.5">inferido</span>}
+                      </td>
+                      <td className="fa-td fa-th-r">
+                        {enEdicion ? (
+                          <input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={draft}
+                            onChange={(e) => setDraft(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") guardar(f);
+                              else if (e.key === "Escape") setEditando(null);
+                            }}
+                            autoFocus
+                            className="fa-edit-input fa-mono"
+                          />
+                        ) : f.descuento === null ? (
+                          <span className="fa-t-muted2">—</span>
+                        ) : (
+                          <span className={`fa-mono ${f.inferido ? "fa-t-muted2" : ""}`}>{f.descuento} %</span>
+                        )}
+                      </td>
+                      <td className="fa-td fa-mono fa-t-ink3">{f.prioridad ?? "—"}</td>
+                      <td className="fa-td fa-th-r">
+                        {enEdicion ? (
+                          <span className="inline-flex justify-end gap-1">
+                            <button type="button" title="Guardar" onClick={() => guardar(f)} disabled={trabajando} className="fa-iconbtn fa-iconbtn-accept">
+                              {trabajando ? "…" : <CheckIcon />}
+                            </button>
+                            <button type="button" title="Cancelar" onClick={() => setEditando(null)} disabled={trabajando} className="fa-iconbtn fa-iconbtn-cancel">
+                              <XIcon />
+                            </button>
+                          </span>
+                        ) : (
+                          <span className="inline-flex justify-end gap-1">
+                            {f.inferido && (
+                              <button type="button" title="Confirmar" onClick={() => confirmar(f)} disabled={trabajando} className="fa-iconbtn fa-iconbtn-confirm">
+                                {trabajando ? "…" : <ConfirmarIcon />}
+                              </button>
+                            )}
+                            <button type="button" title="Editar" onClick={() => empezar(f)} disabled={trabajando} className="fa-iconbtn fa-iconbtn-edit">
+                              <PencilIcon />
+                            </button>
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          {visibles.length === 0 && <div className="fa-t-muted2 p-11 text-center text-sm">Sin resultados para esa búsqueda.</div>}
+          {filtradas.length > LIMITE && (
+            <div className="fa-t-muted border-t p-3.5 text-[13px]" style={{ borderColor: "var(--fa-rule)", background: "var(--fa-inset)" }}>
+              Mostrando {LIMITE} de {filtradas.length}. Busca o filtra para afinar.
+            </div>
+          )}
+        </>
       )}
-
-      {activo && visibles.length === 0 ? (
-        <p className="text-sm text-neutral-400">Nada coincide.</p>
-      ) : filtradas.length > LIMITE ? (
-        <p className="text-sm text-neutral-400">
-          Mostrando {LIMITE} de {filtradas.length}. Busca o filtra para afinar.
-        </p>
-      ) : null}
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import "./farma-admin.css";
 
 // Layout propio y aislado: /farma no lleva el chrome del sitio (TerminalShell ni
 // paleta verde). El root layout ya pone noindex por defecto; lo reforzamos aquí.

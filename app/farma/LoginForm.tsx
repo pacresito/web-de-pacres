@@ -33,24 +33,26 @@ export default function LoginForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="mx-auto mt-24 flex max-w-xs flex-col gap-3">
-      <h1 className="text-center text-lg font-medium">Farma</h1>
+    <form onSubmit={onSubmit} className="flex w-full max-w-[320px] flex-col gap-4">
+      <h1 className="text-center text-[30px] font-semibold tracking-[-0.015em]">Farma</h1>
       <input
         type="password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
-        placeholder="Clave"
+        placeholder="Contraseña"
         autoFocus
-        className="rounded border border-neutral-300 px-3 py-2 outline-none focus:border-neutral-500"
+        className="fa-input"
+        style={{ height: 44 }}
       />
       <button
         type="submit"
         disabled={cargando || !password}
-        className="rounded bg-neutral-900 px-3 py-2 text-white disabled:opacity-40"
+        className="fa-btn fa-btn-primary flex h-11 items-center justify-center gap-2"
       >
+        {cargando && <span className="fa-spinner" />}
         {cargando ? "Entrando…" : "Entrar"}
       </button>
-      {error && <p className="text-center text-sm text-red-600">{error}</p>}
+      {error && <p className="fa-t-red -mt-1 text-center text-[13px]">{error}</p>}
     </form>
   );
 }

@@ -25,7 +25,8 @@ export default function SearchBox({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         autoFocus={autoFocus}
-        className="w-full rounded border border-neutral-300 px-3 py-2 pr-9 outline-none focus:border-neutral-500"
+        className="fa-input"
+        style={{ paddingRight: "2.25rem" }}
       />
       {value && (
         <button
@@ -33,7 +34,7 @@ export default function SearchBox({
           onClick={() => onChange("")}
           title="Borrar"
           aria-label="Borrar"
-          className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
+          className="fa-t-muted2 absolute right-2 top-1/2 -translate-y-1/2 hover:text-[color:var(--fa-ink3)]"
         >
           <XIcon />
         </button>

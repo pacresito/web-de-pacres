@@ -13,7 +13,7 @@ export default async function FarmaPage() {
   const rol = await getRol();
   if (!rol)
     return (
-      <div className="min-h-screen bg-neutral-50 px-5 py-8">
+      <div className="fa-admin flex items-center justify-center p-6">
         <LoginForm />
       </div>
     );

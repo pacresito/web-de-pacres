@@ -1,5 +1,4 @@
 import { requireAdmin } from "../../auth";
-import SubpageNav from "../../SubpageNav";
 import Pvp from "../../Pvp";
 import { cargarPvpPendientes } from "@/lib/farma/pvp";
 
@@ -11,11 +10,7 @@ export default async function PvpPage() {
   const pendientes = await cargarPvpPendientes();
 
   return (
-    <main className="flex flex-col gap-6">
-      <header className="flex items-baseline justify-between">
-        <h1 className="text-xl font-medium">PVP</h1>
-        <SubpageNav />
-      </header>
+    <main className="p-[16px]">
       <Pvp pendientes={pendientes} />
     </main>
   );
