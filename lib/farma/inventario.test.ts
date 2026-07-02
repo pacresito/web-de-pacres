@@ -1,10 +1,10 @@
-// Test del parser contra los tres formatos reales de UnycopWin:
-//   `npx tsx lib/farma/inventario.test.ts`. Fuera del build.
-// Los .xls de ejemplo viven en farma (gitignoreado, datos privados);
-// si no están, el test se salta solo.
+// Test del parser contra ejemplos reales de UnycopWin (inventario detallado por
+// familia y variante por categoría): `npx tsx lib/farma/inventario.test.ts`. Fuera
+// del build. Los .xls viven en farma/ (fuera del repo, datos privados); si no están,
+// el test se salta solo.
 import assert from "assert";
 import { readFileSync, existsSync } from "fs";
-import { parseInventario, evaluarCarga } from "./inventario";
+import { parseInventario, evaluarCarga, esEspecialidad } from "./inventario";
 
 // --- Guarda de carga (#7): veredicto por rangos. No necesita fixtures. ---
 assert.strictEqual(evaluarCarga(3500, 25000), "ok", "centro del rango normal");
@@ -21,11 +21,13 @@ assert.strictEqual(evaluarCarga(3500, 45000), "bloqueo", "unidades sobre el máx
 
 const dir = "/Users/pacres/Documents/Claude/Pacres/WEB/farma/Ejemplos inventario/";
 
-// [fichero, nº de artículos esperado (= "Nº Items" del preámbulo), fecha del informe]
-const casos: [string, number, string][] = [
-  ["Inventario ejemplo típico.xls", 3664, "2026-06-24"],
-  ["Iventario por Familia.xls", 3659, "2026-06-25"],
-  ["Iventario por Categoría.xls", 1768, "2026-06-25"],
+// [fichero, nº de artículos esperado (= "Nº Items" del preámbulo), fecha del informe, formato]
+// El inventario detallado normal trae la agrupación fiscal (formato "familia", con
+// medicamentos); solo el "por categoría" usa categorías comerciales sin medicamentos → "otro".
+const casos: [string, number, string, "familia" | "otro"][] = [
+  ["Inventario primera carga (2026-06-24).xls", 3664, "2026-06-24", "familia"],
+  ["Inventario por Familia.xls", 3659, "2026-06-25", "familia"],
+  ["Inventario por Categoría.xls", 1768, "2026-06-25", "otro"],
 ];
 
 if (!existsSync(dir + casos[0][0])) {
@@ -33,11 +35,16 @@ if (!existsSync(dir + casos[0][0])) {
   process.exit(0);
 }
 
-for (const [fichero, nEsperado, fecha] of casos) {
+for (const [fichero, nEsperado, fecha, formato] of casos) {
   const inv = parseInventario(readFileSync(dir + fichero));
 
   assert.strictEqual(inv.items.length, nEsperado, `${fichero}: nº de artículos`);
   assert.strictEqual(inv.fechaInforme, fecha, `${fichero}: fecha del informe`);
+  assert.strictEqual(inv.formato, formato, `${fichero}: formato detectado`);
+
+  // El formato "familia" es exactamente el que trae medicamentos (Especialidades);
+  // los otros no permiten distinguir el IVA.
+  assert.strictEqual(inv.items.some(esEspecialidad), formato === "familia", `${fichero}: presencia de Especialidades`);
 
   // Ninguna fila colada: todo artículo tiene código de 6 díg, denominación y stock/pvp numéricos.
   for (const it of inv.items) {

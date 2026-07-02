@@ -1,32 +1,22 @@
 // Subida de inventario (admin). Una sola subida alimenta Pedidos y PVP:
-//   1. parsea el .xls (firma de fila, cubre los 3 formatos),
-//   2. guarda de carga (#7): si los artículos/unidades quedan fuera de rango,
+//   1. parsea el .xls (firma de fila, cubre los formatos de UnycopWin),
+//   2. exige el desglose por familia (para el IVA): si no viene, responde
+//      `estado: "formato"` SIN escribir nada,
+//   3. guarda de carga (#7): si los artículos/unidades quedan fuera de rango,
 //      responde `estado: "aviso"` (confirmable) o `"bloqueo"` (duro) SIN escribir,
-//   3. reescribe el snapshot de stock (farma:stock) y los metadatos (farma:meta),
-//   4. diff de PVP contra el histórico (farma:pvp): marca `pending` lo que cambió,
-//   5. cuenta la acción,
+//   4. reescribe el snapshot de stock (farma:stock) y los metadatos (farma:meta),
+//   5. diff de PVP contra el histórico (farma:pvp): marca `pending` lo que cambió
+//      (excepto medicamentos, ver `diffPvp`),
+//   6. cuenta la acción,
 // y responde `estado: "ok"` con el delta de confirmación (±artículos vs la subida
 // anterior + total + unidades), un chequeo rápido de que el parseo fue bien. El
 // recálculo de pedidos lo hace la página al refrescar, no hace falta devolverlo.
 import { getRol } from "../../auth";
 import redis from "@/lib/redis";
 import { KEYS } from "@/lib/farma/keys";
-import { parseInventario, evaluarCarga, totalUnidades, type ArticuloInventario } from "@/lib/farma/inventario";
+import { parseInventario, evaluarCarga, totalUnidades, esEspecialidad, type ArticuloInventario } from "@/lib/farma/inventario";
 import { incrStat } from "@/lib/farma/stats";
-import type { RegistroPvp } from "@/lib/farma/pvp";
-
-// Aplica el diff de PVP de un artículo contra su histórico. Devuelve el registro
-// actualizado: primera vez = línea base sin cambio; mismo precio = solo refresca
-// lastSeen; precio distinto = el anterior pasa a oldPrice y queda pendiente.
-function diffPvp(art: ArticuloInventario, fecha: string, previo: RegistroPvp | null): RegistroPvp {
-  if (!previo) {
-    return { denominacion: art.denominacion, oldPrice: art.pvp, newPrice: art.pvp, firstSeen: fecha, lastSeen: fecha, pending: false };
-  }
-  if (art.pvp === previo.newPrice) {
-    return { ...previo, denominacion: art.denominacion, lastSeen: fecha };
-  }
-  return { denominacion: art.denominacion, oldPrice: previo.newPrice, newPrice: art.pvp, firstSeen: fecha, lastSeen: fecha, pending: true };
-}
+import { diffPvp, type RegistroPvp } from "@/lib/farma/pvp";
 
 export async function POST(request: Request): Promise<Response> {
   if ((await getRol()) !== "admin") {
@@ -41,16 +31,26 @@ export async function POST(request: Request): Promise<Response> {
 
   let items: ArticuloInventario[];
   let fechaInforme: string;
+  let formato: "familia" | "otro";
   try {
     const inv = parseInventario(Buffer.from(await file.arrayBuffer()));
     items = inv.items;
     fechaInforme = inv.fechaInforme;
+    formato = inv.formato;
   } catch (err) {
     console.error("parseInventario falló:", err);
     return Response.json({ error: "No se pudo leer el inventario" }, { status: 422 });
   }
   if (items.length === 0) {
     return Response.json({ error: "El inventario no tiene artículos: ¿formato correcto?" }, { status: 422 });
+  }
+
+  // El diff de PVP necesita la familia fiscal (para excluir medicamentos, 4%). El
+  // inventario detallado normal ya la trae; un listado sin ella o el "por categoría"
+  // (categorías comerciales, sin medicamentos → incompleto) no. Sin familia no se toca
+  // NADA (ni stock): se rechaza y se pide el informe por familia.
+  if (formato !== "familia") {
+    return Response.json({ estado: "formato" });
   }
 
   // Guarda de carga (#7): rangos esperados de un inventario completo.
@@ -76,7 +76,7 @@ export async function POST(request: Request): Promise<Response> {
   const pvpFlat: Record<string, string> = {};
   for (const art of items) {
     const previo = pvpPrevio[art.codigo] ? (JSON.parse(pvpPrevio[art.codigo]) as RegistroPvp) : null;
-    pvpFlat[art.codigo] = JSON.stringify(diffPvp(art, fechaInforme, previo));
+    pvpFlat[art.codigo] = JSON.stringify(diffPvp(art.denominacion, art.pvp, fechaInforme, previo, !esEspecialidad(art)));
   }
 
   const pipe = redis.pipeline();

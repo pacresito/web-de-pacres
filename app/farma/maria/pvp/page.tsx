@@ -1,6 +1,6 @@
 import { requireAdmin } from "../../auth";
 import Pvp from "../../Pvp";
-import { cargarPvpPendientes } from "@/lib/farma/pvp";
+import { cargarPvpPendientes } from "@/lib/farma/pvp-store";
 
 // PVP (admin): cambios de precio detectados en la última subida de inventario,
 // pendientes de reetiquetar. El diff lo hace la subida (marca `pending`); aquí solo

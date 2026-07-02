@@ -15,6 +15,14 @@
 // Gotcha: el código NO siempre tiene 6 dígitos (hay de 1 a 6, p. ej. 1021). Se
 // normaliza a 6 con ceros a la izquierda, que es la forma canónica de Ventas
 // (el código nacional con el que cruza `farma:ref:pedidos`).
+//
+// Familia y formato: el inventario detallado normal (el que sube María) antepone a
+// cada bloque una fila `*** FAMILIA: 1 Especialidades ***` con la familia FISCAL
+// (Especialidades = 4%, el resto 21%/10%). Capturamos esa familia por artículo. El
+// "por Categoría" usa las mismas marcas pero con categorías COMERCIALES (Solares,
+// Pediatría…) que mezclan IVAs y no traen los medicamentos. Por eso el formato se
+// detecta por la presencia de la familia "Especialidades": sin ella no se puede
+// distinguir el IVA ni está el inventario completo (ver `esEspecialidad`).
 import * as XLSX from "xlsx";
 
 export interface ArticuloInventario {
@@ -22,10 +30,12 @@ export interface ArticuloInventario {
   denominacion: string;
   stock: number; // unidades en existencias
   pvp: number; // Valor PVP unitario
+  familia: string; // grupo "*** FAMILIA: … ***"; "" en el formato típico (sin grupos)
 }
 
 export interface Inventario {
   fechaInforme: string; // ISO yyyy-mm-dd (de la etiqueta "Fecha del Informe")
+  formato: "familia" | "otro"; // "familia" = trae la agrupación fiscal (con "Especialidades")
   items: ArticuloInventario[];
 }
 
@@ -36,6 +46,23 @@ const esTexto = (v: unknown): v is string => typeof v === "string" && v.trim().l
 // El resto de filas (preámbulo, agrupadores, totales) tienen col0 vacío.
 const esArticulo = (r: unknown[]): boolean => esNumero(r[0]) && esTexto(r[1]) && esNumero(r[2]);
 
+// Marca de bloque de familia: `*** FAMILIA: 1 Especialidades ***`. Devuelve el nombre
+// del grupo (p. ej. "1 Especialidades") o null si la fila no es una marca.
+const FAMILIA_RE = /\*\*\*\s*Familia:\s*(.+?)\s*\*\*\*/i;
+const familiaDeFila = (r: unknown[]): string | null => {
+  for (const c of r) {
+    if (typeof c === "string") {
+      const m = c.match(FAMILIA_RE);
+      if (m) return m[1].trim();
+    }
+  }
+  return null;
+};
+
+// Medicamentos (familia fiscal "Especialidades"): IVA 4%. Es la única familia que la
+// pantalla PVP excluye —María solo reetiqueta no-medicamentos (21%/10%)—.
+export const esEspecialidad = (a: ArticuloInventario): boolean => /especialidades/i.test(a.familia);
+
 export function parseInventario(data: Buffer | Uint8Array | ArrayBuffer): Inventario {
   const wb = XLSX.read(data, { type: "buffer" });
   const ws = wb.Sheets[wb.SheetNames[0]];
@@ -43,14 +70,26 @@ export function parseInventario(data: Buffer | Uint8Array | ArrayBuffer): Invent
 
   const fechaInforme = leerFechaInforme(rows);
 
-  const items: ArticuloInventario[] = rows.filter(esArticulo).map((r) => ({
-    codigo: String(r[0]).padStart(6, "0"),
-    denominacion: (r[1] as string).trim(),
-    stock: r[2] as number,
-    pvp: esNumero(r[4]) ? (r[4] as number) : 0,
-  }));
+  // Escaneo con estado: cada marca de familia fija la familia de los artículos que la siguen.
+  const items: ArticuloInventario[] = [];
+  let familia = "";
+  for (const r of rows) {
+    const marca = familiaDeFila(r);
+    if (marca !== null) {
+      familia = marca;
+    } else if (esArticulo(r)) {
+      items.push({
+        codigo: String(r[0]).padStart(6, "0"),
+        denominacion: (r[1] as string).trim(),
+        stock: r[2] as number,
+        pvp: esNumero(r[4]) ? (r[4] as number) : 0,
+        familia,
+      });
+    }
+  }
 
-  return { fechaInforme, items };
+  const formato: Inventario["formato"] = items.some(esEspecialidad) ? "familia" : "otro";
+  return { fechaInforme, formato, items };
 }
 
 // Guarda de carga (#7): un inventario completo cae dentro de unos rangos conocidos.

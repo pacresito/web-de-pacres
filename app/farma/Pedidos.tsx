@@ -95,6 +95,14 @@ export default function Pedidos({
         setAviso({ articulos: d.articulos, unidades: d.unidades }); // pide confirmación
         return;
       }
+      if (d.estado === "formato") {
+        // No viene desglosado por familia → sin dato de IVA no se actualizan los PVP; no se toca nada.
+        setError(
+          "Este inventario no viene por familia, así que no puedo distinguir el IVA. " +
+            "Vuelve a exportarlo desde UnycopWin como inventario por familia y súbelo otra vez.",
+        );
+        return;
+      }
       if (!res.ok) {
         setError(d.error ?? "No se pudo subir el inventario.");
         return;
