@@ -19,7 +19,7 @@ assert.strictEqual(evaluarCarga(7000, 25000), "bloqueo", "artículos sobre el m�
 assert.strictEqual(evaluarCarga(3500, 9000), "bloqueo", "unidades bajo el mínimo duro");
 assert.strictEqual(evaluarCarga(3500, 45000), "bloqueo", "unidades sobre el máximo duro");
 
-const dir = "/Users/pacres/Documents/Claude/Pacres/WEB/farma/Ejemplos inventario/";
+const dir = "/Users/pacres/Documents/Claude/Pacres/WEB/farma/Datos iniciales/Inventario/";
 
 // [fichero, nº de artículos esperado (= "Nº Items" del preámbulo), fecha del informe, formato]
 // El inventario detallado normal trae la agrupación fiscal (formato "familia", con
