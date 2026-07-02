@@ -28,7 +28,7 @@ export default function PanelResumen({
     <section className="fa-card">
       <div className="fa-card-label mb-3">Resumen del día</div>
       <div className="fa-t-ink2 flex flex-col gap-[7px] text-sm">
-        <p><Cuenta n={pedidos} uno="pedido listo" varios="pedidos listos" /></p>
+        <p><Cuenta n={pedidos} uno="pedido pendiente" varios="pedidos pendientes" /></p>
         <p><Cuenta n={descuentosInferidos} uno="descuento por revisar" varios="descuentos por revisar" /></p>
         <p><Cuenta n={pvpCambiados} uno="precio cambiado" varios="precios cambiados" /></p>
       </div>
