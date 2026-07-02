@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { rankear, type LabDescuento } from "@/lib/farma/prioridades";
+import { coincide, contiene, filtrarFallback, sinAcentos } from "@/lib/farma/buscar";
 import SearchBox from "./SearchBox";
 import { PencilIcon, CheckIcon, XIcon, ConfirmarIcon } from "./icons";
 
@@ -13,9 +14,6 @@ import { PencilIcon, CheckIcon, XIcon, ConfirmarIcon } from "./icons";
 // Prioridades (reusa rankear); la escritura va al blob farma:descuentos.
 
 const LIMITE = 100; // tope de filas pintadas (el universo son miles): filtra o busca para afinar
-
-const sinAcentos = (s: string) =>
-  s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
 type Fila = ReturnType<typeof rankear>[number] & { principio: string };
 
@@ -54,7 +52,8 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
     let xs = todas;
     if (soloUno) xs = xs.filter((f) => data[f.principio].length === 1);
     if (soloInferidos) xs = xs.filter((f) => f.inferido);
-    if (consulta) xs = xs.filter((f) => sinAcentos(f.denominacion).includes(consulta));
+    if (consulta)
+      xs = filtrarFallback(xs, (f) => contiene(f.denominacion, consulta), (f) => coincide(f.denominacion, consulta));
     return [...xs].sort((a, b) => {
       const p = a.principio.localeCompare(b.principio, "es");
       if (p !== 0) return p;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { coincide, contiene, filtrarFallback, sinAcentos } from "@/lib/farma/buscar";
 import SearchBox from "./SearchBox";
 import { PencilIcon, CheckIcon, XIcon } from "./icons";
 
@@ -22,9 +23,6 @@ export interface ArticuloMin {
 }
 
 const LIMITE = 100; // tope de filas pintadas: el universo son miles, María afina con el buscador
-
-const sinAcentos = (s: string) =>
-  s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
 export default function Inventario({ articulos }: { articulos: ArticuloMin[] }) {
   const [items, setItems] = useState(articulos);
@@ -64,7 +62,12 @@ export default function Inventario({ articulos }: { articulos: ArticuloMin[] }) 
       if (soloBajoObjetivo) xs = xs.filter((a) => a.existencias < Math.max(a.stMin ?? 0, a.consumoMensual));
     }
     if (consulta) {
-      xs = xs.filter((a) => sinAcentos(a.denominacion).includes(consulta) || a.codigo.includes(consulta));
+      // Typos solo en la denominación; el código se casa exacto (un dígito cambiado es otro producto).
+      xs = filtrarFallback(
+        xs,
+        (a) => contiene(a.denominacion, consulta) || a.codigo.includes(consulta),
+        (a) => coincide(a.denominacion, consulta) || a.codigo.includes(consulta),
+      );
     }
     return [...xs].sort((a, b) => a.denominacion.localeCompare(b.denominacion, "es"));
   }, [items, consulta, soloStMinAlto, soloBajoObjetivo, soloSinHistorial]);

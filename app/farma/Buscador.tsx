@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { coincide, contiene, filtrarFallback, sinAcentos } from "@/lib/farma/buscar";
 import { XIcon } from "./icons";
 
 // Buscador con autocompletar genérico (reutilizable: lo usan Prioridades y Pedidos).
-// Filtra por substring, sin acentos, y emite onSelect. Aspa a la derecha para borrar.
-const sinAcentos = (s: string) =>
-  s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+// Filtra sin acentos, tolera pequeños typos (lib/farma/buscar), y emite onSelect. Aspa a
+// la derecha para borrar.
 
 export default function Buscador({
   items,
@@ -26,7 +26,7 @@ export default function Buscador({
 
   const consulta = sinAcentos(q.trim());
   const coincidencias = consulta
-    ? items.filter((i) => sinAcentos(i).includes(consulta)).slice(0, 8)
+    ? filtrarFallback(items, (i) => contiene(i, consulta), (i) => coincide(i, consulta)).slice(0, 8)
     : [];
 
   function elegir(item: string) {
