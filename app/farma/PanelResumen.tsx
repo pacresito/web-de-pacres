@@ -53,7 +53,7 @@ export default function PanelResumen({
             <span className={ahora !== null && fechaMadrid(ahora) !== meta.fechaInforme ? "text-amber-800" : "text-neutral-900"}>
               {meta.fechaInforme}
             </span>
-            {ahora !== null && <span className="text-neutral-400"> subido {haceX(meta.loadedAt, ahora)}</span>} ·{" "}
+            {ahora !== null && <> subido <span className="text-neutral-400">{haceX(meta.loadedAt, ahora)}</span></>} ·{" "}
             {meta.totalArticulos.toLocaleString("es-ES")} artículos ·{" "}
             {meta.unidades.toLocaleString("es-ES")} unidades
           </>
