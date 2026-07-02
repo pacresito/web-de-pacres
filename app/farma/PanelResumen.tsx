@@ -39,7 +39,8 @@ export default function PanelResumen({
             <span className={invViejo ? "fa-t-amber font-semibold" : "font-semibold"} style={invViejo ? undefined : { color: "var(--fa-ink)" }}>
               {meta.fechaInforme}
             </span>
-            {ahora !== null && <> subido <span className="fa-t-muted2">{haceX(meta.loadedAt, ahora)}</span></>} ·{" "}
+            {ahora !== null && <> subido <span className="fa-t-muted2">{haceX(meta.loadedAt, ahora)}</span></>}
+            <br />
             {meta.totalArticulos.toLocaleString("es-ES")} artículos · {meta.unidades.toLocaleString("es-ES")} unidades
           </>
         ) : (
