@@ -128,7 +128,7 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
         <SearchBox
           value={q}
           onChange={setQ}
-          placeholder="Principio activo o laboratorio…"
+          placeholder="Buscar por principio activo o laboratorio…"
           autoFocus
         />
         <div className="flex flex-wrap items-center gap-4">
