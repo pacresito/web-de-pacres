@@ -27,12 +27,13 @@
 //   hasta el StMín). Aviso informativo: se cuenta sobre TODO el universo de stock
 //   mínimo, haya rotura o no (lo revisa María en la pantalla Inventario); aquí solo
 //   va el total para la línea-resumen sutil.
-// - Ciclo de vida por PEDIDO (María hace check a nivel de pedido); solo se
-//   construyen los pedidos que cumplen #1:
-//     · pendiente: cumple #1 y no está fichado, o lo está pero pasaron 5 días.
-//     · ya hecho: fichado hace < 5 días.
-//     · resuelto: si un inventario nuevo deja de cumplir #1 (se quita la rotura o
-//       caen las líneas por debajo de 6), el pedido no se construye (desaparece).
+// - Ciclo de vida por PEDIDO (el disparador es la DESCARGA del .xls, que marca el
+//   pedido como descargado; ya no hay check manual). Para cada pedido con líneas:
+//     · descargado: descargado hace < 5 días → va a "descargados" tenga o no rotura
+//       ni las 6 líneas. Así entran también los pedidos manuales que María descarga.
+//     · pendiente: cumple #1 (rotura + ≥6 líneas) y no está descargado hace < 5 días.
+//     · resuelto: si un inventario nuevo repone el pedido del todo (ninguna línea con
+//       cantidad > 0), no se construye y desaparece de ambas listas.
 
 const CINCO_DIAS_MS = 5 * 24 * 60 * 60 * 1000;
 const MIN_LINEAS_PEDIDO = 6; // #1b: un pedido con menos líneas no se considera pendiente
@@ -160,15 +161,12 @@ export function calcularPedidos(
   const hechosOut: PedidoHecho[] = [];
 
   for (const [pedido, { lineas, hayRotura }] of porPedido) {
-    // #1: solo es pedido si tiene ≥1 rotura Y ≥6 líneas para pedir.
-    if (!hayRotura || lineas.length < MIN_LINEAS_PEDIDO) continue;
-
     lineas.sort((a, b) => a.denominacion.localeCompare(b.denominacion, "es"));
     const orderedAt = hechos[pedido];
     if (orderedAt && now - orderedAt < CINCO_DIAS_MS) {
-      hechosOut.push({ pedido, orderedAt, lineas });
-    } else {
-      pendientes.push({ pedido, lineas }); // sin fichar, o fichado hace ≥5 días → reabre
+      hechosOut.push({ pedido, orderedAt, lineas }); // descargado hace < 5 días (aunque no cumpla #1)
+    } else if (hayRotura && lineas.length >= MIN_LINEAS_PEDIDO) {
+      pendientes.push({ pedido, lineas }); // #1 y sin descargar (o descargado hace ≥ 5 días) → reabre
     }
   }
 

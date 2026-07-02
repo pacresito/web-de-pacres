@@ -10,3 +10,14 @@ export function haceX(epoch: number, ahora: number): string {
   const d = Math.floor(h / 24);
   return `hace ${d} ${d === 1 ? "día" : "días"}`;
 }
+
+// Fecha "AAAA-MM-DD" en Europe/Madrid, para comparar con la fecha del informe de
+// inventario (que ya viene en ese huso). en-CA da el formato ISO directamente.
+export function fechaMadrid(epoch: number): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Madrid",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(epoch);
+}

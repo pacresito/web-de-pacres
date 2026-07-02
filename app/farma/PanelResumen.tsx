@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { MetaInventario } from "@/lib/farma/pedidos-store";
-import { haceX } from "@/lib/farma/tiempo";
+import { fechaMadrid, haceX } from "@/lib/farma/tiempo";
 
 // Panel de bienvenida de /farma/maria: el estado del día en texto plano (la navegación
 // la cubre el nav de arriba). Es solo lectura; los datos los calcula el servidor. El
@@ -44,12 +44,16 @@ export default function PanelResumen({
       {/* Precios cambiados: solo aparece si hay alguno. El tono escala con la cantidad. */}
       {pvpCambiados > 0 && <p className="text-neutral-700">{textoPrecios(pvpCambiados)}</p>}
 
-      {/* Última carga de inventario (la última, pegada a la caja de subir) */}
+      {/* Última carga de inventario (la última, pegada a la caja de subir). La fecha va
+          en negro, o ámbar si el inventario no es de hoy (el "hace X" solo tras hidratar). */}
       <p className="text-neutral-700">
         {meta ? (
           <>
-            Último inventario: <span className="text-neutral-900">{meta.fechaInforme}</span>
-            {ahora !== null && <span className="text-neutral-400"> · {haceX(meta.loadedAt, ahora)}</span>} ·{" "}
+            Inventario del{" "}
+            <span className={ahora !== null && fechaMadrid(ahora) !== meta.fechaInforme ? "text-amber-800" : "text-neutral-900"}>
+              {meta.fechaInforme}
+            </span>
+            {ahora !== null && <span className="text-neutral-400"> subido {haceX(meta.loadedAt, ahora)}</span>} ·{" "}
             {meta.totalArticulos.toLocaleString("es-ES")} artículos ·{" "}
             {meta.unidades.toLocaleString("es-ES")} unidades
           </>

@@ -1,6 +1,6 @@
-// Ficha un pedido como hecho (admin): María marca un pedido que ya cursó. Pasa a
-// "Pedidos ya hechos" hasta que un inventario lo resuelva o pasen 5 días con rotura
-// (lógica en calcularPedidos). Solo guarda el epoch del check.
+// Marca un pedido como descargado (admin): lo dispara la descarga del .xls, no un check
+// manual. Pasa a "Pedidos descargados" hasta que un inventario lo reponga del todo o
+// pasen 5 días (lógica en calcularPedidos). Solo guarda el epoch de la descarga.
 import { getRol } from "../../../auth";
 import redis from "@/lib/redis";
 import { KEYS } from "@/lib/farma/keys";

@@ -62,9 +62,11 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ estado: veredicto, articulos, unidades });
   }
 
-  // Delta de confirmación contra la subida anterior.
+  // Delta de confirmación contra la subida anterior (artículos y unidades).
   const metaRaw = await redis.get(KEYS.meta());
-  const totalPrevio: number | null = metaRaw ? JSON.parse(metaRaw).totalArticulos : null;
+  const metaPrevio = metaRaw ? JSON.parse(metaRaw) : null;
+  const totalPrevio: number | null = metaPrevio?.totalArticulos ?? null;
+  const unidadesPrevio: number | null = metaPrevio?.unidades ?? null;
 
   // Snapshot de stock: se reescribe entero (DEL + HSET en pipeline).
   const stockFlat = Object.fromEntries(items.map((a) => [a.codigo, a.stock]));
@@ -92,5 +94,6 @@ export async function POST(request: Request): Promise<Response> {
     totalArticulos: articulos,
     unidades,
     delta: totalPrevio === null ? null : articulos - totalPrevio,
+    deltaUnidades: unidadesPrevio === null ? null : unidades - unidadesPrevio,
   });
 }

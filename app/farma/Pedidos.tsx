@@ -3,30 +3,46 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { BolsaPedido, ResultadoPedidos } from "@/lib/farma/pedidos";
-import { haceX } from "@/lib/farma/tiempo";
+import type { MetaInventario } from "@/lib/farma/pedidos-store";
+import { fechaMadrid, haceX } from "@/lib/farma/tiempo";
 import Buscador from "./Buscador";
 
 // Pedidos (admin): subida de inventario + bolsas por pedido. El estado de cabecera lo
 // resume <PanelResumen> arriba de la página.
 // El cálculo lo hace el servidor (cargarEstadoPedidos); aquí va solo la interacción
-// —subir un inventario, fichar un pedido, descargar su .xls, generar un pedido manual—
-// y el refresco tras cada acción. Estilo neutro y minimalista (no es la pantalla skin Unycop).
-export default function Pedidos({ resultado, pedidos }: { resultado: ResultadoPedidos; pedidos: string[] }) {
+// —subir un inventario, descargar un pedido (que lo pasa a "descargados"), generar un
+// pedido manual— y el refresco tras cada acción. Estilo neutro y minimalista (no es la
+// pantalla skin Unycop).
+export default function Pedidos({
+  resultado,
+  pedidos,
+  meta,
+}: {
+  resultado: ResultadoPedidos;
+  pedidos: string[];
+  meta: MetaInventario | null;
+}) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [subiendo, setSubiendo] = useState(false);
-  const [confirmacion, setConfirmacion] = useState<{ total: number; delta: number | null } | null>(null);
+  const [confirmacion, setConfirmacion] = useState<{ total: number; delta: number | null; deltaUnidades: number | null } | null>(null);
   const [aviso, setAviso] = useState<{ articulos: number; unidades: number } | null>(null); // guarda de carga (#7)
   const [error, setError] = useState("");
   const [nombre, setNombre] = useState(""); // nombre del archivo elegido
   const [abierto, setAbierto] = useState<string | null>(null); // pedido expandido
-  const [fichando, setFichando] = useState<string | null>(null);
+  const [avisoDescarga, setAvisoDescarga] = useState(false); // se descargó un pedido con inventario no de hoy
 
   // Pedido manual (B5): bolsa del pedido elegido en el buscador. `manualVacio` guarda el
   // pedido cuando no hay nada que pedir, para avisar sin confundirlo con "no buscado".
   const [manual, setManual] = useState<BolsaPedido | null>(null);
   const [manualVacio, setManualVacio] = useState<string | null>(null);
   const [buscandoManual, setBuscandoManual] = useState(false);
+
+  // "hace X" y "¿es de hoy el inventario?" dependen de la hora actual: se calculan solo
+  // tras montar para no romper la hidratación (el HTML del servidor no conoce la hora).
+  const [ahora, setAhora] = useState<number | null>(null);
+  useEffect(() => setAhora(Date.now()), []);
+  const inventarioViejo = ahora !== null && meta !== null && fechaMadrid(ahora) !== meta.fechaInforme;
 
   async function pedirManual(pedido: string) {
     setManual(null);
@@ -47,11 +63,6 @@ export default function Pedidos({ resultado, pedidos }: { resultado: ResultadoPe
       setBuscandoManual(false);
     }
   }
-
-  // "hace X" depende de la hora actual: se calcula solo tras montar para no romper la
-  // hidratación (el HTML del servidor no conoce la hora del cliente).
-  const [ahora, setAhora] = useState<number | null>(null);
-  useEffect(() => setAhora(Date.now()), []);
 
   // `confirmar` lo pone el botón del aviso de la guarda de carga (#7): reenvía el
   // mismo archivo saltándose el aviso. El bloqueo es duro, no se confirma.
@@ -86,7 +97,8 @@ export default function Pedidos({ resultado, pedidos }: { resultado: ResultadoPe
         setError(d.error ?? "No se pudo subir el inventario.");
         return;
       }
-      setConfirmacion({ total: d.totalArticulos, delta: d.delta });
+      setConfirmacion({ total: d.totalArticulos, delta: d.delta, deltaUnidades: d.deltaUnidades });
+      setAvisoDescarga(false); // inventario nuevo: el aviso de descarga con inventario viejo ya no aplica
       if (fileRef.current) fileRef.current.value = "";
       setNombre("");
       router.refresh();
@@ -97,26 +109,25 @@ export default function Pedidos({ resultado, pedidos }: { resultado: ResultadoPe
     }
   }
 
-  async function fichar(pedido: string) {
-    setFichando(pedido);
+  // Descargar un pedido lo marca como descargado (pasa a "Pedidos descargados") y refresca.
+  // El propio <a> dispara la descarga del .xls; aquí solo marcamos + limpiamos el pedido
+  // manual (si era uno, ya saldrá abajo en descargados) y avisamos si el inventario no es
+  // de hoy (#5).
+  async function descargar(pedido: string) {
+    if (inventarioViejo) setAvisoDescarga(true);
+    setManual(null);
+    setManualVacio(null);
+    setAbierto(null);
     try {
-      const res = await fetch("/farma/api/pedidos/done", {
+      await fetch("/farma/api/pedidos/done", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pedido }),
       });
-      if (res.ok) {
-        setAbierto(null);
-        router.refresh();
-      } else {
-        const d = await res.json().catch(() => ({}));
-        setError(d.error ?? "No se pudo fichar el pedido.");
-      }
     } catch {
-      setError("No se pudo conectar.");
-    } finally {
-      setFichando(null);
+      // la descarga ya ha salido por el enlace; si el marcado falla no bloqueamos a María
     }
+    router.refresh();
   }
 
   const { pendientes, hechos, huerfanos } = resultado;
@@ -181,13 +192,13 @@ export default function Pedidos({ resultado, pedidos }: { resultado: ResultadoPe
         )}
         {confirmacion && (
           <p className="text-sm text-neutral-600">
-            Cargados {confirmacion.total} artículos
-            {confirmacion.delta !== null && confirmacion.delta !== 0 && (
-              <span className={confirmacion.delta > 0 ? "text-green-700" : "text-red-700"}>
-                {" "}({confirmacion.delta > 0 ? "+" : ""}{confirmacion.delta} vs la subida anterior)
-              </span>
+            Cargados {confirmacion.total.toLocaleString("es-ES")} artículos
+            {confirmacion.delta !== null && (
+              <> · <Delta n={confirmacion.delta} sustantivo="artículos" /></>
             )}
-            .
+            {confirmacion.deltaUnidades !== null && (
+              <> · <Delta n={confirmacion.deltaUnidades} sustantivo="unidades" /></>
+            )}
           </p>
         )}
         {error && <p className="text-sm text-red-600">{error}</p>}
@@ -199,6 +210,35 @@ export default function Pedidos({ resultado, pedidos }: { resultado: ResultadoPe
           <p className="font-medium">Artículos en rotura sin datos de Ventas (avisar a Pablo):</p>
           <p className="mt-1 font-mono text-xs">{huerfanos.join(", ")}</p>
         </section>
+      )}
+
+      {/* Pedido manual (B5): generar la bolsa de un pedido concreto aunque nada haya roto
+          stock. Va arriba, como acción de entrada; al descargarlo cae en "descargados". */}
+      <section className="flex flex-col gap-2">
+        <h2 className="text-sm font-medium text-neutral-700">Pedido manual</h2>
+        <Buscador items={pedidos} onSelect={pedirManual} placeholder="Buscar pedido…" />
+        {buscandoManual && <p className="text-sm text-neutral-400">Calculando…</p>}
+        {manual && (
+          <ul className="flex flex-col rounded border border-neutral-200 bg-white">
+            <BolsaItem
+              bolsa={manual}
+              abierto={abierto === manual.pedido}
+              onToggle={() => setAbierto(abierto === manual.pedido ? null : manual.pedido)}
+              onDescargar={descargar}
+            />
+          </ul>
+        )}
+        {manualVacio && (
+          <p className="text-sm text-neutral-400">No hay nada que pedir en «{manualVacio}».</p>
+        )}
+      </section>
+
+      {/* Aviso #5: se descargó un pedido con un inventario que no es de hoy */}
+      {avisoDescarga && (
+        <p className="rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+          Ojo: el inventario{meta ? ` es del ${meta.fechaInforme}` : ""}, no de hoy. El pedido descargado puede no
+          reflejar el stock actual.
+        </p>
       )}
 
       {/* Pedidos pendientes */}
@@ -214,18 +254,17 @@ export default function Pedidos({ resultado, pedidos }: { resultado: ResultadoPe
                 bolsa={b}
                 abierto={abierto === b.pedido}
                 onToggle={() => setAbierto(abierto === b.pedido ? null : b.pedido)}
-                onFichar={() => fichar(b.pedido)}
-                fichando={fichando === b.pedido}
+                onDescargar={descargar}
               />
             ))}
           </ul>
         )}
       </section>
 
-      {/* Pedidos ya hechos (sutil) */}
+      {/* Pedidos descargados (sutil) */}
       {hechos.length > 0 && (
         <section className="flex flex-col gap-2">
-          <h2 className="text-sm font-medium text-neutral-500">Pedidos ya hechos</h2>
+          <h2 className="text-sm font-medium text-neutral-500">Pedidos descargados</h2>
           <ul className="flex flex-col divide-y divide-neutral-100 rounded border border-neutral-200 bg-neutral-50">
             {hechos.map((b) => (
               <BolsaItem
@@ -234,53 +273,42 @@ export default function Pedidos({ resultado, pedidos }: { resultado: ResultadoPe
                 hecho={ahora !== null ? haceX(b.orderedAt, ahora) : undefined}
                 abierto={abierto === b.pedido}
                 onToggle={() => setAbierto(abierto === b.pedido ? null : b.pedido)}
+                onDescargar={descargar}
               />
             ))}
           </ul>
         </section>
       )}
-
-      {/* Pedido manual (B5): generar un pedido aunque nada haya roto stock. Uso poco
-          habitual → al final y discreto. */}
-      <section className="flex flex-col gap-2 border-t border-neutral-100 pt-4">
-        <h2 className="text-sm font-medium text-neutral-500">Pedido manual</h2>
-        <p className="text-xs text-neutral-400">
-          Genera la bolsa de un pedido aunque no haya roturas.
-        </p>
-        <Buscador items={pedidos} onSelect={pedirManual} placeholder="Buscar pedido…" />
-        {buscandoManual && <p className="text-sm text-neutral-400">Calculando…</p>}
-        {manual && (
-          <ul className="flex flex-col rounded border border-neutral-200 bg-white">
-            <BolsaItem
-              bolsa={manual}
-              abierto={abierto === manual.pedido}
-              onToggle={() => setAbierto(abierto === manual.pedido ? null : manual.pedido)}
-            />
-          </ul>
-        )}
-        {manualVacio && (
-          <p className="text-sm text-neutral-400">No hay nada que pedir en «{manualVacio}».</p>
-        )}
-      </section>
     </div>
   );
 }
 
-// Una fila de pedido: cabecera clicable que expande sus líneas, descarga del .xls y
-// (si está pendiente) botón para fichar el pedido como hecho.
+// Segmento de delta coloreado del texto de confirmación (#8): verde si sube, rojo si
+// baja. El negativo ya trae su "−"; al positivo le anteponemos "+".
+function Delta({ n, sustantivo }: { n: number; sustantivo: string }) {
+  const color = n > 0 ? "text-green-700" : n < 0 ? "text-red-700" : "text-neutral-500";
+  return (
+    <span className={color}>
+      {n > 0 ? "+" : ""}
+      {n.toLocaleString("es-ES")} {sustantivo}
+    </span>
+  );
+}
+
+// Una fila de pedido: cabecera clicable que expande sus líneas y descarga del .xls (que
+// además lo marca como descargado). El check manual "Pedido hecho" ya no existe: descargar
+// es el disparador.
 function BolsaItem({
   bolsa,
   abierto,
   onToggle,
-  onFichar,
-  fichando,
+  onDescargar,
   hecho,
 }: {
   bolsa: BolsaPedido;
   abierto: boolean;
   onToggle: () => void;
-  onFichar?: () => void;
-  fichando?: boolean;
+  onDescargar: (pedido: string) => void;
   hecho?: string;
 }) {
   return (
@@ -305,14 +333,13 @@ function BolsaItem({
             </tbody>
           </table>
           <div className="flex items-center gap-4 text-sm">
-            <a href={`/farma/api/pedidos/xls?pedido=${encodeURIComponent(bolsa.pedido)}`} className="text-neutral-700 hover:underline">
-              Descargar xls
+            <a
+              href={`/farma/api/pedidos/xls?pedido=${encodeURIComponent(bolsa.pedido)}`}
+              onClick={() => onDescargar(bolsa.pedido)}
+              className="text-neutral-700 hover:underline"
+            >
+              Descargar pedido
             </a>
-            {onFichar && (
-              <button type="button" onClick={onFichar} disabled={fichando} className="text-neutral-700 hover:underline disabled:opacity-40">
-                {fichando ? "Fichando…" : "Pedido hecho"}
-              </button>
-            )}
           </div>
         </div>
       )}

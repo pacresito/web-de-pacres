@@ -70,24 +70,37 @@ const pedCinfa: PedidosDeCodigo = Object.fromEntries(C.map((c) => [c, ["CINFA"]]
   assert.strictEqual(r.alertasStockMinimo, 1, "solo 000001 (25 > 10)");
 }
 
-// --- Ciclo de vida: fichado < 5 días → ya hecho; ≥ 5 días → reabre ---
+// --- Ciclo de vida: descargado < 5 días → en descargados; ≥ 5 días → reabre ---
 {
   const ref = seisCinfa(10);
   const reciente = calcularPedidos(todos(2), ref, todos(5), pedCinfa, { CINFA: haceDias(2) }, AHORA);
-  assert.strictEqual(reciente.pendientes.length, 0, "fichado hace 2 días: no pendiente");
-  assert.strictEqual(reciente.hechos.length, 1, "aparece en ya hechos");
+  assert.strictEqual(reciente.pendientes.length, 0, "descargado hace 2 días: no pendiente");
+  assert.strictEqual(reciente.hechos.length, 1, "aparece en descargados");
 
   const viejo = calcularPedidos(todos(2), ref, todos(5), pedCinfa, { CINFA: haceDias(6) }, AHORA);
-  assert.strictEqual(viejo.pendientes.length, 1, "fichado hace 6 días y sigue cumpliendo #1: reabre");
+  assert.strictEqual(viejo.pendientes.length, 1, "descargado hace 6 días y sigue cumpliendo #1: reabre");
   assert.strictEqual(viejo.hechos.length, 0);
 }
 
-// --- Resuelto: si el inventario nuevo deja de cumplir #1, desaparece aunque esté fichado ---
+// --- Descargado se mantiene mientras tenga líneas; desaparece al reponerse del todo ---
 {
-  // todos a 9: sin rotura (9≥5), 6 líneas de cantidad 1 → falla #1a → ni pendiente ni hecho
-  const r = calcularPedidos(todos(9), seisCinfa(10), todos(5), pedCinfa, { CINFA: haceDias(1) }, AHORA);
-  assert.strictEqual(r.pendientes.length, 0);
-  assert.strictEqual(r.hechos.length, 0, "sin rotura: desaparece de ambas listas");
+  // Reposición total (todos a 99 ≥ objetivo): sin líneas → desaparece de ambas listas.
+  const repuesto = calcularPedidos(todos(99), seisCinfa(10), todos(5), pedCinfa, { CINFA: haceDias(1) }, AHORA);
+  assert.strictEqual(repuesto.pendientes.length, 0);
+  assert.strictEqual(repuesto.hechos.length, 0, "repuesto del todo: desaparece");
+
+  // Descargado sin rotura pero aún con líneas (todos a 9 → cantidad 1): sigue en descargados.
+  const parcial = calcularPedidos(todos(9), seisCinfa(10), todos(5), pedCinfa, { CINFA: haceDias(1) }, AHORA);
+  assert.strictEqual(parcial.pendientes.length, 0);
+  assert.strictEqual(parcial.hechos.length, 1, "descargado con líneas: se mantiene aunque no cumpla #1");
+}
+
+// --- Descargado manual: un pedido sin rotura descargado aparece en descargados ---
+{
+  // Sin StMín → sin rotura, no cumple #1; pero descargado hace 1 día y con líneas por consumo.
+  const r = calcularPedidos(todos(2), seisCinfa(10), {}, pedCinfa, { CINFA: haceDias(1) }, AHORA);
+  assert.strictEqual(r.pendientes.length, 0, "sin rotura: no pendiente");
+  assert.strictEqual(r.hechos.length, 1, "descargado manual: en descargados");
 }
 
 // --- Huérfano: hay que pedir (rotura) pero el código no está en la referencia ---

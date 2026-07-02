@@ -38,7 +38,7 @@ export default async function MariaPage() {
         pvpCambiados={pvpCambiados}
         descuentosInferidos={descuentosInferidos}
       />
-      <Pedidos resultado={resultado} pedidos={pedidos} />
+      <Pedidos resultado={resultado} pedidos={pedidos} meta={meta} />
     </main>
   );
 }
