@@ -1,29 +1,76 @@
 "use client";
 
-import { useState } from "react";
-import Buscador from "./Buscador";
+import { useMemo, useState } from "react";
 import { rankear, type LabDescuento } from "@/lib/farma/prioridades";
+import SearchBox from "./SearchBox";
+import { PencilIcon, CheckIcon, XIcon, ConfirmarIcon } from "./icons";
 
-// Descuentos: la tabla de Prioridades en modo edición. María busca un principio
-// activo y corrige el descuento de cada lab. El número de un descuento `inferido`
-// (lo decidimos nosotros, no dato firme suyo) se pinta sutil; puede darlo por bueno
-// (Comprobar) o cambiarlo (Editar) — ambos apagan el flag. Mismo dato y orden que
-// Prioridades (reusa Buscador y rankear); la escritura va al blob farma:descuentos.
+// Descuentos: la tabla de Prioridades en modo edición. María busca (por principio activo
+// o laboratorio) y corrige el descuento de cada lab. Dos filtros de revisión combinables
+// con la búsqueda: "Inferidos" (descuentos que decidimos nosotros, sin validar) y "Sólo
+// uno" (principios con un único laboratorio). El número inferido se pinta sutil; se puede
+// confirmar (dar por bueno) o editar — ambos apagan el flag. Mismo dato y orden que
+// Prioridades (reusa rankear); la escritura va al blob farma:descuentos.
+
+const LIMITE = 100; // tope de filas pintadas (el universo son miles): filtra o busca para afinar
+
+const sinAcentos = (s: string) =>
+  s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
+type Fila = ReturnType<typeof rankear>[number] & { principio: string };
+
 export default function Descuentos({ data: inicial }: { data: Record<string, LabDescuento[]> }) {
   const [data, setData] = useState(inicial);
-  const [principio, setPrincipio] = useState<string | null>(null);
-  const [editando, setEditando] = useState<string | null>(null); // lab en edición
+  const [q, setQ] = useState("");
+  const [soloInferidos, setSoloInferidos] = useState(false);
+  const [soloUno, setSoloUno] = useState(false);
+  const [editando, setEditando] = useState<string | null>(null); // denominación (fila) en edición
   const [draft, setDraft] = useState("");
-  const [ocupado, setOcupado] = useState<string | null>(null); // lab guardando
+  const [ocupado, setOcupado] = useState<string | null>(null); // denominación guardando
   const [error, setError] = useState("");
 
-  const principios = Object.keys(data);
-  const filas = principio ? rankear(principio, data[principio]) : [];
+  const consulta = sinAcentos(q.trim());
 
-  function patchLocal(lab: string, cambio: Partial<LabDescuento>) {
+  const todas: Fila[] = useMemo(
+    () =>
+      Object.entries(data).flatMap(([principio, labs]) =>
+        rankear(principio, labs).map((f) => ({ ...f, principio })),
+      ),
+    [data],
+  );
+
+  const totalInferidos = useMemo(() => todas.filter((f) => f.inferido).length, [todas]);
+  const totalUno = useMemo(
+    () => todas.filter((f) => data[f.principio].length === 1).length,
+    [todas, data],
+  );
+
+  const activo = consulta !== "" || soloInferidos || soloUno;
+
+  // Filtros y búsqueda se combinan. Orden: por principio y, dentro, por prioridad (mejor
+  // descuento primero; sin descuento al final), para conservar la comparación entre labs.
+  const filtradas = useMemo(() => {
+    if (!activo) return [];
+    let xs = todas;
+    if (soloUno) xs = xs.filter((f) => data[f.principio].length === 1);
+    if (soloInferidos) xs = xs.filter((f) => f.inferido);
+    if (consulta) xs = xs.filter((f) => sinAcentos(f.denominacion).includes(consulta));
+    return [...xs].sort((a, b) => {
+      const p = a.principio.localeCompare(b.principio, "es");
+      if (p !== 0) return p;
+      if (a.prioridad === b.prioridad) return 0;
+      if (a.prioridad === null) return 1;
+      if (b.prioridad === null) return -1;
+      return a.prioridad - b.prioridad;
+    });
+  }, [activo, todas, data, soloUno, soloInferidos, consulta]);
+
+  const visibles = filtradas.slice(0, LIMITE);
+
+  function patchLocal(principio: string, lab: string, cambio: Partial<LabDescuento>) {
     setData((d) => ({
       ...d,
-      [principio!]: d[principio!].map((l) => (l.lab === lab ? { ...l, ...cambio } : l)),
+      [principio]: d[principio].map((l) => (l.lab === lab ? { ...l, ...cambio } : l)),
     }));
   }
 
@@ -47,48 +94,66 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
     }
   }
 
-  async function guardar(lab: string) {
+  async function guardar(f: Fila) {
     const valor = Number(draft);
     if (draft.trim() === "" || !Number.isFinite(valor) || valor < 0 || valor > 100) {
       setError("Descuento entre 0 y 100.");
       return;
     }
-    setOcupado(lab);
-    const ok = await post("/farma/api/descuento", { principio, lab, valor });
+    setOcupado(f.denominacion);
+    const ok = await post("/farma/api/descuento", { principio: f.principio, lab: f.lab, valor });
     setOcupado(null);
     if (ok) {
-      patchLocal(lab, { descuento: valor, inferido: false });
+      patchLocal(f.principio, f.lab, { descuento: valor, inferido: false });
       setEditando(null);
     }
   }
 
-  async function comprobar(lab: string) {
-    setOcupado(lab);
-    const ok = await post("/farma/api/descuento/check", { principio, lab });
+  async function confirmar(f: Fila) {
+    setOcupado(f.denominacion);
+    const ok = await post("/farma/api/descuento/check", { principio: f.principio, lab: f.lab });
     setOcupado(null);
-    if (ok) patchLocal(lab, { inferido: false });
+    if (ok) patchLocal(f.principio, f.lab, { inferido: false });
   }
 
-  function empezar(lab: string, descuento: number | null) {
+  function empezar(f: Fila) {
     setError("");
-    setDraft(descuento === null ? "" : String(descuento));
-    setEditando(lab);
+    setDraft(f.descuento === null ? "" : String(f.descuento));
+    setEditando(f.denominacion);
   }
 
   return (
     <div className="flex flex-col gap-5">
-      <Buscador
-        items={principios}
-        onSelect={(p) => {
-          setPrincipio(p);
-          setEditando(null);
-          setError("");
-        }}
-        placeholder="Principio activo…"
-        autoFocus
-      />
+      <div className="flex flex-col gap-3">
+        <SearchBox
+          value={q}
+          onChange={setQ}
+          placeholder="Principio activo o laboratorio…"
+          autoFocus
+        />
+        <div className="flex flex-wrap items-center gap-4">
+          <label className="flex items-center gap-2 text-sm text-neutral-600">
+            <input
+              type="checkbox"
+              checked={soloInferidos}
+              onChange={(e) => setSoloInferidos(e.target.checked)}
+            />
+            Inferidos ({totalInferidos})
+          </label>
+          <label className="flex items-center gap-2 text-sm text-neutral-600">
+            <input
+              type="checkbox"
+              checked={soloUno}
+              onChange={(e) => setSoloUno(e.target.checked)}
+            />
+            Sólo uno ({totalUno})
+          </label>
+        </div>
+      </div>
+
       {error && <p className="text-sm text-red-600">{error}</p>}
-      {principio && (
+
+      {activo && (
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr className="border-b border-neutral-300 text-left text-neutral-500">
@@ -99,11 +164,11 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
             </tr>
           </thead>
           <tbody>
-            {filas.map((f) => {
-              const enEdicion = editando === f.lab;
-              const trabajando = ocupado === f.lab;
+            {visibles.map((f) => {
+              const enEdicion = editando === f.denominacion;
+              const trabajando = ocupado === f.denominacion;
               return (
-                <tr key={f.lab} className="border-b border-neutral-100">
+                <tr key={f.denominacion} className="border-b border-neutral-100">
                   <td className="py-2">{f.denominacion}</td>
                   <td className="py-2 text-right tabular-nums">
                     {enEdicion ? (
@@ -114,7 +179,7 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
                         value={draft}
                         onChange={(e) => setDraft(e.target.value)}
                         onKeyDown={(e) => {
-                          if (e.key === "Enter") guardar(f.lab);
+                          if (e.key === "Enter") guardar(f);
                           else if (e.key === "Escape") setEditando(null);
                         }}
                         autoFocus
@@ -133,19 +198,21 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
                       <span className="flex justify-end gap-3">
                         <button
                           type="button"
-                          onClick={() => guardar(f.lab)}
+                          title="Guardar"
+                          onClick={() => guardar(f)}
                           disabled={trabajando}
-                          className="text-neutral-900 hover:underline disabled:opacity-40"
+                          className="text-green-600 hover:text-green-800 disabled:opacity-40"
                         >
-                          {trabajando ? "Guardando…" : "Guardar"}
+                          {trabajando ? "…" : <CheckIcon />}
                         </button>
                         <button
                           type="button"
+                          title="Cancelar"
                           onClick={() => setEditando(null)}
                           disabled={trabajando}
-                          className="text-neutral-500 hover:underline disabled:opacity-40"
+                          className="text-neutral-400 hover:text-neutral-600 disabled:opacity-40"
                         >
-                          Cancelar
+                          <XIcon />
                         </button>
                       </span>
                     ) : (
@@ -153,20 +220,22 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
                         {f.inferido && (
                           <button
                             type="button"
-                            onClick={() => comprobar(f.lab)}
+                            title="Confirmar"
+                            onClick={() => confirmar(f)}
                             disabled={trabajando}
-                            className="text-neutral-500 hover:underline disabled:opacity-40"
+                            className="text-neutral-400 hover:text-neutral-600 disabled:opacity-40"
                           >
-                            {trabajando ? "…" : "Comprobar"}
+                            {trabajando ? "…" : <ConfirmarIcon />}
                           </button>
                         )}
                         <button
                           type="button"
-                          onClick={() => empezar(f.lab, f.descuento)}
+                          title="Editar"
+                          onClick={() => empezar(f)}
                           disabled={trabajando}
-                          className="text-neutral-500 hover:underline disabled:opacity-40"
+                          className="text-neutral-300 hover:text-neutral-600 transition-colors disabled:opacity-40"
                         >
-                          Editar
+                          <PencilIcon />
                         </button>
                       </span>
                     )}
@@ -177,6 +246,14 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
           </tbody>
         </table>
       )}
+
+      {activo && visibles.length === 0 ? (
+        <p className="text-sm text-neutral-400">Nada coincide.</p>
+      ) : filtradas.length > LIMITE ? (
+        <p className="text-sm text-neutral-400">
+          Mostrando {LIMITE} de {filtradas.length}. Busca o filtra para afinar.
+        </p>
+      ) : null}
     </div>
   );
 }

@@ -1,12 +1,16 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import SearchBox from "./SearchBox";
+import { PencilIcon, CheckIcon, XIcon } from "./icons";
 
 // Inventario: catálogo completo de artículos con los datos usados para calcular pedidos.
 // Highlight = existencias bajo objetivo (max(stMín, consumo)). Tres filtros opcionales:
 // "Stock mínimo > consumo", "Reponer" y "Sin historial" (en stock pero fuera de Ventas:
-// consumo desconocido, "?"). El stMín sin definir se muestra "—". El buscador rastrea
-// todo el universo. La edición inline de stMín escribe en farma:stmin. Estilo neutro.
+// consumo desconocido, "?"). "Sin historial" es excluyente con los otros dos; marcarlo
+// desmarca cualquier otro filtro y viceversa. La búsqueda (por denominación o código) se
+// combina con los filtros; sin ningún filtro rastrea todo el universo (incluido sin
+// historial). El stMín sin definir se muestra "—". La edición inline escribe en farma:stmin.
 
 export interface ArticuloMin {
   codigo: string;
@@ -21,24 +25,6 @@ const LIMITE = 100; // tope de filas pintadas: el universo son miles, María afi
 
 const sinAcentos = (s: string) =>
   s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
-
-const PencilIcon = () => (
-  <svg className="h-4 w-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M11 2.5l2.5 2.5L5 13.5H2.5V11L11 2.5z" />
-  </svg>
-);
-
-const CheckIcon = () => (
-  <svg className="h-4 w-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M2.5 8l4 4 7-7" />
-  </svg>
-);
-
-const XIcon = () => (
-  <svg className="h-4 w-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M3 3l10 10M13 3L3 13" />
-  </svg>
-);
 
 export default function Inventario({ articulos }: { articulos: ArticuloMin[] }) {
   const [items, setItems] = useState(articulos);
@@ -66,17 +52,19 @@ export default function Inventario({ articulos }: { articulos: ArticuloMin[] }) 
     [items],
   );
 
-  // Buscar manda sobre los filtros: si hay consulta, rastrea todo el universo (incluyendo sin historial).
+  // Los filtros acotan el universo; la búsqueda (denominación o código) se aplica encima.
+  // Sin ningún filtro, la búsqueda rastrea todo el universo (incluido sin historial).
   const filtrados = useMemo(() => {
     let xs = items;
-    if (consulta) {
-      xs = xs.filter((a) => sinAcentos(a.denominacion).includes(consulta));
-    } else if (soloSinHistorial) {
+    if (soloSinHistorial) {
       xs = xs.filter((a) => a.sinHistorial);
-    } else {
+    } else if (soloStMinAlto || soloBajoObjetivo) {
       xs = xs.filter((a) => !a.sinHistorial);
       if (soloStMinAlto) xs = xs.filter((a) => (a.stMin ?? 0) > a.consumoMensual);
       if (soloBajoObjetivo) xs = xs.filter((a) => a.existencias < Math.max(a.stMin ?? 0, a.consumoMensual));
+    }
+    if (consulta) {
+      xs = xs.filter((a) => sinAcentos(a.denominacion).includes(consulta) || a.codigo.includes(consulta));
     }
     return [...xs].sort((a, b) => a.denominacion.localeCompare(b.denominacion, "es"));
   }, [items, consulta, soloStMinAlto, soloBajoObjetivo, soloSinHistorial]);
@@ -119,43 +107,47 @@ export default function Inventario({ articulos }: { articulos: ArticuloMin[] }) 
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-4">
-        <input
+      <div className="flex flex-col gap-3">
+        <SearchBox
           value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Buscar artículo…"
-          className="flex-1 rounded border border-neutral-300 px-3 py-2 outline-none focus:border-neutral-500"
+          onChange={setQ}
+          placeholder="Buscar por denominación o código…"
         />
-        <label className="flex items-center gap-2 text-sm text-neutral-600">
-          <input
-            type="checkbox"
-            checked={soloStMinAlto}
-            onChange={(e) => setSoloStMinAlto(e.target.checked)}
-            disabled={consulta !== "" || soloSinHistorial}
-          />
-          Stock mínimo &gt; consumo ({totalStMinAlto})
-        </label>
-        <label className="flex items-center gap-2 text-sm text-neutral-600">
-          <input
-            type="checkbox"
-            checked={soloBajoObjetivo}
-            onChange={(e) => setSoloBajoObjetivo(e.target.checked)}
-            disabled={consulta !== "" || soloSinHistorial}
-          />
-          Reponer ({totalBajoObjetivo})
-        </label>
-        <label className="flex items-center gap-2 text-sm text-neutral-600">
-          <input
-            type="checkbox"
-            checked={soloSinHistorial}
-            onChange={(e) => {
-              setSoloSinHistorial(e.target.checked);
-              if (e.target.checked) { setSoloStMinAlto(false); setSoloBajoObjetivo(false); }
-            }}
-            disabled={consulta !== ""}
-          />
-          Sin historial ({totalSinHistorial})
-        </label>
+        <div className="flex flex-wrap items-center gap-4">
+          <label className="flex items-center gap-2 text-sm text-neutral-600">
+            <input
+              type="checkbox"
+              checked={soloStMinAlto}
+              onChange={(e) => {
+                setSoloStMinAlto(e.target.checked);
+                if (e.target.checked) setSoloSinHistorial(false);
+              }}
+            />
+            Stock mínimo &gt; consumo ({totalStMinAlto})
+          </label>
+          <label className="flex items-center gap-2 text-sm text-neutral-600">
+            <input
+              type="checkbox"
+              checked={soloBajoObjetivo}
+              onChange={(e) => {
+                setSoloBajoObjetivo(e.target.checked);
+                if (e.target.checked) setSoloSinHistorial(false);
+              }}
+            />
+            Reponer ({totalBajoObjetivo})
+          </label>
+          <label className="flex items-center gap-2 text-sm text-neutral-600">
+            <input
+              type="checkbox"
+              checked={soloSinHistorial}
+              onChange={(e) => {
+                setSoloSinHistorial(e.target.checked);
+                if (e.target.checked) { setSoloStMinAlto(false); setSoloBajoObjetivo(false); }
+              }}
+            />
+            Sin historial ({totalSinHistorial})
+          </label>
+        </div>
       </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}

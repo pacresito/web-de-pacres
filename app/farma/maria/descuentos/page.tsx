@@ -17,12 +17,11 @@ export default async function DescuentosPage() {
     <main className="flex flex-col gap-6">
       <header className="flex items-baseline justify-between">
         <h1 className="text-xl font-medium">Descuentos</h1>
-        <SubpageNav />
+        <SubpageNav vistaUsuario />
       </header>
       <p className="text-sm text-neutral-500">
-        Busca un principio activo y corrige el descuento de cada laboratorio. Los valores
-        <span className="text-neutral-400"> en gris</span> los hemos inferido: dalos por buenos
-        (Comprobar) o edítalos.
+        Busca por principio activo o laboratorio y corrige el descuento de cada lab. Los valores
+        <span className="text-neutral-400"> en gris</span> los hemos inferido: confírmalos o edítalos.
       </p>
       <Descuentos data={data} />
     </main>

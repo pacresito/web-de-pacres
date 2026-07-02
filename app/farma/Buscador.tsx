@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { XIcon } from "./icons";
 
-// Buscador con autocompletar genérico (reutilizable: la futura sección de "ventas
-// cruzadas" lo compartirá). Filtra por substring, sin acentos, y emite onSelect.
+// Buscador con autocompletar genérico (reutilizable: lo usan Prioridades y Pedidos).
+// Filtra por substring, sin acentos, y emite onSelect. Aspa a la derecha para borrar.
 const sinAcentos = (s: string) =>
   s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
@@ -54,11 +55,27 @@ export default function Buscador({
         }}
         placeholder={placeholder}
         autoFocus={autoFocus}
+        style={{ paddingRight: "2rem" }} // hueco para el aspa (gana al padding del className)
         className={
           inputClassName ??
           "w-full rounded border border-neutral-300 px-3 py-2 outline-none focus:border-neutral-500"
         }
       />
+      {q && (
+        <button
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => {
+            setQ("");
+            setAbierto(false);
+          }}
+          title="Borrar"
+          aria-label="Borrar"
+          className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
+        >
+          <XIcon />
+        </button>
+      )}
       {abierto && coincidencias.length > 0 && (
         <ul className="absolute z-10 mt-1 max-h-72 w-full overflow-auto rounded border border-neutral-200 bg-white shadow">
           {coincidencias.map((item) => (

@@ -26,7 +26,6 @@ export default async function MariaPage() {
       <header className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
         <h1 className="text-xl font-medium">¡Hola María!</h1>
         <nav className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-neutral-600">
-          <Link href="/farma" className="hover:text-neutral-900">Prioridades</Link>
           <Link href="/farma/maria/descuentos" className="hover:text-neutral-900">Descuentos</Link>
           <Link href="/farma/maria/inventario" className="hover:text-neutral-900">Inventario</Link>
           <Link href="/farma/maria/pvp" className="hover:text-neutral-900">PVP</Link>
