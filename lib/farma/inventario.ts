@@ -12,6 +12,10 @@
 // Validado con los tres ejemplos: el nº de filas que cumplen la firma coincide
 // exactamente con el "Nº Items" total del preámbulo (3664 / 3659 / 1768).
 //
+// Gotcha PVP: "Valor PVP" (col4) NO es el precio de un artículo, es el valor del stock a
+// PVP = precio unitario × existencias. El PVP unitario se recupera dividiendo por las
+// unidades (col2) y redondeando a céntimos. Sin stock no es derivable (0 = desconocido).
+//
 // Gotcha: el código NO siempre tiene 6 dígitos (hay de 1 a 6, p. ej. 1021). Se
 // normaliza a 6 con ceros a la izquierda, que es la forma canónica de Ventas
 // (el código nacional con el que cruza `farma:ref:pedidos`).
@@ -29,7 +33,7 @@ export interface ArticuloInventario {
   codigo: string; // código nacional, 6 dígitos (con ceros a la izquierda)
   denominacion: string;
   stock: number; // unidades en existencias
-  pvp: number; // Valor PVP unitario
+  pvp: number; // PVP unitario (Valor PVP / existencias; 0 si no derivable)
   familia: string; // grupo "*** FAMILIA: … ***"; "" en el formato típico (sin grupos)
 }
 
@@ -45,6 +49,10 @@ const esTexto = (v: unknown): v is string => typeof v === "string" && v.trim().l
 // Una fila es un artículo si tiene código (col0), denominación (col1) y stock (col2).
 // El resto de filas (preámbulo, agrupadores, totales) tienen col0 vacío.
 const esArticulo = (r: unknown[]): boolean => esNumero(r[0]) && esTexto(r[1]) && esNumero(r[2]);
+
+// PVP unitario desde el "Valor PVP" (col4, valor del stock a PVP) y las existencias.
+const pvpUnitario = (valorPvp: unknown, stock: number): number =>
+  esNumero(valorPvp) && stock > 0 ? Math.round((valorPvp / stock) * 100) / 100 : 0;
 
 // Marca de bloque de familia: `*** FAMILIA: 1 Especialidades ***`. Devuelve el nombre
 // del grupo (p. ej. "1 Especialidades") o null si la fila no es una marca.
@@ -78,11 +86,12 @@ export function parseInventario(data: Buffer | Uint8Array | ArrayBuffer): Invent
     if (marca !== null) {
       familia = marca;
     } else if (esArticulo(r)) {
+      const stock = r[2] as number;
       items.push({
         codigo: String(r[0]).padStart(6, "0"),
         denominacion: (r[1] as string).trim(),
-        stock: r[2] as number,
-        pvp: esNumero(r[4]) ? (r[4] as number) : 0,
+        stock,
+        pvp: pvpUnitario(r[4], stock),
         familia,
       });
     }

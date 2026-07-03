@@ -61,4 +61,9 @@ for (const [fichero, nEsperado, fecha, formato] of casos) {
   assert.strictEqual(new Set(inv.items.map((it) => it.codigo)).size, inv.items.length, `${fichero}: códigos duplicados`);
 }
 
+// PVP unitario, no valor del stock: BRONCHOTOS trae "Valor PVP" 41,8 con 4 uds → 10,45 €/ud.
+const primera = parseInventario(readFileSync(dir + casos[0][0]));
+const bronchotos = primera.items.find((it) => it.codigo === "214297");
+assert.strictEqual(bronchotos?.pvp, 10.45, "PVP unitario de BRONCHOTOS (Valor PVP / existencias)");
+
 console.log("inventario.test.ts ✓");
