@@ -362,11 +362,11 @@ function BolsaItem({
           <table className="w-full border-collapse">
             <thead>
               <tr className="fa-t-muted2 text-[10px] uppercase tracking-[0.04em]">
-                <th className="py-[3px] text-left font-medium"></th>
+                <th className="py-[3px] pl-2.5 text-left font-medium"></th>
                 <th className="w-[58px] py-[3px] text-right font-medium">Existen.</th>
                 <th className="w-[58px] py-[3px] text-right font-medium">Consumo</th>
                 <th className="w-[40px] py-[3px] text-right font-medium">Mín</th>
-                <th className="fa-t-ink3 w-[48px] py-[3px] text-right font-medium">Pedir</th>
+                <th className="fa-t-ink3 w-[56px] py-[3px] pr-2.5 text-right font-medium">Pedir</th>
               </tr>
             </thead>
             <tbody>
@@ -374,11 +374,11 @@ function BolsaItem({
                 const rotura = l.min !== null && l.existencias < l.min;
                 return (
                   <tr key={l.codigo} className={rotura ? "fa-row-low" : undefined} style={{ borderTop: rotura ? "1px solid var(--fa-amber-rule)" : "1px solid #f0f2f5" }}>
-                    <td className="fa-t-ink2 py-[7px] pr-2 text-[13px]">{l.denominacion}</td>
+                    <td className="fa-t-ink2 py-[7px] pl-2.5 pr-2 text-[13px]">{l.denominacion}</td>
                     <td className={`fa-mono py-[7px] text-right text-[13px] ${rotura ? "fa-t-amber" : "fa-t-muted2"}`}>{l.existencias}</td>
                     <td className="fa-mono fa-t-muted2 py-[7px] text-right text-[13px]">{l.consumo}</td>
                     <td className="fa-mono fa-t-muted2 py-[7px] text-right text-[13px]">{l.min ?? "—"}</td>
-                    <td className="fa-mono fa-t-ink py-[7px] text-right text-[13px] font-medium">{l.cantidad}</td>
+                    <td className="fa-mono fa-t-ink py-[7px] pr-2.5 text-right text-[13px] font-medium">{l.cantidad}</td>
                   </tr>
                 );
               })}
