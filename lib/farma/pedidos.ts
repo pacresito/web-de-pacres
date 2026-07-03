@@ -35,6 +35,8 @@
 //     · resuelto: si un inventario nuevo repone el pedido del todo (ninguna línea con
 //       cantidad > 0), no se construye y desaparece de ambas listas.
 
+import { tamanoCaja } from "./cajas-lacer";
+
 const CINCO_DIAS_MS = 5 * 24 * 60 * 60 * 1000;
 const MIN_LINEAS_PEDIDO = 6; // #1b: un pedido con menos líneas no se considera pendiente
 
@@ -78,10 +80,13 @@ export interface ResultadoPedidos {
 }
 
 // Cantidad a pedir de un artículo (#2): subir hasta max(StMín, ceil(consumo)) − stock,
-// nunca negativo. Sin ref de Ventas, el objetivo es solo el StMín.
-function cantidadAPedir(min: number, ref: RefArticulo | undefined, existencias: number): number {
+// nunca negativo. Sin ref de Ventas, el objetivo es solo el StMín. Si el artículo se
+// pide por caja (caja > 1, p. ej. Lacer), se redondea al alza al múltiplo de caja: se
+// piden cajas completas, dejando las existencias en o por encima del objetivo.
+function cantidadAPedir(min: number, ref: RefArticulo | undefined, existencias: number, caja = 1): number {
   const objetivo = ref ? Math.max(min, Math.ceil(ref.consumoMensual)) : min;
-  return Math.max(0, objetivo - existencias);
+  const bruto = Math.max(0, objetivo - existencias);
+  return caja > 1 ? Math.ceil(bruto / caja) * caja : bruto;
 }
 
 // Lista de pedidos del universo de Ventas, ordenada. Alimenta el buscador del pedido
@@ -109,7 +114,7 @@ export function bolsaDePedido(
   for (const [codigo, ref] of Object.entries(refPedidos)) {
     if (!(pedidosDeCodigo[codigo] ?? []).includes(pedido)) continue;
     const existencias = stock[codigo] ?? 0;
-    const cantidad = cantidadAPedir(stMin[codigo] ?? 0, ref, existencias);
+    const cantidad = cantidadAPedir(stMin[codigo] ?? 0, ref, existencias, tamanoCaja(codigo, pedidosDeCodigo[codigo] ?? []));
     if (cantidad > 0) {
       lineas.push({ codigo, denominacion: ref.denominacion, cantidad, existencias, consumo: ref.consumoMensual, min: stMin[codigo] ?? null });
     }
@@ -144,7 +149,7 @@ export function calcularPedidos(
 
     const existencias = stock[codigo] ?? 0; // ausente del inventario = 0 unidades
 
-    const cantidad = cantidadAPedir(min, ref, existencias);
+    const cantidad = cantidadAPedir(min, ref, existencias, tamanoCaja(codigo, pedidosDeCodigo[codigo] ?? []));
     if (cantidad <= 0) continue; // ya cubierto: no es línea para pedir
 
     if (!ref) {

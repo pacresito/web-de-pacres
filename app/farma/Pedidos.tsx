@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { BolsaPedido, ResultadoPedidos } from "@/lib/farma/pedidos";
+import { PEDIDO_LACER } from "@/lib/farma/cajas-lacer";
 import type { MetaInventario } from "@/lib/farma/pedidos-store";
 import { fechaMadrid, haceX } from "@/lib/farma/tiempo";
 import Buscador from "./Buscador";
@@ -356,6 +357,12 @@ function BolsaItem({
       </button>
       {abierto && (
         <div className="px-3.5 pb-3.5 pl-[34px]" style={{ background: hecho ? undefined : "#fcfdfe" }}>
+          {/* Lacer solo sirve cajas completas: "pedir" ya viene redondeado al múltiplo de caja. */}
+          {bolsa.pedido === PEDIDO_LACER && (
+            <p className="fa-t-muted2 mb-2 text-[12px] leading-[1.45]">
+              Lacer se pide por cajas: la cantidad va redondeada al alza al múltiplo de caja (mínimo 6 uds).
+            </p>
+          )}
           {/* Columnas de contexto (existencias, consumo, mín) tenues para que María vea por qué
               está la línea; "pedir" es la cantidad, la única prominente. Fila en ámbar si hay
               rotura (existencias < StMín), como en Inventario. */}

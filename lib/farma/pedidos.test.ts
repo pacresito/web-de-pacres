@@ -175,4 +175,27 @@ const pedCinfa: PedidosDeCodigo = Object.fromEntries(C.map((c) => [c, ["CINFA"]]
   assert.deepStrictEqual(listarPedidos(pedCinfa, seisCinfa(10)), ["CINFA"], "pedido listado sin StMín");
 }
 
+// --- Caja Lacer: la cantidad se redondea al alza al múltiplo de caja (default 6) ---
+{
+  // objetivo 14, stock 1 → bruto 13 → múltiplo de 6 superior = 18 (3 cajas).
+  const ref: RefPedidos = { "000123": { denominacion: "LACER-X", lab: "LACER", consumoMensual: 14 } };
+  const bolsa = bolsaDePedido("LACER", { "000123": 1 }, ref, {}, { "000123": ["LACER"] });
+  assert.strictEqual(bolsa!.lineas[0].cantidad, 18, "no listado en LACER → caja 6: ceil(13/6)·6 = 18");
+}
+
+// --- Caja Lacer 12 (excepción): un cepillo de expositor 12 redondea a múltiplo de 12 ---
+{
+  // mismo bruto 13, pero 162974 tiene caja 12 → ceil(13/12)·12 = 24 (2 expositores).
+  const ref: RefPedidos = { "162974": { denominacion: "CEPILLO MEDIO", lab: "LACER", consumoMensual: 14 } };
+  const bolsa = bolsaDePedido("LACER", { "162974": 1 }, ref, {}, { "162974": ["LACER"] });
+  assert.strictEqual(bolsa!.lineas[0].cantidad, 24, "excepción caja 12: ceil(13/12)·12 = 24");
+}
+
+// --- Fuera de Lacer no se redondea: la cantidad es exacta (caja 1) ---
+{
+  const ref: RefPedidos = { "000001": { denominacion: "CINFA-A", lab: "CINFA", consumoMensual: 14 } };
+  const bolsa = bolsaDePedido("CINFA", { "000001": 1 }, ref, {}, { "000001": ["CINFA"] });
+  assert.strictEqual(bolsa!.lineas[0].cantidad, 13, "no-Lacer: cantidad exacta 14−1 = 13");
+}
+
 console.log("pedidos.test.ts ✓");
