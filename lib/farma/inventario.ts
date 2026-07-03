@@ -99,9 +99,18 @@ export function parseInventario(data: Buffer | Uint8Array | ArrayBuffer): Invent
 // El bloqueo es duro: ni confirmándolo se actualiza.
 export type VeredictoCarga = "ok" | "aviso" | "bloqueo";
 
+// [min, max] de artículos y unidades. RANGO_BLOQUEO viaja en la respuesta de la API
+// para que el mensaje del cliente cite siempre los límites vigentes (este módulo no
+// es importable desde el cliente: arrastraría xlsx al bundle).
+export type RangoCarga = { articulos: [number, number]; unidades: [number, number] };
+export const RANGO_BLOQUEO: RangoCarga = { articulos: [1000, 6000], unidades: [10000, 40000] };
+const RANGO_NORMAL: RangoCarga = { articulos: [2000, 5000], unidades: [15000, 35000] };
+
+const fuera = (v: number, [min, max]: [number, number]) => v < min || v > max;
+
 export function evaluarCarga(articulos: number, unidades: number): VeredictoCarga {
-  if (articulos < 1000 || articulos > 6000 || unidades < 10000 || unidades > 40000) return "bloqueo";
-  if (articulos < 2000 || articulos > 5000 || unidades < 15000 || unidades > 35000) return "aviso";
+  if (fuera(articulos, RANGO_BLOQUEO.articulos) || fuera(unidades, RANGO_BLOQUEO.unidades)) return "bloqueo";
+  if (fuera(articulos, RANGO_NORMAL.articulos) || fuera(unidades, RANGO_NORMAL.unidades)) return "aviso";
   return "ok";
 }
 

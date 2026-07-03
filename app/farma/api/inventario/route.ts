@@ -14,7 +14,7 @@
 import { getRol } from "../../auth";
 import redis from "@/lib/redis";
 import { KEYS } from "@/lib/farma/keys";
-import { parseInventario, evaluarCarga, totalUnidades, esEspecialidad, type ArticuloInventario } from "@/lib/farma/inventario";
+import { parseInventario, evaluarCarga, totalUnidades, esEspecialidad, RANGO_BLOQUEO, type ArticuloInventario } from "@/lib/farma/inventario";
 import { incrStat } from "@/lib/farma/stats";
 import { diffPvp, type RegistroPvp } from "@/lib/farma/pvp";
 
@@ -59,7 +59,7 @@ export async function POST(request: Request): Promise<Response> {
   const veredicto = evaluarCarga(articulos, unidades);
   const confirmar = form?.get("confirmar") === "true"; // el aviso lo confirma María; el bloqueo es duro
   if (veredicto === "bloqueo" || (veredicto === "aviso" && !confirmar)) {
-    return Response.json({ estado: veredicto, articulos, unidades });
+    return Response.json({ estado: veredicto, articulos, unidades, limites: RANGO_BLOQUEO });
   }
 
   // Delta de confirmación contra la subida anterior (artículos y unidades).

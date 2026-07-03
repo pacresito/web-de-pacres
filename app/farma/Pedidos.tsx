@@ -43,6 +43,7 @@ export default function Pedidos({
   // "hace X" y "¿es de hoy el inventario?" dependen de la hora actual: se calculan solo
   // tras montar para no romper la hidratación (el HTML del servidor no conoce la hora).
   const [ahora, setAhora] = useState<number | null>(null);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- un solo set tras montar (no cascadea); es el patrón para no romper la hidratación
   useEffect(() => setAhora(Date.now()), []);
   const inventarioViejo = ahora !== null && meta !== null && fechaMadrid(ahora) !== meta.fechaInforme;
 
@@ -84,10 +85,14 @@ export default function Pedidos({
       const res = await fetch("/farma/api/inventario", { method: "POST", body: fd });
       const d = await res.json().catch(() => ({}));
       if (d.estado === "bloqueo") {
+        // Los límites vigentes los manda la API (viven en evaluarCarga, no importable aquí).
+        const rango = ([min, max]: [number, number]) =>
+          `${min.toLocaleString("es-ES")}–${max.toLocaleString("es-ES")}`;
         setError(
           `El inventario tiene ${d.articulos.toLocaleString("es-ES")} artículos y ` +
             `${d.unidades.toLocaleString("es-ES")} unidades, fuera de los límites razonables ` +
-            `(1.000–6.000 artículos, 10.000–40.000 unidades). Revisa que sea el archivo correcto.`,
+            `(${rango(d.limites.articulos)} artículos, ${rango(d.limites.unidades)} unidades). ` +
+            `Revisa que sea el archivo correcto.`,
         );
         return;
       }
@@ -168,6 +173,7 @@ export default function Pedidos({
             meta={meta}
             pvpCambiados={resumen.pvpCambiados}
             descuentosInferidos={resumen.descuentosInferidos}
+            ahora={ahora}
           />
 
           {/* Subir inventario */}
@@ -337,7 +343,7 @@ function BolsaItem({
   hecho?: string;
 }) {
   return (
-    <li className="fa-bolsa flex flex-col" style={{ borderBottom: "1px solid var(--fa-rule)" }}>
+    <li className="fa-bolsa flex flex-col">
       <button type="button" onClick={onToggle} className="flex items-center justify-between px-3.5 py-3 text-left hover:bg-[#fafbfc]">
         <span className="flex items-center gap-2.5">
           <span className={`w-3 text-[11px] ${abierto ? "fa-t-accent" : "fa-t-muted2"}`}>{abierto ? "▾" : "▸"}</span>

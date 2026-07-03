@@ -1,9 +1,7 @@
 // Da por bueno un descuento inferido sin cambiar su valor: apaga `inferido` en el
 // blob farma:descuentos. Mismo read-modify-write que /descuento. Solo admin.
 import { getRol } from "../../../auth";
-import redis from "@/lib/redis";
-import { KEYS } from "@/lib/farma/keys";
-import type { LabDescuento } from "@/lib/farma/prioridades";
+import { cargarDescuentos, guardarDescuentos } from "@/lib/farma/descuentos-store";
 
 export async function POST(request: Request): Promise<Response> {
   if ((await getRol()) !== "admin") {
@@ -21,14 +19,13 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ error: "principio y lab requeridos" }, { status: 400 });
   }
 
-  const raw = await redis.get(KEYS.descuentos());
-  const data: Record<string, LabDescuento[]> = raw ? JSON.parse(raw) : {};
+  const data = await cargarDescuentos();
   const fila = data[principio]?.find((l) => l.lab === lab);
   if (!fila) {
     return Response.json({ error: "Principio o lab desconocido" }, { status: 404 });
   }
 
   fila.inferido = false;
-  await redis.set(KEYS.descuentos(), JSON.stringify(data));
+  await guardarDescuentos(data);
   return Response.json({ ok: true });
 }

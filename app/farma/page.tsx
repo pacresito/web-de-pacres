@@ -3,9 +3,7 @@ import { getRol } from "./auth";
 import LoginForm from "./LoginForm";
 import LogoutButton from "./LogoutButton";
 import Prioridades from "./Prioridades";
-import redis from "@/lib/redis";
-import { KEYS } from "@/lib/farma/keys";
-import type { LabDescuento } from "@/lib/farma/prioridades";
+import { cargarDescuentos } from "@/lib/farma/descuentos-store";
 
 // Landing de /farma: sin sesión → login; con sesión → Prioridades. El admin ve
 // además el acceso a su panel (/farma/maria), desde donde cuelga el resto.
@@ -18,8 +16,7 @@ export default async function FarmaPage() {
       </div>
     );
 
-  const raw = await redis.get(KEYS.descuentos());
-  const data: Record<string, LabDescuento[]> = raw ? JSON.parse(raw) : {};
+  const data = await cargarDescuentos();
 
   return (
     <div className="min-h-screen px-5 py-8" style={{ background: "#E8E4DC" }}>

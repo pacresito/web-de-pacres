@@ -1,8 +1,9 @@
 // Búsqueda de los buscadores de /farma: normaliza acentos/mayúsculas y tolera pequeños
 // typos. Lógica pura compartida por Buscador, Inventario y Descuentos (test: buscar.test.ts).
 
+// \u0300-\u036f: los diacríticos combinantes que NFD separa (tildes, diéresis).
 export const sinAcentos = (s: string) =>
-  s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
 // Ediciones permitidas según la longitud de la consulta: nada por debajo de 4 (una letra
 // mal en algo tan corto encaja con demasiadas cosas), 1 hasta 7, 2 de 8 en adelante.

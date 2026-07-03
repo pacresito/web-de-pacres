@@ -1,27 +1,25 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import type { MetaInventario } from "@/lib/farma/pedidos-store";
 import { fechaMadrid, haceX } from "@/lib/farma/tiempo";
 
 // Tarjeta "Resumen del día" de /farma/maria: el estado del día en solo lectura (los
-// datos los calcula el servidor). El "hace X" y el "¿es de hoy?" dependen de la hora
-// actual, así que se montan vacíos y se rellenan tras hidratar para no romper la
-// hidratación (el HTML del servidor no conoce la hora del cliente).
+// datos los calcula el servidor). `ahora` llega de Pedidos (null hasta hidratar): el
+// "hace X" y el "¿es de hoy?" dependen de la hora actual, que el HTML del servidor
+// no conoce.
 export default function PanelResumen({
   pedidos,
   meta,
   pvpCambiados,
   descuentosInferidos,
+  ahora,
 }: {
   pedidos: number;
   meta: MetaInventario | null;
   pvpCambiados: number;
   descuentosInferidos: number;
+  ahora: number | null;
 }) {
-  const [ahora, setAhora] = useState<number | null>(null);
-  useEffect(() => setAhora(Date.now()), []);
-
   const invViejo = ahora !== null && meta !== null && fechaMadrid(ahora) !== meta.fechaInforme;
 
   return (

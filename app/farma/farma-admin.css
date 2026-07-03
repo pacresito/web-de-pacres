@@ -131,7 +131,9 @@
 .fa-row-low { background: var(--fa-amber-bg); }
 .fa-row-low .fa-td { border-bottom-color: var(--fa-amber-rule); }
 
-.fa-panel > .fa-bolsa:last-child { border-bottom: none !important; }
+/* Fila de pedido (lista de bolsas): borde entre filas, sin borde en la última. */
+.fa-bolsa { border-bottom: 1px solid var(--fa-rule); }
+.fa-panel > .fa-bolsa:last-child { border-bottom: none; }
 
 /* Chip de filtro (checkbox con aspecto de botón). */
 .fa-chip {
@@ -163,12 +165,6 @@
 }
 .fa-chip-on .fa-chip-box { background: var(--fa-accent); border-color: var(--fa-accent); color: #fff; }
 .fa-chip-count { color: var(--fa-muted2); }
-
-/* Pill de prioridad. */
-.fa-pill { display: inline-block; font-size: 11.5px; font-weight: 500; padding: 2px 9px; border-radius: 5px; }
-.fa-pill-alta { background: var(--fa-red-bg); color: var(--fa-red); }
-.fa-pill-media { background: var(--fa-amber-bg); color: var(--fa-amber); }
-.fa-pill-baja { background: #f2f4f7; color: var(--fa-ink3); }
 
 /* Etiqueta "inferido". */
 .fa-tag { font-size: 10.5px; padding: 1px 6px; border-radius: 4px; background: #f2f4f7; color: var(--fa-muted); letter-spacing: 0.02em; }
@@ -222,7 +218,6 @@
   transition: background 0.12s, color 0.12s;
 }
 .fa-nav-item:hover { background: #f4f6f8; }
-.fa-nav-item-active { background: var(--fa-accent-bg); color: var(--fa-ink); font-weight: 600; }
 
 /* Aviso ámbar / error rojo (cajas). */
 .fa-note-amber { border: 1px solid var(--fa-amber-border); background: var(--fa-amber-bg); border-radius: 6px; color: var(--fa-amber-ink); }
