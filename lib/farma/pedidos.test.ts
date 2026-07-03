@@ -27,6 +27,13 @@ const pedCinfa: PedidosDeCodigo = Object.fromEntries(C.map((c) => [c, ["CINFA"]]
   assert.strictEqual(cinfa.pedido, "CINFA");
   assert.strictEqual(cinfa.lineas.length, 6, "6 líneas");
   assert.ok(cinfa.lineas.every((l) => l.cantidad === 8), "cantidad max(5,10)−2 = 8");
+  assert.ok(cinfa.lineas.every((l) => l.existencias === 2 && l.consumo === 10 && l.min === 5), "cada línea lleva su contexto (existencias, consumo, StMín)");
+}
+
+// --- Contexto de línea: StMín sin definir viaja como null (no 0) ---
+{
+  const r = calcularPedidos(todos(2), seisCinfa(10), {}, pedCinfa, { CINFA: haceDias(1) }, AHORA);
+  assert.ok(r.hechos[0].lineas.every((l) => l.min === null), "sin StMín → min null en la línea");
 }
 
 // --- #2: con StMín > consumo el objetivo es el StMín; #3 cuenta la alerta ---

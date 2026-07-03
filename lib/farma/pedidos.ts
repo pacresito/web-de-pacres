@@ -54,6 +54,11 @@ export interface LineaPedido {
   codigo: string;
   denominacion: string;
   cantidad: number;
+  // Contexto para que María vea por qué está la línea y de dónde sale la cantidad:
+  // existencias del inventario, consumo mensual (de Ventas) y StMín (null = sin definir).
+  existencias: number;
+  consumo: number;
+  min: number | null;
 }
 
 export interface BolsaPedido {
@@ -103,8 +108,11 @@ export function bolsaDePedido(
   const lineas: LineaPedido[] = [];
   for (const [codigo, ref] of Object.entries(refPedidos)) {
     if (!(pedidosDeCodigo[codigo] ?? []).includes(pedido)) continue;
-    const cantidad = cantidadAPedir(stMin[codigo] ?? 0, ref, stock[codigo] ?? 0);
-    if (cantidad > 0) lineas.push({ codigo, denominacion: ref.denominacion, cantidad });
+    const existencias = stock[codigo] ?? 0;
+    const cantidad = cantidadAPedir(stMin[codigo] ?? 0, ref, existencias);
+    if (cantidad > 0) {
+      lineas.push({ codigo, denominacion: ref.denominacion, cantidad, existencias, consumo: ref.consumoMensual, min: stMin[codigo] ?? null });
+    }
   }
   if (lineas.length === 0) return null;
   lineas.sort((a, b) => a.denominacion.localeCompare(b.denominacion, "es"));
@@ -151,7 +159,7 @@ export function calcularPedidos(
     // Un código puede ir en varios pedidos (colisión): suma su línea a cada uno.
     for (const pedido of pedidos) {
       const grupo = porPedido.get(pedido) ?? { lineas: [], hayRotura: false };
-      grupo.lineas.push({ codigo, denominacion: ref.denominacion, cantidad });
+      grupo.lineas.push({ codigo, denominacion: ref.denominacion, cantidad, existencias, consumo: ref.consumoMensual, min: stMin[codigo] ?? null });
       if (existencias < min) grupo.hayRotura = true; // rotura (#1a): solo dispara con StMín definido
       porPedido.set(pedido, grupo);
     }
