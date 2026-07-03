@@ -27,3 +27,15 @@ export const ConfirmarIcon = () => (
     <path d="M5.5 8l1.8 1.8L10.5 6.3" />
   </svg>
 );
+
+export const TrashIcon = () => (
+  <svg className="h-4 w-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 4.5h10M6.5 4.5V3a1 1 0 011-1h1a1 1 0 011 1v1.5M4.5 4.5l.6 8a1 1 0 001 .9h3.8a1 1 0 001-.9l.6-8" />
+  </svg>
+);
+
+export const PlusIcon = () => (
+  <svg className="h-4 w-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M8 3v10M3 8h10" />
+  </svg>
+);
