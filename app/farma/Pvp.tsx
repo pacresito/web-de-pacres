@@ -157,7 +157,8 @@ export default function Pvp({ pendientes, borrador }: { pendientes: LineaPvp[]; 
       const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: "application/pdf" }));
       const a = document.createElement("a");
       a.href = url;
-      a.download = "etiquetas.pdf";
+      const fecha = new Date().toLocaleDateString("sv-SE"); // AAAA-MM-DD
+      a.download = `${fecha} Etiquetas (${etiquetas.length}).pdf`;
       a.click();
       URL.revokeObjectURL(url);
     } catch {
