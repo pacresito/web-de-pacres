@@ -4,7 +4,7 @@
 //   npx tsx --env-file=.env.local scripts/seed-farma.ts --prod   → siembra producción
 // Por defecto escribe en -dev: los datos sin validar (por María) no tocan prod.
 import Redis from "ioredis";
-import { readFileSync } from "fs";
+import { readFileSync, existsSync } from "fs";
 import { resolve } from "path";
 import { KEYS } from "../lib/farma/keys";
 
@@ -39,6 +39,20 @@ async function main(): Promise<void> {
   await redis.set(KEYS.pedidoCodigos(dev), JSON.stringify(pedidos));
   const nPedidos = new Set(Object.values(pedidos).flat()).size;
   console.log(`Sembrados ${Object.keys(pedidos).length} códigos en ${nPedidos} pedidos en ${KEYS.pedidoCodigos(dev)}.`);
+
+  // Recomendaciones (ventas cruzadas): dato mutable de María. A diferencia del resto, se
+  // siembra SOLO si la clave no existe, para no pisar sus ediciones en un re-seed. El
+  // JSON curado llega en otra fase; si aún no está, se salta sin ruido.
+  const recomPath = resolve("seed/recomendaciones.json");
+  if (!existsSync(recomPath)) {
+    console.log("Sin seed/recomendaciones.json — se omiten las recomendaciones.");
+  } else if (await redis.exists(KEYS.recomendaciones(dev))) {
+    console.log(`${KEYS.recomendaciones(dev)} ya existe — no se pisa (lo gobierna María).`);
+  } else {
+    const recom = JSON.parse(readFileSync(recomPath, "utf-8")) as Record<string, string[]>;
+    await redis.set(KEYS.recomendaciones(dev), JSON.stringify(recom));
+    console.log(`Sembradas ${Object.keys(recom).length} recomendaciones en ${KEYS.recomendaciones(dev)}.`);
+  }
 
   await redis.quit();
 }

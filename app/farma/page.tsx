@@ -22,6 +22,7 @@ export default async function FarmaPage() {
     <div className="min-h-screen px-5 py-8" style={{ background: "#E8E4DC" }}>
       <main className="mx-auto flex w-full max-w-4xl flex-col gap-3">
         <nav className="flex items-center justify-end gap-4 text-sm text-neutral-600">
+          <Link href="/farma/recomendados" className="hover:text-neutral-900">Recomendados</Link>
           {rol === "admin" && (
             <Link href="/farma/maria" className="hover:text-neutral-900">Volver</Link>
           )}

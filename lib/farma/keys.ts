@@ -28,6 +28,10 @@ export const KEYS = {
   // Borrador de etiquetado de PVP (mutable, admin): blob JSON {tamanos, cantidades,
   // extras} con lo que María prepara en la pantalla PVP y aún no ha impreso/limpiado.
   pvpEtiquetas: (dev: boolean = esDev) => farmaKey("farma:pvp-etiquetas", dev),
+  // Ventas cruzadas (mutable, lo edita María): blob JSON codigo → [códigos recomendados].
+  // Dirigido (A→B no implica B→A). Lo lee la vista de mostrador y el panel; lo muta la
+  // ruta de recomendaciones. El seed solo lo puebla si no existe (no pisa a María).
+  recomendaciones: (dev: boolean = esDev) => farmaKey("farma:recomendaciones", dev),
   // Contadores de uso por acción y mes (YYYY-MM, Madrid). No se exponen en la web.
   stats: (accion: string, mes: string, dev: boolean = esDev) =>
     farmaKey(`farma:stats:${accion}:${mes}`, dev),

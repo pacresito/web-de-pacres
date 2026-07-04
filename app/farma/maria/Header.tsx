@@ -11,7 +11,11 @@ import LogoutButton from "../LogoutButton";
 export default function Header() {
   const pathname = usePathname();
   const enPanel = pathname === "/farma/maria";
-  const enDescuentos = pathname === "/farma/maria/descuentos";
+  // Cada subpágina de edición enlaza a su vista de usuario (la puerta de entrada de María).
+  const vistaUsuario =
+    pathname === "/farma/maria/descuentos" ? "/farma"
+    : pathname === "/farma/maria/recomendaciones" ? "/farma/recomendados"
+    : null;
 
   return (
     <div className="fa-header">
@@ -25,11 +29,12 @@ export default function Header() {
               <Link href="/farma/maria/descuentos" className="fa-nav-item">Descuentos</Link>
               <Link href="/farma/maria/inventario" className="fa-nav-item">Inventario</Link>
               <Link href="/farma/maria/pvp" className="fa-nav-item">PVP</Link>
+              <Link href="/farma/maria/recomendaciones" className="fa-nav-item">Recomendaciones</Link>
             </>
           ) : (
             <>
+              {vistaUsuario && <Link href={vistaUsuario} className="fa-nav-item">Vista de usuario</Link>}
               <Link href="/farma/maria" className="fa-nav-item">Volver</Link>
-              {enDescuentos && <Link href="/farma" className="fa-nav-item">Vista de usuario</Link>}
             </>
           )}
           <LogoutButton className="fa-btn fa-btn-outline ml-1.5 flex-none whitespace-nowrap px-3.5 py-[7px] text-[13px]" />

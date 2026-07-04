@@ -14,19 +14,22 @@ export default function Buscador({
   placeholder,
   autoFocus,
   inputClassName,
+  buscarExtra,
 }: {
   items: string[];
   onSelect: (item: string) => void;
   placeholder?: string;
   autoFocus?: boolean;
   inputClassName?: string; // sobreescribe el estilo del campo (p. ej. skin UnycopWin en Prioridades)
+  buscarExtra?: (item: string) => string; // texto extra buscable por ítem (p. ej. el código)
 }) {
   const [q, setQ] = useState("");
   const [abierto, setAbierto] = useState(false);
 
   const consulta = sinAcentos(q.trim());
+  const extra = (i: string) => (buscarExtra ? sinAcentos(buscarExtra(i)).includes(consulta) : false);
   const coincidencias = consulta
-    ? filtrarFallback(items, (i) => contiene(i, consulta), (i) => coincide(i, consulta)).slice(0, 8)
+    ? filtrarFallback(items, (i) => contiene(i, consulta) || extra(i), (i) => coincide(i, consulta) || extra(i)).slice(0, 8)
     : [];
 
   function elegir(item: string) {
