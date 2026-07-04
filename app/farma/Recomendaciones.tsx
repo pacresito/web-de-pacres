@@ -20,9 +20,7 @@ type Fila = { codigo: string; denominacion: string; recomendados: string[] };
 export default function Recomendaciones({ catalogo, data: inicial }: { catalogo: RefPedidos; data: Datos }) {
   const [data, setData] = useState(inicial);
   const [q, setQ] = useState("");
-  const [sinRecom, setSinRecom] = useState(false);
-  const [conRecom, setConRecom] = useState(false);
-  const [masDe3, setMasDe3] = useState(false);
+  const [filtro, setFiltro] = useState<"" | "sin" | "con" | "mas3">(""); // excluyentes: la dimensión es cuántos recomendados tiene
   const [editando, setEditando] = useState<string | null>(null); // código en edición
   const [ocupado, setOcupado] = useState(false);
   const [error, setError] = useState("");
@@ -48,14 +46,14 @@ export default function Recomendaciones({ catalogo, data: inicial }: { catalogo:
   const totalMas3 = useMemo(() => todas.filter((f) => f.recomendados.length > 3).length, [todas]);
 
   const consulta = sinAcentos(q.trim());
-  const activo = consulta !== "" || sinRecom || conRecom || masDe3;
+  const activo = consulta !== "" || filtro !== "";
 
   const filtradas = useMemo(() => {
     if (!activo) return [];
     let xs = todas;
-    if (sinRecom) xs = xs.filter((f) => f.recomendados.length === 0);
-    if (conRecom) xs = xs.filter((f) => f.recomendados.length > 0);
-    if (masDe3) xs = xs.filter((f) => f.recomendados.length > 3);
+    if (filtro === "sin") xs = xs.filter((f) => f.recomendados.length === 0);
+    if (filtro === "con") xs = xs.filter((f) => f.recomendados.length > 0);
+    if (filtro === "mas3") xs = xs.filter((f) => f.recomendados.length > 3);
     if (consulta)
       xs = filtrarFallback(
         xs,
@@ -63,7 +61,7 @@ export default function Recomendaciones({ catalogo, data: inicial }: { catalogo:
         (f) => coincide(f.denominacion, consulta),
       );
     return xs;
-  }, [activo, todas, sinRecom, conRecom, masDe3, consulta, q]);
+  }, [activo, todas, filtro, consulta, q]);
 
   const visibles = filtradas.slice(0, LIMITE);
 
@@ -99,15 +97,15 @@ export default function Recomendaciones({ catalogo, data: inicial }: { catalogo:
       <div className="flex flex-col gap-3 border-b p-4" style={{ borderColor: "var(--fa-border)" }}>
         <SearchBox value={q} onChange={setQ} placeholder="Buscar por denominación o código…" autoFocus />
         <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={() => setSinRecom(!sinRecom)} className={`fa-chip ${sinRecom ? "fa-chip-on" : ""}`}>
+          <button type="button" onClick={() => setFiltro(filtro === "sin" ? "" : "sin")} className={`fa-chip ${filtro === "sin" ? "fa-chip-on" : ""}`}>
             <span className="fa-chip-box"><CheckIcon /></span>
             Sin recomendados <span className="fa-chip-count">({totalSin})</span>
           </button>
-          <button type="button" onClick={() => setConRecom(!conRecom)} className={`fa-chip ${conRecom ? "fa-chip-on" : ""}`}>
+          <button type="button" onClick={() => setFiltro(filtro === "con" ? "" : "con")} className={`fa-chip ${filtro === "con" ? "fa-chip-on" : ""}`}>
             <span className="fa-chip-box"><CheckIcon /></span>
             Con recomendados <span className="fa-chip-count">({totalCon})</span>
           </button>
-          <button type="button" onClick={() => setMasDe3(!masDe3)} className={`fa-chip ${masDe3 ? "fa-chip-on" : ""}`}>
+          <button type="button" onClick={() => setFiltro(filtro === "mas3" ? "" : "mas3")} className={`fa-chip ${filtro === "mas3" ? "fa-chip-on" : ""}`}>
             <span className="fa-chip-box"><CheckIcon /></span>
             Más de 3 <span className="fa-chip-count">({totalMas3})</span>
           </button>
@@ -169,6 +167,7 @@ export default function Recomendaciones({ catalogo, data: inicial }: { catalogo:
                                 key={f.recomendados.length}
                                 items={disponibles}
                                 onSelect={(n) => { const c = porNombre.get(n); if (c) guardar(f.codigo, [...f.recomendados, c]); }}
+                                buscarExtra={(n) => porNombre.get(n) ?? ""}
                                 placeholder="Añadir recomendado…"
                                 inputClassName="fa-input w-full"
                               />
