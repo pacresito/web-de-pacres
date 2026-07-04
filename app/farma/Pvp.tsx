@@ -1,8 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { LineaPvp } from "@/lib/farma/pvp";
+import type { BorradorEtiquetas, FilaExtra, LineaPvp, Tamano } from "@/lib/farma/pvp";
 import { DIAMETROS, expandir, type FuenteEtiqueta } from "@/lib/farma/etiquetas";
 import type { FuentesEtiqueta } from "@/lib/farma/etiquetas-pdf";
 import { TrashIcon, PlusIcon } from "./icons";
@@ -14,28 +14,20 @@ import { TrashIcon, PlusIcon } from "./icons";
 // minimalista.
 //
 // Además de las líneas reales, María puede añadir líneas manuales (precio libre, texto
-// + precio, o una promo fija) para generar etiquetas que no vienen de un cambio de PVP. Tamaño de
-// etiqueta, cantidad de copias y estas líneas manuales viven solo en estado local: no
-// se guardan en Redis (aviso visible al respecto). "Descargar etiquetas" genera el PDF
-// (círculos con el precio, mosaico apretado en A4) en el cliente con pdf-lib; la
-// geometría vive en lib/farma/etiquetas.ts y el dibujo en etiquetas-pdf.ts.
+// + precio, o una promo fija) para generar etiquetas que no vienen de un cambio de PVP.
+// El tamaño de etiqueta, la cantidad de copias y estas líneas manuales se persisten en
+// Redis (blob farma:pvp-etiquetas) por autosave, así que sobreviven a las recargas; la
+// carga inicial llega como prop `borrador` desde el server component. "Descargar
+// etiquetas" genera el PDF (círculos con el precio, mosaico apretado en A4) en el
+// cliente con pdf-lib; la geometría vive en lib/farma/etiquetas.ts y el dibujo en
+// etiquetas-pdf.ts.
 
 const TODAS = "__todas__";
-const TAMANOS = [
-  { valor: "S" as const, radio: 5, titulo: "Pequeño" },
-  { valor: "M" as const, radio: 7, titulo: "Mediano" },
-  { valor: "L" as const, radio: 9, titulo: "Grande" },
+const TAMANOS: { valor: Tamano; radio: number; titulo: string }[] = [
+  { valor: "S", radio: 5, titulo: "Pequeño" },
+  { valor: "M", radio: 7, titulo: "Mediano" },
+  { valor: "L", radio: 9, titulo: "Grande" },
 ];
-type Tamano = (typeof TAMANOS)[number]["valor"];
-
-// Tipos de línea manual: "precio" (precio libre, la denominación no se imprime),
-// "texto-precio" (denominación + precio, ambos impresos) y "promo" (texto fijo).
-interface FilaExtra {
-  id: string;
-  tipo: "precio" | "texto-precio" | "promo";
-  denominacion: string;
-  precio: number | null; // aplica a "precio" y "texto-precio"
-}
 
 // Cómo se imprime cada promo fija (título fino opcional + texto principal en negrita),
 // replicando los PDF de María.
@@ -81,20 +73,43 @@ function PrecioInput({ valor, onChange }: { valor: number | null; onChange: (v: 
   );
 }
 
-export default function Pvp({ pendientes }: { pendientes: LineaPvp[] }) {
+export default function Pvp({ pendientes, borrador }: { pendientes: LineaPvp[]; borrador: BorradorEtiquetas }) {
   const router = useRouter();
   const [ocupado, setOcupado] = useState<string | null>(null); // codigo en curso, o TODAS
   const [error, setError] = useState("");
-  const [tamanos, setTamanos] = useState<Record<string, Tamano>>({});
-  const [cantidades, setCantidades] = useState<Record<string, number>>({});
-  const [extras, setExtras] = useState<FilaExtra[]>([]);
+  const [tamanos, setTamanos] = useState<Record<string, Tamano>>(borrador.tamanos);
+  const [cantidades, setCantidades] = useState<Record<string, number>>(borrador.cantidades);
+  const [extras, setExtras] = useState<FilaExtra[]>(borrador.extras);
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [generando, setGenerando] = useState(false);
-  const idsRef = useRef(0);
+  // Continúa la numeración de ids tras las líneas manuales ya guardadas, para no chocar.
+  const idsRef = useRef(borrador.extras.reduce((m, x) => Math.max(m, Number(x.id.replace("extra-", "")) || 0), 0));
   const fuentesRef = useRef<FuentesEtiqueta | null>(null);
 
   const tamanoDe = (id: string) => tamanos[id] ?? "S";
   const cantidadDe = (id: string) => cantidades[id] ?? 1;
+
+  // Autosave (debounce) del borrador de etiquetado en Redis: sobrevive a las recargas.
+  // Se saltan el primer render (el estado ya viene del prop) y se podan tamaños/cantidades
+  // de líneas que ya no existen (pendiente limpiado o extra borrado) para no acumular.
+  const primeraRef = useRef(true);
+  useEffect(() => {
+    if (primeraRef.current) {
+      primeraRef.current = false;
+      return;
+    }
+    const vivos = new Set<string>([...pendientes.map((p) => p.codigo), ...extras.map((x) => x.id)]);
+    const soloVivos = <T,>(m: Record<string, T>) =>
+      Object.fromEntries(Object.entries(m).filter(([k]) => vivos.has(k)));
+    const t = setTimeout(() => {
+      fetch("/farma/api/pvp/etiquetas", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tamanos: soloVivos(tamanos), cantidades: soloVivos(cantidades), extras }),
+      }).catch(() => {});
+    }, 600);
+    return () => clearTimeout(t);
+  }, [tamanos, cantidades, extras, pendientes]);
 
   // Cada fila con contenido imprimible (precio real, precio libre con número, o promo)
   // aporta una etiqueta; el precio libre aún sin número no cuenta.
@@ -274,8 +289,6 @@ export default function Pvp({ pendientes }: { pendientes: LineaPvp[] }) {
           )}
         </div>
       </div>
-
-      <p className="fa-t-muted2 mb-3 text-[12px]">El tamaño de etiqueta, la cantidad y las líneas añadidas no se guardan al recargar la página.</p>
 
       <div className="relative mb-3.5 inline-block">
         <button type="button" onClick={() => setMenuAbierto((v) => !v)} className="fa-btn fa-btn-outline inline-flex items-center gap-1.5 px-[13px] py-[7px] text-[13px]">

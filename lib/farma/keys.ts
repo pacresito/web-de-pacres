@@ -25,6 +25,9 @@ export const KEYS = {
   pvp: (dev: boolean = esDev) => farmaKey("farma:pvp", dev),
   // Pedidos fichados por María: hash pedido → orderedAt (epoch ms del check).
   pedidosHechos: (dev: boolean = esDev) => farmaKey("farma:pedidos-hechos", dev),
+  // Borrador de etiquetado de PVP (mutable, admin): blob JSON {tamanos, cantidades,
+  // extras} con lo que María prepara en la pantalla PVP y aún no ha impreso/limpiado.
+  pvpEtiquetas: (dev: boolean = esDev) => farmaKey("farma:pvp-etiquetas", dev),
   // Contadores de uso por acción y mes (YYYY-MM, Madrid). No se exponen en la web.
   stats: (accion: string, mes: string, dev: boolean = esDev) =>
     farmaKey(`farma:stats:${accion}:${mes}`, dev),

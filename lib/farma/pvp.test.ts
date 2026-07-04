@@ -3,7 +3,7 @@
 // —solo el 21%/10% aparece en la pantalla PVP para reetiquetar—, y un pendiente
 // antiguo de un medicamento se limpia al reprocesarse.
 import assert from "assert";
-import { diffPvp, type RegistroPvp } from "./pvp";
+import { diffPvp, sanearBorrador, type RegistroPvp } from "./pvp";
 
 const F = "2026-07-02";
 const base = (p: Partial<RegistroPvp> = {}): RegistroPvp => ({
@@ -30,5 +30,21 @@ assert.strictEqual(r2.lastSeen, F, "se refresca lastSeen");
 
 // …pero el mismo caso en un medicamento LIMPIA el pendiente antiguo.
 assert.strictEqual(diffPvp("X", 10, F, base({ newPrice: 10, pending: true }), false).pending, false, "medicamento limpia pendiente antiguo");
+
+// sanearBorrador: conserva lo válido y descarta lo que ensuciaría el render.
+const limpio = sanearBorrador({
+  tamanos: { "123": "M", "456": "XL", "789": 1 }, // solo "M" es válido
+  cantidades: { a: 3, b: 0, c: 2.5, d: "x" }, // solo enteros ≥ 1
+  extras: [
+    { id: "extra-1", tipo: "promo", denominacion: "3x2", precio: null },
+    { id: "extra-2", tipo: "raro", denominacion: "x", precio: null }, // tipo inválido
+    { tipo: "precio", denominacion: "x", precio: 5 }, // sin id
+  ],
+});
+assert.deepStrictEqual(limpio.tamanos, { "123": "M" }, "solo tamaños válidos");
+assert.deepStrictEqual(limpio.cantidades, { a: 3 }, "solo cantidades enteras ≥ 1");
+assert.strictEqual(limpio.extras.length, 1, "solo la fila extra bien formada");
+assert.deepStrictEqual(sanearBorrador(null), { tamanos: {}, cantidades: {}, extras: [] }, "no-objeto → borrador vacío");
+assert.deepStrictEqual(sanearBorrador({ extras: "nope" }).extras, [], "extras no-array → []");
 
 console.log("pvp.test.ts ✓");
