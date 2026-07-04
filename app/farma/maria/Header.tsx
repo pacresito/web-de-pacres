@@ -27,9 +27,9 @@ export default function Header() {
           {enPanel ? (
             <>
               <Link href="/farma/maria/descuentos" className="fa-nav-item">Descuentos</Link>
+              <Link href="/farma/maria/recomendaciones" className="fa-nav-item">Recomendaciones</Link>
               <Link href="/farma/maria/inventario" className="fa-nav-item">Inventario</Link>
               <Link href="/farma/maria/pvp" className="fa-nav-item">PVP</Link>
-              <Link href="/farma/maria/recomendaciones" className="fa-nav-item">Recomendaciones</Link>
             </>
           ) : (
             <>
