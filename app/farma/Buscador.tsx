@@ -11,6 +11,7 @@ import { XIcon } from "./icons";
 export default function Buscador({
   items,
   onSelect,
+  onClear,
   placeholder,
   autoFocus,
   inputClassName,
@@ -18,6 +19,7 @@ export default function Buscador({
 }: {
   items: string[];
   onSelect: (item: string) => void;
+  onClear?: () => void; // se llama al vaciar el campo con el aspa (para resetear el filtro del padre)
   placeholder?: string;
   autoFocus?: boolean;
   inputClassName?: string; // sobreescribe el estilo del campo (p. ej. skin UnycopWin en Prioridades)
@@ -71,6 +73,7 @@ export default function Buscador({
           onClick={() => {
             setQ("");
             setAbierto(false);
+            onClear?.();
           }}
           title="Borrar"
           aria-label="Borrar"

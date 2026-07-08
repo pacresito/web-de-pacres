@@ -2,24 +2,35 @@
 
 import { useMemo, useState } from "react";
 import { rankear, type LabDescuento } from "@/lib/farma/prioridades";
-import { coincide, contiene, filtrarFallback, sinAcentos } from "@/lib/farma/buscar";
-import SearchBox from "./SearchBox";
-import { PencilIcon, CheckIcon, XIcon, ConfirmarIcon } from "./icons";
+import Buscador from "./Buscador";
+import { PencilIcon, CheckIcon, XIcon, ConfirmarIcon, PlusIcon } from "./icons";
 
-// Descuentos: la tabla de Prioridades en modo edición. María busca (por principio activo
-// o laboratorio) y corrige el descuento de cada lab. Dos filtros de revisión combinables
-// con la búsqueda: "Inferidos" (descuentos que decidimos nosotros, sin validar) y "Sólo
-// uno" (principios con un único laboratorio). El número inferido se pinta sutil; se puede
-// confirmar (dar por bueno) o editar — ambos apagan el flag. Mismo dato y orden que
-// Prioridades (reusa rankear); la escritura va al blob farma:descuentos.
+// Descuentos: la tabla de Prioridades en modo edición. María elige en el autocompletar un
+// principio activo O un laboratorio y ve solo ese; corrige el descuento de cada lab. Dos
+// filtros de revisión combinables con la selección: "Inferidos" (descuentos que decidimos
+// nosotros, sin validar) y "Sólo uno" (principios con un único laboratorio). El número
+// inferido se pinta sutil; se puede confirmar (dar por bueno) o editar — ambos apagan el
+// flag. Mismo dato y orden que Prioridades (reusa rankear); la escritura va al blob
+// farma:descuentos.
 
 const LIMITE = 100; // tope de filas pintadas (el universo son miles): filtra o busca para afinar
 
 type Fila = ReturnType<typeof rankear>[number] & { principio: string };
 
+// Normaliza lo tecleado en un campo de descuento: solo dígitos y un decimal, tope 100.
+// El "-" se cae con el filtro (nunca < 0) y >100 se recorta a 100. Deja pasar cadenas
+// intermedias ("", "3.") mientras se escribe.
+function sanearDescuento(raw: string): string {
+  const limpio = raw.replace(",", ".").replace(/[^\d.]/g, "");
+  const [ent, dec] = limpio.split(".");
+  const s = ent + (limpio.includes(".") ? "." + (dec ?? "").slice(0, 1) : "");
+  return s !== "" && Number(s) > 100 ? "100" : s;
+}
+
 export default function Descuentos({ data: inicial }: { data: Record<string, LabDescuento[]> }) {
   const [data, setData] = useState(inicial);
-  const [q, setQ] = useState("");
+  const [seleccion, setSeleccion] = useState<string | null>(null); // principio O lab elegido en el autocompletar
+  const [busquedaKey, setBusquedaKey] = useState(0); // se incrementa para remontar el buscador y vaciar su campo
   const [soloInferidos, setSoloInferidos] = useState(false);
   const [soloUno, setSoloUno] = useState(false);
   const [editando, setEditando] = useState<string | null>(null); // denominación (fila) en edición
@@ -27,7 +38,13 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
   const [ocupado, setOcupado] = useState<string | null>(null); // denominación guardando
   const [error, setError] = useState("");
 
-  const consulta = sinAcentos(q.trim());
+  // Alta de descuento: principio (de los existentes) → lab (de los que aún no lo tienen)
+  // → valor. No crea principios ni labs nuevos (se valida también en el servidor).
+  const [anadiendo, setAnadiendo] = useState(false);
+  const [nPrincipio, setNPrincipio] = useState<string | null>(null);
+  const [nLab, setNLab] = useState<string | null>(null);
+  const [nDescuento, setNDescuento] = useState("");
+  const [guardandoAlta, setGuardandoAlta] = useState(false);
 
   const todas: Fila[] = useMemo(
     () =>
@@ -37,23 +54,35 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
     [data],
   );
 
+  // Sugerencias del autocompletar: todos los principios activos y todos los laboratorios.
+  const sugerencias = useMemo(() => {
+    const set = new Set<string>();
+    for (const [principio, labs] of Object.entries(data)) {
+      set.add(principio);
+      for (const l of labs) set.add(l.lab);
+    }
+    return [...set].sort((a, b) => a.localeCompare(b, "es"));
+  }, [data]);
+
   const totalInferidos = useMemo(() => todas.filter((f) => f.inferido).length, [todas]);
   const totalUno = useMemo(
     () => todas.filter((f) => data[f.principio].length === 1).length,
     [todas, data],
   );
 
-  const activo = consulta !== "" || soloInferidos || soloUno;
+  const activo = seleccion !== null || soloInferidos || soloUno;
 
-  // Filtros y búsqueda se combinan. Orden: por principio y, dentro, por prioridad (mejor
-  // descuento primero; sin descuento al final), para conservar la comparación entre labs.
+  // La selección (principio o lab) y los chips se combinan. Orden: por principio y, dentro,
+  // por prioridad (mejor descuento primero; sin descuento al final), para conservar la
+  // comparación entre labs.
   const filtradas = useMemo(() => {
     if (!activo) return [];
     let xs = todas;
     if (soloUno) xs = xs.filter((f) => data[f.principio].length === 1);
     if (soloInferidos) xs = xs.filter((f) => f.inferido);
-    if (consulta)
-      xs = filtrarFallback(xs, (f) => contiene(f.denominacion, consulta), (f) => coincide(f.denominacion, consulta));
+    // Un principio es clave de `data`; si no, la selección es un laboratorio.
+    if (seleccion)
+      xs = data[seleccion] ? xs.filter((f) => f.principio === seleccion) : xs.filter((f) => f.lab === seleccion);
     return [...xs].sort((a, b) => {
       const p = a.principio.localeCompare(b.principio, "es");
       if (p !== 0) return p;
@@ -62,7 +91,7 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
       if (b.prioridad === null) return -1;
       return a.prioridad - b.prioridad;
     });
-  }, [activo, todas, data, soloUno, soloInferidos, consulta]);
+  }, [activo, todas, data, soloUno, soloInferidos, seleccion]);
 
   const visibles = filtradas.slice(0, LIMITE);
 
@@ -121,25 +150,139 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
     setEditando(f.denominacion);
   }
 
+  // Vacía la búsqueda: quita la selección y remonta el buscador (limpia su campo de texto).
+  function limpiarBusqueda() {
+    setSeleccion(null);
+    setBusquedaKey((k) => k + 1);
+  }
+
+  // Chips excluyentes entre sí; al activar uno se apaga el otro y se limpia la búsqueda.
+  function toggleChip(cual: "inferidos" | "uno") {
+    const activar = cual === "inferidos" ? !soloInferidos : !soloUno;
+    setSoloInferidos(cual === "inferidos" ? activar : false);
+    setSoloUno(cual === "uno" ? activar : false);
+    if (activar) limpiarBusqueda();
+  }
+
+  // Labs que aún NO tienen el principio elegido (los únicos que se pueden añadir).
+  const labsDisponibles = useMemo(() => {
+    if (!nPrincipio) return [];
+    const yaTiene = new Set(data[nPrincipio].map((l) => l.lab));
+    const set = new Set<string>();
+    for (const labs of Object.values(data)) for (const l of labs) if (!yaTiene.has(l.lab)) set.add(l.lab);
+    return [...set].sort((a, b) => a.localeCompare(b, "es"));
+  }, [data, nPrincipio]);
+
+  function cerrarAlta() {
+    setAnadiendo(false);
+    setNPrincipio(null);
+    setNLab(null);
+    setNDescuento("");
+    setError("");
+  }
+
+  async function anadir() {
+    if (!nPrincipio || !nLab) {
+      setError("Elige principio activo y laboratorio.");
+      return;
+    }
+    const valor = Number(nDescuento);
+    if (nDescuento.trim() === "" || !Number.isFinite(valor) || valor < 0 || valor > 100) {
+      setError("Descuento entre 0 y 100.");
+      return;
+    }
+    setGuardandoAlta(true);
+    const ok = await post("/farma/api/descuento/add", { principio: nPrincipio, lab: nLab, valor });
+    setGuardandoAlta(false);
+    if (ok) {
+      const principio = nPrincipio;
+      setData((d) => ({ ...d, [principio]: [...d[principio], { lab: nLab, descuento: valor, inferido: false }] }));
+      cerrarAlta();
+      setSeleccion(principio); // deja a la vista el principio recién ampliado
+    }
+  }
+
   return (
     <div className="fa-panel">
       <div className="flex flex-col gap-3 border-b p-4" style={{ borderColor: "var(--fa-border)" }}>
-        <SearchBox
-          value={q}
-          onChange={setQ}
+        <Buscador
+          key={busquedaKey}
+          items={sugerencias}
+          onSelect={setSeleccion}
+          onClear={() => setSeleccion(null)}
           placeholder="Buscar por principio activo o laboratorio…"
           autoFocus
         />
-        <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={() => setSoloInferidos(!soloInferidos)} className={`fa-chip ${soloInferidos ? "fa-chip-on" : ""}`}>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => { setError(""); setAnadiendo(true); }}
+            className="fa-btn fa-btn-outline inline-flex items-center gap-1.5 px-[13px] py-[7px] text-[13px]"
+          >
+            <PlusIcon /> Añadir descuento
+          </button>
+          <button type="button" onClick={() => toggleChip("inferidos")} className={`fa-chip ${soloInferidos ? "fa-chip-on" : ""}`}>
             <span className="fa-chip-box"><CheckIcon /></span>
             Inferidos <span className="fa-chip-count">({totalInferidos})</span>
           </button>
-          <button type="button" onClick={() => setSoloUno(!soloUno)} className={`fa-chip ${soloUno ? "fa-chip-on" : ""}`}>
+          <button type="button" onClick={() => toggleChip("uno")} className={`fa-chip ${soloUno ? "fa-chip-on" : ""}`}>
             <span className="fa-chip-box"><CheckIcon /></span>
             Sólo uno <span className="fa-chip-count">({totalUno})</span>
           </button>
         </div>
+
+        {anadiendo && (
+          <div className="flex flex-wrap items-end gap-2 rounded border p-3" style={{ borderColor: "var(--fa-border)", background: "var(--fa-surface)" }}>
+            <label className="fa-t-muted flex flex-col gap-1 text-[12px]">
+              Principio activo
+              <div className="w-56">
+                <Buscador
+                  items={Object.keys(data)}
+                  onSelect={(p) => { setNPrincipio(p); setNLab(null); }}
+                  onClear={() => { setNPrincipio(null); setNLab(null); }}
+                  placeholder="Principio activo…"
+                  inputClassName="fa-input"
+                  autoFocus
+                />
+              </div>
+            </label>
+            <label className="fa-t-muted flex flex-col gap-1 text-[12px]">
+              Laboratorio
+              <div className="w-56">
+                <Buscador
+                  key={nPrincipio ?? "sin-principio"}
+                  items={labsDisponibles}
+                  onSelect={setNLab}
+                  onClear={() => setNLab(null)}
+                  placeholder={nPrincipio ? "Laboratorio…" : "Elige principio primero"}
+                  inputClassName="fa-input"
+                />
+              </div>
+            </label>
+            <label className="fa-t-muted flex flex-col gap-1 text-[12px]">
+              Descuento
+              <input
+                type="text"
+                inputMode="decimal"
+                value={nDescuento}
+                onChange={(e) => setNDescuento(sanearDescuento(e.target.value))}
+                onKeyDown={(e) => { if (e.key === "Enter") anadir(); else if (e.key === "Escape") cerrarAlta(); }}
+                placeholder="%"
+                className="fa-input fa-mono text-right"
+                style={{ width: 90 }}
+              />
+            </label>
+            <div className="flex gap-1">
+              <button type="button" onClick={anadir} disabled={!nPrincipio || !nLab || guardandoAlta} className="fa-btn fa-btn-primary px-3 py-[7px] text-[13px]">
+                {guardandoAlta ? "Añadiendo…" : "Añadir"}
+              </button>
+              <button type="button" onClick={cerrarAlta} disabled={guardandoAlta} className="fa-btn fa-btn-outline px-3 py-[7px] text-[13px]">
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
+
         {error && <p className="fa-t-red text-[13px]">{error}</p>}
       </div>
 
@@ -174,11 +317,10 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
                       <td className="fa-td fa-th-r">
                         {enEdicion ? (
                           <input
-                            type="number"
-                            min={0}
-                            max={100}
+                            type="text"
+                            inputMode="decimal"
                             value={draft}
-                            onChange={(e) => setDraft(e.target.value)}
+                            onChange={(e) => setDraft(sanearDescuento(e.target.value))}
                             onKeyDown={(e) => {
                               if (e.key === "Enter") guardar(f);
                               else if (e.key === "Escape") setEditando(null);

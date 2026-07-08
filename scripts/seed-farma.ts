@@ -7,6 +7,9 @@ import Redis from "ioredis";
 import { readFileSync, existsSync } from "fs";
 import { resolve } from "path";
 import { KEYS } from "../lib/farma/keys";
+import type { LabDescuento } from "../lib/farma/prioridades";
+
+type Descuentos = Record<string, LabDescuento[]>;
 
 async function main(): Promise<void> {
   const prod = process.argv.includes("--prod");
@@ -17,10 +20,34 @@ async function main(): Promise<void> {
 
   const redis = new Redis(url);
 
-  // Descuentos (Prioridades).
-  const prioridades = JSON.parse(readFileSync(resolve("seed/prioridades.json"), "utf-8")) as Record<string, unknown>;
-  await redis.set(KEYS.descuentos(dev), JSON.stringify(prioridades));
-  console.log(`Sembrados ${Object.keys(prioridades).length} principios en ${KEYS.descuentos(dev)}.`);
+  // Descuentos (Prioridades). Una vez sembrado, el blob lo gobierna María (lo edita
+  // desde la pantalla Descuentos, incl. altas de labs). Por eso NO se sobrescribe: se
+  // MERGEA — el blob existente gana en todo conflicto y el seed solo AÑADE lo que falta
+  // (principios nuevos como los que mete Pablo por el pipeline, o labs nuevos de un
+  // principio). Así un re-seed nunca borra lo que María validó ni sus altas.
+  const seedDesc = JSON.parse(readFileSync(resolve("seed/prioridades.json"), "utf-8")) as Descuentos;
+  const rawPrev = await redis.get(KEYS.descuentos(dev));
+  const prev: Descuentos = rawPrev ? JSON.parse(rawPrev) : {};
+  const merged: Descuentos = { ...prev };
+  let nuevosPrincipios = 0;
+  let nuevosLabs = 0;
+  for (const [principio, labs] of Object.entries(seedDesc)) {
+    const existentes = merged[principio];
+    if (!existentes) {
+      merged[principio] = labs;
+      nuevosPrincipios++;
+      continue;
+    }
+    const presentes = new Set(existentes.map((l) => l.lab));
+    const anadir = labs.filter((l) => !presentes.has(l.lab));
+    if (anadir.length) merged[principio] = [...existentes, ...anadir];
+    nuevosLabs += anadir.length;
+  }
+  await redis.set(KEYS.descuentos(dev), JSON.stringify(merged));
+  console.log(
+    `Descuentos en ${KEYS.descuentos(dev)}: ${Object.keys(merged).length} principios ` +
+      `(+${nuevosPrincipios} principios, +${nuevosLabs} labs nuevos; el resto se conserva).`,
+  );
 
   // Ventas: ref:pedidos (blob) + stmin (hash). El StMín lo gobierna María a partir de
   // aquí; solo se siembran los > 0 (StMín 0 = nunca rotura, no aporta a Pedidos ni a Mínimos).

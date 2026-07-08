@@ -14,6 +14,19 @@ const NAVY = "#1A3A7A";
 const CHECK = "#1a7a1a";
 const ROW_BORDER = "#D0C8B8";
 
+// El mostrador solo necesita ver los mejores labs, no la lista entera: se muestran
+// los 5 primeros. Si el 5º puesto está empatado (varios labs comparten prioridad), se
+// incluyen todos los de esa prioridad —nunca se parte un empate, sería arbitrario elegir
+// entre labs con el mismo margen—, así que pueden salir más de 5 filas.
+const TOPE = 5;
+function top<T extends { prioridad: number | null }>(filas: T[]): T[] {
+  if (filas.length <= TOPE) return filas;
+  const corte = filas[TOPE - 1].prioridad;
+  let fin = TOPE;
+  while (fin < filas.length && filas[fin].prioridad === corte) fin++;
+  return filas.slice(0, fin);
+}
+
 const th: React.CSSProperties = {
   background: NAVY,
   color: "#fff",
@@ -27,7 +40,7 @@ export default function Prioridades({ data }: { data: Record<string, LabDescuent
   const [principio, setPrincipio] = useState<string | null>(null);
   const [sel, setSel] = useState(0);
   const principios = Object.keys(data); // ya ordenado alfabéticamente desde el seed
-  const filas = principio ? rankear(principio, data[principio]) : [];
+  const filas = principio ? top(rankear(principio, data[principio])) : [];
   const seleccionada = filas[sel];
   const fecha = new Date().toLocaleDateString("es-ES");
 
@@ -82,6 +95,7 @@ export default function Prioridades({ data }: { data: Record<string, LabDescuent
               <col style={{ width: 40 }} />
               <col style={{ width: 30 }} />
               <col />
+              <col style={{ width: 80 }} />
               <col style={{ width: 90 }} />
             </colgroup>
             <thead>
@@ -90,13 +104,14 @@ export default function Prioridades({ data }: { data: Record<string, LabDescuent
                 <th style={{ ...th, textAlign: "center" }}>EFG</th>
                 <th style={{ ...th, textAlign: "center" }}>B</th>
                 <th style={{ ...th, textAlign: "left" }}>Denominación</th>
+                <th style={{ ...th, textAlign: "right" }}>Descuento</th>
                 <th style={{ ...th, textAlign: "right", borderRight: "none" }}>Prioridad</th>
               </tr>
             </thead>
             <tbody>
               {filas.length === 0 && (
                 <tr>
-                  <td colSpan={5} style={{ padding: "10px", textAlign: "center", color: "#888" }}>
+                  <td colSpan={6} style={{ padding: "10px", textAlign: "center", color: "#888" }}>
                     Busque un principio activo para ver los laboratorios y su prioridad.
                   </td>
                 </tr>
@@ -118,6 +133,9 @@ export default function Prioridades({ data }: { data: Record<string, LabDescuent
                     <td style={{ ...cell, textAlign: "center", color: checkColor }}>✓</td>
                     <td style={cell} />
                     <td style={cell} className="whitespace-nowrap">{f.denominacion}</td>
+                    <td style={{ ...cell, textAlign: "right" }} className="tabular-nums">
+                      {f.descuento === null ? "—" : `${f.descuento} %`}
+                    </td>
                     <td style={{ ...cell, textAlign: "right", fontWeight: 700 }} className="tabular-nums">
                       {f.prioridad ?? "—"}
                     </td>
