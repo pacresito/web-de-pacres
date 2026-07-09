@@ -125,14 +125,11 @@
 }
 .v-card:active { box-shadow: 0 6px 20px rgba(31, 92, 57, 0.14); }
 .v-card-img {
+  position: relative;
   aspect-ratio: 3 / 2;
   background: linear-gradient(135deg, #dfeadf, #cfe0d2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--v-verde-osc);
-  font-size: 34px;
 }
+.v-card-img img { object-fit: cover; }
 .v-card-body { padding: 12px 13px 14px; display: flex; flex-direction: column; gap: 7px; }
 .v-card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .v-tipo {
@@ -174,15 +171,13 @@
 .v-volver { display: inline-block; font-size: 13px; color: var(--v-suave); margin-bottom: 14px; }
 @media (hover: hover) { .v-volver:hover { color: var(--v-verde-osc); } }
 .v-ficha-img {
+  position: relative;
   aspect-ratio: 5 / 2;
   background: linear-gradient(135deg, #dfeadf, #cfe0d2);
   border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--v-verde-osc);
-  font-size: 52px;
+  overflow: hidden;
 }
+.v-ficha-img img { object-fit: cover; }
 .v-ficha-top { display: flex; align-items: center; gap: 10px; margin-top: 18px; }
 .v-ficha h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; margin-top: 8px; }
 .v-ficha-que { font-size: 15px; line-height: 1.5; margin-top: 8px; }

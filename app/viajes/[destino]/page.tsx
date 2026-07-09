@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { DatosViajes, Restaurante } from "@/lib/viajes/tipos";
@@ -54,7 +55,9 @@ export default async function FichaDestino({ params }: Props) {
       <article className="v-ficha">
         <Link href="/viajes" className="v-volver">← Todos los sitios</Link>
 
-        <div className="v-ficha-img">🏔️</div>
+        <div className="v-ficha-img">
+          <Image src={d.imagen} alt={d.nombre} fill sizes="(max-width: 860px) 100vw, 860px" priority />
+        </div>
 
         <div className="v-ficha-top">
           <span className="v-tipo">{d.tipo}</span>

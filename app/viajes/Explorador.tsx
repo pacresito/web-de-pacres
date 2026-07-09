@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
+import Image from "next/image";
 import Link from "next/link";
 import type { DatosViajes, Destino, Restaurante } from "@/lib/viajes/tipos";
 import { filtrarDestinos, type Desnivel, type Filtros } from "@/lib/viajes/filtrar";
@@ -169,7 +170,9 @@ function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; chi
 function Card({ destino: d, zona }: { destino: Destino; zona: string }) {
   return (
     <Link href={`/viajes/${d.slug}`} className="v-card">
-      <div className="v-card-img">🏔️</div>
+      <div className="v-card-img">
+        <Image src={d.imagen} alt={d.nombre} fill sizes="(max-width: 600px) 100vw, 300px" />
+      </div>
       <div className="v-card-body">
         <div className="v-card-top">
           <span className="v-tipo">{d.tipo}</span>
