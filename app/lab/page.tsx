@@ -98,14 +98,14 @@ function LabTable({ items, visible }: { items: LabItem[]; visible: number }) {
   return (
     <div style={{ border: "1px solid var(--t-rule)", borderRadius: 10, overflow: "hidden" }} className="t-lab-desktop">
       <div style={{
-        display: "grid", gridTemplateColumns: "38px 100px 160px 1fr 80px 24px",
+        display: "grid", gridTemplateColumns: "38px 100px 160px 1fr 80px",
         gap: "0 16px", padding: "10px 18px",
         background: "var(--t-paper2)", borderBottom: "1px dashed var(--t-rule)",
         fontFamily: "var(--t-mono)", fontSize: 10, color: "var(--t-ink3)",
         textTransform: "uppercase", letterSpacing: "0.05em",
       }}>
         <span>#</span><span>type</span><span>title</span><span>description</span>
-        <span style={{ textAlign: "right" }}>status</span><span />
+        <span>status</span>
       </div>
 
       {items.map((item, idx) => {
@@ -118,7 +118,7 @@ function LabTable({ items, visible }: { items: LabItem[]; visible: number }) {
               className={clickable ? "t-rowhover" : undefined}
               onClick={() => { if (clickable) router.push(item.href!); }}
               style={{
-                display: "grid", gridTemplateColumns: "38px 100px 160px 1fr 80px 24px",
+                display: "grid", gridTemplateColumns: "38px 100px 160px 1fr 80px",
                 gap: "0 16px", padding: "10px 18px",
                 borderTop: idx === 0 ? "none" : "1px dashed var(--t-rule)",
                 alignItems: "center",
@@ -129,8 +129,10 @@ function LabTable({ items, visible }: { items: LabItem[]; visible: number }) {
               <TypePill type={item.type} status={item.status} />
               <span style={{ fontFamily: "var(--t-sans)", fontSize: 14, fontWeight: 500, color: "var(--t-ink)" }}>{item.title}</span>
               <span style={{ fontFamily: "var(--t-sans)", fontSize: 13, color: "var(--t-ink2)", lineHeight: 1.45 }}>{item.description}</span>
-              <span style={{ textAlign: "right" }}><StatusTag status={item.status} /></span>
-              <span style={{ fontFamily: "var(--t-mono)", fontSize: 11, textAlign: "center", color: clickable ? "var(--t-accent2)" : "transparent" }}>→</span>
+              <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <StatusTag status={item.status} />
+                {clickable && <span style={{ fontFamily: "var(--t-mono)", fontSize: 11, color: "var(--t-accent2)" }}>→</span>}
+              </span>
             </div>
           </div>
         );
