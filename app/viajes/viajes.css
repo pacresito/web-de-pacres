@@ -1,0 +1,239 @@
+/* Estilo PROVISIONAL de /viajes (variante B "outdoor"): verde, badges, robusto.
+   Aislado bajo .viajes; pensado para que Claude Design lo sustituya sin tocar la
+   lógica (Explorador.tsx no depende de estos nombres más que como className). */
+.viajes {
+  --v-verde: #2f7d4f;
+  --v-verde-osc: #1f5c39;
+  --v-bg: #f5f3ec;
+  --v-card: #ffffff;
+  --v-borde: #e3ddd0;
+  --v-texto: #23281f;
+  --v-suave: #6d7466;
+  --v-badge: #e8f1e9;
+
+  min-height: 100vh;
+  background: var(--v-bg);
+  color: var(--v-texto);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.viajes a { color: inherit; text-decoration: none; }
+
+/* Cabecera */
+.v-header {
+  background: var(--v-verde-osc);
+  color: #f4f7f2;
+  padding: 22px 20px;
+}
+.v-header-inner { max-width: 1180px; margin: 0 auto; }
+.v-marca { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; }
+.v-lema { margin-top: 4px; font-size: 14px; opacity: 0.85; }
+
+/* Barra de filtros */
+.v-filtros {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--v-card);
+  border-bottom: 1px solid var(--v-borde);
+  padding: 12px 20px;
+}
+.v-filtros-inner {
+  max-width: 1180px;
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.v-campo { display: flex; flex-direction: column; gap: 3px; }
+.v-campo label { font-size: 11px; font-weight: 600; color: var(--v-suave); text-transform: uppercase; letter-spacing: 0.03em; }
+.v-campo select {
+  font: inherit;
+  font-size: 14px;
+  padding: 6px 8px;
+  border: 1px solid var(--v-borde);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--v-texto);
+}
+.v-toggles { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
+.v-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 11px;
+  border: 1px solid var(--v-borde);
+  border-radius: 999px;
+  font-size: 13px;
+  cursor: pointer;
+  user-select: none;
+  background: #fff;
+}
+.v-toggle input { accent-color: var(--v-verde); }
+.v-toggle[data-on="true"] { background: var(--v-badge); border-color: var(--v-verde); color: var(--v-verde-osc); font-weight: 600; }
+.v-limpiar {
+  font: inherit;
+  font-size: 13px;
+  padding: 7px 11px;
+  border: 1px solid var(--v-borde);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--v-suave);
+  cursor: pointer;
+}
+.v-limpiar:disabled { opacity: 0.4; cursor: default; }
+
+/* Cuerpo: grid + mapa */
+.v-main {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 18px 20px 40px;
+  display: grid;
+  gap: 20px;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 900px) {
+  .v-main { grid-template-columns: minmax(0, 1fr) 340px; align-items: start; }
+  .v-aside { position: sticky; top: 76px; }
+}
+.v-conteo { font-size: 13px; color: var(--v-suave); margin-bottom: 12px; }
+
+.v-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+}
+.v-vacio {
+  padding: 40px 0;
+  text-align: center;
+  color: var(--v-suave);
+}
+
+/* Ficha (card) */
+.v-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--v-card);
+  border: 1px solid var(--v-borde);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: box-shadow 0.15s, transform 0.15s;
+}
+@media (hover: hover) {
+  .v-card:hover { box-shadow: 0 6px 20px rgba(31, 92, 57, 0.14); transform: translateY(-2px); }
+}
+.v-card:active { box-shadow: 0 6px 20px rgba(31, 92, 57, 0.14); }
+.v-card-img {
+  aspect-ratio: 3 / 2;
+  background: linear-gradient(135deg, #dfeadf, #cfe0d2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--v-verde-osc);
+  font-size: 34px;
+}
+.v-card-body { padding: 12px 13px 14px; display: flex; flex-direction: column; gap: 7px; }
+.v-card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.v-tipo {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--v-verde-osc);
+  background: var(--v-badge);
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+.v-zona { font-size: 12px; color: var(--v-suave); }
+.v-nombre { font-size: 16px; font-weight: 700; line-height: 1.2; }
+.v-que { font-size: 13px; color: var(--v-suave); line-height: 1.4; }
+.v-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+.v-pill {
+  font-size: 11.5px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: #f0efe8;
+  color: var(--v-texto);
+}
+.v-pill--ok { background: var(--v-badge); color: var(--v-verde-osc); font-weight: 600; }
+
+/* Aside: mapa Leaflet + restaurantes */
+.v-mapa {
+  height: 340px;
+  border: 1px solid var(--v-borde);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #eef2ec;
+}
+.v-mapa .leaflet-popup-content { font-family: system-ui, sans-serif; font-size: 13px; }
+.v-mapa .leaflet-popup-content a { color: var(--v-verde-osc); font-weight: 600; }
+
+/* Ficha de destino (/viajes/[destino]) */
+.v-ficha { max-width: 860px; margin: 0 auto; padding: 18px 20px 48px; }
+.v-volver { display: inline-block; font-size: 13px; color: var(--v-suave); margin-bottom: 14px; }
+@media (hover: hover) { .v-volver:hover { color: var(--v-verde-osc); } }
+.v-ficha-img {
+  aspect-ratio: 5 / 2;
+  background: linear-gradient(135deg, #dfeadf, #cfe0d2);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--v-verde-osc);
+  font-size: 52px;
+}
+.v-ficha-top { display: flex; align-items: center; gap: 10px; margin-top: 18px; }
+.v-ficha h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; margin-top: 8px; }
+.v-ficha-que { font-size: 15px; line-height: 1.5; margin-top: 8px; }
+.v-maps {
+  display: inline-block;
+  margin-top: 14px;
+  padding: 9px 16px;
+  border-radius: 999px;
+  background: var(--v-verde);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+}
+@media (hover: hover) { .v-maps:hover { background: var(--v-verde-osc); } }
+.v-maps:active { background: var(--v-verde-osc); }
+.v-datos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px 16px;
+  background: var(--v-card);
+  border: 1px solid var(--v-borde);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-top: 18px;
+}
+.v-dato dt { font-size: 11px; font-weight: 600; color: var(--v-suave); text-transform: uppercase; letter-spacing: 0.03em; }
+.v-dato dd { font-size: 14px; font-weight: 600; margin-top: 2px; }
+.v-seccion { margin-top: 24px; }
+.v-seccion h2 { font-size: 17px; font-weight: 700; margin-bottom: 10px; }
+.v-quever { padding-left: 20px; display: flex; flex-direction: column; gap: 5px; font-size: 14px; }
+.v-nota {
+  margin-top: 18px;
+  padding: 11px 14px;
+  border-left: 3px solid var(--v-verde);
+  background: var(--v-badge);
+  border-radius: 0 10px 10px 0;
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+.v-resto-precios { font-size: 12.5px; font-weight: 600; color: var(--v-verde-osc); margin-top: 5px; }
+.v-resto-platos { font-size: 12.5px; color: var(--v-suave); margin-top: 4px; }
+
+.v-restos { margin-top: 16px; }
+.v-restos h2 { font-size: 15px; font-weight: 700; margin-bottom: 10px; }
+.v-resto {
+  background: var(--v-card);
+  border: 1px solid var(--v-borde);
+  border-radius: 10px;
+  padding: 11px 12px;
+  margin-bottom: 10px;
+}
+.v-resto-nombre { font-size: 14px; font-weight: 700; }
+.v-resto-sub { font-size: 12px; color: var(--v-suave); margin-top: 2px; }
+.v-resto-comida { font-size: 12.5px; margin-top: 5px; }
