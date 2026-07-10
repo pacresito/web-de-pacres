@@ -4,6 +4,7 @@ import LoginForm from "./LoginForm";
 import LogoutButton from "./LogoutButton";
 import Prioridades from "./Prioridades";
 import { cargarDescuentos } from "@/lib/farma/descuentos-store";
+import { registrarMetrica } from "@/lib/farma/metricas";
 
 // Landing de /farma: sin sesión → login; con sesión → Prioridades. El admin ve
 // además el acceso a su panel (/farma/maria), desde donde cuelga el resto.
@@ -16,6 +17,7 @@ export default async function FarmaPage() {
       </div>
     );
 
+  await registrarMetrica("visitas:prioridades");
   const data = await cargarDescuentos();
 
   return (

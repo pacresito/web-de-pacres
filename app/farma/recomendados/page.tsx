@@ -4,6 +4,7 @@ import { getRol } from "../auth";
 import LogoutButton from "../LogoutButton";
 import Recomendados from "../Recomendados";
 import { cargarRecomendaciones } from "@/lib/farma/recomendaciones-store";
+import { registrarMetrica } from "@/lib/farma/metricas";
 import redis from "@/lib/redis";
 import { KEYS } from "@/lib/farma/keys";
 import type { RefPedidos } from "@/lib/farma/pedidos";
@@ -15,6 +16,7 @@ export default async function RecomendadosPage() {
   const rol = await getRol();
   if (!rol) redirect("/farma");
 
+  await registrarMetrica("visitas:recomendados");
   const [recomendaciones, refRaw] = await Promise.all([
     cargarRecomendaciones(),
     redis.get(KEYS.refPedidos()),

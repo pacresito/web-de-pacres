@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Buscador from "./Buscador";
+import { contarMetrica } from "./contarMetrica";
 import { rankear, type LabDescuento } from "@/lib/farma/prioridades";
 
 // Prioridades: el usuario del mostrador busca un principio activo y ve los
@@ -76,6 +77,7 @@ export default function Prioridades({ data }: { data: Record<string, LabDescuent
               onSelect={(p) => {
                 setPrincipio(p);
                 setSel(0);
+                contarMetrica("busquedas:prioridades");
               }}
               placeholder="Ej: AMLODIPINO"
               autoFocus

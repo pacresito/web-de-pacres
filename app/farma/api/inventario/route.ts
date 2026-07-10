@@ -15,7 +15,7 @@ import { getRol } from "../../auth";
 import redis from "@/lib/redis";
 import { KEYS } from "@/lib/farma/keys";
 import { parseInventario, evaluarCarga, totalUnidades, esEspecialidad, RANGO_BLOQUEO, type ArticuloInventario } from "@/lib/farma/inventario";
-import { incrStat } from "@/lib/farma/stats";
+import { registrarMetrica, registrarErrorInventario } from "@/lib/farma/metricas";
 import { diffPvp, type RegistroPvp } from "@/lib/farma/pvp";
 
 export async function POST(request: Request): Promise<Response> {
@@ -39,9 +39,11 @@ export async function POST(request: Request): Promise<Response> {
     formato = inv.formato;
   } catch (err) {
     console.error("parseInventario falló:", err);
+    await registrarErrorInventario("no se pudo leer");
     return Response.json({ error: "No se pudo leer el inventario" }, { status: 422 });
   }
   if (items.length === 0) {
+    await registrarErrorInventario("sin artículos");
     return Response.json({ error: "El inventario no tiene artículos: ¿formato correcto?" }, { status: 422 });
   }
 
@@ -50,6 +52,7 @@ export async function POST(request: Request): Promise<Response> {
   // (categorías comerciales, sin medicamentos → incompleto) no. Sin familia no se toca
   // NADA (ni stock): se rechaza y se pide el informe por familia.
   if (formato !== "familia") {
+    await registrarErrorInventario("formato sin familia");
     return Response.json({ estado: "formato" });
   }
 
@@ -59,6 +62,9 @@ export async function POST(request: Request): Promise<Response> {
   const veredicto = evaluarCarga(articulos, unidades);
   const confirmar = form?.get("confirmar") === "true"; // el aviso lo confirma María; el bloqueo es duro
   if (veredicto === "bloqueo" || (veredicto === "aviso" && !confirmar)) {
+    // Solo el bloqueo es un rechazo duro; el aviso es un checkpoint que María reenvía
+    // confirmado, así que no se cuenta como error (si no, contaría dos veces).
+    if (veredicto === "bloqueo") await registrarErrorInventario("carga fuera de rango");
     return Response.json({ estado: veredicto, articulos, unidades, limites: RANGO_BLOQUEO });
   }
 
@@ -86,7 +92,7 @@ export async function POST(request: Request): Promise<Response> {
   pipe.set(KEYS.meta(), JSON.stringify({ fechaInforme, loadedAt: Date.now(), totalArticulos: articulos, unidades }));
   await pipe.exec();
 
-  await incrStat("inventario-subido");
+  await registrarMetrica("inventario:subida-ok");
 
   return Response.json({
     estado: "ok",

@@ -6,6 +6,7 @@
 import { getRol } from "../../auth";
 import redis from "@/lib/redis";
 import { KEYS } from "@/lib/farma/keys";
+import { registrarMetrica } from "@/lib/farma/metricas";
 import type { RefPedidos } from "@/lib/farma/pedidos";
 
 export async function POST(request: Request): Promise<Response> {
@@ -35,5 +36,6 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   await redis.hset(KEYS.stmin(), codigo, valor);
+  await registrarMetrica("stmin:ediciones");
   return Response.json({ ok: true });
 }

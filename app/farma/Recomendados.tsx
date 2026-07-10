@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Buscador from "./Buscador";
+import { contarMetrica } from "./contarMetrica";
 import type { RefPedidos } from "@/lib/farma/pedidos";
 import type { Recomendaciones } from "@/lib/farma/recomendaciones-store";
 
@@ -71,6 +72,7 @@ export default function Recomendados({ catalogo, data }: { catalogo: RefPedidos;
               onSelect={(n) => {
                 setOrigen(porNombre.get(n) ?? null);
                 setSel(0);
+                contarMetrica("busquedas:recomendados");
               }}
               placeholder="Ej: IBUPROFENO"
               autoFocus

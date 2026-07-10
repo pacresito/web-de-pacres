@@ -1,11 +1,9 @@
 // Marca PVP como reetiquetado (admin): apaga el flag `pending` en farma:pvp, de
 // todas las líneas pendientes o de una sola (body {codigo} opcional). El newPrice
-// ya es la línea base del próximo diff, así que basta con apagar pending. Cuenta la
-// acción solo si limpió algo (no infla el contador con no-ops). Solo admin.
+// ya es la línea base del próximo diff, así que basta con apagar pending. Solo admin.
 import { getRol } from "../../../auth";
 import redis from "@/lib/redis";
 import { KEYS } from "@/lib/farma/keys";
-import { incrStat } from "@/lib/farma/stats";
 import type { RegistroPvp } from "@/lib/farma/pvp";
 
 export async function POST(request: Request): Promise<Response> {
@@ -37,7 +35,6 @@ export async function POST(request: Request): Promise<Response> {
 
   if (limpiados > 0) {
     await pipe.exec();
-    await incrStat("pvp-actualizado");
   }
   return Response.json({ ok: true, limpiados });
 }

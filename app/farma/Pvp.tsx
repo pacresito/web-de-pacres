@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { BorradorEtiquetas, FilaExtra, LineaPvp, Tamano } from "@/lib/farma/pvp";
 import { DIAMETROS, expandir, type FuenteEtiqueta } from "@/lib/farma/etiquetas";
 import type { FuentesEtiqueta } from "@/lib/farma/etiquetas-pdf";
+import { contarMetrica } from "./contarMetrica";
 import { TrashIcon, PlusIcon } from "./icons";
 
 // PVP (admin): artículos cuyo precio cambió desde la última comprobación, como
@@ -161,6 +162,7 @@ export default function Pvp({ pendientes, borrador }: { pendientes: LineaPvp[]; 
       a.download = `${fecha} Etiquetas (${etiquetas.length}).pdf`;
       a.click();
       URL.revokeObjectURL(url);
+      contarMetrica("pvp:etiquetas");
     } catch {
       setError("No se pudo generar el PDF.");
     } finally {

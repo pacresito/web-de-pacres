@@ -2,6 +2,7 @@ import { requireAdmin } from "../../auth";
 import Inventario, { type ArticuloMin } from "../../Inventario";
 import redis from "@/lib/redis";
 import { KEYS } from "@/lib/farma/keys";
+import { registrarMetrica } from "@/lib/farma/metricas";
 import type { RefPedidos } from "@/lib/farma/pedidos";
 
 // Inventario (admin): ajustar el stock mínimo de cada artículo (hash mutable
@@ -12,6 +13,7 @@ import type { RefPedidos } from "@/lib/farma/pedidos";
 // (visible solo con el filtro correspondiente).
 export default async function InventarioPage() {
   await requireAdmin();
+  await registrarMetrica("visitas:inventario");
 
   const [refRaw, stmin, stock, pvpRaw] = await Promise.all([
     redis.get(KEYS.refPedidos()),

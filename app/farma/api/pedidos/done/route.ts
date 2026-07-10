@@ -4,7 +4,7 @@
 import { getRol } from "../../../auth";
 import redis from "@/lib/redis";
 import { KEYS } from "@/lib/farma/keys";
-import { incrStat } from "@/lib/farma/stats";
+import { registrarMetrica } from "@/lib/farma/metricas";
 
 export async function POST(request: Request): Promise<Response> {
   if ((await getRol()) !== "admin") {
@@ -22,6 +22,6 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   await redis.hset(KEYS.pedidosHechos(), body.pedido, Date.now());
-  await incrStat("pedido-hecho");
+  await registrarMetrica("pedidos:descargas");
   return Response.json({ ok: true });
 }
