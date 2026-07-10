@@ -292,6 +292,33 @@
 }
 @media (hover: hover) { .v-maps:hover { background: var(--v-verde-osc); } }
 .v-maps:active { background: var(--v-verde-osc); }
+.v-galeria {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+.v-galeria-thumb {
+  position: relative;
+  aspect-ratio: 3 / 2;
+  border-radius: 8px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #dfeadf, #cfe0d2);
+}
+.v-galeria-thumb img { object-fit: cover; }
+.v-acciones { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.v-acciones .v-maps { margin-top: 0; }
+.v-wikiloc {
+  display: inline-block;
+  padding: 9px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--v-verde);
+  color: var(--v-verde-osc);
+  font-size: 14px;
+  font-weight: 600;
+}
+@media (hover: hover) { .v-wikiloc:hover { background: var(--v-badge); } }
+.v-wikiloc:active { background: var(--v-badge); }
 .v-datos {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
@@ -307,6 +334,43 @@
 .v-seccion { margin-top: 24px; }
 .v-seccion h2 { font-size: 17px; font-weight: 700; margin-bottom: 10px; }
 .v-quever { padding-left: 20px; display: flex; flex-direction: column; gap: 5px; font-size: 14px; }
+.v-lista-check, .v-lista-warn { list-style: none; display: flex; flex-direction: column; gap: 6px; font-size: 14px; line-height: 1.4; }
+.v-lista-check li, .v-lista-warn li { position: relative; padding-left: 26px; }
+.v-lista-check li::before { content: "✅"; position: absolute; left: 0; }
+.v-lista-warn li::before { content: "⚠️"; position: absolute; left: 0; }
+.v-pueblos { display: flex; flex-wrap: wrap; gap: 8px; }
+.v-pueblo {
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: var(--v-card);
+  border: 1px solid var(--v-borde);
+  font-size: 13px;
+  font-weight: 600;
+}
+.v-cerca { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+.v-cerca-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 11px 13px;
+  border-radius: 10px;
+  background: var(--v-card);
+  border: 1px solid var(--v-borde);
+}
+@media (hover: hover) { .v-cerca-item:hover { border-color: var(--v-verde); } }
+.v-cerca-item:active { border-color: var(--v-verde); }
+.v-cerca-nombre { font-size: 14px; font-weight: 700; }
+.v-cerca-tipo { font-size: 12px; color: var(--v-suave); text-transform: capitalize; }
+.v-resto-cat {
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--v-badge);
+  color: var(--v-verde-osc);
+  font-size: 11px;
+  font-weight: 600;
+  vertical-align: middle;
+}
 .v-nota {
   margin-top: 18px;
   padding: 11px 14px;

@@ -2,13 +2,21 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import type { DatosViajes, Restaurante } from "@/lib/viajes/tipos";
+import type { DatosViajes, Destino, Restaurante } from "@/lib/viajes/tipos";
 import { rango } from "@/lib/viajes/formato";
 import datosNavarra from "@/data/viajes/navarra.json";
 
 // Ficha de destino (Server Component): URL propia y compartible. Todas las
 // rutas salen del JSON en build; un slug desconocido da 404.
 const datos = datosNavarra as DatosViajes;
+
+// Restaurantes: uno por categoría, en este orden, máx. 3 (spec de Cris).
+const CATEGORIAS = ["economico", "calidad-precio", "especial"] as const;
+const ETIQUETA_CAT: Record<string, string> = {
+  economico: "Económico",
+  "calidad-precio": "Calidad-precio",
+  especial: "Especial",
+};
 
 type Props = { params: Promise<{ destino: string }> };
 
@@ -28,7 +36,16 @@ export default async function FichaDestino({ params }: Props) {
   if (!d) notFound();
 
   const zona = datos.zonas.find((z) => z.id === d.zona)?.nombre ?? d.zona;
-  const restaurantes = datos.restaurantes.filter((r) => r.zona === d.zona);
+  const restaurantes = CATEGORIAS
+    .map((cat) => datos.restaurantes.find((r) => r.zona === d.zona && r.categoria === cat))
+    .filter((r): r is Restaurante => r !== undefined);
+
+  // Destinos cercanos: resolver slugs a fichas reales (descartar rotos y el propio).
+  const cercanos = (d.cerca ?? [])
+    .map((slug) => datos.destinos.find((x) => x.slug === slug))
+    .filter((x): x is Destino => x !== undefined && x.slug !== d.slug);
+
+  const galeria = d.imagenes ?? [d.imagen];
 
   const siNo = (v: boolean) => (v ? "Sí" : "No");
   const filas: [string, string][] = [];
@@ -56,8 +73,18 @@ export default async function FichaDestino({ params }: Props) {
         <Link href="/viajes" className="v-volver">← Todos los sitios</Link>
 
         <div className="v-ficha-img">
-          <Image src={d.imagen} alt={d.nombre} fill sizes="(max-width: 860px) 100vw, 860px" priority />
+          <Image src={galeria[0]} alt={d.nombre} fill sizes="(max-width: 860px) 100vw, 860px" priority />
         </div>
+
+        {galeria.length > 1 && (
+          <div className="v-galeria">
+            {galeria.slice(1).map((src) => (
+              <div key={src} className="v-galeria-thumb">
+                <Image src={src} alt={d.nombre} fill sizes="(max-width: 860px) 33vw, 280px" />
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="v-ficha-top">
           <span className="v-tipo">{d.tipo}</span>
@@ -66,15 +93,24 @@ export default async function FichaDestino({ params }: Props) {
         <h1>{d.nombre}</h1>
         <p className="v-ficha-que">{d.queEs}</p>
 
-        {d.gps && (
-          <a
-            className="v-maps"
-            href={`https://www.google.com/maps/search/?api=1&query=${d.gps[0]},${d.gps[1]}`}
-            target="_blank"
-            rel="noreferrer"
-          >
-            Abrir en Google Maps{d.gpsAprox ? " (ubicación aproximada)" : ""}
-          </a>
+        {(d.gps || d.trackWikiloc) && (
+          <div className="v-acciones">
+            {d.gps && (
+              <a
+                className="v-maps"
+                href={`https://www.google.com/maps/search/?api=1&query=${d.gps[0]},${d.gps[1]}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Abrir en Google Maps{d.gpsAprox ? " (ubicación aproximada)" : ""}
+              </a>
+            )}
+            {d.trackWikiloc && (
+              <a className="v-wikiloc" href={d.trackWikiloc} target="_blank" rel="noreferrer">
+                Ver track en Wikiloc
+              </a>
+            )}
+          </div>
         )}
 
         {filas.length > 0 && (
@@ -88,6 +124,15 @@ export default async function FichaDestino({ params }: Props) {
           </dl>
         )}
 
+        {d.loMejor && d.loMejor.length > 0 && (
+          <section className="v-seccion">
+            <h2>Lo mejor</h2>
+            <ul className="v-lista-check">
+              {d.loMejor.map((x) => <li key={x}>{x}</li>)}
+            </ul>
+          </section>
+        )}
+
         {d.queVer && d.queVer.length > 0 && (
           <section className="v-seccion">
             <h2>Qué ver</h2>
@@ -97,7 +142,25 @@ export default async function FichaDestino({ params }: Props) {
           </section>
         )}
 
+        {d.antesDeIr && d.antesDeIr.length > 0 && (
+          <section className="v-seccion">
+            <h2>Antes de ir</h2>
+            <ul className="v-lista-warn">
+              {d.antesDeIr.map((x) => <li key={x}>{x}</li>)}
+            </ul>
+          </section>
+        )}
+
         {d.nota && <p className="v-nota">{d.nota}</p>}
+
+        {d.pueblosAlojamiento && d.pueblosAlojamiento.length > 0 && (
+          <section className="v-seccion">
+            <h2>Dónde alojarse</h2>
+            <div className="v-pueblos">
+              {d.pueblosAlojamiento.map((p) => <span key={p} className="v-pueblo">{p}</span>)}
+            </div>
+          </section>
+        )}
 
         {restaurantes.length > 0 && (
           <section className="v-seccion">
@@ -105,6 +168,20 @@ export default async function FichaDestino({ params }: Props) {
             {restaurantes.map((r) => (
               <RestoFicha key={r.nombre} resto={r} />
             ))}
+          </section>
+        )}
+
+        {cercanos.length > 0 && (
+          <section className="v-seccion">
+            <h2>Cerca de esta ruta</h2>
+            <div className="v-cerca">
+              {cercanos.map((c) => (
+                <Link key={c.slug} href={`/viajes/${c.slug}`} className="v-cerca-item">
+                  <span className="v-cerca-nombre">{c.nombre}</span>
+                  <span className="v-cerca-tipo">{c.tipo}</span>
+                </Link>
+              ))}
+            </div>
           </section>
         )}
       </article>
@@ -120,7 +197,12 @@ function RestoFicha({ resto: r }: { resto: Restaurante }) {
 
   return (
     <div className="v-resto">
-      <div className="v-resto-nombre">{r.nombre}</div>
+      <div className="v-resto-nombre">
+        {r.nombre}
+        {r.categoria && ETIQUETA_CAT[r.categoria] && (
+          <span className="v-resto-cat">{ETIQUETA_CAT[r.categoria]}</span>
+        )}
+      </div>
       <div className="v-resto-sub">
         {[r.direccion ?? r.poblacion, r.telefono].filter(Boolean).join(" · ")}
       </div>

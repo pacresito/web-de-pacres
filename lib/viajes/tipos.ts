@@ -37,7 +37,8 @@ export type Destino = {
   pueblosAlojamiento?: string[];  // pueblos donde alojarse, no hoteles
   trackWikiloc?: string;          // URL de la ruta en Wikiloc
   nota?: string;
-  imagen: string;
+  imagen: string;                 // foto principal
+  imagenes?: string[];            // galería (hoy 1; la ficha usa esta si existe, si no [imagen])
 };
 
 export type Restaurante = {
