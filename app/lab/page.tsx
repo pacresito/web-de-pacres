@@ -17,12 +17,13 @@ type LabItem = {
   status: "available" | "hidden" | "soon" | "private";
   href: string | null;
   cta: string;
+  secretHref?: string; // puerta oculta: navega aquí al clicar SIN afordance visible (solo farma → stats)
 };
 
 const ITEMS: LabItem[] = [
   { id: "lucas",       num: "01", type: "web",        title: "Dr. Lucas Crespo",     description: `Perfil profesional de un aeronáutico de ${calcularEdad(new Date(2020, 2, 30))} años.`, status: "available", href: "/webs/lucas",       cta: "Ver perfil →" },
   { id: "lagartijas",  num: "02", type: "web",        title: "Lagartijas de Lucas",  description: "Las lagartijas de cuentas que hace a mano, una a una.",                             status: "available", href: "/webs/lagartijas",  cta: "Verlas →" },
-  { id: "farma",       num: "03", type: "web",        title: "Farmacia",             description: "Gestión de pedidos, inventario y prioridades de venta.",                          status: "private",   href: "/farma",           cta: "Privada" },
+  { id: "farma",       num: "03", type: "web",        title: "Farmacia",             description: "Gestión de pedidos, inventario y prioridades de venta.",                          status: "private",   href: "/farma",           cta: "Privada", secretHref: "/webs/farma-stats" },
   { id: "viajes",      num: "04", type: "web",        title: "Fuera de Ruta",         description: "Destinos chulos pero poco conocidos, filtrables y con mapa.",                         status: "available", href: "/viajes",           cta: "Explorar →" },
   { id: "placeholder", num: "05", type: "web",        title: "Aquí va lo importante", description: "Aquí podría ir tu web. Dime tu idea y lo implementamos.",                            status: "soon",      href: null,               cta: "En construcción" },
   { id: "rpncalc",     num: "06", type: "app",        title: "Calculadora RPN",       description: "Para los que piensan en pila.",                                                       status: "available", href: "/apps/RPNcalc",     cta: "Abrir →" },
@@ -116,7 +117,10 @@ function LabTable({ items, visible }: { items: LabItem[]; visible: number }) {
             style={{ visibility: revealed ? undefined : "hidden" }}>
             <div
               className={clickable ? "t-rowhover" : undefined}
-              onClick={() => { if (clickable) router.push(item.href!); }}
+              onClick={() => {
+                if (clickable) router.push(item.href!);
+                else if (item.secretHref) router.push(item.secretHref);
+              }}
               style={{
                 display: "grid", gridTemplateColumns: "38px 100px 160px 1fr 80px",
                 gap: "0 16px", padding: "10px 18px",
@@ -148,6 +152,7 @@ function LabTable({ items, visible }: { items: LabItem[]; visible: number }) {
 }
 
 function LabCards({ items, visible }: { items: LabItem[]; visible: number }) {
+  const router = useRouter();
   return (
     <div className="t-lab-mobile" style={{ flexDirection: "column", gap: 8 }}>
       {items.map((item, idx) => {
@@ -155,6 +160,7 @@ function LabCards({ items, visible }: { items: LabItem[]; visible: number }) {
         const clickable = item.status === "available" && item.href;
         return (
           <div key={item.id} className={revealed ? "t-row-in" : undefined}
+            onClick={item.secretHref ? () => router.push(item.secretHref!) : undefined}
             style={{
               border: "1px solid var(--t-rule)", borderRadius: 8,
               background: "var(--t-paper)", overflow: "hidden",

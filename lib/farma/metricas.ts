@@ -27,6 +27,43 @@ export type Metrica =
 
 const hoy = (): string => fechaMadrid(Date.now());
 
+const DIA_MS = 24 * 60 * 60 * 1000;
+
+// Rango de métricas ya agregado (matriz campos×día) listo para pintar. Serializable,
+// así lo consume tanto el script (ASCII) como el panel farma-stats (server → HTML).
+export type MetricasRango = {
+  fechas: string[];                    // YYYY-MM-DD (Madrid), de más antigua a hoy
+  campos: string[];                    // campos presentes en el rango, orden alfabético
+  conteos: Record<string, number[]>;   // campo → conteo por día (mismo índice que fechas)
+  totales: Record<string, number>;     // campo → suma del rango
+  errorInventario: string | null;      // motivo del último inventario rechazado
+};
+
+/**
+ * Lee los contadores de uso de los últimos `dias` (hashes farma:metricas:*) y los
+ * agrega en una matriz campos×día. `dev` fuerza el sufijo de clave; omitido, lo
+ * decide NODE_ENV (default de KEYS) — la página deja el default; el script lo pasa.
+ */
+export async function leerMetricas(dias: number, dev?: boolean): Promise<MetricasRango> {
+  const ahora = Date.now();
+  const fechas = Array.from({ length: dias }, (_, i) => fechaMadrid(ahora - (dias - 1 - i) * DIA_MS));
+  const res = await redis.pipeline(fechas.map((f) => ["hgetall", KEYS.metricas(f, dev)])).exec();
+
+  const porDia = (res ?? []).map(([, h]) => (h as Record<string, string>) ?? {});
+  const campos = [...new Set(porDia.flatMap((h) => Object.keys(h)))].sort();
+
+  const conteos: Record<string, number[]> = {};
+  const totales: Record<string, number> = {};
+  for (const campo of campos) {
+    const serie = porDia.map((h) => Number(h[campo] ?? 0));
+    conteos[campo] = serie;
+    totales[campo] = serie.reduce((s, n) => s + n, 0);
+  }
+
+  const errorInventario = await redis.get(KEYS.metricasErrorInventario(dev));
+  return { fechas, campos, conteos, totales, errorInventario };
+}
+
 /** Suma 1 al contador del evento en el hash de hoy (Madrid). Nunca lanza. */
 export async function registrarMetrica(campo: Metrica): Promise<void> {
   try {
