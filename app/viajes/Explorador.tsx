@@ -46,7 +46,9 @@ export default function Explorador({ datos }: { datos: DatosViajes }) {
     : datos.restaurantes;
 
   const set = (parcial: Partial<Filtros>) => setFiltros((f) => ({ ...f, ...parcial }));
-  const hayFiltros = Object.keys(filtros).length > 0;
+  // Desactivar un filtro deja su clave con `undefined` (el spread no la borra):
+  // hay que mirar valores, no claves.
+  const hayFiltros = Object.values(filtros).some((v) => v !== undefined);
 
   return (
     <>
