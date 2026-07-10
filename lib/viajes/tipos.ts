@@ -1,5 +1,7 @@
 // Formas de datos de /viajes. Fuente: data/viajes/<comunidad>.json.
 // Los campos opcionales pueden faltar en el JSON; la UI solo pinta lo que hay.
+// Los campos `*Horas`/`epoca`/`agua`/`tipoViaje` numéricos o en array son la
+// versión filtrable; `duracion`/`mejorEpoca` de texto se conservan para mostrar.
 
 export type Rango = [number, number];
 
@@ -7,22 +9,33 @@ export type Destino = {
   slug: string;
   nombre: string;
   zona: string;        // id de zona
-  tipo: string;        // ruta | cascada | pueblo | mirador | cueva | parque | monumento | alojamiento
+  tipo: string;        // ruta | cascada | pueblo | mirador | cueva | parque | monumento | alojamiento | actividad
+  actividad?: string;  // solo si tipo="actividad": tirolina, teleférico, balneario, kayak…
   queEs: string;
-  gps?: [number, number];
+  gps?: [number, number];         // el GPS es el parking (así lo trae la fuente), no el punto de interés
   gpsAprox?: boolean;  // coordenada aproximada (centro de pueblo, parking sin fijar)
   distanciaKm?: Rango;
   desnivelM?: Rango;
-  duracion?: string;
+  duracion?: string;              // texto para mostrar ("2 a 3 horas")
+  duracionHoras?: Rango;          // versión numérica [min, max] para filtrar
   dificultad?: string;
   circular?: boolean;
   bano?: boolean;
+  agua?: string[];                // ibon | cascada | rio | poza | embalse
   ninos?: boolean;
   perros?: boolean;
-  senalizacion?: string;
+  tipoViaje?: string[];           // pareja | amigos (niños y perros ya son booleanos)
+  senalizacion?: string;          // muy buena | buena | GPS recomendable | track recomendable
+  parkingGratuito?: boolean;
   reserva?: string;
-  mejorEpoca?: string;
+  mejorEpoca?: string;            // texto para mostrar
+  epoca?: string[];               // primavera | verano | otono | invierno, para filtrar
   queVer?: string[];
+  loMejor?: string[];             // 3-5 puntos fuertes (✅)
+  antesDeIr?: string[];           // avisos útiles (⚠)
+  cerca?: string[];               // slugs de destinos cercanos (3-4 máx)
+  pueblosAlojamiento?: string[];  // pueblos donde alojarse, no hoteles
+  trackWikiloc?: string;          // URL de la ruta en Wikiloc
   nota?: string;
   imagen: string;
 };
@@ -30,6 +43,7 @@ export type Destino = {
 export type Restaurante = {
   nombre: string;
   zona: string;
+  categoria?: string;  // economico | calidad-precio | especial (la ficha muestra máx. 3, uno por categoría)
   poblacion?: string;
   direccion?: string;
   telefono?: string;
