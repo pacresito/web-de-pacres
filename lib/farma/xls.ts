@@ -5,7 +5,9 @@
 import * as XLSX from "xlsx";
 import type { LineaPedido } from "./pedidos";
 
-export function generarBolsa(lineas: LineaPedido[]): Buffer {
+// Solo necesita los tres campos que van al .xls; el resto de LineaPedido (existencias,
+// consumo, min) es contexto de pantalla que aquí no pinta.
+export function generarBolsa(lineas: Pick<LineaPedido, "codigo" | "denominacion" | "cantidad">[]): Buffer {
   const filas = [
     ["Código", "Denominación", "Cantidad"],
     ...lineas.map((l) => [l.codigo, l.denominacion, String(l.cantidad)]),
