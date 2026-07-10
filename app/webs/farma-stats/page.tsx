@@ -40,7 +40,7 @@ export default async function FarmaStats() {
           ↳ status:{" "}
           <span style={{ color: ACCENT }}>{DIAS}</span>
           <span style={{ color: "var(--t-ink2)" }}> días · {fechas[0]} → {fechas[fechas.length - 1]}</span>
-          {" · Σ "}
+          {" · "}
           <span style={{ color: ACCENT }}>{granTotal}</span> eventos
         </div>
 
