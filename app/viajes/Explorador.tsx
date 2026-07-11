@@ -1,29 +1,43 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
 import type { DatosViajes, Destino } from "@/lib/viajes/tipos";
 import { filtrarDestinos, nivelesDificultad, type Desnivel, type Filtros } from "@/lib/viajes/filtrar";
-import { AGUA_TEXTO, DESNIVEL_TEXTO, EPOCA_TEXTO, filtrosActivos, resumenFiltros } from "@/lib/viajes/resumen";
+import { AGUA_TEXTO, DESNIVEL_TEXTO, EPOCA_TEXTO, filtrosActivos, resumenFiltros, type FiltroActivo } from "@/lib/viajes/resumen";
 import { rango } from "@/lib/viajes/formato";
 import CrearViaje from "./CrearViaje";
 
 // Leaflet toca `window`: solo en cliente, sin SSR.
 const Mapa = dynamic(() => import("./Mapa"), { ssr: false });
 
-// Explorador de /viajes (S3, Río pop): filtros en dos filas (dropdowns-chip multi
-// + toggles), grid de tarjetas numeradas y mapa sticky con los mismos números —
-// pin y tarjeta se resaltan mutuamente vía `activo`. Todos los recuentos en vivo
-// (por opción del dropdown, chips de rescate del estado 0) se calculan
-// re-ejecutando filtrar.ts, la lógica pura ya testada.
+// Explorador de /viajes (S3, Río pop). Escritorio (F3): filtros en dos filas
+// (dropdowns-chip + toggles), grid de tarjetas y mapa sticky. Móvil (F4): overlay
+// a pantalla completa con dos modos —lista y mapa— y los filtros en hoja inferior.
+// El componente elige árbol según el ancho (`useEsMovil`); ambos comparten TODA la
+// lógica de filtros y recuentos, que re-ejecuta filtrar.ts (lógica pura ya testada).
 
 // Umbrales (valor único, no categoría): un tope acumulativo no admite multi-selección.
 const DISTANCIAS = [5, 10, 15, 20, 25];
 const DURACIONES = [1, 2, 3, 4, 6];
 const DESNIVELES = Object.keys(DESNIVEL_TEXTO) as Desnivel[];
 const DIFICULTADES = ["fácil", "media", "difícil"];
+
+// Salta a un árbol u otro sin parpadeo: en cliente ya sabe el ancho en el primer
+// render (el Explorador solo se monta tras navegar, nunca en SSR).
+function useEsMovil() {
+  const [esMovil, setEsMovil] = useState(() => typeof window !== "undefined" && window.matchMedia("(max-width: 899px)").matches);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 899px)");
+    const on = () => setEsMovil(mq.matches);
+    mq.addEventListener("change", on);
+    on();
+    return () => mq.removeEventListener("change", on);
+  }, []);
+  return esMovil;
+}
 
 export default function Explorador({ datos, zonaInicial, onCambiarZonas, onVolverEspana }: {
   datos: DatosViajes;
@@ -34,8 +48,11 @@ export default function Explorador({ datos, zonaInicial, onCambiarZonas, onVolve
   const [filtros, setFiltros] = useState<Filtros>(() => (zonaInicial?.length ? { zona: zonaInicial } : {}));
   const [verRestaurantes, setVerRestaurantes] = useState(false);
   const [modo, setModo] = useState<"explorar" | "plan">("explorar");
-  const [abierto, setAbierto] = useState<string | null>(null); // dropdown desplegado
+  const [abierto, setAbierto] = useState<string | null>(null); // dropdown desplegado (escritorio)
   const [activo, setActivo] = useState<string | null>(null);   // slug resaltado pin↔tarjeta
+  const [modoMovil, setModoMovil] = useState<"lista" | "mapa">("lista");
+  const [hojaAbierta, setHojaAbierta] = useState(false);
+  const esMovil = useEsMovil();
 
   const nombreZona = useMemo(() => new Map(datos.zonas.map((z) => [z.id, z.nombre])), [datos.zonas]);
   const zona = (id: string) => nombreZona.get(id) ?? id;
@@ -71,14 +88,14 @@ export default function Explorador({ datos, zonaInicial, onCambiarZonas, onVolve
       return { ...f, [clave]: nueva.length ? nueva : undefined };
     });
 
-  // Un solo dropdown abierto a la vez.
+  // Un solo dropdown abierto a la vez (escritorio).
   const desp = (id: string) => ({
     abierto: abierto === id,
     onToggle: () => setAbierto(abierto === id ? null : id),
     onCerrar: () => setAbierto(null),
   });
 
-  // Click en un pin: resalta y lleva a su tarjeta.
+  // Click en un pin (escritorio): resalta y lleva a su tarjeta.
   const irATarjeta = (slug: string) => {
     setActivo(slug);
     document.getElementById(`fr-card-${slug}`)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -90,6 +107,161 @@ export default function Explorador({ datos, zonaInicial, onCambiarZonas, onVolve
 
   const nBano = (filtros.bano ? 1 : 0) + (filtros.agua?.length ?? 0);
 
+  // ---------------------------------------------------------------- MÓVIL (F4)
+  if (esMovil) {
+    // Con 0 resultados no se puede ir al mapa: se muestra el estado 0 en la lista.
+    const modoEfectivo = destinos.length === 0 ? "lista" : modoMovil;
+    const zonasSel = filtros.zona?.length ? filtros.zona.map(zona).join(" + ") : "";
+
+    return (
+      <div className="fr-m3">
+        <header className="fr-m3-head">
+          <button className="fr-m3-atras" onClick={onCambiarZonas ?? onVolverEspana} aria-label="Volver">‹</button>
+          <span className="fr-m3-titulo">
+            <b>{modoEfectivo === "mapa" ? `${destinos.length} ${destinos.length === 1 ? "sitio" : "sitios"}` : datos.comunidad}</b>
+            {modoEfectivo !== "mapa" && zonasSel && <span>{zonasSel}</span>}
+          </span>
+          <button className="fr-m3-filtros" onClick={() => setHojaAbierta(true)}>
+            Filtros{activos.length > 0 && <span className="fr-m3-badge">{activos.length}</span>}
+          </button>
+        </header>
+
+        <div className="fr-m3-body">
+          <div className="fr-m3-lista" hidden={modoEfectivo !== "lista"}>
+            {destinos.length === 0 ? (
+              <EstadoVacio resumen={resumen} hayTipo={!!filtros.tipo?.length} activos={activos} todos={datos.destinos} onFiltros={setFiltros} />
+            ) : (
+              <>
+                {activos.length > 0 && (
+                  <div className="fr-m3-chips">
+                    {activos.map((a) => (
+                      <button key={a.etiqueta} className="fr-m3-chip-activo" onClick={() => setFiltros(a.sin)}>{a.etiqueta} ×</button>
+                    ))}
+                    <button className="fr-m3-chip-limpiar" onClick={() => setFiltros({})}>Limpiar</button>
+                  </div>
+                )}
+                <div className="fr-m3-cont">
+                  <span className="fr-m3-n">{destinos.length} {destinos.length === 1 ? "sitio" : "sitios"}</span>
+                  {destinos.map((d, i) => (
+                    <TarjetaCompacta key={d.slug} destino={d} zona={zona(d.zona)} num={i + 1} />
+                  ))}
+                  <button className="fr-m3-cta" onClick={() => setModo("plan")}>Crear mi viaje con estos {destinos.length} →</button>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Mapa: siempre montado (no reinicializar Leaflet al cambiar de modo) */}
+          <div className="fr-m3-mapa-capa">
+            <Mapa destinos={destinos} restaurantes={restaurantes} activo={activo} onActivo={setActivo} onPin={setActivo} />
+            {destinos.length > 0 && (
+              <div className="fr-m3-carrusel">
+                <div className="fr-m3-carrusel-top">
+                  <button className="fr-m3-pildora" onClick={() => setModoMovil("lista")}>≡ Lista</button>
+                </div>
+                <CarruselMovil destinos={destinos} activo={activo} onActivo={setActivo} />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {modoEfectivo === "lista" && destinos.length > 0 && (
+          <button className="fr-m3-pildora fr-m3-pildora--fija" onClick={() => setModoMovil("mapa")}>
+            <span className="fr-m3-pildora-punto" />Mapa · {destinos.length}
+          </button>
+        )}
+
+        {hojaAbierta && (
+          <div className="fr-m3-scrim" onClick={() => setHojaAbierta(false)}>
+            <div className="fr-m3-hoja" onClick={(e) => e.stopPropagation()}>
+              <div className="fr-m3-asa"><span /></div>
+              <div className="fr-m3-hoja-scroll">
+                <div className="fr-m3-hoja-head">
+                  <b>Filtros</b>
+                  {activos.length > 0 && <button className="fr-m3-hoja-limpiar" onClick={() => setFiltros({})}>Limpiar todo ({activos.length})</button>}
+                </div>
+
+                <Grupo label="Zona">
+                  <div className="fr-m3-grupo-chips">
+                    {datos.zonas.map((z) => (
+                      <Opcion key={z.id} texto={z.nombre} on={!!filtros.zona?.includes(z.id)} n={cuenta({ zona: [z.id] })} onClick={() => toggle("zona", z.id)} />
+                    ))}
+                  </div>
+                </Grupo>
+
+                <Grupo label="Tipo de destino">
+                  <div className="fr-m3-grupo-chips">
+                    {tipos.map((t) => (
+                      <Opcion key={t} texto={t} on={!!filtros.tipo?.includes(t)} n={cuenta({ tipo: [t] })} onClick={() => toggle("tipo", t)} />
+                    ))}
+                  </div>
+                </Grupo>
+
+                {dificultades.length > 0 && (
+                  <Grupo label="Dificultad">
+                    <div className="fr-m3-grupo-chips">
+                      {dificultades.map((d) => (
+                        <Opcion key={d} texto={d} on={!!filtros.dificultad?.includes(d)} n={cuenta({ dificultad: [d] })} onClick={() => toggle("dificultad", d)} />
+                      ))}
+                    </div>
+                  </Grupo>
+                )}
+
+                <Grupo label="Agua y baño">
+                  <div className="fr-m3-grupo-chips">
+                    <Opcion texto="te puedes bañar" on={!!filtros.bano} n={cuenta({ bano: true })} onClick={() => set({ bano: filtros.bano ? undefined : true })} />
+                    {aguas.map((a) => (
+                      <Opcion key={a} texto={AGUA_TEXTO[a]} on={!!filtros.agua?.includes(a)} n={cuenta({ agua: [a] })} onClick={() => toggle("agua", a)} />
+                    ))}
+                  </div>
+                </Grupo>
+
+                {epocas.length > 0 && (
+                  <Grupo label="Época">
+                    <div className="fr-m3-grupo-chips">
+                      {epocas.map((e) => (
+                        <Opcion key={e} texto={EPOCA_TEXTO[e]} on={!!filtros.epoca?.includes(e)} n={cuenta({ epoca: [e] })} onClick={() => toggle("epoca", e)} />
+                      ))}
+                    </div>
+                  </Grupo>
+                )}
+
+                <Grupo label="A pie, como mucho">
+                  <Segmentado opciones={DISTANCIAS.map((km) => ({ v: km, etq: `${km} km` }))} valor={filtros.distanciaMax} onElegir={(v) => set({ distanciaMax: v })} />
+                </Grupo>
+
+                <Grupo label="Duración, como mucho">
+                  <Segmentado opciones={DURACIONES.map((h) => ({ v: h, etq: `${h} h` }))} valor={filtros.duracionMax} onElegir={(v) => set({ duracionMax: v })} />
+                </Grupo>
+
+                <Grupo label="Desnivel, como mucho">
+                  <Segmentado opciones={DESNIVELES.map((d) => ({ v: d, etq: DESNIVEL_TEXTO[d] }))} valor={filtros.desnivel} onElegir={(v) => set({ desnivel: v })} />
+                </Grupo>
+
+                <div className="fr-m3-grupo">
+                  <span className="fr-m3-grupo-lab">Extras</span>
+                  <ExtraSwitch label="Apto niños" on={!!filtros.ninos} onClick={() => set({ ninos: filtros.ninos ? undefined : true })} />
+                  <ExtraSwitch label="Apto perros" on={!!filtros.perros} onClick={() => set({ perros: filtros.perros ? undefined : true })} />
+                  <ExtraSwitch label="Parking gratis" on={!!filtros.parkingGratuito} onClick={() => set({ parkingGratuito: filtros.parkingGratuito ? undefined : true })} />
+                  <ExtraSwitch label="Sin reserva" on={!!filtros.sinReserva} onClick={() => set({ sinReserva: filtros.sinReserva ? undefined : true })} />
+                  <div className="fr-m3-restos-fila">
+                    <span><span className="fr-m3-restos-r">R</span>Restaurantes en el mapa</span>
+                    <button className="fr-m3-sw" aria-pressed={verRestaurantes} aria-label="Restaurantes en el mapa" onClick={() => setVerRestaurantes((v) => !v)} />
+                  </div>
+                </div>
+              </div>
+              <div className="fr-m3-hoja-pie">
+                <button className="fr-m3-hoja-cerrar" onClick={() => setHojaAbierta(false)}>Cerrar</button>
+                <button className="fr-m3-hoja-ver" onClick={() => setHojaAbierta(false)}>Ver {destinos.length} {destinos.length === 1 ? "sitio" : "sitios"}</button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ----------------------------------------------------------- ESCRITORIO (F3)
   return (
     <>
       <div className="fr-s3-crumbs">
@@ -206,24 +378,7 @@ export default function Explorador({ datos, zonaInicial, onCambiarZonas, onVolve
       <div className="fr-s3-main">
         <div className="fr-s3-col">
           {destinos.length === 0 ? (
-            <div className="fr-s3-vacio">
-              <span className="fr-s3-cero">0</span>
-              <h2 className="fr-s3-vacio-titulo">Ni Cris conoce un sitio con todo eso</h2>
-              <p className="fr-s3-vacio-p">
-                No hay {filtros.tipo?.length ? "" : "sitios "}{resumen}. Suelta uno de estos y seguro que aparece algo:
-              </p>
-              <div className="fr-s3-rescates">
-                {activos.map((a) => (
-                  <button key={a.etiqueta} className="fr-s3-rescate" onClick={() => setFiltros(a.sin)}>
-                    {a.etiqueta} × <b>→ +{filtrarDestinos(datos.destinos, a.sin).length}</b>
-                  </button>
-                ))}
-              </div>
-              <button className="fr-s3-vacio-btn" onClick={() => setFiltros({})}>
-                Limpiar {activos.length === 1 ? "el filtro" : `los ${activos.length} filtros`}
-              </button>
-              <span className="fr-s3-vacio-nota">El mapa se queda quieto — no borra tu encuadre.</span>
-            </div>
+            <EstadoVacio resumen={resumen} hayTipo={!!filtros.tipo?.length} activos={activos} todos={datos.destinos} onFiltros={setFiltros} />
           ) : (
             <>
               <div className="fr-s3-head">
@@ -257,8 +412,37 @@ function presentes(todas: string[], valores: string[]): string[] {
   return todas.filter((v) => hay.has(v));
 }
 
-// Dropdown-chip de la fila 1: chip (Lima con valor cuando filtra) + panel flotante
-// con opciones, "Limpiar <dimensión>" y "Listo". El velo cierra al clicar fuera.
+// Estado 0 (compartido escritorio/móvil): explica el porqué en lenguaje natural y
+// ofrece un chip por filtro con cuántos resultados devuelve al quitarlo (en vivo).
+function EstadoVacio({ resumen, hayTipo, activos, todos, onFiltros }: {
+  resumen: string;
+  hayTipo: boolean;
+  activos: FiltroActivo[];
+  todos: Destino[];
+  onFiltros: (f: Filtros) => void;
+}) {
+  return (
+    <div className="fr-s3-vacio">
+      <span className="fr-s3-cero">0</span>
+      <h2 className="fr-s3-vacio-titulo">Ni Cris conoce un sitio con todo eso</h2>
+      <p className="fr-s3-vacio-p">No hay {hayTipo ? "" : "sitios "}{resumen}. Suelta uno de estos y seguro que aparece algo:</p>
+      <div className="fr-s3-rescates">
+        {activos.map((a) => (
+          <button key={a.etiqueta} className="fr-s3-rescate" onClick={() => onFiltros(a.sin)}>
+            {a.etiqueta} × <b>→ +{filtrarDestinos(todos, a.sin).length}</b>
+          </button>
+        ))}
+      </div>
+      <button className="fr-s3-vacio-btn" onClick={() => onFiltros({})}>
+        Limpiar {activos.length === 1 ? "el filtro" : `los ${activos.length} filtros`}
+      </button>
+      <span className="fr-s3-vacio-nota">El mapa se queda quieto — no borra tu encuadre.</span>
+    </div>
+  );
+}
+
+// Dropdown-chip de la fila 1 (escritorio): chip (Lima con valor cuando filtra) +
+// panel flotante con opciones, "Limpiar <dimensión>" y "Listo". Cierra al clicar fuera.
 function Desplegable({ etiqueta, valor, titulo, abierto, onToggle, onCerrar, onLimpiar, alinear, children }: {
   etiqueta: string;
   valor?: string;            // resumen en el chip ("2", "‹ 5 km"); presente = activo
@@ -292,7 +476,8 @@ function Desplegable({ etiqueta, valor, titulo, abierto, onToggle, onCerrar, onL
   );
 }
 
-// Opción dentro del panel. Sin resultados (y sin marcar) = deshabilitada con "· 0".
+// Opción multi-selección (panel escritorio y hoja móvil). Sin resultados (y sin
+// marcar) = deshabilitada con "· 0".
 function Opcion({ texto, on, n, onClick }: { texto: string; on: boolean; n: number; onClick: () => void }) {
   const off = !on && n === 0;
   return (
@@ -306,7 +491,7 @@ function Opcion({ texto, on, n, onClick }: { texto: string; on: boolean; n: numb
   );
 }
 
-// Toggle de la fila 2 (track 38×22, knob Tinta; on = track Lima, knob a la derecha).
+// Toggle de la fila 2 escritorio (track 38×22, knob Tinta; on = track Lima, knob a la derecha).
 function Interruptor({ on, onClick, children }: { on: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button type="button" className="fr-s3-toggle" data-on={on} aria-pressed={on} onClick={onClick}>
@@ -365,5 +550,141 @@ function Tarjeta({ destino: d, zona, num, activa, onActivo }: {
         )}
       </div>
     </Link>
+  );
+}
+
+// Tarjeta compacta horizontal (lista móvil): foto 112px con pin + meta/nombre/chips.
+// A diferencia de la de escritorio, "baño sí" sí va en chip (no hay sticker aquí).
+function TarjetaCompacta({ destino: d, zona, num }: { destino: Destino; zona: string; num: number }) {
+  const chips: { texto: string; tono?: "si" | "no" }[] = [];
+  if (d.distanciaKm) chips.push({ texto: rango(d.distanciaKm, "km") });
+  if (d.bano !== undefined) chips.push({ texto: `baño ${d.bano ? "sí" : "no"}`, tono: d.bano ? "si" : "no" });
+  if (d.ninos !== undefined) chips.push({ texto: `niños ${d.ninos ? "sí" : "no"}`, tono: d.ninos ? "si" : "no" });
+  if (d.perros !== undefined) chips.push({ texto: `perros ${d.perros ? "sí" : "no"}`, tono: d.perros ? "si" : "no" });
+  if (d.desnivelM) chips.push({ texto: d.desnivelM[1] === 0 ? "llano" : `+${rango(d.desnivelM, "m")}` });
+
+  return (
+    <Link href={`/viajes/${d.slug}`} className="fr-m3-card">
+      <div className={`fr-m3-card-foto${d.imagen ? "" : " fr-m3-card-foto--sin"}`}>
+        {d.imagen && <Image src={d.imagen} alt={d.nombre} fill sizes="112px" />}
+        <span className="fr-m3-card-pin">{num}</span>
+      </div>
+      <div className="fr-m3-card-body">
+        <span className="fr-m3-card-meta">{zona} · {d.tipo}</span>
+        <span className="fr-m3-card-nombre">{d.nombre}</span>
+        {chips.length > 0 && (
+          <span className="fr-m3-card-chips">
+            {chips.slice(0, 3).map((c) => (
+              <span key={c.texto} className={`fr-m3-dato${c.tono ? ` fr-m3-dato--${c.tono}` : ""}`}>{c.texto}</span>
+            ))}
+          </span>
+        )}
+      </div>
+    </Link>
+  );
+}
+
+// Carrusel de mini-tarjetas (modo mapa), sincronizado con los pins: al deslizar,
+// la tarjeta centrada activa su pin; al tocar un pin, su tarjeta se centra. El
+// umbral de "ya centrada" corta la pelea scroll↔activo (si el cambio vino del
+// propio swipe, no se reposiciona).
+function CarruselMovil({ destinos, activo, onActivo }: {
+  destinos: Destino[];
+  activo: string | null;
+  onActivo: (slug: string | null) => void;
+}) {
+  const pista = useRef<HTMLDivElement>(null);
+  const raf = useRef(0);
+  const ultimo = useRef<string | null>(activo);
+
+  const onScroll = () => {
+    if (raf.current) return;
+    raf.current = requestAnimationFrame(() => {
+      raf.current = 0;
+      const cont = pista.current;
+      if (!cont) return;
+      const centro = cont.scrollLeft + cont.clientWidth / 2;
+      let slug: string | null = null;
+      let min = Infinity;
+      cont.querySelectorAll<HTMLElement>("[data-slug]").forEach((el) => {
+        const d = Math.abs(el.offsetLeft + el.offsetWidth / 2 - centro);
+        if (d < min) { min = d; slug = el.dataset.slug ?? null; }
+      });
+      if (slug && slug !== ultimo.current) { ultimo.current = slug; onActivo(slug); }
+    });
+  };
+
+  useEffect(() => {
+    ultimo.current = activo;
+    const cont = pista.current;
+    if (!cont || !activo) return;
+    const el = cont.querySelector<HTMLElement>(`[data-slug="${activo}"]`);
+    if (!el) return;
+    if (Math.abs(cont.scrollLeft + cont.clientWidth / 2 - (el.offsetLeft + el.offsetWidth / 2)) < 40) return;
+    // Scroll instantáneo, no smooth: con scroll-snap mandatory Chromium cancela el
+    // scroll suave programático (el snap lo interrumpe). El salto directo es fiable.
+    cont.scrollTo({ left: el.offsetLeft - (cont.clientWidth - el.offsetWidth) / 2 });
+  }, [activo]);
+
+  return (
+    <div className="fr-m3-pista" ref={pista} onScroll={onScroll}>
+      {destinos.map((d, i) => (
+        <Link key={d.slug} href={`/viajes/${d.slug}`} data-slug={d.slug}
+          className={`fr-m3-mini${activo === d.slug ? " fr-m3-mini--activa" : ""}`}>
+          <div className={`fr-m3-mini-foto${d.imagen ? "" : " fr-m3-mini-foto--sin"}`}>
+            {d.imagen && <Image src={d.imagen} alt={d.nombre} fill sizes="88px" />}
+            <span className="fr-m3-mini-pin">{i + 1}</span>
+          </div>
+          <div className="fr-m3-mini-body">
+            <span className="fr-m3-mini-meta">{d.tipo}{d.bano !== undefined ? ` · baño ${d.bano ? "sí" : "no"}` : ""}</span>
+            <span className="fr-m3-mini-nombre">{d.nombre}</span>
+            <span className="fr-m3-mini-stat">{miniStat(d)}</span>
+          </div>
+        </Link>
+      ))}
+    </div>
+  );
+}
+
+function miniStat(d: Destino): string {
+  const p: string[] = [];
+  if (d.distanciaKm) p.push(rango(d.distanciaKm, "km"));
+  if (d.desnivelM) p.push(d.desnivelM[1] === 0 ? "llano" : `+${rango(d.desnivelM, "m")}`);
+  return p.join(" · ");
+}
+
+// Grupo de la hoja de filtros: micro-etiqueta mono + contenido (chips o segmentado).
+function Grupo({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="fr-m3-grupo">
+      <span className="fr-m3-grupo-lab">{label}</span>
+      {children}
+    </div>
+  );
+}
+
+// Umbral como segmentado de valor único: cada opción alterna, "da igual" = sin filtro.
+function Segmentado<T extends string | number>({ opciones, valor, onElegir }: {
+  opciones: { v: T; etq: string }[];
+  valor: T | undefined;
+  onElegir: (v: T | undefined) => void;
+}) {
+  return (
+    <div className="fr-m3-seg">
+      {opciones.map((o) => (
+        <button key={o.v} type="button" aria-pressed={valor === o.v} onClick={() => onElegir(valor === o.v ? undefined : o.v)}>{o.etq}</button>
+      ))}
+      <button type="button" className="fr-m3-seg-igual" aria-pressed={valor === undefined} onClick={() => onElegir(undefined)}>da igual</button>
+    </div>
+  );
+}
+
+// Fila de extra en la hoja: etiqueta + toggle grande (44×26).
+function ExtraSwitch({ label, on, onClick }: { label: string; on: boolean; onClick: () => void }) {
+  return (
+    <div className="fr-m3-extra">
+      <span>{label}</span>
+      <button type="button" className="fr-m3-sw" aria-pressed={on} aria-label={label} onClick={onClick} />
+    </div>
   );
 }
