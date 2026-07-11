@@ -45,7 +45,7 @@ export default async function FichaDestino({ params }: Props) {
     .map((slug) => datos.destinos.find((x) => x.slug === slug))
     .filter((x): x is Destino => x !== undefined && x.slug !== d.slug);
 
-  const galeria = d.imagenes ?? [d.imagen];
+  const galeria = d.imagenes ?? (d.imagen ? [d.imagen] : []); // F5: fallback "foto en camino" si vacío
 
   const siNo = (v: boolean) => (v ? "Sí" : "No");
   const filas: [string, string][] = [];
@@ -63,12 +63,6 @@ export default async function FichaDestino({ params }: Props) {
 
   return (
     <>
-      <header className="v-header">
-        <div className="v-header-inner">
-          <Link href="/viajes" className="v-marca">Fuera de Ruta</Link>
-        </div>
-      </header>
-
       <article className="v-ficha">
         <Link href="/viajes" className="v-volver">← Todos los sitios</Link>
 
