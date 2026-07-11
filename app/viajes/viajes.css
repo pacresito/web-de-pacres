@@ -358,137 +358,6 @@
 .v-mapa .leaflet-popup-content { font-family: system-ui, sans-serif; font-size: 13px; }
 .v-mapa .leaflet-popup-content a { color: var(--v-verde-osc); font-weight: 600; }
 
-/* Ficha de destino (/viajes/[destino]) */
-.v-ficha { max-width: 860px; margin: 0 auto; padding: 18px 20px 48px; }
-.v-volver { display: inline-block; font-size: 13px; color: var(--v-suave); margin-bottom: 14px; }
-@media (hover: hover) { .v-volver:hover { color: var(--v-verde-osc); } }
-.v-ficha-img {
-  position: relative;
-  aspect-ratio: 5 / 2;
-  background: linear-gradient(135deg, #dfeadf, #cfe0d2);
-  border-radius: 12px;
-  overflow: hidden;
-}
-.v-ficha-img img { object-fit: cover; }
-.v-ficha-top { display: flex; align-items: center; gap: 10px; margin-top: 18px; }
-.v-ficha h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; margin-top: 8px; }
-.v-ficha-que { font-size: 15px; line-height: 1.5; margin-top: 8px; }
-.v-maps {
-  display: inline-block;
-  margin-top: 14px;
-  padding: 9px 16px;
-  border-radius: 999px;
-  background: var(--v-verde);
-  color: #fff;
-  font-size: 14px;
-  font-weight: 600;
-}
-@media (hover: hover) { .v-maps:hover { background: var(--v-verde-osc); } }
-.v-maps:active { background: var(--v-verde-osc); }
-.v-galeria {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 8px;
-  margin-top: 8px;
-}
-.v-galeria-thumb {
-  position: relative;
-  aspect-ratio: 3 / 2;
-  border-radius: 8px;
-  overflow: hidden;
-  background: linear-gradient(135deg, #dfeadf, #cfe0d2);
-}
-.v-galeria-thumb img { object-fit: cover; }
-.v-acciones { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
-.v-acciones .v-maps { margin-top: 0; }
-.v-wikiloc {
-  display: inline-block;
-  padding: 9px 16px;
-  border-radius: 999px;
-  border: 1px solid var(--v-verde);
-  color: var(--v-verde-osc);
-  font-size: 14px;
-  font-weight: 600;
-}
-@media (hover: hover) { .v-wikiloc:hover { background: var(--v-badge); } }
-.v-wikiloc:active { background: var(--v-badge); }
-.v-datos {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 12px 16px;
-  background: var(--v-card);
-  border: 1px solid var(--v-borde);
-  border-radius: 12px;
-  padding: 14px 16px;
-  margin-top: 18px;
-}
-.v-dato dt { font-size: 11px; font-weight: 600; color: var(--v-suave); text-transform: uppercase; letter-spacing: 0.03em; }
-.v-dato dd { font-size: 14px; font-weight: 600; margin-top: 2px; }
-.v-seccion { margin-top: 24px; }
-.v-seccion h2 { font-size: 17px; font-weight: 700; margin-bottom: 10px; }
-.v-quever { padding-left: 20px; display: flex; flex-direction: column; gap: 5px; font-size: 14px; }
-.v-lista-check, .v-lista-warn { list-style: none; display: flex; flex-direction: column; gap: 6px; font-size: 14px; line-height: 1.4; }
-.v-lista-check li, .v-lista-warn li { position: relative; padding-left: 26px; }
-.v-lista-check li::before { content: "✅"; position: absolute; left: 0; }
-.v-lista-warn li::before { content: "⚠️"; position: absolute; left: 0; }
-.v-pueblos { display: flex; flex-wrap: wrap; gap: 8px; }
-.v-pueblo {
-  padding: 5px 12px;
-  border-radius: 999px;
-  background: var(--v-card);
-  border: 1px solid var(--v-borde);
-  font-size: 13px;
-  font-weight: 600;
-}
-.v-cerca { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
-.v-cerca-item {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  padding: 11px 13px;
-  border-radius: 10px;
-  background: var(--v-card);
-  border: 1px solid var(--v-borde);
-}
-@media (hover: hover) { .v-cerca-item:hover { border-color: var(--v-verde); } }
-.v-cerca-item:active { border-color: var(--v-verde); }
-.v-cerca-nombre { font-size: 14px; font-weight: 700; }
-.v-cerca-tipo { font-size: 12px; color: var(--v-suave); text-transform: capitalize; }
-.v-resto-cat {
-  margin-left: 8px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--v-badge);
-  color: var(--v-verde-osc);
-  font-size: 11px;
-  font-weight: 600;
-  vertical-align: middle;
-}
-.v-nota {
-  margin-top: 18px;
-  padding: 11px 14px;
-  border-left: 3px solid var(--v-verde);
-  background: var(--v-badge);
-  border-radius: 0 10px 10px 0;
-  font-size: 13.5px;
-  line-height: 1.45;
-}
-.v-resto-precios { font-size: 12.5px; font-weight: 600; color: var(--v-verde-osc); margin-top: 5px; }
-.v-resto-platos { font-size: 12.5px; color: var(--v-suave); margin-top: 4px; }
-
-.v-restos { margin-top: 16px; }
-.v-restos h2 { font-size: 15px; font-weight: 700; margin-bottom: 10px; }
-.v-resto {
-  background: var(--v-card);
-  border: 1px solid var(--v-borde);
-  border-radius: 10px;
-  padding: 11px 12px;
-  margin-bottom: 10px;
-}
-.v-resto-nombre { font-size: 14px; font-weight: 700; }
-.v-resto-sub { font-size: 12px; color: var(--v-suave); margin-top: 2px; }
-.v-resto-comida { font-size: 12.5px; margin-top: 5px; }
-
 /* ============================================================
    Río pop · sistema visual base (F1)
    Clases .fr-*; conviven con .v-* hasta F7.
@@ -1823,3 +1692,172 @@
   cursor: pointer;
 }
 .fr-m3-hoja-ver:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--fr-tinta); }
+
+/* ============================================================
+   S4 · Ficha de destino (F5). Móvil = hero full-bleed con badges
+   solapando + caja única de datos + barra fija; escritorio = grid
+   1fr|400px con cabecera antes de la galería y columna sticky.
+   Toda sección sin dato no se renderiza (sin huecos).
+   ============================================================ */
+.fr-s4 { max-width: 1180px; margin: 0 auto; padding-bottom: 96px; }
+.fr-s4-crumbs { display: none; gap: 6px; padding: 16px 20px 0; }
+.fr-s4-grid { display: flex; flex-direction: column; gap: 28px; padding: 0 20px 40px; }
+.fr-s4-col { display: flex; flex-direction: column; gap: 26px; min-width: 0; }
+
+/* Cabecera: badges + título + entradilla (orden distinto en cada breakpoint) */
+.fr-s4-badges { display: flex; gap: 7px; align-items: center; flex-wrap: wrap; }
+.fr-s4-badge-tipo {
+  background: var(--fr-rio); color: var(--fr-papel); border: 2px solid var(--fr-tinta);
+  border-radius: 99px; padding: 5px 13px; font: 700 12px var(--fr-font-dm), sans-serif;
+}
+.fr-s4-badge-zona {
+  background: var(--fr-papel); color: var(--fr-tinta); border: 2px solid var(--fr-tinta);
+  border-radius: 99px; padding: 5px 13px; font: 700 12px var(--fr-font-dm), sans-serif;
+}
+.fr-s4-badge-favorito { transform: rotate(2deg); }
+.fr-s4-h1 { font: 800 31px/1.05 var(--fr-font-baloo), sans-serif; color: var(--fr-tinta); }
+.fr-s4-lead { font: 400 14.5px/1.55 var(--fr-font-dm), sans-serif; color: var(--fr-sec); text-wrap: pretty; }
+.fr-s4-cabecera--desktop { display: none; flex-direction: column; gap: 10px; }
+.fr-s4-cabecera--movil { display: flex; flex-direction: column; gap: 8px; }
+
+/* Hero móvil: foto full-bleed con «‹» y badges solapando el borde inferior */
+.fr-s4-hero--movil { position: relative; margin: 0 -20px; }
+.fr-s4-hero-img {
+  position: relative; height: 250px; overflow: hidden;
+  border-bottom: 2px solid var(--fr-tinta);
+  background: repeating-linear-gradient(-45deg, #d3e2ee 0 16px, #dfeaf2 16px 32px);
+}
+.fr-s4-hero-img img { object-fit: cover; }
+.fr-s4-hero-fallback {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  font: 500 10.5px var(--fr-font-mono), monospace; color: var(--fr-sec);
+}
+.fr-s4-hero-fallback span { background: var(--fr-papel); padding: 4px 10px; border-radius: 99px; }
+.fr-s4-back {
+  position: absolute; left: 14px; top: 14px; z-index: 2;
+  width: 38px; height: 38px; display: grid; place-items: center;
+  border-radius: 12px; border: 2px solid var(--fr-tinta); background: var(--fr-papel);
+  font: 800 18px var(--fr-font-baloo), sans-serif; color: var(--fr-tinta);
+  box-shadow: var(--fr-sombra-2);
+}
+.fr-s4-badges--overlay { position: absolute; left: 14px; bottom: -12px; z-index: 2; }
+.fr-s4-badges--overlay .fr-s4-badge-tipo,
+.fr-s4-badges--overlay .fr-s4-badge-zona { box-shadow: var(--fr-sombra-2); }
+
+/* Galería: principal (solo escritorio) + tira de miniaturas (ambos) */
+.fr-s4-galeria-principal {
+  display: none; height: 360px; border-radius: 14px; border: 2px solid var(--fr-tinta);
+  overflow: hidden; position: relative; box-shadow: var(--fr-sombra-4);
+  background: repeating-linear-gradient(-45deg, #d3e2ee 0 16px, #dfeaf2 16px 32px);
+}
+.fr-s4-galeria-principal img { object-fit: cover; }
+.fr-s4-thumbs { display: flex; gap: 8px; overflow: hidden; }
+.fr-s4-thumb {
+  flex: none; width: 92px; height: 62px; border-radius: 10px; overflow: hidden; position: relative;
+  border: 2px solid rgba(28, 47, 94, 0.35);
+  background: repeating-linear-gradient(-45deg, #e2ecf3 0 9px, #eaf1f6 9px 18px);
+}
+.fr-s4-thumb img { object-fit: cover; }
+.fr-s4-thumb--mas {
+  background: var(--fr-tinta); color: var(--fr-papel); display: grid; place-items: center;
+  font: 800 13px var(--fr-font-baloo), sans-serif;
+}
+
+/* Secciones de contenido (comparten título Baloo 800 20px) */
+.fr-s4-titulo { font: 800 20px var(--fr-font-baloo), sans-serif; color: var(--fr-tinta); }
+.fr-s4-seccion { display: flex; flex-direction: column; gap: 10px; }
+.fr-s4-lo-mejor { display: flex; flex-direction: column; gap: 8px; }
+.fr-s4-check { display: flex; gap: 9px; align-items: center; }
+.fr-s4-check i {
+  flex: none; width: 22px; height: 22px; border-radius: 50%; font-style: normal;
+  background: var(--fr-lima); border: 2px solid var(--fr-tinta);
+  display: grid; place-items: center; font: 800 12px var(--fr-font-baloo), sans-serif; color: var(--fr-tinta);
+}
+.fr-s4-check span { font: 500 14px var(--fr-font-dm), sans-serif; color: var(--fr-tinta); }
+.fr-s4-parrafo { font: 400 14px/1.6 var(--fr-font-dm), sans-serif; color: var(--fr-tinta); text-wrap: pretty; }
+.fr-s4-aviso {
+  display: flex; align-items: center; gap: 10px; background: var(--fr-rosa);
+  border: 2px solid var(--fr-tinta); border-radius: 12px; padding: 11px 14px;
+}
+.fr-s4-aviso i {
+  flex: none; width: 22px; height: 22px; border-radius: 50%; font-style: normal;
+  background: var(--fr-tinta); color: var(--fr-rosa);
+  display: grid; place-items: center; font: 800 13px var(--fr-font-baloo), sans-serif;
+}
+.fr-s4-aviso span { font: 500 13px/1.4 var(--fr-font-dm), sans-serif; color: var(--fr-tinta); }
+.fr-s4-nota {
+  background: var(--fr-papel); border: 2px solid var(--fr-tinta); border-radius: 16px;
+  padding: 16px; position: relative; box-shadow: var(--fr-sombra-3); margin-top: 6px;
+}
+.fr-s4-nota-sticker { position: absolute; top: -12px; left: 14px; }
+.fr-s4-nota p { margin: 0; font: 500 italic 13.5px/1.55 var(--fr-font-dm), sans-serif; color: var(--fr-tinta); }
+
+/* Cerca de esta ruta */
+.fr-s4-cerca-grid { display: flex; gap: 12px; flex-wrap: wrap; }
+.fr-s4-cerca-item {
+  flex: 1; min-width: 220px; display: flex; gap: 12px; align-items: center;
+  background: var(--fr-papel); border: 2px solid var(--fr-tinta); border-radius: 14px;
+  padding: 10px 12px; box-shadow: var(--fr-sombra-3);
+}
+.fr-s4-cerca-thumb {
+  flex: none; width: 52px; height: 52px; border-radius: 10px; border: 2px solid var(--fr-tinta);
+  overflow: hidden; position: relative;
+  background: repeating-linear-gradient(-45deg, #d3e2ee 0 8px, #dfeaf2 8px 16px);
+}
+.fr-s4-cerca-thumb img { object-fit: cover; }
+.fr-s4-cerca-nombre { display: block; font: 800 15px var(--fr-font-baloo), sans-serif; color: var(--fr-tinta); }
+.fr-s4-cerca-sub { display: block; font: 500 11.5px var(--fr-font-dm), sans-serif; color: var(--fr-sec); }
+
+/* Columna lateral: acciones + cajas de datos (escritorio sticky) */
+.fr-s4-lateral { display: flex; flex-direction: column; gap: 14px; }
+.fr-s4-accion { display: block; text-align: center; }
+.fr-s4-accion-sub { display: block; font: 500 11px var(--fr-font-dm), sans-serif; opacity: 0.85; }
+.fr-s4-caja { padding: 16px 18px; display: flex; flex-direction: column; gap: 0; }
+.fr-s4-caja--espaciada { gap: 10px; }
+.fr-s4-caja-pueblos { margin-top: 10px; }
+.fr-s4-caja-titulo { display: block; padding-bottom: 8px; }
+.fr-s4-fila {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  padding: 8px 0; border-top: 1.5px dashed rgba(28, 47, 94, 0.25);
+}
+.fr-s4-fila:first-child { border-top: none; }
+.fr-s4-fila-k { font: 700 12px var(--fr-font-dm), sans-serif; color: var(--fr-sec); }
+.fr-s4-fila-v { font: 800 15px var(--fr-font-baloo), sans-serif; color: var(--fr-tinta); text-align: right; }
+.fr-s4-pueblos { display: flex; gap: 6px; flex-wrap: wrap; }
+.fr-s4-pueblo {
+  background: var(--fr-papel); border: 2px solid var(--fr-tinta); border-radius: 99px;
+  padding: 5px 12px; font: 700 12px var(--fr-font-dm), sans-serif; color: var(--fr-tinta);
+}
+.fr-s4-resto { display: flex; gap: 10px; align-items: center; padding-top: 10px; border-top: 1.5px dashed rgba(28, 47, 94, 0.25); }
+.fr-s4-resto:first-child { padding-top: 0; border-top: none; }
+.fr-s4-resto-badge {
+  flex: none; width: 30px; height: 30px; border-radius: 50%;
+  background: var(--fr-rosa); border: 2px solid var(--fr-tinta);
+  display: grid; place-items: center; font: 800 13px var(--fr-font-baloo), sans-serif; color: var(--fr-tinta);
+}
+.fr-s4-resto-nombre { display: block; font: 800 14.5px var(--fr-font-baloo), sans-serif; color: var(--fr-tinta); }
+.fr-s4-resto-sub { display: block; font: 500 11.5px var(--fr-font-dm), sans-serif; color: var(--fr-sec); }
+
+/* Barra fija de acciones (móvil) */
+.fr-s4-barra {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+  display: flex; gap: 10px; padding: 12px 16px 16px;
+  background: var(--fr-papel); border-top: 2px solid var(--fr-tinta);
+}
+.fr-s4-barra .fr-btn--primario { flex: 1.4; text-align: center; }
+.fr-s4-barra .fr-btn--secundario { flex: 1; text-align: center; }
+
+@media (min-width: 900px) {
+  .fr-s4 { padding-bottom: 0; }
+  .fr-s4-crumbs { display: flex; padding: 16px 32px 0; }
+  .fr-s4-grid { display: grid; grid-template-columns: 1fr 400px; gap: 44px; padding: 28px 32px 44px; align-items: start; }
+  .fr-s4-cabecera--desktop { display: flex; }
+  .fr-s4-cabecera--movil { display: none; }
+  .fr-s4-h1 { font-size: 46px; }
+  .fr-s4-lead { font-size: 16.5px; max-width: 640px; }
+  .fr-s4-hero--movil { display: none; }
+  .fr-s4-galeria-principal { display: block; }
+  .fr-s4-thumb { width: 104px; height: 70px; }
+  .fr-s4-lateral { position: sticky; top: 20px; }
+  .fr-s4-barra { display: none; }
+}
