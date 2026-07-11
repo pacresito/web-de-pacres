@@ -4,81 +4,62 @@ import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
-import type { DatosViajes, Destino, Restaurante } from "@/lib/viajes/tipos";
+import type { DatosViajes, Destino } from "@/lib/viajes/tipos";
 import { filtrarDestinos, nivelesDificultad, type Desnivel, type Filtros } from "@/lib/viajes/filtrar";
+import { AGUA_TEXTO, DESNIVEL_TEXTO, EPOCA_TEXTO, filtrosActivos, resumenFiltros } from "@/lib/viajes/resumen";
 import { rango } from "@/lib/viajes/formato";
 import CrearViaje from "./CrearViaje";
 
 // Leaflet toca `window`: solo en cliente, sin SSR.
 const Mapa = dynamic(() => import("./Mapa"), { ssr: false });
 
-// Explorador del índice /viajes: mantiene el estado de filtros en cliente y
-// deriva la lista filtrada que alimenta a la vez el grid y el mapa.
-// Estilo provisional en viajes.css; la lógica no depende de él.
+// Explorador de /viajes (S3, Río pop): filtros en dos filas (dropdowns-chip multi
+// + toggles), grid de tarjetas numeradas y mapa sticky con los mismos números —
+// pin y tarjeta se resaltan mutuamente vía `activo`. Todos los recuentos en vivo
+// (por opción del dropdown, chips de rescate del estado 0) se calculan
+// re-ejecutando filtrar.ts, la lógica pura ya testada.
 
 // Umbrales (valor único, no categoría): un tope acumulativo no admite multi-selección.
 const DISTANCIAS = [5, 10, 15, 20, 25];
 const DURACIONES = [1, 2, 3, 4, 6];
-const DESNIVELES: { valor: Desnivel; texto: string }[] = [
-  { valor: "<150", texto: "Hasta 150 m" },
-  { valor: "<300", texto: "Hasta 300 m" },
-  { valor: "<500", texto: "Hasta 500 m" },
-  { valor: "+500", texto: "Más de 500 m" },
-];
+const DESNIVELES = Object.keys(DESNIVEL_TEXTO) as Desnivel[];
+const DIFICULTADES = ["fácil", "media", "difícil"];
 
-// Opciones categóricas con su texto visible, en orden. Se muestran solo las
-// presentes en los datos (como `tipos`), para no ofrecer filtros que no filtran.
-type Opcion = { valor: string; texto: string };
-const DIFICULTADES: Opcion[] = [
-  { valor: "fácil", texto: "Fácil" },
-  { valor: "media", texto: "Media" },
-  { valor: "difícil", texto: "Difícil" },
-];
-const EPOCAS: Opcion[] = [
-  { valor: "primavera", texto: "Primavera" },
-  { valor: "verano", texto: "Verano" },
-  { valor: "otono", texto: "Otoño" },
-  { valor: "invierno", texto: "Invierno" },
-];
-const AGUAS: Opcion[] = [
-  { valor: "ibon", texto: "Ibón" },
-  { valor: "cascada", texto: "Cascada" },
-  { valor: "rio", texto: "Río" },
-  { valor: "poza", texto: "Poza" },
-  { valor: "embalse", texto: "Embalse" },
-];
-
-export default function Explorador({ datos, zonaInicial, onCambiarZonas }: {
+export default function Explorador({ datos, zonaInicial, onCambiarZonas, onVolverEspana }: {
   datos: DatosViajes;
   zonaInicial?: string[];        // zonas elegidas en la entrada por mapa (vacío = todas)
-  onCambiarZonas?: () => void;   // volver a la entrada por mapa
+  onCambiarZonas?: () => void;   // crumb de la comunidad → volver a elegir zonas
+  onVolverEspana?: () => void;   // crumb "‹ España" → volver a la portada
 }) {
   const [filtros, setFiltros] = useState<Filtros>(() => (zonaInicial?.length ? { zona: zonaInicial } : {}));
   const [verRestaurantes, setVerRestaurantes] = useState(false);
   const [modo, setModo] = useState<"explorar" | "plan">("explorar");
+  const [abierto, setAbierto] = useState<string | null>(null); // dropdown desplegado
+  const [activo, setActivo] = useState<string | null>(null);   // slug resaltado pin↔tarjeta
 
-  const nombreZona = useMemo(
-    () => new Map(datos.zonas.map((z) => [z.id, z.nombre])),
-    [datos.zonas],
-  );
+  const nombreZona = useMemo(() => new Map(datos.zonas.map((z) => [z.id, z.nombre])), [datos.zonas]);
+  const zona = (id: string) => nombreZona.get(id) ?? id;
+
   // Opciones categóricas presentes en los datos: solo se ofrece lo que filtra.
-  const tipos = useMemo<Opcion[]>(
-    () => [...new Set(datos.destinos.map((d) => d.tipo))].sort().map((t) => ({ valor: t, texto: t })),
-    [datos.destinos],
-  );
+  const tipos = useMemo(() => [...new Set(datos.destinos.map((d) => d.tipo))].sort(), [datos.destinos]);
   const dificultades = useMemo(() => presentes(DIFICULTADES, datos.destinos.flatMap((d) => nivelesDificultad(d.dificultad))), [datos.destinos]);
-  const epocas = useMemo(() => presentes(EPOCAS, datos.destinos.flatMap((d) => d.epoca ?? [])), [datos.destinos]);
-  const aguas = useMemo(() => presentes(AGUAS, datos.destinos.flatMap((d) => d.agua ?? [])), [datos.destinos]);
+  const epocas = useMemo(() => presentes(Object.keys(EPOCA_TEXTO), datos.destinos.flatMap((d) => d.epoca ?? [])), [datos.destinos]);
+  const aguas = useMemo(() => presentes(Object.keys(AGUA_TEXTO), datos.destinos.flatMap((d) => d.agua ?? [])), [datos.destinos]);
 
-  const destinos = useMemo(
-    () => filtrarDestinos(datos.destinos, filtros),
-    [datos.destinos, filtros],
+  const destinos = useMemo(() => filtrarDestinos(datos.destinos, filtros), [datos.destinos, filtros]);
+  const activos = filtrosActivos(filtros, zona);
+  const resumen = resumenFiltros(filtros, zona);
+
+  // Recuento en vivo con una variación de los filtros.
+  const cuenta = (parcial: Partial<Filtros>) => filtrarDestinos(datos.destinos, { ...filtros, ...parcial }).length;
+
+  // Pins R del mapa: restaurantes de las zonas filtradas que tienen GPS.
+  const restaurantes = useMemo(
+    () => (verRestaurantes
+      ? datos.restaurantes.filter((r) => r.gps && (!filtros.zona?.length || filtros.zona.includes(r.zona)))
+      : []),
+    [datos.restaurantes, verRestaurantes, filtros.zona],
   );
-
-  const zonaUnica = filtros.zona?.length === 1 ? filtros.zona[0] : undefined;
-  const restaurantes = filtros.zona?.length
-    ? datos.restaurantes.filter((r) => filtros.zona!.includes(r.zona))
-    : datos.restaurantes;
 
   const set = (parcial: Partial<Filtros>) => setFiltros((f) => ({ ...f, ...parcial }));
   // Alterna un valor en una dimensión multi-selección. Vacía = `undefined`, para
@@ -89,125 +70,181 @@ export default function Explorador({ datos, zonaInicial, onCambiarZonas }: {
       const nueva = actual.includes(valor) ? actual.filter((v) => v !== valor) : [...actual, valor];
       return { ...f, [clave]: nueva.length ? nueva : undefined };
     });
-  // Desactivar un filtro deja su clave con `undefined` (el spread no la borra):
-  // hay que mirar valores, no claves.
-  const hayFiltros = Object.values(filtros).some((v) => v !== undefined);
+
+  // Un solo dropdown abierto a la vez.
+  const desp = (id: string) => ({
+    abierto: abierto === id,
+    onToggle: () => setAbierto(abierto === id ? null : id),
+    onCerrar: () => setAbierto(null),
+  });
+
+  // Click en un pin: resalta y lleva a su tarjeta.
+  const irATarjeta = (slug: string) => {
+    setActivo(slug);
+    document.getElementById(`fr-card-${slug}`)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  };
 
   if (modo === "plan") {
     return <CrearViaje datos={datos} filtros={filtros} onVolver={() => setModo("explorar")} />;
   }
 
+  const nBano = (filtros.bano ? 1 : 0) + (filtros.agua?.length ?? 0);
+
   return (
     <>
-      <div className="v-filtros">
-        <div className="v-filtros-inner">
-          {onCambiarZonas && (
-            <button className="v-volver-zonas" onClick={onCambiarZonas}>← Cambiar zonas</button>
-          )}
-          <div className="v-fila">
-            <div className="v-campo">
-              <label htmlFor="v-dist">Distancia</label>
-              <select
-                id="v-dist"
-                value={filtros.distanciaMax ?? ""}
-                onChange={(e) => set({ distanciaMax: e.target.value ? Number(e.target.value) : undefined })}
-              >
-                <option value="">Sin tope</option>
-                {DISTANCIAS.map((km) => (
-                  <option key={km} value={km}>Hasta {km} km</option>
-                ))}
-              </select>
-            </div>
+      <div className="fr-s3-crumbs">
+        {onVolverEspana && <button className="fr-crumb" onClick={onVolverEspana}>‹ España</button>}
+        {onCambiarZonas && <button className="fr-crumb fr-crumb--on" onClick={onCambiarZonas}>{datos.comunidad}</button>}
+      </div>
 
-            <div className="v-campo">
-              <label htmlFor="v-dur">Duración</label>
-              <select
-                id="v-dur"
-                value={filtros.duracionMax ?? ""}
-                onChange={(e) => set({ duracionMax: e.target.value ? Number(e.target.value) : undefined })}
-              >
-                <option value="">Sin tope</option>
-                {DURACIONES.map((h) => (
-                  <option key={h} value={h}>Hasta {h} h</option>
-                ))}
-              </select>
-            </div>
+      <div className="fr-s3-filtros">
+        <div className="fr-s3-filtros-inner">
+          <div className="fr-s3-fila">
+            <Desplegable etiqueta="Zona" titulo="zona — marca varias" {...desp("zona")}
+              valor={filtros.zona?.length ? String(filtros.zona.length) : undefined}
+              onLimpiar={() => set({ zona: undefined })}>
+              {datos.zonas.map((z) => (
+                <Opcion key={z.id} texto={z.nombre} on={!!filtros.zona?.includes(z.id)}
+                  n={cuenta({ zona: [z.id] })} onClick={() => toggle("zona", z.id)} />
+              ))}
+            </Desplegable>
 
-            <div className="v-campo">
-              <label htmlFor="v-desn">Desnivel</label>
-              <select
-                id="v-desn"
-                value={filtros.desnivel ?? ""}
-                onChange={(e) => set({ desnivel: (e.target.value || undefined) as Desnivel | undefined })}
-              >
-                <option value="">Cualquiera</option>
-                {DESNIVELES.map((d) => (
-                  <option key={d.valor} value={d.valor}>{d.texto}</option>
+            <Desplegable etiqueta="Tipo" titulo="tipo de destino — marca varios" {...desp("tipo")}
+              valor={filtros.tipo?.length ? String(filtros.tipo.length) : undefined}
+              onLimpiar={() => set({ tipo: undefined })}>
+              {tipos.map((t) => (
+                <Opcion key={t} texto={t} on={!!filtros.tipo?.includes(t)}
+                  n={cuenta({ tipo: [t] })} onClick={() => toggle("tipo", t)} />
+              ))}
+            </Desplegable>
+
+            {dificultades.length > 0 && (
+              <Desplegable etiqueta="Dificultad" titulo="dificultad — marca varias" {...desp("dificultad")}
+                valor={filtros.dificultad?.length ? String(filtros.dificultad.length) : undefined}
+                onLimpiar={() => set({ dificultad: undefined })}>
+                {dificultades.map((d) => (
+                  <Opcion key={d} texto={d} on={!!filtros.dificultad?.includes(d)}
+                    n={cuenta({ dificultad: [d] })} onClick={() => toggle("dificultad", d)} />
                 ))}
-              </select>
-            </div>
+              </Desplegable>
+            )}
+
+            <Desplegable etiqueta="Baño" titulo="agua y baño — marca varios" {...desp("bano")}
+              valor={nBano ? String(nBano) : undefined}
+              onLimpiar={() => set({ bano: undefined, agua: undefined })}>
+              <Opcion texto="te puedes bañar" on={!!filtros.bano} n={cuenta({ bano: true })}
+                onClick={() => set({ bano: filtros.bano ? undefined : true })} />
+              {aguas.map((a) => (
+                <Opcion key={a} texto={AGUA_TEXTO[a]} on={!!filtros.agua?.includes(a)}
+                  n={cuenta({ agua: [a] })} onClick={() => toggle("agua", a)} />
+              ))}
+            </Desplegable>
+
+            {epocas.length > 0 && (
+              <Desplegable etiqueta="Época" titulo="época — marca varias" {...desp("epoca")}
+                valor={filtros.epoca?.length ? String(filtros.epoca.length) : undefined}
+                onLimpiar={() => set({ epoca: undefined })}>
+                {epocas.map((e) => (
+                  <Opcion key={e} texto={EPOCA_TEXTO[e]} on={!!filtros.epoca?.includes(e)}
+                    n={cuenta({ epoca: [e] })} onClick={() => toggle("epoca", e)} />
+                ))}
+              </Desplegable>
+            )}
+
+            <span className="fr-s3-divisor" />
+
+            <Desplegable etiqueta="A pie" titulo="a pie, como mucho" {...desp("apie")}
+              valor={filtros.distanciaMax !== undefined ? `‹ ${filtros.distanciaMax} km` : undefined}
+              onLimpiar={() => set({ distanciaMax: undefined })}>
+              {DISTANCIAS.map((km) => (
+                <Opcion key={km} texto={`‹ ${km} km`} on={filtros.distanciaMax === km} n={cuenta({ distanciaMax: km })}
+                  onClick={() => set({ distanciaMax: filtros.distanciaMax === km ? undefined : km })} />
+              ))}
+              <Opcion texto="da igual" on={false} n={cuenta({ distanciaMax: undefined })}
+                onClick={() => set({ distanciaMax: undefined })} />
+            </Desplegable>
+
+            <Desplegable etiqueta="Duración" titulo="duración, como mucho" {...desp("duracion")}
+              valor={filtros.duracionMax !== undefined ? `‹ ${filtros.duracionMax} h` : undefined}
+              onLimpiar={() => set({ duracionMax: undefined })}>
+              {DURACIONES.map((h) => (
+                <Opcion key={h} texto={`‹ ${h} h`} on={filtros.duracionMax === h} n={cuenta({ duracionMax: h })}
+                  onClick={() => set({ duracionMax: filtros.duracionMax === h ? undefined : h })} />
+              ))}
+              <Opcion texto="da igual" on={false} n={cuenta({ duracionMax: undefined })}
+                onClick={() => set({ duracionMax: undefined })} />
+            </Desplegable>
+
+            <Desplegable etiqueta="Desnivel" titulo="desnivel, como mucho" alinear="der" {...desp("desnivel")}
+              valor={filtros.desnivel ? DESNIVEL_TEXTO[filtros.desnivel] : undefined}
+              onLimpiar={() => set({ desnivel: undefined })}>
+              {DESNIVELES.map((d) => (
+                <Opcion key={d} texto={DESNIVEL_TEXTO[d]} on={filtros.desnivel === d} n={cuenta({ desnivel: d })}
+                  onClick={() => set({ desnivel: filtros.desnivel === d ? undefined : d })} />
+              ))}
+              <Opcion texto="da igual" on={false} n={cuenta({ desnivel: undefined })}
+                onClick={() => set({ desnivel: undefined })} />
+            </Desplegable>
           </div>
 
-          <Grupo label="Zona" opciones={datos.zonas.map((z) => ({ valor: z.id, texto: z.nombre }))}
-            seleccion={filtros.zona} onToggle={(v) => toggle("zona", v)} />
-          <Grupo label="Tipo" opciones={tipos} seleccion={filtros.tipo} onToggle={(v) => toggle("tipo", v)} />
-          {dificultades.length > 0 && (
-            <Grupo label="Dificultad" opciones={dificultades} seleccion={filtros.dificultad} onToggle={(v) => toggle("dificultad", v)} />
-          )}
-          {epocas.length > 0 && (
-            <Grupo label="Época" opciones={epocas} seleccion={filtros.epoca} onToggle={(v) => toggle("epoca", v)} />
-          )}
-          {aguas.length > 0 && (
-            <Grupo label="Agua" opciones={aguas} seleccion={filtros.agua} onToggle={(v) => toggle("agua", v)} />
-          )}
-
-          <div className="v-toggles">
-            <Chip on={!!filtros.ninos} onClick={() => set({ ninos: filtros.ninos ? undefined : true })}>Con niños</Chip>
-            <Chip on={!!filtros.perros} onClick={() => set({ perros: filtros.perros ? undefined : true })}>Con perro</Chip>
-            <Chip on={!!filtros.bano} onClick={() => set({ bano: filtros.bano ? undefined : true })}>Con baño</Chip>
-            <Chip on={!!filtros.parkingGratuito} onClick={() => set({ parkingGratuito: filtros.parkingGratuito ? undefined : true })}>Parking gratis</Chip>
-            <Chip on={!!filtros.sinReserva} onClick={() => set({ sinReserva: filtros.sinReserva ? undefined : true })}>Sin reserva</Chip>
-            <Chip on={verRestaurantes} onClick={() => setVerRestaurantes((v) => !v)}>Restaurantes</Chip>
-            <button className="v-crear" onClick={() => setModo("plan")}>Crear mi viaje →</button>
-            <button
-              className="v-limpiar"
-              onClick={() => setFiltros({})}
-              disabled={!hayFiltros}
-            >
-              Limpiar
+          <div className="fr-s3-fila fr-s3-fila--extras">
+            <Interruptor on={!!filtros.ninos} onClick={() => set({ ninos: filtros.ninos ? undefined : true })}>apto niños</Interruptor>
+            <Interruptor on={!!filtros.perros} onClick={() => set({ perros: filtros.perros ? undefined : true })}>apto perros</Interruptor>
+            <Interruptor on={!!filtros.parkingGratuito} onClick={() => set({ parkingGratuito: filtros.parkingGratuito ? undefined : true })}>parking gratis</Interruptor>
+            <Interruptor on={!!filtros.sinReserva} onClick={() => set({ sinReserva: filtros.sinReserva ? undefined : true })}>sin reserva</Interruptor>
+            <button className={`fr-s3-restos${verRestaurantes ? " fr-s3-restos--on" : ""}`}
+              aria-pressed={verRestaurantes} onClick={() => setVerRestaurantes((v) => !v)}>
+              <span className="fr-s3-restos-r">R</span>Restaurantes
             </button>
+            {activos.length > 0 && (
+              <button className="fr-s3-limpiar" onClick={() => setFiltros({})}>Limpiar ({activos.length})</button>
+            )}
           </div>
         </div>
       </div>
 
-      <div className="v-main">
-        <div>
-          <p className="v-conteo">
-            {destinos.length} {destinos.length === 1 ? "sitio" : "sitios"}
-            {hayFiltros ? " con estos filtros" : ""}
-          </p>
+      <div className="fr-s3-main">
+        <div className="fr-s3-col">
           {destinos.length === 0 ? (
-            <p className="v-vacio">Nada encaja con estos filtros. Prueba a aflojar alguno.</p>
-          ) : (
-            <div className="v-grid">
-              {destinos.map((d) => (
-                <Card key={d.slug} destino={d} zona={nombreZona.get(d.zona) ?? d.zona} />
-              ))}
+            <div className="fr-s3-vacio">
+              <span className="fr-s3-cero">0</span>
+              <h2 className="fr-s3-vacio-titulo">Ni Cris conoce un sitio con todo eso</h2>
+              <p className="fr-s3-vacio-p">
+                No hay {filtros.tipo?.length ? "" : "sitios "}{resumen}. Suelta uno de estos y seguro que aparece algo:
+              </p>
+              <div className="fr-s3-rescates">
+                {activos.map((a) => (
+                  <button key={a.etiqueta} className="fr-s3-rescate" onClick={() => setFiltros(a.sin)}>
+                    {a.etiqueta} × <b>→ +{filtrarDestinos(datos.destinos, a.sin).length}</b>
+                  </button>
+                ))}
+              </div>
+              <button className="fr-s3-vacio-btn" onClick={() => setFiltros({})}>
+                Limpiar {activos.length === 1 ? "el filtro" : `los ${activos.length} filtros`}
+              </button>
+              <span className="fr-s3-vacio-nota">El mapa se queda quieto — no borra tu encuadre.</span>
             </div>
+          ) : (
+            <>
+              <div className="fr-s3-head">
+                <span className="fr-s3-n">{destinos.length} {destinos.length === 1 ? "sitio" : "sitios"}</span>
+                {resumen && <span className="fr-s3-resumen">{resumen}</span>}
+              </div>
+              <div className="fr-s3-grid">
+                {destinos.map((d, i) => (
+                  <Tarjeta key={d.slug} destino={d} zona={zona(d.zona)} num={i + 1}
+                    activa={activo === d.slug} onActivo={setActivo} />
+                ))}
+              </div>
+              <button className="fr-s3-cta" onClick={() => setModo("plan")}>
+                Crear mi viaje con estos {destinos.length} →
+              </button>
+            </>
           )}
         </div>
 
-        <aside className="v-aside">
-          <Mapa destinos={destinos} />
-
-          {verRestaurantes && (
-            <div className="v-restos">
-              <h2>Dónde comer{zonaUnica ? ` · ${nombreZona.get(zonaUnica)}` : ""}</h2>
-              {restaurantes.map((r) => (
-                <RestoCard key={r.nombre} resto={r} zona={nombreZona.get(r.zona) ?? r.zona} />
-              ))}
-            </div>
-          )}
+        <aside className="fr-s3-aside">
+          <Mapa destinos={destinos} restaurantes={restaurantes} activo={activo} onActivo={setActivo} onPin={irATarjeta} />
         </aside>
       </div>
     </>
@@ -215,72 +252,118 @@ export default function Explorador({ datos, zonaInicial, onCambiarZonas }: {
 }
 
 // Deja de `todas` las opciones en su orden solo las que aparecen en los datos.
-function presentes(todas: Opcion[], valores: string[]): Opcion[] {
+function presentes(todas: string[], valores: string[]): string[] {
   const hay = new Set(valores);
-  return todas.filter((o) => hay.has(o.valor));
+  return todas.filter((v) => hay.has(v));
 }
 
-// Grupo de chips multi-selección para una dimensión categórica.
-function Grupo({ label, opciones, seleccion, onToggle }: {
-  label: string;
-  opciones: Opcion[];
-  seleccion?: string[];
-  onToggle: (valor: string) => void;
+// Dropdown-chip de la fila 1: chip (Lima con valor cuando filtra) + panel flotante
+// con opciones, "Limpiar <dimensión>" y "Listo". El velo cierra al clicar fuera.
+function Desplegable({ etiqueta, valor, titulo, abierto, onToggle, onCerrar, onLimpiar, alinear, children }: {
+  etiqueta: string;
+  valor?: string;            // resumen en el chip ("2", "‹ 5 km"); presente = activo
+  titulo: string;
+  abierto: boolean;
+  onToggle: () => void;
+  onCerrar: () => void;
+  onLimpiar: () => void;
+  alinear?: "der";           // panel alineado a la derecha (chips junto al borde)
+  children: React.ReactNode;
 }) {
-  const sel = seleccion ?? [];
   return (
-    <div className="v-grupo">
-      <span className="v-grupo-label">{label}</span>
-      <div className="v-grupo-chips">
-        {opciones.map((o) => (
-          <Chip key={o.valor} on={sel.includes(o.valor)} onClick={() => onToggle(o.valor)}>{o.texto}</Chip>
-        ))}
-      </div>
+    <div className="fr-s3-desp">
+      <button className={`fr-s3-chip${valor ? " fr-s3-chip--on" : ""}`} aria-expanded={abierto} onClick={onToggle}>
+        {etiqueta}{valor ? ` · ${valor}` : ""} {abierto ? "▴" : "▾"}
+      </button>
+      {abierto && (
+        <>
+          <div className="fr-s3-velo" onClick={onCerrar} />
+          <div className={`fr-s3-panel${alinear ? " fr-s3-panel--der" : ""}`}>
+            <span className="fr-mono">{titulo}</span>
+            <div className="fr-s3-panel-chips">{children}</div>
+            <div className="fr-s3-panel-pie">
+              <button className="fr-s3-panel-limpiar" onClick={onLimpiar}>Limpiar {etiqueta.toLowerCase()}</button>
+              <button className="fr-s3-listo" onClick={onCerrar}>Listo</button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
 
-function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; children: React.ReactNode }) {
+// Opción dentro del panel. Sin resultados (y sin marcar) = deshabilitada con "· 0".
+function Opcion({ texto, on, n, onClick }: { texto: string; on: boolean; n: number; onClick: () => void }) {
+  const off = !on && n === 0;
   return (
-    <label className="v-toggle" data-on={on}>
-      <input type="checkbox" checked={on} onChange={onClick} />
-      {children}
-    </label>
+    <button
+      className={`fr-s3-opcion${on ? " fr-s3-opcion--on" : ""}${off ? " fr-s3-opcion--off" : ""}`}
+      disabled={off}
+      onClick={onClick}
+    >
+      {texto}{on ? " ×" : off ? " · 0" : ""}
+    </button>
   );
 }
 
-function Card({ destino: d, zona }: { destino: Destino; zona: string }) {
+// Toggle de la fila 2 (track 38×22, knob Tinta; on = track Lima, knob a la derecha).
+function Interruptor({ on, onClick, children }: { on: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
-    <Link href={`/viajes/${d.slug}`} className="v-card">
-      <div className="v-card-img">
-        {d.imagen && <Image src={d.imagen} alt={d.nombre} fill sizes="(max-width: 600px) 100vw, 300px" />}
+    <button type="button" className="fr-s3-toggle" data-on={on} aria-pressed={on} onClick={onClick}>
+      <span className="fr-s3-track"><span className="fr-s3-knob" /></span>
+      {children}
+    </button>
+  );
+}
+
+function Tarjeta({ destino: d, zona, num, activa, onActivo }: {
+  destino: Destino;
+  zona: string;
+  num: number;
+  activa: boolean;
+  onActivo: (slug: string | null) => void;
+}) {
+  // 2-4 chips de datos; "baño sí" no va en chip porque ya lo dice el sticker.
+  const chips: { texto: string; tono?: "si" | "no" }[] = [];
+  if (d.distanciaKm) chips.push({ texto: rango(d.distanciaKm, "km") });
+  if (d.desnivelM) chips.push({ texto: d.desnivelM[1] === 0 ? "llano" : `+${rango(d.desnivelM, "m")}` });
+  if (d.ninos !== undefined) chips.push({ texto: `niños ${d.ninos ? "sí" : "no"}`, tono: d.ninos ? "si" : "no" });
+  if (d.perros !== undefined) chips.push({ texto: `perros ${d.perros ? "sí" : "no"}`, tono: d.perros ? "si" : "no" });
+  if (d.bano === false) chips.push({ texto: "baño no", tono: "no" });
+
+  return (
+    <Link
+      href={`/viajes/${d.slug}`}
+      id={`fr-card-${d.slug}`}
+      className={`fr-s3-card${activa ? " fr-s3-card--activa" : ""}`}
+      onMouseEnter={() => onActivo(d.slug)}
+      onMouseLeave={() => onActivo(null)}
+    >
+      <div className="fr-s3-card-foto">
+        {d.imagen ? (
+          <div className="fr-s3-card-marco">
+            <Image src={d.imagen} alt={d.nombre} fill sizes="(max-width: 900px) 100vw, 330px" />
+          </div>
+        ) : (
+          <div className="fr-s3-card-fallback">
+            <i className="fr-s3-foto-pronto">foto en camino</i>
+            <span>{d.nombre}</span>
+          </div>
+        )}
+        <span className={`fr-s3-pin-num${activa ? " fr-s3-pin-num--activo" : ""}`}>{num}</span>
+        {d.bano && <span className="fr-s3-bano">te puedes bañar</span>}
       </div>
-      <div className="v-card-body">
-        <div className="v-card-top">
-          <span className="v-tipo">{d.tipo}</span>
-          <span className="v-zona">{zona}</span>
-        </div>
-        <div className="v-nombre">{d.nombre}</div>
-        <p className="v-que">{d.queEs}</p>
-        <div className="v-meta">
-          {d.distanciaKm && <span className="v-pill">{rango(d.distanciaKm, "km")}</span>}
-          {d.desnivelM && <span className="v-pill">↑ {rango(d.desnivelM, "m")}</span>}
-          {d.duracion && <span className="v-pill">{d.duracion}</span>}
-          {d.ninos && <span className="v-pill v-pill--ok">niños</span>}
-          {d.perros && <span className="v-pill v-pill--ok">perros</span>}
-          {d.bano && <span className="v-pill v-pill--ok">baño</span>}
-        </div>
+      <div className="fr-s3-card-body">
+        <span className="fr-s3-card-meta">{zona} · {d.tipo}</span>
+        <span className="fr-s3-card-nombre">{d.nombre}</span>
+        {chips.length > 0 && (
+          <span className="fr-s3-card-chips">
+            {chips.slice(0, 4).map((c) => (
+              <span key={c.texto} className={`fr-s3-dato${c.tono ? ` fr-s3-dato--${c.tono}` : ""}`}>{c.texto}</span>
+            ))}
+          </span>
+        )}
       </div>
     </Link>
-  );
-}
-
-function RestoCard({ resto: r, zona }: { resto: Restaurante; zona: string }) {
-  return (
-    <div className="v-resto">
-      <div className="v-resto-nombre">{r.nombre}</div>
-      <div className="v-resto-sub">{r.poblacion ?? zona}{r.telefono ? ` · ${r.telefono}` : ""}</div>
-      {r.tipoComida && <div className="v-resto-comida">{r.tipoComida}</div>}
-    </div>
   );
 }

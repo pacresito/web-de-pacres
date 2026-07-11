@@ -33,7 +33,14 @@ export default function Viajes({ datos }: { datos: DatosViajes }) {
   }
 
   if (paso === "resultados") {
-    return <Explorador datos={datos} zonaInicial={seleccion} onCambiarZonas={() => setPaso("zonas")} />;
+    return (
+      <Explorador
+        datos={datos}
+        zonaInicial={seleccion}
+        onCambiarZonas={() => setPaso("zonas")}
+        onVolverEspana={() => setPaso("espana")}
+      />
+    );
   }
 
   const toggle = (id: string) =>
@@ -46,8 +53,8 @@ export default function Viajes({ datos }: { datos: DatosViajes }) {
   return (
     <div className="fr-s2">
       <div className="fr-s2-crumbs">
-        <button className="fr-s2-crumb" onClick={() => setPaso("espana")}>‹ España</button>
-        <span className="fr-s2-crumb fr-s2-crumb--on">{datos.comunidad}</span>
+        <button className="fr-crumb" onClick={() => setPaso("espana")}>‹ España</button>
+        <span className="fr-crumb fr-crumb--on">{datos.comunidad}</span>
       </div>
 
       <div className="fr-s2-grid">
