@@ -1,64 +1,92 @@
 import { MAPA_ESPANA } from "@/data/viajes/espana-mapa";
 
-// Pantalla inicial de /viajes (hero): mapa de España en SVG. Solo Navarra está
-// activa (verde, con glow y pulso, clicable); el resto de provincias apagadas —
-// "próximamente". Canarias en el recuadro insertado. Es un prototipo: se enseña
-// el mapa completo aunque solo haya datos de Navarra, para que Cris vea la idea.
-// Datos de geometría en data/viajes/espana-mapa.ts (generados, no a mano).
+// S1 · Portada «España como hoja de pegatinas» (Río pop, F2).
+// El SVG real de provincias con tratamiento pegatina: Navarra despegada (Lima,
+// trazo Tinta 3px, sombra dura con el mismo path desplazado +6,+7), el resto en
+// papel con trazo discontinuo y tooltip "próximamente". Un solo tap posible.
+// Geometría en data/viajes/espana-mapa.ts (generada, no a mano).
 
 const ACTIVA = "Navarra";
 
-export default function MapaEspana({ comunidad, total, onEntrar }: {
+export default function MapaEspana({ comunidad, total, zonas, onEntrar }: {
   comunidad: string;   // nombre de la comunidad activa
   total: number;       // nº de destinos (para la etiqueta)
+  zonas: number;       // nº de zonas (para la etiqueta)
   onEntrar: () => void;
 }) {
   const { viewBox, inset, provincias } = MAPA_ESPANA;
   const activa = provincias.find((p) => p.name === ACTIVA)!;
-  const bx = activa.cx;
-  const by = activa.cy - 78; // globo por encima de la comunidad (zona norte, vacía)
+  // El callout se ancla como overlay sobre el polígono (posición en % del viewBox).
+  const [vbW, vbH] = viewBox.split(" ").slice(2).map(Number);
+  const navX = (activa.cx / vbW) * 100;
+  const navY = (activa.cy / vbH) * 100;
 
   return (
-    <div className="v-espana">
-      <div className="v-espana-head">
-        <h1>Elige tu destino</h1>
-        <p>Empezamos por <strong>{comunidad}</strong>. Pronto, más rincones de España.</p>
+    <>
+      <div className="fr-s1">
+        <div className="fr-s1-panel">
+          <span className="fr-sticker">hecho a mano por Cris — sin algoritmos</span>
+          <h1 className="fr-s1-h1">Elige tu<br />des<span>tino</span></h1>
+          <p className="fr-s1-lead">
+            Nada de listas infinitas: cada sitio está elegido uno a uno. Empezamos por{" "}
+            <strong>{comunidad}</strong> — el resto de España se irá despegando poco a poco.
+          </p>
+          <div className="fr-s1-cta">
+            <button className="fr-btn fr-btn--primario" onClick={onEntrar}>Explorar {comunidad} →</button>
+            <span className="fr-s1-cta-meta">{total} sitios · {zonas} zonas</span>
+          </div>
+        </div>
+
+        <div className="fr-s1-mapa">
+          <svg viewBox={viewBox} role="img" aria-label={`Mapa de España; ${comunidad} disponible`}>
+            <rect className="fr-inset" x={inset.x} y={inset.y} width={inset.w} height={inset.h} rx="12" />
+
+            <g className="fr-prov-grupo">
+              {provincias.filter((p) => p.name !== ACTIVA).map((p) => (
+                <path key={p.name} d={p.d} className="fr-prov">
+                  <title>Próximamente</title>
+                </path>
+              ))}
+            </g>
+
+            <path d={activa.d} className="fr-prov-sombra" transform="translate(6,7)" />
+            <path d={activa.d} className="fr-prov-on" role="button" tabIndex={0}
+              aria-label={`Explorar ${comunidad}`}
+              onClick={onEntrar}
+              onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), onEntrar())}
+            />
+          </svg>
+
+          <button className="fr-s1-callout" onClick={onEntrar}
+            style={{ left: `${navX + 4}%`, top: `${Math.max(navY - 14, 0)}%` }}>
+            <span className="fr-s1-callout-t1">{comunidad}</span>
+            <span className="fr-s1-callout-t2">{total} sitios · toca para entrar</span>
+          </button>
+          <span className="fr-s1-flecha" style={{ left: `${navX}%`, top: `${navY - 3}%` }} />
+        </div>
+
+        <button className="fr-s1-navcard" onClick={onEntrar} aria-label={`Explorar ${comunidad}`}>
+          <span className="fr-s1-navcard-badge">{total}</span>
+          <span className="fr-s1-navcard-txt">
+            <span className="fr-s1-navcard-nombre">{comunidad}</span>
+            <span className="fr-s1-navcard-sub">{total} sitios en {zonas} zonas</span>
+          </span>
+          <span className="fr-s1-navcard-flecha">→</span>
+        </button>
+
+        <div className="fr-s1-leyenda">
+          <span className="fr-s1-ley fr-s1-ley--on"><i />disponible</span>
+          <span className="fr-s1-ley fr-s1-ley--off"><i />próximamente</span>
+        </div>
       </div>
 
-      <svg className="v-espana-svg" viewBox={viewBox} role="img" aria-label={`Mapa de España; ${comunidad} disponible`}>
-        <defs>
-          <filter id="v-glow" x="-40%" y="-40%" width="180%" height="180%">
-            <feDropShadow dx="0" dy="0" stdDeviation="7" floodColor="#2f7d4f" floodOpacity="0.55" />
-          </filter>
-        </defs>
-
-        <rect className="v-inset" x={inset.x} y={inset.y} width={inset.w} height={inset.h} rx="8" />
-
-        {provincias.filter((p) => p.name !== ACTIVA).map((p) => (
-          <path key={p.name} d={p.d} className="v-prov">
-            <title>Próximamente</title>
-          </path>
-        ))}
-
-        <g
-          className="v-activa"
-          role="button"
-          tabIndex={0}
-          aria-label={`Explorar ${comunidad}`}
-          onClick={onEntrar}
-          onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), onEntrar())}
-        >
-          <path d={activa.d} className="v-prov-on" filter="url(#v-glow)" />
-          <circle className="v-pulso" cx={activa.cx} cy={activa.cy} r="7" />
-          <circle className="v-punto" cx={activa.cx} cy={activa.cy} r="4.5" />
-          <line className="v-callout-linea" x1={activa.cx} y1={activa.cy} x2={bx} y2={by + 22} />
-          <rect className="v-callout-caja" x={bx - 78} y={by - 24} width="156" height="48" rx="10" />
-          <text className="v-callout-t1" x={bx} y={by - 3} textAnchor="middle">{comunidad}</text>
-          <text className="v-callout-t2" x={bx} y={by + 17} textAnchor="middle">{total} sitios · toca aquí</text>
-        </g>
-      </svg>
-
-      <button className="v-ver" onClick={onEntrar}>Explorar {comunidad} →</button>
-    </div>
+      <div className="fr-s1-pie">
+        <span className="fr-mono">una sección de pacr.es</span>
+        <span className="fr-s1-pie-cta">
+          ¿Conoces un sitio que debería estar aquí?{" "}
+          <a href="mailto:hola@pacr.es">Escríbele a Cris</a>
+        </span>
+      </div>
+    </>
   );
 }

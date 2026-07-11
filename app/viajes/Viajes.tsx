@@ -1,17 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import dynamic from "next/dynamic";
 import type { DatosViajes } from "@/lib/viajes/tipos";
 import Explorador from "./Explorador";
 import MapaEspana from "./MapaEspana";
+import MapaZonas from "./MapaZonas";
 
 // Asistente de /viajes: España (elegir comunidad) → zonas (elegir zonas sobre el
 // mapa) → resultados. La selección de zonas alimenta el filtro `zona` del
-// Explorador, que no cambia su lógica — solo recibe el valor inicial.
-// Leaflet toca `window`: el mapa de zonas solo en cliente, sin SSR. El de España
-// es SVG puro, se renderiza sin más.
-const MapaZonas = dynamic(() => import("./MapaZonas"), { ssr: false });
+// Explorador, que no cambia su lógica — solo recibe el valor inicial. Los mapas de
+// España y zonas son SVG puro (Río pop, F2): sin Leaflet, se renderizan sin más.
 
 export default function Viajes({ datos }: { datos: DatosViajes }) {
   // España → zonas → resultados. `seleccion` (zonas) se conserva al volver.
@@ -24,7 +22,14 @@ export default function Viajes({ datos }: { datos: DatosViajes }) {
   );
 
   if (paso === "espana") {
-    return <MapaEspana comunidad={datos.comunidad} total={datos.destinos.length} onEntrar={() => setPaso("zonas")} />;
+    return (
+      <MapaEspana
+        comunidad={datos.comunidad}
+        total={datos.destinos.length}
+        zonas={datos.zonas.length}
+        onEntrar={() => setPaso("zonas")}
+      />
+    );
   }
 
   if (paso === "resultados") {
@@ -34,19 +39,55 @@ export default function Viajes({ datos }: { datos: DatosViajes }) {
   const toggle = (id: string) =>
     setSeleccion((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
 
+  const textoVer = seleccion.length
+    ? `Ver ${conteo} ${conteo === 1 ? "sitio" : "sitios"} →`
+    : `Ver los ${datos.destinos.length} sitios →`;
+
   return (
-    <div className="v-entrada">
-      <div className="v-entrada-head">
-        <button className="v-volver-zonas" onClick={() => setPaso("espana")}>← España</button>
-        <h1>¿Por dónde te apetece?</h1>
-        <p>Toca una o varias zonas de {datos.comunidad}. O entra directamente a verlas todas.</p>
+    <div className="fr-s2">
+      <div className="fr-s2-crumbs">
+        <button className="fr-s2-crumb" onClick={() => setPaso("espana")}>‹ España</button>
+        <span className="fr-s2-crumb fr-s2-crumb--on">{datos.comunidad}</span>
       </div>
-      <MapaZonas zonas={datos.zonas} destinos={datos.destinos} seleccion={seleccion} onToggle={toggle} />
-      <div className="v-entrada-acciones">
-        <button className="v-ver" onClick={() => setPaso("resultados")}>
-          Ver {conteo} {conteo === 1 ? "sitio" : "sitios"}
-          {seleccion.length ? ` en ${seleccion.length} ${seleccion.length === 1 ? "zona" : "zonas"}` : ""} →
-        </button>
+
+      <div className="fr-s2-grid">
+        <div className="fr-s2-col-mapa">
+          <h1 className="fr-s2-h1">¿Por dónde te apetece?</h1>
+          <p className="fr-s2-lead">Marca una o varias zonas — o ninguna, y verás {datos.comunidad} entera.</p>
+          <MapaZonas zonas={datos.zonas} destinos={datos.destinos} seleccion={seleccion} onToggle={toggle} />
+          <div className="fr-s2-chips">
+            {datos.zonas.map((z) => {
+              const sel = seleccion.includes(z.id);
+              return (
+                <button key={z.id} className={`fr-chip${sel ? " fr-chip--activo" : ""}`} onClick={() => toggle(z.id)}>
+                  {z.nombre}{sel ? " ×" : ""}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="fr-s2-lista">
+          <span className="fr-mono">las mismas zonas, en lista</span>
+          {datos.zonas.map((z) => {
+            const sel = seleccion.includes(z.id);
+            const n = datos.destinos.filter((d) => d.zona === z.id).length;
+            return (
+              <button key={z.id} className={`fr-s2-fila${sel ? " fr-s2-fila--on" : ""}`} onClick={() => toggle(z.id)}>
+                <span className="fr-s2-radio">{sel && <span className="fr-s2-radio-check" />}</span>
+                <span className="fr-s2-fila-n">{z.nombre}</span>
+                <span className="fr-s2-fila-c">{n} {n === 1 ? "sitio" : "sitios"}</span>
+              </button>
+            );
+          })}
+          <button className="fr-btn fr-btn--primario fr-s2-ver" onClick={() => setPaso("resultados")}>{textoVer}</button>
+          <button className="fr-btn fr-btn--terciario fr-s2-volver" onClick={() => setPaso("espana")}>‹ Volver a España</button>
+        </div>
+      </div>
+
+      <div className="fr-s2-barra">
+        <button className="fr-btn fr-btn--terciario" onClick={() => setPaso("espana")}>‹ España</button>
+        <button className="fr-btn fr-btn--primario fr-s2-barra-ver" onClick={() => setPaso("resultados")}>{textoVer}</button>
       </div>
     </div>
   );

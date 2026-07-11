@@ -1,28 +1,40 @@
-"use client";
-
-import { useEffect, useRef } from "react";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
 import type { Zona, Destino } from "@/lib/viajes/tipos";
 
-// Mapa de entrada de /viajes: las zonas de Navarra como polígonos interactivos
-// (Leaflet a pelo, autohospedado). Multi-selección por clic; el estado vive en el
-// asistente (Viajes.tsx) y aquí solo se pinta y se restila.
+// S2 · Mapa de zonas «hoja de pegatinas» (Río pop, F2).
+// Las 5 zonas de Navarra como polígonos pegatina en SVG puro (antes Leaflet):
+// seleccionada = Lima + trazo Tinta + sombra path-desplazada + badge check;
+// no seleccionada = papel + trazo Tinta + badge "+". Mapa y lista comparten
+// estado (Viajes.tsx). La geometría es de presentación —no dato curado de Cris—,
+// heredada del handoff de diseño; los ids se mapean por posición norte→sur.
+// Etiquetas dentro del SVG (<text>) para que escalen con el mapa en cualquier
+// ancho; los nombres reales, más largos que los del mock, se parten en dos líneas.
 
-// Polígonos aproximados hechos a mano: teselan Navarra a ojo (norte→sur) para el
-// flujo de entrada. Es geometría de presentación provisional, no dato curado de
-// Cris; el diseño definitivo es handoff a Claude Design. No mostramos pins aquí,
-// así que la contención exacta de cada parking en su rectángulo no importa.
-const POLIGONOS: Record<string, [number, number][]> = {
-  "baztan-otsondo": [[43.3, -2.0], [43.3, -1.35], [42.85, -1.35], [42.85, -2.0]],
-  "irati-aezkoa": [[43.2, -1.35], [43.2, -1.05], [42.85, -1.05], [42.85, -1.35]],
-  "urbasa-andia": [[42.85, -2.4], [42.85, -1.75], [42.4, -1.75], [42.4, -2.4]],
-  "tierra-estella": [[42.85, -1.75], [42.85, -1.1], [42.4, -1.1], [42.4, -1.75]],
-  "ribera": [[42.4, -2.0], [42.4, -1.0], [41.9, -1.0], [41.9, -2.0]],
+type ZonaSvg = {
+  id: string;
+  path: string;
+  badge: [number, number];   // centro del badge (coords SVG)
+  label: [number, number];   // centro de la etiqueta (coords SVG)
 };
 
-const ESTILO_BASE: L.PathOptions = { color: "#1f5c39", weight: 1.5, fillColor: "#2f7d4f", fillOpacity: 0.18 };
-const ESTILO_SEL: L.PathOptions = { color: "#1f5c39", weight: 2, fillColor: "#2f7d4f", fillOpacity: 0.55 };
+const ZONAS_SVG: ZonaSvg[] = [
+  { id: "baztan-otsondo", path: "M62,22 L198,12 L210,92 L92,112 Z", badge: [196, 34], label: [140, 59] },
+  { id: "irati-aezkoa", path: "M222,16 L358,42 L368,142 L232,122 Z", badge: [352, 52], label: [295, 80] },
+  { id: "urbasa-andia", path: "M32,124 L152,116 L162,222 L62,242 L20,182 Z", badge: [150, 132], label: [86, 177] },
+  { id: "tierra-estella", path: "M172,132 L340,154 L330,262 L172,258 Z", badge: [330, 168], label: [254, 202] },
+  { id: "ribera", path: "M104,272 L298,276 L282,392 L142,382 Z", badge: [288, 290], label: [206, 331] },
+];
+
+// Parte un nombre largo en dos líneas equilibradas por palabras (cabe en el polígono).
+function dosLineas(nombre: string): string[] {
+  const palabras = nombre.split(" ");
+  if (nombre.length <= 14 || palabras.length === 1) return [nombre];
+  let corte = 1, mejor = Infinity;
+  for (let i = 1; i < palabras.length; i++) {
+    const dif = Math.abs(palabras.slice(0, i).join(" ").length - palabras.slice(i).join(" ").length);
+    if (dif < mejor) { mejor = dif; corte = i; }
+  }
+  return [palabras.slice(0, corte).join(" "), palabras.slice(corte).join(" ")];
+}
 
 export default function MapaZonas({ zonas, destinos, seleccion, onToggle }: {
   zonas: Zona[];
@@ -30,58 +42,53 @@ export default function MapaZonas({ zonas, destinos, seleccion, onToggle }: {
   seleccion: string[];
   onToggle: (id: string) => void;
 }) {
-  const contenedor = useRef<HTMLDivElement>(null);
-  const mapa = useRef<L.Map | null>(null);
-  const capas = useRef<Map<string, L.Polygon>>(new Map());
-  // `onToggle` cambia en cada render; lo guardamos en un ref (actualizado en un
-  // effect) para que el handler de clic —registrado una sola vez al crear el
-  // polígono— llame siempre al actual.
-  const toggleRef = useRef(onToggle);
-  useEffect(() => { toggleRef.current = onToggle; }, [onToggle]);
+  const nombre = (id: string) => zonas.find((z) => z.id === id)?.nombre ?? id;
+  const conteo = (id: string) => destinos.filter((d) => d.zona === id).length;
 
-  // Inicializa el mapa y los polígonos una vez.
-  useEffect(() => {
-    if (!contenedor.current || mapa.current) return;
-    const capa = capas.current;
-    const m = L.map(contenedor.current, { scrollWheelZoom: false });
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: "&copy; OpenStreetMap",
-      maxZoom: 18,
-    }).addTo(m);
-
-    const conteo = (id: string) => destinos.filter((d) => d.zona === id).length;
-    for (const z of zonas) {
-      const ring = POLIGONOS[z.id];
-      if (!ring) continue;
-      const poly = L.polygon(ring, ESTILO_BASE)
-        .bindTooltip(`${z.nombre} · ${conteo(z.id)}`, { permanent: true, direction: "center", className: "v-zona-label" })
-        .on("click", () => toggleRef.current(z.id))
-        .addTo(m);
-      capa.set(z.id, poly);
-    }
-
-    const puntos = Object.values(POLIGONOS).flat();
-    m.fitBounds(L.latLngBounds(puntos), { padding: [20, 20] });
-
-    // Leaflet no recalcula su tamaño si el contenedor cambia de ancho: lo forzamos.
-    const ro = new ResizeObserver(() => m.invalidateSize());
-    ro.observe(contenedor.current);
-    mapa.current = m;
-
-    return () => {
-      ro.disconnect();
-      m.remove();
-      mapa.current = null;
-      capa.clear();
-    };
-  }, [zonas, destinos]);
-
-  // Restila los polígonos según la selección actual.
-  useEffect(() => {
-    for (const [id, poly] of capas.current) {
-      poly.setStyle(seleccion.includes(id) ? ESTILO_SEL : ESTILO_BASE);
-    }
-  }, [seleccion]);
-
-  return <div ref={contenedor} className="v-mapa-zonas" />;
+  return (
+    <div className="fr-s2-mapa">
+      <svg viewBox="0 0 400 430" role="group" aria-label="Zonas de Navarra">
+        {ZONAS_SVG.map((z) => {
+          const sel = seleccion.includes(z.id);
+          const [bx, by] = z.badge;
+          const [lx, ly] = z.label;
+          const lineas = dosLineas(nombre(z.id));
+          const n = conteo(z.id);
+          // Bloque centrado en (lx, ly): líneas del nombre + recuento debajo.
+          const y0 = ly - (lineas.length * 16) / 2;
+          return (
+            <g key={z.id} className="fr-zona" role="button" tabIndex={0}
+              aria-pressed={sel} aria-label={`${nombre(z.id)}, ${n} sitios`}
+              onClick={() => onToggle(z.id)}
+              onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), onToggle(z.id))}>
+              {sel && <path d={z.path} transform="translate(5,6)" className="fr-zona-sombra" />}
+              <path d={z.path} className={sel ? "fr-zona-on" : "fr-zona-off"} />
+              {sel ? (
+                <>
+                  <circle cx={bx} cy={by} r="13" className="fr-zona-badge-on" />
+                  <path d={`M${bx - 6},${by} L${bx - 1},${by + 5} L${bx + 7},${by - 5}`}
+                    className="fr-zona-check" fill="none" />
+                </>
+              ) : (
+                <>
+                  <circle cx={bx} cy={by} r="12" className="fr-zona-badge-off" />
+                  <path d={`M${bx},${by - 5} L${bx},${by + 5} M${bx - 5},${by} L${bx + 5},${by}`}
+                    className="fr-zona-mas" />
+                </>
+              )}
+              <text className="fr-zona-nombre" textAnchor="middle">
+                {lineas.map((linea, i) => (
+                  <tspan key={i} x={lx} y={y0 + i * 16}>{linea}</tspan>
+                ))}
+              </text>
+              <text className={`fr-zona-conteo${sel ? " fr-zona-conteo--on" : ""}`}
+                textAnchor="middle" x={lx} y={y0 + lineas.length * 16 + 2}>
+                {n} {n === 1 ? "sitio" : "sitios"}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
 }
