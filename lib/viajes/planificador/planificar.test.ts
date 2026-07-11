@@ -11,7 +11,7 @@ import matriz from "../../../data/viajes/matriz-navarra.json";
 const datos = navarra as unknown as DatosViajes;
 const base: Omit<PlanInput, "dias"> = {
   datos, matriz: matriz as MatrizViajes, filtros: {},
-  ritmo: "activo", comida: "bocadillo", fecha: new Date(Date.UTC(2026, 6, 15, 12)),
+  ritmo: "activo", comida: "picnic", fecha: new Date(Date.UTC(2026, 6, 15, 12)),
 };
 
 // Candidatos esperados: destinos filtrados, con GPS en la matriz y no alojamientos.
@@ -29,7 +29,7 @@ for (const p of props) {
   assert.ok(p.dias.length <= 4, `${p.id}: no más días de los pedidos`);
   // Conservación: cada candidato aparece exactamente una vez (en un día o sin encajar).
   const colocados = p.dias.flatMap((d) => d.paradas.map((x) => x.slug));
-  const todos = [...colocados, ...p.sinEncajar];
+  const todos = [...colocados, ...p.sinEncajar.map((s) => s.slug)];
   assert.strictEqual(todos.length, new Set(todos).size, `${p.id}: sin duplicados`);
   assert.deepStrictEqual(new Set(todos), setCand, `${p.id}: no se pierde ni inventa ningún candidato`);
   for (const d of p.dias) {

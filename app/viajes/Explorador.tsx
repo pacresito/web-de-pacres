@@ -253,7 +253,7 @@ function Card({ destino: d, zona }: { destino: Destino; zona: string }) {
   return (
     <Link href={`/viajes/${d.slug}`} className="v-card">
       <div className="v-card-img">
-        <Image src={d.imagen} alt={d.nombre} fill sizes="(max-width: 600px) 100vw, 300px" />
+        {d.imagen && <Image src={d.imagen} alt={d.nombre} fill sizes="(max-width: 600px) 100vw, 300px" />}
       </div>
       <div className="v-card-body">
         <div className="v-card-top">

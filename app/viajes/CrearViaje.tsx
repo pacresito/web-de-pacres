@@ -21,7 +21,8 @@ const RITMOS: { valor: Ritmo; texto: string }[] = [
 ];
 const COMIDAS: { valor: Comida; texto: string }[] = [
   { valor: "restaurante", texto: "Restaurante" },
-  { valor: "bocadillo", texto: "Bocadillo" },
+  { valor: "picnic", texto: "Picnic" },
+  { valor: "da-igual", texto: "Da igual" },
   { valor: "solo-cena", texto: "Solo cena" },
 ];
 
@@ -163,7 +164,7 @@ function PropuestaCard({ propuesta: p, nombrePorSlug }: {
       {p.sinEncajar.length > 0 && (
         <div className="v-sin-encajar">
           <span className="v-grupo-label">No caben</span>
-          <span>{p.sinEncajar.map((s) => nombrePorSlug.get(s) ?? s).join(" · ")}</span>
+          <span>{p.sinEncajar.map((s) => nombrePorSlug.get(s.slug) ?? s.slug).join(" · ")}</span>
         </div>
       )}
     </section>

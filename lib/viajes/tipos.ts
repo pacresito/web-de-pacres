@@ -11,6 +11,8 @@ export type Destino = {
   zona: string;        // id de zona
   tipo: string;        // ruta | cascada | pueblo | mirador | cueva | parque | monumento | alojamiento | actividad
   actividad?: string;  // solo si tipo="actividad": tirolina, teleférico, balneario, kayak…
+  favoritoDeCris?: boolean;       // sticker "favorito de Cris" (solo si presente)
+  precio?: string;                // libre: "gratis · parking 3 €", "entrada 5,50 €" (dato de ficha, no filtro)
   queEs: string;
   gps?: [number, number];         // el GPS es el parking (así lo trae la fuente), no el punto de interés
   gpsAprox?: boolean;  // coordenada aproximada (centro de pueblo, parking sin fijar)
@@ -37,7 +39,7 @@ export type Destino = {
   pueblosAlojamiento?: string[];  // pueblos donde alojarse, no hoteles
   trackWikiloc?: string;          // URL de la ruta en Wikiloc
   nota?: string;
-  imagen: string;                 // foto principal
+  imagen?: string;                // foto principal (opcional; sin foto → fallback "foto en camino")
   imagenes?: string[];            // galería (hoy 1; la ficha usa esta si existe, si no [imagen])
 };
 
@@ -45,6 +47,8 @@ export type Restaurante = {
   nombre: string;
   zona: string;
   categoria?: string;  // economico | calidad-precio | especial (la ficha muestra máx. 3, uno por categoría)
+  gps?: [number, number];  // solo para el pin del explorador; la lógica de ficha/planificador sigue por zona
+  reserva?: boolean;   // chip "mejor reservar" (solo si presente)
   poblacion?: string;
   direccion?: string;
   telefono?: string;

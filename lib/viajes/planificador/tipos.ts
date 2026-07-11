@@ -6,7 +6,8 @@ import type { DatosViajes } from "../tipos";
 import type { MatrizViajes } from "./geo";
 
 export type Ritmo = "relajado" | "medio" | "activo";
-export type Comida = "restaurante" | "bocadillo" | "solo-cena";
+// da-igual = restaurante si hay en la zona, picnic si no (lo resuelve el motor por día).
+export type Comida = "restaurante" | "picnic" | "da-igual" | "solo-cena";
 
 export type PlanInput = {
   datos: DatosViajes;        // destinos, restaurantes y zonas de la comunidad
@@ -25,6 +26,14 @@ export type Parada = {
   tipo: string;
   visitaMin: number;          // minutos de visita (de duracionHoras)
   cocheDesdeAnterior: number; // minutos de coche desde la parada anterior (0 la primera)
+  horaInicio: number;         // minutos desde la medianoche local en que arranca la visita
+};
+
+// Candidato que no cupo en los días pedidos, con el motivo humano del descarte.
+export type Descarte = {
+  slug: string;
+  motivo: string;                 // por qué no encajó (derivado de lo que calcula el motor)
+  enPropuesta?: "A" | "B" | "C";  // otra propuesta que sí lo coloca, si existe
 };
 
 export type Dia = {
@@ -41,7 +50,7 @@ export type Propuesta = {
   id: "A" | "B" | "C";
   nombre: string;             // Equilibrada | Mínimo coche | Imprescindibles
   dias: Dia[];
-  sinEncajar: string[];       // slugs de candidatos que no cupieron en los días pedidos
+  sinEncajar: Descarte[];     // candidatos que no cupieron, con motivo humano
   cocheTotalMin: number;      // suma del coche intra-día de todos los días
   avisos: string[];
 };

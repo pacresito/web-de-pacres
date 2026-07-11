@@ -5,10 +5,13 @@ import type { Destino, Restaurante } from "../tipos";
 import { filtrarDestinos } from "../filtrar";
 import { tiempoCoche, ordenarDia, type MatrizViajes } from "./geo";
 import { horasDeLuz } from "./sol";
-import type { Comida, Dia, Parada, PlanInput, Propuesta, Ritmo } from "./tipos";
+import type { Comida, Descarte, Dia, Parada, PlanInput, Propuesta, Ritmo } from "./tipos";
 
 const RITMO_MIN: Record<Ritmo, number> = { relajado: 300, medio: 420, activo: 540 };
-const COMIDA_MIN: Record<Comida, number> = { restaurante: 90, bocadillo: 30, "solo-cena": 0 };
+// Minutos reservados para la comida. "da-igual" reserva como picnic en el presupuesto
+// global; por día se resuelve a restaurante (90) si la zona tiene, o picnic si no.
+const COMIDA_MIN: Record<Comida, number> = { restaurante: 90, picnic: 30, "da-igual": 30, "solo-cena": 0 };
+const LUNCH = 14 * 60; // minutos desde medianoche: se intercala la comida en la 1ª parada que arranca a esta hora o después
 const VISITA_DEFECTO = 90;   // minutos si el destino no trae duracionHoras
 const MAX_PARADAS_DIA = 8;   // tope del TSP por fuerza bruta (ver geo.ordenarDia)
 const PENAL_ZONA = 30;       // min de coche "imaginario" que la estrategia "Mínimo coche"
@@ -57,8 +60,9 @@ export function planificar(input: PlanInput): Propuesta[] {
   const luzTotal = centro ? horasDeLuz(fecha, centro[0], centro[1]).minutosLuz : 0;
   const presupuesto = Math.min(RITMO_MIN[ritmo], luzTotal - COMIDA_MIN[comida]);
 
-  return ESTRATEGIAS.map((e) =>
+  const propuestas = ESTRATEGIAS.map((e) =>
     repartir(e, e.orden(candidatos, imprescindibles), { matriz, porSlug, restPorZona, comida, fecha, dias, presupuesto }));
+  return anotarAlternativas(propuestas);
 }
 
 type Ctx = {
@@ -104,37 +108,73 @@ function repartir(estr: Estrategia, ordenados: Destino[], ctx: Ctx): Propuesta {
   }
 
   const cocheTotalMin = dias.reduce((s, d) => s + d.paradas.reduce((t, p) => t + p.cocheDesdeAnterior, 0), 0);
-  const sinEncajar = restantes.map((r) => r.slug);
+  const colocados = dias.flatMap((d) => d.paradas.map((p) => p.slug));
+  const sinEncajar: Descarte[] = restantes.map((r) => ({ slug: r.slug, motivo: motivoDescarte(r.slug, colocados, ctx) }));
   const avisos: string[] = [];
   if (sinEncajar.length) avisos.push(`${sinEncajar.length} destino(s) no caben en ${ctx.dias} día(s)`);
   return { id: estr.id, nombre: estr.nombre, dias, sinEncajar, cocheTotalMin, avisos };
 }
 
+// Motivo humano del descarte: no cupo en los días pedidos, y a cuánto coche queda del
+// destino colocado más cercano (lo que "costaría" recogerlo). Solo usa la matriz.
+function motivoDescarte(slug: string, colocados: string[], ctx: Ctx): string {
+  const base = `no cupo en ${ctx.dias} día(s)`;
+  if (!colocados.length) return base;
+  const cercano = min(Math.min(...colocados.map((c) => tiempoCoche(ctx.matriz, slug, c))));
+  return `${base} · a ${cercano} min en coche de la parada más cercana`;
+}
+
+// Marca en cada descarte si otra propuesta sí coloca ese destino ("está en la C").
+function anotarAlternativas(propuestas: Propuesta[]): Propuesta[] {
+  const colocadosPorProp = new Map(
+    propuestas.map((p) => [p.id, new Set(p.dias.flatMap((d) => d.paradas.map((x) => x.slug)))]),
+  );
+  for (const p of propuestas) {
+    for (const desc of p.sinEncajar) {
+      const otra = propuestas.find((q) => q.id !== p.id && colocadosPorProp.get(q.id)!.has(desc.slug));
+      if (otra) desc.enPropuesta = otra.id;
+    }
+  }
+  return propuestas;
+}
+
 function construirDia(numero: number, clusterSlugs: string[], ctx: Ctx): Dia {
   const { orden } = ordenarDia(ctx.matriz, clusterSlugs);
-  const paradas: Parada[] = orden.map((slug, i) => {
-    const d = ctx.porSlug.get(slug)!;
-    return {
-      slug, nombre: d.nombre, tipo: d.tipo, visitaMin: visitaMin(d),
-      cocheDesdeAnterior: i === 0 ? 0 : min(tiempoCoche(ctx.matriz, orden[i - 1], slug)),
-    };
-  });
-
-  const zona = zonaDominante(orden.map((s) => ctx.porSlug.get(s)!));
+  const destinos = orden.map((s) => ctx.porSlug.get(s)!);
+  const zona = zonaDominante(destinos);
   const avisos: string[] = [];
+
+  // Comida del mediodía. "da-igual" toma restaurante si la zona tiene y picnic si no,
+  // sin aviso (el usuario ya dijo que le da igual); "restaurante" avisa cuando no hay.
   let restaurante: string | undefined;
-  if (ctx.comida === "restaurante") {
+  let comidaMin = COMIDA_MIN[ctx.comida];
+  if (ctx.comida === "restaurante" || ctx.comida === "da-igual") {
     const r = ctx.restPorZona.get(zona);
-    if (r) restaurante = r.nombre;
-    else avisos.push(`Sin restaurante en la zona (${zona}): lleva picnic`);
+    if (r) { restaurante = r.nombre; comidaMin = COMIDA_MIN.restaurante; }
+    else if (ctx.comida === "restaurante") avisos.push(`Sin restaurante en la zona (${zona}): lleva picnic`);
+    else comidaMin = COMIDA_MIN.picnic;
   }
+
+  // El día arranca al amanecer: cada parada empieza tras conducir hasta ella y la
+  // comida se intercala en la primera parada que caería a mediodía o más tarde.
+  const centro = centroDe(destinos)!;
+  const { amanecer, minutosLuz } = horasDeLuz(ctx.fecha, centro[0], centro[1]);
+  const paradas: Parada[] = [];
+  let cursor = amanecer;
+  let comidaPuesta = comidaMin === 0;
+  orden.forEach((slug, i) => {
+    const d = ctx.porSlug.get(slug)!;
+    const cocheDesdeAnterior = i === 0 ? 0 : min(tiempoCoche(ctx.matriz, orden[i - 1], slug));
+    cursor += cocheDesdeAnterior;
+    if (!comidaPuesta && cursor >= LUNCH) { cursor += comidaMin; comidaPuesta = true; }
+    paradas.push({ slug, nombre: d.nombre, tipo: d.tipo, visitaMin: visitaMin(d), cocheDesdeAnterior, horaInicio: cursor });
+    cursor += visitaMin(d);
+  });
 
   const visitas = paradas.reduce((s, p) => s + p.visitaMin, 0);
   const coche = paradas.reduce((s, p) => s + p.cocheDesdeAnterior, 0);
-  const minutosActivos = visitas + coche + COMIDA_MIN[ctx.comida];
+  const minutosActivos = visitas + coche + comidaMin;
 
-  const centro = centroDe(orden.map((s) => ctx.porSlug.get(s)!))!;
-  const minutosLuz = horasDeLuz(ctx.fecha, centro[0], centro[1]).minutosLuz;
   if (minutosActivos > minutosLuz) {
     avisos.push(`Jornada apretada: ${fmt(minutosActivos)} de actividad para ${fmt(minutosLuz)} de luz`);
   }
