@@ -147,7 +147,8 @@
 .v-grupo-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .v-campo { display: flex; flex-direction: column; gap: 3px; }
 .v-campo label { font-size: 11px; font-weight: 600; color: var(--v-suave); text-transform: uppercase; letter-spacing: 0.03em; }
-.v-campo select {
+.v-campo select,
+.v-campo input {
   font: inherit;
   font-size: 14px;
   padding: 6px 8px;
@@ -156,6 +157,7 @@
   background: #fff;
   color: var(--v-texto);
 }
+.v-campo input[type="number"] { width: 72px; }
 .v-toggles { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
 .v-toggle {
   display: inline-flex;
@@ -182,6 +184,79 @@
   cursor: pointer;
 }
 .v-limpiar:disabled { opacity: 0.4; cursor: default; }
+.v-crear {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px 13px;
+  border: 1px solid var(--v-verde);
+  border-radius: 999px;
+  background: var(--v-badge);
+  color: var(--v-verde-osc);
+  cursor: pointer;
+}
+@media (hover: hover) { .v-crear:hover { background: var(--v-verde); color: #fff; } }
+.v-crear:active { background: var(--v-verde); color: #fff; }
+
+/* Planificador "Crear mi viaje" (Fase E.3) */
+.v-plan { max-width: 1180px; margin: 0 auto; padding: 22px 20px 40px; }
+.v-plan-titulo { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; margin-top: 10px; }
+.v-plan-sub { font-size: 14px; color: var(--v-suave); margin-top: 4px; max-width: 640px; }
+.v-plan-form { display: flex; flex-direction: column; gap: 16px; margin-top: 20px; }
+.v-plan-acciones { display: flex; justify-content: flex-start; }
+
+.v-propuestas {
+  margin-top: 28px;
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  align-items: start;
+}
+.v-propuesta {
+  border: 1px solid var(--v-borde);
+  border-radius: 12px;
+  background: var(--v-card);
+  padding: 14px 16px 16px;
+}
+.v-propuesta-head { display: flex; align-items: center; gap: 12px; }
+.v-propuesta-id {
+  display: grid; place-items: center;
+  width: 34px; height: 34px; flex: none;
+  border-radius: 999px;
+  background: var(--v-verde); color: #fff;
+  font-weight: 800; font-size: 16px;
+}
+.v-propuesta-nombre { font-size: 16px; font-weight: 700; }
+.v-propuesta-meta { font-size: 12px; color: var(--v-suave); }
+
+.v-dias { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
+.v-dia { border-top: 1px solid var(--v-borde); padding-top: 10px; }
+.v-dia-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
+.v-dia-num { font-weight: 700; font-size: 14px; }
+.v-dia-zona { font-size: 12px; color: var(--v-verde-osc); font-weight: 600; }
+.v-dia-luz { font-size: 11px; color: var(--v-suave); margin-left: auto; }
+.v-paradas { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+.v-parada { display: flex; align-items: baseline; gap: 8px; font-size: 13px; }
+.v-parada-coche { font-size: 11px; color: var(--v-suave); flex: none; }
+.v-parada-nombre { flex: 1; }
+.v-parada-visita { font-size: 11px; color: var(--v-suave); flex: none; }
+.v-dia-resto { font-size: 12px; color: var(--v-texto); margin-top: 8px; }
+
+.v-aviso {
+  font-size: 12px;
+  color: #8a5a00;
+  background: #fbf3e0;
+  border-radius: 6px;
+  padding: 4px 8px;
+  margin-top: 8px;
+}
+.v-sin-encajar {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--v-borde);
+  display: flex; flex-direction: column; gap: 3px;
+  font-size: 12px; color: var(--v-suave);
+}
 
 /* Cuerpo: grid + mapa */
 .v-main {

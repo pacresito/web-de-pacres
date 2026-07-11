@@ -7,6 +7,7 @@ import Link from "next/link";
 import type { DatosViajes, Destino, Restaurante } from "@/lib/viajes/tipos";
 import { filtrarDestinos, nivelesDificultad, type Desnivel, type Filtros } from "@/lib/viajes/filtrar";
 import { rango } from "@/lib/viajes/formato";
+import CrearViaje from "./CrearViaje";
 
 // Leaflet toca `window`: solo en cliente, sin SSR.
 const Mapa = dynamic(() => import("./Mapa"), { ssr: false });
@@ -54,6 +55,7 @@ export default function Explorador({ datos, zonaInicial, onCambiarZonas }: {
 }) {
   const [filtros, setFiltros] = useState<Filtros>(() => (zonaInicial?.length ? { zona: zonaInicial } : {}));
   const [verRestaurantes, setVerRestaurantes] = useState(false);
+  const [modo, setModo] = useState<"explorar" | "plan">("explorar");
 
   const nombreZona = useMemo(
     () => new Map(datos.zonas.map((z) => [z.id, z.nombre])),
@@ -90,6 +92,10 @@ export default function Explorador({ datos, zonaInicial, onCambiarZonas }: {
   // Desactivar un filtro deja su clave con `undefined` (el spread no la borra):
   // hay que mirar valores, no claves.
   const hayFiltros = Object.values(filtros).some((v) => v !== undefined);
+
+  if (modo === "plan") {
+    return <CrearViaje datos={datos} filtros={filtros} onVolver={() => setModo("explorar")} />;
+  }
 
   return (
     <>
@@ -162,6 +168,7 @@ export default function Explorador({ datos, zonaInicial, onCambiarZonas }: {
             <Chip on={!!filtros.parkingGratuito} onClick={() => set({ parkingGratuito: filtros.parkingGratuito ? undefined : true })}>Parking gratis</Chip>
             <Chip on={!!filtros.sinReserva} onClick={() => set({ sinReserva: filtros.sinReserva ? undefined : true })}>Sin reserva</Chip>
             <Chip on={verRestaurantes} onClick={() => setVerRestaurantes((v) => !v)}>Restaurantes</Chip>
+            <button className="v-crear" onClick={() => setModo("plan")}>Crear mi viaje →</button>
             <button
               className="v-limpiar"
               onClick={() => setFiltros({})}
