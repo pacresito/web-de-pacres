@@ -33,11 +33,6 @@ export default function MapaZonas({ region, viewBox, zonas, seleccion, onToggle,
   return (
     <div className="fr-s2-mapa">
       <svg viewBox={viewBox} role="group" aria-label={`Zonas de ${region}`}>
-        {/* Sombra dura de pegatina, siempre (identidad «hoja de pegatinas»); capa aparte
-            para que ninguna sombra pise el relleno de la zona vecina. */}
-        {zonas.map((z) => (
-          <path key={`${z.id}-s`} d={z.path} transform="translate(5,6)" className="fr-zona-sombra" />
-        ))}
         {zonas.map((z) => {
           const sel = seleccion.includes(z.id);
           const [lx, ly] = z.label;
@@ -51,6 +46,7 @@ export default function MapaZonas({ region, viewBox, zonas, seleccion, onToggle,
               aria-pressed={sel} aria-label={`${z.nombre}${ariaN}`}
               onClick={() => onToggle(z.id)}
               onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), onToggle(z.id))}>
+              {sel && <path d={z.path} transform="translate(5,6)" className="fr-zona-sombra" />}
               <path d={z.path} className={sel ? "fr-zona-on" : "fr-zona-off"} />
               <text className="fr-zona-nombre" textAnchor="middle">
                 {lineas.map((linea, i) => (

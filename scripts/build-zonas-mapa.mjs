@@ -10,7 +10,7 @@ const SALIDA = new URL("../data/viajes/zonas-mapa.ts", import.meta.url);
 
 const VB_W = 400, VB_H = 430, PAD = 22;      // lienzo de MapaZonas
 const TOL = 18;                               // px de simplificación (chunky, muy poligonal pero reconocible)
-const GAP = 5;                                // px que se encoge cada zona → hueco entre pegatinas
+const GAP = 10;                               // px que se encoge cada zona → hueco entre pegatinas
 
 // Zonas por provincia: id + nombre + semilla en fracción del bbox (0,0 = NO, 1,1 = SE).
 // Navarra conserva los ids de navarra.json (mapeo zona→destinos). El resto son
