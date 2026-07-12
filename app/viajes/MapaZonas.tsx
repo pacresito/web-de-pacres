@@ -1,28 +1,14 @@
-import type { Zona, Destino } from "@/lib/viajes/tipos";
+import type { ZonaMapa } from "@/data/viajes/zonas-mapa";
 
 // S2 · Mapa de zonas «hoja de pegatinas» (Río pop, F2).
-// Las 5 zonas de Navarra como polígonos pegatina en SVG puro (antes Leaflet):
+// Las zonas de una provincia como polígonos pegatina en SVG puro (antes Leaflet):
 // seleccionada = Lima + trazo Tinta + sombra path-desplazada + badge check;
-// no seleccionada = papel + trazo Tinta + badge "+". Mapa y lista comparten
-// estado (Viajes.tsx). La geometría es de presentación —no dato curado de Cris—,
-// heredada del handoff de diseño; los ids se mapean por posición norte→sur.
-// Etiquetas dentro del SVG (<text>) para que escalen con el mapa en cualquier
-// ancho; los nombres reales, más largos que los del mock, se parten en dos líneas.
-
-type ZonaSvg = {
-  id: string;
-  path: string;
-  badge: [number, number];   // centro del badge (coords SVG)
-  label: [number, number];   // centro de la etiqueta (coords SVG)
-};
-
-const ZONAS_SVG: ZonaSvg[] = [
-  { id: "baztan-otsondo", path: "M62,22 L198,12 L210,92 L92,112 Z", badge: [196, 34], label: [140, 59] },
-  { id: "irati-aezkoa", path: "M222,16 L358,42 L368,142 L232,122 Z", badge: [352, 52], label: [295, 80] },
-  { id: "urbasa-andia", path: "M32,124 L152,116 L162,222 L62,242 L20,182 Z", badge: [150, 132], label: [86, 177] },
-  { id: "tierra-estella", path: "M172,132 L340,154 L330,262 L172,258 Z", badge: [330, 168], label: [254, 202] },
-  { id: "ribera", path: "M104,272 L298,276 L282,392 L142,382 Z", badge: [288, 290], label: [206, 331] },
-];
+// no seleccionada = papel + trazo Tinta + badge "+". Mapa y lista comparten estado
+// (Viajes.tsx). La geometría (contorno real muy poligonal, partido en zonas) es dato
+// GENERADO en `data/viajes/zonas-mapa.ts`, no curado. Las etiquetas van dentro del
+// SVG (<text>) para que escalen con el mapa; los nombres largos se parten en dos
+// líneas. `conteo` es opcional: sin él (provincias de escaparate) no se pinta el
+// recuento, para que la ficha se lea como si hubiera datos.
 
 // Parte un nombre largo en dos líneas equilibradas por palabras (cabe en el polígono).
 function dosLineas(nombre: string): string[] {
@@ -36,33 +22,48 @@ function dosLineas(nombre: string): string[] {
   return [palabras.slice(0, corte).join(" "), palabras.slice(corte).join(" ")];
 }
 
-export default function MapaZonas({ zonas, destinos, seleccion, onToggle }: {
-  zonas: Zona[];
-  destinos: Destino[];
+export default function MapaZonas({ region, viewBox, zonas, seleccion, onToggle, conteo }: {
+  region: string;
+  viewBox: string;
+  zonas: ZonaMapa[];
   seleccion: string[];
   onToggle: (id: string) => void;
+  conteo?: (id: string) => number;   // si se pasa, muestra "N sitios"; si no, se oculta
 }) {
-  const nombre = (id: string) => zonas.find((z) => z.id === id)?.nombre ?? id;
-  const conteo = (id: string) => destinos.filter((d) => d.zona === id).length;
-
   return (
     <div className="fr-s2-mapa">
-      <svg viewBox="0 0 400 430" role="group" aria-label="Zonas de Navarra">
-        {ZONAS_SVG.map((z) => {
+      <svg viewBox={viewBox} role="group" aria-label={`Zonas de ${region}`}>
+        {/* Sombra dura de pegatina, siempre (identidad «hoja de pegatinas»); capa aparte
+            para que ninguna sombra pise el relleno de la zona vecina. */}
+        {zonas.map((z) => (
+          <path key={`${z.id}-s`} d={z.path} transform="translate(5,6)" className="fr-zona-sombra" />
+        ))}
+        {zonas.map((z) => {
           const sel = seleccion.includes(z.id);
-          const [bx, by] = z.badge;
           const [lx, ly] = z.label;
-          const lineas = dosLineas(nombre(z.id));
-          const n = conteo(z.id);
-          // Bloque centrado en (lx, ly): líneas del nombre + recuento debajo.
-          const y0 = ly - (lineas.length * 16) / 2;
+          const [bx, by] = z.badge;                       // esquina superior-derecha (sobresale)
+          const lineas = dosLineas(z.nombre);
+          const n = conteo?.(z.id);
+          const y0 = ly - (lineas.length - 1) * 8;        // primera línea del nombre, centrada en ly
+          const ariaN = n === undefined ? "" : `, ${n} ${n === 1 ? "sitio" : "sitios"}`;
           return (
             <g key={z.id} className="fr-zona" role="button" tabIndex={0}
-              aria-pressed={sel} aria-label={`${nombre(z.id)}, ${n} sitios`}
+              aria-pressed={sel} aria-label={`${z.nombre}${ariaN}`}
               onClick={() => onToggle(z.id)}
               onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), onToggle(z.id))}>
-              {sel && <path d={z.path} transform="translate(5,6)" className="fr-zona-sombra" />}
               <path d={z.path} className={sel ? "fr-zona-on" : "fr-zona-off"} />
+              <text className="fr-zona-nombre" textAnchor="middle">
+                {lineas.map((linea, i) => (
+                  <tspan key={i} x={lx} y={y0 + i * 16}>{linea}</tspan>
+                ))}
+              </text>
+              {n !== undefined && (
+                <text className={`fr-zona-conteo${sel ? " fr-zona-conteo--on" : ""}`}
+                  textAnchor="middle" x={lx} y={y0 + lineas.length * 16 + 1}>
+                  {n} {n === 1 ? "sitio" : "sitios"}
+                </text>
+              )}
+              {/* Badge al final para que sobresalga por encima del borde */}
               {sel ? (
                 <>
                   <circle cx={bx} cy={by} r="13" className="fr-zona-badge-on" />
@@ -76,15 +77,6 @@ export default function MapaZonas({ zonas, destinos, seleccion, onToggle }: {
                     className="fr-zona-mas" />
                 </>
               )}
-              <text className="fr-zona-nombre" textAnchor="middle">
-                {lineas.map((linea, i) => (
-                  <tspan key={i} x={lx} y={y0 + i * 16}>{linea}</tspan>
-                ))}
-              </text>
-              <text className={`fr-zona-conteo${sel ? " fr-zona-conteo--on" : ""}`}
-                textAnchor="middle" x={lx} y={y0 + lineas.length * 16 + 2}>
-                {n} {n === 1 ? "sitio" : "sitios"}
-              </text>
             </g>
           );
         })}

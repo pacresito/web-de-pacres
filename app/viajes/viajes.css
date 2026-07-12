@@ -250,8 +250,20 @@
   max-width: 400px;
 }
 .fr-s1-lead strong { color: var(--fr-tinta); }
-.fr-s1-cta { display: none; align-items: center; gap: 12px; }
-.fr-s1-cta-meta { font: 700 13px var(--fr-font-dm), sans-serif; color: var(--fr-tinta); }
+/* Tarjetas de provincia: los tap principales, mismo peso las 4 (visibles en todo tamaño) */
+.fr-s1-provs { display: flex; flex-wrap: wrap; gap: 10px; }
+.fr-s1-provcard {
+  display: inline-flex; align-items: center; gap: 10px;
+  background: var(--fr-lima);
+  border: 2px solid var(--fr-tinta);
+  border-radius: 14px;
+  padding: 10px 15px;
+  box-shadow: var(--fr-sombra-3);
+  cursor: pointer;
+}
+.fr-s1-provcard-nombre { font: 800 16px var(--fr-font-baloo), sans-serif; color: var(--fr-tinta); }
+.fr-s1-provcard-flecha { font: 800 17px var(--fr-font-baloo), sans-serif; color: var(--fr-rio); }
+.fr-s1-provcard:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--fr-tinta); }
 
 .fr-s1-mapa { position: relative; }
 .fr-s1-mapa svg { width: 100%; height: auto; display: block; overflow: visible; }
@@ -274,63 +286,9 @@
 }
 .fr-prov-on:focus { outline: none; }
 .fr-prov-on:focus-visible { stroke-width: 4; }
+.fr-prov-on:hover { fill: var(--fr-lima); filter: brightness(1.04); }
 
-/* Callout flotante (solo escritorio) */
-.fr-s1-callout {
-  display: none;
-  position: absolute;
-  flex-direction: column;
-  gap: 1px;
-  text-align: left;
-  background: var(--fr-papel);
-  border: 2px solid var(--fr-tinta);
-  border-radius: 14px;
-  padding: 10px 16px;
-  box-shadow: var(--fr-sombra-4);
-  transform: rotate(2deg);
-  cursor: pointer;
-}
-.fr-s1-callout-t1 { font: 800 18px var(--fr-font-baloo), sans-serif; color: var(--fr-tinta); }
-.fr-s1-callout-t2 { font: 700 12px var(--fr-font-dm), sans-serif; color: var(--fr-rio); }
-.fr-s1-flecha {
-  display: none;
-  position: absolute;
-  width: 14px;
-  height: 14px;
-  border-left: 2.5px solid var(--fr-tinta);
-  border-bottom: 2.5px solid var(--fr-tinta);
-  transform: rotate(45deg);
-}
-
-/* Tarjeta-fila Navarra (tap principal en móvil) */
-.fr-s1-navcard {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  text-align: left;
-  background: var(--fr-papel);
-  border: 2px solid var(--fr-tinta);
-  border-radius: 16px;
-  padding: 14px 16px;
-  box-shadow: var(--fr-sombra-4);
-  cursor: pointer;
-}
-.fr-s1-navcard-badge {
-  flex: none;
-  width: 44px; height: 44px;
-  display: grid; place-items: center;
-  border-radius: 12px;
-  background: var(--fr-lima);
-  border: 2px solid var(--fr-tinta);
-  font: 800 17px var(--fr-font-baloo), sans-serif;
-  color: var(--fr-tinta);
-}
-.fr-s1-navcard-txt { display: flex; flex-direction: column; }
-.fr-s1-navcard-nombre { font: 800 18px var(--fr-font-baloo), sans-serif; color: var(--fr-tinta); }
-.fr-s1-navcard-sub { font: 500 12.5px var(--fr-font-dm), sans-serif; color: var(--fr-sec); }
-.fr-s1-navcard-flecha { margin-left: auto; font: 800 20px var(--fr-font-baloo), sans-serif; color: var(--fr-rio); }
-
-.fr-s1-leyenda { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.fr-s1-leyenda { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
 .fr-s1-ley {
   display: inline-flex; align-items: center; gap: 7px;
   font: 700 11.5px var(--fr-font-dm), sans-serif;
@@ -362,9 +320,6 @@
   }
   .fr-s1-h1 { font-size: 58px; line-height: 1.02; }
   .fr-s1-lead { font-size: 16.5px; }
-  .fr-s1-cta { display: flex; }
-  .fr-s1-callout, .fr-s1-flecha { display: flex; }
-  .fr-s1-navcard { display: none; }
   .fr-s1-pie { padding: 14px 32px; }
 }
 
@@ -380,7 +335,7 @@
 .fr-s2-lead { font: 400 15px/1.5 var(--fr-font-dm), sans-serif; color: var(--fr-sec); }
 
 .fr-s2-mapa { position: relative; align-self: flex-start; width: 100%; }
-.fr-s2-mapa svg { width: 100%; height: auto; display: block; }
+.fr-s2-mapa svg { width: 100%; height: auto; display: block; overflow: visible; }
 .fr-zona { cursor: pointer; }
 .fr-zona:focus { outline: none; }
 .fr-zona-sombra { fill: var(--fr-tinta); }
@@ -392,7 +347,7 @@
 .fr-zona-check { stroke: var(--fr-lima); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
 .fr-zona-badge-off { fill: var(--fr-papel); stroke: var(--fr-tinta); stroke-width: 2; }
 .fr-zona-mas { stroke: var(--fr-tinta); stroke-width: 2.5; stroke-linecap: round; }
-.fr-zona-nombre { font-family: var(--fr-font-baloo), sans-serif; font-weight: 700; font-size: 15px; fill: var(--fr-tinta); }
+.fr-zona-nombre { font-family: var(--fr-font-baloo), sans-serif; font-weight: 700; font-size: 13px; fill: var(--fr-tinta); }
 .fr-zona-conteo { font-family: var(--fr-font-mono), monospace; font-size: 11px; fill: var(--fr-sec); }
 .fr-zona-conteo--on { fill: var(--fr-tinta); }
 
@@ -430,6 +385,8 @@
 .fr-s2-fila-c { margin-left: auto; font: 700 12.5px var(--fr-font-dm), sans-serif; color: var(--fr-sec); }
 .fr-s2-fila--on .fr-s2-fila-c { color: var(--fr-tinta); }
 .fr-s2-ver { margin-top: 8px; text-align: center; font-size: 17px; padding: 15px; }
+.fr-btn:disabled { opacity: 0.4; cursor: default; box-shadow: none; }
+.fr-btn:disabled:active { transform: none; box-shadow: none; }
 .fr-s2-volver { text-align: center; }
 
 /* Barra inferior fija (móvil) */
