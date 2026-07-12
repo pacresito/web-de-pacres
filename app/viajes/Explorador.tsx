@@ -39,13 +39,14 @@ function useEsMovil() {
   return esMovil;
 }
 
-export default function Explorador({ datos, zonaInicial, onCambiarZonas, onVolverEspana }: {
+export default function Explorador({ datos, zonaInicial, filtrosInicial, onCambiarZonas, onVolverEspana }: {
   datos: DatosViajes;
   zonaInicial?: string[];        // zonas elegidas en la entrada por mapa (vacío = todas)
+  filtrosInicial?: Filtros;      // filtros completos (p. ej. al volver de un plan compartido)
   onCambiarZonas?: () => void;   // crumb de la comunidad → volver a elegir zonas
   onVolverEspana?: () => void;   // crumb "‹ España" → volver a la portada
 }) {
-  const [filtros, setFiltros] = useState<Filtros>(() => (zonaInicial?.length ? { zona: zonaInicial } : {}));
+  const [filtros, setFiltros] = useState<Filtros>(() => filtrosInicial ?? (zonaInicial?.length ? { zona: zonaInicial } : {}));
   const [verRestaurantes, setVerRestaurantes] = useState(false);
   const [modo, setModo] = useState<"explorar" | "plan">("explorar");
   const [abierto, setAbierto] = useState<string | null>(null); // dropdown desplegado (escritorio)

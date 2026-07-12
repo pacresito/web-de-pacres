@@ -162,14 +162,18 @@ function construirDia(numero: number, clusterSlugs: string[], ctx: Ctx): Dia {
   const paradas: Parada[] = [];
   let cursor = amanecer;
   let comidaPuesta = comidaMin === 0;
+  let comidaHoraInicio: number | undefined;
   orden.forEach((slug, i) => {
     const d = ctx.porSlug.get(slug)!;
     const cocheDesdeAnterior = i === 0 ? 0 : min(tiempoCoche(ctx.matriz, orden[i - 1], slug));
     cursor += cocheDesdeAnterior;
-    if (!comidaPuesta && cursor >= LUNCH) { cursor += comidaMin; comidaPuesta = true; }
+    if (!comidaPuesta && cursor >= LUNCH) { comidaHoraInicio = cursor; cursor += comidaMin; comidaPuesta = true; }
     paradas.push({ slug, nombre: d.nombre, tipo: d.tipo, visitaMin: visitaMin(d), cocheDesdeAnterior, horaInicio: cursor });
     cursor += visitaMin(d);
   });
+  // Día corto (todas las paradas por la mañana): la comida no llegó a intercalarse
+  // en el recorrido, pero existe. Se sitúa tras la última parada, hora coherente.
+  if (!comidaPuesta) comidaHoraInicio = cursor;
 
   const visitas = paradas.reduce((s, p) => s + p.visitaMin, 0);
   const coche = paradas.reduce((s, p) => s + p.cocheDesdeAnterior, 0);
@@ -178,7 +182,7 @@ function construirDia(numero: number, clusterSlugs: string[], ctx: Ctx): Dia {
   if (minutosActivos > minutosLuz) {
     avisos.push(`Jornada apretada: ${fmt(minutosActivos)} de actividad para ${fmt(minutosLuz)} de luz`);
   }
-  return { numero, zona, paradas, restaurante, minutosActivos, minutosLuz, avisos };
+  return { numero, zona, paradas, restaurante, comidaHoraInicio, minutosActivos, minutosLuz, avisos };
 }
 
 // Un restaurante por zona para la comida del mediodía (el primero que aparece).

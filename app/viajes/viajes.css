@@ -1861,3 +1861,230 @@
   .fr-s4-lateral { position: sticky; top: 20px; }
   .fr-s4-barra { display: none; }
 }
+
+/* ============================================================
+   S5 · Crear mi viaje (F6). Paso 1 formulario (chips + fecha),
+   paso 2 las 3 propuestas con su itinerario. Móvil = base;
+   escritorio = rail sticky «Tu encargo» + columnas de día.
+   ============================================================ */
+
+/* ---- Paso 1 · Formulario ---- */
+.fr-s5-form { max-width: 620px; margin: 0 auto; padding: 18px 20px 120px; }
+.fr-s5-form-head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.fr-s5-atras {
+  width: 34px; height: 34px; flex: none;
+  display: grid; place-items: center;
+  font-family: var(--fr-font-baloo), sans-serif; font-size: 20px; line-height: 1;
+  color: var(--fr-tinta); background: var(--fr-papel);
+  border: 2px solid var(--fr-tinta); border-radius: 999px; cursor: pointer;
+}
+.fr-s5-titulo { font: 800 26px var(--fr-font-baloo), sans-serif; color: var(--fr-tinta); }
+.fr-s5-form-head .fr-mono { margin-left: auto; }
+
+.fr-s5-form-card { padding: 20px 18px; display: flex; flex-direction: column; gap: 22px; }
+
+.fr-s5-heredados {
+  display: flex; align-items: flex-start; gap: 10px;
+  background: var(--fr-lima); border: 2px solid var(--fr-tinta); border-radius: 14px;
+  padding: 12px 14px; font: 500 13.5px/1.45 var(--fr-font-dm), sans-serif; color: var(--fr-tinta);
+}
+.fr-s5-heredados b { font-weight: 700; }
+.fr-s5-heredados-badge {
+  flex: none; width: 22px; height: 22px; border-radius: 999px;
+  background: var(--fr-tinta); color: var(--fr-lima);
+  display: grid; place-items: center; font-size: 12px; font-weight: 700;
+}
+.fr-s5-link {
+  font: 700 13px var(--fr-font-dm), sans-serif; color: var(--fr-rio);
+  background: none; border: none; padding: 0; cursor: pointer;
+  text-decoration: underline; text-underline-offset: 2px;
+}
+
+.fr-s5-preg { display: flex; flex-direction: column; gap: 10px; }
+.fr-s5-preg-t { font: 700 16px var(--fr-font-baloo), sans-serif; color: var(--fr-tinta); }
+.fr-s5-preg-nota { font: 400 12.5px var(--fr-font-dm), sans-serif; color: var(--fr-sec); font-style: normal; }
+.fr-s5-chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+.fr-s5-stepper {
+  display: inline-flex; align-items: center; gap: 10px;
+  border: 2px solid var(--fr-tinta); border-radius: 999px; padding: 3px 12px;
+  font: 700 13px var(--fr-font-dm), sans-serif;
+}
+.fr-s5-stepper button {
+  font-family: var(--fr-font-baloo), sans-serif; font-size: 18px; line-height: 1;
+  width: 22px; height: 22px; border: none; background: none; color: var(--fr-tinta); cursor: pointer;
+}
+
+.fr-s5-fecha {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  background: var(--fr-papel); border: 2px solid var(--fr-tinta); border-radius: 12px; padding: 10px 14px;
+  font: 700 14.5px var(--fr-font-baloo), sans-serif; color: var(--fr-tinta); cursor: pointer;
+}
+.fr-s5-fecha input { font: inherit; font-size: 13px; color: var(--fr-rio); border: none; background: none; cursor: pointer; }
+
+.fr-s5-imp {
+  font: 700 12.5px var(--fr-font-dm), sans-serif;
+  background: var(--fr-papel); color: var(--fr-tinta);
+  border: 2px solid var(--fr-tinta); border-radius: 999px; padding: 7px 13px; cursor: pointer;
+  transition: transform 0.1s ease-out, box-shadow 0.1s ease-out;
+}
+.fr-s5-imp--on { background: var(--fr-rosa); box-shadow: var(--fr-sombra-2); }
+.fr-s5-imp:disabled { opacity: 0.4; cursor: default; }
+.fr-s5-imp--on:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0 var(--fr-tinta); }
+
+.fr-s5-cta-barra {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+  padding: 12px 20px; background: var(--fr-papel); border-top: 2px solid var(--fr-tinta);
+}
+.fr-s5-montar { width: 100%; text-align: center; font-size: 16px; padding: 14px; }
+.fr-s5-montar:disabled { opacity: 0.5; cursor: default; box-shadow: none; }
+
+/* ---- Paso 2 · Propuestas ---- */
+.fr-s5-plan { max-width: 1180px; margin: 0 auto; padding: 16px 20px 96px; }
+.fr-s5-plan-head { display: none; }
+.fr-s5-plan-titulo { font: 700 19px var(--fr-font-baloo), sans-serif; color: var(--fr-tinta); }
+.fr-s5-plan-titulo b { font-weight: 800; }
+.fr-s5-acciones { display: flex; gap: 10px; }
+
+.fr-s5-plan-body { display: flex; flex-direction: column; gap: 16px; }
+.fr-s5-derecha { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
+.fr-s5-tabs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; }
+.fr-s5-tab {
+  flex: none; text-align: left;
+  display: flex; flex-direction: column; gap: 2px;
+  background: var(--fr-papel); border: 2px solid var(--fr-tinta); border-radius: 14px;
+  padding: 8px 14px; cursor: pointer;
+  transition: transform 0.1s ease-out, box-shadow 0.1s ease-out;
+}
+.fr-s5-tab--on { background: var(--fr-lima); box-shadow: var(--fr-sombra-3); }
+.fr-s5-tab-id { font: 800 14px var(--fr-font-baloo), sans-serif; color: var(--fr-tinta); }
+.fr-s5-tab-meta { font: 500 11.5px var(--fr-font-dm), sans-serif; color: var(--fr-sec); }
+.fr-s5-tab--on .fr-s5-tab-meta { color: var(--fr-tinta); }
+.fr-s5-tab--on:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0 var(--fr-tinta); }
+
+/* Rail «Tu encargo» + «No encajan» */
+.fr-s5-rail { display: flex; flex-direction: column; gap: 14px; }
+.fr-s5-encargo { padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.fr-s5-encargo-l { font: 500 13.5px/1.4 var(--fr-font-dm), sans-serif; color: var(--fr-tinta); }
+.fr-s5-encargo-l b { font-weight: 800; font-family: var(--fr-font-baloo), sans-serif; }
+.fr-s5-encargo-filtros { color: var(--fr-sec); }
+.fr-s5-encargo .fr-s5-link { margin-top: 2px; }
+
+.fr-s5-noencajan {
+  border: 2px dashed rgba(28, 47, 94, 0.4); border-radius: 14px; padding: 12px 14px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.fr-s5-descarte { display: flex; flex-direction: column; gap: 1px; font: 500 13px/1.4 var(--fr-font-dm), sans-serif; color: var(--fr-sec); }
+.fr-s5-descarte b { font-weight: 700; color: var(--fr-tinta); }
+.fr-s5-descarte-otra { color: var(--fr-rio); font-weight: 700; }
+/* Móvil: el rail solo aporta «Tu encargo»; «No encajan» va tras los días. */
+.fr-s5-rail .fr-s5-noencajan { display: none; }
+.fr-s5-noencajan-movil { margin-top: 2px; }
+
+/* Día = tarjeta acordeón */
+.fr-s5-dias { display: flex; flex-direction: column; gap: 14px; }
+.fr-s5-dia { overflow: hidden; }
+.fr-s5-dia-head {
+  width: 100%; display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+  padding: 14px 16px; background: none; border: none; cursor: pointer; text-align: left;
+}
+.fr-s5-dia-num { font: 800 17px var(--fr-font-baloo), sans-serif; color: var(--fr-tinta); }
+.fr-s5-dia-zona {
+  font: 700 11.5px var(--fr-font-dm), sans-serif; color: var(--fr-tinta);
+  background: var(--fr-papel); border: 2px solid var(--fr-tinta); border-radius: 999px; padding: 3px 10px;
+}
+.fr-s5-dia-resumen { flex-basis: 100%; font: 500 12.5px var(--fr-font-dm), sans-serif; color: var(--fr-sec); }
+.fr-s5-dia-flecha { margin-left: auto; font-family: var(--fr-font-baloo), sans-serif; font-size: 14px; color: var(--fr-tinta); }
+.fr-s5-dia-cuerpo { padding: 0 16px 16px; display: none; }
+/* Acordeón móvil: solo el día abierto muestra el timeline; el resto, su resumen. */
+.fr-s5-dia--abierto .fr-s5-dia-cuerpo { display: block; }
+.fr-s5-dia--abierto .fr-s5-dia-resumen { display: none; }
+
+.fr-s5-luz { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
+.fr-s5-luz-track { height: 9px; border: 2px solid var(--fr-tinta); border-radius: 999px; background: var(--fr-blanco); overflow: hidden; }
+.fr-s5-luz-fill { display: block; height: 100%; background: var(--fr-lima); }
+
+/* Timeline: conectores y tarjetas de parada/comida */
+.fr-s5-timeline { list-style: none; }
+.fr-s5-conector { display: flex; align-items: center; padding: 4px 0 4px 15px; }
+.fr-s5-conector::before {
+  content: ""; align-self: stretch; width: 0; margin-right: 13px;
+  border-left: 2px dashed rgba(28, 47, 94, 0.35);
+}
+.fr-s5-coche {
+  font: 500 10px var(--fr-font-mono), monospace; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--fr-sec); background: var(--fr-bruma);
+  border: 1.5px solid rgba(28, 47, 94, 0.25); border-radius: 999px; padding: 3px 9px;
+}
+.fr-s5-item {
+  display: flex; align-items: center; gap: 11px;
+  border: 2px solid var(--fr-tinta); border-radius: 13px; padding: 10px 12px;
+  box-shadow: var(--fr-sombra-2);
+}
+.fr-s5-item--parada { background: var(--fr-blanco); color: var(--fr-tinta); }
+.fr-s5-item--comida { background: var(--fr-rosa); }
+.fr-s5-pin {
+  flex: none; width: 27px; height: 27px; border-radius: 999px;
+  background: var(--fr-lima); border: 2px solid var(--fr-tinta);
+  display: grid; place-items: center; font: 800 13px var(--fr-font-baloo), sans-serif; color: var(--fr-tinta);
+}
+.fr-s5-pin--r { background: var(--fr-papel); }
+.fr-s5-item-txt { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.fr-s5-item-nombre { font: 800 15px var(--fr-font-baloo), sans-serif; color: var(--fr-tinta); }
+.fr-s5-star { color: var(--fr-rio); }
+.fr-s5-item-meta { font: 500 12px var(--fr-font-dm), sans-serif; color: var(--fr-sec); }
+.fr-s5-item-ir { margin-left: auto; font: 800 20px var(--fr-font-baloo), sans-serif; color: var(--fr-rio); }
+
+.fr-s5-aviso {
+  margin-top: 12px; font: 500 13px/1.45 var(--fr-font-dm), sans-serif; color: var(--fr-tinta);
+  background: var(--fr-rosa); border: 2px solid var(--fr-tinta); border-radius: 12px; padding: 10px 12px;
+}
+
+/* Toast de compartir/guardar */
+.fr-s5-toast {
+  position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); z-index: 40;
+  font: 700 13px var(--fr-font-dm), sans-serif; color: var(--fr-papel);
+  background: var(--fr-tinta); border-radius: 999px; padding: 10px 18px;
+  box-shadow: 0 6px 20px rgba(28, 47, 94, 0.3);
+}
+
+/* Barra inferior fija (móvil): compartir + guardar */
+.fr-s5-barra-movil {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+  display: flex; gap: 10px; padding: 12px 20px;
+  background: var(--fr-papel); border-top: 2px solid var(--fr-tinta);
+}
+.fr-s5-barra-movil .fr-btn { flex: 1; text-align: center; }
+.fr-s5-barra-guardar { flex: 1.4 !important; }
+
+/* ---- Escritorio ---- */
+@media (min-width: 900px) {
+  .fr-s5-form { padding-top: 34px; padding-bottom: 40px; }
+  .fr-s5-form-card { padding: 26px 28px; }
+  .fr-s5-cta-barra { position: static; border: none; padding: 18px 0 0; background: none; }
+  .fr-s5-montar { width: auto; padding: 14px 30px; }
+
+  .fr-s5-plan { padding: 26px 32px 44px; }
+  .fr-s5-plan-head { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+  .fr-s5-plan-titulo { font-size: 22px; }
+  .fr-s5-acciones { margin-left: auto; }
+  .fr-s5-plan-body { display: grid; grid-template-columns: 300px 1fr; gap: 28px; align-items: start; }
+  .fr-s5-rail { position: sticky; top: 20px; }
+  .fr-s5-rail .fr-s5-noencajan { display: flex; }
+  .fr-s5-noencajan-movil { display: none; }
+  .fr-s5-barra-movil { display: none; }
+  .fr-s5-toast { bottom: 32px; }
+
+  .fr-s5-dias { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; align-items: start; }
+  .fr-s5-dia-head { pointer-events: none; }         /* en escritorio los días no se pliegan */
+  .fr-s5-dia-flecha { display: none; }
+  .fr-s5-dia-resumen { display: none; }
+  .fr-s5-dia-cuerpo { display: block; }             /* todos los días abiertos a la vez */
+}
+
+@media (hover: hover) {
+  .fr-s5-tab:hover { box-shadow: var(--fr-sombra-2); }
+  .fr-s5-item--parada:hover { box-shadow: var(--fr-sombra-3); }
+  .fr-s5-link:hover { color: var(--fr-tinta); }
+}

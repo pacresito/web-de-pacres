@@ -2,6 +2,9 @@
 
 import { useMemo, useState } from "react";
 import type { DatosViajes } from "@/lib/viajes/tipos";
+import type { Filtros } from "@/lib/viajes/filtrar";
+import { parsearEncargo, type Encargo } from "@/lib/viajes/planificador/encargo";
+import CrearViaje from "./CrearViaje";
 import Explorador from "./Explorador";
 import MapaEspana from "./MapaEspana";
 import MapaZonas from "./MapaZonas";
@@ -11,15 +14,38 @@ import MapaZonas from "./MapaZonas";
 // Explorador, que no cambia su lógica — solo recibe el valor inicial. Los mapas de
 // España y zonas son SVG puro (Río pop, F2): sin Leaflet, se renderizan sin más.
 
+// Encargo llegado por URL (Compartir): se lee una vez al montar (solo cliente).
+const encargoDeUrl = (): Encargo | null =>
+  typeof window === "undefined" ? null : parsearEncargo(new URLSearchParams(window.location.search).get("plan"));
+
 export default function Viajes({ datos }: { datos: DatosViajes }) {
   // España → zonas → resultados. `seleccion` (zonas) se conserva al volver.
-  const [paso, setPaso] = useState<"espana" | "zonas" | "resultados">("espana");
+  const [compartido, setCompartido] = useState<Encargo | null>(encargoDeUrl);
+  const [filtrosCompartidos, setFiltrosCompartidos] = useState<Filtros | undefined>();
+  const [paso, setPaso] = useState<"espana" | "zonas" | "resultados">(() => (encargoDeUrl() ? "resultados" : "espana"));
   const [seleccion, setSeleccion] = useState<string[]>([]);
 
   const conteo = useMemo(
     () => (seleccion.length ? datos.destinos.filter((d) => seleccion.includes(d.zona)).length : datos.destinos.length),
     [datos.destinos, seleccion],
   );
+
+  // Enlace compartido: se reproduce el encargo directamente en el paso 2 del
+  // planificador. Al editar, se cae al explorador con esos mismos filtros.
+  if (compartido) {
+    return (
+      <CrearViaje
+        datos={datos}
+        filtros={compartido.filtros}
+        inicial={compartido}
+        onVolver={() => {
+          setFiltrosCompartidos(compartido.filtros);
+          setCompartido(null);
+          window.history.replaceState(null, "", "/viajes");
+        }}
+      />
+    );
+  }
 
   if (paso === "espana") {
     return (
@@ -37,6 +63,7 @@ export default function Viajes({ datos }: { datos: DatosViajes }) {
       <Explorador
         datos={datos}
         zonaInicial={seleccion}
+        filtrosInicial={filtrosCompartidos}
         onCambiarZonas={() => setPaso("zonas")}
         onVolverEspana={() => setPaso("espana")}
       />

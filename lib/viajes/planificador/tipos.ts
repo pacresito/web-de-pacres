@@ -41,6 +41,7 @@ export type Dia = {
   zona: string;               // zona dominante del día
   paradas: Parada[];
   restaurante?: string;       // restaurante del mediodía, si comida="restaurante" y hay en la zona
+  comidaHoraInicio?: number;  // minutos desde medianoche en que se intercala la comida (si se programó)
   minutosActivos: number;     // visitas + coche + comida
   minutosLuz: number;         // ventana de luz del día en esa zona y fecha
   avisos: string[];
