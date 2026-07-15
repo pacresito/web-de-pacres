@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { useTypewriter } from "./components/useTypewriter";
 
@@ -73,9 +74,9 @@ export default function NotFound() {
           <p>¿Qué estás buscando por aquí?</p>
           <p style={{ color: "var(--t-ink3)" }}>
             Te llevo a casa en {secs}…{" "}
-            <a href="/" className="hover-accent" style={{ textDecoration: "underline" }}>
+            <Link href="/" className="hover-accent" style={{ textDecoration: "underline" }}>
               o ya
-            </a>
+            </Link>
           </p>
         </div>
       </div>
