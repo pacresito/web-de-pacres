@@ -13,6 +13,7 @@
       "nombre": "Ruta Búnkeres de Otsondo",
       "zona": "baztan-otsondo",
       "tipo": "ruta",
+      "precio": "gratis",
       "queEs": "Ruta de montaña con restos de búnkeres militares de los años 40 en el puerto de Otsondo, con vistas al valle del Baztán.",
       "gps": [43.1405, -1.481],
       "distanciaKm": [8, 8],
@@ -42,6 +43,7 @@
       "nombre": "Cascada de Xorroxin (Erratzu)",
       "zona": "baztan-otsondo",
       "tipo": "cascada",
+      "precio": "gratis",
       "queEs": "Cascada natural en bosque atlántico con poza de baño.",
       "gps": [43.1448, -1.4976],
       "distanciaKm": [5, 6],
@@ -66,13 +68,19 @@
       "pueblosAlojamiento": ["Erratzu", "Elizondo", "Arizkun"],
       "trackWikiloc": "https://www.wikiloc.com/hiking-trails/navarra-cascada-de-xorroxin-erratzu-50027847",
       "nota": "Evitar agosto por masificación.",
-      "imagen": "/viajes/img/cascada-de-xorroxin.jpg"
+      "imagen": "/viajes/img/cascada-de-xorroxin.jpg",
+      "imagenes": [
+        "/viajes/img/cascada-de-xorroxin.jpg",
+        "/viajes/img/cascada-de-xorroxin-2.jpg",
+        "/viajes/img/cascada-de-xorroxin-3.jpg"
+      ]
     },
     {
       "slug": "infernuko-errota",
       "nombre": "Infernuko Errota (Molino del Infierno)",
       "zona": "baztan-otsondo",
       "tipo": "monumento",
+      "precio": "gratis",
       "queEs": "Molino histórico escondido en bosque junto al río Baztán.",
       "gps": [43.136, -1.502],
       "gpsAprox": true,
@@ -96,6 +104,7 @@
       "nombre": "Elizondo",
       "zona": "baztan-otsondo",
       "tipo": "pueblo",
+      "precio": "gratis",
       "queEs": "Capital del valle del Baztán, pueblo tradicional con arquitectura vasco-navarra. Pueblo ideal como base de rutas.",
       "gps": [43.1464, -1.5143],
       "mejorEpoca": "Todo el año",
@@ -103,13 +112,22 @@
       "queVer": ["Casco urbano tradicional", "Puentes sobre el río", "Calles de piedra", "Ambiente gastronómico muy fuerte"],
       "loMejor": ["Casco tradicional vasco-navarro junto al río", "Gran ambiente gastronómico", "Base ideal para las rutas del Baztán"],
       "cerca": ["cascada-de-xorroxin", "ruta-bunkers-de-otsondo", "infernuko-errota"],
-      "imagen": "/viajes/img/elizondo.jpg"
+      "imagen": "/viajes/img/elizondo.jpg",
+      "imagenes": [
+        "/viajes/img/elizondo.jpg",
+        "/viajes/img/elizondo-2.jpg",
+        "/viajes/img/elizondo-3.jpg",
+        "/viajes/img/elizondo-4.jpg",
+        "/viajes/img/elizondo-5.jpg"
+      ]
     },
     {
       "slug": "selva-de-irati-embalse-de-irabia",
       "nombre": "Selva de Irati y embalse de Irabia",
       "zona": "irati-aezkoa",
       "tipo": "parque",
+      "favoritoDeCris": true,
+      "precio": "gratis · parking 5-8 € en temporada alta",
       "queEs": "Bosque de hayas enorme con embalse en pleno Pirineo.",
       "gps": [42.9885, -1.156],
       "distanciaKm": [10, 15],
@@ -133,13 +151,21 @@
       "pueblosAlojamiento": ["Orbaizeta", "Aribe", "Auritz"],
       "trackWikiloc": "https://www.wikiloc.com/hiking-trails/parking-selva-de-irati-embalse-de-irabia-parking-de-vuelta-144013667",
       "nota": "Embalse visible pero sin baño ni actividades acuáticas. Parking regulado en verano.",
-      "imagen": "/viajes/img/selva-de-irati-embalse-de-irabia.jpg"
+      "imagen": "/viajes/img/selva-de-irati-embalse-de-irabia.jpg",
+      "imagenes": [
+        "/viajes/img/selva-de-irati-embalse-de-irabia.jpg",
+        "/viajes/img/selva-de-irati-embalse-de-irabia-2.jpg",
+        "/viajes/img/selva-de-irati-embalse-de-irabia-3.jpg",
+        "/viajes/img/selva-de-irati-embalse-de-irabia-4.jpg",
+        "/viajes/img/selva-de-irati-embalse-de-irabia-5.jpg"
+      ]
     },
     {
       "slug": "fabrica-de-orbaizeta",
       "nombre": "Fábrica de Orbaizeta",
       "zona": "irati-aezkoa",
       "tipo": "monumento",
+      "precio": "gratis",
       "queEs": "Ruinas de fábrica de armas del siglo XVIII en bosque.",
       "gps": [42.9861, -1.1814],
       "distanciaKm": [1, 2],
@@ -155,13 +181,21 @@
       "loMejor": ["Ruinas de la Real Fábrica de Armas del siglo XVIII", "Naturaleza invadiendo la piedra, muy fotogénico", "Paseo corto ideal para combinar con Irati"],
       "cerca": ["selva-de-irati-embalse-de-irabia", "cueva-de-arpea", "ruta-de-los-horreos"],
       "pueblosAlojamiento": ["Orbaizeta", "Aribe", "Auritz"],
-      "imagen": "/viajes/img/fabrica-de-orbaizeta.jpg"
+      "imagen": "/viajes/img/fabrica-de-orbaizeta.jpg",
+      "imagenes": [
+        "/viajes/img/fabrica-de-orbaizeta.jpg",
+        "/viajes/img/fabrica-de-orbaizeta-2.jpg",
+        "/viajes/img/fabrica-de-orbaizeta-3.jpg",
+        "/viajes/img/fabrica-de-orbaizeta-4.jpg",
+        "/viajes/img/fabrica-de-orbaizeta-5.jpg"
+      ]
     },
     {
       "slug": "ruta-de-los-horreos",
       "nombre": "Ruta de los Hórreos",
       "zona": "irati-aezkoa",
       "tipo": "ruta",
+      "precio": "gratis",
       "queEs": "Ruta cultural entre pueblos tradicionales con hórreos de madera.",
       "gps": [42.9899, -1.2305],
       "distanciaKm": [5, 10],
@@ -185,6 +219,7 @@
       "nombre": "Cueva de Arpea",
       "zona": "irati-aezkoa",
       "tipo": "cueva",
+      "precio": "gratis",
       "queEs": "Pequeña cavidad natural en roca en collado abierto de montaña.",
       "gps": [42.9948, -1.1175],
       "distanciaKm": [1, 3],
@@ -199,13 +234,21 @@
       "loMejor": ["Cavidad natural en roca en un collado de montaña", "Paisaje abierto y pastoril con vacas", "Paseo muy corto y fácil, apto para todos"],
       "cerca": ["selva-de-irati-embalse-de-irabia", "fabrica-de-orbaizeta", "mirador-de-zamariain"],
       "pueblosAlojamiento": ["Orbaizeta", "Aribe", "Auritz"],
-      "imagen": "/viajes/img/cueva-de-arpea.jpg"
+      "imagen": "/viajes/img/cueva-de-arpea.jpg",
+      "imagenes": [
+        "/viajes/img/cueva-de-arpea.jpg",
+        "/viajes/img/cueva-de-arpea-2.jpg",
+        "/viajes/img/cueva-de-arpea-3.jpg",
+        "/viajes/img/cueva-de-arpea-4.jpg",
+        "/viajes/img/cueva-de-arpea-5.jpg"
+      ]
     },
     {
       "slug": "mirador-de-zamariain",
       "nombre": "Mirador de Zamariáin",
       "zona": "irati-aezkoa",
       "tipo": "mirador",
+      "precio": "gratis",
       "queEs": "Mirador natural en bosque de hayas sobre el valle de Aezkoa.",
       "gps": [42.9826, -1.2268],
       "distanciaKm": [6, 7],
@@ -228,6 +271,7 @@
       "nombre": "Foz de Arbaiún",
       "zona": "irati-aezkoa",
       "tipo": "mirador",
+      "precio": "gratis · 3 € en temporada alta",
       "queEs": "Gran cañón natural del río Salazar con la mayor colonia de buitres leonados de Navarra.",
       "gps": [42.619, -1.285],
       "distanciaKm": [8, 12],
@@ -245,13 +289,22 @@
       "cerca": ["mirador-de-zamariain", "ruta-de-los-horreos", "selva-de-irati-embalse-de-irabia"],
       "pueblosAlojamiento": ["Lumbier", "Domeño", "Usún"],
       "trackWikiloc": "https://www.wikiloc.com/hiking-trails/circular-por-los-miradores-de-la-foz-de-arbayun-mirador-de-penacornota-27661541",
-      "imagen": "/viajes/img/foz-de-arbaiun.jpg"
+      "imagen": "/viajes/img/foz-de-arbaiun.jpg",
+      "imagenes": [
+        "/viajes/img/foz-de-arbaiun.jpg",
+        "/viajes/img/foz-de-arbaiun-2.jpg",
+        "/viajes/img/foz-de-arbaiun-3.jpg",
+        "/viajes/img/foz-de-arbaiun-4.jpg",
+        "/viajes/img/foz-de-arbaiun-5.jpg"
+      ]
     },
     {
       "slug": "nacedero-del-urederra",
       "nombre": "Nacedero del Urederra",
       "zona": "urbasa-andia",
       "tipo": "cascada",
+      "favoritoDeCris": true,
+      "precio": "gratis · parking 5 €",
       "queEs": "Cascadas de agua turquesa en bosque de hayas.",
       "gps": [42.781, -2.0815],
       "distanciaKm": [5, 6],
@@ -275,13 +328,21 @@
       "cerca": ["ubagua", "bosque-encantado-de-artea", "ojo-de-iturmendi"],
       "pueblosAlojamiento": ["Baquedano", "Zudaire", "Estella-Lizarra"],
       "nota": "Ida y vuelta. Reserva Natural con acceso desde Baquedano; parking regulado en verano.",
-      "imagen": "/viajes/img/nacedero-del-urederra.jpg"
+      "imagen": "/viajes/img/nacedero-del-urederra.jpg",
+      "imagenes": [
+        "/viajes/img/nacedero-del-urederra.jpg",
+        "/viajes/img/nacedero-del-urederra-2.jpg",
+        "/viajes/img/nacedero-del-urederra-3.jpg",
+        "/viajes/img/nacedero-del-urederra-4.jpg",
+        "/viajes/img/nacedero-del-urederra-5.jpg"
+      ]
     },
     {
       "slug": "ubagua",
       "nombre": "Ubagua",
       "zona": "urbasa-andia",
       "tipo": "ruta",
+      "precio": "gratis",
       "queEs": "Río con bosque, puentes y zonas de baño.",
       "gps": [42.7382, -1.9648],
       "distanciaKm": [3, 9],
@@ -308,6 +369,7 @@
       "nombre": "Bosque Encantado de Artea",
       "zona": "urbasa-andia",
       "tipo": "parque",
+      "precio": "gratis",
       "queEs": "Bosque de hayas tipo laberinto natural.",
       "gps": [42.875, -2.111],
       "duracion": "1 a 2 horas",
@@ -321,13 +383,21 @@
       "loMejor": ["Hayedo tipo laberinto natural, muy fotogénico", "Ambiente mágico, sobre todo con niebla u otoño", "Paseo corto y fácil para toda la familia"],
       "cerca": ["ojo-de-iturmendi", "nacedero-del-urederra", "ubagua"],
       "pueblosAlojamiento": ["Zudaire", "Estella-Lizarra", "Baquedano"],
-      "imagen": "/viajes/img/bosque-encantado-de-artea.jpg"
+      "imagen": "/viajes/img/bosque-encantado-de-artea.jpg",
+      "imagenes": [
+        "/viajes/img/bosque-encantado-de-artea.jpg",
+        "/viajes/img/bosque-encantado-de-artea-2.jpg",
+        "/viajes/img/bosque-encantado-de-artea-3.jpg",
+        "/viajes/img/bosque-encantado-de-artea-4.jpg",
+        "/viajes/img/bosque-encantado-de-artea-5.jpg"
+      ]
     },
     {
       "slug": "ojo-de-iturmendi",
       "nombre": "Ojo de Iturmendi",
       "zona": "urbasa-andia",
       "tipo": "monumento",
+      "precio": "gratis",
       "queEs": "Formación natural tipo agujero en roca con ermita cercana.",
       "gps": [42.8912, -2.1245],
       "distanciaKm": [10, 11],
@@ -350,6 +420,7 @@
       "nombre": "Mirador de Lazkua",
       "zona": "tierra-estella",
       "tipo": "mirador",
+      "precio": "gratis",
       "queEs": "Mirador sobre acantilado natural sin protección.",
       "gps": [42.6908, -2.0612],
       "distanciaKm": [2.5, 2.5],
@@ -374,6 +445,7 @@
       "nombre": "Peña Izaga",
       "zona": "tierra-estella",
       "tipo": "ruta",
+      "precio": "gratis",
       "queEs": "Ascensión a montaña con ermita románica del siglo XI.",
       "gps": [42.792, -1.403],
       "distanciaKm": [8, 8],
@@ -390,13 +462,20 @@
       "antesDeIr": ["700 m de desnivel: lleva agua y calzado de montaña", "Cima expuesta al viento y sin sombra"],
       "cerca": ["ujue", "mirador-de-lazkua"],
       "pueblosAlojamiento": ["Monreal", "Aoiz", "Tafalla"],
-      "imagen": "/viajes/img/pena-izaga.jpg"
+      "imagen": "/viajes/img/pena-izaga.jpg",
+      "imagenes": [
+        "/viajes/img/pena-izaga.jpg",
+        "/viajes/img/pena-izaga-2.jpg",
+        "/viajes/img/pena-izaga-3.jpg",
+        "/viajes/img/pena-izaga-4.jpg"
+      ]
     },
     {
       "slug": "ujue",
       "nombre": "Ujué",
       "zona": "tierra-estella",
       "tipo": "pueblo",
+      "precio": "gratis",
       "queEs": "Pueblo medieval fortificado en la cima de una colina.",
       "gps": [42.51, -1.499],
       "gpsAprox": true,
@@ -409,13 +488,22 @@
       "loMejor": ["Pueblo medieval fortificado sobre una colina", "Iglesia-fortaleza de Santa María", "Vistas panorámicas y famosas migas de pastor"],
       "cerca": ["pena-izaga", "mirador-de-lazkua"],
       "pueblosAlojamiento": ["Ujué", "Olite", "Tafalla"],
-      "imagen": "/viajes/img/ujue.jpg"
+      "imagen": "/viajes/img/ujue.jpg",
+      "imagenes": [
+        "/viajes/img/ujue.jpg",
+        "/viajes/img/ujue-2.jpg",
+        "/viajes/img/ujue-3.jpg",
+        "/viajes/img/ujue-4.jpg",
+        "/viajes/img/ujue-5.jpg"
+      ]
     },
     {
       "slug": "bardenas-reales",
       "nombre": "Bardenas Reales",
       "zona": "ribera",
       "tipo": "parque",
+      "favoritoDeCris": true,
+      "precio": "gratis",
       "queEs": "Parque natural semidesértico tipo paisaje lunar.",
       "gps": [42.203, -1.525],
       "distanciaKm": [2, 20],
@@ -434,7 +522,14 @@
       "cerca": ["camping-bardenas", "tudela"],
       "pueblosAlojamiento": ["Arguedas", "Tudela", "Valtierra"],
       "nota": "Entrada gratuita, sin reserva general.",
-      "imagen": "/viajes/img/bardenas-reales.jpg"
+      "imagen": "/viajes/img/bardenas-reales.jpg",
+      "imagenes": [
+        "/viajes/img/bardenas-reales.jpg",
+        "/viajes/img/bardenas-reales-2.jpg",
+        "/viajes/img/bardenas-reales-3.jpg",
+        "/viajes/img/bardenas-reales-4.jpg",
+        "/viajes/img/bardenas-reales-5.jpg"
+      ]
     },
     {
       "slug": "camping-bardenas",
@@ -455,6 +550,7 @@
       "nombre": "Tudela",
       "zona": "ribera",
       "tipo": "pueblo",
+      "precio": "gratis · catedral 4 €",
       "queEs": "Ciudad histórica y gastronómica de la Ribera.",
       "gps": [42.0744, -1.6373],
       "gpsAprox": true,
@@ -464,7 +560,14 @@
       "loMejor": ["Casco histórico y catedral de Santa María", "Capital gastronómica de la verdura navarra", "Base perfecta para visitar las Bardenas"],
       "cerca": ["bardenas-reales", "camping-bardenas"],
       "pueblosAlojamiento": ["Tudela", "Arguedas", "Valtierra"],
-      "imagen": "/viajes/img/tudela.jpg"
+      "imagen": "/viajes/img/tudela.jpg",
+      "imagenes": [
+        "/viajes/img/tudela.jpg",
+        "/viajes/img/tudela-2.jpg",
+        "/viajes/img/tudela-3.jpg",
+        "/viajes/img/tudela-4.jpg",
+        "/viajes/img/tudela-5.jpg"
+      ]
     }
   ],
   "restaurantes": [
@@ -473,6 +576,7 @@
       "zona": "baztan-otsondo",
       "categoria": "calidad-precio",
       "gps": [43.14697, -1.51771],
+      "reserva": true,
       "poblacion": "Elizondo",
       "direccion": "Calle Pedro Axular 4, Elizondo",
       "telefono": "948 580 297",
@@ -496,6 +600,7 @@
       "zona": "irati-aezkoa",
       "categoria": "especial",
       "gps": [42.99134, -1.33236],
+      "reserva": true,
       "poblacion": "Auritz / Burguete",
       "direccion": "Calle Kanaleburua 6, Burguete (Auritz)",
       "telefono": "747 491 440",
@@ -507,6 +612,7 @@
       "zona": "ribera",
       "categoria": "especial",
       "gps": [42.06150, -1.60513],
+      "reserva": true,
       "poblacion": "Tudela",
       "direccion": "Calle Gaztambide 2, Tudela",
       "telefono": "948 820 850",
