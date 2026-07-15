@@ -10,10 +10,14 @@ import type { ZonaMapa } from "@/data/viajes/zonas-mapa";
 // líneas. `conteo` es opcional: sin él (provincias de escaparate) no se pinta el
 // recuento, para que la ficha se lea como si hubiera datos.
 
-// Parte un nombre largo en dos líneas equilibradas por palabras (cabe en el polígono).
+const LINEA = 12;   // alto de línea del nombre, en unidades del viewBox
+
+// Parte el nombre en dos líneas equilibradas por palabras. Siempre dos: el hueco de
+// cada zona se busca para una etiqueta de dos líneas (ALTO en build-zonas-mapa.mjs),
+// así que dejar un nombre corto en una sola línea lo haría demasiado ancho para su sitio.
 function dosLineas(nombre: string): string[] {
   const palabras = nombre.split(" ");
-  if (nombre.length <= 14 || palabras.length === 1) return [nombre];
+  if (palabras.length === 1) return [nombre];
   let corte = 1, mejor = Infinity;
   for (let i = 1; i < palabras.length; i++) {
     const dif = Math.abs(palabras.slice(0, i).join(" ").length - palabras.slice(i).join(" ").length);
@@ -39,7 +43,7 @@ export default function MapaZonas({ region, viewBox, zonas, seleccion, onToggle,
           const [bx, by] = z.badge;                       // esquina superior-derecha (sobresale)
           const lineas = dosLineas(z.nombre);
           const n = conteo?.(z.id);
-          const y0 = ly - (lineas.length - 1) * 8;        // primera línea del nombre, centrada en ly
+          const y0 = ly - (lineas.length - 1) * (LINEA / 2);   // primera línea del nombre, centrada en ly
           const ariaN = n === undefined ? "" : `, ${n} ${n === 1 ? "sitio" : "sitios"}`;
           return (
             <g key={z.id} className="fr-zona" role="button" tabIndex={0}
@@ -50,12 +54,12 @@ export default function MapaZonas({ region, viewBox, zonas, seleccion, onToggle,
               <path d={z.path} className={sel ? "fr-zona-on" : "fr-zona-off"} />
               <text className="fr-zona-nombre" textAnchor="middle">
                 {lineas.map((linea, i) => (
-                  <tspan key={i} x={lx} y={y0 + i * 16}>{linea}</tspan>
+                  <tspan key={i} x={lx} y={y0 + i * LINEA}>{linea}</tspan>
                 ))}
               </text>
               {n !== undefined && (
                 <text className={`fr-zona-conteo${sel ? " fr-zona-conteo--on" : ""}`}
-                  textAnchor="middle" x={lx} y={y0 + lineas.length * 16 + 1}>
+                  textAnchor="middle" x={lx} y={y0 + lineas.length * LINEA + 1}>
                   {n} {n === 1 ? "sitio" : "sitios"}
                 </text>
               )}
