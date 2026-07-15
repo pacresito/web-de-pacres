@@ -1374,17 +1374,21 @@
   background: repeating-linear-gradient(-45deg, #d3e2ee 0 16px, #dfeaf2 16px 32px);
 }
 .fr-s4-galeria-principal img { object-fit: cover; }
-.fr-s4-thumbs { display: flex; gap: 8px; overflow: hidden; }
+/* Tira de miniaturas: están todas las fotos, así que en móvil no caben y se desliza. */
+.fr-s4-thumbs { display: flex; gap: 8px; overflow-x: auto; }
 .fr-s4-thumb {
   flex: none; width: 92px; height: 62px; border-radius: 10px; overflow: hidden; position: relative;
   border: 2px solid rgba(28, 47, 94, 0.35);
   background: repeating-linear-gradient(-45deg, #e2ecf3 0 9px, #eaf1f6 9px 18px);
+  padding: 0; cursor: pointer;
 }
 .fr-s4-thumb img { object-fit: cover; }
-.fr-s4-thumb--mas {
-  background: var(--fr-tinta); color: var(--fr-papel); display: grid; place-items: center;
-  font: 800 13px var(--fr-font-baloo), sans-serif;
+/* La que se está mirando: borde de tinta, como el resto de piezas seleccionadas. */
+.fr-s4-thumb--activa { border-color: var(--fr-tinta); box-shadow: var(--fr-sombra-2); }
+@media (hover: hover) {
+  .fr-s4-thumb:hover { border-color: var(--fr-tinta); }
 }
+.fr-s4-thumb:active { border-color: var(--fr-tinta); }
 
 /* Secciones de contenido (comparten título Baloo 800 20px) */
 .fr-s4-titulo { font: 800 20px var(--fr-font-baloo), sans-serif; color: var(--fr-tinta); }

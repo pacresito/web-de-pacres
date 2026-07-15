@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import type { DatosViajes, Destino, Restaurante } from "@/lib/viajes/tipos";
 import { rango } from "@/lib/viajes/formato";
 import { tiempoCoche, type MatrizViajes } from "@/lib/viajes/planificador/geo";
+import Portada from "./Portada";
 import datosNavarra from "@/data/viajes/navarra.json";
 import matrizNavarra from "@/data/viajes/matriz-navarra.json";
 
@@ -100,44 +101,18 @@ export default async function FichaDestino({ params }: Props) {
               <p className="fr-s4-lead">{d.queEs}</p>
             </div>
 
-            {/* Hero — móvil: foto full-bleed con «‹» y badges solapando */}
-            <div className="fr-s4-hero--movil">
-              <div className="fr-s4-hero-img">
-                {galeria[0] ? (
-                  <Image src={galeria[0]} alt={d.nombre} fill sizes="100vw" priority />
-                ) : (
-                  <div className="fr-s4-hero-fallback"><span>foto en camino</span></div>
-                )}
-                <Link href="/viajes" className="fr-s4-back" aria-label={`Volver a ${datos.comunidad}`}>‹</Link>
-                <div className="fr-s4-badges--overlay">{badges}</div>
-              </div>
-            </div>
-            <div className="fr-s4-cabecera--movil">
-              <h1 className="fr-s4-h1">{d.nombre}</h1>
-              <p className="fr-s4-lead">{d.queEs}</p>
-            </div>
-
-            {/* Galería */}
-            <div className="fr-s4-galeria-principal">
-              {galeria[0] ? (
-                <Image src={galeria[0]} alt={d.nombre} fill sizes="(max-width: 900px) 100vw, 760px" />
-              ) : (
-                <div className="fr-s4-hero-fallback"><span>foto en camino</span></div>
-              )}
-            </div>
-            {galeria.length > 1 && (
-              <div className="fr-s4-thumbs">
-                {galeria.slice(1, 4).map((src, i, arr) => {
-                  const esUltimaConMas = i === arr.length - 1 && galeria.length > 4;
-                  return (
-                    <div key={src} className="fr-s4-thumb">
-                      <Image src={src} alt={d.nombre} fill sizes="104px" />
-                      {esUltimaConMas && <span className="fr-s4-thumb--mas">+{galeria.length - 4}</span>}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+            {/* Hero móvil + galería: la foto grande cambia al pulsar una miniatura */}
+            <Portada
+              fotos={galeria}
+              nombre={d.nombre}
+              queEs={d.queEs}
+              overlay={
+                <>
+                  <Link href="/viajes" className="fr-s4-back" aria-label={`Volver a ${datos.comunidad}`}>‹</Link>
+                  <div className="fr-s4-badges--overlay">{badges}</div>
+                </>
+              }
+            />
 
             {d.loMejor && d.loMejor.length > 0 && (
               <section className="fr-s4-seccion">
