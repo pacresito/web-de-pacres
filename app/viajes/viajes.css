@@ -24,7 +24,8 @@
   font-family: var(--fr-font-dm), system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
-.viajes a { color: inherit; text-decoration: none; }
+/* :where() deja este reset a especificidad 0: cualquier clase con color propio le gana. */
+.viajes :where(a) { color: inherit; text-decoration: none; }
 
 /* ============================================================
    Río pop · sistema visual base
@@ -1409,9 +1410,14 @@
 .fr-s4-aviso span { font: 500 13px/1.4 var(--fr-font-dm), sans-serif; color: var(--fr-tinta); }
 .fr-s4-nota {
   background: var(--fr-papel); border: 2px solid var(--fr-tinta); border-radius: 16px;
-  padding: 16px; position: relative; box-shadow: var(--fr-sombra-3); margin-top: 6px;
+  padding: 28px 16px 16px; position: relative; box-shadow: var(--fr-sombra-3); margin-top: 14px;
 }
-.fr-s4-nota-sticker { position: absolute; top: -12px; left: 14px; }
+/* A caballo del borde sin conocer su alto: media caja fuera, media dentro del padding-top.
+   Sin nowrap se parte en dos líneas al estrecharse y vuelve a comerse la primera línea del texto. */
+.fr-s4-nota-sticker {
+  position: absolute; top: 0; left: 14px;
+  transform: translateY(-50%) rotate(-2deg); white-space: nowrap;
+}
 .fr-s4-nota p { margin: 0; font: 500 italic 13.5px/1.55 var(--fr-font-dm), sans-serif; color: var(--fr-tinta); }
 
 /* Cerca de esta ruta */
