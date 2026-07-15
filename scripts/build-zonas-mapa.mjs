@@ -158,7 +158,9 @@ function reparte(rej, semillas) {
 // Ancho que pide el nombre: el de su línea más larga. El nombre se pinta siempre a dos
 // líneas partidas por palabras (`dosLineas` en MapaZonas), así que el corte se replica
 // aquí para saber cuánto ocupa la más larga. Se estima de más a propósito: pasarse deja
-// aire de sobra, quedarse corto pega el texto al borde.
+// aire de sobra, quedarse corto pega el texto al borde. Es un número basto (±20% según
+// las letras), así que no avisar de «no cabe» comparando contra él: salta con nombres
+// que sí entran. El ancho que se logra por zona se imprime, y el mapa es el juez.
 function anchoNombre(nombre) {
   const palabras = nombre.split(" ");
   let largo = nombre.length, dif = Infinity;
