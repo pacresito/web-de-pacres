@@ -347,9 +347,7 @@
 .fr-zona-check { stroke: var(--fr-lima); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
 .fr-zona-badge-off { fill: var(--fr-papel); stroke: var(--fr-tinta); stroke-width: 2; }
 .fr-zona-mas { stroke: var(--fr-tinta); stroke-width: 2.5; stroke-linecap: round; }
-.fr-zona-nombre { font-family: var(--fr-font-baloo), sans-serif; font-weight: 700; font-size: 9px; fill: var(--fr-tinta); }
-.fr-zona-conteo { font-family: var(--fr-font-mono), monospace; font-size: 8px; fill: var(--fr-sec); }
-.fr-zona-conteo--on { fill: var(--fr-tinta); }
+.fr-zona-nombre { font-family: var(--fr-font-baloo), sans-serif; font-weight: 700; font-size: 12px; fill: var(--fr-tinta); }
 
 .fr-s2-chips { display: flex; flex-wrap: wrap; gap: 7px; }
 

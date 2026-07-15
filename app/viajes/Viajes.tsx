@@ -96,7 +96,7 @@ export default function Viajes({ datos }: { datos: DatosViajes }) {
           <h1 className="fr-s2-h1">¿Por dónde te apetece?</h1>
           <p className="fr-s2-lead">Marca una o varias zonas — o ninguna, y verás {activa} entera.</p>
           <MapaZonas region={activa} viewBox={prov.viewBox} zonas={prov.zonas}
-            seleccion={seleccion} onToggle={toggle} conteo={tieneDatos ? conteoZona : undefined} />
+            seleccion={seleccion} onToggle={toggle} />
           <div className="fr-s2-chips">
             {prov.zonas.map((z) => {
               const sel = seleccion.includes(z.id);

@@ -6,11 +6,12 @@ import type { ZonaMapa } from "@/data/viajes/zonas-mapa";
 // no seleccionada = papel + trazo Tinta + badge "+". Mapa y lista comparten estado
 // (Viajes.tsx). La geometría (contorno real muy poligonal, partido en zonas) es dato
 // GENERADO en `data/viajes/zonas-mapa.ts`, no curado. Las etiquetas van dentro del
-// SVG (<text>) para que escalen con el mapa; los nombres largos se parten en dos
-// líneas. `conteo` es opcional: sin él (provincias de escaparate) no se pinta el
-// recuento, para que la ficha se lea como si hubiera datos.
+// SVG (<text>) para que escalen con el mapa; el nombre va siempre a dos líneas. El
+// recuento de sitios no se pinta aquí: era una tercera línea que obligaba a encoger
+// la tipografía hasta lo ilegible por culpa de la zona más estrecha, y la lista de al
+// lado ya lo da.
 
-const LINEA = 12;   // alto de línea del nombre, en unidades del viewBox
+const LINEA = 15;   // alto de línea del nombre, en unidades del viewBox
 
 // Parte el nombre en dos líneas equilibradas por palabras. Siempre dos: el hueco de
 // cada zona se busca para una etiqueta de dos líneas (ALTO en build-zonas-mapa.mjs),
@@ -26,13 +27,12 @@ function dosLineas(nombre: string): string[] {
   return [palabras.slice(0, corte).join(" "), palabras.slice(corte).join(" ")];
 }
 
-export default function MapaZonas({ region, viewBox, zonas, seleccion, onToggle, conteo }: {
+export default function MapaZonas({ region, viewBox, zonas, seleccion, onToggle }: {
   region: string;
   viewBox: string;
   zonas: ZonaMapa[];
   seleccion: string[];
   onToggle: (id: string) => void;
-  conteo?: (id: string) => number;   // si se pasa, muestra "N sitios"; si no, se oculta
 }) {
   return (
     <div className="fr-s2-mapa">
@@ -42,27 +42,20 @@ export default function MapaZonas({ region, viewBox, zonas, seleccion, onToggle,
           const [lx, ly] = z.label;
           const [bx, by] = z.badge;                       // esquina superior-derecha (sobresale)
           const lineas = dosLineas(z.nombre);
-          const n = conteo?.(z.id);
-          const y0 = ly - (lineas.length - 1) * (LINEA / 2);   // primera línea del nombre, centrada en ly
-          const ariaN = n === undefined ? "" : `, ${n} ${n === 1 ? "sitio" : "sitios"}`;
           return (
             <g key={z.id} className="fr-zona" role="button" tabIndex={0}
-              aria-pressed={sel} aria-label={`${z.nombre}${ariaN}`}
+              aria-pressed={sel} aria-label={z.nombre}
               onClick={() => onToggle(z.id)}
               onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), onToggle(z.id))}>
               {sel && <path d={z.path} transform="translate(5,6)" className="fr-zona-sombra" />}
               <path d={z.path} className={sel ? "fr-zona-on" : "fr-zona-off"} />
-              <text className="fr-zona-nombre" textAnchor="middle">
+              {/* dominantBaseline central + el desplazamiento simétrico centran el bloque
+                  entero en `label`: cuadrar las líneas base lo deja alto. */}
+              <text className="fr-zona-nombre" textAnchor="middle" dominantBaseline="central">
                 {lineas.map((linea, i) => (
-                  <tspan key={i} x={lx} y={y0 + i * LINEA}>{linea}</tspan>
+                  <tspan key={i} x={lx} y={ly + (i - (lineas.length - 1) / 2) * LINEA}>{linea}</tspan>
                 ))}
               </text>
-              {n !== undefined && (
-                <text className={`fr-zona-conteo${sel ? " fr-zona-conteo--on" : ""}`}
-                  textAnchor="middle" x={lx} y={y0 + lineas.length * LINEA + 1}>
-                  {n} {n === 1 ? "sitio" : "sitios"}
-                </text>
-              )}
               {/* Badge al final para que sobresalga por encima del borde */}
               {sel ? (
                 <>

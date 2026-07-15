@@ -18,7 +18,7 @@ const GAP = 10;                               // px que se encoge cada zona → 
 const ESCALERA = 2;                           // px: limpia la escalera de 1 px del trazado por rejilla
 const PASADAS = 150;                          // iteraciones del reparto (igualar áreas y compactar)
 const RELAJA = 0.25;                          // cuánto se arrastra la semilla al centro de su zona en cada pasada
-const ALTO = 40;                              // alto de la etiqueta: nombre a dos líneas + recuento, con holgura
+const ALTO = 35;                              // alto de la etiqueta: el nombre a dos líneas, con holgura
 
 // Zonas por provincia: id + nombre + semilla en fracción del bbox (0,0 = NO, 1,1 = SE).
 // Navarra conserva los ids de navarra.json (mapeo zona→destinos). El resto son
