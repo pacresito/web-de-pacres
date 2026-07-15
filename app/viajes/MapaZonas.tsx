@@ -40,7 +40,7 @@ export default function MapaZonas({ region, viewBox, zonas, seleccion, onToggle 
         {zonas.map((z) => {
           const sel = seleccion.includes(z.id);
           const [lx, ly] = z.label;
-          const [bx, by] = z.badge;                       // esquina superior-derecha (sobresale)
+          const [bx, by] = z.badge;                       // borde derecho, a un 80% del alto (sobresale)
           const lineas = dosLineas(z.nombre);
           return (
             <g key={z.id} className="fr-zona" role="button" tabIndex={0}

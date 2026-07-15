@@ -19,6 +19,11 @@ const ESCALERA = 2;                           // px: limpia la escalera de 1 px 
 const PASADAS = 150;                          // iteraciones del reparto (igualar áreas y compactar)
 const RELAJA = 0.25;                          // cuánto se arrastra la semilla al centro de su zona en cada pasada
 const ALTO = 35;                              // alto de la etiqueta: el nombre a dos líneas, con holgura
+const CHAR = 6.4;                             // ancho por carácter del nombre (Baloo 2 700 12px, medido en el navegador)
+const AIRE = 6;                               // margen a los lados del nombre
+const BADGE_Y = 0.8;                          // altura del badge dentro de la zona (0 = abajo, 1 = arriba)
+const BADGE_FUERA = 3;                        // px que el badge se sale del borde derecho
+const BADGE_R = 17;                           // radio que el badge le quita a la zona (círculo de 13 + aire)
 
 // Zonas por provincia: id + nombre + semilla en fracción del bbox (0,0 = NO, 1,1 = SE).
 // Navarra conserva los ids de navarra.json (mapeo zona→destinos). El resto son
@@ -76,11 +81,6 @@ const dentro = (p, poly) => {                    // point-in-polygon (ray castin
     if ((yi > p[1]) !== (yj > p[1]) && p[0] < ((xj - xi) * (p[1] - yi)) / (yj - yi) + xi) d = !d;
   }
   return d;
-};
-
-const empuja = (p, desde, d) => {               // aleja p de `desde` d px (badge que sobresale)
-  const dx = p[0] - desde[0], dy = p[1] - desde[1], l = Math.hypot(dx, dy) || 1;
-  return [p[0] + (dx / l) * d, p[1] + (dy / l) * d];
 };
 
 // Douglas-Peucker sobre un anillo cerrado (se ancla en el punto más lejano al centroide).
@@ -155,13 +155,30 @@ function reparte(rej, semillas) {
   return { zonaDe, cuenta, objetivo };
 }
 
-// Sitio de la etiqueta: el punto donde cabe la caja de texto más ancha. El alto lo
-// fija el diseño (ALTO), así que aquí solo se busca ancho — buscar la caja «más
-// grande» de una proporción dada elige mal, porque el hueco más holgado de una zona
-// rara vez tiene la forma del texto. Se mide contra la máscara con una imagen
-// integral, así que vale para cualquier forma. Devuelve el ancho que cabe, para poder
-// avisar si un nombre no entra.
-function sitioEtiqueta(mask, w, h, x0, y0) {
+// Ancho que pide el nombre: el de su línea más larga. El nombre se pinta siempre a dos
+// líneas partidas por palabras (`dosLineas` en MapaZonas), así que el corte se replica
+// aquí para saber cuánto ocupa la más larga. Se estima de más a propósito: pasarse deja
+// aire de sobra, quedarse corto pega el texto al borde.
+function anchoNombre(nombre) {
+  const palabras = nombre.split(" ");
+  let largo = nombre.length, dif = Infinity;
+  for (let i = 1; i < palabras.length; i++) {
+    const a = palabras.slice(0, i).join(" ").length, b = palabras.slice(i).join(" ").length;
+    if (Math.abs(a - b) < dif) { dif = Math.abs(a - b); largo = Math.max(a, b); }
+  }
+  return largo * CHAR + AIRE;
+}
+
+// Sitio de la etiqueta: el punto MÁS CENTRAL de la zona donde entra la caja del nombre.
+// La caja no se busca, se conoce: el alto lo fija el diseño (ALTO) y el ancho lo pide el
+// texto. Quedan muchos sitios válidos y de esos gana el más cercano al centro de la
+// zona, que es contra lo que el ojo lo compara. Elegir por tamaño —el hueco más ancho, o
+// la caja más grande de una proporción dada— coloca mal: el hueco más holgado de una
+// zona rara vez está en su centro, ni tiene la forma del texto. Se mide contra la
+// máscara con una imagen integral, así que vale para cualquier forma. Si el nombre no
+// entra en ningún sitio se estrecha la caja hasta que entre; el ancho que devuelve dice
+// si hubo que hacerlo.
+function sitioEtiqueta(mask, w, h, x0, y0, pedido) {
   const I = new Int32Array((w + 1) * (h + 1));
   for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
     I[(j + 1) * (w + 1) + i + 1] = mask[j * w + i] + I[j * (w + 1) + i + 1] + I[(j + 1) * (w + 1) + i] - I[j * (w + 1) + i];
@@ -169,15 +186,44 @@ function sitioEtiqueta(mask, w, h, x0, y0) {
   const lleno = (i0, j0, i1, j1) =>
     i0 >= 0 && j0 >= 0 && i1 <= w && j1 <= h &&
     I[j1 * (w + 1) + i1] - I[j0 * (w + 1) + i1] - I[j1 * (w + 1) + i0] + I[j0 * (w + 1) + i0] === (i1 - i0) * (j1 - j0);
+  let cx = 0, cy = 0, n = 0;                              // centro de la zona = centro de masa de sus píxeles
+  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) if (mask[j * w + i]) { cx += i; cy += j; n++; }
+  cx /= n; cy /= n;
   const hh = Math.round(ALTO / 2);
-  let mejor = [x0, y0], mejorA = 0;                       // a = media anchura de la caja, en px
-  for (let j = 0; j < h; j += 2) for (let i = 0; i < w; i += 2) {
-    if (!mask[j * w + i]) continue;
-    let a = mejorA;                                       // solo interesa batir el récord
-    while (lleno(i - (a + 1), j - hh, i + (a + 1), j + hh)) a++;
-    if (a > mejorA) { mejorA = a; mejor = [x0 + i + 0.5, y0 + j + 0.5]; }
+  for (let a = Math.round(pedido / 2); a > 0; a--) {      // a = media anchura de la caja, en px
+    let mejor = null, mejorD = Infinity;
+    for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+      if (!mask[j * w + i] || !lleno(i - a, j - hh, i + a, j + hh)) continue;
+      const d = (i - cx) ** 2 + (j - cy) ** 2;
+      if (d < mejorD) { mejorD = d; mejor = [x0 + i + 0.5, y0 + j + 0.5]; }
+    }
+    if (mejor) return { punto: mejor, ancho: 2 * a };
   }
-  return { punto: mejor, ancho: 2 * mejorA };
+  return { punto: [x0 + cx, y0 + cy], ancho: 0 };
+}
+
+// Badge en el borde derecho de la zona, a BADGE_Y de altura: del todo a la derecha para
+// que sobresalga de la pegatina, pero no en el pico de arriba (ahí flotaba, lejos de la
+// masa de la zona). La zona es conexa, así que esa fila existe seguro.
+function sitioBadge(mask, w, h, x0, y0) {
+  const filas = [];
+  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) if (mask[j * w + i]) { filas.push(j); break; }
+  const arriba = filas[0], abajo = filas[filas.length - 1];   // en SVG la y crece hacia abajo
+  const j = Math.round(abajo - BADGE_Y * (abajo - arriba));
+  let i = w - 1;
+  while (!mask[j * w + i]) i--;
+  return [x0 + i + 0.5 + BADGE_FUERA, y0 + j + 0.5];
+}
+
+// El badge tapa lo que haya debajo, así que se le quita su disco a la zona antes de
+// buscarle sitio a la etiqueta: son los dos únicos que se disputan la superficie.
+function sinBadge(mask, w, h, x0, y0, [bx, by]) {
+  const out = Uint8Array.from(mask);
+  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+    const dx = x0 + i + 0.5 - bx, dy = y0 + j + 0.5 - by;
+    if (dx * dx + dy * dy <= BADGE_R * BADGE_R) out[j * w + i] = 0;
+  }
+  return out;
 }
 
 // Encoge el conjunto de celdas g px en toda dirección (erosión con disco) → hueco
@@ -320,10 +366,10 @@ for (const [nombre, zonasCfg] of Object.entries(PROVINCIAS)) {
     const { mask, perdido } = mayorComponente(erosiona(bruta, rej.w, rej.h, GAP), rej.w, rej.h);
     if (perdido > cuenta[i] * 0.05) console.warn(`  ⚠️ ${z.id}: descarto ${perdido} px sueltos (mover la semilla)`);
     const zona = simplifica(contorno(mask, rej.w, rej.h, rej.x0, rej.y0), ESCALERA);
-    const { punto: [cx, cy], ancho } = sitioEtiqueta(mask, rej.w, rej.h, rej.x0, rej.y0);
-    // Badge en la esquina superior-derecha (máx x−y), empujado un poco hacia fuera para que sobresalga.
-    const esq = zona.reduce((m, p) => (p[0] - p[1] > m[0] - m[1] ? p : m), zona[0]);
-    const [bx, by] = empuja(esq, [cx, cy], 3);
+    const [bx, by] = sitioBadge(mask, rej.w, rej.h, rej.x0, rej.y0);
+    const pedido = anchoNombre(z.nombre);
+    const libre = sinBadge(mask, rej.w, rej.h, rej.x0, rej.y0, [bx, by]);
+    const { punto: [cx, cy], ancho } = sitioEtiqueta(libre, rej.w, rej.h, rej.x0, rej.y0, pedido);
     const d = "M" + zona.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join("L") + "Z";
     console.log(`  ${z.id}: área ${(cuenta[i] / objetivo).toFixed(2)}× · ${zona.length} vértices · etiqueta ${ancho}×${ALTO}px`);
     return { id: z.id, nombre: z.nombre, path: d, label: [+cx.toFixed(1), +cy.toFixed(1)], badge: [+bx.toFixed(1), +by.toFixed(1)] };
