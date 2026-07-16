@@ -6,7 +6,7 @@ import Link from "next/link";
 import { calcularEdad } from "@/lib/utils";
 
 // ─── Datos ──────────────────────────────────────────────────────────────────
-// La favorita (verde y amarilla) va en la portada; estas 5 son la galería.
+// La favorita (rosa, "Sapo") va en la portada; estas 5 son la galería.
 // `sample-*` son lagartijas de muestra; el resto son fotos reales de Lucas.
 
 type Lagartija = {
@@ -243,10 +243,10 @@ export default function Lagartijas() {
               <div className="lg-marker" style={{ position: "absolute", top: -22, left: -20, color: "#ff5ca8", fontSize: "clamp(15px,4vw,21px)", transform: "rotate(-9deg)", zIndex: 3 }}>¡mi favorita!</div>
               <div className="lg-polaroid" style={{ padding: "13px 13px 0", boxShadow: "0 14px 30px rgba(0,0,0,.2)" }}>
                 <div className="lg-washi" style={{ width: 118, background: "rgba(41,194,201,.78)" }} />
-                <Image src="/lagartijas/sample-verde-amarilla.webp" alt="Lagartija verde y amarilla, mi favorita" width={316} height={316} className="lg-photo" style={{ width: "clamp(228px,64vw,316px)", height: "clamp(228px,64vw,316px)" }} />
+                <Image src="/lagartijas/rosa-sapo.jpg" alt="Lagartija rosa, mi favorita" width={316} height={316} className="lg-photo" style={{ width: "clamp(228px,64vw,316px)", height: "clamp(228px,64vw,316px)" }} />
                 <div style={{ textAlign: "center", padding: "11px 6px 16px" }}>
-                  <div className="lg-display" style={{ fontWeight: 700, fontSize: 22 }}>Verde y amarilla</div>
-                  <div style={{ fontSize: 16, color: "#7a7466" }}>con anilla de plata</div>
+                  <div className="lg-display" style={{ fontWeight: 700, fontSize: 22 }}>Rosa y roja</div>
+                  <div style={{ fontSize: 16, color: "#7a7466" }}>con su nombre: Sapo</div>
                 </div>
               </div>
             </div>
