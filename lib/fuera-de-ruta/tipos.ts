@@ -5,6 +5,11 @@
 
 export type Rango = [number, number];
 
+// Un campo booleano de compatibilidad (carrito, vertigo) solo se rellena donde la
+// pregunta se plantea de verdad: ausente = "no consta", no "no". La ficha pinta el
+// dato que hay; la tarjeta, solo lo que distingue (los "no"). Campos externos que no
+// se pueden confirmar sin inventar (horario, contacto, plazoReserva…) se dejan
+// ausentes y se anotan en verificar-con-cris.md — nunca se rellenan a ojo.
 export type Destino = {
   slug: string;
   nombre: string;
@@ -16,25 +21,55 @@ export type Destino = {
   queEs: string;
   gps?: [number, number];         // el GPS es el parking (así lo trae la fuente), no el punto de interés
   gpsAprox?: boolean;  // coordenada aproximada (centro de pueblo, parking sin fijar)
+
+  // Métricas físicas
   distanciaKm?: Rango;
   desnivelM?: Rango;
   duracion?: string;              // texto para mostrar ("2 a 3 horas")
   duracionHoras?: Rango;          // versión numérica [min, max] para filtrar
   dificultad?: string;
-  circular?: boolean;
+  recorrido?: "circular" | "ida-vuelta" | "lineal";  // tipo de recorrido (antes: `circular` booleano)
+  terreno?: string;               // tipo de terreno ("sendero de tierra", "pasarelas de madera"…)
+
+  // Compatibilidad (lo que puede eliminar un destino en el motor, si es imprescindible)
+  carrito?: boolean;              // apta para carrito de bebé
+  edadMinima?: number;            // edad mínima recomendada, en años
+  vertigo?: boolean;              // pasarelas, cadenas o zonas expuestas
+  accesoCarretera?: "asfalto" | "pista buena" | "pista";  // tipo de acceso rodado al parking
   bano?: boolean;
   agua?: string[];                // ibon | cascada | rio | poza | embalse
   ninos?: boolean;
   perros?: boolean;
   tipoViaje?: string[];           // pareja | amigos (niños y perros ya son booleanos)
+
+  // Estancia (minutos): mínimo para disfrutarla y tiempo ideal; el motor lo modula por ritmo
+  estanciaMin?: number;
+  estanciaIdeal?: number;
+
+  // Contexto temporal
+  mejorEpoca?: string;            // texto para mostrar
+  epoca?: string[];               // primavera | verano | otono | invierno, para filtrar
+  mejorMomento?: string;          // mejor momento del día + justificación ("atardecer: el mirador mira al oeste")
+  dependeDeLuz?: boolean;         // necesita luz natural (senderos, miradores) vs. nocturna (cuevas, cenas)
+  horario?: string;               // horario de apertura, si aplica (teleférico, monumento)
+
+  // Logística
   senalizacion?: string;          // muy buena | buena | GPS recomendable | track recomendable
   parkingGratuito?: boolean;
   reserva?: string;
-  mejorEpoca?: string;            // texto para mostrar
-  epoca?: string[];               // primavera | verano | otono | invierno, para filtrar
+  plazoReserva?: string;          // con cuánta antelación reservar ("2-3 días antes")
+  contacto?: { web?: string; tel?: string; email?: string };  // enlace oficial / teléfono cuando exista
+
+  // Etiquetas para el motor (uso interno; también las lee el explorador)
+  paisaje?: string[];             // bosque | hayedo | alta montaña | cascada | ibon | rio | poza | barranco | desierto | valle…
+  experiencia?: string[];         // senderismo | fotografia | gastronomia | historia | naturaleza | cultura…
+
+  // Contenido
   queVer?: string[];
   loMejor?: string[];             // 3-5 puntos fuertes (✅)
   antesDeIr?: string[];           // avisos útiles (⚠)
+  detalles?: string[];            // "detalles que marcan la diferencia": consejos y curiosidades de Cris
+  material?: string[];            // material recomendable (calzado de montaña, linterna…)
   cerca?: string[];               // slugs de destinos cercanos (3-4 máx)
   pueblosAlojamiento?: string[];  // pueblos donde alojarse, no hoteles
   trackWikiloc?: string;          // URL de la ruta en Wikiloc

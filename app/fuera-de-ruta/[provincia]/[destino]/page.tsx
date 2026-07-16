@@ -20,6 +20,31 @@ const ETIQUETA_CAT: Record<string, string> = {
   especial: "Especial",
 };
 
+// Etiquetas de cara al usuario de los valores estructurados (spec §4.11).
+const RECORRIDO_TEXTO: Record<string, string> = {
+  circular: "circular",
+  "ida-vuelta": "ida y vuelta",
+  lineal: "lineal",
+};
+const ACCESO_TEXTO: Record<string, string> = {
+  asfalto: "asfalto",
+  "pista buena": "pista en buen estado",
+  pista: "pista sin asfaltar",
+};
+
+// Minutos → "1 h 30 min". El rango estancia mínima–ideal se muestra como una sola fila.
+function minutos(m: number): string {
+  const h = Math.floor(m / 60);
+  const min = m % 60;
+  return [h && `${h} h`, min && `${min} min`].filter(Boolean).join(" ") || "0 min";
+}
+function estancia(min?: number, ideal?: number): string | undefined {
+  if (min === undefined && ideal === undefined) return undefined;
+  if (min !== undefined && ideal !== undefined && min !== ideal)
+    return `${minutos(min)} – ${minutos(ideal)}`;
+  return minutos((ideal ?? min)!);
+}
+
 type Props = { params: Promise<{ provincia: string; destino: string }> };
 
 export function generateStaticParams() {
@@ -62,22 +87,39 @@ export default async function FichaDestino({ params }: Props) {
 
   const galeria = d.imagenes ?? (d.imagen ? [d.imagen] : []); // sin foto → fallback "foto en camino"
 
+  // Ficha técnica (nivel 2): toda fila sin dato se omite, así una ficha con pocos
+  // campos no deja huecos y una completa los pinta todos.
   const siNo = (v: boolean) => (v ? "sí" : "no");
   const filasTexto: [string, string][] = [];
   if (d.distanciaKm) filasTexto.push(["A pie", rango(d.distanciaKm, "km")]);
-  if (d.desnivelM) filasTexto.push(["Desnivel", `+${rango(d.desnivelM, "m")}`]);
+  if (d.desnivelM) filasTexto.push(["Desnivel", d.desnivelM[1] === 0 ? "llano" : `+${rango(d.desnivelM, "m")}`]);
   if (d.duracion) filasTexto.push(["Duración", d.duracion]);
   if (d.dificultad) filasTexto.push(["Dificultad", d.dificultad]);
+  if (d.recorrido) filasTexto.push(["Recorrido", RECORRIDO_TEXTO[d.recorrido] ?? d.recorrido]);
+  if (d.terreno) filasTexto.push(["Terreno", d.terreno]);
+  if (d.accesoCarretera) filasTexto.push(["Acceso", ACCESO_TEXTO[d.accesoCarretera] ?? d.accesoCarretera]);
   if (d.senalizacion) filasTexto.push(["Señalización", d.senalizacion]);
+  const estanciaTxt = estancia(d.estanciaMin, d.estanciaIdeal);
+  if (estanciaTxt) filasTexto.push(["Estancia", estanciaTxt]);
+  if (d.edadMinima !== undefined) filasTexto.push(["Edad mínima", `desde ${d.edadMinima} años`]);
   if (d.mejorEpoca) filasTexto.push(["Época", d.mejorEpoca]);
+  if (d.mejorMomento) filasTexto.push(["Mejor momento", d.mejorMomento]);
+  if (d.horario) filasTexto.push(["Horario", d.horario]);
   if (d.precio) filasTexto.push(["Precio", d.precio]);
   if (d.reserva) filasTexto.push(["Reserva", d.reserva]);
+  if (d.plazoReserva) filasTexto.push(["Antelación", d.plazoReserva]);
 
   const filasBool: [string, boolean][] = [];
-  if (d.circular !== undefined) filasBool.push(["Circular", d.circular]);
+  if (d.carrito !== undefined) filasBool.push(["Apta carrito", d.carrito]);
   if (d.ninos !== undefined) filasBool.push(["Apto niños", d.ninos]);
   if (d.perros !== undefined) filasBool.push(["Apto perros", d.perros]);
   if (d.bano !== undefined) filasBool.push(["Baño", d.bano]);
+  if (d.vertigo !== undefined) filasBool.push(["Pasarelas / vértigo", d.vertigo]);
+
+  const contactos: [string, string, string][] = []; // [etiqueta, texto, href]
+  if (d.contacto?.web) contactos.push(["Web oficial", "abrir web ↗", d.contacto.web]);
+  if (d.contacto?.tel) contactos.push(["Teléfono", d.contacto.tel, `tel:${d.contacto.tel}`]);
+  if (d.contacto?.email) contactos.push(["Email", d.contacto.email, `mailto:${d.contacto.email}`]);
 
   const badges = (
     <div className="fr-s4-badges">
@@ -191,8 +233,8 @@ export default async function FichaDestino({ params }: Props) {
             )}
 
             {(filasTexto.length > 0 || filasBool.length > 0) && (
-              <div className="fr-tarjeta fr-s4-caja">
-                <span className="fr-mono fr-s4-caja-titulo">Datos prácticos</span>
+              <details className="fr-tarjeta fr-s4-caja fr-s4-ficha" open>
+                <summary className="fr-mono fr-s4-caja-titulo fr-s4-ficha-sum">Ficha técnica</summary>
                 {filasTexto.map(([k, v]) => (
                   <div key={k} className="fr-s4-fila">
                     <span className="fr-s4-fila-k">{k}</span>
@@ -205,7 +247,37 @@ export default async function FichaDestino({ params }: Props) {
                     <span className={`fr-pildora ${v ? "fr-pildora--si" : "fr-pildora--no"}`}>{siNo(v)}</span>
                   </div>
                 ))}
-              </div>
+                {d.paisaje && d.paisaje.length > 0 && (
+                  <div className="fr-s4-fila fr-s4-fila--tags">
+                    <span className="fr-s4-fila-k">Paisaje</span>
+                    <span className="fr-s4-tags">{d.paisaje.map((p) => <span key={p} className="fr-s4-tag">{p}</span>)}</span>
+                  </div>
+                )}
+                {d.experiencia && d.experiencia.length > 0 && (
+                  <div className="fr-s4-fila fr-s4-fila--tags">
+                    <span className="fr-s4-fila-k">Experiencia</span>
+                    <span className="fr-s4-tags">{d.experiencia.map((x) => <span key={x} className="fr-s4-tag">{x}</span>)}</span>
+                  </div>
+                )}
+                {contactos.map(([k, texto, href]) => (
+                  <div key={k} className="fr-s4-fila">
+                    <span className="fr-s4-fila-k">{k}</span>
+                    <a className="fr-s4-fila-v fr-s4-fila-link" href={href} target="_blank" rel="noreferrer">{texto}</a>
+                  </div>
+                ))}
+                {d.material && d.material.length > 0 && (
+                  <div className="fr-s4-fila fr-s4-fila--tags">
+                    <span className="fr-s4-fila-k">Material</span>
+                    <span className="fr-s4-tags">{d.material.map((m) => <span key={m} className="fr-s4-tag">{m}</span>)}</span>
+                  </div>
+                )}
+                {d.detalles && d.detalles.length > 0 && (
+                  <div className="fr-s4-ficha-detalles">
+                    <span className="fr-s4-ficha-detalles-tit">Detalles que marcan la diferencia</span>
+                    {d.detalles.map((x) => <p key={x}>{x}</p>)}
+                  </div>
+                )}
+              </details>
             )}
 
             {d.pueblosAlojamiento && d.pueblosAlojamiento.length > 0 && (

@@ -1471,6 +1471,28 @@
 .fr-s4-resto-nombre { display: block; font: 800 14.5px var(--fr-font-baloo), sans-serif; color: var(--fr-tinta); }
 .fr-s4-resto-sub { display: block; font: 500 11.5px var(--fr-font-dm), sans-serif; color: var(--fr-sec); }
 
+/* Ficha técnica (nivel 2): desplegable con las filas estructuradas */
+.fr-s4-ficha > summary { list-style: none; cursor: pointer; }
+.fr-s4-ficha > summary::-webkit-details-marker { display: none; }
+.fr-s4-ficha-sum { display: flex; align-items: center; justify-content: space-between; }
+.fr-s4-ficha-sum::after {
+  content: "▸"; font-size: 13px; color: var(--fr-sec); transition: transform 0.15s ease;
+}
+.fr-s4-ficha[open] .fr-s4-ficha-sum::after { transform: rotate(90deg); }
+.fr-s4-fila--tags { align-items: flex-start; }
+.fr-s4-tags { display: flex; flex-wrap: wrap; gap: 5px; justify-content: flex-end; max-width: 70%; }
+.fr-s4-tag {
+  background: var(--fr-papel); border: 1.5px solid var(--fr-tinta); border-radius: 99px;
+  padding: 3px 9px; font: 700 11px var(--fr-font-dm), sans-serif; color: var(--fr-tinta);
+}
+.fr-s4-fila-link { text-decoration: underline; text-underline-offset: 2px; }
+.fr-s4-ficha-detalles { margin-top: 12px; padding-top: 12px; border-top: 2px solid var(--fr-tinta); }
+.fr-s4-ficha-detalles-tit {
+  display: block; margin-bottom: 6px;
+  font: 800 14px var(--fr-font-baloo), sans-serif; color: var(--fr-tinta);
+}
+.fr-s4-ficha-detalles p { font: 500 13px var(--fr-font-dm), sans-serif; color: var(--fr-sec); margin: 4px 0; }
+
 /* Barra fija de acciones (móvil) */
 .fr-s4-barra {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
