@@ -36,6 +36,13 @@ for (const p of props) {
     assert.ok(d.paradas.length >= 1 && d.paradas.length <= 8, `${p.id} día ${d.numero}: 1–8 paradas`);
     assert.strictEqual(d.paradas[0].cocheDesdeAnterior, 0, `${p.id} día ${d.numero}: la 1ª parada no lleva coche previo`);
     assert.ok(d.minutosActivos > 0 && d.minutosLuz > 0, `${p.id} día ${d.numero}: minutos coherentes`);
+    // Comida no antes de las 13:00 y, con ≥2 paradas, siempre queda plan después de comer.
+    if (d.comidaHoraInicio != null) {
+      assert.ok(d.comidaHoraInicio >= 13 * 60, `${p.id} día ${d.numero}: comida no antes de las 13:00`);
+      if (d.paradas.length >= 2) {
+        assert.ok(d.paradas.some((x) => x.horaInicio >= d.comidaHoraInicio!), `${p.id} día ${d.numero}: alguna parada después de comer`);
+      }
+    }
   }
   assert.ok(p.cocheTotalMin >= 0, `${p.id}: coche total no negativo`);
 }

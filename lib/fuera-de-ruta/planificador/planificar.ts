@@ -12,7 +12,8 @@ const RITMO_MIN: Record<Ritmo, number> = { relajado: 300, medio: 420, activo: 54
 // Minutos reservados para la comida. "da-igual" reserva como picnic en el presupuesto
 // global; por día se resuelve a restaurante (90) si la zona tiene, o picnic si no.
 const COMIDA_MIN: Record<Comida, number> = { restaurante: 90, picnic: 30, "da-igual": 30, "solo-cena": 0 };
-const LUNCH = 14 * 60; // minutos desde medianoche: se intercala la comida en la 1ª parada que arranca a esta hora o después
+const INICIO_DIA = 9 * 60;  // hora realista de arranque (no el amanecer astronómico, que apelmazaba todo de madrugada)
+const COMIDA_MIN_HORA = 13 * 60; // no se come antes de esta hora: en días cortos se espera al mediodía en vez de comer a media mañana
 const VISITA_DEFECTO = 90;   // minutos si el destino no trae duracionHoras
 const MAX_PARADAS_DIA = 8;   // tope del TSP por fuerza bruta (ver geo.ordenarDia)
 const PENAL_ZONA = 30;       // min de coche "imaginario" que la estrategia "Mínimo coche"
@@ -156,29 +157,42 @@ function construirDia(numero: number, clusterSlugs: string[], ctx: Ctx): Dia {
     else comidaMin = COMIDA_MIN.picnic;
   }
 
-  // El día arranca al amanecer: cada parada empieza tras conducir hasta ella y la
-  // comida se intercala en la primera parada que caería a mediodía o más tarde.
+  // El día arranca a una hora realista de turismo. La comida NO se ancla al reloj
+  // (eso la mandaba al cierre en días que acababan antes de las 14:00): parte la
+  // jornada por la mitad del trabajo, así siempre quedan paradas después de comer.
   const centro = centroDe(destinos)!;
   const { amanecer, minutosLuz } = horasDeLuz(ctx.fecha, centro[0], centro[1]);
+  const coches = orden.map((s, i) => (i === 0 ? 0 : min(tiempoCoche(ctx.matriz, orden[i - 1], s))));
+  const visitas = destinos.map(visitaMin);
+  const trabajoTotal = coches.reduce((s, c) => s + c, 0) + visitas.reduce((s, v) => s + v, 0);
+
+  // Índice de la 1ª parada de la tarde: la que cruza la mitad del trabajo del día.
+  // Con ≥2 paradas garantiza reparto mañana/tarde; con 1 (o solo-cena) no hay reparto.
+  let idxComida = -1;
+  if (comidaMin > 0 && orden.length >= 2) {
+    let acum = 0;
+    for (let i = 0; i < orden.length; i++) {
+      if (i > 0 && acum + coches[i] >= trabajoTotal / 2) { idxComida = i; break; }
+      acum += coches[i] + visitas[i];
+    }
+    if (idxComida < 0) idxComida = orden.length - 1; // que al menos la última quede tras comer
+  }
+
   const paradas: Parada[] = [];
-  let cursor = amanecer;
-  let comidaPuesta = comidaMin === 0;
+  let cursor = Math.max(amanecer, INICIO_DIA);
   let comidaHoraInicio: number | undefined;
   orden.forEach((slug, i) => {
-    const d = ctx.porSlug.get(slug)!;
-    const cocheDesdeAnterior = i === 0 ? 0 : min(tiempoCoche(ctx.matriz, orden[i - 1], slug));
-    cursor += cocheDesdeAnterior;
-    if (!comidaPuesta && cursor >= LUNCH) { comidaHoraInicio = cursor; cursor += comidaMin; comidaPuesta = true; }
-    paradas.push({ slug, nombre: d.nombre, tipo: d.tipo, visitaMin: visitaMin(d), cocheDesdeAnterior, horaInicio: cursor });
-    cursor += visitaMin(d);
+    const d = destinos[i];
+    cursor += coches[i];
+    if (i === idxComida) { cursor = Math.max(cursor, COMIDA_MIN_HORA); comidaHoraInicio = cursor; cursor += comidaMin; }
+    paradas.push({ slug, nombre: d.nombre, tipo: d.tipo, visitaMin: visitas[i], cocheDesdeAnterior: coches[i], horaInicio: cursor });
+    cursor += visitas[i];
   });
-  // Día corto (todas las paradas por la mañana): la comida no llegó a intercalarse
-  // en el recorrido, pero existe. Se sitúa tras la última parada, hora coherente.
-  if (!comidaPuesta) comidaHoraInicio = cursor;
+  // Día de una sola parada: la comida del mediodía existe pero no parte el recorrido;
+  // se sitúa tras la última, con hora coherente (los solo-cena no llevan comida aquí).
+  if (comidaMin > 0 && idxComida < 0) comidaHoraInicio = Math.max(cursor, COMIDA_MIN_HORA);
 
-  const visitas = paradas.reduce((s, p) => s + p.visitaMin, 0);
-  const coche = paradas.reduce((s, p) => s + p.cocheDesdeAnterior, 0);
-  const minutosActivos = visitas + coche + comidaMin;
+  const minutosActivos = trabajoTotal + comidaMin;
 
   if (minutosActivos > minutosLuz) {
     avisos.push(`Jornada apretada: ${fmt(minutosActivos)} de actividad para ${fmt(minutosLuz)} de luz`);
