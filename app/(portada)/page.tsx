@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Manifesto from "./home/manifesto/page";
+import Manifesto from "../home/manifesto/page";
 
 // La raíz es la única ruta indexable: sobrescribe el noindex global del layout.
 export const metadata: Metadata = {
