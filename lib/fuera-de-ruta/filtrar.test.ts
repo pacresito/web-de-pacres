@@ -118,6 +118,6 @@ assert.strictEqual(filtrarDestinos(todos, { zona: ["ribera"] }).length, 3, "3 de
 assert.strictEqual(filtrarDestinos(todos, { desnivel: "+500" }).length, 1, "solo Peña Izaga supera 500 m");
 assert.strictEqual(filtrarDestinos(todos, { agua: ["poza"] }).length, 2, "poza: Xorroxin y Ubagua");
 assert.strictEqual(filtrarDestinos(todos, { epoca: ["invierno"] }).length, 3, "invierno: Elizondo, Ujué, Tudela");
-assert.strictEqual(filtrarDestinos(todos, { sinReserva: true }).length, 18, "2 destinos exigen reserva");
+assert.strictEqual(filtrarDestinos(todos, { sinReserva: true }).length, 17, "3 destinos exigen reserva");
 
 console.log("OK filtrar.test.ts");

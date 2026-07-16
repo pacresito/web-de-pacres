@@ -528,12 +528,15 @@ function Tarjeta({ destino: d, zona, num, href, activa, onActivo }: {
   activa: boolean;
   onActivo: (slug: string | null) => void;
 }) {
-  // 2-4 chips de datos; "baño sí" no va en chip porque ya lo dice el sticker.
+  // 2-4 chips: solo lo que distingue a este sitio. Los "sí" de niños y perros están
+  // en casi todos los destinos, y un chip repetido en 19 de 20 tarjetas no ayuda a
+  // elegir — para buscar por eso están los toggles del filtro, y el dato completo,
+  // en la ficha. "te puedes bañar" sí va, de sticker, porque solo lo son dos.
   const chips: { texto: string; tono?: "si" | "no" }[] = [];
   if (d.distanciaKm) chips.push({ texto: rango(d.distanciaKm, "km") });
   if (d.desnivelM) chips.push({ texto: d.desnivelM[1] === 0 ? "llano" : `+${rango(d.desnivelM, "m")}` });
-  if (d.ninos !== undefined) chips.push({ texto: `niños ${d.ninos ? "sí" : "no"}`, tono: d.ninos ? "si" : "no" });
-  if (d.perros !== undefined) chips.push({ texto: `perros ${d.perros ? "sí" : "no"}`, tono: d.perros ? "si" : "no" });
+  if (d.ninos === false) chips.push({ texto: "niños no", tono: "no" });
+  if (d.perros === false) chips.push({ texto: "perros no", tono: "no" });
   if (d.bano === false) chips.push({ texto: "baño no", tono: "no" });
 
   return (
@@ -574,13 +577,14 @@ function Tarjeta({ destino: d, zona, num, href, activa, onActivo }: {
 }
 
 // Tarjeta compacta horizontal (lista móvil): foto 112px con pin + meta/nombre/chips.
-// A diferencia de la de escritorio, "baño sí" sí va en chip (no hay sticker aquí).
+// Mismo criterio de chips que la de escritorio, con una diferencia: aquí "baño sí"
+// sí va en chip, porque no hay sticker donde ponerlo.
 function TarjetaCompacta({ destino: d, zona, num, href }: { destino: Destino; zona: string; num: number; href: string }) {
   const chips: { texto: string; tono?: "si" | "no" }[] = [];
   if (d.distanciaKm) chips.push({ texto: rango(d.distanciaKm, "km") });
   if (d.bano !== undefined) chips.push({ texto: `baño ${d.bano ? "sí" : "no"}`, tono: d.bano ? "si" : "no" });
-  if (d.ninos !== undefined) chips.push({ texto: `niños ${d.ninos ? "sí" : "no"}`, tono: d.ninos ? "si" : "no" });
-  if (d.perros !== undefined) chips.push({ texto: `perros ${d.perros ? "sí" : "no"}`, tono: d.perros ? "si" : "no" });
+  if (d.ninos === false) chips.push({ texto: "niños no", tono: "no" });
+  if (d.perros === false) chips.push({ texto: "perros no", tono: "no" });
   if (d.desnivelM) chips.push({ texto: d.desnivelM[1] === 0 ? "llano" : `+${rango(d.desnivelM, "m")}` });
 
   return (
