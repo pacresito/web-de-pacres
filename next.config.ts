@@ -11,7 +11,7 @@ const nextConfig: NextConfig = {
       { source: "/a", destination: "/apps/AgricolaCalc", permanent: false },
       { source: "/c", destination: "/apps/CastleComboCalc", permanent: false },
       { source: "/farmacia", destination: "/farma", permanent: false },
-      { source: "/v", destination: "/viajes", permanent: false },
+      { source: "/v", destination: "/fuera-de-ruta", permanent: false },
     ];
   },
   async headers() {

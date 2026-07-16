@@ -1,11 +1,11 @@
-// Genera data/viajes/espana-mapa.ts (paths SVG de las provincias de España) para
-// el mapa de entrada de /viajes. Descarga el GeoJSON de provincias, lo proyecta
+// Genera data/fuera-de-ruta/espana-mapa.ts (paths SVG de las provincias de España) para
+// el mapa de entrada de /fuera-de-ruta. Descarga el GeoJSON de provincias, lo proyecta
 // (equirectangular con corrección de latitud) y lleva Canarias a un inset abajo a
 // la izquierda. Uso puntual: `node scripts/build-espana-mapa.mjs`.
 import fs from "node:fs";
 
 const FUENTE = "https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/spain-provinces.geojson";
-const SALIDA = new URL("../data/viajes/espana-mapa.ts", import.meta.url);
+const SALIDA = new URL("../data/fuera-de-ruta/espana-mapa.ts", import.meta.url);
 
 const geo = await (await fetch(FUENTE)).json();
 
@@ -82,7 +82,7 @@ const out = {
 };
 
 fs.writeFileSync(SALIDA, `// GENERADO por scripts/build-espana-mapa.mjs — no editar a mano.
-// Paths SVG de las provincias de España para el mapa de entrada de /viajes.
+// Paths SVG de las provincias de España para el mapa de entrada de /fuera-de-ruta.
 export const MAPA_ESPANA = ${JSON.stringify(out)} as const;
 `);
 console.log("OK espana-mapa.ts | provincias", provincias.length, "| viewBox", out.viewBox);

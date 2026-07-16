@@ -1,4 +1,4 @@
-// Genera data/viajes/zonas-mapa.ts: para cada provincia de /viajes, su contorno
+// Genera data/fuera-de-ruta/zonas-mapa.ts: para cada provincia de /fuera-de-ruta, su contorno
 // REAL pero muy poligonal (Douglas-Peucker agresivo) partido en zonas del mismo
 // tamaño. El reparto se hace sobre una rejilla de píxeles (diagrama de potencia:
 // cada píxel va a la semilla más cercana, con un peso por zona que se ajusta hasta
@@ -10,7 +10,7 @@
 import fs from "node:fs";
 
 const FUENTE = "https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/spain-provinces.geojson";
-const SALIDA = new URL("../data/viajes/zonas-mapa.ts", import.meta.url);
+const SALIDA = new URL("../data/fuera-de-ruta/zonas-mapa.ts", import.meta.url);
 
 const VB_W = 400, VB_H = 430, PAD = 22;      // lienzo de MapaZonas
 const TOL = 20;                               // px de simplificación (chunky, muy poligonal pero reconocible)
@@ -382,7 +382,7 @@ for (const [nombre, zonasCfg] of Object.entries(PROVINCIAS)) {
 }
 
 fs.writeFileSync(SALIDA, `// GENERADO por scripts/build-zonas-mapa.mjs — no editar a mano.
-// Contorno real (muy poligonal) de cada provincia de /viajes, partido en zonas.
+// Contorno real (muy poligonal) de cada provincia de /fuera-de-ruta, partido en zonas.
 export type ZonaMapa = { id: string; nombre: string; path: string; label: [number, number]; badge: [number, number] };
 export type ProvinciaMapa = { viewBox: string; zonas: ZonaMapa[] };
 export const ZONAS_MAPA: Record<string, ProvinciaMapa> = ${JSON.stringify(salida)};
