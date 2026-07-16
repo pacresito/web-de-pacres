@@ -22,7 +22,10 @@ export default function Cabecera() {
         Fuera <span className="fr-wordmark-de">de</span> Ruta
       </Link>
       <span className="fr-tagline">sitios chulos y poco conocidos</span>
-      <button type="button" className="fr-que-es" onClick={() => setAbierto(true)}>
+      <Link href="/fuera-de-ruta/guardados" className="fr-cabecera-link fr-cabecera-mis-viajes">
+        Mis viajes
+      </Link>
+      <button type="button" className="fr-cabecera-link" onClick={() => setAbierto(true)}>
         ¿Qué es esto?
       </button>
 

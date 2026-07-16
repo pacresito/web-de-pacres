@@ -67,8 +67,7 @@
   border-left: 2px solid rgba(28, 47, 94, 0.15);
   padding-left: 16px;
 }
-.fr-que-es {
-  margin-left: auto;
+.fr-cabecera-link {
   font: 700 13.5px var(--fr-font-dm), sans-serif;
   color: var(--fr-tinta);
   background: none;
@@ -77,6 +76,8 @@
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+/* El primero de los dos empuja al grupo contra el borde derecho. */
+.fr-cabecera-mis-viajes { margin-left: auto; }
 
 /* Modal "¿Qué es esto?" */
 .fr-modal-fondo {
@@ -1719,4 +1720,78 @@
   .fr-s5-tab:hover { box-shadow: var(--fr-sombra-2); }
   .fr-s5-item--parada:hover { box-shadow: var(--fr-sombra-3); }
   .fr-s5-link:hover { color: var(--fr-tinta); }
+}
+
+/* ============================================================
+   S6 · Mis viajes — los encargos guardados en este navegador.
+   Una tarjeta por viaje; el CTA reabre el planificador con su
+   `?plan=`. Lista de una columna: son pocos y se leen en fila.
+   ============================================================ */
+.fr-guardados { padding: 22px 18px 40px; max-width: 720px; margin: 0 auto; }
+.fr-guardados-titulo {
+  font-family: var(--fr-font-baloo), sans-serif;
+  font-weight: 800;
+  font-size: 28px;
+  margin: 0 0 8px;
+}
+.fr-guardados-intro {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--fr-sec);
+  margin: 0 0 22px;
+}
+
+.fr-guardados-vacio {
+  padding: 26px 22px;
+  display: grid;
+  justify-items: start;
+  gap: 16px;
+}
+.fr-guardados-vacio p { margin: 0; font-size: 15px; }
+
+.fr-guardados-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
+.fr-guardados-item { padding: 18px 20px 16px; }
+.fr-guardados-item-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.fr-guardados-provincia {
+  font-family: var(--fr-font-mono), monospace;
+  font-weight: 500;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fr-sec);
+}
+/* Píldora Lima: la propuesta guardada, con el mismo código de color que su pestaña. */
+.fr-guardados-propuesta {
+  font: 700 11px var(--fr-font-dm), sans-serif;
+  background: var(--fr-lima);
+  border: 2px solid var(--fr-tinta);
+  border-radius: 99px;
+  padding: 1px 9px;
+}
+.fr-guardados-borrar { margin-left: auto; color: var(--fr-sec); }
+
+.fr-guardados-item-titulo {
+  font-family: var(--fr-font-baloo), sans-serif;
+  font-weight: 800;
+  font-size: 19px;
+  margin: 0 0 6px;
+}
+.fr-guardados-item-resumen { font-size: 14px; line-height: 1.45; margin: 0 0 4px; }
+.fr-guardados-item-meta { font-size: 13px; color: var(--fr-sec); margin: 0; }
+
+.fr-guardados-item-pie { display: flex; align-items: center; gap: 14px; margin-top: 16px; }
+.fr-guardados-fecha {
+  font-family: var(--fr-font-mono), monospace;
+  font-size: 11px;
+  color: var(--fr-muted);
+  margin-left: auto;
+}
+
+@media (min-width: 900px) {
+  .fr-guardados { padding: 34px 32px 56px; }
+  .fr-guardados-titulo { font-size: 34px; }
+}
+
+@media (hover: hover) {
+  .fr-guardados-borrar:hover { color: var(--fr-tinta); }
 }

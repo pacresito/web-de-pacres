@@ -3,6 +3,7 @@
 // reparto distinta. Lógica pura. Test: `npx tsx lib/fuera-de-ruta/planificador/planificar.test.ts`.
 import type { Destino, Restaurante } from "../tipos";
 import { filtrarDestinos } from "../filtrar";
+import { PROPUESTA_TEXTO } from "../formato";
 import { tiempoCoche, ordenarDia, type MatrizViajes } from "./geo";
 import { horasDeLuz } from "./sol";
 import type { Comida, Descarte, Dia, Parada, PlanInput, Propuesta, Ritmo } from "./tipos";
@@ -34,10 +35,10 @@ type Estrategia = {
 const porZona = (cs: Destino[]) => [...cs].sort((a, b) => a.zona.localeCompare(b.zona));
 
 const ESTRATEGIAS: Estrategia[] = [
-  { id: "A", nombre: "Equilibrada", orden: porZona },
-  { id: "B", nombre: "Mínimo coche", orden: porZona, penalZona: PENAL_ZONA },
+  { id: "A", nombre: PROPUESTA_TEXTO.A, orden: porZona },
+  { id: "B", nombre: PROPUESTA_TEXTO.B, orden: porZona, penalZona: PENAL_ZONA },
   {
-    id: "C", nombre: "Imprescindibles",
+    id: "C", nombre: PROPUESTA_TEXTO.C,
     orden: (cs, imp) => [...cs].sort((a, b) => rangoImp(a, imp) - rangoImp(b, imp)),
   },
 ];

@@ -5,11 +5,12 @@ import Link from "next/link";
 import type { DatosViajes, Destino, Rango, Restaurante } from "@/lib/fuera-de-ruta/tipos";
 import { filtrarDestinos, type Filtros } from "@/lib/fuera-de-ruta/filtrar";
 import { resumenFiltros } from "@/lib/fuera-de-ruta/resumen";
-import { rango } from "@/lib/fuera-de-ruta/formato";
+import { COMIDA_TEXTO, rango, RITMO_TEXTO } from "@/lib/fuera-de-ruta/formato";
 import { planificar } from "@/lib/fuera-de-ruta/planificador/planificar";
 import type { MatrizViajes } from "@/lib/fuera-de-ruta/planificador/geo";
 import type { Comida, Dia, Parada, Propuesta, Ritmo } from "@/lib/fuera-de-ruta/planificador/tipos";
 import { serializarEncargo, type Encargo } from "@/lib/fuera-de-ruta/planificador/encargo";
+import { guardarViaje } from "@/lib/fuera-de-ruta/planificador/guardados";
 import { filtrosAQuery } from "@/lib/fuera-de-ruta/url-filtros";
 
 // S5 «Crear mi viaje» (Río pop, F6): superficie sobre el motor determinista.
@@ -27,8 +28,6 @@ const COMIDAS: { valor: Comida; texto: string }[] = [
   { valor: "picnic", texto: "picnic" },
   { valor: "da-igual", texto: "da igual" },
 ];
-const RITMO_TEXTO: Record<Ritmo, string> = { relajado: "tranquilo", medio: "normal", activo: "a tope" };
-const COMIDA_TEXTO: Record<Comida, string> = { restaurante: "restaurante", picnic: "picnic", "da-igual": "da igual", "solo-cena": "solo cena" };
 const MAX_IMPRESCINDIBLES = 3;
 
 const hoy = () => new Date().toISOString().slice(0, 10);
@@ -110,6 +109,7 @@ export default function CrearViaje({ datos, matriz, provincia, filtros, inicial 
       <Propuestas
         propuestas={propuestas}
         encargo={encargo()}
+        propuestaInicial={inicial?.propuesta}
         provincia={provincia}
         rangoFechas={rangoFechas}
         resumenHeredado={resumenHeredado}
@@ -210,9 +210,10 @@ export default function CrearViaje({ datos, matriz, provincia, filtros, inicial 
 }
 
 // ------------------------------------------------------------------ PASO 2 · Propuestas
-function Propuestas({ propuestas, encargo, provincia, rangoFechas, resumenHeredado, destinoPorSlug, restPorNombre, zona, onEditar }: {
+function Propuestas({ propuestas, encargo, propuestaInicial, provincia, rangoFechas, resumenHeredado, destinoPorSlug, restPorNombre, zona, onEditar }: {
   propuestas: Propuesta[];
   encargo: Encargo;
+  propuestaInicial?: Propuesta["id"]; // la que traía el enlace guardado o compartido
   provincia: string;
   rangoFechas: string;
   resumenHeredado: string;
@@ -221,7 +222,7 @@ function Propuestas({ propuestas, encargo, provincia, rangoFechas, resumenHereda
   zona: (id: string) => string;
   onEditar: () => void;
 }) {
-  const [activa, setActiva] = useState<Propuesta["id"]>(propuestas[0].id);
+  const [activa, setActiva] = useState<Propuesta["id"]>(propuestaInicial ?? propuestas[0].id);
   const [abiertoDia, setAbiertoDia] = useState(1); // acordeón móvil: un día abierto
   const [aviso, setAviso] = useState("");
   const prop = propuestas.find((p) => p.id === activa)!;
@@ -232,10 +233,14 @@ function Propuestas({ propuestas, encargo, provincia, rangoFechas, resumenHereda
 
   const mostrarAviso = (t: string) => { setAviso(t); window.setTimeout(() => setAviso(""), 2600); };
 
+  // Lo que se comparte o se guarda es el encargo **con la propuesta abierta**: quien lo
+  // abra cae en la que se eligió, no en la A por defecto.
+  const encargoElegido = (): Encargo => ({ ...encargo, propuesta: activa });
+
   // El enlace apunta al planificador, no al índice: la provincia va en la ruta (el
   // encargo no la lleva) y quien lo abre cae directamente en las propuestas.
   const compartir = async () => {
-    const url = `${window.location.origin}/fuera-de-ruta/${provincia}/crear-viaje?plan=${serializarEncargo(encargo)}`;
+    const url = `${window.location.origin}/fuera-de-ruta/${provincia}/crear-viaje?${serializarEncargo(encargoElegido())}`;
     window.history.replaceState(null, "", url);
     try {
       await navigator.clipboard.writeText(url);
@@ -247,10 +252,8 @@ function Propuestas({ propuestas, encargo, provincia, rangoFechas, resumenHereda
 
   const guardar = () => {
     try {
-      const clave = "fr:guardados";
-      const previos = JSON.parse(localStorage.getItem(clave) || "[]");
-      localStorage.setItem(clave, JSON.stringify([...previos, encargo]));
-      mostrarAviso("Viaje guardado en este navegador");
+      guardarViaje(provincia, encargoElegido());
+      mostrarAviso("Viaje guardado — lo tienes en «Mis viajes»");
     } catch {
       mostrarAviso("No se pudo guardar en este navegador");
     }

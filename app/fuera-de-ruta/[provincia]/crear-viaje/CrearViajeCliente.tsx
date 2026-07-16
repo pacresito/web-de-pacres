@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useSearchParams } from "next/navigation";
 import type { DatosViajes } from "@/lib/fuera-de-ruta/tipos";
 import type { MatrizViajes } from "@/lib/fuera-de-ruta/planificador/geo";
 import { parsearEncargo } from "@/lib/fuera-de-ruta/planificador/encargo";
@@ -16,19 +17,23 @@ export default function CrearViajeCliente({ datos, matriz, provincia }: {
   matriz: MatrizViajes;
   provincia: string;
 }) {
-  // Dos formas de llegar, ambas por la URL: `?plan=` es un enlace compartido (encargo
-  // completo, arranca en las propuestas); si no, los filtros con los que se venía del
-  // explorador. Un `?plan=` corrupto cae al formulario en vez de reventar.
-  const params = new URLSearchParams(typeof window === "undefined" ? "" : window.location.search);
-  const compartido = parsearEncargo(params.get("plan"));
+  // Dos formas de llegar, y las dos son la misma query: si trae un encargo entero es un
+  // enlace compartido o guardado (arranca en las propuestas); si no, son los filtros con
+  // los que se venía del explorador y arranca en el formulario. Una query a medias o
+  // corrupta cae al formulario en vez de reventar.
+  //
+  // Se lee con `useSearchParams`, no de `window.location`: al llegar por un `<Link>`
+  // (Mis viajes) este envoltorio renderiza **antes** de que el navegador actualice la
+  // URL, así que `location.search` iba vacío y el plan se perdía.
+  const params = useSearchParams();
 
   return (
     <CrearViaje
       datos={datos}
       matriz={matriz}
       provincia={provincia}
-      filtros={compartido?.filtros ?? queryAFiltros(params)}
-      inicial={compartido ?? undefined}
+      filtros={queryAFiltros(params)}
+      inicial={parsearEncargo(params) ?? undefined}
     />
   );
 }

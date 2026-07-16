@@ -9,6 +9,9 @@ import { ZONAS_MAPA } from "@/data/fuera-de-ruta/zonas-mapa";
 // [destino]); `datos.test.ts` lo comprueba.
 export const RUTAS_RESERVADAS = ["sitios", "crear-viaje"];
 
+// El mismo choque un nivel arriba: cuelgan de /fuera-de-ruta/ y ganan a [provincia].
+export const RUTAS_RESERVADAS_RAIZ = ["guardados"];
+
 export const PROVINCIAS = Object.keys(ZONAS_MAPA);
 
 export const slugProvincia = (nombre: string): string =>

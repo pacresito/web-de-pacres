@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { datosDe, matrizDe, PROVINCIAS_CON_DATOS } from "@/lib/fuera-de-ruta/datos";
@@ -25,5 +26,11 @@ export default async function CrearViajePage({ params }: Props) {
   const matriz = matrizDe(provincia);
   if (!datos || !matriz) notFound();
 
-  return <CrearViajeCliente datos={datos} matriz={matriz} provincia={provincia} />;
+  // El Suspense lo pide `useSearchParams` en una página prerenderizada; no se ve, el
+  // planificador ya se monta sin SSR.
+  return (
+    <Suspense>
+      <CrearViajeCliente datos={datos} matriz={matriz} provincia={provincia} />
+    </Suspense>
+  );
 }
