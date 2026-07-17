@@ -1770,3 +1770,60 @@
 @media (hover: hover) {
   .fr-guardados-borrar:hover { color: var(--fr-tinta); }
 }
+
+/* --- Itinerario cronológico día a día (Fase E, §5.3) --- */
+.fr-it-wrap { max-width: 760px; margin: 0 auto; padding: 20px 16px 64px; }
+.fr-it-nota { margin: -4px 0 20px; }
+.fr-d-itinerario { width: 100%; }
+
+.fr-it-dia { padding: 18px 18px 20px; margin-bottom: 18px; }
+.fr-it-dia--libre { background: var(--fr-bruma); }
+.fr-it-dia-cab { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.fr-it-dia-t { font-family: var(--fr-font-baloo), sans-serif; font-weight: 800; font-size: 24px; margin: 0; }
+.fr-it-aloj {
+  font: 700 12px var(--fr-font-dm), sans-serif;
+  background: var(--fr-rosa); border: 2px solid var(--fr-tinta); border-radius: 99px; padding: 2px 10px;
+}
+.fr-it-libre { color: var(--fr-sec); margin: 4px 0 0; }
+
+.fr-it-resumen { list-style: none; display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 0 0 14px; padding: 0; font-size: 14px; }
+.fr-it-resumen li { display: flex; align-items: center; gap: 4px; }
+
+.fr-it-salida {
+  display: inline-flex; align-items: center; gap: 10px; margin-bottom: 16px;
+  font: 700 13px var(--fr-font-dm), sans-serif;
+}
+.fr-it-salida input {
+  font-family: var(--fr-font-mono), monospace; font-size: 14px;
+  border: 2px solid var(--fr-tinta); border-radius: 8px; padding: 4px 8px; background: var(--fr-papel); color: var(--fr-tinta);
+}
+
+.fr-it-timeline { list-style: none; margin: 0; padding: 0; border-left: 2px dashed var(--fr-agua); }
+.fr-it-timeline > li { position: relative; padding: 0 0 4px 18px; }
+.fr-it-hito, .fr-it-parada, .fr-it-comida { display: flex; gap: 12px; padding: 8px 0; align-items: baseline; }
+.fr-it-parada-wrap::before, .fr-it-hito::before {
+  content: ""; position: absolute; left: -6px; top: 15px;
+  width: 8px; height: 8px; border-radius: 99px; background: var(--fr-rio); border: 2px solid var(--fr-tinta);
+}
+.fr-it-hito { font-weight: 700; }
+.fr-it-hora {
+  flex: 0 0 auto; min-width: 44px;
+  font-family: var(--fr-font-mono), monospace; font-size: 14px; font-weight: 700; color: var(--fr-rio);
+}
+.fr-it-txt { display: flex; flex-direction: column; gap: 3px; font-size: 14px; line-height: 1.45; }
+.fr-it-parada-n { font-size: 15px; }
+.fr-it-coche { color: var(--fr-sec); font-size: 12.5px; font-weight: 400; }
+.fr-it-detalle { color: var(--fr-sec); font-size: 13px; }
+.fr-it-luna { font-size: 13px; }
+.fr-it-comida { background: var(--fr-bruma); border-radius: 8px; padding: 8px 10px; margin: 2px 0; }
+.fr-it-pausa { background: var(--fr-bruma); border-radius: 8px; padding: 6px 9px; color: var(--fr-tinta); }
+.fr-it-enlaces { display: flex; gap: 14px; margin-top: 2px; }
+.fr-it-maps { font-size: 13px; }
+
+.fr-it-avisos { list-style: none; margin: 14px 0 0; padding: 10px 12px; background: var(--fr-rosa); border: 2px solid var(--fr-tinta); border-radius: 10px; font-size: 13.5px; }
+.fr-it-avisos li { margin: 2px 0; }
+
+@media (min-width: 900px) {
+  .fr-it-wrap { padding: 30px 24px 72px; }
+  .fr-it-dia { padding: 22px 24px 24px; }
+}

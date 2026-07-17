@@ -9,6 +9,8 @@ import { filtrarDestinos, type Filtros } from "@/lib/fuera-de-ruta/filtrar";
 import { filtrosAQuery } from "@/lib/fuera-de-ruta/url-filtros";
 import { recomendar } from "@/lib/fuera-de-ruta/motor/motor";
 import { resumenMiViaje, elegirEquilibrado } from "@/lib/fuera-de-ruta/viaje/mi-viaje";
+import { generarItinerario, fmtHora } from "@/lib/fuera-de-ruta/itinerario/itinerario";
+import type { DiaItin, ComidaItin } from "@/lib/fuera-de-ruta/itinerario/itinerario";
 import {
   BLOQUES, camposDe, uno, varios,
   type Bloque, type Campo, type Pregunta, type Respuestas,
@@ -337,6 +339,9 @@ function Resultado({ datos, matriz, provincia, filtros, respuestas, seleccion, s
   );
 
   const [listo, setListo] = useState(false);
+  const [verItinerario, setVerItinerario] = useState(false);
+  // Hora de salida por día (Fase E), configurable; sin valor, el generador usa la del ritmo.
+  const [horaSalida, setHoraSalida] = useState<Record<number, number>>({});
 
   const alternar = (slug: string) =>
     setSeleccion((s) => {
@@ -355,8 +360,26 @@ function Resultado({ datos, matriz, provincia, filtros, respuestas, seleccion, s
   );
   const resumen = useMemo(() => resumenMiViaje(destinosSel, matriz, opts), [destinosSel, matriz, opts]);
 
+  // Itinerario cronológico (Fase E): sobre el mismo reparto del panel, para no contradecirlo.
+  const itinerario = useMemo(
+    () => generarItinerario(resumen.dias, datos, matriz, { ...opts, horaSalida }),
+    [resumen.dias, datos, matriz, opts, horaSalida],
+  );
+
   if (!listo) {
     return <Transicion candidatas={candidatas.length} eliminadas={eliminadas.length} onListo={() => setListo(true)} />;
+  }
+
+  if (verItinerario) {
+    return (
+      <Itinerario
+        itinerario={itinerario}
+        porSlug={porSlug}
+        provincia={provincia}
+        onAtras={() => setVerItinerario(false)}
+        onHoraSalida={(dia, min) => setHoraSalida((h) => ({ ...h, [dia]: min }))}
+      />
+    );
   }
 
   return (
@@ -395,6 +418,7 @@ function Resultado({ datos, matriz, provincia, filtros, respuestas, seleccion, s
           seleccion={seleccion}
           onQuitar={alternar}
           onQueDecidaLaIA={queDecidaLaIA}
+          onVerItinerario={() => setVerItinerario(true)}
         />
       </div>
     </div>
@@ -497,7 +521,7 @@ const fmtDur = (min: number) => {
   return h ? (m ? `${h} h ${m} min` : `${h} h`) : `${m} min`;
 };
 
-function PanelViaje({ resumen, porSlug, provincia, respuestas, seleccion, onQuitar, onQueDecidaLaIA }: {
+function PanelViaje({ resumen, porSlug, provincia, respuestas, seleccion, onQuitar, onQueDecidaLaIA, onVerItinerario }: {
   resumen: ResumenViaje;
   porSlug: Map<string, Destino>;
   provincia: string;
@@ -505,6 +529,7 @@ function PanelViaje({ resumen, porSlug, provincia, respuestas, seleccion, onQuit
   seleccion: Set<string>;
   onQuitar: (slug: string) => void;
   onQueDecidaLaIA: () => void;
+  onVerItinerario: () => void;
 }) {
   const vacio = seleccion.size === 0;
   const apretados = resumen.dias.filter((d) => d.apretado).length;
@@ -568,16 +593,178 @@ function PanelViaje({ resumen, porSlug, provincia, respuestas, seleccion, onQuit
       )}
 
       <div className="fr-d-panel-cta">
+        {!vacio && (
+          <button className="fr-btn fr-btn--primario fr-d-itinerario" onClick={onVerItinerario}>
+            🗓 Ver mi itinerario día a día
+          </button>
+        )}
         <button className="fr-btn fr-d-ia" onClick={onQueDecidaLaIA}>
           ✨ Que elija Cris por mí
         </button>
         {!vacio && (
-          <button className="fr-btn fr-btn--primario fr-d-guardar" onClick={guardar} disabled={guardado}>
+          <button className="fr-btn fr-d-guardar" onClick={guardar} disabled={guardado}>
             {guardado ? "✔ Guardado en «Mis viajes»" : "Guardar mi viaje"}
           </button>
         )}
       </div>
       <span className="sr-only" aria-live="polite">{guardado ? "Viaje guardado" : ""}</span>
     </aside>
+  );
+}
+
+// ------------------------------------------------------------ Itinerario cronológico
+// Fase E (§5.3): «el apartado principal de la guía». Cada día, un resumen (luz, coche,
+// estancia, alojamiento) y la cronología detallada —hora de llegada, inicio, estancia,
+// salida y conducción a la siguiente, con la comida intercalada y el regreso—. La hora de
+// salida de cada día es editable y todo se recalcula. Enlace a Maps por parada (el parking).
+const mapsHref = (gps?: [number, number]) =>
+  gps ? `https://www.google.com/maps/search/?api=1&query=${gps[0]},${gps[1]}` : undefined;
+
+function Itinerario({ itinerario, porSlug, provincia, onAtras, onHoraSalida }: {
+  itinerario: { dias: DiaItin[] };
+  porSlug: Map<string, Destino>;
+  provincia: string;
+  onAtras: () => void;
+  onHoraSalida: (dia: number, min: number) => void;
+}) {
+  return (
+    <div className="fr-it-wrap">
+      <div className="fr-s5-form-head">
+        <button className="fr-s5-atras" onClick={onAtras} aria-label="Volver a mi viaje">‹</button>
+        <h1 className="fr-s5-titulo">Tu itinerario día a día</h1>
+        <span className="fr-mono">{itinerario.dias.filter((d) => d.paradas.length).length} días con plan</span>
+      </div>
+      <p className="fr-d-sub fr-it-nota">
+        Horarios orientativos, calculados con las horas de luz reales y los tiempos de coche.
+        No pretende llenar cada minuto: si sobra tiempo, es tuyo.
+      </p>
+      {itinerario.dias.map((d) => <DiaItinerario key={d.numero} dia={d} porSlug={porSlug} provincia={provincia} onHoraSalida={onHoraSalida} />)}
+    </div>
+  );
+}
+
+function DiaItinerario({ dia, porSlug, provincia, onHoraSalida }: {
+  dia: DiaItin;
+  porSlug: Map<string, Destino>;
+  provincia: string;
+  onHoraSalida: (dia: number, min: number) => void;
+}) {
+  if (dia.paradas.length === 0) {
+    return (
+      <section className="fr-it-dia fr-tarjeta fr-it-dia--libre">
+        <h2 className="fr-it-dia-t">Día {dia.numero}</h2>
+        <p className="fr-it-libre">Día libre. Descansa o improvisa: este día no lo hemos planificado.</p>
+      </section>
+    );
+  }
+  return (
+    <section className="fr-it-dia fr-tarjeta">
+      <div className="fr-it-dia-cab">
+        <h2 className="fr-it-dia-t">Día {dia.numero}</h2>
+        {dia.alojamiento && <span className="fr-it-aloj">🏨 {dia.alojamiento.nombre}</span>}
+      </div>
+
+      <ul className="fr-it-resumen">
+        <li>🌅 <b>{fmtHora(dia.amanecer)}</b> · 🌇 <b>{fmtHora(dia.atardecer)}</b></li>
+        <li>🚗 <b>{fmtDur(dia.conduccionMin)}</b>{dia.km > 0 ? ` · ${dia.km} km` : ""}</li>
+        <li>👀 estancia <b>{fmtDur(dia.estanciaTotalMin)}</b></li>
+      </ul>
+
+      <label className="fr-it-salida">
+        <span>🕗 Hora de salida</span>
+        <input
+          type="time"
+          value={fmtHora(dia.horaSalida)}
+          onChange={(e) => {
+            const [h, m] = e.target.value.split(":").map(Number);
+            if (!Number.isNaN(h)) onHoraSalida(dia.numero, h * 60 + (m || 0));
+          }}
+        />
+      </label>
+
+      <ol className="fr-it-timeline">
+        <li className="fr-it-hito">
+          <span className="fr-it-hora">{fmtHora(dia.horaSalida)}</span>
+          <span className="fr-it-txt">Salida desde {dia.alojamiento ? dia.alojamiento.nombre : "el inicio del día"}.</span>
+        </li>
+
+        {dia.paradas.map((p, i) => {
+          const prevFin = i > 0 ? dia.paradas[i - 1].horaSalida : dia.horaSalida;
+          const comidaAntes = dia.comida && dia.comida.horaInicio >= prevFin && dia.comida.horaInicio <= p.horaLlegada;
+          const gps = porSlug.get(p.slug)?.gps;
+          return (
+            <li key={p.slug} className="fr-it-parada-wrap">
+              {comidaAntes && <BloqueComida comida={dia.comida!} />}
+              <div className="fr-it-parada">
+                <span className="fr-it-hora">{fmtHora(p.horaLlegada)}</span>
+                <div className="fr-it-txt">
+                  <span className="fr-it-parada-n">
+                    Llegada a <b>{p.nombre}</b>{p.nocturna && <span className="fr-it-luna"> 🌙</span>}
+                    {p.cocheDesdeAnteriorMin > 0 && <span className="fr-mono fr-it-coche"> · {fmtDur(p.cocheDesdeAnteriorMin)} en coche{p.kmDesdeAnterior > 0 ? ` (${p.kmDesdeAnterior} km)` : ""}</span>}
+                  </span>
+                  {p.pausaComida ? (
+                    <>
+                      <span className="fr-it-detalle">
+                        {p.prepMin > 0 && `Aparcar y prepararse ${p.prepMin} min. `}
+                        Empieza a las <b>{fmtHora(p.horaInicio)}</b> · estancia total recomendada <b>{fmtDur(p.estanciaMin)}</b>.
+                      </span>
+                      <span className="fr-it-detalle fr-it-pausa">
+                        🍴 {fmtHora(p.pausaComida.horaInicio)} — {p.pausaComida.restaurante ? <>pausa para comer en <b>{p.pausaComida.restaurante}</b></> : "pausa para comer"} ({fmtDur(p.pausaComida.min)}) y sigues hasta las <b>{fmtHora(p.horaSalida)}</b>.
+                      </span>
+                    </>
+                  ) : (
+                    <span className="fr-it-detalle">
+                      {p.prepMin > 0 && `Aparcar y prepararse ${p.prepMin} min. `}
+                      Empieza a las <b>{fmtHora(p.horaInicio)}</b>, estancia recomendada <b>{fmtDur(p.estanciaMin)}</b> → salida <b>{fmtHora(p.horaSalida)}</b>.
+                    </span>
+                  )}
+                  <span className="fr-it-enlaces">
+                    {mapsHref(gps) && (
+                      <a className="fr-s5-link" href={mapsHref(gps)} target="_blank" rel="noopener">📍 Cómo llegar</a>
+                    )}
+                    {p.tipo !== "alojamiento" && (
+                      <Link className="fr-s5-link" href={`/fuera-de-ruta/${provincia}/${p.slug}`} target="_blank" rel="noopener">Ver ficha</Link>
+                    )}
+                  </span>
+                </div>
+              </div>
+            </li>
+          );
+        })}
+
+        {/* Comida que no partió el recorrido (día de una sola parada): va tras la última. */}
+        {dia.comida && !dia.paradas.some((p, i) => {
+          const prevFin = i > 0 ? dia.paradas[i - 1].horaSalida : dia.horaSalida;
+          return dia.comida!.horaInicio >= prevFin && dia.comida!.horaInicio <= p.horaLlegada;
+        }) && <li className="fr-it-parada-wrap"><BloqueComida comida={dia.comida} /></li>}
+
+        {dia.regreso && (
+          <li className="fr-it-hito">
+            <span className="fr-it-hora">{fmtHora(dia.regreso.horaLlegada)}</span>
+            <span className="fr-it-txt">
+              🏨 Regreso a {dia.alojamiento?.nombre}
+              <span className="fr-mono fr-it-coche"> · {fmtDur(dia.regreso.cocheMin)} en coche{dia.regreso.km > 0 ? ` (${dia.regreso.km} km)` : ""}</span>
+            </span>
+          </li>
+        )}
+      </ol>
+
+      {dia.avisos.length > 0 && (
+        <ul className="fr-it-avisos">
+          {dia.avisos.map((a) => <li key={a}>⚠ {a}</li>)}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function BloqueComida({ comida }: { comida: ComidaItin }) {
+  return (
+    <div className="fr-it-comida">
+      <span className="fr-it-hora">{fmtHora(comida.horaInicio)}</span>
+      <span className="fr-it-txt">
+        🍴 {comida.restaurante ? <>Comida en <b>{comida.restaurante}</b></> : "Parada para comer"} · {fmtDur(comida.min)}
+      </span>
+    </div>
   );
 }

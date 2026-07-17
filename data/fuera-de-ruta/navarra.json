@@ -905,9 +905,10 @@
       "precio": "gratis · parking 5 €",
       "queEs": "Cascadas de agua turquesa en bosque de hayas.",
       "gps": [
-        42.781,
-        -2.0815
+        42.7835,
+        -2.102
       ],
+      "gpsAprox": true,
       "distanciaKm": [
         5,
         6
@@ -1723,6 +1724,42 @@
         "/fuera-de-ruta/img/tudela-4.jpg",
         "/fuera-de-ruta/img/tudela-5.jpg"
       ]
+    },
+    {
+      "slug": "hotel-elizondo",
+      "nombre": "Hotel Elizondo",
+      "zona": "baztan-otsondo",
+      "tipo": "alojamiento",
+      "queEs": "Hotel céntrico en Elizondo, base cómoda para recorrer el Baztán y Otsondo.",
+      "gps": [43.1443, -1.5174],
+      "accesoCarretera": "asfalto"
+    },
+    {
+      "slug": "hotel-loizu",
+      "nombre": "Hotel Loizu",
+      "zona": "irati-aezkoa",
+      "tipo": "alojamiento",
+      "queEs": "Hotel rural en Auritz-Burguete, base para la Selva de Irati y Aezkoa.",
+      "gps": [42.9877, -1.3371],
+      "accesoCarretera": "asfalto"
+    },
+    {
+      "slug": "casa-lizarrosta",
+      "nombre": "Casa Lizarrosta",
+      "zona": "urbasa-andia",
+      "tipo": "alojamiento",
+      "queEs": "Casa rural en Baquedano, junto al nacedero del Urederra y la sierra de Urbasa.",
+      "gps": [42.7848, -2.1195],
+      "accesoCarretera": "asfalto"
+    },
+    {
+      "slug": "hotel-ureder",
+      "nombre": "Hotel UrEder",
+      "zona": "tierra-estella",
+      "tipo": "alojamiento",
+      "queEs": "Hotel en Estella-Lizarra, base para Tierra Estella.",
+      "gps": [42.6786, -2.0375],
+      "accesoCarretera": "asfalto"
     }
   ],
   "restaurantes": [
