@@ -6,7 +6,7 @@
 import type { Destino } from "../tipos";
 import { tiempoCoche, kmCoche, type MatrizViajes } from "../planificador/geo";
 import { horasDeLuz } from "../planificador/sol";
-import { RITMO_MIN, COMIDA_MIN, visitaMin } from "../planificador/planificar";
+import { RITMO_MIN, COMIDA_MIN, visitaMin } from "../planificador/presupuesto";
 import type { Comida, Ritmo } from "../planificador/tipos";
 
 export type OpcionesViaje = { dias: number; ritmo: Ritmo; comida: Comida; fecha: Date };

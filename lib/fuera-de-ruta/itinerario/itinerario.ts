@@ -7,7 +7,7 @@
 import type { Destino, DatosViajes, Restaurante } from "../tipos";
 import { tiempoCoche, kmCoche, ordenarDia, type MatrizViajes } from "../planificador/geo";
 import { horasDeLuz } from "../planificador/sol";
-import { COMIDA_MIN, VISITA_DEFECTO } from "../planificador/planificar";
+import { COMIDA_MIN, VISITA_DEFECTO } from "../planificador/presupuesto";
 import type { Comida, Ritmo } from "../planificador/tipos";
 import type { DiaViaje } from "../viaje/mi-viaje";
 

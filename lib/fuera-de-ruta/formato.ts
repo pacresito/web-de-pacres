@@ -1,7 +1,7 @@
 // Formateo de datos de /fuera-de-ruta compartido entre índice, ficha y planificador
 // (puro, sin React).
 import type { Rango } from "./tipos";
-import type { Comida, Propuesta, Ritmo } from "./planificador/tipos";
+import type { Comida, Ritmo } from "./planificador/tipos";
 
 // Decimales en estilo español: 2.5 → "2,5".
 const num = (n: number) => String(n).replace(".", ",");
@@ -22,12 +22,4 @@ export const COMIDA_TEXTO: Record<Comida, string> = {
   picnic: "picnic",
   "da-igual": "da igual",
   "solo-cena": "solo cena",
-};
-
-// Nombre de cada estrategia del planificador. Vive aquí, y no en `planificar.ts`, para
-// que «Mis viajes» lo diga igual que las pestañas sin importar el motor entero.
-export const PROPUESTA_TEXTO: Record<Propuesta["id"], string> = {
-  A: "Equilibrada",
-  B: "Mínimo coche",
-  C: "Imprescindibles",
 };
