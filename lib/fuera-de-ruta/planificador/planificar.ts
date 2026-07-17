@@ -8,20 +8,23 @@ import { tiempoCoche, ordenarDia, type MatrizViajes } from "./geo";
 import { horasDeLuz } from "./sol";
 import type { Comida, Descarte, Dia, Parada, PlanInput, Propuesta, Ritmo } from "./tipos";
 
-const RITMO_MIN: Record<Ritmo, number> = { relajado: 300, medio: 420, activo: 540 };
-// Minutos reservados para la comida. "da-igual" reserva como picnic en el presupuesto
-// global; por día se resuelve a restaurante (90) si la zona tiene, o picnic si no.
-const COMIDA_MIN: Record<Comida, number> = { restaurante: 90, picnic: 30, "da-igual": 30, "solo-cena": 0 };
+// Minutos activos objetivo por día según ritmo, y minutos de comida y de visita por
+// defecto. Exportados: el panel «Mi viaje» (lib/fuera-de-ruta/viaje) los reusa para que
+// su estimación y este generador no se contradigan (uno diría "cabe" y el otro no).
+export const RITMO_MIN: Record<Ritmo, number> = { relajado: 300, medio: 420, activo: 540 };
+// "da-igual" reserva como picnic en el presupuesto global; por día se resuelve a
+// restaurante (90) si la zona tiene, o picnic si no.
+export const COMIDA_MIN: Record<Comida, number> = { restaurante: 90, picnic: 30, "da-igual": 30, "solo-cena": 0 };
+export const VISITA_DEFECTO = 90;   // minutos si el destino no trae duracionHoras
+export const visitaMin = (d: Destino) => (d.duracionHoras ? Math.round(((d.duracionHoras[0] + d.duracionHoras[1]) / 2) * 60) : VISITA_DEFECTO);
 const INICIO_DIA = 9 * 60;  // hora realista de arranque (no el amanecer astronómico, que apelmazaba todo de madrugada)
 const COMIDA_MIN_HORA = 13 * 60; // no se come antes de esta hora: en días cortos se espera al mediodía en vez de comer a media mañana
-const VISITA_DEFECTO = 90;   // minutos si el destino no trae duracionHoras
 const MAX_PARADAS_DIA = 8;   // tope del TSP por fuerza bruta (ver geo.ordenarDia)
 const PENAL_ZONA = 30;       // min de coche "imaginario" que la estrategia "Mínimo coche"
                              // suma al considerar un candidato de otra zona: sesga hacia
                              // agotar la zona antes de saltar, sin llegar a prohibirlo.
 
 const min = (seg: number) => Math.round(seg / 60);
-const visitaMin = (d: Destino) => (d.duracionHoras ? Math.round(((d.duracionHoras[0] + d.duracionHoras[1]) / 2) * 60) : VISITA_DEFECTO);
 const fmt = (m: number) => `${Math.floor(m / 60)}h${String(m % 60).padStart(2, "0")}`;
 
 type Estrategia = {

@@ -170,6 +170,7 @@
   transition: transform 0.1s ease-out, box-shadow 0.1s ease-out;
 }
 .fr-chip--activo { background: var(--fr-lima); box-shadow: var(--fr-sombra-2); }
+.fr-chip:disabled { opacity: 0.4; cursor: default; }
 .fr-chip--off {
   border-color: rgba(28, 47, 94, 0.3);
   color: rgba(28, 47, 94, 0.45);
@@ -1594,124 +1595,88 @@
 .fr-s5-montar { width: 100%; text-align: center; font-size: 16px; padding: 14px; }
 .fr-s5-montar:disabled { opacity: 0.5; cursor: default; box-shadow: none; }
 
-/* ---- Paso 2 · Propuestas ---- */
-.fr-s5-plan { max-width: 1180px; margin: 0 auto; padding: 16px 20px 96px; }
-.fr-s5-plan-head { display: none; }
-.fr-s5-plan-titulo { font: 700 19px var(--fr-font-baloo), sans-serif; color: var(--fr-tinta); }
-.fr-s5-plan-titulo b { font-weight: 800; }
-.fr-s5-acciones { display: flex; gap: 10px; }
+/* ---- Cuestionario (Fase C): intro, resumen y listado del motor ---- */
+.fr-cq-intro { font: 500 14px/1.5 var(--fr-font-dm), sans-serif; color: var(--fr-sec); margin: -4px 0 2px; }
 
-.fr-s5-plan-body { display: flex; flex-direction: column; gap: 16px; }
-.fr-s5-derecha { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.fr-cq-resumen { display: flex; flex-direction: column; gap: 10px; list-style: none; margin: 0; padding: 0; }
+.fr-cq-resumen li {
+  position: relative; padding-left: 24px;
+  font: 500 15px/1.45 var(--fr-font-dm), sans-serif; color: var(--fr-tinta);
+}
+.fr-cq-resumen li::before { content: "✔"; position: absolute; left: 0; color: var(--fr-rio); font-weight: 700; }
+.fr-cq-vacio { font: 500 14.5px/1.5 var(--fr-font-dm), sans-serif; color: var(--fr-sec); margin: 0; }
 
-.fr-s5-tabs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; }
-.fr-s5-tab {
-  flex: none; text-align: left;
-  display: flex; flex-direction: column; gap: 2px;
-  background: var(--fr-papel); border: 2px solid var(--fr-tinta); border-radius: 14px;
-  padding: 8px 14px; cursor: pointer;
-  transition: transform 0.1s ease-out, box-shadow 0.1s ease-out;
+/* ---- Fase D · pantalla de transición ---- */
+.fr-d-transicion { max-width: 620px; margin: 0 auto; padding: 56px 20px; }
+.fr-d-pasos { list-style: none; margin: 18px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.fr-d-paso {
+  font: 500 14.5px/1.4 var(--fr-font-dm), sans-serif; color: var(--fr-tinta);
+  animation: fr-d-aparece 0.25s ease-out;
 }
-.fr-s5-tab--on { background: var(--fr-lima); box-shadow: var(--fr-sombra-3); }
-.fr-s5-tab-id { font: 800 14px var(--fr-font-baloo), sans-serif; color: var(--fr-tinta); }
-.fr-s5-tab-meta { font: 500 11.5px var(--fr-font-dm), sans-serif; color: var(--fr-sec); }
-.fr-s5-tab--on .fr-s5-tab-meta { color: var(--fr-tinta); }
-.fr-s5-tab--on:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0 var(--fr-tinta); }
+@keyframes fr-d-aparece { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 
-/* Rail «Tu encargo» + «No encajan» */
-.fr-s5-rail { display: flex; flex-direction: column; gap: 14px; }
-.fr-s5-encargo { padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
-.fr-s5-encargo-l { font: 500 13.5px/1.4 var(--fr-font-dm), sans-serif; color: var(--fr-tinta); }
-.fr-s5-encargo-l b { font-weight: 800; font-family: var(--fr-font-baloo), sans-serif; }
-.fr-s5-encargo-filtros { color: var(--fr-sec); }
-.fr-s5-encargo .fr-s5-link { margin-top: 2px; }
-
-.fr-s5-noencajan {
-  border: 2px dashed rgba(28, 47, 94, 0.4); border-radius: 14px; padding: 12px 14px;
-  display: flex; flex-direction: column; gap: 10px;
-}
-.fr-s5-descarte { display: flex; flex-direction: column; gap: 1px; font: 500 13px/1.4 var(--fr-font-dm), sans-serif; color: var(--fr-sec); }
-.fr-s5-descarte b { font-weight: 700; color: var(--fr-tinta); }
-.fr-s5-descarte-otra { color: var(--fr-rio); font-weight: 700; }
-/* Móvil: el rail solo aporta «Tu encargo»; «No encajan» va tras los días. */
-.fr-s5-rail .fr-s5-noencajan { display: none; }
-.fr-s5-noencajan-movil { margin-top: 2px; }
-
-/* Día = tarjeta acordeón */
-.fr-s5-dias { display: flex; flex-direction: column; gap: 14px; }
-.fr-s5-dia { overflow: hidden; }
-.fr-s5-dia-head {
-  width: 100%; display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
-  padding: 14px 16px; background: none; border: none; cursor: pointer; text-align: left;
-}
-.fr-s5-dia-num { font: 800 17px var(--fr-font-baloo), sans-serif; color: var(--fr-tinta); }
-.fr-s5-dia-zona {
-  font: 700 11.5px var(--fr-font-dm), sans-serif; color: var(--fr-tinta);
-  background: var(--fr-papel); border: 2px solid var(--fr-tinta); border-radius: 999px; padding: 3px 10px;
-}
-.fr-s5-dia-resumen { flex-basis: 100%; font: 500 12.5px var(--fr-font-dm), sans-serif; color: var(--fr-sec); }
-.fr-s5-dia-flecha { margin-left: auto; font-family: var(--fr-font-baloo), sans-serif; font-size: 14px; color: var(--fr-tinta); }
-.fr-s5-dia-cuerpo { padding: 0 16px 16px; display: none; }
-/* Acordeón móvil: solo el día abierto muestra el timeline; el resto, su resumen. */
-.fr-s5-dia--abierto .fr-s5-dia-cuerpo { display: block; }
-.fr-s5-dia--abierto .fr-s5-dia-resumen { display: none; }
-
-.fr-s5-luz { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
-.fr-s5-luz-track { height: 9px; border: 2px solid var(--fr-tinta); border-radius: 999px; background: var(--fr-blanco); overflow: hidden; }
-.fr-s5-luz-fill { display: block; height: 100%; background: var(--fr-lima); }
-
-/* Timeline: conectores y tarjetas de parada/comida */
-.fr-s5-timeline { list-style: none; }
-.fr-s5-conector { display: flex; align-items: center; padding: 4px 0 4px 15px; }
-.fr-s5-conector::before {
-  content: ""; align-self: stretch; width: 0; margin-right: 13px;
-  border-left: 2px dashed rgba(28, 47, 94, 0.35);
-}
-.fr-s5-coche {
-  font: 500 10px var(--fr-font-mono), monospace; letter-spacing: 0.08em; text-transform: uppercase;
-  color: var(--fr-sec); background: var(--fr-bruma);
-  border: 1.5px solid rgba(28, 47, 94, 0.25); border-radius: 999px; padding: 3px 9px;
-}
-.fr-s5-item {
-  display: flex; align-items: center; gap: 11px;
-  border: 2px solid var(--fr-tinta); border-radius: 13px; padding: 10px 12px;
-  box-shadow: var(--fr-sombra-2);
-}
-.fr-s5-item--parada { background: var(--fr-blanco); color: var(--fr-tinta); }
-.fr-s5-item--comida { background: var(--fr-rosa); }
-.fr-s5-pin {
-  flex: none; width: 27px; height: 27px; border-radius: 999px;
-  background: var(--fr-lima); border: 2px solid var(--fr-tinta);
-  display: grid; place-items: center; font: 800 13px var(--fr-font-baloo), sans-serif; color: var(--fr-tinta);
-}
-.fr-s5-pin--r { background: var(--fr-papel); }
-.fr-s5-item-txt { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-.fr-s5-item-nombre { font: 800 15px var(--fr-font-baloo), sans-serif; color: var(--fr-tinta); }
-.fr-s5-star { color: var(--fr-rio); }
-.fr-s5-item-meta { font: 500 12px var(--fr-font-dm), sans-serif; color: var(--fr-sec); }
-.fr-s5-item-ir { margin-left: auto; font: 800 20px var(--fr-font-baloo), sans-serif; color: var(--fr-rio); }
-
-.fr-s5-aviso {
-  margin-top: 12px; font: 500 13px/1.45 var(--fr-font-dm), sans-serif; color: var(--fr-tinta);
-  background: var(--fr-rosa); border: 2px solid var(--fr-tinta); border-radius: 12px; padding: 10px 12px;
+/* ---- Fase D · listado + panel «Mi viaje» ---- */
+.fr-d-wrap { max-width: 1180px; margin: 0 auto; padding: 18px 20px 40px; }
+.fr-d-head { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 18px; }
+.fr-d-sub { font: 500 14px/1.5 var(--fr-font-dm), sans-serif; color: var(--fr-sec); margin: 4px 0 0; max-width: 60ch; }
+.fr-d-cols { display: flex; flex-direction: column; gap: 22px; }
+.fr-d-grid {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px;
 }
 
-/* Toast de compartir/guardar */
-.fr-s5-toast {
-  position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); z-index: 40;
-  font: 700 13px var(--fr-font-dm), sans-serif; color: var(--fr-papel);
-  background: var(--fr-tinta); border-radius: 999px; padding: 10px 18px;
-  box-shadow: 0 6px 20px rgba(28, 47, 94, 0.3);
+/* Tarjeta de actividad (§4.10) */
+.fr-d-card { display: flex; flex-direction: column; overflow: hidden; padding: 0; transition: transform 0.1s ease-out, box-shadow 0.1s ease-out; }
+.fr-d-card--on { border-color: var(--fr-rio); box-shadow: var(--fr-sombra-4); }
+.fr-d-card-foto { position: relative; aspect-ratio: 3 / 2; background: var(--fr-mapa); }
+.fr-d-card-foto img { object-fit: cover; }
+.fr-d-card-fallback { display: grid; place-items: center; height: 100%; }
+.fr-d-card-fav {
+  position: absolute; top: 8px; left: 8px;
+  font: 700 10.5px var(--fr-font-dm), sans-serif; color: var(--fr-tinta);
+  background: var(--fr-lima); border: 2px solid var(--fr-tinta); border-radius: 999px; padding: 2px 8px;
 }
+.fr-d-card-body { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px 14px; flex: 1; }
+.fr-d-card-meta { font: 500 10.5px var(--fr-font-mono), monospace; letter-spacing: 0.07em; text-transform: uppercase; color: var(--fr-sec); }
+.fr-d-card-nombre { font: 800 16px/1.15 var(--fr-font-baloo), sans-serif; color: var(--fr-tinta); }
+.fr-d-card-datos { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+.fr-d-dato {
+  font: 500 11.5px var(--fr-font-dm), sans-serif; color: var(--fr-tinta);
+  background: var(--fr-bruma); border-radius: 999px; padding: 2px 9px;
+}
+.fr-d-card-cta { display: flex; align-items: center; gap: 12px; margin-top: auto; padding-top: 6px; }
+.fr-d-anadir { margin-left: auto; font-size: 13px; padding: 8px 14px; }
+.fr-d-anadir--on { background: var(--fr-lima); box-shadow: var(--fr-sombra-2); }
 
-/* Barra inferior fija (móvil): compartir + guardar */
-.fr-s5-barra-movil {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
-  display: flex; gap: 10px; padding: 12px 20px;
-  background: var(--fr-papel); border-top: 2px solid var(--fr-tinta);
+/* Panel «Mi viaje» (§4.12-4.13) */
+.fr-d-panel { padding: 18px 18px 20px; display: flex; flex-direction: column; gap: 14px; align-self: start; }
+.fr-d-panel-t { font: 800 20px var(--fr-font-baloo), sans-serif; color: var(--fr-tinta); margin: 0; }
+.fr-d-panel-vacio { font: 500 14px/1.5 var(--fr-font-dm), sans-serif; color: var(--fr-sec); margin: 0; }
+.fr-d-totales { display: flex; flex-wrap: wrap; gap: 4px 16px; font: 500 14px var(--fr-font-dm), sans-serif; color: var(--fr-tinta); }
+.fr-d-totales b { font-family: var(--fr-font-baloo), sans-serif; font-weight: 800; }
+.fr-d-aviso {
+  font: 500 12.5px/1.45 var(--fr-font-dm), sans-serif; color: var(--fr-tinta);
+  background: var(--fr-rosa); border: 2px solid var(--fr-tinta); border-radius: 12px; padding: 9px 11px;
 }
-.fr-s5-barra-movil .fr-btn { flex: 1; text-align: center; }
-.fr-s5-barra-guardar { flex: 1.4 !important; }
+.fr-d-dias { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.fr-d-dia { border: 2px solid var(--fr-tinta); border-radius: 12px; padding: 10px 12px; background: var(--fr-blanco); }
+.fr-d-dia--apretado { background: var(--fr-rosa); }
+.fr-d-dia-cab { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.fr-d-dia-n { font: 800 14px var(--fr-font-baloo), sans-serif; color: var(--fr-tinta); }
+.fr-d-dia-libre { color: var(--fr-muted); }
+.fr-d-dia-parada { display: flex; align-items: center; gap: 8px; font: 500 13.5px var(--fr-font-dm), sans-serif; color: var(--fr-tinta); padding: 3px 0; }
+.fr-d-dia-parada > span { flex: 1; }
+.fr-d-quitar {
+  flex: none; width: 22px; height: 22px; border-radius: 999px;
+  border: 1.5px solid var(--fr-tinta); background: var(--fr-papel); color: var(--fr-tinta);
+  cursor: pointer; font-size: 14px; line-height: 1;
+}
+.fr-d-panel-cta { display: flex; flex-direction: column; gap: 10px; margin-top: 2px; }
+.fr-d-ia { background: var(--fr-papel); text-align: center; }
+.fr-d-guardar { text-align: center; }
+.fr-d-guardar:disabled { opacity: 0.7; cursor: default; }
+
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0; }
 
 /* ---- Escritorio ---- */
 @media (min-width: 900px) {
@@ -1720,34 +1685,22 @@
   .fr-s5-cta-barra { position: static; border: none; padding: 18px 0 0; background: none; }
   .fr-s5-montar { width: auto; padding: 14px 30px; }
 
-  .fr-s5-plan { padding: 26px 32px 44px; }
-  .fr-s5-plan-head { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
-  .fr-s5-plan-titulo { font-size: 22px; }
-  .fr-s5-acciones { margin-left: auto; }
-  .fr-s5-plan-body { display: grid; grid-template-columns: 300px 1fr; gap: 28px; align-items: start; }
-  .fr-s5-rail { position: sticky; top: 20px; }
-  .fr-s5-rail .fr-s5-noencajan { display: flex; }
-  .fr-s5-noencajan-movil { display: none; }
-  .fr-s5-barra-movil { display: none; }
-  .fr-s5-toast { bottom: 32px; }
-
-  .fr-s5-dias { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; align-items: start; }
-  .fr-s5-dia-head { pointer-events: none; }         /* en escritorio los días no se pliegan */
-  .fr-s5-dia-flecha { display: none; }
-  .fr-s5-dia-resumen { display: none; }
-  .fr-s5-dia-cuerpo { display: block; }             /* todos los días abiertos a la vez */
+  /* Fase D: tarjetas a la izquierda, panel «Mi viaje» fijo a la derecha. */
+  .fr-d-wrap { padding: 28px 32px 48px; }
+  .fr-d-cols { display: grid; grid-template-columns: 1fr 320px; gap: 26px; align-items: start; }
+  .fr-d-panel { position: sticky; top: 20px; }
 }
 
 @media (hover: hover) {
-  .fr-s5-tab:hover { box-shadow: var(--fr-sombra-2); }
-  .fr-s5-item--parada:hover { box-shadow: var(--fr-sombra-3); }
+  .fr-d-card:hover { transform: translate(-1px, -1px); box-shadow: var(--fr-sombra-3); }
+  .fr-d-quitar:hover { background: var(--fr-rosa); }
   .fr-s5-link:hover { color: var(--fr-tinta); }
 }
 
 /* ============================================================
-   S6 · Mis viajes — los encargos guardados en este navegador.
-   Una tarjeta por viaje; el CTA reabre el planificador con su
-   `?plan=`. Lista de una columna: son pocos y se leen en fila.
+   S6 · Mis viajes — los viajes guardados en este navegador
+   (perfil + selección). Una tarjeta por viaje; el CTA lo reabre
+   en crear-viaje. Lista de una columna: son pocos, se leen en fila.
    ============================================================ */
 .fr-guardados { padding: 22px 18px 40px; max-width: 720px; margin: 0 auto; }
 .fr-guardados-titulo {
@@ -1782,7 +1735,7 @@
   text-transform: uppercase;
   color: var(--fr-sec);
 }
-/* Píldora Lima: la propuesta guardada, con el mismo código de color que su pestaña. */
+/* Píldora Lima: el número de sitios de la selección guardada. */
 .fr-guardados-propuesta {
   font: 700 11px var(--fr-font-dm), sans-serif;
   background: var(--fr-lima);

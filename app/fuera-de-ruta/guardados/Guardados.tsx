@@ -2,17 +2,16 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { datosDe } from "@/lib/fuera-de-ruta/datos";
+import { useRouter } from "next/navigation";
 import { provinciaDeSlug } from "@/lib/fuera-de-ruta/provincias";
-import { COMIDA_TEXTO, PROPUESTA_TEXTO, RITMO_TEXTO } from "@/lib/fuera-de-ruta/formato";
-import { resumenFiltros } from "@/lib/fuera-de-ruta/resumen";
-import { serializarEncargo } from "@/lib/fuera-de-ruta/planificador/encargo";
-import { borrarGuardado, leerGuardados, type ViajeGuardado } from "@/lib/fuera-de-ruta/planificador/guardados";
+import { aViaje } from "@/lib/fuera-de-ruta/cuestionario/mapear";
+import { resumen as resumenPerfil } from "@/lib/fuera-de-ruta/cuestionario/resumen";
+import { borrarGuardado, leerGuardados, marcarParaAbrir, type ViajeGuardado } from "@/lib/fuera-de-ruta/planificador/guardados";
 
-// «Mis viajes»: lo que dejó el botón Guardar del planificador, en este navegador.
+// «Mis viajes»: lo que dejó el botón Guardar del panel «Mi viaje», en este navegador.
 // Lo monta GuardadosCliente sin SSR, así que la lista se lee ya en el primer render.
+// Guardamos el perfil + la selección, no el plan: al abrir uno se vuelve a montar.
 
-const fechaFmt = new Intl.DateTimeFormat("es-ES", { weekday: "short", day: "numeric", month: "short" });
 const guardadoFmt = new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "short" });
 
 export default function Guardados() {
@@ -27,7 +26,7 @@ export default function Guardados() {
     <main className="fr-guardados">
       <h1 className="fr-guardados-titulo">Mis viajes</h1>
       <p className="fr-guardados-intro">
-        Los viajes que has guardado, en este navegador y solo en este. Guardamos lo que pediste,
+        Los viajes que has guardado, en este navegador y solo en este. Guardamos lo que elegiste,
         no el plan: al abrir uno se vuelve a montar con los sitios de ahora.
       </p>
 
@@ -48,39 +47,36 @@ export default function Guardados() {
 }
 
 function Tarjeta({ viaje, onBorrar }: { viaje: ViajeGuardado; onBorrar: () => void }) {
-  const { provincia, encargo } = viaje;
-  const datos = datosDe(provincia);
-  const zonaNombre = new Map((datos?.zonas ?? []).map((z) => [z.id, z.nombre]));
-  const resumen = resumenFiltros(encargo.filtros, (id) => zonaNombre.get(id) ?? id);
+  const router = useRouter();
+  const { provincia, perfil, seleccion } = viaje;
+  const viajeDatos = aViaje(perfil);
+  const lineas = resumenPerfil(perfil).slice(0, 3);
+
+  const abrir = () => {
+    marcarParaAbrir(viaje);
+    router.push(`/fuera-de-ruta/${provincia}/crear-viaje`);
+  };
 
   return (
     <li className="fr-tarjeta fr-guardados-item">
       <div className="fr-guardados-item-head">
         <span className="fr-guardados-provincia">{provinciaDeSlug(provincia) ?? provincia}</span>
-        {encargo.propuesta && (
-          <span className="fr-guardados-propuesta">{PROPUESTA_TEXTO[encargo.propuesta]}</span>
-        )}
+        <span className="fr-guardados-propuesta">{seleccion.length} {seleccion.length === 1 ? "sitio" : "sitios"}</span>
         <button type="button" className="fr-btn--terciario fr-guardados-borrar" onClick={onBorrar}>
           Borrar
         </button>
       </div>
 
       <h2 className="fr-guardados-item-titulo">
-        {encargo.dias} {encargo.dias === 1 ? "día" : "días"} · sale el {fechaFmt.format(new Date(`${encargo.fecha}T00:00`))}
+        {viajeDatos.dias} {viajeDatos.dias === 1 ? "día" : "días"} por {provinciaDeSlug(provincia) ?? provincia}
       </h2>
 
-      {resumen && <p className="fr-guardados-item-resumen">{resumen}</p>}
-      <p className="fr-guardados-item-meta">
-        ritmo {RITMO_TEXTO[encargo.ritmo]} · comida {COMIDA_TEXTO[encargo.comida]}
-      </p>
+      {lineas.length > 0 && <p className="fr-guardados-item-resumen">{lineas.join(" ")}</p>}
 
       <div className="fr-guardados-item-pie">
-        <Link
-          href={`/fuera-de-ruta/${provincia}/crear-viaje?${serializarEncargo(encargo)}`}
-          className="fr-btn fr-btn--primario"
-        >
+        <button type="button" onClick={abrir} className="fr-btn fr-btn--primario">
           Abrir viaje
-        </Link>
+        </button>
         <span className="fr-guardados-fecha">guardado el {guardadoFmt.format(new Date(viaje.guardadoEn))}</span>
       </div>
     </li>

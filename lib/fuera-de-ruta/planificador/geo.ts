@@ -5,6 +5,7 @@
 export type MatrizViajes = {
   ids: string[];         // slugs de destino, en el orden de filas y columnas
   segundos: number[][];  // segundos[i][j] = tiempo de coche de ids[i] a ids[j]
+  metros?: number[][];   // metros[i][j] = distancia de coche de ids[i] a ids[j] (opcional: matrices viejas no lo traen)
 };
 
 const MAX_PARADAS = 8; // fuerza bruta: 8! = 40320 permutaciones, instantáneo
@@ -15,6 +16,16 @@ export function tiempoCoche(matriz: MatrizViajes, origen: string, destino: strin
   const j = matriz.ids.indexOf(destino);
   if (i < 0 || j < 0) throw new Error(`slug fuera de la matriz: ${i < 0 ? origen : destino}`);
   return matriz.segundos[i][j];
+}
+
+// Distancia de coche (metros) entre dos destinos por su slug. 0 si la matriz no trae
+// distancias (las viejas): el panel muestra tiempo siempre y km solo si hay dato.
+export function kmCoche(matriz: MatrizViajes, origen: string, destino: string): number {
+  if (!matriz.metros) return 0;
+  const i = matriz.ids.indexOf(origen);
+  const j = matriz.ids.indexOf(destino);
+  if (i < 0 || j < 0) throw new Error(`slug fuera de la matriz: ${i < 0 ? origen : destino}`);
+  return matriz.metros[i][j];
 }
 
 function* permutaciones<T>(xs: T[]): Generator<T[]> {

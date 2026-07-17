@@ -5,9 +5,9 @@ import { datosDe, matrizDe, PROVINCIAS_CON_DATOS } from "@/lib/fuera-de-ruta/dat
 import { provinciaDeSlug } from "@/lib/fuera-de-ruta/provincias";
 import CrearViajeCliente from "./CrearViajeCliente";
 
-// «Crear mi viaje» de una provincia. Es también el destino de los enlaces Compartir
-// (`?plan=`), por eso tiene ruta propia: la provincia va en la URL y el encargo no
-// necesita llevarla.
+// «Crear mi viaje» de una provincia. Tiene ruta propia porque la provincia va en la URL
+// (el viaje serializado en la query no la lleva) y es el destino de los enlaces que la
+// comparten.
 type Props = { params: Promise<{ provincia: string }> };
 
 export function generateStaticParams() {
@@ -27,7 +27,7 @@ export default async function CrearViajePage({ params }: Props) {
   if (!datos || !matriz) notFound();
 
   // El Suspense lo pide `useSearchParams` en una página prerenderizada; no se ve, el
-  // planificador ya se monta sin SSR.
+  // cuestionario ya se monta sin SSR.
   return (
     <Suspense>
       <CrearViajeCliente datos={datos} matriz={matriz} provincia={provincia} />

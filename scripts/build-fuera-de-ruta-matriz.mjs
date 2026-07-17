@@ -1,6 +1,7 @@
-// Genera data/fuera-de-ruta/matriz-<comunidad>.json: la matriz de tiempos de coche (segundos)
-// entre todos los destinos con GPS, con el endpoint /table del OSRM público. Runtime
-// del planificador = lookup en este dato, sin red. Al añadir o mover destinos, regenerar.
+// Genera data/fuera-de-ruta/matriz-<comunidad>.json: la matriz de tiempos (segundos) y
+// distancias (metros) de coche entre todos los destinos con GPS, con el endpoint /table
+// del OSRM público. Runtime del planificador y del panel «Mi viaje» = lookup en este
+// dato, sin red. Al añadir o mover destinos, regenerar.
 // Uso: `node scripts/build-fuera-de-ruta-matriz.mjs [comunidad]` (por defecto navarra).
 import fs from "node:fs";
 
@@ -18,11 +19,12 @@ const ids = puntos.map((d) => d.slug);
 // OSRM espera lon,lat; nuestro gps es [lat, lon].
 const coords = puntos.map((d) => `${d.gps[1]},${d.gps[0]}`).join(";");
 
-const res = await fetch(`${OSRM}${coords}?annotations=duration`);
+const res = await fetch(`${OSRM}${coords}?annotations=duration,distance`);
 if (!res.ok) throw new Error(`OSRM ${res.status}: ${await res.text()}`);
-const { durations } = await res.json();
-if (!durations) throw new Error("OSRM no devolvió la matriz de duraciones");
+const { durations, distances } = await res.json();
+if (!durations || !distances) throw new Error("OSRM no devolvió duraciones y distancias");
 
 const segundos = durations.map((fila) => fila.map((s) => Math.round(s)));
-fs.writeFileSync(SALIDA, JSON.stringify({ comunidad, ids, segundos }) + "\n");
+const metros = distances.map((fila) => fila.map((m) => Math.round(m)));
+fs.writeFileSync(SALIDA, JSON.stringify({ comunidad, ids, segundos, metros }) + "\n");
 console.log(`OK matriz-${comunidad}.json | ${ids.length} destinos | ${ids.length * ids.length} pares`);
