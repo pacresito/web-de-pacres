@@ -1732,7 +1732,14 @@
       "tipo": "alojamiento",
       "queEs": "Hotel céntrico en Elizondo, base cómoda para recorrer el Baztán y Otsondo.",
       "gps": [43.1443, -1.5174],
-      "accesoCarretera": "asfalto"
+      "accesoCarretera": "asfalto",
+      "imagen": "/fuera-de-ruta/img/hotel-elizondo.jpg",
+      "imagenes": [
+        "/fuera-de-ruta/img/hotel-elizondo.jpg",
+        "/fuera-de-ruta/img/hotel-elizondo-2.jpg",
+        "/fuera-de-ruta/img/hotel-elizondo-3.jpg",
+        "/fuera-de-ruta/img/hotel-elizondo-4.jpg"
+      ]
     },
     {
       "slug": "hotel-loizu",
@@ -1741,7 +1748,13 @@
       "tipo": "alojamiento",
       "queEs": "Hotel rural en Auritz-Burguete, base para la Selva de Irati y Aezkoa.",
       "gps": [42.9877, -1.3371],
-      "accesoCarretera": "asfalto"
+      "accesoCarretera": "asfalto",
+      "imagen": "/fuera-de-ruta/img/hotel-loizu.jpg",
+      "imagenes": [
+        "/fuera-de-ruta/img/hotel-loizu.jpg",
+        "/fuera-de-ruta/img/hotel-loizu-2.jpg",
+        "/fuera-de-ruta/img/hotel-loizu-3.jpg"
+      ]
     },
     {
       "slug": "casa-lizarrosta",
@@ -1750,7 +1763,13 @@
       "tipo": "alojamiento",
       "queEs": "Casa rural en Baquedano, junto al nacedero del Urederra y la sierra de Urbasa.",
       "gps": [42.7848, -2.1195],
-      "accesoCarretera": "asfalto"
+      "accesoCarretera": "asfalto",
+      "imagen": "/fuera-de-ruta/img/casa-lizarrosta.jpg",
+      "imagenes": [
+        "/fuera-de-ruta/img/casa-lizarrosta.jpg",
+        "/fuera-de-ruta/img/casa-lizarrosta-2.jpg",
+        "/fuera-de-ruta/img/casa-lizarrosta-3.jpg"
+      ]
     },
     {
       "slug": "hotel-ureder",
@@ -1759,7 +1778,14 @@
       "tipo": "alojamiento",
       "queEs": "Hotel en Estella-Lizarra, base para Tierra Estella.",
       "gps": [42.6786, -2.0375],
-      "accesoCarretera": "asfalto"
+      "accesoCarretera": "asfalto",
+      "imagen": "/fuera-de-ruta/img/hotel-ureder.jpg",
+      "imagenes": [
+        "/fuera-de-ruta/img/hotel-ureder.jpg",
+        "/fuera-de-ruta/img/hotel-ureder-2.jpg",
+        "/fuera-de-ruta/img/hotel-ureder-3.jpg",
+        "/fuera-de-ruta/img/hotel-ureder-4.jpg"
+      ]
     }
   ],
   "restaurantes": [
