@@ -11,6 +11,8 @@ import { recomendar } from "@/lib/fuera-de-ruta/motor/motor";
 import { resumenMiViaje, elegirEquilibrado } from "@/lib/fuera-de-ruta/viaje/mi-viaje";
 import { auditar, type Hallazgo } from "@/lib/fuera-de-ruta/auditoria/auditoria";
 import { comparar, type Comparativa } from "@/lib/fuera-de-ruta/comparador/comparador";
+import { oportunidades, type Oportunidad } from "@/lib/fuera-de-ruta/oportunidades/oportunidades";
+import { zonasAlojamiento, type ZonaAlojamiento } from "@/lib/fuera-de-ruta/alojamiento/alojamiento";
 import { generarItinerario, fmtHora } from "@/lib/fuera-de-ruta/itinerario/itinerario";
 import type { DiaItin, ComidaItin } from "@/lib/fuera-de-ruta/itinerario/itinerario";
 import {
@@ -369,10 +371,18 @@ function Resultado({ datos, matriz, provincia, filtros, respuestas, seleccion, s
     [seleccion, porSlug],
   );
   const resumen = useMemo(() => resumenMiViaje(destinosSel, matriz, opts), [destinosSel, matriz, opts]);
+  // Zonas de alojamiento (Fase F4, §4.15): dónde dormir, sobre el reparto en días.
+  const zonasViaje = useMemo(() => zonasAlojamiento(resumen, porSlug, matriz), [resumen, porSlug, matriz]);
   // Auditoría (Fase F, §4.16): revisión viva del viaje sobre el reparto ya calculado.
-  const auditoria = useMemo(() => auditar(resumen, destinosSel), [resumen, destinosSel]);
+  const auditoria = useMemo(() => auditar(resumen, destinosSel, zonasViaje), [resumen, destinosSel, zonasViaje]);
   // Comparador (Fase F, §4.8): compara las actividades ya en «Mi viaje».
   const comparativa = useMemo(() => comparar(destinosSel), [destinosSel]);
+  // Oportunidades (Fase F3, §4.6): compatibles no elegidas que pasan cerca de la ruta y
+  // aportan algo distinto. Sugerencia, nunca cambio automático del plan.
+  const oportunidadesViaje = useMemo(
+    () => oportunidades(destinosSel, candidatas.map((c) => c.destino), matriz),
+    [destinosSel, candidatas, matriz],
+  );
 
   // Itinerario cronológico (Fase E): sobre el mismo reparto del panel, para no contradecirlo.
   // Perezoso: solo se calcula al abrirlo, no en cada añadido de la selección (el panel ya
@@ -430,11 +440,14 @@ function Resultado({ datos, matriz, provincia, filtros, respuestas, seleccion, s
         <PanelViaje
           resumen={resumen}
           auditoria={auditoria}
+          oportunidades={oportunidadesViaje}
+          zonas={zonasViaje}
           porSlug={porSlug}
           provincia={provincia}
           respuestas={respuestas}
           seleccion={seleccion}
           onQuitar={alternar}
+          onAnadir={alternar}
           onQueDecidaLaIA={queDecidaLaIA}
           onVerItinerario={() => setVerItinerario(true)}
           onComparar={() => setComparando(true)}
@@ -709,16 +722,23 @@ const fmtDur = (min: number) => {
   return h ? (m ? `${h} h ${m} min` : `${h} h`) : `${m} min`;
 };
 
+// Rango de días de una zona de alojamiento: "Día 2" o "Días 1-3" (el tramo es contiguo).
+const fmtDias = (dias: number[]) =>
+  dias.length === 1 ? `Día ${dias[0]}` : `Días ${dias[0]}-${dias[dias.length - 1]}`;
+
 const ICONO_AUD: Record<Hallazgo["nivel"], string> = { ok: "✅", aviso: "⚠️", idea: "💡" };
 
-function PanelViaje({ resumen, auditoria, porSlug, provincia, respuestas, seleccion, onQuitar, onQueDecidaLaIA, onVerItinerario, onComparar }: {
+function PanelViaje({ resumen, auditoria, oportunidades, zonas, porSlug, provincia, respuestas, seleccion, onQuitar, onAnadir, onQueDecidaLaIA, onVerItinerario, onComparar }: {
   resumen: ResumenViaje;
   auditoria: Hallazgo[];
+  oportunidades: Oportunidad[];
+  zonas: ZonaAlojamiento[];
   porSlug: Map<string, Destino>;
   provincia: string;
   respuestas: Respuestas;
   seleccion: Set<string>;
   onQuitar: (slug: string) => void;
+  onAnadir: (slug: string) => void;
   onQueDecidaLaIA: () => void;
   onVerItinerario: () => void;
   onComparar: () => void;
@@ -784,6 +804,48 @@ function PanelViaje({ resumen, auditoria, porSlug, provincia, respuestas, selecc
               </li>
             ))}
           </ol>
+
+          {oportunidades.length > 0 && (
+            <div className="fr-d-oport">
+              <h3 className="fr-d-oport-t">Ya que pasáis cerca…</h3>
+              <ul className="fr-d-oport-lista">
+                {oportunidades.map((o) => (
+                  <li key={o.destino.slug} className="fr-d-oport-item">
+                    <div className="fr-d-oport-info">
+                      <span className="fr-d-oport-nombre">{o.destino.nombre}</span>
+                      <span className="fr-d-oport-meta fr-mono">{o.destino.tipo} · +{o.desvioMin} min de coche</span>
+                    </div>
+                    <button
+                      className="fr-btn fr-btn--primario fr-d-oport-add"
+                      onClick={() => onAnadir(o.destino.slug)}
+                    >
+                      + Añadir
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {zonas.length > 0 && (
+            <div className="fr-d-aloj">
+              <h3 className="fr-d-aloj-t">🛏 Dónde dormir</h3>
+              <ul className="fr-d-aloj-lista">
+                {zonas.map((z) => (
+                  <li key={z.pueblo + z.dias[0]} className="fr-d-aloj-item">
+                    <div className="fr-d-aloj-cab">
+                      <span className="fr-d-aloj-pueblo">{z.pueblo}</span>
+                      <span className="fr-mono fr-d-aloj-dias">{fmtDias(z.dias)}</span>
+                    </div>
+                    <span className="fr-d-aloj-paradas">Cerca de {z.paradas.join(", ")}.</span>
+                    {z.ahorroMin != null && (
+                      <span className="fr-d-aloj-ahorro">Cambiar de base aquí ahorra ~{z.ahorroMin} min de coche.</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </>
       )}
 

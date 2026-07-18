@@ -7,12 +7,13 @@
 // propios hallazgos; las optimizaciones finas (§4.16.4) llegan más tarde.
 import type { Destino } from "../tipos";
 import type { ResumenViaje } from "../viaje/mi-viaje";
+import type { ZonaAlojamiento } from "../alojamiento/alojamiento";
 
 // El nivel decide el icono en el panel (✅ ok · ⚠️ aviso · 💡 idea). `accion` es una CTA
 // que la UI resuelve (hoy solo «comparar», que abre el comparador de la F2).
 export type Hallazgo = {
   nivel: "ok" | "aviso" | "idea";
-  tipo: "compatibilidad" | "tiempo" | "reserva";
+  tipo: "compatibilidad" | "tiempo" | "reserva" | "alojamiento";
   texto: string;
   accion?: "comparar";
 };
@@ -21,10 +22,15 @@ export type Hallazgo = {
 // `plazoReserva` es complementario y puede faltar.
 const requiereReserva = (d: Destino) => d.reserva != null;
 
+// Une nombres en lista natural: "A", "A y B", "A, B y C".
+const listaNatural = (xs: string[]) =>
+  xs.length <= 1 ? (xs[0] ?? "") : `${xs.slice(0, -1).join(", ")} y ${xs[xs.length - 1]}`;
+
 // Selección + reparto ya calculado → hallazgos de la auditoría. Sin selección, nada que
 // auditar (lista vacía: el panel no muestra el bloque). El orden es el de §4.16.5:
-// compatibilidad, tiempo, reservas.
-export function auditar(resumen: ResumenViaje, seleccion: Destino[]): Hallazgo[] {
+// compatibilidad, tiempo, reservas, alojamiento. Las `zonas` (F4) son opcionales: si
+// llegan, añaden la línea 💡 de dónde dormir; el bloque detallado lo pinta el panel.
+export function auditar(resumen: ResumenViaje, seleccion: Destino[], zonas: ZonaAlojamiento[] = []): Hallazgo[] {
   if (seleccion.length === 0) return [];
   const hallazgos: Hallazgo[] = [];
 
@@ -68,6 +74,20 @@ export function auditar(resumen: ResumenViaje, seleccion: Destino[]): Hallazgo[]
         conReserva === 1
           ? "Una actividad requiere reserva previa."
           : `Hay ${conReserva} actividades que requieren reserva previa.`,
+    });
+  }
+
+  // Alojamiento (§4.15, F4): dónde conviene dormir. Una línea 💡 con las localidades base;
+  // el detalle (días, paradas, ahorro) lo pinta el bloque «Zonas recomendadas» del panel.
+  if (zonas.length > 0) {
+    const pueblos = zonas.map((z) => z.pueblo);
+    hallazgos.push({
+      nivel: "idea",
+      tipo: "alojamiento",
+      texto:
+        pueblos.length === 1
+          ? `Mejor base para dormir: ${pueblos[0]}.`
+          : `Os proponemos dormir en ${pueblos.length} zonas: ${listaNatural(pueblos)}.`,
     });
   }
 

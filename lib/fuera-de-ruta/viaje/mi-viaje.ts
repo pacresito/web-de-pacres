@@ -142,7 +142,8 @@ export function elegirEquilibrado(
 // Cadena por vecino más cercano (coche): arranca en el primero de la selección y salta
 // siempre al más próximo sin visitar. Da días con paradas geográficamente contiguas sin
 // el coste del TSP exacto (el panel es una estimación; el orden fino es de la Fase E).
-function cadenaVecinos(slugs: string[], matriz: MatrizViajes): string[] {
+// La exporta también F3 (oportunidades) para medir desvíos contra la misma ruta.
+export function cadenaVecinos(slugs: string[], matriz: MatrizViajes): string[] {
   if (slugs.length <= 1) return [...slugs];
   const restantes = new Set(slugs);
   let actual = slugs[0];

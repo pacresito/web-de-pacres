@@ -40,6 +40,17 @@ const reserva = h.find((x) => x.tipo === "reserva")!;
 assert.ok(reserva, "hay línea de reserva");
 assert.ok(reserva.texto.includes("3"), "cuenta las 3 reservas");
 
+// --- Alojamiento (F4): con zonas, añade la línea 💡; sin zonas, no aparece ---
+h = auditar(resumenMiViaje(holgada, m, opts), holgada);
+assert.ok(!h.some((x) => x.tipo === "alojamiento"), "sin zonas, sin línea de alojamiento");
+h = auditar(resumenMiViaje(holgada, m, opts), holgada, [
+  { pueblo: "Elizondo", dias: [1], paradas: [] },
+  { pueblo: "Zudaire", dias: [2], paradas: [] },
+]);
+const aloj = h.find((x) => x.tipo === "alojamiento")!;
+assert.strictEqual(aloj.nivel, "idea", "la línea de alojamiento es una idea 💡");
+assert.ok(aloj.texto.includes("Elizondo") && aloj.texto.includes("Zudaire"), "nombra las bases");
+
 // --- Estructural: la auditoría nunca elimina; todo hallazgo es informativo ---
 for (const x of auditar(resumenMiViaje(todos, m, { ...opts, dias: 1 }), todos)) {
   assert.ok(["ok", "aviso", "idea"].includes(x.nivel), "nivel informativo, nunca destructivo");

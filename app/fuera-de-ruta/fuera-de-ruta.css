@@ -1702,6 +1702,33 @@
   border: 1.5px solid var(--fr-tinta); background: var(--fr-papel); color: var(--fr-tinta);
   cursor: pointer; font-size: 14px; line-height: 1;
 }
+/* Oportunidades (F3, §4.6): sugerencias «de paso», nunca alteran el plan. Acento lima para leerlas como algo positivo y aparte de los días (blanco) y avisos (rosa). */
+.fr-d-oport { display: flex; flex-direction: column; gap: 8px; }
+.fr-d-oport-t { margin: 0; font: 800 14px var(--fr-font-baloo), sans-serif; color: var(--fr-tinta); }
+.fr-d-oport-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.fr-d-oport-item {
+  display: flex; align-items: center; gap: 10px;
+  border: 2px solid var(--fr-tinta); border-radius: 12px; padding: 9px 11px; background: var(--fr-lima);
+}
+.fr-d-oport-info { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.fr-d-oport-nombre { font: 700 13.5px var(--fr-font-dm), sans-serif; color: var(--fr-tinta); }
+.fr-d-oport-meta { font-size: 11.5px; color: var(--fr-tinta); }
+.fr-d-oport-add { flex: none; font-size: 13px; padding: 8px 14px; }
+
+/* Zonas de alojamiento (F4, §4.15): dónde dormir. Localidades, nunca hoteles. Tarjeta sobria (los días ya usan blanco/rosa y las oportunidades lima); el ahorro de coche en río. */
+.fr-d-aloj { display: flex; flex-direction: column; gap: 8px; }
+.fr-d-aloj-t { margin: 0; font: 800 14px var(--fr-font-baloo), sans-serif; color: var(--fr-tinta); }
+.fr-d-aloj-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.fr-d-aloj-item {
+  display: flex; flex-direction: column; gap: 3px;
+  border: 2px solid var(--fr-tinta); border-radius: 12px; padding: 9px 11px; background: var(--fr-blanco);
+}
+.fr-d-aloj-cab { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.fr-d-aloj-pueblo { font: 800 14px var(--fr-font-baloo), sans-serif; color: var(--fr-tinta); }
+.fr-d-aloj-dias { font-size: 11.5px; color: var(--fr-muted); }
+.fr-d-aloj-paradas { font: 500 12px/1.4 var(--fr-font-dm), sans-serif; color: var(--fr-tinta); }
+.fr-d-aloj-ahorro { font: 600 11.5px/1.4 var(--fr-font-dm), sans-serif; color: var(--fr-rio); }
+
 .fr-d-panel-cta { display: flex; flex-direction: column; gap: 10px; margin-top: 2px; }
 .fr-d-comparar { background: var(--fr-papel); text-align: center; }
 .fr-d-ia { background: var(--fr-papel); text-align: center; }
