@@ -1685,6 +1685,10 @@
   font: 500 12.5px/1.45 var(--fr-font-dm), sans-serif; color: var(--fr-tinta);
   background: var(--fr-rosa); border: 2px solid var(--fr-tinta); border-radius: 12px; padding: 9px 11px;
 }
+/* Auditoría del viaje (§4.16.5): hallazgos ✅/⚠️/💡. Los ⚠️ reusan la caja de .fr-d-aviso; los ✅/💡, línea plana. */
+.fr-d-aud { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.fr-d-aud-linea { font: 500 12.5px/1.45 var(--fr-font-dm), sans-serif; color: var(--fr-tinta); }
+.fr-d-aud li { display: flex; gap: 7px; align-items: baseline; }
 .fr-d-dias { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
 .fr-d-dia { border: 2px solid var(--fr-tinta); border-radius: 12px; padding: 10px 12px; background: var(--fr-blanco); }
 .fr-d-dia--apretado { background: var(--fr-rosa); }
@@ -1699,6 +1703,7 @@
   cursor: pointer; font-size: 14px; line-height: 1;
 }
 .fr-d-panel-cta { display: flex; flex-direction: column; gap: 10px; margin-top: 2px; }
+.fr-d-comparar { background: var(--fr-papel); text-align: center; }
 .fr-d-ia { background: var(--fr-papel); text-align: center; }
 .fr-d-guardar { text-align: center; }
 .fr-d-guardar:disabled { opacity: 0.7; cursor: default; }
@@ -1930,9 +1935,22 @@
 .fr-fd-anadir { flex: 1; text-align: center; }
 .fr-fd-completa { flex: none; white-space: nowrap; }
 
+/* Comparador (§4.8): tabla de campos + frases condicionales, sobre el overlay del drawer. */
+.fr-cmp { padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 14px; }
+.fr-cmp-t { font-size: 22px; }
+.fr-cmp-tabla-wrap { overflow-x: auto; }
+.fr-cmp-tabla { border-collapse: collapse; width: 100%; font: 500 13px var(--fr-font-dm), sans-serif; color: var(--fr-tinta); }
+.fr-cmp-tabla th, .fr-cmp-tabla td { border: 1.5px solid var(--fr-tinta); padding: 7px 10px; text-align: left; vertical-align: top; }
+.fr-cmp-tabla thead th { font-family: var(--fr-font-baloo), sans-serif; font-weight: 800; }
+.fr-cmp-tabla tbody th { font-weight: 700; white-space: nowrap; }
+.fr-cmp-frases { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.fr-cmp-frases li { font: 500 13px/1.45 var(--fr-font-dm), sans-serif; color: var(--fr-tinta); }
+.fr-cmp-fichas { display: flex; flex-wrap: wrap; gap: 8px 18px; }
+
 @media (min-width: 900px) {
   .fr-fd-scrim { align-items: center; padding: 24px; }
   .fr-fd { max-width: 480px; border-radius: 20px; }
+  .fr-fd--ancho { max-width: 680px; }
   .fr-fd-foto { border-radius: 18px 18px 0 0; }
   .fr-fd-cta { border-radius: 0 0 18px 18px; }
 }

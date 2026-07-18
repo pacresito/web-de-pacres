@@ -9,6 +9,8 @@ import { filtrarDestinos, type Filtros } from "@/lib/fuera-de-ruta/filtrar";
 import { filtrosAQuery } from "@/lib/fuera-de-ruta/url-filtros";
 import { recomendar } from "@/lib/fuera-de-ruta/motor/motor";
 import { resumenMiViaje, elegirEquilibrado } from "@/lib/fuera-de-ruta/viaje/mi-viaje";
+import { auditar, type Hallazgo } from "@/lib/fuera-de-ruta/auditoria/auditoria";
+import { comparar, type Comparativa } from "@/lib/fuera-de-ruta/comparador/comparador";
 import { generarItinerario, fmtHora } from "@/lib/fuera-de-ruta/itinerario/itinerario";
 import type { DiaItin, ComidaItin } from "@/lib/fuera-de-ruta/itinerario/itinerario";
 import {
@@ -346,6 +348,7 @@ function Resultado({ datos, matriz, provincia, filtros, respuestas, seleccion, s
 
   const [listo, setListo] = useState(false);
   const [verItinerario, setVerItinerario] = useState(false);
+  const [comparando, setComparando] = useState(false); // modal comparador abierto (§4.8)
   const [fichaAbierta, setFichaAbierta] = useState<string | null>(null); // slug del destino en el drawer
   // Hora de salida por día (Fase E), configurable; sin valor, el generador usa la del ritmo.
   const [horaSalida, setHoraSalida] = useState<Record<number, number>>({});
@@ -366,6 +369,10 @@ function Resultado({ datos, matriz, provincia, filtros, respuestas, seleccion, s
     [seleccion, porSlug],
   );
   const resumen = useMemo(() => resumenMiViaje(destinosSel, matriz, opts), [destinosSel, matriz, opts]);
+  // Auditoría (Fase F, §4.16): revisión viva del viaje sobre el reparto ya calculado.
+  const auditoria = useMemo(() => auditar(resumen, destinosSel), [resumen, destinosSel]);
+  // Comparador (Fase F, §4.8): compara las actividades ya en «Mi viaje».
+  const comparativa = useMemo(() => comparar(destinosSel), [destinosSel]);
 
   // Itinerario cronológico (Fase E): sobre el mismo reparto del panel, para no contradecirlo.
   // Perezoso: solo se calcula al abrirlo, no en cada añadido de la selección (el panel ya
@@ -422,6 +429,7 @@ function Resultado({ datos, matriz, provincia, filtros, respuestas, seleccion, s
 
         <PanelViaje
           resumen={resumen}
+          auditoria={auditoria}
           porSlug={porSlug}
           provincia={provincia}
           respuestas={respuestas}
@@ -429,8 +437,18 @@ function Resultado({ datos, matriz, provincia, filtros, respuestas, seleccion, s
           onQuitar={alternar}
           onQueDecidaLaIA={queDecidaLaIA}
           onVerItinerario={() => setVerItinerario(true)}
+          onComparar={() => setComparando(true)}
         />
       </div>
+
+      {comparando && (
+        <Comparador
+          comparativa={comparativa}
+          destinos={destinosSel}
+          provincia={provincia}
+          onCerrar={() => setComparando(false)}
+        />
+      )}
 
       {fichaAbierta && porSlug.get(fichaAbierta) && (
         <FichaDrawer
@@ -526,6 +544,66 @@ function FichaDrawer({ destino: d, zona, provincia, elegida, onAlternar, onCerra
           <Link href={`/fuera-de-ruta/${provincia}/${d.slug}`} target="_blank" rel="noopener" className="fr-s5-link fr-fd-completa">
             Ver ficha completa ↗
           </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Comparador Inteligente (§4.8): los campos de las actividades de «Mi viaje» lado a lado
+// + frases condicionales del motor (nunca «esta es mejor»: la restricción vive en la
+// plantilla, ver comparador.ts). Es la respuesta al aviso de tiempo de la auditoría y se
+// abre también a mano. Reusa el overlay del drawer; cierra con Esc o el scrim.
+function Comparador({ comparativa, destinos, provincia, onCerrar }: {
+  comparativa: Comparativa;
+  destinos: Destino[];
+  provincia: string;
+  onCerrar: () => void;
+}) {
+  useEffect(() => {
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") onCerrar(); };
+    window.addEventListener("keydown", esc);
+    return () => window.removeEventListener("keydown", esc);
+  }, [onCerrar]);
+
+  const { nombres, filas, frases } = comparativa;
+  return (
+    <div className="fr-fd-scrim" onClick={onCerrar}>
+      <div className="fr-fd fr-fd--ancho" role="dialog" aria-modal="true" aria-label="Comparar actividades" onClick={(e) => e.stopPropagation()}>
+        <button className="fr-fd-cerrar" onClick={onCerrar} aria-label="Cerrar">×</button>
+
+        <div className="fr-fd-scroll fr-cmp">
+          <h2 className="fr-fd-nombre fr-cmp-t">Comparar actividades</h2>
+
+          <div className="fr-cmp-tabla-wrap">
+            <table className="fr-cmp-tabla">
+              <thead>
+                <tr><th aria-hidden />{nombres.map((n, i) => <th key={i}>{n}</th>)}</tr>
+              </thead>
+              <tbody>
+                {filas.map((f) => (
+                  <tr key={f.etiqueta}>
+                    <th scope="row">{f.etiqueta}</th>
+                    {f.valores.map((v, i) => <td key={i}>{v ?? "—"}</td>)}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {frases.length > 0 && (
+            <ul className="fr-cmp-frases">
+              {frases.map((f, i) => <li key={i}>💡 {f}</li>)}
+            </ul>
+          )}
+
+          <div className="fr-cmp-fichas">
+            {destinos.map((d) => (
+              <Link key={d.slug} href={`/fuera-de-ruta/${provincia}/${d.slug}`} target="_blank" rel="noopener" className="fr-s5-link">
+                Ficha de {d.nombre} ↗
+              </Link>
+            ))}
+          </div>
         </div>
       </div>
     </div>
@@ -631,8 +709,11 @@ const fmtDur = (min: number) => {
   return h ? (m ? `${h} h ${m} min` : `${h} h`) : `${m} min`;
 };
 
-function PanelViaje({ resumen, porSlug, provincia, respuestas, seleccion, onQuitar, onQueDecidaLaIA, onVerItinerario }: {
+const ICONO_AUD: Record<Hallazgo["nivel"], string> = { ok: "✅", aviso: "⚠️", idea: "💡" };
+
+function PanelViaje({ resumen, auditoria, porSlug, provincia, respuestas, seleccion, onQuitar, onQueDecidaLaIA, onVerItinerario, onComparar }: {
   resumen: ResumenViaje;
+  auditoria: Hallazgo[];
   porSlug: Map<string, Destino>;
   provincia: string;
   respuestas: Respuestas;
@@ -640,9 +721,9 @@ function PanelViaje({ resumen, porSlug, provincia, respuestas, seleccion, onQuit
   onQuitar: (slug: string) => void;
   onQueDecidaLaIA: () => void;
   onVerItinerario: () => void;
+  onComparar: () => void;
 }) {
   const vacio = seleccion.size === 0;
-  const apretados = resumen.dias.filter((d) => d.apretado).length;
 
   // «Guardado» se deriva, no se almacena: guardo la firma de la selección guardada y la
   // comparo con la actual. Así al cambiar la selección el botón se reactiva solo —cada
@@ -674,16 +755,15 @@ function PanelViaje({ resumen, porSlug, provincia, respuestas, seleccion, onQuit
             {resumen.totalKm > 0 && <span><b>{resumen.totalKm}</b> km en coche</span>}
           </div>
 
-          {resumen.desbordado ? (
-            <p className="fr-d-aviso">
-              Todo esto no cabe en {resumen.dias.length} {resumen.dias.length === 1 ? "día" : "días"} a este ritmo.
-              Lo repartimos lo mejor posible sin quitar nada, pero para que respire: añade días o quita algún sitio.
-            </p>
-          ) : apretados > 0 && (
-            <p className="fr-d-aviso">
-              Con esta selección, {apretados === 1 ? "un día va muy justo" : `${apretados} días van muy justos`} para el ritmo que elegiste.
-              Puedes quitar algo o dejarlo así: nunca eliminamos nada por ti.
-            </p>
+          {auditoria.length > 0 && (
+            <ul className="fr-d-aud">
+              {auditoria.map((h, i) => (
+                <li key={i} className={h.nivel === "aviso" ? "fr-d-aviso" : "fr-d-aud-linea"}>
+                  <span aria-hidden>{ICONO_AUD[h.nivel]}</span>
+                  <span>{h.texto}</span>
+                </li>
+              ))}
+            </ul>
           )}
 
           <ol className="fr-d-dias">
@@ -711,6 +791,11 @@ function PanelViaje({ resumen, porSlug, provincia, respuestas, seleccion, onQuit
         {!vacio && (
           <button className="fr-btn fr-btn--primario fr-d-itinerario" onClick={onVerItinerario}>
             🗓 Ver mi itinerario día a día
+          </button>
+        )}
+        {seleccion.size >= 2 && (
+          <button className="fr-btn fr-d-comparar" onClick={onComparar}>
+            ⚖️ Comparar actividades
           </button>
         )}
         <button className="fr-btn fr-d-ia" onClick={onQueDecidaLaIA}>
