@@ -164,7 +164,6 @@ export default function Explorador({ datos, provincia }: {
                   {destinos.map((d, i) => (
                     <TarjetaCompacta key={d.slug} destino={d} zona={zona(d.zona)} num={i + 1} href={hrefDestino(d.slug)} />
                   ))}
-                  <Link href={hrefCrearViaje} className="fr-m3-cta">Crear mi viaje con estos {destinos.length} →</Link>
                 </div>
               </>
             )}
@@ -184,10 +183,15 @@ export default function Explorador({ datos, provincia }: {
           </div>
         </div>
 
+        {/* Barra de acción fija: el CTA principal siempre visible (antes solo al final de
+            la lista) + acceso al mapa. Sustituye a la píldora suelta «Mapa · N». */}
         {modoEfectivo === "lista" && destinos.length > 0 && (
-          <button className="fr-m3-pildora fr-m3-pildora--fija" onClick={() => setModoMovil("mapa")}>
-            <span className="fr-m3-pildora-punto" />Mapa · {destinos.length}
-          </button>
+          <div className="fr-m3-barra">
+            <button className="fr-m3-barra-mapa" onClick={() => setModoMovil("mapa")}>
+              <span className="fr-m3-pildora-punto" />Mapa · {destinos.length}
+            </button>
+            <Link href={hrefCrearViaje} className="fr-m3-barra-cta">Crear viaje con estos {destinos.length} →</Link>
+          </div>
         )}
 
         {hojaAbierta && (

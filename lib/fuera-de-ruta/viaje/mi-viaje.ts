@@ -24,6 +24,7 @@ export type ResumenViaje = {
   totalMin: number;
   totalKm: number;
   totalParadas: number;
+  desbordado: boolean; // el trabajo total no cabe en los días con este ritmo (aviso global)
 };
 
 const seg2min = (seg: number) => Math.round(seg / 60);
@@ -38,8 +39,9 @@ export function presupuestoDia(seleccion: Destino[], opts: OpcionesViaje): numbe
 }
 
 // Selección → reparto en días + totales. Las actividades se encadenan por cercanía
-// (vecino más próximo en coche) y la cadena se parte en días por presupuesto; los
-// destinos sin GPS (no rutables) se cuelgan del día más corto, contando su visita.
+// (vecino más próximo en coche) y la cadena se reparte en días de forma equilibrada
+// (todos los días con carga proporcional: nunca un día sumidero de 30 h); los destinos
+// sin GPS (no rutables) se cuelgan del día más corto, contando su visita.
 export function resumenMiViaje(seleccion: Destino[], matriz: MatrizViajes, opts: OpcionesViaje): ResumenViaje {
   const presupuesto = presupuestoDia(seleccion, opts);
   const comidaMin = COMIDA_MIN[opts.comida];
@@ -47,29 +49,36 @@ export function resumenMiViaje(seleccion: Destino[], matriz: MatrizViajes, opts:
   const sinGps = seleccion.filter((d) => !enRuta.includes(d));
   const porSlug = new Map(seleccion.map((d) => [d.slug, d]));
 
+  // Coste de ruta de cada parada de la cadena (coche desde la anterior + su visita); el
+  // total marca las fronteras proporcionales que reparten la cadena en `opts.dias` tramos.
+  const cadena = cadenaVecinos(enRuta.map((d) => d.slug), matriz);
+  const costeRuta = cadena.reduce((s, slug, i) => {
+    const coche = i > 0 ? seg2min(tiempoCoche(matriz, cadena[i - 1], slug)) : 0;
+    return s + coche + visitaMin(porSlug.get(slug)!);
+  }, 0);
+
   const dias: DiaViaje[] = [];
   let dia = nuevoDia();
   let prev: string | null = null;
+  let acum = 0; // coste colocado hasta ahora, para cruzar las fronteras proporcionales
 
-  for (const slug of cadenaVecinos(enRuta.map((d) => d.slug), matriz)) {
-    const coche = prev ? seg2min(tiempoCoche(matriz, prev, slug)) : 0;
-    const vis = visitaMin(porSlug.get(slug)!);
-    const proyectado = dia.min + coche + vis; // dia.min ya incluye la comida del día
-    // Cierra el día si esta parada lo desborda y aún quedan días por abrir (el último
-    // día absorbe todo lo que quede: nunca se descarta, solo se marca apretado).
-    if (dia.slugs.length > 0 && proyectado > presupuesto && dias.length < opts.dias - 1) {
+  for (const slug of cadena) {
+    // Antes de colocar, cierra el día si ya cruzó su cuota proporcional y aún quedan días
+    // por abrir. Reparte parejo en lugar de llenar cada día al tope y volcar el resto en
+    // el último. El coche que quedaría al inicio del nuevo día no cuenta (prev = null).
+    const frontera = (costeRuta * (dias.length + 1)) / opts.dias;
+    if (dia.slugs.length > 0 && acum >= frontera && dias.length < opts.dias - 1) {
       cerrar(dia);
       dias.push(dia);
       dia = nuevoDia();
       prev = null;
-      dia.slugs.push(slug);
-      dia.min += vis;
-      prev = slug;
-      continue;
     }
+    const coche = prev ? seg2min(tiempoCoche(matriz, prev, slug)) : 0;
+    const vis = visitaMin(porSlug.get(slug)!);
     dia.slugs.push(slug);
     dia.min += coche + vis;
     dia.km += prev ? kmCoche(matriz, prev, slug) / 1000 : 0;
+    acum += coche + vis;
     prev = slug;
   }
   cerrar(dia);
@@ -92,11 +101,16 @@ export function resumenMiViaje(seleccion: Destino[], matriz: MatrizViajes, opts:
     d.apretado = d.slugs.length > 0 && d.min - comidaMin > presupuesto;
   });
 
+  // Desbordado: el trabajo total (sin comidas) no cabe ni repartido a partes iguales.
+  // Distingue "un día justo" de "no cabe en X días": dispara el aviso global.
+  const trabajoTotal = dias.reduce((s, d) => s + (d.slugs.length > 0 ? d.min - comidaMin : 0), 0);
+
   return {
     dias,
     totalMin: dias.reduce((s, d) => s + d.min, 0),
     totalKm: dias.reduce((s, d) => s + d.km, 0),
     totalParadas: seleccion.length,
+    desbordado: trabajoTotal > presupuesto * opts.dias,
   };
 
   function nuevoDia(): DiaViaje {

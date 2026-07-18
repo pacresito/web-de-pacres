@@ -29,11 +29,25 @@ assert.ok(r.totalKm > 0, "km reales de la matriz (metros presentes)");
 // comida, así que el aviso solo salta por el trabajo real (regresión del doble conteo).
 assert.ok(r.dias.every((d) => !d.apretado), "3 sitios en 2 días entran de sobra, ningún día apretado");
 
+// Una selección holgada no desborda: cabe de sobra en los días.
+assert.strictEqual(r.desbordado, false, "3 sitios en 2 días no desbordan");
+
 // --- Regla del flujo: MUCHA selección en 1 día no descarta nada, solo aprieta ---
 const todos = datos.destinos.filter((d) => d.tipo !== "alojamiento");
 r = resumenMiViaje(todos, m, { ...opts, dias: 1 });
 assert.strictEqual(r.dias.flatMap((d) => d.slugs).length, todos.length, "todas colocadas en 1 día");
 assert.ok(r.dias[0].apretado, "un día con todo va apretado");
+assert.strictEqual(r.desbordado, true, "todos los destinos en 1 día desbordan (aviso global)");
+
+// --- Reparto equilibrado: mucha selección NO se apila en el último día ---
+// Con todo repartido en varios días, ninguno debe llevar más de la mitad de las paradas
+// (antes el último día era el sumidero: absorbía casi todo y salían días de 30 h).
+r = resumenMiViaje(todos, m, { ...opts, dias: 4 });
+assert.strictEqual(r.dias.flatMap((d) => d.slugs).length, todos.length, "todas colocadas, ninguna descartada");
+const conParadas = r.dias.filter((d) => d.slugs.length > 0);
+assert.ok(conParadas.length >= 2, "el reparto usa varios días, no uno solo");
+const maxEnUnDia = Math.max(...r.dias.map((d) => d.slugs.length));
+assert.ok(maxEnUnDia <= Math.ceil(todos.length / 2), "ningún día se queda con casi todo");
 
 // --- Presupuesto: más ritmo = más minutos por día ---
 assert.ok(

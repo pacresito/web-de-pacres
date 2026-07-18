@@ -261,5 +261,13 @@ function centroDe(ds: Destino[]): [number, number] | null {
   return [lat, lon];
 }
 
-// "HH:MM" desde minutos-de-medianoche. Exportada: la UI del itinerario pinta todas las horas.
-export const fmtHora = (min: number) => `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
+// "HH:MM" desde minutos-de-medianoche. Exportada: la UI del itinerario pinta todas las
+// horas. Si un día se alarga más allá de medianoche (sobre-selección extrema, ya avisada
+// como global), la hora envuelve al reloj del día y marca el desfase: "01:20 +1" en vez de
+// "25:20", que no es una hora real. La hora de salida siempre es de mañana: nunca lleva +N.
+export const fmtHora = (min: number) => {
+  const dia = Math.floor(min / 1440);
+  const enDia = min % 1440;
+  const hhmm = `${String(Math.floor(enDia / 60)).padStart(2, "0")}:${String(enDia % 60).padStart(2, "0")}`;
+  return dia > 0 ? `${hhmm} +${dia}` : hhmm;
+};

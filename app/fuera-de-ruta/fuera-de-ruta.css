@@ -702,13 +702,17 @@
 .fr-s3-dato--si { background: var(--fr-lima); }
 .fr-s3-dato--no { background: var(--fr-rosa); }
 .fr-s3-cta {
-  align-self: flex-start;
-  font: 800 15px var(--fr-font-baloo), sans-serif;
+  position: sticky;
+  bottom: 16px;
+  z-index: 1;
+  align-self: stretch;
+  text-align: center;
+  font: 800 16px var(--fr-font-baloo), sans-serif;
   color: var(--fr-tinta);
   background: var(--fr-lima);
   border: 2px solid var(--fr-tinta);
   border-radius: 14px;
-  padding: 13px 20px;
+  padding: 15px 20px;
   box-shadow: var(--fr-sombra-3);
   cursor: pointer;
   transition: transform 0.1s ease-out, box-shadow 0.1s ease-out;
@@ -1065,20 +1069,50 @@
 .fr-m3-dato--no { background: var(--fr-rosa); }
 
 /* CTA crear viaje */
-.fr-m3-cta {
+/* Barra de acción fija (modo lista): CTA principal siempre visible + acceso al mapa. */
+.fr-m3-barra {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+  background: var(--fr-papel);
+  border-top: 2px solid var(--fr-tinta);
+}
+.fr-m3-barra-mapa {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--fr-tinta);
+  color: var(--fr-papel);
+  border: 2px solid var(--fr-tinta);
+  border-radius: 14px;
+  padding: 12px 14px;
+  font: 800 14px var(--fr-font-baloo), sans-serif;
+  cursor: pointer;
+}
+.fr-m3-barra-mapa:active { filter: brightness(0.9); }
+.fr-m3-barra-cta {
+  flex: 1;
   text-align: center;
+  align-content: center;
   background: var(--fr-lima);
   border: 2px solid var(--fr-tinta);
   border-radius: 14px;
-  padding: 13px;
+  padding: 12px;
   font: 800 15px var(--fr-font-baloo), sans-serif;
   color: var(--fr-tinta);
   box-shadow: var(--fr-sombra-3);
   cursor: pointer;
 }
-.fr-m3-cta:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--fr-tinta); }
+.fr-m3-barra-cta:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--fr-tinta); }
 
-/* Píldora flotante (Mapa·N / ≡ Lista) — única sombra con blur del sistema */
+/* Píldora flotante (≡ Lista, en modo mapa) — única sombra con blur del sistema */
 .fr-m3-pildora {
   display: inline-flex;
   align-items: center;
@@ -1093,13 +1127,6 @@
   cursor: pointer;
 }
 .fr-m3-pildora:active { filter: brightness(0.9); }
-.fr-m3-pildora--fija {
-  position: absolute;
-  left: 50%;
-  bottom: 18px;
-  transform: translateX(-50%);
-  z-index: 5;
-}
 .fr-m3-pildora-punto { width: 18px; height: 18px; border-radius: 50%; background: var(--fr-lima); border: 2px solid var(--fr-papel); }
 
 /* Carrusel de mini-tarjetas (modo mapa). El contenedor deja pasar el toque al
@@ -1826,4 +1853,86 @@
 @media (min-width: 900px) {
   .fr-it-wrap { padding: 30px 24px 72px; }
   .fr-it-dia { padding: 22px 24px 24px; }
+}
+
+/* ── Drawer «Ver más» (Fase D): vista breve de la ficha sin navegar. Hoja inferior en
+   móvil, modal centrado en escritorio. ────────────────────────────────────────────── */
+.fr-fd-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(28, 47, 94, 0.5);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.fr-fd {
+  position: relative;
+  width: 100%;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--fr-papel);
+  border: 2px solid var(--fr-tinta);
+  border-radius: 20px 20px 0 0;
+  box-shadow: var(--fr-sombra-4);
+}
+.fr-fd-cerrar {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--fr-papel);
+  border: 2px solid var(--fr-tinta);
+  font: 800 18px var(--fr-font-baloo), sans-serif;
+  color: var(--fr-tinta);
+  cursor: pointer;
+  box-shadow: var(--fr-sombra-2);
+}
+.fr-fd-cerrar:active { transform: translate(1px, 1px); }
+.fr-fd-scroll { overflow-y: auto; }
+.fr-fd-foto {
+  position: relative;
+  height: 210px;
+  border-bottom: 2px solid var(--fr-tinta);
+  border-radius: 18px 18px 0 0;
+  overflow: hidden;
+  background: repeating-linear-gradient(-45deg, #d3e2ee 0 14px, #dfeaf2 14px 28px);
+}
+.fr-fd-foto img { object-fit: cover; }
+.fr-fd-body { padding: 16px 18px 8px; display: flex; flex-direction: column; gap: 10px; }
+.fr-fd-nombre { font: 800 24px/1.1 var(--fr-font-baloo), sans-serif; color: var(--fr-tinta); }
+.fr-fd-lead { font: 500 14.5px/1.5 var(--fr-font-dm), sans-serif; color: var(--fr-tinta); }
+.fr-fd-datos { display: flex; gap: 7px; flex-wrap: wrap; }
+.fr-fd-precio { font: 700 13.5px var(--fr-font-dm), sans-serif; color: var(--fr-tinta); }
+.fr-fd-lista { display: flex; flex-direction: column; gap: 4px; }
+.fr-fd-lista-t {
+  font: 700 10.5px var(--fr-font-dm), sans-serif;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fr-rio);
+}
+.fr-fd-lista ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.fr-fd-lista li { font: 500 14px/1.45 var(--fr-font-dm), sans-serif; color: var(--fr-tinta); }
+.fr-fd-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 18px;
+  border-top: 2px solid var(--fr-tinta);
+  background: var(--fr-papel);
+  border-radius: 0 0 18px 18px;
+}
+.fr-fd-anadir { flex: 1; text-align: center; }
+.fr-fd-completa { flex: none; white-space: nowrap; }
+
+@media (min-width: 900px) {
+  .fr-fd-scrim { align-items: center; padding: 24px; }
+  .fr-fd { max-width: 480px; border-radius: 20px; }
+  .fr-fd-foto { border-radius: 18px 18px 0 0; }
+  .fr-fd-cta { border-radius: 0 0 18px 18px; }
 }

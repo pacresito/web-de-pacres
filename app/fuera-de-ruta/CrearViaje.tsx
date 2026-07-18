@@ -27,25 +27,28 @@ import type { ResumenViaje } from "@/lib/fuera-de-ruta/viaje/mi-viaje";
 // URL. El motor es puro e instantáneo: aquí solo se pinta lo que decide.
 
 const CLAVE_VIAJERO = "fr:viajero";
+const CLAVE_VIAJE = "fr:viaje";
 type Paso = "viajero" | "viaje" | "resumen" | "resultado";
 
 const fechaFmt = new Intl.DateTimeFormat("es-ES", { weekday: "long", day: "numeric", month: "long" });
 const legibleFecha = (iso?: string) => (iso ? fechaFmt.format(new Date(`${iso}T00:00`)) : "Elegir fecha");
 
-// --- Persistencia del viajero (bloque 1) en localStorage, defensiva en ambos sentidos ---
-function leerViajero(): Respuestas {
+// --- Persistencia en localStorage, defensiva en ambos sentidos. El viajero (bloque 1) es
+// reutilizable; el viaje (bloque 2) va sobre todo a la URL (compartible), pero se espeja
+// aquí también para que sobreviva al entrar sin query —un enlace con viaje gana al espejo—.
+function leerBloque(clave: string, id: Bloque["id"]): Respuestas {
   try {
-    const obj = JSON.parse(localStorage.getItem(CLAVE_VIAJERO) ?? "{}") as Respuestas;
-    return recortar(obj, camposDe("viajero"));
+    const obj = JSON.parse(localStorage.getItem(clave) ?? "{}") as Respuestas;
+    return recortar(obj, camposDe(id));
   } catch {
     return {};
   }
 }
-function guardarViajero(r: Respuestas) {
+function guardarBloque(clave: string, id: Bloque["id"], r: Respuestas) {
   try {
-    localStorage.setItem(CLAVE_VIAJERO, JSON.stringify(recortar(r, camposDe("viajero"))));
+    localStorage.setItem(clave, JSON.stringify(recortar(r, camposDe(id))));
   } catch {
-    /* navegador sin localStorage: el viajero no se recuerda, no pasa nada más */
+    /* navegador sin localStorage: no se recuerda, no pasa nada más */
   }
 }
 const recortar = (r: Respuestas, campos: Campo[]): Respuestas => {
@@ -84,7 +87,9 @@ export default function CrearViaje({ datos, matriz, provincia, filtros, viajeIni
   // directo en el resultado con el perfil y la selección guardados.
   const [abrir] = useState(() => tomarParaAbrir(provincia));
   const [respuestas, setRespuestas] = useState<Respuestas>(() =>
-    abrir ? podar(abrir.perfil) : podar({ ...leerViajero(), ...viajeInicial }));
+    abrir
+      ? podar(abrir.perfil)
+      : podar({ ...leerBloque(CLAVE_VIAJERO, "viajero"), ...leerBloque(CLAVE_VIAJE, "viaje"), ...viajeInicial }));
   const [paso, setPaso] = useState<Paso>(abrir ? "resultado" : "viajero");
   const [seleccion, setSeleccion] = useState<Set<string>>(() => new Set(abrir?.seleccion ?? []));
 
@@ -94,7 +99,8 @@ export default function CrearViaje({ datos, matriz, provincia, filtros, viajeIni
   // llegan de ahí, escribir en cada render realimentaba render→escribe→render (cuelgue al
   // marcar una opción). Por eso solo se escribe si la URL cambia de verdad: idempotente.
   useEffect(() => {
-    guardarViajero(respuestas);
+    guardarBloque(CLAVE_VIAJERO, "viajero", respuestas);
+    guardarBloque(CLAVE_VIAJE, "viaje", respuestas);
     const params = new URLSearchParams(filtrosAQuery(filtros));
     new URLSearchParams(serializarViaje(respuestas)).forEach((v, k) => params.append(k, v));
     const qs = params.toString();
@@ -340,6 +346,7 @@ function Resultado({ datos, matriz, provincia, filtros, respuestas, seleccion, s
 
   const [listo, setListo] = useState(false);
   const [verItinerario, setVerItinerario] = useState(false);
+  const [fichaAbierta, setFichaAbierta] = useState<string | null>(null); // slug del destino en el drawer
   // Hora de salida por día (Fase E), configurable; sin valor, el generador usa la del ritmo.
   const [horaSalida, setHoraSalida] = useState<Record<number, number>>({});
 
@@ -361,16 +368,19 @@ function Resultado({ datos, matriz, provincia, filtros, respuestas, seleccion, s
   const resumen = useMemo(() => resumenMiViaje(destinosSel, matriz, opts), [destinosSel, matriz, opts]);
 
   // Itinerario cronológico (Fase E): sobre el mismo reparto del panel, para no contradecirlo.
+  // Perezoso: solo se calcula al abrirlo, no en cada añadido de la selección (el panel ya
+  // recalcula su reparto en vivo; generar el itinerario cronológico entero cada vez era
+  // trabajo tirado y en móvil, con muchos destinos, podía tumbar el render).
   const itinerario = useMemo(
-    () => generarItinerario(resumen.dias, datos, matriz, { ...opts, horaSalida }),
-    [resumen.dias, datos, matriz, opts, horaSalida],
+    () => (verItinerario ? generarItinerario(resumen.dias, datos, matriz, { ...opts, horaSalida }) : null),
+    [verItinerario, resumen.dias, datos, matriz, opts, horaSalida],
   );
 
   if (!listo) {
     return <Transicion candidatas={candidatas.length} eliminadas={eliminadas.length} onListo={() => setListo(true)} />;
   }
 
-  if (verItinerario) {
+  if (verItinerario && itinerario) {
     return (
       <Itinerario
         itinerario={itinerario}
@@ -402,9 +412,9 @@ function Resultado({ datos, matriz, provincia, filtros, respuestas, seleccion, s
               <TarjetaActividad
                 destino={c.destino}
                 zona={zonaNombre.get(c.destino.zona) ?? c.destino.zona}
-                provincia={provincia}
                 elegida={seleccion.has(c.destino.slug)}
                 onAlternar={() => alternar(c.destino.slug)}
+                onVerMas={() => setFichaAbierta(c.destino.slug)}
               />
             </li>
           ))}
@@ -420,6 +430,103 @@ function Resultado({ datos, matriz, provincia, filtros, respuestas, seleccion, s
           onQueDecidaLaIA={queDecidaLaIA}
           onVerItinerario={() => setVerItinerario(true)}
         />
+      </div>
+
+      {fichaAbierta && porSlug.get(fichaAbierta) && (
+        <FichaDrawer
+          destino={porSlug.get(fichaAbierta)!}
+          zona={zonaNombre.get(porSlug.get(fichaAbierta)!.zona) ?? porSlug.get(fichaAbierta)!.zona}
+          provincia={provincia}
+          elegida={seleccion.has(fichaAbierta)}
+          onAlternar={() => alternar(fichaAbierta)}
+          onCerrar={() => setFichaAbierta(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+// Drawer superpuesto de «Ver más» (§4.10): una vista breve de la ficha sobre la propia
+// pantalla, sin navegar. Muestra lo esencial —foto, qué es, datos, lo mejor y avisos— y
+// deja añadir/quitar sin cerrar; el enlace a la ficha completa sí abre pestaña (acción
+// deliberada de profundizar). Pinta solo lo que hay: todos los campos son opcionales.
+function FichaDrawer({ destino: d, zona, provincia, elegida, onAlternar, onCerrar }: {
+  destino: Destino;
+  zona: string;
+  provincia: string;
+  elegida: boolean;
+  onAlternar: () => void;
+  onCerrar: () => void;
+}) {
+  useEffect(() => {
+    const cerrarConEsc = (e: KeyboardEvent) => { if (e.key === "Escape") onCerrar(); };
+    window.addEventListener("keydown", cerrarConEsc);
+    return () => window.removeEventListener("keydown", cerrarConEsc);
+  }, [onCerrar]);
+
+  const datos: string[] = [];
+  if (d.duracion) datos.push(`🕒 ${d.duracion}`);
+  if (d.dificultad) datos.push(`🥾 ${d.dificultad}`);
+  if (d.distanciaKm) datos.push(`📏 ${d.distanciaKm[0]}–${d.distanciaKm[1]} km`);
+  if (d.desnivelM) datos.push(`⛰ ${d.desnivelM[0]}–${d.desnivelM[1]} m`);
+  if (d.bano) datos.push("💧 baño");
+  if (d.ninos === false) datos.push("👶 no apto");
+  if (d.perros === false) datos.push("🐕 no apto");
+
+  return (
+    <div className="fr-fd-scrim" onClick={onCerrar}>
+      <div className="fr-fd" role="dialog" aria-modal="true" aria-label={d.nombre} onClick={(e) => e.stopPropagation()}>
+        <button className="fr-fd-cerrar" onClick={onCerrar} aria-label="Cerrar">×</button>
+
+        <div className="fr-fd-scroll">
+          <div className="fr-fd-foto">
+            {d.imagen ? (
+              <Image src={d.imagen} alt={d.nombre} fill sizes="(max-width: 720px) 100vw, 480px" />
+            ) : (
+              <div className="fr-d-card-fallback"><i className="fr-s3-foto-pronto">foto en camino</i></div>
+            )}
+            {d.favoritoDeCris && <span className="fr-d-card-fav">★ favorito de Cris</span>}
+          </div>
+
+          <div className="fr-fd-body">
+            <span className="fr-d-card-meta">{zona} · {d.tipo}</span>
+            <h2 className="fr-fd-nombre">{d.nombre}</h2>
+            {d.queEs && <p className="fr-fd-lead">{d.queEs}</p>}
+
+            {datos.length > 0 && (
+              <div className="fr-fd-datos">
+                {datos.map((t) => <span key={t} className="fr-d-dato">{t}</span>)}
+              </div>
+            )}
+            {d.precio && <p className="fr-fd-precio">💶 {d.precio}</p>}
+
+            {d.loMejor && d.loMejor.length > 0 && (
+              <div className="fr-fd-lista">
+                <span className="fr-fd-lista-t">Lo mejor</span>
+                <ul>{d.loMejor.map((l) => <li key={l}>✅ {l}</li>)}</ul>
+              </div>
+            )}
+            {d.antesDeIr && d.antesDeIr.length > 0 && (
+              <div className="fr-fd-lista">
+                <span className="fr-fd-lista-t">Antes de ir</span>
+                <ul>{d.antesDeIr.map((l) => <li key={l}>⚠ {l}</li>)}</ul>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="fr-fd-cta">
+          <button
+            className={`fr-btn fr-fd-anadir${elegida ? " fr-d-anadir--on" : " fr-btn--primario"}`}
+            aria-pressed={elegida}
+            onClick={onAlternar}
+          >
+            {elegida ? "✔ En tu viaje" : "+ Añadir a mi viaje"}
+          </button>
+          <Link href={`/fuera-de-ruta/${provincia}/${d.slug}`} target="_blank" rel="noopener" className="fr-s5-link fr-fd-completa">
+            Ver ficha completa ↗
+          </Link>
+        </div>
       </div>
     </div>
   );
@@ -465,12 +572,15 @@ function Transicion({ candidatas, eliminadas, onListo }: {
 
 // Tarjeta de actividad (§4.10): foto, nombre, tipo, duración, dificultad, iconos que
 // distinguen (baño, y los "no" de niños/perros), «Ver más» y «Añadir a mi viaje».
-function TarjetaActividad({ destino: d, zona, provincia, elegida, onAlternar }: {
+// «Ver más» abre un drawer superpuesto en vez de navegar: preserva la selección en curso
+// (que vive en estado de React y se perdería al salir de la página) y no confunde con una
+// pestaña nueva en móvil.
+function TarjetaActividad({ destino: d, zona, elegida, onAlternar, onVerMas }: {
   destino: Destino;
   zona: string;
-  provincia: string;
   elegida: boolean;
   onAlternar: () => void;
+  onVerMas: () => void;
 }) {
   const iconos: string[] = [];
   if (d.bano) iconos.push("💧 baño");
@@ -496,9 +606,9 @@ function TarjetaActividad({ destino: d, zona, provincia, elegida, onAlternar }: 
           {iconos.map((t) => <span key={t} className="fr-d-dato">{t}</span>)}
         </span>
         <div className="fr-d-card-cta">
-          <Link href={`/fuera-de-ruta/${provincia}/${d.slug}`} target="_blank" rel="noopener" className="fr-s5-link">
+          <button type="button" className="fr-s5-link" onClick={onVerMas}>
             Ver más
-          </Link>
+          </button>
           <button
             className={`fr-btn fr-d-anadir${elegida ? " fr-d-anadir--on" : " fr-btn--primario"}`}
             aria-pressed={elegida}
@@ -564,7 +674,12 @@ function PanelViaje({ resumen, porSlug, provincia, respuestas, seleccion, onQuit
             {resumen.totalKm > 0 && <span><b>{resumen.totalKm}</b> km en coche</span>}
           </div>
 
-          {apretados > 0 && (
+          {resumen.desbordado ? (
+            <p className="fr-d-aviso">
+              Todo esto no cabe en {resumen.dias.length} {resumen.dias.length === 1 ? "día" : "días"} a este ritmo.
+              Lo repartimos lo mejor posible sin quitar nada, pero para que respire: añade días o quita algún sitio.
+            </p>
+          ) : apretados > 0 && (
             <p className="fr-d-aviso">
               Con esta selección, {apretados === 1 ? "un día va muy justo" : `${apretados} días van muy justos`} para el ritmo que elegiste.
               Puedes quitar algo o dejarlo así: nunca eliminamos nada por ti.
