@@ -44,14 +44,19 @@ const desdeB = ordenarDia(linea, ["a", "d"], "b");
 assert.strictEqual(desdeB.segundos, tiempoCoche(linea, "b", "a") + tiempoCoche(linea, "a", "d"), "b→a→d es lo barato");
 assert.deepStrictEqual(desdeB.orden, ["a", "d"], "primero 'a' (a 1) y luego 'd'");
 
-// --- Tope de paradas ---
-assert.throws(() => ordenarDia(linea, ["a", "b", "c", "d", "a", "b", "c", "d", "a"]), /≤8 paradas/, "más de 8 lanza");
-
 // --- Matriz real de Navarra: forma y coherencia ---
 const real = matrizNavarra as MatrizViajes;
-assert.strictEqual(real.ids.length, 20, "20 destinos en la matriz");
-assert.strictEqual(real.segundos.length, 20, "20 filas");
-assert.ok(real.segundos.every((f) => f.length === 20), "matriz cuadrada 20×20");
+
+// --- Más de 8 paradas: no lanza; cae a vecino más cercano y las coloca todas (un día
+// sobrecargado antes petaba con "≤8 paradas") ---
+const muchas = real.ids.slice(0, 12);
+const r12 = ordenarDia(real, muchas, real.ids[15]); // inicio externo, como el alojamiento del día
+assert.strictEqual(r12.orden.length, muchas.length, "coloca las 12 sin descartar ni lanzar");
+assert.strictEqual(new Set(r12.orden).size, muchas.length, "sin duplicados ni pérdidas");
+assert.ok(Number.isFinite(r12.segundos) && r12.segundos > 0, "coste finito y positivo por la heurística");
+assert.strictEqual(real.ids.length, 24, "24 destinos en la matriz");
+assert.strictEqual(real.segundos.length, 24, "24 filas");
+assert.ok(real.segundos.every((f) => f.length === 24), "matriz cuadrada 24×24");
 assert.ok(real.ids.every((_, i) => real.segundos[i][i] === 0), "diagonal a 0");
 // Dos destinos del Baztán colindantes están a pocos minutos en coche.
 assert.ok(tiempoCoche(real, "ruta-bunkers-de-otsondo", "cascada-de-xorroxin") < 10 * 60, "Otsondo↔Xorroxin < 10 min");

@@ -38,14 +38,14 @@ function* permutaciones<T>(xs: T[]): Generator<T[]> {
 
 // Orden que minimiza el tiempo total de coche visitando todas las paradas (ruta
 // abierta, no vuelve al origen). Si se da `inicio` (p. ej. el alojamiento del día),
-// la ruta arranca ahí sin incluirlo en la salida. Pensado para ≤8 paradas.
+// la ruta arranca ahí sin incluirlo en la salida. Óptimo por fuerza bruta hasta 8
+// paradas; por encima (un día sobre-selección, ya avisado como que no cabe) cae a la
+// heurística del vecino más cercano —no óptima, pero sin el coste factorial y sin petar—.
 export function ordenarDia(
   matriz: MatrizViajes, paradas: string[], inicio?: string,
 ): { orden: string[]; segundos: number } {
-  if (paradas.length > MAX_PARADAS) {
-    throw new Error(`ordenarDia soporta ≤${MAX_PARADAS} paradas, recibió ${paradas.length}`);
-  }
   if (paradas.length <= 1) return { orden: [...paradas], segundos: 0 };
+  if (paradas.length > MAX_PARADAS) return vecinoMasCercano(matriz, paradas, inicio);
   let orden = paradas, segundos = Infinity;
   for (const perm of permutaciones(paradas)) {
     let t = 0, previo = inicio;
@@ -54,6 +54,29 @@ export function ordenarDia(
       previo = p;
     }
     if (t < segundos) { segundos = t; orden = perm; }
+  }
+  return { orden, segundos };
+}
+
+// Vecino más cercano: arranca en `inicio` (o en la primera parada si no lo hay) y salta
+// siempre a la más próxima sin visitar. O(n²), para días con demasiadas paradas.
+function vecinoMasCercano(
+  matriz: MatrizViajes, paradas: string[], inicio?: string,
+): { orden: string[]; segundos: number } {
+  const restantes = new Set(paradas);
+  const orden: string[] = [];
+  let previo = inicio;
+  let segundos = 0;
+  while (restantes.size) {
+    let mejor = "", mejorT = Infinity;
+    for (const p of restantes) {
+      const t = previo ? tiempoCoche(matriz, previo, p) : 0;
+      if (t < mejorT) { mejorT = t; mejor = p; }
+    }
+    if (previo) segundos += mejorT;
+    orden.push(mejor);
+    restantes.delete(mejor);
+    previo = mejor;
   }
   return { orden, segundos };
 }

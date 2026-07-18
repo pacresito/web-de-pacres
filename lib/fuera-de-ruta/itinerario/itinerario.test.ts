@@ -115,10 +115,9 @@ assert.ok(dia.amanecer > 0 && dia.atardecer > dia.amanecer, "amanecer y anochece
 // --- fmtHora ---
 assert.strictEqual(fmtHora(8 * 60), "08:00");
 assert.strictEqual(fmtHora(13 * 60 + 5), "13:05");
-// Pasada la medianoche: envuelve el reloj del día y marca el desfase (no "25:20", "32:41").
-assert.strictEqual(fmtHora(24 * 60), "00:00 +1");
-assert.strictEqual(fmtHora(25 * 60 + 20), "01:20 +1");
-assert.strictEqual(fmtHora(32 * 60 + 41), "08:41 +1");
-assert.strictEqual(fmtHora(50 * 60), "02:00 +2");
+// Pasada la medianoche: envuelve al reloj del día (no "25:20", "32:41", que no son horas).
+assert.strictEqual(fmtHora(24 * 60), "00:00");
+assert.strictEqual(fmtHora(25 * 60 + 20), "01:20");
+assert.strictEqual(fmtHora(32 * 60 + 41), "08:41");
 
 console.log("OK itinerario.test.ts");

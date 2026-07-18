@@ -199,11 +199,16 @@ function construirDia(dia: DiaViaje, ctx: Ctx): DiaItin {
   const km = Math.round(kms.reduce((s, k) => s + k, 0) + (regreso?.km ?? 0));
   const estanciaTotalMin = estancias.reduce((s, e) => s + e, 0);
 
-  // Aviso solo si el plan no cabe en la luz (la auditoría fina es Fase F): fin de la
-  // última actividad más tarde que el anochecer.
+  // Aviso solo si el plan no cabe en la luz (la auditoría fina es Fase F): la última
+  // actividad acaba después del anochecer. La hora que se muestra es la del fin real del
+  // día —la vuelta al alojamiento, que es la última fila de la cronología—, no la salida de
+  // la última parada; así el aviso coincide con lo que se ve arriba. Si cruza medianoche, se
+  // dice explícito (en la cronología la hora va envuelta, aquí no puede quedar ambigua).
   const finUltima = paradas.length ? paradas[paradas.length - 1].horaSalida : horaSalida;
   if (atardecer > 0 && finUltima > atardecer) {
-    avisos.push(`El día termina a las ${fmtHora(finUltima)}, después del anochecer (${fmtHora(atardecer)})`);
+    const finDia = regreso ? regreso.horaLlegada : finUltima;
+    const marca = finDia >= 1440 ? " (¡del día siguiente!)" : "";
+    avisos.push(`El día termina a las ${fmtHora(finDia)}${marca}, después del anochecer (${fmtHora(atardecer)})`);
   }
 
   return { numero: dia.numero, zona, alojamiento, horaSalida, amanecer, atardecer,
@@ -262,12 +267,10 @@ function centroDe(ds: Destino[]): [number, number] | null {
 }
 
 // "HH:MM" desde minutos-de-medianoche. Exportada: la UI del itinerario pinta todas las
-// horas. Si un día se alarga más allá de medianoche (sobre-selección extrema, ya avisada
-// como global), la hora envuelve al reloj del día y marca el desfase: "01:20 +1" en vez de
-// "25:20", que no es una hora real. La hora de salida siempre es de mañana: nunca lleva +N.
+// horas. Si un día se alarga más allá de medianoche (sobre-selección extrema, ya avisada),
+// la hora envuelve al reloj del día: "01:20" en vez de "25:20", que no es una hora real. En
+// la cronología se ve solo, y el aviso del final lo dice explícito ("del día siguiente").
 export const fmtHora = (min: number) => {
-  const dia = Math.floor(min / 1440);
   const enDia = min % 1440;
-  const hhmm = `${String(Math.floor(enDia / 60)).padStart(2, "0")}:${String(enDia % 60).padStart(2, "0")}`;
-  return dia > 0 ? `${hhmm} +${dia}` : hhmm;
+  return `${String(Math.floor(enDia / 60)).padStart(2, "0")}:${String(enDia % 60).padStart(2, "0")}`;
 };
