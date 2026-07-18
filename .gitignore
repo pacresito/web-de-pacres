@@ -49,6 +49,7 @@ AGENTS.md
 # farma: datos sensibles (descuentos, consumos) — nunca al repo público
 /seed
 
-# farma: herramienta que muta prod — solo local (Pablo la ejecuta desde su equipo; los
-# backups que genera van fuera del repo, a WEB/farma/backups/)
+# farma: herramientas que mutan prod — solo local (Pablo las ejecuta desde su equipo; los
+# backups que generan van fuera del repo, a WEB/farma/backups/)
 /scripts/migrate-descuentos-orden.ts
+/scripts/aplicar-descuentos.ts
