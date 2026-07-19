@@ -11,7 +11,7 @@ import navarra from "../../../data/fuera-de-ruta/navarra.json";
 const todos = (navarra as unknown as DatosViajes).destinos;
 
 // --- Regla de oro: un cuestionario vacío no elimina a nadie ---
-let p = aPerfil({}, undefined);
+const p = aPerfil({}, undefined);
 assert.deepStrictEqual(p, {}, "sin respuestas, perfil vacío");
 assert.strictEqual(recomendar(todos, p).eliminadas.length, 0, "cuestionario vacío no elimina");
 

@@ -64,7 +64,7 @@ assert.strictEqual(r.candidatas.length, 3, "regla de oro: el conjunto se mantien
 
 // --- Datos reales de Navarra ---
 const todos = (navarra as unknown as DatosViajes).destinos;
-assert.strictEqual(eliminar(todos, {}).candidatas.length, 20, "sin perfil: los 20");
+assert.strictEqual(eliminar(todos, {}).candidatas.length, 24, "sin perfil: los 24");
 assert.strictEqual(eliminar(todos, { carritoImprescindible: true }).eliminadas.length, 12, "12 no aptos para carrito (los 5 ausentes pasan)");
 assert.deepStrictEqual(eliminar(todos, { conVertigo: true }).eliminadas.map((e) => e.destino.slug), ["mirador-de-lazkua"], "vértigo: solo Lazkua");
 assert.strictEqual(eliminar(todos, { edadMinNino: 8 }).eliminadas.length, 3, "menor de 8: fuera los 3 de edad mínima 10");

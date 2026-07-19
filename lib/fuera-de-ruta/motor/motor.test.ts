@@ -20,7 +20,7 @@ const soloPreferencias: Perfil = {
 };
 let r = recomendar(todos, soloPreferencias);
 assert.strictEqual(r.eliminadas.length, 0, "regla de oro: ninguna preferencia elimina");
-assert.strictEqual(r.candidatas.length, 20, "regla de oro: los 20 siguen en el listado");
+assert.strictEqual(r.candidatas.length, 24, "regla de oro: los 24 siguen en el listado");
 
 // --- La puntuación ordena: el imprescindible encabeza ---
 assert.strictEqual(r.candidatas[0].destino.slug, "nacedero-del-urederra", "el imprescindible ordena primero");
@@ -31,7 +31,7 @@ assert.deepStrictEqual(pts, [...pts].sort((a, b) => b - a), "candidatas ordenada
 // --- Incompatibilidad + puntuación se combinan sin mezclarse ---
 r = recomendar(todos, { carritoImprescindible: true, paisajes: ["bosque"] });
 assert.strictEqual(r.eliminadas.length, 12, "elimina los 12 no aptos para carrito");
-assert.strictEqual(r.candidatas.length, 8, "quedan 8 candidatas (3 aptas + 5 sin dato)");
+assert.strictEqual(r.candidatas.length, todos.length - 12, "las demás siguen siendo candidatas (aptas o sin dato)");
 assert.ok(r.candidatas.every((c) => c.destino.carrito !== false), "ninguna candidata es carrito=false");
 
 // --- Zona + preferencias: filtra por zona (elimina) y ordena el resto ---

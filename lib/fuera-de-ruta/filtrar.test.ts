@@ -111,13 +111,13 @@ assert.deepStrictEqual(slugs(filtrarDestinos(res, { sinReserva: true })), ["libr
 // --- Datos reales de Navarra: sanity checks ---
 const datos = navarra as unknown as DatosViajes;
 const todos = datos.destinos;
-assert.strictEqual(todos.length, 20, "20 destinos en el JSON");
+assert.strictEqual(todos.length, 24, "24 destinos en el JSON");
 assert.deepStrictEqual(slugs(filtrarDestinos(todos, { bano: true })), ["cascada-de-xorroxin", "ubagua"], "solo Xorroxin y Ubagua tienen baño");
 assert.strictEqual(filtrarDestinos(todos, { tipo: ["pueblo"] }).length, 3, "3 pueblos");
 assert.strictEqual(filtrarDestinos(todos, { zona: ["ribera"] }).length, 3, "3 destinos en la Ribera");
 assert.strictEqual(filtrarDestinos(todos, { desnivel: "+500" }).length, 1, "solo Peña Izaga supera 500 m");
 assert.strictEqual(filtrarDestinos(todos, { agua: ["poza"] }).length, 2, "poza: Xorroxin y Ubagua");
 assert.strictEqual(filtrarDestinos(todos, { epoca: ["invierno"] }).length, 3, "invierno: Elizondo, Ujué, Tudela");
-assert.strictEqual(filtrarDestinos(todos, { sinReserva: true }).length, 17, "3 destinos exigen reserva");
+assert.strictEqual(filtrarDestinos(todos, { sinReserva: true }).length, 21, "3 destinos exigen reserva");
 
 console.log("OK filtrar.test.ts");
