@@ -389,6 +389,10 @@
 .fr-btn:disabled { opacity: 0.4; cursor: default; box-shadow: none; }
 .fr-btn:disabled:active { transform: none; box-shadow: none; }
 .fr-s2-volver { text-align: center; }
+.fr-s2-esc { font: 500 13.5px/1.5 var(--fr-font-dm), sans-serif; color: var(--fr-sec); text-align: center; }
+.fr-s2-esc-link { color: var(--fr-tinta); font-weight: 700; text-decoration: underline; }
+.fr-s2-esc--movil { margin-top: 12px; }
+@media (min-width: 900px) { .fr-s2-esc--movil { display: none; } }
 
 /* Barra inferior fija (móvil) */
 .fr-s2-barra {
@@ -1965,10 +1969,17 @@
 /* Comparador (§4.8): tabla de campos + frases condicionales, sobre el overlay del drawer. */
 .fr-cmp { padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 14px; }
 .fr-cmp-t { font-size: 22px; }
-.fr-cmp-tabla-wrap { overflow-x: auto; }
+/* flex-shrink: 0 — sin él, dentro del modal (flex column de altura fija) la tabla se
+   encoge al hueco que dejan las frases y queda en un sliver con scroll propio; así
+   mantiene su alto natural y scrollea el modal entero. Solo scroll horizontal interno. */
+.fr-cmp-tabla-wrap { overflow-x: auto; flex-shrink: 0; }
 .fr-cmp-tabla { border-collapse: collapse; width: 100%; font: 500 13px var(--fr-font-dm), sans-serif; color: var(--fr-tinta); }
 .fr-cmp-tabla th, .fr-cmp-tabla td { border: 1.5px solid var(--fr-tinta); padding: 7px 10px; text-align: left; vertical-align: top; }
 .fr-cmp-tabla thead th { font-family: var(--fr-font-baloo), sans-serif; font-weight: 800; }
+/* Columna de etiquetas fija al scrollear la tabla en horizontal (móvil): no se pierde
+   de qué campo es cada fila. En desktop la tabla cabe y no hay scroll → es un no-op. */
+.fr-cmp-tabla thead th:first-child,
+.fr-cmp-tabla tbody th { position: sticky; left: 0; z-index: 1; background: var(--fr-papel); }
 .fr-cmp-tabla tbody th { font-weight: 700; white-space: nowrap; }
 .fr-cmp-frases { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .fr-cmp-frases li { font: 500 13px/1.45 var(--fr-font-dm), sans-serif; color: var(--fr-tinta); }

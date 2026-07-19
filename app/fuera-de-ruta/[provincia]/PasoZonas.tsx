@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import type { ProvinciaMapa } from "@/data/fuera-de-ruta/zonas-mapa";
 import type { Destino } from "@/lib/fuera-de-ruta/tipos";
 import { filtrosAQuery } from "@/lib/fuera-de-ruta/url-filtros";
@@ -28,11 +28,34 @@ function BotonVer({ href, texto, activo, className }: {
     : <button className={clase} disabled>{texto}</button>;
 }
 
-export default function PasoZonas({ provincia, nombre, mapa, destinos }: {
+// Provincia de escaparate (sin datos): explica que Cris aún la prepara y enlaza a las
+// que sí se pueden visitar. Se pinta bajo el CTA «Ver sitios» (desactivado en esos casos).
+function MensajeEscaparate({ nombre, otras, className }: {
+  nombre: string;
+  otras: { slug: string; nombre: string }[];
+  className?: string;
+}) {
+  if (!otras.length) return null;
+  return (
+    <p className={`fr-s2-esc${className ? ` ${className}` : ""}`}>
+      Cris todavía está preparando {nombre}. Mientras tanto puedes visitar{" "}
+      {otras.map((p, i) => (
+        <Fragment key={p.slug}>
+          {i > 0 && (i === otras.length - 1 ? " y " : ", ")}
+          <Link href={`/fuera-de-ruta/${p.slug}`} className="fr-s2-esc-link">{p.nombre}</Link>
+        </Fragment>
+      ))}
+      .
+    </p>
+  );
+}
+
+export default function PasoZonas({ provincia, nombre, mapa, destinos, otrasConDatos }: {
   provincia: string;              // slug de URL ("navarra")
   nombre: string;                 // nombre para mostrar ("Navarra")
   mapa: ProvinciaMapa;
   destinos: Destino[] | null;     // null = provincia de escaparate (sin datos)
+  otrasConDatos: { slug: string; nombre: string }[]; // adonde redirigir si es escaparate
 }) {
   const [seleccion, setSeleccion] = useState<string[]>([]);
 
@@ -78,6 +101,9 @@ export default function PasoZonas({ provincia, nombre, mapa, destinos }: {
               );
             })}
           </div>
+          {!tieneDatos && (
+            <MensajeEscaparate nombre={nombre} otras={otrasConDatos} className="fr-s2-esc--movil" />
+          )}
         </div>
 
         <div className="fr-s2-lista">
@@ -93,6 +119,7 @@ export default function PasoZonas({ provincia, nombre, mapa, destinos }: {
             );
           })}
           <BotonVer href={hrefSitios} texto={textoVer} activo={tieneDatos} className="fr-s2-ver" />
+          {!tieneDatos && <MensajeEscaparate nombre={nombre} otras={otrasConDatos} />}
           <Link href="/fuera-de-ruta" className="fr-btn fr-btn--terciario fr-s2-volver">‹ Volver a España</Link>
         </div>
       </div>
