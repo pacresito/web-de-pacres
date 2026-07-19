@@ -63,12 +63,18 @@ assert.strictEqual(r.eliminadas.length, 0, "regla de oro: las preferencias no el
 assert.strictEqual(r.candidatas.length, 3, "regla de oro: el conjunto se mantiene entero");
 
 // --- Datos reales de Navarra ---
+// Sin recuentos: el JSON crece con cada destino que añade Cris. Lo que se aserta es **quién**
+// se elimina —exactamente los que declaran la incompatibilidad, nunca los que no dicen nada—,
+// que es la regla de oro y lo único que puede romperse.
 const todos = (navarra as unknown as DatosViajes).destinos;
-assert.strictEqual(eliminar(todos, {}).candidatas.length, 24, "sin perfil: los 24");
-assert.strictEqual(eliminar(todos, { carritoImprescindible: true }).eliminadas.length, 12, "12 no aptos para carrito (los 5 ausentes pasan)");
-assert.deepStrictEqual(eliminar(todos, { conVertigo: true }).eliminadas.map((e) => e.destino.slug), ["mirador-de-lazkua"], "vértigo: solo Lazkua");
-assert.strictEqual(eliminar(todos, { edadMinNino: 8 }).eliminadas.length, 3, "menor de 8: fuera los 3 de edad mínima 10");
-assert.strictEqual(eliminar(todos, { accesoMax: "asfalto" }).eliminadas.length, 2, "solo asfalto: fuera Arpea y Peña Izaga (pista)");
-assert.strictEqual(eliminar(todos, { conPerro: true }).eliminadas.length, 0, "ninguno marca perros=false: no elimina");
+const eliminadas = (p: Perfil) => eliminar(todos, p).eliminadas.map((e) => e.destino.slug).sort();
+const losQue = (cumple: (d: Destino) => boolean) => todos.filter(cumple).map((d) => d.slug).sort();
+
+assert.strictEqual(eliminar(todos, {}).candidatas.length, todos.length, "sin perfil no se elimina a nadie");
+assert.deepStrictEqual(eliminadas({ carritoImprescindible: true }), losQue((d) => d.carrito === false), "carrito: solo los marcados como no aptos (el dato ausente pasa)");
+assert.deepStrictEqual(eliminadas({ conVertigo: true }), losQue((d) => d.vertigo === true), "vértigo: solo los marcados");
+assert.deepStrictEqual(eliminadas({ edadMinNino: 8 }), losQue((d) => (d.edadMinima ?? 0) > 8), "edad: solo los que piden más años de los que tiene el niño");
+assert.deepStrictEqual(eliminadas({ accesoMax: "asfalto" }), losQue((d) => d.accesoCarretera === "pista"), "solo asfalto: fuera los de pista");
+assert.deepStrictEqual(eliminadas({ conPerro: true }), [], "ninguno marca perros=false: no elimina");
 
 console.log("OK eliminar.test.ts");

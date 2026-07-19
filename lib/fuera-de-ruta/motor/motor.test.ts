@@ -20,7 +20,7 @@ const soloPreferencias: Perfil = {
 };
 let r = recomendar(todos, soloPreferencias);
 assert.strictEqual(r.eliminadas.length, 0, "regla de oro: ninguna preferencia elimina");
-assert.strictEqual(r.candidatas.length, 24, "regla de oro: los 24 siguen en el listado");
+assert.strictEqual(r.candidatas.length, todos.length, "regla de oro: el listado entero sigue ahí");
 
 // --- La puntuación ordena: el imprescindible encabeza ---
 assert.strictEqual(r.candidatas[0].destino.slug, "nacedero-del-urederra", "el imprescindible ordena primero");
@@ -29,14 +29,16 @@ const pts = r.candidatas.map((c) => c.puntos);
 assert.deepStrictEqual(pts, [...pts].sort((a, b) => b - a), "candidatas ordenadas por puntos desc");
 
 // --- Incompatibilidad + puntuación se combinan sin mezclarse ---
+// (Sin recuentos sobre el JSON, que crece: se aserta quién queda a cada lado.)
+const slugsDe = (ds: { destino: { slug: string } }[]) => ds.map((d) => d.destino.slug).sort();
+const losQue = (cumple: (d: (typeof todos)[number]) => boolean) => todos.filter(cumple).map((d) => d.slug).sort();
+
 r = recomendar(todos, { carritoImprescindible: true, paisajes: ["bosque"] });
-assert.strictEqual(r.eliminadas.length, 12, "elimina los 12 no aptos para carrito");
-assert.strictEqual(r.candidatas.length, todos.length - 12, "las demás siguen siendo candidatas (aptas o sin dato)");
-assert.ok(r.candidatas.every((c) => c.destino.carrito !== false), "ninguna candidata es carrito=false");
+assert.deepStrictEqual(slugsDe(r.eliminadas), losQue((d) => d.carrito === false), "elimina solo los no aptos para carrito");
+assert.deepStrictEqual(slugsDe(r.candidatas), losQue((d) => d.carrito !== false), "las demás siguen siendo candidatas (aptas o sin dato)");
 
 // --- Zona + preferencias: filtra por zona (elimina) y ordena el resto ---
 r = recomendar(todos, { zonas: ["ribera"], experiencias: ["historia"] });
-assert.strictEqual(r.candidatas.length, 3, "3 destinos en la Ribera");
-assert.ok(r.candidatas.every((c) => c.destino.zona === "ribera"), "todas las candidatas son de la Ribera");
+assert.deepStrictEqual(slugsDe(r.candidatas), losQue((d) => d.zona === "ribera"), "candidatas: exactamente los de la Ribera");
 
 console.log("OK motor.test.ts");
