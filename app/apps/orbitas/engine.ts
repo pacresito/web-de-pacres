@@ -26,6 +26,10 @@ export type Body = {
 
 export type World = { bodies: Body[] };
 
+// Trozo de mundo que se ve en pantalla. A zoom 1 coincide con el lienzo; alejando la cámara
+// crece alrededor del mismo centro (el mundo no se reescala, solo se ve más).
+export type View = { x: number; y: number; w: number; h: number };
+
 // radio ∝ masa^(1/3): al fusionar, r_nuevo³ = r_a³ + r_b³ (volumen conservado)
 export function radiusForMass(mass: number): number {
   return RADIUS_K * Math.cbrt(mass);
@@ -135,12 +139,13 @@ export function detectCollisions(world: World) {
   }
 }
 
-// Elimina los cuerpos que han escapado lejos del viewport: ya no vuelven, así que dejan de
+// Elimina los cuerpos que han escapado lejos de la vista: ya no vuelven, así que dejan de
 // contar. La distancia coincide con el punto en que la flecha-radar ya se ha apagado.
-export function pruneEscaped(world: World, W: number, H: number) {
+export function pruneEscaped(world: World, view: View) {
+  const x1 = view.x + view.w, y1 = view.y + view.h;
   world.bodies = world.bodies.filter(b => {
-    const dx = b.x < 0 ? -b.x : b.x > W ? b.x - W : 0;
-    const dy = b.y < 0 ? -b.y : b.y > H ? b.y - H : 0;
+    const dx = b.x < view.x ? view.x - b.x : b.x > x1 ? b.x - x1 : 0;
+    const dy = b.y < view.y ? view.y - b.y : b.y > y1 ? b.y - y1 : 0;
     return Math.hypot(dx, dy) <= ESCAPE_MARGIN;
   });
 }

@@ -1,7 +1,7 @@
 // Pintado de Órbitas en canvas: fondo negro cosmos, color por temperatura estelar,
 // estelas por desvanecido y los overlays del gesto y del radar. Sin React ni estado propio.
 
-import type { Body } from "./engine";
+import type { Body, View } from "./engine";
 
 const TAU = Math.PI * 2;
 
@@ -90,19 +90,20 @@ export function drawBody(ctx: CanvasRenderingContext2D, b: Body) {
   }
 }
 
-// Intersección del rayo centro→cuerpo con el borde del viewport (inset por `margin`).
+// Intersección del rayo centro→cuerpo con el borde de la vista (inset por `margin`).
 // Devuelve null si el cuerpo está dentro del recuadro.
-function edgePoint(W: number, H: number, b: Body, margin: number): { x: number; y: number } | null {
-  if (b.x >= 0 && b.x <= W && b.y >= 0 && b.y <= H) return null;
-  const cx = W / 2, cy = H / 2;
+function edgePoint(view: View, b: Body, margin: number): { x: number; y: number } | null {
+  const x0 = view.x, y0 = view.y, x1 = view.x + view.w, y1 = view.y + view.h;
+  if (b.x >= x0 && b.x <= x1 && b.y >= y0 && b.y <= y1) return null;
+  const cx = x0 + view.w / 2, cy = y0 + view.h / 2;
   const dx = b.x - cx, dy = b.y - cy;
   if (dx === 0 && dy === 0) return null;
   // t más pequeño que lleva el rayo a cada plano del recuadro interior
   let t = Infinity;
-  if (dx > 0) t = Math.min(t, (W - margin - cx) / dx);
-  if (dx < 0) t = Math.min(t, (margin - cx) / dx);
-  if (dy > 0) t = Math.min(t, (H - margin - cy) / dy);
-  if (dy < 0) t = Math.min(t, (margin - cy) / dy);
+  if (dx > 0) t = Math.min(t, (x1 - margin - cx) / dx);
+  if (dx < 0) t = Math.min(t, (x0 + margin - cx) / dx);
+  if (dy > 0) t = Math.min(t, (y1 - margin - cy) / dy);
+  if (dy < 0) t = Math.min(t, (y0 + margin - cy) / dy);
   return { x: cx + t * dx, y: cy + t * dy };
 }
 
@@ -113,15 +114,18 @@ const FADE_NEAR = 40;    // px fuera del borde a partir de los cuales empieza a 
 const FADE_FAR = 1400;   // px a los que la flecha ya se ha apagado ("escape")
 const ARROW_LEN = 8;     // largo fijo del triángulo
 const ARROW_BASE = 5;    // semiancho de la base cuando el cuerpo está cerca
-export function drawRadarArrow(ctx: CanvasRenderingContext2D, W: number, H: number, b: Body) {
-  const edge = edgePoint(W, H, b, 14);
+// El contexto llega escalado por `zoom`: las medidas de pantalla (margen y triángulo) se
+// dividen por él para que la flecha se vea igual de grande en cualquier nivel de zoom.
+export function drawRadarArrow(ctx: CanvasRenderingContext2D, view: View, b: Body, zoom = 1) {
+  const edge = edgePoint(view, b, 14 / zoom);
   if (!edge) return;
   const dist = Math.hypot(b.x - edge.x, b.y - edge.y);
   const fade = 1 - Math.min(1, Math.max(0, (dist - FADE_NEAR) / (FADE_FAR - FADE_NEAR)));
   if (fade <= 0.02) return;
 
   const angle = Math.atan2(b.y - edge.y, b.x - edge.x);
-  const base = ARROW_BASE * fade; // la base se cierra hasta ser una línea al escapar
+  const len = ARROW_LEN / zoom;
+  const base = (ARROW_BASE / zoom) * fade; // la base se cierra hasta ser una línea al escapar
   const [r, g, bl] = massToColor(b.mass);
 
   ctx.save();
@@ -130,9 +134,9 @@ export function drawRadarArrow(ctx: CanvasRenderingContext2D, W: number, H: numb
   ctx.globalAlpha = 0.5 * fade; // sutil
   ctx.fillStyle = `rgb(${r},${g},${bl})`;
   ctx.beginPath();
-  ctx.moveTo(ARROW_LEN, 0);
-  ctx.lineTo(-ARROW_LEN * 0.6, base);
-  ctx.lineTo(-ARROW_LEN * 0.6, -base);
+  ctx.moveTo(len, 0);
+  ctx.lineTo(-len * 0.6, base);
+  ctx.lineTo(-len * 0.6, -base);
   ctx.closePath();
   ctx.fill();
   ctx.restore();
@@ -170,12 +174,14 @@ export function drawExplosion(
 
 // Preview del gesto de creación: bola-fantasma latiendo en el origen + flecha de
 // lanzamiento en la dirección de tirachinas (origen − puntero = velocidad inicial).
+// Como en la flecha-radar, los trazos se dividen por `zoom` para no adelgazar al alejarse.
 export function drawDragPreview(
   ctx: CanvasRenderingContext2D,
   origin: { x: number; y: number },
   pointer: { x: number; y: number },
   mass: number,
   radius: number,
+  zoom = 1,
 ) {
   const [r, g, bl] = massToColor(mass);
 
@@ -183,23 +189,24 @@ export function drawDragPreview(
   ctx.fillStyle = `rgba(${r},${g},${bl},0.55)`;
   ctx.beginPath(); ctx.arc(origin.x, origin.y, radius, 0, TAU); ctx.fill();
   ctx.strokeStyle = `rgba(${r},${g},${bl},0.8)`;
-  ctx.lineWidth = 1;
+  ctx.lineWidth = 1 / zoom;
   ctx.beginPath(); ctx.arc(origin.x, origin.y, radius, 0, TAU); ctx.stroke();
 
   // flecha de lanzamiento (dirección y módulo = origen − puntero)
   const lvx = origin.x - pointer.x, lvy = origin.y - pointer.y;
   const len = Math.hypot(lvx, lvy);
-  if (len < 4) return;
+  if (len < 4 / zoom) return;
   const tipX = origin.x + lvx, tipY = origin.y + lvy;
   const ang = Math.atan2(lvy, lvx);
 
   ctx.strokeStyle = "rgba(255,255,255,0.7)";
-  ctx.lineWidth = 1.5;
+  ctx.lineWidth = 1.5 / zoom;
   ctx.beginPath(); ctx.moveTo(origin.x, origin.y); ctx.lineTo(tipX, tipY); ctx.stroke();
 
   ctx.save();
   ctx.translate(tipX, tipY);
   ctx.rotate(ang);
+  ctx.scale(1 / zoom, 1 / zoom); // punta de tamaño constante en pantalla
   ctx.fillStyle = "rgba(255,255,255,0.85)";
   ctx.beginPath();
   ctx.moveTo(7, 0); ctx.lineTo(-3, 4); ctx.lineTo(-3, -4); ctx.closePath();

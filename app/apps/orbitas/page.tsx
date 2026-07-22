@@ -7,7 +7,7 @@ import {
   createWorld, clearWorld, addBody, makeBody, step, pruneEscaped,
   radiusForMass, totalMass, presetSolar, presetBinary, presetCluster,
   presetThreeBody, PRESET_MAX_MASS,
-  type World,
+  type World, type View,
 } from "./engine";
 import {
   fadeCanvas, drawBody, drawRadarArrow, drawDragPreview, drawExplosion,
@@ -35,6 +35,22 @@ const PRESETS: PresetDef[] = [
     dots: [{ cx: 7, cy: 8, r: 2 }, { cx: 13, cy: 6, r: 2 }, { cx: 17, cy: 11, r: 2 },
            { cx: 9, cy: 14, r: 2 }, { cx: 16, cy: 16, r: 2 }, { cx: 11, cy: 18, r: 2 }] },
 ];
+
+// Distancia de cámara. La física no cambia en absoluto: el mundo se sigue midiendo en px CSS
+// del lienzo y los presets se construyen con ese mismo tamaño; alejarse solo dibuja todo más
+// pequeño y deja ver el espacio de alrededor (por donde escapan los cuerpos).
+// `dotR` es el radio del círculo del icono en viewBox 24×24: se encoge igual que la escena.
+const ZOOM_LEVELS = [
+  { label: "Cerca",     zoom: 1,    dotR: 6 },
+  { label: "Lejos",     zoom: 0.5,  dotR: 3 },
+  { label: "Muy lejos", zoom: 0.25, dotR: 1.5 },
+];
+
+// Trozo de mundo visible: el lienzo W×H a zoom 1, creciendo alrededor del mismo centro.
+function viewFor(W: number, H: number, zoom: number): View {
+  const w = W / zoom, h = H / zoom;
+  return { x: (W - w) / 2, y: (H - h) / 2, w, h };
+}
 
 // Explosión visual al eliminar una estrella (clic). Vive fuera del motor: es solo pintado.
 type Explosion = { x: number; y: number; r: number; color: [number, number, number]; start: number };
@@ -75,6 +91,15 @@ const CollapseIcon = () => (
   </svg>
 );
 
+// Icono de distancia (solo pantalla completa): el recuadro de la vista, siempre igual, con
+// la escena dentro encogiéndose conforme la cámara se aleja.
+const ZoomIcon = ({ r }: { r: number }) => (
+  <svg width="22" height="22" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" strokeWidth="1.4" opacity="0.45" />
+    <circle cx="12" cy="12" r={r} fill="currentColor" />
+  </svg>
+);
+
 export default function Orbitas() {
   const [whyOpen, setWhyOpen] = useState(false);
 
@@ -107,6 +132,20 @@ export default function Orbitas() {
   const pressTsRef  = useRef(0);
 
   const [fullscreen, setFullscreen] = useState(false);
+  const [zoomIdx, setZoomIdx] = useState(0);
+  const zoomRef = useRef(ZOOM_LEVELS[0].zoom); // el bucle y los gestos lo leen sin re-suscribirse
+  const zoomLevel = ZOOM_LEVELS[zoomIdx];
+
+  // Al cambiar de distancia, las estelas ya pintadas están a la escala anterior: se borran
+  // de golpe en vez de dejar que se desvanezcan con la escena nueva encima.
+  useEffect(() => {
+    zoomRef.current = ZOOM_LEVELS[zoomIdx].zoom;
+    const ctx = canvasRef.current?.getContext("2d");
+    if (!ctx || !canvasRef.current) return;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+  }, [zoomIdx]);
 
   const loadPreset = useCallback((build: (W: number, H: number) => World) => {
     const { W, H } = sizeRef.current;
@@ -114,6 +153,8 @@ export default function Orbitas() {
   }, []);
 
   const clearAll = useCallback(() => clearWorld(worldRef.current), []);
+
+  const cycleZoom = useCallback(() => setZoomIdx(i => (i + 1) % ZOOM_LEVELS.length), []);
 
   // Redimensionado del canvas (cámara fija: el mundo no se reescala, solo el lienzo)
   useEffect(() => {
@@ -162,12 +203,17 @@ export default function Orbitas() {
         step(world, 1);
         accum -= STEP_MS;
       }
-      pruneEscaped(world, W, H); // los cuerpos que escapan dejan de existir (y de contar)
+      const zoom = zoomRef.current;
+      const view = viewFor(W, H, zoom);
+      pruneEscaped(world, view); // los cuerpos que escapan dejan de existir (y de contar)
 
-      ctx.setTransform(dprRef.current, 0, 0, dprRef.current, 0, 0); // dibujar en px CSS
+      const dpr = dprRef.current;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // px CSS: el velo de las estelas cubre el lienzo entero
       fadeCanvas(ctx, W, H);
+      // A partir de aquí se dibuja en coordenadas de mundo: escala `zoom` alrededor del centro.
+      ctx.setTransform(dpr * zoom, 0, 0, dpr * zoom, dpr * (W / 2) * (1 - zoom), dpr * (H / 2) * (1 - zoom));
       for (const b of world.bodies) drawBody(ctx, b);
-      for (const b of world.bodies) drawRadarArrow(ctx, W, H, b);
+      for (const b of world.bodies) drawRadarArrow(ctx, view, b, zoom);
 
       // estrellas eliminadas con clic: explosión que se desvanece y luego se descarta
       for (let i = explosionsRef.current.length - 1; i >= 0; i--) {
@@ -179,7 +225,7 @@ export default function Orbitas() {
 
       if (creatingRef.current) {
         const mass = heldMass(now - pressTsRef.current);
-        drawDragPreview(ctx, originRef.current, pointerRef.current, mass, radiusForMass(mass));
+        drawDragPreview(ctx, originRef.current, pointerRef.current, mass, radiusForMass(mass), zoom);
       }
 
       if (++frameRef.current % 15 === 0 && statsLabelRef.current) {
@@ -197,12 +243,18 @@ export default function Orbitas() {
     return () => cancelAnimationFrame(rafRef.current);
   }, []);
 
-  // Entrada unificada ratón + táctil vía Pointer Events (en px CSS = unidades del mundo)
+  // Entrada unificada ratón + táctil vía Pointer Events, deshaciendo el zoom: px CSS del
+  // lienzo → unidades del mundo (a zoom 1 es la identidad).
   const getPos = useCallback((e: PointerEvent) => {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
     const rect = canvas.getBoundingClientRect();
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    const { W, H } = sizeRef.current;
+    const zoom = zoomRef.current;
+    return {
+      x: W / 2 + (e.clientX - rect.left - W / 2) / zoom,
+      y: H / 2 + (e.clientY - rect.top - H / 2) / zoom,
+    };
   }, []);
 
   useEffect(() => {
@@ -223,7 +275,7 @@ export default function Orbitas() {
       const bodies = worldRef.current.bodies;
       for (let i = bodies.length - 1; i >= 0; i--) {
         const b = bodies[i];
-        if (Math.hypot(b.x - pos.x, b.y - pos.y) <= b.radius + HIT_PAD) {
+        if (Math.hypot(b.x - pos.x, b.y - pos.y) <= b.radius + HIT_PAD / zoomRef.current) {
           if (!b.fixed) {
             b.fixed = true; b.vx = 0; b.vy = 0; // primer toque: congelar en el sitio
           } else {
@@ -359,6 +411,9 @@ export default function Orbitas() {
             );
           })}
           <button className="orb-btn muted" onClick={clearAll}>Vaciar</button>
+          <button className="orb-btn muted" onClick={cycleZoom} title="Distancia de la cámara">
+            {zoomLevel.label}
+          </button>
         </div>
 
         {/* Canvas */}
@@ -384,6 +439,9 @@ export default function Orbitas() {
               <svg width="22" height="22" viewBox="0 0 24 24">
                 <circle cx="12" cy="12" r="6.5" fill="none" stroke="var(--t-ink3)" strokeWidth="1.6" />
               </svg>
+            </button>
+            <button className="fs-preset-btn" style={{ color: "var(--t-ink3)" }} title={`Distancia: ${zoomLevel.label.toLowerCase()}`} aria-label="Distancia de la cámara" onClick={cycleZoom}>
+              <ZoomIcon r={zoomLevel.dotR} />
             </button>
           </div>
         )}
