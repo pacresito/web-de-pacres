@@ -4,7 +4,7 @@
 // panel avisa, pero todas se colocan. Estimación honesta para el panel; la cronología
 // real (horas, pivote de comida) la construye la Fase E. Puro. Test al lado.
 import type { Destino } from "../tipos";
-import { tiempoCoche, kmCoche, type MatrizViajes } from "../planificador/geo";
+import { tiempoCoche, kmCoche, SALTO_ZONA_MIN, type MatrizViajes } from "../planificador/geo";
 import { horasDeLuz } from "../planificador/sol";
 import { RITMO_MIN, COMIDA_MIN, visitaMin } from "../planificador/presupuesto";
 import type { Comida, Ritmo } from "../planificador/tipos";
@@ -39,9 +39,10 @@ export function presupuestoDia(seleccion: Destino[], opts: OpcionesViaje): numbe
 }
 
 // Selección → reparto en días + totales. Las actividades se encadenan por cercanía
-// (vecino más próximo en coche) y la cadena se reparte en días de forma equilibrada
-// (todos los días con carga proporcional: nunca un día sumidero de 30 h); los destinos
-// sin GPS (no rutables) se cuelgan del día más corto, contando su visita.
+// (vecino más próximo en coche) y la cadena se corta primero por geografía —en los saltos
+// de coche grandes, los mismos que hacen cambiar de base— y solo dentro de cada bloque se
+// reparte por carga; los destinos sin GPS (no rutables) se cuelgan del día más corto,
+// contando su visita.
 export function resumenMiViaje(seleccion: Destino[], matriz: MatrizViajes, opts: OpcionesViaje): ResumenViaje {
   const presupuesto = presupuestoDia(seleccion, opts);
   const comidaMin = COMIDA_MIN[opts.comida];
@@ -49,40 +50,50 @@ export function resumenMiViaje(seleccion: Destino[], matriz: MatrizViajes, opts:
   const sinGps = seleccion.filter((d) => !enRuta.includes(d));
   const porSlug = new Map(seleccion.map((d) => [d.slug, d]));
 
-  // Coste de ruta de cada parada de la cadena (coche desde la anterior + su visita); el
-  // total marca las fronteras proporcionales que reparten la cadena en `opts.dias` tramos.
-  const cadena = cadenaVecinos(enRuta.map((d) => d.slug), matriz);
-  const costeRuta = cadena.reduce((s, slug, i) => {
-    const coche = i > 0 ? seg2min(tiempoCoche(matriz, cadena[i - 1], slug)) : 0;
+  // Coste de ruta de un tramo de cadena: coche desde la parada anterior + visita de cada
+  // una. Mide la carga de un bloque y marca sus fronteras proporcionales internas.
+  const costeRuta = (tramo: string[]) => tramo.reduce((s, slug, i) => {
+    const coche = i > 0 ? seg2min(tiempoCoche(matriz, tramo[i - 1], slug)) : 0;
     return s + coche + visitaMin(porSlug.get(slug)!);
   }, 0);
 
-  const dias: DiaViaje[] = [];
-  let dia = nuevoDia();
-  let prev: string | null = null;
-  let acum = 0; // coste colocado hasta ahora, para cruzar las fronteras proporcionales
+  const cadena = cadenaVecinos(enRuta.map((d) => d.slug), matriz);
+  const zonas = repartoPorZonas(cadena, matriz, opts.dias, costeRuta);
 
-  for (const slug of cadena) {
-    // Antes de colocar, cierra el día si ya cruzó su cuota proporcional y aún quedan días
-    // por abrir. Reparte parejo en lugar de llenar cada día al tope y volcar el resto en
-    // el último. El coche que quedaría al inicio del nuevo día no cuenta (prev = null).
-    const frontera = (costeRuta * (dias.length + 1)) / opts.dias;
-    if (dia.slugs.length > 0 && acum >= frontera && dias.length < opts.dias - 1) {
-      cerrar(dia);
-      dias.push(dia);
-      dia = nuevoDia();
-      prev = null;
+  const dias: DiaViaje[] = [];
+  zonas.forEach((z) => repartirBloque(z.bloque, z.dias, costeRuta(z.bloque)));
+
+  // Un bloque en sus `nDias` días: la cuota proporcional de siempre, ahora solo dentro de
+  // la zona. Con un único bloque (ningún salto grande) el reparto es el de antes.
+  function repartirBloque(bloque: string[], nDias: number, carga: number) {
+    const abiertos = dias.length; // días ya cerrados por los bloques anteriores
+    let dia = nuevoDia();
+    let prev: string | null = null;
+    let acum = 0; // coste colocado del bloque, para cruzar sus fronteras proporcionales
+
+    for (const slug of bloque) {
+      // Antes de colocar, cierra el día si ya cruzó su cuota proporcional y aún quedan días
+      // por abrir. Reparte parejo en lugar de llenar cada día al tope y volcar el resto en
+      // el último. El coche que quedaría al inicio del nuevo día no cuenta (prev = null).
+      const cerrados = dias.length - abiertos;
+      const frontera = (carga * (cerrados + 1)) / nDias;
+      if (dia.slugs.length > 0 && acum >= frontera && cerrados < nDias - 1) {
+        cerrar(dia);
+        dias.push(dia);
+        dia = nuevoDia();
+        prev = null;
+      }
+      const coche = prev ? seg2min(tiempoCoche(matriz, prev, slug)) : 0;
+      const vis = visitaMin(porSlug.get(slug)!);
+      dia.slugs.push(slug);
+      dia.min += coche + vis;
+      dia.km += prev ? kmCoche(matriz, prev, slug) / 1000 : 0;
+      acum += coche + vis;
+      prev = slug;
     }
-    const coche = prev ? seg2min(tiempoCoche(matriz, prev, slug)) : 0;
-    const vis = visitaMin(porSlug.get(slug)!);
-    dia.slugs.push(slug);
-    dia.min += coche + vis;
-    dia.km += prev ? kmCoche(matriz, prev, slug) / 1000 : 0;
-    acum += coche + vis;
-    prev = slug;
+    cerrar(dia);
+    dias.push(dia);
   }
-  cerrar(dia);
-  dias.push(dia);
 
   // Días vacíos hasta completar el viaje (quedaron libres) y renumerado final.
   while (dias.length < opts.dias) dias.push(nuevoDia());
@@ -120,6 +131,55 @@ export function resumenMiViaje(seleccion: Destino[], matriz: MatrizViajes, opts:
   function cerrar(d: DiaViaje) {
     if (d.slugs.length > 0) d.min += comidaMin;
   }
+}
+
+// La cadena troceada en zonas, con los días que le tocan a cada una. Se corta donde el
+// salto de coche entre dos paradas consecutivas supera el umbral —el mismo con el que se
+// cambia de base de alojamiento, o días y bases discreparían— y los días se reparten
+// **por carga**, no por número de zonas: dar un día fijo a cada una dejaba días de 17 h
+// junto a días de 4 h. Una zona que no da ni para un día se fusiona con su vecina (por el
+// menor de los saltos) y se vuelve a repartir; así nunca sobran días vacíos.
+function repartoPorZonas(
+  cadena: string[], matriz: MatrizViajes, dias: number, carga: (tramo: string[]) => number,
+): { bloque: string[]; dias: number }[] {
+  let cortes = cadena.slice(1)
+    .map((slug, i) => ({ i: i + 1, salto: seg2min(tiempoCoche(matriz, cadena[i], slug)) }))
+    .filter((c) => c.salto >= SALTO_ZONA_MIN);
+
+  for (;;) {
+    const bloques = trocear(cadena, cortes.map((c) => c.i));
+    const reparto = diasPorCarga(bloques.map(carga), dias);
+    if (cortes.length === 0 || reparto.every((d) => d > 0)) {
+      return bloques.map((bloque, i) => ({ bloque, dias: Math.max(reparto[i], 1) }));
+    }
+    const menor = cortes.reduce((m, c) => (c.salto < m.salto ? c : m));
+    cortes = cortes.filter((c) => c !== menor);
+  }
+}
+
+function trocear(cadena: string[], cortes: number[]): string[][] {
+  const enCorte = new Set(cortes);
+  const bloques: string[][] = [[]];
+  cadena.forEach((slug, i) => {
+    if (enCorte.has(i)) bloques.push([]);
+    bloques[bloques.length - 1].push(slug);
+  });
+  return bloques;
+}
+
+// Reparto de los días proporcional a la carga de cada zona, por mayores restos. Un 0
+// significa que esa zona no da ni para un día: quien llama la fusiona y reparte de nuevo.
+function diasPorCarga(cargas: number[], dias: number): number[] {
+  const total = cargas.reduce((s, c) => s + c, 0);
+  if (total === 0) return cargas.map((_, i) => (i === 0 ? dias : 0));
+  const exactos = cargas.map((c) => (c * dias) / total);
+  const reparto = exactos.map(Math.floor);
+  let sobrantes = dias - reparto.reduce((s, d) => s + d, 0);
+  for (const { i } of exactos.map((e, i) => ({ i, resto: e % 1 })).sort((a, b) => b.resto - a.resto)) {
+    if (sobrantes-- <= 0) break;
+    reparto[i]++;
+  }
+  return reparto;
 }
 
 // «Prefiero que la IA decida» (§4.12): pre-selecciona un conjunto equilibrado —las mejor

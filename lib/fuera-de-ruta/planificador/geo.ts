@@ -10,6 +10,11 @@ export type MatrizViajes = {
 
 const MAX_PARADAS = 8; // fuerza bruta: 8! = 40320 permutaciones, instantáneo
 
+// Salto de coche (min) que separa dos zonas: a partir de aquí no compensa encadenar las
+// paradas en el mismo día ni volver a dormir al mismo sitio. Una sola constante para los
+// dos cortes —días (`mi-viaje`) y bases (`alojamiento`)—: con dos, discrepan.
+export const SALTO_ZONA_MIN = 25;
+
 // Tiempo de coche (segundos) entre dos destinos por su slug.
 export function tiempoCoche(matriz: MatrizViajes, origen: string, destino: string): number {
   const i = matriz.ids.indexOf(origen);

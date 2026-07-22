@@ -49,6 +49,39 @@ assert.ok(conParadas.length >= 2, "el reparto usa varios días, no uno solo");
 const maxEnUnDia = Math.max(...r.dias.map((d) => d.slugs.length));
 assert.ok(maxEnUnDia <= Math.ceil(todos.length / 2), "ningún día se queda con casi todo");
 
+// --- Corte por zonas: el día no parte en mitad de un salto de coche largo ---
+// Baztán (norte) + Urbasa (sur), 4 paradas en 2 días: la cadena es Otsondo → Xorroxin →
+// (85 min) → Ojo de Iturmendi → Urederra. Repartiendo solo por horas caían 3+1 y el día 1
+// se comía el salto; cortando por el salto salen 2+2.
+const dosZonas: Destino[] = [
+  "ruta-bunkers-de-otsondo", "cascada-de-xorroxin", "ojo-de-iturmendi", "nacedero-del-urederra",
+].map(bySlug);
+r = resumenMiViaje(dosZonas, m, opts);
+assert.deepStrictEqual(
+  r.dias.map((d) => d.slugs.length), [2, 2],
+  "el corte cae en el salto de 85 min, no en la cuota de horas",
+);
+assert.ok(
+  r.dias[0].slugs.includes("cascada-de-xorroxin") && r.dias[1].slugs.includes("ojo-de-iturmendi"),
+  "cada día se queda en su zona",
+);
+
+// --- Los días se reparten por carga, no por número de zonas ---
+// 13 paradas de 4 zonas en 4 días: dar un día fijo a cada zona dejaba un día con 7 paradas
+// (17 h) y dos con una sola (4 h). Repartiendo por carga, ningún día dobla la media.
+const cuatroZonas: Destino[] = [
+  "selva-de-irati-embalse-de-irabia", "mirador-de-zamariain", "ruta-de-los-horreos", "fabrica-de-orbaizeta",
+  "elizondo", "infernuko-errota", "ruta-bunkers-de-otsondo", "cascada-de-xorroxin",
+  "ubagua", "nacedero-del-urederra", "bosque-encantado-de-artea", "foz-de-arbaiun", "bardenas-reales",
+].map(bySlug);
+r = resumenMiViaje(cuatroZonas, m, { ...opts, dias: 4 });
+const media = r.totalMin / 4;
+assert.ok(
+  Math.max(...r.dias.map((d) => d.min)) < media * 1.5,
+  "ningún día se lleva vez y media la carga media del viaje",
+);
+assert.ok(r.dias.every((d) => d.slugs.length > 0), "ningún día vacío mientras otros aprietan");
+
 // --- Presupuesto: más ritmo = más minutos por día ---
 assert.ok(
   presupuestoDia(tres, { ...opts, ritmo: "activo" }) > presupuestoDia(tres, { ...opts, ritmo: "relajado" }),
