@@ -7,7 +7,7 @@
 // decisión de Pablo)—, nunca de un GPS inventado. Puro. Test al lado.
 import type { Destino } from "../tipos";
 import type { ResumenViaje } from "../viaje/mi-viaje";
-import { tiempoCoche, SALTO_ZONA_MIN, type MatrizViajes } from "../planificador/geo";
+import { tiempoCoche, seg2min, SALTO_ZONA_MIN, type MatrizViajes } from "../planificador/geo";
 
 // Una base de alojamiento: la localidad, los días que cubre, las paradas que quedan a mano
 // (para el porqué) y —si mudarse aquí desde la zona anterior evita un trayecto largo— los
@@ -30,7 +30,6 @@ export type OpcionesAlojamiento = {
 
 const MAX_ZONAS = 3;
 
-const seg2min = (seg: number) => Math.round(seg / 60);
 
 // Viaje repartido en días → zonas de alojamiento. Vacío si no hay nada rutable que dormir
 // cerca. Nunca más de `max` zonas: corta solo en los saltos mayores.

@@ -3,6 +3,8 @@
 import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { mapsHref } from "@/lib/fuera-de-ruta/formato";
+import { escapar } from "./escapar";
 
 // Mapa del viaje (Fase G, §5.6): las mismas paradas que la guía, **en el mismo orden de la
 // planificación** (el pin N es la parada N), unidas día a día por una línea, con el
@@ -21,9 +23,6 @@ export type PuntoViaje = {
   base?: boolean;                // alojamiento del día: de aquí se sale y aquí se vuelve
   detalle?: string;              // línea bajo el nombre en el popup (hora, tipo…)
 };
-
-const mapsHref = (gps: [number, number]) =>
-  `https://www.google.com/maps/search/?api=1&query=${gps[0]},${gps[1]}`;
 
 const icono = (etiqueta: string, nombre: string) =>
   L.divIcon({
@@ -93,8 +92,3 @@ export default function MapaViaje({ puntos }: { puntos: PuntoViaje[] }) {
 
   return <div ref={contenedor} className="fr-g-mapa" />;
 }
-
-// El popup interpola HTML: los nombres vienen del JSON curado, pero escapar cuesta cuatro
-// líneas y quita el pie de que un dato futuro (o de otra provincia) traiga un `<`.
-const escapar = (s: string) =>
-  s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);

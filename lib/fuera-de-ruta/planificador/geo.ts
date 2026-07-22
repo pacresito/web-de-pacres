@@ -1,6 +1,7 @@
 // Lookup de tiempos de coche en la matriz precalculada (OSRM, ver
 // scripts/build-fuera-de-ruta-matriz.mjs) y orden óptimo de un día por fuerza bruta (TSP
 // abierto). Lógica pura. Test: `npx tsx lib/fuera-de-ruta/planificador/geo.test.ts`.
+import type { Destino } from "../tipos";
 
 export type MatrizViajes = {
   ids: string[];         // slugs de destino, en el orden de filas y columnas
@@ -14,6 +15,21 @@ const MAX_PARADAS = 8; // fuerza bruta: 8! = 40320 permutaciones, instantáneo
 // paradas en el mismo día ni volver a dormir al mismo sitio. Una sola constante para los
 // dos cortes —días (`mi-viaje`) y bases (`alojamiento`)—: con dos, discrepan.
 export const SALTO_ZONA_MIN = 25;
+
+// La matriz habla en segundos y metros; el resto del dominio, en minutos y km. Las dos
+// conversiones viven aquí, junto a las funciones que devuelven esas unidades.
+export const seg2min = (seg: number) => Math.round(seg / 60);
+
+// Centro geográfico de un grupo de destinos (media de los que tienen GPS), o null si
+// ninguno lo tiene. Lo usan el panel y el itinerario para pedir las horas de luz del día:
+// dentro de una comunidad apenas varían, así que un punto medio basta.
+export function centroDe(ds: Destino[]): [number, number] | null {
+  const con = ds.filter((d) => d.gps);
+  if (!con.length) return null;
+  const lat = con.reduce((s, d) => s + d.gps![0], 0) / con.length;
+  const lon = con.reduce((s, d) => s + d.gps![1], 0) / con.length;
+  return [lat, lon];
+}
 
 // Tiempo de coche (segundos) entre dos destinos por su slug.
 export function tiempoCoche(matriz: MatrizViajes, origen: string, destino: string): number {

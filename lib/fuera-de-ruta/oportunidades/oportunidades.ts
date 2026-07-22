@@ -9,7 +9,7 @@
 // `cadenaVecinos`, la misma que usa el panel— y su `tipo` —para el criterio de que la
 // oportunidad sea «diferenciada» (aporta un tipo que el viaje aún no tiene)—.
 import type { Destino } from "../tipos";
-import { tiempoCoche, type MatrizViajes } from "../planificador/geo";
+import { tiempoCoche, seg2min, type MatrizViajes } from "../planificador/geo";
 import { cadenaVecinos } from "../viaje/mi-viaje";
 
 // Destino que enriquece el viaje sin desviarlo apenas. `desvioMin` = minutos de coche
@@ -25,7 +25,6 @@ export type OpcionesOportunidad = {
 const DESVIO_MAX_MIN = 15; // «a pocos minutos» de la ruta; el resto ya es otro viaje
 const MAX_OPORTUNIDADES = 3;
 
-const seg2min = (seg: number) => Math.round(seg / 60);
 
 // Selección + candidatas compatibles no elegidas → oportunidades ordenadas por desvío
 // creciente. Vacío si no hay ruta que medir (nada seleccionado con GPS) o nada cerca y

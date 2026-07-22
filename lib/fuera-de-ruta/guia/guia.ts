@@ -3,7 +3,7 @@
 // ellas —totales del viaje, consejos del día y las alternativas de lluvia precalculadas—.
 // Determinista, IA cero. Puro. Test: `npx tsx lib/fuera-de-ruta/guia/guia.test.ts`.
 import type { Destino } from "../tipos";
-import { tiempoCoche, kmCoche, type MatrizViajes } from "../planificador/geo";
+import { tiempoCoche, kmCoche, seg2min, type MatrizViajes } from "../planificador/geo";
 import type { Ritmo } from "../planificador/tipos";
 import { estanciaPorRitmo, type DiaItin, type Itinerario } from "../itinerario/itinerario";
 
@@ -13,7 +13,6 @@ export const CIERRE =
   "antes de realizar el viaje se recomienda comprobar posibles cambios que dependan de terceros, " +
   "como horarios, reservas o condiciones de acceso.";
 
-const seg2min = (seg: number) => Math.round(seg / 60);
 
 // --------------------------------------------------------------- Totales del viaje
 export type TotalesViaje = {

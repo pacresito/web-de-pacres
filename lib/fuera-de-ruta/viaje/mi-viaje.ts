@@ -4,7 +4,7 @@
 // panel avisa, pero todas se colocan. Estimación honesta para el panel; la cronología
 // real (horas, pivote de comida) la construye la Fase E. Puro. Test al lado.
 import type { Destino } from "../tipos";
-import { tiempoCoche, kmCoche, SALTO_ZONA_MIN, type MatrizViajes } from "../planificador/geo";
+import { tiempoCoche, kmCoche, seg2min, centroDe, SALTO_ZONA_MIN, type MatrizViajes } from "../planificador/geo";
 import { horasDeLuz } from "../planificador/sol";
 import { RITMO_MIN, COMIDA_MIN, visitaMin } from "../planificador/presupuesto";
 import type { Comida, Ritmo } from "../planificador/tipos";
@@ -27,7 +27,6 @@ export type ResumenViaje = {
   desbordado: boolean; // el trabajo total no cabe en los días con este ritmo (aviso global)
 };
 
-const seg2min = (seg: number) => Math.round(seg / 60);
 
 // Minutos activos que caben en un día: el menor entre el ritmo elegido y la luz de la
 // fecha menos la comida. La luz se calcula en el centro de la selección (apenas varía
@@ -220,12 +219,4 @@ export function cadenaVecinos(slugs: string[], matriz: MatrizViajes): string[] {
     actual = mejor;
   }
   return cadena;
-}
-
-function centroDe(ds: Destino[]): [number, number] | null {
-  const con = ds.filter((d) => d.gps);
-  if (!con.length) return null;
-  const lat = con.reduce((s, d) => s + d.gps![0], 0) / con.length;
-  const lon = con.reduce((s, d) => s + d.gps![1], 0) / con.length;
-  return [lat, lon];
 }

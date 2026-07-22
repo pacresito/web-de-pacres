@@ -1,20 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useEscape } from "./useEscape";
 
 // Cabecera común a todas las pantallas de Fuera de Ruta (F1): wordmark "Fuera de Ruta"
 // (el "de" en píldora Lima rotada), tagline mono y "¿Qué es esto?" → modal.
 export default function Cabecera() {
   const [abierto, setAbierto] = useState(false);
 
-  // Esc cierra el modal; sin overlay abierto no hay listener.
-  useEffect(() => {
-    if (!abierto) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setAbierto(false);
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [abierto]);
+  useEscape(() => setAbierto(false), abierto);
 
   return (
     <header className="fr-cabecera">

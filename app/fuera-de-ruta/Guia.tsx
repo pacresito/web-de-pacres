@@ -6,7 +6,7 @@ import Link from "next/link";
 import type { DatosViajes, Destino } from "@/lib/fuera-de-ruta/tipos";
 import type { MatrizViajes } from "@/lib/fuera-de-ruta/planificador/geo";
 import type { Ritmo } from "@/lib/fuera-de-ruta/planificador/tipos";
-import { duracion } from "@/lib/fuera-de-ruta/formato";
+import { duracion, mapsHref } from "@/lib/fuera-de-ruta/formato";
 import { fmtHora, type DiaItin, type ComidaItin, type Itinerario } from "@/lib/fuera-de-ruta/itinerario/itinerario";
 import {
   CIERRE, totalesViaje, consejosDelDia, alternativasLluvia, type Alternativa,
@@ -20,9 +20,6 @@ const MapaViaje = dynamic(() => import("./MapaViaje"), { ssr: false });
 // Fase E: la guía A lo pinta entero con sus consejos, la de bolsillo lo resume a una
 // pantalla, el mapa lo recorre en el mismo orden y la alternativa de lluvia (guía B) cuelga
 // de cada parada, ya calculada. El PDF es la guía A impresa (ver `@media print`).
-
-const mapsHref = (gps?: [number, number]) =>
-  gps ? `https://www.google.com/maps/search/?api=1&query=${gps[0]},${gps[1]}` : undefined;
 
 // Icono por tipo de destino, solo para la guía de bolsillo: ahí el icono sustituye a la
 // palabra («🥾 Ruta de los hórreos»), que es lo que la hace legible de un vistazo.
@@ -131,6 +128,16 @@ function DiaItinerario({ dia, porSlug, provincia, alternativas, onHoraSalida }: 
   onHoraSalida: (dia: number, min: number) => void;
 }) {
   const consejos = consejosDelDia(dia, porSlug);
+  // Índice de la parada ante la que se intercala la comida, o -1 si no cae entre dos
+  // paradas (día de una sola, o comida que se va al final): entonces se pinta tras la
+  // última. Se calcula **una vez**: el mismo predicado escrito en dos sitios se
+  // desincroniza al tocarlo y la comida acaba duplicada o desaparecida.
+  const idxComida = dia.comida
+    ? dia.paradas.findIndex((p, i) => {
+        const finAnterior = i > 0 ? dia.paradas[i - 1].horaSalida : dia.horaSalida;
+        return dia.comida!.horaInicio >= finAnterior && dia.comida!.horaInicio <= p.horaLlegada;
+      })
+    : -1;
 
   if (dia.paradas.length === 0) {
     return (
@@ -176,12 +183,10 @@ function DiaItinerario({ dia, porSlug, provincia, alternativas, onHoraSalida }: 
         </li>
 
         {dia.paradas.map((p, i) => {
-          const prevFin = i > 0 ? dia.paradas[i - 1].horaSalida : dia.horaSalida;
-          const comidaAntes = dia.comida && dia.comida.horaInicio >= prevFin && dia.comida.horaInicio <= p.horaLlegada;
           const gps = porSlug.get(p.slug)?.gps;
           return (
             <li key={p.slug} className="fr-it-parada-wrap">
-              {comidaAntes && <BloqueComida comida={dia.comida!} />}
+              {i === idxComida && <BloqueComida comida={dia.comida!} />}
               <div className="fr-it-parada">
                 <span className="fr-it-hora">{fmtHora(p.horaLlegada)}</span>
                 <div className="fr-it-txt">
@@ -206,7 +211,7 @@ function DiaItinerario({ dia, porSlug, provincia, alternativas, onHoraSalida }: 
                     </span>
                   )}
                   <span className="fr-it-enlaces">
-                    {mapsHref(gps) && (
+                    {gps && (
                       <a className="fr-s5-link" href={mapsHref(gps)} target="_blank" rel="noopener">📍 Cómo llegar</a>
                     )}
                     {p.tipo !== "alojamiento" && (
@@ -223,10 +228,9 @@ function DiaItinerario({ dia, porSlug, provincia, alternativas, onHoraSalida }: 
         })}
 
         {/* Comida que no partió el recorrido (día de una sola parada): va tras la última. */}
-        {dia.comida && !dia.paradas.some((p, i) => {
-          const prevFin = i > 0 ? dia.paradas[i - 1].horaSalida : dia.horaSalida;
-          return dia.comida!.horaInicio >= prevFin && dia.comida!.horaInicio <= p.horaLlegada;
-        }) && <li className="fr-it-parada-wrap"><BloqueComida comida={dia.comida} /></li>}
+        {dia.comida && idxComida < 0 && (
+          <li className="fr-it-parada-wrap"><BloqueComida comida={dia.comida} /></li>
+        )}
 
         {dia.regreso && (
           <li className="fr-it-hito">
@@ -276,6 +280,7 @@ function BloqueLluvia({ alternativa: a, porSlug, provincia }: {
   provincia: string;
 }) {
   const [abierto, setAbierto] = useState(false);
+  const gpsAlternativa = porSlug.get(a.slug)?.gps;
   return (
     <div className="fr-g-lluvia">
       <button className="fr-g-lluvia-b fr-g-no-print" onClick={() => setAbierto((v) => !v)} aria-expanded={abierto}>
@@ -287,8 +292,8 @@ function BloqueLluvia({ alternativa: a, porSlug, provincia }: {
           🚗 {duracion(a.cocheMin)} desde aquí{a.km > 0 ? ` (${a.km} km)` : ""} · ⏱️ {duracion(a.estanciaMin)} · {a.motivo}
         </span>
         <span className="fr-it-enlaces">
-          {mapsHref(porSlug.get(a.slug)?.gps) && (
-            <a className="fr-s5-link" href={mapsHref(porSlug.get(a.slug)?.gps)} target="_blank" rel="noopener">📍 Cómo llegar</a>
+          {gpsAlternativa && (
+            <a className="fr-s5-link" href={mapsHref(gpsAlternativa)} target="_blank" rel="noopener">📍 Cómo llegar</a>
           )}
           <Link className="fr-s5-link" href={`/fuera-de-ruta/${provincia}/${a.slug}`} target="_blank" rel="noopener">Ver ficha</Link>
         </span>
@@ -331,7 +336,7 @@ function VistaBolsillo({ itinerario, porSlug }: { itinerario: Itinerario; porSlu
               <span className="fr-mono fr-g-b-hora">{fmtHora(f.hora)}</span>
               <span>
                 {f.icono} <b>{f.nombre}</b>{f.cola}
-                {mapsHref(f.gps) && <> · <a className="fr-s5-link" href={mapsHref(f.gps)} target="_blank" rel="noopener">📍</a></>}
+                {f.gps && <> · <a className="fr-s5-link" href={mapsHref(f.gps)} target="_blank" rel="noopener">📍</a></>}
               </span>
             </li>
           ))}

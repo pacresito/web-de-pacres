@@ -6,7 +6,7 @@
 // Puro. Test: `npx tsx lib/fuera-de-ruta/itinerario/itinerario.test.ts`.
 import type { Destino, DatosViajes, Restaurante } from "../tipos";
 import type { ZonaAlojamiento } from "../alojamiento/alojamiento";
-import { tiempoCoche, kmCoche, ordenarDia, type MatrizViajes } from "../planificador/geo";
+import { tiempoCoche, kmCoche, ordenarDia, seg2min, centroDe, type MatrizViajes } from "../planificador/geo";
 import { horasDeLuz } from "../planificador/sol";
 import { COMIDA_MIN, VISITA_DEFECTO } from "../planificador/presupuesto";
 import type { Comida, Ritmo } from "../planificador/tipos";
@@ -65,7 +65,6 @@ export type DiaItin = {
 
 export type Itinerario = { dias: DiaItin[] };
 
-const seg2min = (seg: number) => Math.round(seg / 60);
 
 // Estancia recomendada modulada por el ritmo: activo tira al mínimo (ver más sitios),
 // relajado al ideal (disfrutar), medio al punto medio. Sin datos de estancia, cae a la
@@ -289,14 +288,6 @@ const zonaDominante = (ds: Destino[]): string => {
   for (const d of ds) cuenta.set(d.zona, (cuenta.get(d.zona) ?? 0) + 1);
   return [...cuenta].sort((a, b) => b[1] - a[1])[0][0];
 };
-
-function centroDe(ds: Destino[]): [number, number] | null {
-  const con = ds.filter((d) => d.gps);
-  if (!con.length) return null;
-  const lat = con.reduce((s, d) => s + d.gps![0], 0) / con.length;
-  const lon = con.reduce((s, d) => s + d.gps![1], 0) / con.length;
-  return [lat, lon];
-}
 
 // "HH:MM" desde minutos-de-medianoche. Exportada: la UI del itinerario pinta todas las
 // horas. Si un día se alarga más allá de medianoche (sobre-selección extrema, ya avisada),

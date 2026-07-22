@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { Destino, Restaurante } from "@/lib/fuera-de-ruta/tipos";
+import { escapar } from "./escapar";
 
 // Mapa del Explorador (Río pop): Leaflet a pelo, autohospedado vía npm, cargado
 // con dynamic({ssr:false}) porque toca `window`. Pins propios con divIcon — el
@@ -18,7 +19,7 @@ const CENTRO_NAVARRA: [number, number] = [42.75, -1.65];
 const iconoDestino = (num: number, nombre: string) =>
   L.divIcon({
     className: "fr-pin-wrap",
-    html: `<span class="fr-pin">${num}</span><span class="fr-pin-globo">${nombre}</span>`,
+    html: `<span class="fr-pin">${num}</span><span class="fr-pin-globo">${escapar(nombre)}</span>`,
     iconSize: [30, 30],
     iconAnchor: [15, 15],
   });
@@ -127,7 +128,7 @@ export default function Mapa({ destinos, restaurantes, activo, onActivo, onPin }
     capa.clearLayers();
     for (const r of restaurantes) {
       L.marker(r.gps!, { icon: iconoResto() })
-        .bindTooltip(r.nombre, { direction: "top", offset: [0, -12] })
+        .bindTooltip(escapar(r.nombre), { direction: "top", offset: [0, -12] })
         .addTo(capa);
     }
   }, [restaurantes]);

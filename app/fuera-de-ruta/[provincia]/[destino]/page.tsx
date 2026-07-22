@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Destino, Restaurante } from "@/lib/fuera-de-ruta/tipos";
-import { rango } from "@/lib/fuera-de-ruta/formato";
+import { duracion, mapsHref, rango } from "@/lib/fuera-de-ruta/formato";
 import { tiempoCoche } from "@/lib/fuera-de-ruta/planificador/geo";
 import { datosDe, matrizDe, PROVINCIAS_CON_DATOS } from "@/lib/fuera-de-ruta/datos";
 import Portada from "./Portada";
@@ -32,17 +32,12 @@ const ACCESO_TEXTO: Record<string, string> = {
   pista: "pista sin asfaltar",
 };
 
-// Minutos → "1 h 30 min". El rango estancia mínima–ideal se muestra como una sola fila.
-function minutos(m: number): string {
-  const h = Math.floor(m / 60);
-  const min = m % 60;
-  return [h && `${h} h`, min && `${min} min`].filter(Boolean).join(" ") || "0 min";
-}
+// El rango estancia mínima–ideal se muestra como una sola fila.
 function estancia(min?: number, ideal?: number): string | undefined {
   if (min === undefined && ideal === undefined) return undefined;
   if (min !== undefined && ideal !== undefined && min !== ideal)
-    return `${minutos(min)} – ${minutos(ideal)}`;
-  return minutos((ideal ?? min)!);
+    return `${duracion(min)} – ${duracion(ideal)}`;
+  return duracion((ideal ?? min)!);
 }
 
 type Props = { params: Promise<{ provincia: string; destino: string }> };
@@ -218,7 +213,7 @@ export default async function FichaDestino({ params }: Props) {
             {d.gps && (
               <a
                 className="fr-btn fr-btn--primario fr-s4-accion"
-                href={`https://www.google.com/maps/search/?api=1&query=${d.gps[0]},${d.gps[1]}`}
+                href={mapsHref(d.gps)}
                 target="_blank"
                 rel="noreferrer"
               >
@@ -302,7 +297,7 @@ export default async function FichaDestino({ params }: Props) {
       {(d.gps || d.trackWikiloc) && (
         <div className="fr-s4-barra">
           {d.gps && (
-            <a className="fr-btn fr-btn--primario" href={`https://www.google.com/maps/search/?api=1&query=${d.gps[0]},${d.gps[1]}`} target="_blank" rel="noreferrer">
+            <a className="fr-btn fr-btn--primario" href={mapsHref(d.gps)} target="_blank" rel="noreferrer">
               Google Maps →
             </a>
           )}
