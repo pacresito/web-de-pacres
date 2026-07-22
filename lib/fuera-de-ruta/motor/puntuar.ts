@@ -7,8 +7,10 @@ import { nivelesDificultad } from "../filtrar";
 import type { Candidata, Perfil } from "./tipos";
 import { PESOS, type Pesos } from "./pesos";
 
-// Nº de valores que comparten dos listas (0 si falta alguna).
-const solapa = (tiene: string[] | undefined, quiere: string[] | undefined): number =>
+// Nº de valores que comparten dos listas (0 si falta alguna). Ojo: **no es el `solapa`
+// de `filtrar.ts`**, que responde sí/no. Aquí lo que puntúa es *cuántos* coinciden —dos
+// paisajes que encajan valen más que uno—, así que devuelve la cuenta.
+const cuantosSolapan = (tiene: string[] | undefined, quiere: string[] | undefined): number =>
   tiene && quiere ? tiene.filter((v) => quiere.includes(v)).length : 0;
 
 export function puntuar(destinos: Destino[], p: Perfil, pesos: Pesos = PESOS): Candidata[] {
@@ -32,11 +34,11 @@ function puntuarUno(d: Destino, p: Perfil, w: Pesos): Candidata {
     }
   };
 
-  suma(solapa(d.paisaje, p.paisajes) * w.paisaje, "paisaje");
-  suma(solapa(d.experiencia, p.experiencias) * w.experiencia, "experiencia");
+  suma(cuantosSolapan(d.paisaje, p.paisajes) * w.paisaje, "paisaje");
+  suma(cuantosSolapan(d.experiencia, p.experiencias) * w.experiencia, "experiencia");
   if (p.tipos?.includes(d.tipo)) suma(w.tipo, "tipo");
-  if (p.dificultades?.length && solapa(nivelesDificultad(d.dificultad), p.dificultades) > 0) suma(w.dificultad, "dificultad");
-  if (solapa(d.epoca, p.epoca) > 0) suma(w.epoca, "época");
+  if (p.dificultades?.length && cuantosSolapan(nivelesDificultad(d.dificultad), p.dificultades) > 0) suma(w.dificultad, "dificultad");
+  if (cuantosSolapan(d.epoca, p.epoca) > 0) suma(w.epoca, "época");
   if (p.quiereBano && d.bano === true) suma(w.bano, "baño");
   if (p.imprescindibles?.includes(d.slug)) suma(w.imprescindible, "imprescindible");
   if (d.favoritoDeCris) suma(w.favoritoDeCris, "favorito de Cris");
