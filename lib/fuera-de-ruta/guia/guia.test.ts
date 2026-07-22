@@ -6,6 +6,7 @@ import { totalesViaje, consejosDelDia, alternativasLluvia, esRefugio, CIERRE } f
 import { generarItinerario } from "../itinerario/itinerario";
 import type { OpcionesItinerario } from "../itinerario/itinerario";
 import { resumenMiViaje } from "../viaje/mi-viaje";
+import { zonasAlojamiento } from "../alojamiento/alojamiento";
 import type { DatosViajes } from "../tipos";
 import type { MatrizViajes } from "../planificador/geo";
 import navarra from "../../../data/fuera-de-ruta/navarra.json";
@@ -20,7 +21,7 @@ const opts: OpcionesItinerario = { ritmo: "medio", comida: "picnic", fecha: new 
 const itinerarioDe = (slugs: string[], o: OpcionesItinerario, dias = 2) => {
   const sel = slugs.map(bySlug);
   const reparto = resumenMiViaje(sel, m, { dias, ritmo: o.ritmo, comida: o.comida, fecha: o.fecha });
-  return generarItinerario(reparto.dias, datos, m, o);
+  return generarItinerario(reparto.dias, datos, m, o, zonasAlojamiento(reparto, porSlug, m));
 };
 
 const it = itinerarioDe(["cascada-de-xorroxin", "elizondo", "infernuko-errota"], opts, 2);
@@ -39,7 +40,7 @@ const diaConPlan = it.dias.find((d) => d.paradas.length > 0)!;
 const consejos = consejosDelDia(diaConPlan, porSlug);
 assert.ok(consejos.length > 0 && consejos.length <= 5, "entre 1 y 5 consejos");
 assert.ok(consejos.every((c) => c.trim().length > 0), "sin consejos vacíos");
-const libre = generarItinerario([{ numero: 1, slugs: [], min: 0, km: 0, apretado: false }], datos, m, opts);
+const libre = generarItinerario([{ numero: 1, slugs: [], min: 0, km: 0, apretado: false }], datos, m, opts, []);
 assert.deepStrictEqual(consejosDelDia(libre.dias[0], porSlug), [], "un día libre no tiene consejos");
 
 // El material de las paradas aparece agregado y sin repetir.

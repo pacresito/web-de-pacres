@@ -64,12 +64,14 @@ export default function MapaViaje({ puntos }: { puntos: PuntoViaje[] }) {
     const capa = L.layerGroup().addTo(m);
 
     // Un trazo por día: el recorrido de la jornada tal y como lo cuenta la guía, **cerrado
-    // en el alojamiento** — el día empieza y acaba ahí, y la guía cuenta las dos patas.
+    // en el alojamiento** — el día empieza y acaba ahí, y la guía cuenta las dos patas. El
+    // día que se cambia de base, la vuelta es a otro sitio: viene ya como último punto (y
+    // como primero del día siguiente), así que el trazo no se cierra, se encadena.
     const dias = [...new Set(puntos.map((p) => p.dia))];
     for (const dia of dias) {
       const delDia = puntos.filter((p) => p.dia === dia);
       const ruta = delDia.map((p) => p.gps);
-      if (delDia[0]?.base && ruta.length > 1) ruta.push(delDia[0].gps);
+      if (delDia[0]?.base && !delDia[delDia.length - 1]?.base && ruta.length > 1) ruta.push(delDia[0].gps);
       if (ruta.length > 1) {
         // --fr-rio: Leaflet dibuja en SVG y no lee variables CSS.
         L.polyline(ruta, { color: "#2e5be6", weight: 2, dashArray: "6 6", opacity: 0.8 }).addTo(capa);

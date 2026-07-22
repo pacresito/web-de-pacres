@@ -12,6 +12,7 @@ import matrizNavarra from "../../../data/fuera-de-ruta/matriz-navarra.json";
 const gps: [number, number] = [42, -1];
 const dest = (slug: string, pueblos?: string[]): Destino =>
   ({ slug, nombre: slug, zona: "z-" + slug, tipo: "ruta", queEs: "", gps, ...(pueblos && { pueblosAlojamiento: pueblos }) });
+const hotel = (slug: string): Destino => ({ ...dest(slug), tipo: "alojamiento" });
 
 // Reparto sintético: un ResumenViaje a mano (solo importan `numero` y `slugs`).
 const dia = (numero: number, slugs: string[]) => ({ numero, slugs, min: 0, km: 0, apretado: false });
@@ -53,6 +54,18 @@ assert.strictEqual(z[0].pueblo, "Y", "Y (1º en dB + 2º en dA) gana a X y Z");
 z = zonasAlojamiento(resumen(dia(1, ["solo"])), new Map([["solo", dest("solo")]]), mat({ solo: {} }));
 assert.strictEqual(z[0].pueblo, "z-solo", "fallback a la zona de la provincia");
 
+// --- Ancla rutable: el alojamiento más cerca de las paradas del tramo, no del pueblo ---
+const Ma = mat({ P: { Q: 40, hN: 10, hS: 90 }, Q: { hN: 90, hS: 10 }, hN: { hS: 100 }, hS: {} });
+const psA = new Map([dest("P", ["Norte"]), dest("Q", ["Sur"]), hotel("hN"), hotel("hS")].map((d) => [d.slug, d]));
+z = zonasAlojamiento(resumen(dia(1, ["P"]), dia(2, ["Q"])), psA, Ma);
+assert.deepStrictEqual(z.map((x) => x.ancla?.slug), ["hN", "hS"], "cada base ancla en el alojamiento que menos coche suma");
+assert.deepStrictEqual([z[0].pueblo, z[1].pueblo], ["Norte", "Sur"], "el ancla no pisa el pueblo que se enseña");
+
+// --- Base sin ningún alojamiento rutable → sin ancla, pero con pueblo (no se rompe) ---
+z = zonasAlojamiento(resumen(dia(1, ["P"])), porSlug, M);
+assert.strictEqual(z[0].ancla, undefined, "sin alojamientos en los datos, la base se queda sin ancla");
+assert.strictEqual(z[0].pueblo, "Norte", "y aun así propone dónde dormir");
+
 // --- Sin paradas rutables → nada que proponer ---
 assert.deepStrictEqual(zonasAlojamiento(resumen(dia(1, ["fuera-de-matriz"])), porSlug, M), [], "sin rutables, sin zonas");
 
@@ -68,6 +81,8 @@ assert.strictEqual(z.length, 2, "norte y sur son dos bases");
 assert.ok(z[1].ahorroMin && z[1].ahorroMin > 0, "la mudanza al sur ahorra coche real");
 const pueblosReales = new Set(datos.destinos.flatMap((d) => d.pueblosAlojamiento ?? []));
 assert.ok(z.every((x) => pueblosReales.has(x.pueblo)), "toda base es una localidad de pueblosAlojamiento, nunca un hotel");
+assert.ok(z.every((x) => x.ancla && bySlug(x.ancla.slug).tipo === "alojamiento"), "toda base real ancla en un alojamiento de los datos");
+assert.notStrictEqual(z[0].ancla!.slug, z[1].ancla!.slug, "norte y sur no anclan en el mismo hotel");
 assert.strictEqual(zonasAlojamiento(resumenMiViaje(sel, m, opts), real, m, { max: 1 }).length, 1, "max recorta a una base");
 
 console.log("OK alojamiento.test.ts");

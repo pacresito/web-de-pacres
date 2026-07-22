@@ -144,7 +144,7 @@ function DiaItinerario({ dia, porSlug, provincia, alternativas, onHoraSalida }: 
     <section className="fr-it-dia fr-tarjeta">
       <div className="fr-it-dia-cab">
         <h2 className="fr-it-dia-t">Día {dia.numero}</h2>
-        {dia.alojamiento && <span className="fr-it-aloj">🏨 {dia.alojamiento.nombre}</span>}
+        {dia.alojamiento && <span className="fr-it-aloj">🏨 Noche en {dia.alojamiento.pueblo}</span>}
       </div>
 
       <ul className="fr-it-resumen">
@@ -168,7 +168,11 @@ function DiaItinerario({ dia, porSlug, provincia, alternativas, onHoraSalida }: 
       <ol className="fr-it-timeline">
         <li className="fr-it-hito">
           <span className="fr-it-hora">{fmtHora(dia.horaSalida)}</span>
-          <span className="fr-it-txt">Salida desde {dia.alojamiento ? dia.alojamiento.nombre : "el inicio del día"}.</span>
+          <span className="fr-it-txt">
+            {dia.salidaDesde
+              ? <>Salida desde <b>{dia.salidaDesde.pueblo}</b> con el equipaje: hoy cambias de base.</>
+              : <>Salida desde {dia.alojamiento ? dia.alojamiento.pueblo : "el inicio del día"}.</>}
+          </span>
         </li>
 
         {dia.paradas.map((p, i) => {
@@ -228,7 +232,7 @@ function DiaItinerario({ dia, porSlug, provincia, alternativas, onHoraSalida }: 
           <li className="fr-it-hito">
             <span className="fr-it-hora">{fmtHora(dia.regreso.horaLlegada)}</span>
             <span className="fr-it-txt">
-              🏨 Regreso a {dia.alojamiento?.nombre}
+              {dia.salidaDesde ? "🧳 Traslado a" : "🏨 Regreso a"} {dia.alojamiento?.pueblo}
               <span className="fr-mono fr-it-coche"> · {duracion(dia.regreso.cocheMin)} en coche{dia.regreso.km > 0 ? ` (${dia.regreso.km} km)` : ""}</span>
             </span>
           </li>
@@ -357,7 +361,11 @@ function filasBolsillo(dia: DiaItin, porSlug: Map<string, Destino>): FilaBolsill
     filas.push({ clave: `comida-${i}`, hora: c.horaInicio, icono: "🍴", nombre: c.restaurante ?? "Parada para comer", cola: "" });
   }
   if (dia.regreso && dia.alojamiento) {
-    filas.push({ clave: "regreso", hora: dia.regreso.horaLlegada, icono: "🏨", nombre: dia.alojamiento.nombre, cola: "" });
+    filas.push({
+      clave: "regreso", hora: dia.regreso.horaLlegada,
+      icono: dia.salidaDesde ? "🧳" : "🏨",
+      nombre: dia.alojamiento.pueblo, cola: "",
+    });
   }
   return filas.sort((a, b) => a.hora - b.hora);
 }
@@ -389,9 +397,14 @@ function VistaMapa({ itinerario, datos, porSlug }: {
       if (rest?.gps) {
         delDia.push({ slug: rest.nombre, nombre: rest.nombre, gps: rest.gps, etiqueta: "🍴", dia: dia.numero, detalle: `Día ${dia.numero} · ${fmtHora(dia.comida!.horaInicio)}`, hora: dia.comida!.horaInicio });
       }
-      const aloj = dia.alojamiento ? porSlug.get(dia.alojamiento.slug) : undefined;
-      if (aloj?.gps) lista.push({ slug: aloj.slug, nombre: aloj.nombre, gps: aloj.gps, etiqueta: "🏨", dia: dia.numero, base: true, detalle: `Día ${dia.numero} · salida y regreso` });
+      // La base de la que se sale abre el día; si esa noche se duerme en otra, la nueva lo
+      // cierra —y abre el siguiente—, que es lo que une el mapa de punta a punta.
+      const salida = dia.salidaDesde ?? dia.alojamiento;
+      const alojSalida = salida ? porSlug.get(salida.slug) : undefined;
+      if (alojSalida?.gps) lista.push({ slug: alojSalida.slug, nombre: alojSalida.nombre, gps: alojSalida.gps, etiqueta: "🏨", dia: dia.numero, base: true, detalle: `Día ${dia.numero} · ${dia.salidaDesde ? "salida con el equipaje" : "salida y regreso"}` });
       lista.push(...delDia.sort((a, b) => a.hora - b.hora));
+      const alojNoche = dia.salidaDesde && dia.alojamiento ? porSlug.get(dia.alojamiento.slug) : undefined;
+      if (alojNoche?.gps) lista.push({ slug: alojNoche.slug, nombre: alojNoche.nombre, gps: alojNoche.gps, etiqueta: "🏨", dia: dia.numero, base: true, detalle: `Día ${dia.numero} · noche en ${dia.alojamiento!.pueblo}` });
     }
     return lista;
   }, [itinerario, datos.restaurantes, porSlug]);

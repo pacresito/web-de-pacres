@@ -5,6 +5,7 @@ import assert from "assert";
 import { generarItinerario, estanciaPorRitmo, SALIDA_DEFECTO, fmtHora } from "./itinerario";
 import type { OpcionesItinerario } from "./itinerario";
 import { resumenMiViaje } from "../viaje/mi-viaje";
+import { zonasAlojamiento } from "../alojamiento/alojamiento";
 import type { DatosViajes } from "../tipos";
 import type { MatrizViajes } from "../planificador/geo";
 import navarra from "../../../data/fuera-de-ruta/navarra.json";
@@ -15,11 +16,14 @@ const m = matriz as MatrizViajes;
 const bySlug = (s: string) => datos.destinos.find((d) => d.slug === s)!;
 const opts: OpcionesItinerario = { ritmo: "medio", comida: "picnic", fecha: new Date("2026-07-18") };
 
-// Reparte con el panel y genera el itinerario (mismo flujo que la UI).
+const porSlug = new Map(datos.destinos.map((d) => [d.slug, d]));
+
+// Reparte con el panel, calcula las bases donde dormir y genera el itinerario: el mismo
+// encadenado que la UI, para que el test se rompa si las dos fuentes se separan.
 const itinerarioDe = (slugs: string[], o: OpcionesItinerario, dias = 2) => {
   const sel = slugs.map(bySlug);
   const reparto = resumenMiViaje(sel, m, { dias, ritmo: o.ritmo, comida: o.comida, fecha: o.fecha });
-  return generarItinerario(reparto.dias, datos, m, o);
+  return generarItinerario(reparto.dias, datos, m, o, zonasAlojamiento(reparto, porSlug, m));
 };
 
 // --- Estancia por ritmo: activo ≤ medio ≤ relajado, y respeta min/ideal del dato ---
@@ -47,8 +51,10 @@ for (let i = 1; i < dia.paradas.length; i++) {
   assert.ok(dia.paradas[i].horaLlegada >= dia.paradas[i - 1].horaSalida, "el día avanza en el tiempo");
 }
 
-// --- Ancla en alojamiento: baztán tiene Hotel Elizondo; hay salida (coche 1ª parada) y regreso ---
-assert.ok(dia.alojamiento && dia.alojamiento.slug === "hotel-elizondo", "ancla en el alojamiento de la zona");
+// --- Ancla en la base: baztán duerme en Hotel Elizondo; hay salida (coche 1ª parada) y regreso ---
+assert.ok(dia.alojamiento && dia.alojamiento.slug === "hotel-elizondo", "ancla en el alojamiento de la base");
+assert.ok(dia.alojamiento!.pueblo.length > 0, "la base lleva el pueblo que ve el usuario");
+assert.strictEqual(dia.salidaDesde, undefined, "sin cambio de base no hay traslado");
 assert.ok(dia.paradas[0].cocheDesdeAnteriorMin >= 0, "la 1ª parada arranca desde el alojamiento");
 assert.ok(dia.regreso && dia.regreso.horaLlegada >= dia.paradas.at(-1)!.horaSalida, "regreso tras la última parada");
 assert.ok(dia.conduccionMin >= dia.regreso.cocheMin, "la conducción total incluye el regreso");
@@ -95,7 +101,7 @@ assert.strictEqual(pu.horaSalida, pu.horaInicio + pu.estanciaMin + pu.pausaComid
 // Actividad corta que acaba antes de comer: NO se parte, la comida va después.
 const corta = generarItinerario(
   [{ numero: 1, slugs: ["fabrica-de-orbaizeta"], min: 0, km: 0, apretado: false }],
-  datos, m, { ...opts, ritmo: "activo", comida: "picnic", horaSalida: { 1: 8 * 60 } },
+  datos, m, { ...opts, ritmo: "activo", comida: "picnic", horaSalida: { 1: 8 * 60 } }, [],
 );
 const pc = corta.dias[0].paradas[0];
 if (pc.horaInicio + pc.estanciaMin <= 13 * 60) {
@@ -104,10 +110,34 @@ if (pc.horaInicio + pc.estanciaMin <= 13 * 60) {
 
 // --- Día libre: sin paradas, sin conducción, no revienta ---
 const vacio = generarItinerario(
-  [{ numero: 1, slugs: [], min: 0, km: 0, apretado: false }], datos, m, opts,
+  [{ numero: 1, slugs: [], min: 0, km: 0, apretado: false }], datos, m, opts, [],
 );
 assert.strictEqual(vacio.dias[0].paradas.length, 0, "día libre sin paradas");
 assert.strictEqual(vacio.dias[0].conduccionMin, 0, "sin conducción");
+
+// --- Base sin alojamiento rutable: el día se queda sin ancla, pero se construye igual ---
+const sinAncla = generarItinerario(
+  [{ numero: 1, slugs: ["cascada-de-xorroxin"], min: 0, km: 0, apretado: false }], datos, m, opts,
+  [{ pueblo: "Un pueblo sin hotel en los datos", dias: [1], paradas: [] }],
+);
+assert.strictEqual(sinAncla.dias[0].alojamiento, undefined, "base sin ancla → día sin alojamiento");
+assert.strictEqual(sinAncla.dias[0].regreso, undefined, "y sin regreso, como antes de las bases");
+assert.strictEqual(sinAncla.dias[0].paradas.length, 1, "pero el día se planifica igual");
+
+// --- Cambio de base: el caso que destapó el fallo (Baztán + Urbasa en 2 días) ---
+// El día que se muda sale de la base vieja y termina en la nueva: sin hoteles huérfanos y
+// sin el regreso de 93 km que provocaba anclar cada día por su cuenta.
+const dosBases = itinerarioDe(
+  ["ruta-bunkers-de-otsondo", "cascada-de-xorroxin", "nacedero-del-urederra", "ojo-de-iturmendi"], opts, 2,
+);
+const [d1, d2] = dosBases.dias;
+assert.notStrictEqual(d1.alojamiento!.slug, d2.alojamiento!.slug, "el viaje cambia de base");
+assert.strictEqual(d1.salidaDesde, undefined, "el primer día arranca en su propia base");
+assert.ok(d2.salidaDesde, "el día de la mudanza sale de otra base");
+assert.strictEqual(d2.salidaDesde!.slug, d1.alojamiento!.slug, "sale justo de donde durmió la noche anterior");
+assert.strictEqual(d2.regreso && d2.regreso.horaLlegada >= d2.paradas.at(-1)!.horaSalida, true, "y termina llegando a la nueva");
+// La cadena no tiene huecos: dormir donde acabó el día es la única forma de que el mapa cierre.
+assert.strictEqual(d2.paradas[0].cocheDesdeAnteriorMin > 0, true, "el traslado se conduce: cuenta como coche del día");
 
 // --- Horas de luz reales presentes y coherentes ---
 assert.ok(dia.amanecer > 0 && dia.atardecer > dia.amanecer, "amanecer y anochecer coherentes");

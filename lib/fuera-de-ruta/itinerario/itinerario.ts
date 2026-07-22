@@ -1,10 +1,11 @@
 // Generador de itinerario cronológico (Fase E, §5.3 + briefing §5). De «lista repartida
 // en días» (lo que decide el panel «Mi viaje») a «plan cronológico»: para cada parada
 // calcula hora de llegada, de inicio, estancia (modulada por el ritmo, no fija), hora de
-// salida y conducción a la siguiente; ancla el día en un alojamiento real de la zona
-// (salida y regreso) y cruza cada jornada contra las horas de luz. Determinista, IA cero.
+// salida y conducción a la siguiente; ancla el día en la base donde se duerme (salida y
+// regreso) y cruza cada jornada contra las horas de luz. Determinista, IA cero.
 // Puro. Test: `npx tsx lib/fuera-de-ruta/itinerario/itinerario.test.ts`.
 import type { Destino, DatosViajes, Restaurante } from "../tipos";
+import type { ZonaAlojamiento } from "../alojamiento/alojamiento";
 import { tiempoCoche, kmCoche, ordenarDia, type MatrizViajes } from "../planificador/geo";
 import { horasDeLuz } from "../planificador/sol";
 import { COMIDA_MIN, VISITA_DEFECTO } from "../planificador/presupuesto";
@@ -41,10 +42,15 @@ export type ParadaItin = {
 
 export type ComidaItin = { restaurante?: string; horaInicio: number; min: number };
 
+// Base donde se duerme: el pueblo es lo que se le dice al usuario («noche en Elizondo»);
+// slug/nombre son el alojamiento con el que se ruta.
+export type BaseItin = { slug: string; nombre: string; pueblo: string };
+
 export type DiaItin = {
   numero: number;
   zona: string;
-  alojamiento?: { slug: string; nombre: string }; // ancla de salida y regreso, si la zona tiene
+  alojamiento?: BaseItin;   // dónde se duerme esa noche; el regreso del día va aquí
+  salidaDesde?: BaseItin;   // solo el día que se cambia de base: se sale con las maletas de la anterior
   horaSalida: number;
   amanecer: number;
   atardecer: number;
@@ -72,63 +78,92 @@ export function estanciaPorRitmo(d: Destino, ritmo: Ritmo): number {
   return Math.round((min + ideal) / 2);
 }
 
-// Selección repartida en días (panel «Mi viaje») → itinerario cronológico. Respeta el
-// reparto del panel (qué destinos van en cada día); reordena dentro del día por cercanía
-// y coloca las nocturnas al final. Los días libres (sin paradas) se conservan vacíos.
+// Selección repartida en días (panel «Mi viaje») + bases donde dormir (panel «Dónde
+// dormir») → itinerario cronológico. Respeta el reparto del panel (qué destinos van en cada
+// día); reordena dentro del día por cercanía y coloca las nocturnas al final. Los días
+// libres (sin paradas) se conservan vacíos. **Las bases son las del panel, no se
+// recalculan aquí**: si las dos fuentes no coinciden palabra por palabra, es un bug.
 export function generarItinerario(
   dias: DiaViaje[], datos: DatosViajes, matriz: MatrizViajes, opts: OpcionesItinerario,
+  bases: ZonaAlojamiento[],
 ): Itinerario {
   const porSlug = new Map(datos.destinos.map((d) => [d.slug, d]));
   const restPorZona = agruparRestaurantes(datos.restaurantes);
-  const alojPorZona = agruparAlojamientos(datos.destinos);
+  const basePorDia = repartirBases(dias, bases);
 
   return {
-    dias: dias.map((dia) => construirDia(dia, { porSlug, restPorZona, alojPorZona, matriz, opts })),
+    dias: dias.map((dia) => construirDia(dia, { porSlug, restPorZona, matriz, opts }, {
+      noche: basePorDia.get(dia.numero),
+      previa: basePorDia.get(dia.numero - 1),
+    })),
   };
+}
+
+// Base de cada número de día. Las bases solo cubren los días con paradas; un día libre
+// hereda la del día anterior (se duerme igual aunque no se visite nada).
+function repartirBases(dias: DiaViaje[], bases: ZonaAlojamiento[]): Map<number, BaseItin> {
+  const porDia = new Map<number, BaseItin>();
+  for (const b of bases) {
+    if (!b.ancla) continue; // base sin alojamiento rutable: el día se queda sin ancla, como antes
+    const base: BaseItin = { ...b.ancla, pueblo: b.pueblo };
+    for (const n of b.dias) porDia.set(n, base);
+  }
+  let ultima: BaseItin | undefined;
+  for (const d of dias) {
+    const base = porDia.get(d.numero) ?? ultima;
+    if (base) porDia.set(d.numero, base);
+    ultima = base;
+  }
+  return porDia;
 }
 
 type Ctx = {
   porSlug: Map<string, Destino>;
   restPorZona: Map<string, Restaurante>;
-  alojPorZona: Map<string, Destino>;
   matriz: MatrizViajes;
   opts: OpcionesItinerario;
 };
 
-function construirDia(dia: DiaViaje, ctx: Ctx): DiaItin {
+// Base de la noche y base de la noche anterior. El día que cambian, se conduce de una a
+// otra: se sale de la anterior con las maletas y el regreso del día lleva a la nueva.
+type Bases = { noche?: BaseItin; previa?: BaseItin };
+
+function construirDia(dia: DiaViaje, ctx: Ctx, bases: Bases): DiaItin {
   const { opts } = ctx;
   const destinos = dia.slugs.map((s) => ctx.porSlug.get(s)!).filter(Boolean);
   const zona = destinos.length ? zonaDominante(destinos) : "";
-  const alojDest = ctx.alojPorZona.get(zona);
-  const alojamiento = alojDest ? { slug: alojDest.slug, nombre: alojDest.nombre } : undefined;
+  const alojamiento = bases.noche;
+  // El primer día no viene de ninguna base: arranca en la suya (llegar de casa no se rutea).
+  const arranque = bases.previa ?? alojamiento;
+  const salidaDesde = arranque && arranque.slug !== alojamiento?.slug ? arranque : undefined;
   const horaSalida = opts.horaSalida?.[dia.numero] ?? SALIDA_DEFECTO[opts.ritmo];
   const avisos: string[] = [];
 
   // Horas de luz del día: en el centro de las paradas (apenas varía dentro de la comunidad).
-  const centro = centroDe(destinos) ?? (alojDest?.gps ?? null);
+  const centro = centroDe(destinos) ?? (ctx.porSlug.get(alojamiento?.slug ?? "")?.gps ?? null);
   const { amanecer, atardecer } = centro
     ? horasDeLuz(opts.fecha, centro[0], centro[1])
     : { amanecer: 0, atardecer: 0 };
 
   if (destinos.length === 0) {
-    return { numero: dia.numero, zona, alojamiento, horaSalida, amanecer, atardecer,
+    return { numero: dia.numero, zona, alojamiento, salidaDesde, horaSalida, amanecer, atardecer,
       paradas: [], conduccionMin: 0, km: 0, estanciaTotalMin: 0, avisos };
   }
 
-  // Orden del día: rutables por cercanía (TSP arrancando en el alojamiento si lo hay);
+  // Orden del día: rutables por cercanía (TSP arrancando en la base de la que se sale);
   // las nocturnas (dependeDeLuz === false: cuevas, cenas, museos) al final, tras la última
   // diurna. Los destinos sin GPS no entran en la matriz: se cuelgan al final sin coche.
   const enRuta = destinos.filter((d) => d.gps && ctx.matriz.ids.includes(d.slug));
   const sinGps = destinos.filter((d) => !enRuta.includes(d));
   const diurnas = enRuta.filter((d) => d.dependeDeLuz !== false);
   const nocturnas = enRuta.filter((d) => d.dependeDeLuz === false);
-  const ordenDiurnas = ordenarDia(ctx.matriz, diurnas.map((d) => d.slug), alojamiento?.slug).orden;
+  const ordenDiurnas = ordenarDia(ctx.matriz, diurnas.map((d) => d.slug), arranque?.slug).orden;
   const ultimaDiurna = ordenDiurnas[ordenDiurnas.length - 1];
   const ordenNocturnas = ordenarDia(ctx.matriz, nocturnas.map((d) => d.slug), ultimaDiurna).orden;
   const orden = [...ordenDiurnas, ...ordenNocturnas, ...sinGps.map((d) => d.slug)];
 
-  // Coche y estancia de cada parada; la primera arranca desde el alojamiento (o 0 sin ancla).
-  const previos = [alojamiento?.slug, ...orden.slice(0, -1)];
+  // Coche y estancia de cada parada; la primera arranca desde la base de salida (o 0 sin ancla).
+  const previos = [arranque?.slug, ...orden.slice(0, -1)];
   const coches = orden.map((s, i) => {
     const prev = previos[i];
     return prev && ctx.matriz.ids.includes(s) && ctx.matriz.ids.includes(prev) ? seg2min(tiempoCoche(ctx.matriz, prev, s)) : 0;
@@ -187,7 +222,9 @@ function construirDia(dia: DiaViaje, ctx: Ctx): DiaItin {
     comida = { restaurante, horaInicio: Math.max(cursor, COMIDA_MIN_HORA), min: comidaMin };
   }
 
-  // Regreso al alojamiento desde la última parada rutable (la última puede ser sin-GPS).
+  // Vuelta a la base de la noche desde la última parada rutable (la última puede ser
+  // sin-GPS). El día que se cambia de base, esta vuelta ES el traslado: mismo tramo, otro
+  // destino —por eso no hay un trayecto extra que sumar—.
   let regreso: DiaItin["regreso"];
   const ultimaRutable = [...orden].reverse().find((s) => ctx.matriz.ids.includes(s));
   if (alojamiento && ultimaRutable && ctx.matriz.ids.includes(alojamiento.slug)) {
@@ -211,7 +248,7 @@ function construirDia(dia: DiaViaje, ctx: Ctx): DiaItin {
     avisos.push(`El día termina a las ${fmtHora(finDia)}${marca}, después del anochecer (${fmtHora(atardecer)})`);
   }
 
-  return { numero: dia.numero, zona, alojamiento, horaSalida, amanecer, atardecer,
+  return { numero: dia.numero, zona, alojamiento, salidaDesde, horaSalida, amanecer, atardecer,
     paradas, comida, regreso, conduccionMin, km, estanciaTotalMin, avisos };
 }
 
@@ -240,15 +277,10 @@ function resolverComida(comida: Comida, zona: string, ctx: Ctx, avisos: string[]
   return { comidaMin: COMIDA_MIN[comida] };
 }
 
-// Un restaurante y un alojamiento por zona (el primero que aparece).
+// Un restaurante por zona (el primero que aparece).
 function agruparRestaurantes(rs: Restaurante[]): Map<string, Restaurante> {
   const m = new Map<string, Restaurante>();
   for (const r of rs) if (!m.has(r.zona)) m.set(r.zona, r);
-  return m;
-}
-function agruparAlojamientos(ds: Destino[]): Map<string, Destino> {
-  const m = new Map<string, Destino>();
-  for (const d of ds) if (d.tipo === "alojamiento" && d.gps && !m.has(d.zona)) m.set(d.zona, d);
   return m;
 }
 

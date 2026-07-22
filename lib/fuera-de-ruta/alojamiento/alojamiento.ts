@@ -11,12 +11,16 @@ import { tiempoCoche, type MatrizViajes } from "../planificador/geo";
 
 // Una base de alojamiento: la localidad, los días que cubre, las paradas que quedan a mano
 // (para el porqué) y —si mudarse aquí desde la zona anterior evita un trayecto largo— los
-// minutos de coche que ahorra. `pueblo` es siempre una localidad, jamás un hotel.
+// minutos de coche que ahorra. `pueblo` es siempre una localidad, jamás un hotel: es lo
+// que se le enseña al usuario. El `ancla` es lo contrario: un alojamiento real con GPS que
+// el itinerario usa para rutar (salir por la mañana, volver por la noche), nunca una
+// recomendación. Falta cuando el tramo no tiene ningún alojamiento rutable cerca.
 export type ZonaAlojamiento = {
   pueblo: string;
   dias: number[];
   paradas: string[];
   ahorroMin?: number;
+  ancla?: { slug: string; nombre: string };
 };
 
 export type OpcionesAlojamiento = {
@@ -41,6 +45,7 @@ export function zonasAlojamiento(
   const saltoMin = opts.saltoMin ?? SALTO_MIN;
 
   const dias = resumen.dias.filter((d) => d.slugs.length > 0);
+  const anclas = [...porSlug.values()].filter((d) => d.tipo === "alojamiento" && d.gps && matriz.ids.includes(d.slug));
   const rutables = (i: number) => dias[i].slugs.filter((s) => matriz.ids.includes(s));
   const conRutables = dias.filter((_, i) => rutables(i).length > 0);
   if (conRutables.length === 0) return [];
@@ -69,27 +74,41 @@ export function zonasAlojamiento(
   dias.forEach((d, i) => {
     tramo.push(d);
     if (corteEn.has(i)) {
-      zonas.push(cerrarTramo(tramo, porSlug, ahorro));
+      zonas.push(cerrarTramo(tramo, porSlug, anclas, matriz, ahorro));
       ahorro = corteEn.get(i);
       tramo = [];
     }
   });
-  if (tramo.length > 0) zonas.push(cerrarTramo(tramo, porSlug, ahorro));
+  if (tramo.length > 0) zonas.push(cerrarTramo(tramo, porSlug, anclas, matriz, ahorro));
   return zonas;
 }
 
 type DiaViajeMin = ResumenViaje["dias"][number];
 
 function cerrarTramo(
-  tramo: DiaViajeMin[], porSlug: Map<string, Destino>, ahorroMin?: number,
+  tramo: DiaViajeMin[], porSlug: Map<string, Destino>, anclas: Destino[],
+  matriz: MatrizViajes, ahorroMin?: number,
 ): ZonaAlojamiento {
   const destinos = tramo.flatMap((d) => d.slugs.map((s) => porSlug.get(s)).filter((x): x is Destino => x != null));
+  const ancla = anclaBase(destinos, anclas, matriz);
   return {
     pueblo: puebloBase(destinos),
     dias: tramo.map((d) => d.numero),
     paradas: destinos.map((d) => d.nombre),
     ...(ahorroMin != null && { ahorroMin }),
+    ...(ancla && { ancla: { slug: ancla.slug, nombre: ancla.nombre } }),
   };
+}
+
+// Punto rutable de la base: el alojamiento que minimiza el coche total a las paradas del
+// tramo. No se elige por el pueblo —el pueblo no tiene GPS y los alojamientos de los datos
+// no cubren todos los pueblos—, sino por las paradas, que es lo que se conduce a diario.
+// `undefined` si el tramo no tiene paradas rutables o la provincia no trae alojamientos.
+function anclaBase(destinos: Destino[], anclas: Destino[], matriz: MatrizViajes): Destino | undefined {
+  const paradas = destinos.map((d) => d.slug).filter((s) => matriz.ids.includes(s));
+  if (paradas.length === 0 || anclas.length === 0) return undefined;
+  const coche = (a: Destino) => paradas.reduce((s, p) => s + tiempoCoche(matriz, a.slug, p), 0);
+  return anclas.reduce((mejor, a) => (coche(a) < coche(mejor) ? a : mejor));
 }
 
 // Localidad base del tramo: la más votada en los `pueblosAlojamiento` de sus destinos, con

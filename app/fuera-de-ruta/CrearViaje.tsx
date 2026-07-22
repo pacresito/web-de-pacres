@@ -390,8 +390,8 @@ function Resultado({ datos, matriz, provincia, filtros, respuestas, seleccion, s
   // recalcula su reparto en vivo; generar el itinerario cronológico entero cada vez era
   // trabajo tirado y en móvil, con muchos destinos, podía tumbar el render).
   const itinerario = useMemo(
-    () => (verItinerario ? generarItinerario(resumen.dias, datos, matriz, { ...opts, horaSalida }) : null),
-    [verItinerario, resumen.dias, datos, matriz, opts, horaSalida],
+    () => (verItinerario ? generarItinerario(resumen.dias, datos, matriz, { ...opts, horaSalida }, zonasViaje) : null),
+    [verItinerario, resumen.dias, datos, matriz, opts, horaSalida, zonasViaje],
   );
 
   if (!listo) {
