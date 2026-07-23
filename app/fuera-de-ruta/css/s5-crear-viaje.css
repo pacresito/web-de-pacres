@@ -1,0 +1,179 @@
+/* ============================================================
+   S5 · Crear mi viaje (F6). Paso 1 formulario (chips + fecha),
+   paso 2 las 3 propuestas con su itinerario. Móvil = base;
+   escritorio = rail sticky «Tu encargo» + columnas de día.
+   ============================================================ */
+
+/* ---- Paso 1 · Formulario ---- */
+.fr-s5-form { max-width: 620px; margin: 0 auto; padding: 18px 20px 120px; }
+.fr-s5-form-head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.fr-s5-atras {
+  width: 34px; height: 34px; flex: none;
+  display: grid; place-items: center;
+  font-family: var(--fr-font-baloo), sans-serif; font-size: 20px; line-height: 1;
+  color: var(--fr-tinta); background: var(--fr-papel);
+  border: 2px solid var(--fr-tinta); border-radius: 999px; cursor: pointer;
+}
+.fr-s5-titulo { font: 800 26px var(--fr-font-baloo), sans-serif; color: var(--fr-tinta); }
+.fr-s5-form-head .fr-mono { margin-left: auto; }
+
+.fr-s5-form-card { padding: 20px 18px; display: flex; flex-direction: column; gap: 22px; }
+
+.fr-s5-link {
+  font: 700 13px var(--fr-font-dm), sans-serif; color: var(--fr-rio);
+  background: none; border: none; padding: 0; cursor: pointer;
+  text-decoration: underline; text-underline-offset: 2px;
+}
+
+.fr-s5-preg { display: flex; flex-direction: column; gap: 10px; }
+.fr-s5-preg-t { font: 700 16px var(--fr-font-baloo), sans-serif; color: var(--fr-tinta); }
+.fr-s5-preg-nota { font: 400 12.5px var(--fr-font-dm), sans-serif; color: var(--fr-sec); font-style: normal; }
+.fr-s5-chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+.fr-s5-fecha {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  background: var(--fr-papel); border: 2px solid var(--fr-tinta); border-radius: 12px; padding: 10px 14px;
+  font: 700 14.5px var(--fr-font-baloo), sans-serif; color: var(--fr-tinta); cursor: pointer;
+}
+.fr-s5-fecha input { font: inherit; font-size: 13px; color: var(--fr-rio); border: none; background: none; cursor: pointer; }
+
+.fr-s5-cta-barra {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+  padding: 12px 20px; background: var(--fr-papel); border-top: 2px solid var(--fr-tinta);
+}
+.fr-s5-montar { width: 100%; text-align: center; font-size: 16px; padding: 14px; }
+.fr-s5-montar:disabled { opacity: 0.5; cursor: default; box-shadow: none; }
+
+/* ---- Cuestionario (Fase C): intro, resumen y listado del motor ---- */
+.fr-cq-intro { font: 500 14px/1.5 var(--fr-font-dm), sans-serif; color: var(--fr-sec); margin: -4px 0 2px; }
+
+.fr-cq-resumen { display: flex; flex-direction: column; gap: 10px; list-style: none; margin: 0; padding: 0; }
+.fr-cq-resumen li {
+  position: relative; padding-left: 24px;
+  font: 500 15px/1.45 var(--fr-font-dm), sans-serif; color: var(--fr-tinta);
+}
+.fr-cq-resumen li::before { content: "✔"; position: absolute; left: 0; color: var(--fr-rio); font-weight: 700; }
+.fr-cq-vacio { font: 500 14.5px/1.5 var(--fr-font-dm), sans-serif; color: var(--fr-sec); margin: 0; }
+
+/* ---- Fase D · pantalla de transición ---- */
+.fr-d-transicion { max-width: 620px; margin: 0 auto; padding: 56px 20px; }
+.fr-d-pasos { list-style: none; margin: 18px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.fr-d-paso {
+  font: 500 14.5px/1.4 var(--fr-font-dm), sans-serif; color: var(--fr-tinta);
+  animation: fr-d-aparece 0.25s ease-out;
+}
+@keyframes fr-d-aparece { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+/* ---- Fase D · listado + panel «Mi viaje» ---- */
+.fr-d-wrap { max-width: 1180px; margin: 0 auto; padding: 18px 20px 40px; }
+.fr-d-head { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 18px; }
+.fr-d-sub { font: 500 14px/1.5 var(--fr-font-dm), sans-serif; color: var(--fr-sec); margin: 4px 0 0; max-width: 60ch; }
+.fr-d-cols { display: flex; flex-direction: column; gap: 22px; }
+.fr-d-grid {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px;
+}
+
+/* Tarjeta de actividad (§4.10) */
+.fr-d-card { display: flex; flex-direction: column; overflow: hidden; padding: 0; transition: transform 0.1s ease-out, box-shadow 0.1s ease-out; }
+.fr-d-card--on { border-color: var(--fr-rio); box-shadow: var(--fr-sombra-4); }
+.fr-d-card-foto { position: relative; aspect-ratio: 3 / 2; background: var(--fr-mapa); }
+.fr-d-card-foto img { object-fit: cover; }
+.fr-d-card-fallback { display: grid; place-items: center; height: 100%; }
+.fr-d-card-fav {
+  position: absolute; top: 8px; left: 8px;
+  font: 700 10.5px var(--fr-font-dm), sans-serif; color: var(--fr-tinta);
+  background: var(--fr-lima); border: 2px solid var(--fr-tinta); border-radius: 999px; padding: 2px 8px;
+}
+.fr-d-card-body { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px 14px; flex: 1; }
+.fr-d-card-meta { font: 500 10.5px var(--fr-font-mono), monospace; letter-spacing: 0.07em; text-transform: uppercase; color: var(--fr-sec); }
+.fr-d-card-nombre { font: 800 16px/1.15 var(--fr-font-baloo), sans-serif; color: var(--fr-tinta); }
+.fr-d-card-datos { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+.fr-d-dato {
+  font: 500 11.5px var(--fr-font-dm), sans-serif; color: var(--fr-tinta);
+  background: var(--fr-bruma); border-radius: 999px; padding: 2px 9px;
+}
+.fr-d-card-cta { display: flex; align-items: center; gap: 12px; margin-top: auto; padding-top: 6px; }
+.fr-d-anadir { margin-left: auto; font-size: 13px; padding: 8px 14px; }
+.fr-d-anadir--on { background: var(--fr-lima); box-shadow: var(--fr-sombra-2); }
+
+/* Panel «Mi viaje» (§4.12-4.13) */
+.fr-d-panel { padding: 18px 18px 20px; display: flex; flex-direction: column; gap: 14px; align-self: start; }
+.fr-d-panel-t { font: 800 20px var(--fr-font-baloo), sans-serif; color: var(--fr-tinta); margin: 0; }
+.fr-d-panel-vacio { font: 500 14px/1.5 var(--fr-font-dm), sans-serif; color: var(--fr-sec); margin: 0; }
+.fr-d-totales { display: flex; flex-wrap: wrap; gap: 4px 16px; font: 500 14px var(--fr-font-dm), sans-serif; color: var(--fr-tinta); }
+.fr-d-totales b { font-family: var(--fr-font-baloo), sans-serif; font-weight: 800; }
+.fr-d-aviso {
+  font: 500 12.5px/1.45 var(--fr-font-dm), sans-serif; color: var(--fr-tinta);
+  background: var(--fr-rosa); border: 2px solid var(--fr-tinta); border-radius: 12px; padding: 9px 11px;
+}
+/* Auditoría del viaje (§4.16.5): hallazgos ✅/⚠️/💡. Los ⚠️ reusan la caja de .fr-d-aviso; los ✅/💡, línea plana. */
+.fr-d-aud { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.fr-d-aud-linea { font: 500 12.5px/1.45 var(--fr-font-dm), sans-serif; color: var(--fr-tinta); }
+.fr-d-aud li { display: flex; gap: 7px; align-items: baseline; }
+.fr-d-dias { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.fr-d-dia { border: 2px solid var(--fr-tinta); border-radius: 12px; padding: 10px 12px; background: var(--fr-blanco); }
+.fr-d-dia--apretado { background: var(--fr-rosa); }
+.fr-d-dia-cab { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.fr-d-dia-n { font: 800 14px var(--fr-font-baloo), sans-serif; color: var(--fr-tinta); }
+.fr-d-dia-libre { color: var(--fr-muted); }
+.fr-d-dia-parada { display: flex; align-items: center; gap: 8px; font: 500 13.5px var(--fr-font-dm), sans-serif; color: var(--fr-tinta); padding: 3px 0; }
+.fr-d-dia-parada > span { flex: 1; }
+.fr-d-quitar {
+  flex: none; width: 22px; height: 22px; border-radius: 999px;
+  border: 1.5px solid var(--fr-tinta); background: var(--fr-papel); color: var(--fr-tinta);
+  cursor: pointer; font-size: 14px; line-height: 1;
+}
+/* Oportunidades (F3, §4.6): sugerencias «de paso», nunca alteran el plan. Acento lima para leerlas como algo positivo y aparte de los días (blanco) y avisos (rosa). */
+.fr-d-oport { display: flex; flex-direction: column; gap: 8px; }
+.fr-d-oport-t { margin: 0; font: 800 14px var(--fr-font-baloo), sans-serif; color: var(--fr-tinta); }
+.fr-d-oport-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.fr-d-oport-item {
+  display: flex; align-items: center; gap: 10px;
+  border: 2px solid var(--fr-tinta); border-radius: 12px; padding: 9px 11px; background: var(--fr-lima);
+}
+.fr-d-oport-info { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.fr-d-oport-nombre { font: 700 13.5px var(--fr-font-dm), sans-serif; color: var(--fr-tinta); }
+.fr-d-oport-meta { font-size: 11.5px; color: var(--fr-tinta); }
+.fr-d-oport-add { flex: none; font-size: 13px; padding: 8px 14px; }
+
+/* Zonas de alojamiento (F4, §4.15): dónde dormir. Localidades, nunca hoteles. Tarjeta sobria (los días ya usan blanco/rosa y las oportunidades lima); el ahorro de coche en río. */
+.fr-d-aloj { display: flex; flex-direction: column; gap: 8px; }
+.fr-d-aloj-t { margin: 0; font: 800 14px var(--fr-font-baloo), sans-serif; color: var(--fr-tinta); }
+.fr-d-aloj-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.fr-d-aloj-item {
+  display: flex; flex-direction: column; gap: 3px;
+  border: 2px solid var(--fr-tinta); border-radius: 12px; padding: 9px 11px; background: var(--fr-blanco);
+}
+.fr-d-aloj-cab { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.fr-d-aloj-pueblo { font: 800 14px var(--fr-font-baloo), sans-serif; color: var(--fr-tinta); }
+.fr-d-aloj-dias { font-size: 11.5px; color: var(--fr-muted); }
+.fr-d-aloj-paradas { font: 500 12px/1.4 var(--fr-font-dm), sans-serif; color: var(--fr-tinta); }
+.fr-d-aloj-ahorro { font: 600 11.5px/1.4 var(--fr-font-dm), sans-serif; color: var(--fr-rio); }
+
+.fr-d-panel-cta { display: flex; flex-direction: column; gap: 10px; margin-top: 2px; }
+.fr-d-comparar { background: var(--fr-papel); text-align: center; }
+.fr-d-ia { background: var(--fr-papel); text-align: center; }
+.fr-d-guardar { text-align: center; }
+.fr-d-guardar:disabled { opacity: 0.7; cursor: default; }
+
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0; }
+
+/* ---- Escritorio ---- */
+@media (min-width: 900px) {
+  .fr-s5-form { padding-top: 34px; padding-bottom: 40px; }
+  .fr-s5-form-card { padding: 26px 28px; }
+  .fr-s5-cta-barra { position: static; border: none; padding: 18px 0 0; background: none; }
+  .fr-s5-montar { width: auto; padding: 14px 30px; }
+
+  /* Fase D: tarjetas a la izquierda, panel «Mi viaje» fijo a la derecha. */
+  .fr-d-wrap { padding: 28px 32px 48px; }
+  .fr-d-cols { display: grid; grid-template-columns: 1fr 320px; gap: 26px; align-items: start; }
+  .fr-d-panel { position: sticky; top: 20px; }
+}
+
+@media (hover: hover) {
+  .fr-d-card:hover { transform: translate(-1px, -1px); box-shadow: var(--fr-sombra-3); }
+  .fr-d-quitar:hover { background: var(--fr-rosa); }
+  .fr-s5-link:hover { color: var(--fr-tinta); }
+}

@@ -1,0 +1,93 @@
+/* ============================================================
+   S2 · Elegir zonas — "¿por dónde te apetece?" (F2)
+   ============================================================ */
+.fr-s2 { max-width: 1180px; margin: 0 auto; padding: 18px 20px 110px; }
+.fr-s2-crumbs { display: none; gap: 6px; align-items: center; margin-bottom: 20px; }
+
+.fr-s2-grid { display: grid; grid-template-columns: 1fr; gap: 24px; align-items: start; }
+.fr-s2-col-mapa { display: flex; flex-direction: column; gap: 14px; }
+.fr-s2-h1 { font: 800 30px/1.08 var(--fr-font-baloo), sans-serif; color: var(--fr-tinta); }
+.fr-s2-lead { font: 400 15px/1.5 var(--fr-font-dm), sans-serif; color: var(--fr-sec); }
+
+.fr-s2-mapa { position: relative; align-self: flex-start; width: 100%; }
+.fr-s2-mapa svg { width: 100%; height: auto; display: block; overflow: visible; }
+.fr-zona { cursor: pointer; }
+.fr-zona:focus { outline: none; }
+.fr-zona-sombra { fill: var(--fr-tinta); }
+.fr-zona-off { fill: var(--fr-papel); stroke: var(--fr-tinta); stroke-width: 2; stroke-linejoin: round; }
+.fr-zona-on { fill: var(--fr-lima); stroke: var(--fr-tinta); stroke-width: 2.5; stroke-linejoin: round; }
+.fr-zona:focus-visible .fr-zona-off,
+.fr-zona:focus-visible .fr-zona-on { stroke-width: 3.5; }
+.fr-zona-badge-on { fill: var(--fr-tinta); }
+.fr-zona-check { stroke: var(--fr-lima); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.fr-zona-badge-off { fill: var(--fr-papel); stroke: var(--fr-tinta); stroke-width: 2; }
+.fr-zona-mas { stroke: var(--fr-tinta); stroke-width: 2.5; stroke-linecap: round; }
+.fr-zona-nombre { font-family: var(--fr-font-baloo), sans-serif; font-weight: 700; font-size: 12px; fill: var(--fr-tinta); }
+
+.fr-s2-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+
+.fr-s2-lista { display: none; flex-direction: column; gap: 10px; }
+.fr-s2-fila {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  background: var(--fr-papel);
+  border: 2px solid var(--fr-tinta);
+  border-radius: 14px;
+  padding: 13px 16px;
+  cursor: pointer;
+  transition: transform 0.1s ease-out, box-shadow 0.1s ease-out;
+}
+.fr-s2-fila--on { background: var(--fr-lima); box-shadow: var(--fr-sombra-3); }
+.fr-s2-radio {
+  flex: none;
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  border: 2px solid var(--fr-tinta);
+  display: grid; place-items: center;
+}
+.fr-s2-fila--on .fr-s2-radio { background: var(--fr-tinta); border-color: var(--fr-tinta); }
+.fr-s2-radio-check {
+  width: 10px; height: 6px;
+  border-left: 2.5px solid var(--fr-lima);
+  border-bottom: 2.5px solid var(--fr-lima);
+  transform: rotate(-45deg) translate(1px, -1px);
+}
+.fr-s2-fila-n { font: 800 16px var(--fr-font-baloo), sans-serif; color: var(--fr-tinta); }
+.fr-s2-fila-c { margin-left: auto; font: 700 12.5px var(--fr-font-dm), sans-serif; color: var(--fr-sec); }
+.fr-s2-fila--on .fr-s2-fila-c { color: var(--fr-tinta); }
+.fr-s2-ver { margin-top: 8px; text-align: center; font-size: 17px; padding: 15px; }
+.fr-btn:disabled { opacity: 0.4; cursor: default; box-shadow: none; }
+.fr-btn:disabled:active { transform: none; box-shadow: none; }
+.fr-s2-volver { text-align: center; }
+.fr-s2-esc { font: 500 13.5px/1.5 var(--fr-font-dm), sans-serif; color: var(--fr-sec); text-align: center; }
+.fr-s2-esc-link { color: var(--fr-tinta); font-weight: 700; text-decoration: underline; }
+.fr-s2-esc--movil { margin-top: 12px; }
+@media (min-width: 900px) { .fr-s2-esc--movil { display: none; } }
+
+/* Barra inferior fija (móvil) */
+.fr-s2-barra {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 20;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 12px 16px 16px;
+  background: var(--fr-papel);
+  border-top: 2px solid var(--fr-tinta);
+}
+.fr-s2-barra-ver { flex: 1; text-align: center; font-size: 16px; }
+
+@media (min-width: 900px) {
+  .fr-s2 { padding: 18px 32px 40px; }
+  .fr-s2-crumbs { display: flex; }
+  .fr-s2-grid { grid-template-columns: 1fr 400px; gap: 44px; }
+  .fr-s2-h1 { font-size: 42px; line-height: 1.05; }
+  .fr-s2-lead { font-size: 15.5px; }
+  .fr-s2-mapa { max-width: 560px; }
+  .fr-s2-chips { display: none; }
+  .fr-s2-lista { display: flex; position: sticky; top: 20px; }
+  .fr-s2-barra { display: none; }
+}

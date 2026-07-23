@@ -1,0 +1,101 @@
+/* ── Drawer «Ver más» (Fase D): vista breve de la ficha sin navegar. Hoja inferior en
+   móvil, modal centrado en escritorio. ────────────────────────────────────────────── */
+.fr-fd-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(28, 47, 94, 0.5);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.fr-fd {
+  position: relative;
+  width: 100%;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--fr-papel);
+  border: 2px solid var(--fr-tinta);
+  border-radius: 20px 20px 0 0;
+  box-shadow: var(--fr-sombra-4);
+}
+.fr-fd-cerrar {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--fr-papel);
+  border: 2px solid var(--fr-tinta);
+  font: 800 18px var(--fr-font-baloo), sans-serif;
+  color: var(--fr-tinta);
+  cursor: pointer;
+  box-shadow: var(--fr-sombra-2);
+}
+.fr-fd-cerrar:active { transform: translate(1px, 1px); }
+.fr-fd-scroll { overflow-y: auto; }
+.fr-fd-foto {
+  position: relative;
+  height: 210px;
+  border-bottom: 2px solid var(--fr-tinta);
+  border-radius: 18px 18px 0 0;
+  overflow: hidden;
+  background: repeating-linear-gradient(-45deg, #d3e2ee 0 14px, #dfeaf2 14px 28px);
+}
+.fr-fd-foto img { object-fit: cover; }
+.fr-fd-body { padding: 16px 18px 8px; display: flex; flex-direction: column; gap: 10px; }
+.fr-fd-nombre { font: 800 24px/1.1 var(--fr-font-baloo), sans-serif; color: var(--fr-tinta); }
+.fr-fd-lead { font: 500 14.5px/1.5 var(--fr-font-dm), sans-serif; color: var(--fr-tinta); }
+.fr-fd-datos { display: flex; gap: 7px; flex-wrap: wrap; }
+.fr-fd-precio { font: 700 13.5px var(--fr-font-dm), sans-serif; color: var(--fr-tinta); }
+.fr-fd-lista { display: flex; flex-direction: column; gap: 4px; }
+.fr-fd-lista-t {
+  font: 700 10.5px var(--fr-font-dm), sans-serif;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fr-rio);
+}
+.fr-fd-lista ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.fr-fd-lista li { font: 500 14px/1.45 var(--fr-font-dm), sans-serif; color: var(--fr-tinta); }
+.fr-fd-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 18px;
+  border-top: 2px solid var(--fr-tinta);
+  background: var(--fr-papel);
+  border-radius: 0 0 18px 18px;
+}
+.fr-fd-anadir { flex: 1; text-align: center; }
+.fr-fd-completa { flex: none; white-space: nowrap; }
+
+/* Comparador (§4.8): tabla de campos + frases condicionales, sobre el overlay del drawer. */
+.fr-cmp { padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 14px; }
+.fr-cmp-t { font-size: 22px; }
+/* flex-shrink: 0 — sin él, dentro del modal (flex column de altura fija) la tabla se
+   encoge al hueco que dejan las frases y queda en un sliver con scroll propio; así
+   mantiene su alto natural y scrollea el modal entero. Solo scroll horizontal interno. */
+.fr-cmp-tabla-wrap { overflow-x: auto; flex-shrink: 0; }
+.fr-cmp-tabla { border-collapse: collapse; width: 100%; font: 500 13px var(--fr-font-dm), sans-serif; color: var(--fr-tinta); }
+.fr-cmp-tabla th, .fr-cmp-tabla td { border: 1.5px solid var(--fr-tinta); padding: 7px 10px; text-align: left; vertical-align: top; }
+.fr-cmp-tabla thead th { font-family: var(--fr-font-baloo), sans-serif; font-weight: 800; }
+/* Columna de etiquetas fija al scrollear la tabla en horizontal (móvil): no se pierde
+   de qué campo es cada fila. En desktop la tabla cabe y no hay scroll → es un no-op. */
+.fr-cmp-tabla thead th:first-child,
+.fr-cmp-tabla tbody th { position: sticky; left: 0; z-index: 1; background: var(--fr-papel); }
+.fr-cmp-tabla tbody th { font-weight: 700; white-space: nowrap; }
+.fr-cmp-frases { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.fr-cmp-frases li { font: 500 13px/1.45 var(--fr-font-dm), sans-serif; color: var(--fr-tinta); }
+.fr-cmp-fichas { display: flex; flex-wrap: wrap; gap: 8px 18px; }
+
+@media (min-width: 900px) {
+  .fr-fd-scrim { align-items: center; padding: 24px; }
+  .fr-fd { max-width: 480px; border-radius: 20px; }
+  .fr-fd--ancho { max-width: 680px; }
+  .fr-fd-foto { border-radius: 18px 18px 0 0; }
+  .fr-fd-cta { border-radius: 0 0 18px 18px; }
+}

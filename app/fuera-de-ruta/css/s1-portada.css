@@ -1,0 +1,98 @@
+/* ============================================================
+   S1 · Portada — "España como hoja de pegatinas" (F2)
+   ============================================================ */
+.fr-s1 {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 26px 20px 24px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+  align-items: start;
+}
+.fr-s1-panel { display: flex; flex-direction: column; align-items: flex-start; gap: 16px; }
+.fr-s1-h1 {
+  font: 800 38px/1.05 var(--fr-font-baloo), sans-serif;
+  color: var(--fr-tinta);
+  letter-spacing: -0.01em;
+}
+.fr-s1-h1 span { color: var(--fr-rio); }
+.fr-s1-lead {
+  font: 400 15px/1.55 var(--fr-font-dm), sans-serif;
+  color: var(--fr-sec);
+  text-wrap: pretty;
+  max-width: 400px;
+}
+.fr-s1-lead strong { color: var(--fr-tinta); }
+/* Tarjetas de provincia: los tap principales, mismo peso las 4 (visibles en todo tamaño) */
+.fr-s1-provs { display: flex; flex-wrap: wrap; gap: 10px; }
+.fr-s1-provcard {
+  display: inline-flex; align-items: center; gap: 10px;
+  background: var(--fr-lima);
+  border: 2px solid var(--fr-tinta);
+  border-radius: 14px;
+  padding: 10px 15px;
+  box-shadow: var(--fr-sombra-3);
+  cursor: pointer;
+}
+.fr-s1-provcard-nombre { font: 800 16px var(--fr-font-baloo), sans-serif; color: var(--fr-tinta); }
+.fr-s1-provcard-flecha { font: 800 17px var(--fr-font-baloo), sans-serif; color: var(--fr-rio); }
+.fr-s1-provcard:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--fr-tinta); }
+
+.fr-s1-mapa { position: relative; }
+.fr-s1-mapa svg { width: 100%; height: auto; display: block; overflow: visible; }
+.fr-prov {
+  fill: var(--fr-papel);
+  stroke: var(--fr-muted);
+  stroke-width: 2;
+  stroke-dasharray: 7 5;
+  stroke-linejoin: round;
+  cursor: default;
+}
+.fr-inset { fill: none; stroke: var(--fr-muted); stroke-width: 2; stroke-dasharray: 7 5; }
+.fr-prov-sombra { fill: var(--fr-tinta); stroke: none; }
+.fr-prov-on {
+  fill: var(--fr-lima);
+  stroke: var(--fr-tinta);
+  stroke-width: 3;
+  stroke-linejoin: round;
+  cursor: pointer;
+}
+.fr-prov-on:focus { outline: none; }
+.fr-prov-on:focus-visible { stroke-width: 4; }
+.fr-prov-on:hover { fill: var(--fr-lima); filter: brightness(1.04); }
+
+.fr-s1-leyenda { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
+.fr-s1-ley {
+  display: inline-flex; align-items: center; gap: 7px;
+  font: 700 11.5px var(--fr-font-dm), sans-serif;
+}
+.fr-s1-ley i { width: 11px; height: 11px; border-radius: 50%; flex: none; }
+.fr-s1-ley--on { color: var(--fr-tinta); }
+.fr-s1-ley--on i { background: var(--fr-lima); border: 1.5px solid var(--fr-tinta); }
+.fr-s1-ley--off { color: var(--fr-sec); }
+.fr-s1-ley--off i { background: var(--fr-bruma); border: 1.5px dashed var(--fr-muted); }
+
+.fr-s1-pie {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 14px 20px;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  flex-wrap: wrap;
+  border-top: 2px solid var(--fr-tinta);
+}
+.fr-s1-pie-cta { margin-left: auto; font: 700 12px var(--fr-font-dm), sans-serif; color: var(--fr-tinta); }
+.fr-s1-pie-cta a { color: var(--fr-rio); text-decoration: underline; text-underline-offset: 2px; }
+
+@media (min-width: 900px) {
+  .fr-s1 {
+    grid-template-columns: 440px 1fr;
+    gap: 12px 36px;
+    padding: 48px 32px 40px;
+  }
+  .fr-s1-h1 { font-size: 58px; line-height: 1.02; }
+  .fr-s1-lead { font-size: 16.5px; }
+  .fr-s1-pie { padding: 14px 32px; }
+}

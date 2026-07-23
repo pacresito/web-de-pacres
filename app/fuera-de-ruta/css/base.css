@@ -1,0 +1,220 @@
+.fuera-de-ruta {
+  /* Río pop */
+  --fr-tinta: #1c2f5e;
+  --fr-rio: #2e5be6;
+  --fr-lima: #c3e84e;
+  --fr-rosa: #f4c7d4;
+  --fr-papel: #fdfcf8;
+  --fr-bruma: #e9f0f6;
+  --fr-sec: #5a6478;
+  --fr-blanco: #ffffff;
+  --fr-mapa: #dfe9f0;
+  --fr-agua: #b8d2e4;
+  --fr-muted: #8fa3bd;
+  --fr-sombra-4: 4px 4px 0 var(--fr-tinta);
+  --fr-sombra-3: 3px 3px 0 var(--fr-tinta);
+  --fr-sombra-2: 2px 2px 0 var(--fr-tinta);
+
+  min-height: 100vh;
+  background: var(--fr-bruma);
+  color: var(--fr-tinta);
+  font-family: var(--fr-font-dm), system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+/* :where() deja este reset a especificidad 0: cualquier clase con color propio le gana. */
+.fuera-de-ruta :where(a) { color: inherit; text-decoration: none; }
+
+/* ============================================================
+   Río pop · sistema visual base
+   ============================================================ */
+
+/* Cabecera (todas las pantallas) */
+.fr-cabecera {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 14px 32px;
+  background: var(--fr-papel);
+  border-bottom: 2px solid var(--fr-tinta);
+  flex-wrap: wrap;
+}
+.fr-wordmark {
+  font-family: var(--fr-font-baloo), sans-serif;
+  font-weight: 800;
+  font-size: 23px;
+  color: var(--fr-tinta);
+  line-height: 1;
+}
+.fr-wordmark-de {
+  display: inline-block;
+  background: var(--fr-lima);
+  border: 2px solid var(--fr-tinta);
+  border-radius: 99px;
+  padding: 0 10px;
+  transform: rotate(-3deg);
+  font-size: 16px;
+}
+.fr-tagline {
+  font-family: var(--fr-font-mono), monospace;
+  font-weight: 500;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fr-sec);
+  border-left: 2px solid rgba(28, 47, 94, 0.15);
+  padding-left: 16px;
+}
+.fr-cabecera-link {
+  font: 700 13.5px var(--fr-font-dm), sans-serif;
+  color: var(--fr-tinta);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+/* El primero de los dos empuja al grupo contra el borde derecho. */
+.fr-cabecera-mis-viajes { margin-left: auto; }
+
+/* Modal "¿Qué es esto?" */
+.fr-modal-fondo {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(28, 47, 94, 0.45);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+.fr-modal {
+  position: relative;
+  width: min(440px, 100%);
+  background: var(--fr-papel);
+  border: 2px solid var(--fr-tinta);
+  border-radius: 18px;
+  box-shadow: var(--fr-sombra-4);
+  padding: 24px 26px 22px;
+  color: var(--fr-tinta);
+}
+.fr-modal p { font-size: 15px; line-height: 1.55; margin: 0 0 12px; }
+.fr-modal p:last-child { margin-bottom: 0; }
+.fr-modal-titulo {
+  font-family: var(--fr-font-baloo), sans-serif;
+  font-weight: 800;
+  font-size: 24px;
+  margin: 0 0 14px;
+}
+.fr-modal-nota { color: var(--fr-sec); font-size: 13.5px; }
+.fr-modal-cerrar {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  font-family: var(--fr-font-baloo), sans-serif;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--fr-tinta);
+  background: var(--fr-papel);
+  border: 2px solid var(--fr-tinta);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+/* Tarjeta base */
+.fr-tarjeta {
+  background: var(--fr-papel);
+  border: 2px solid var(--fr-tinta);
+  border-radius: 18px;
+  box-shadow: var(--fr-sombra-4);
+}
+
+/* Botones */
+.fr-btn {
+  font: 800 14px var(--fr-font-baloo), sans-serif;
+  border: 2px solid var(--fr-tinta);
+  border-radius: 14px;
+  padding: 11px 18px;
+  box-shadow: var(--fr-sombra-3);
+  cursor: pointer;
+  transition: transform 0.1s ease-out, box-shadow 0.1s ease-out;
+}
+.fr-btn--primario { background: var(--fr-rio); color: var(--fr-papel); }
+.fr-btn--secundario { background: var(--fr-papel); color: var(--fr-tinta); }
+.fr-btn--terciario {
+  font: 700 13px var(--fr-font-dm), sans-serif;
+  color: var(--fr-tinta);
+  background: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Chip de filtro */
+.fr-chip {
+  font: 700 12.5px var(--fr-font-dm), sans-serif;
+  background: var(--fr-papel);
+  color: var(--fr-tinta);
+  border: 2px solid var(--fr-tinta);
+  border-radius: 99px;
+  padding: 7px 13px;
+  cursor: pointer;
+  transition: transform 0.1s ease-out, box-shadow 0.1s ease-out;
+}
+.fr-chip--activo { background: var(--fr-lima); box-shadow: var(--fr-sombra-2); }
+.fr-chip:disabled { opacity: 0.4; cursor: default; }
+
+/* Píldora de dato (sí / no / neutra) */
+.fr-pildora {
+  font: 700 12px var(--fr-font-dm), sans-serif;
+  color: var(--fr-tinta);
+  background: var(--fr-papel);
+  border: 2px solid var(--fr-tinta);
+  border-radius: 99px;
+  padding: 6px 12px;
+}
+.fr-pildora--si { background: var(--fr-lima); }
+.fr-pildora--no { background: var(--fr-rosa); }
+
+/* Sticker editorial (rotado; solo contenido, no controles) */
+.fr-sticker {
+  display: inline-block;
+  font: 700 13px var(--fr-font-dm), sans-serif;
+  color: var(--fr-tinta);
+  background: var(--fr-rosa);
+  border: 2px solid var(--fr-tinta);
+  border-radius: 99px;
+  padding: 7px 15px;
+  transform: rotate(-2deg);
+  box-shadow: var(--fr-sombra-2);
+}
+
+/* Micro-etiqueta mono */
+.fr-mono {
+  font: 500 10.5px var(--fr-font-mono), monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fr-sec);
+}
+
+/* Miga de pan por chips (‹ España / Navarra) — compartida por S2 y S3 */
+.fr-crumb {
+  font: 700 12px var(--fr-font-dm), sans-serif;
+  color: var(--fr-tinta);
+  background: var(--fr-papel);
+  border: 2px solid var(--fr-tinta);
+  border-radius: 99px;
+  padding: 5px 13px;
+  cursor: pointer;
+}
+.fr-crumb--on { background: var(--fr-lima); cursor: default; }
+
+/* Prensado táctil: la pegatina se aplasta (+2,+2px, sombra a 1px). */
+.fr-btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--fr-tinta); }
+.fr-btn--terciario:active { transform: none; box-shadow: none; }
+.fr-chip--activo:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0 var(--fr-tinta); }
