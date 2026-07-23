@@ -5,7 +5,8 @@ import * as Astro from "astronomy-engine";
 import {
   sedeParaFecha, rumbo, magnitudSatelite, partesLocales, nombreFase,
   pasosVisibles, salidasDeLuna, planetasVisibles, agenda, altitudSolar,
-  ALTITUD_MINIMA, MAGNITUD_MAXIMA, SOL_MAXIMO, HORA_MINIMA_LUNA,
+  altitudMinimaPlaneta,
+  ALTITUD_MINIMA, MAGNITUD_MAXIMA, SOL_MAXIMO, HORA_MINIMA_LUNA, MARGEN_MINUTOS,
   type Satelite,
 } from "./engine";
 
@@ -109,8 +110,17 @@ const HASTA = new Date(AHORA.getTime() + 7 * 24 * 3600 * 1000);
   console.log(`  … ${planetas.length} apariciones de planetas: ` +
     [...new Set(planetas.map((p) => p.nombre))].join(", "));
   check("planetas: hay alguno", planetas.length > 0);
-  check("planetas: todos por encima de la altitud mínima",
-    planetas.every((p) => p.altitud >= ALTITUD_MINIMA));
+  check("planetas: todos por encima de su altitud mínima",
+    planetas.every((p) => p.altitud >= altitudMinimaPlaneta(p.magnitud)));
+  check("altitud mínima: Venus (−4) baja al suelo, Marte (+1.5) no",
+    altitudMinimaPlaneta(-4) === 5 && altitudMinimaPlaneta(1.5) > 5);
+  check("altitud mínima: cuanto más débil, más alto tiene que estar",
+    altitudMinimaPlaneta(2) > altitudMinimaPlaneta(0));
+  // Venus baja de 15° a las 22:05 el 23 de julio y con −4.3 se siguió viendo casi una
+  // hora más: es el caso que destapó que el listón de los satélites no le valía.
+  check("planetas: Venus del 23 de julio dura bastante más allá de los 15°",
+    planetas.some((p) => p.nombre === "Venus" && p.noche === "2026-07-23" && p.horaFin >= "22:50"),
+    planetas.find((p) => p.noche === "2026-07-23")?.horaFin ?? "");
   check("planetas: ninguno de madrugada", planetas.every((p) => +p.hora.slice(0, 2) >= 12));
   check("planetas: el Sol está bajo el horizonte", planetas.every((p) =>
     altitudSolar(new Date(p.instante), new Astro.Observer(37.66, -0.72, 0)) <= SOL_MAXIMO + 0.01));
@@ -129,6 +139,18 @@ const HASTA = new Date(AHORA.getTime() + 7 * 24 * 3600 * 1000);
     noches.every((n) => n.eventos.every((e) => e.noche === n.clave)));
   check("agenda: en julio todo se ve desde La Manga",
     noches.every((n) => n.sede === "La Manga"));
+  check("agenda: la noche de hoy se etiqueta Hoy y la siguiente Mañana",
+    noches[0].etiqueta === "Hoy" && noches[1].etiqueta === "Mañana");
+  check("agenda: el resto lleva fecha capitalizada",
+    noches.slice(2).every((n) => /^\p{Lu}.., \d/u.test(n.etiqueta)), noches[2]?.etiqueta);
+
+  // Margen: rebobinar el reloj justo detrás de un paso lo mantiene en la lista.
+  const paso = noches.flatMap((n) => n.eventos).find((e) => e.tipo === "satelite")!;
+  const despues = new Date(paso.instanteFin + (MARGEN_MINUTOS - 1) * 60000);
+  const sigue = agenda(SATELITES, despues, 1)
+    .flatMap((n) => n.eventos)
+    .some((e) => e.tipo === "satelite" && e.instanteFin === paso.instanteFin);
+  check("agenda: un paso recién terminado aguanta el margen de 10 min", sigue);
 }
 
 console.log(fails === 0 ? "\nTodo OK" : `\n${fails} fallos`);

@@ -1,9 +1,10 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import TerminalShell from "../../components/TerminalShell";
 import WhyFooter from "../../components/WhyFooter";
 import {
-  ALTITUD_MINIMA, MAGNITUD_MAXIMA, HORA_MINIMA_LUNA,
+  ALTITUD_MINIMA, MAGNITUD_MAXIMA,
   type Evento, type EventoLuna, type Noche,
 } from "./engine";
 
@@ -58,11 +59,15 @@ function IconoPlaneta({ tam = 18 }: { tam?: number }) {
 /** Cuarto de círculo del horizonte al cenit, con la marca donde culmina el objeto. */
 function ArcoAltitud({ grados }: { grados: number }) {
   const rad = (grados * Math.PI) / 180;
+  // Redondeado a centésimas de píxel, y no por estética: Math.cos no está fijado por la
+  // norma IEEE y Node y el navegador discrepan en el último bit → React canta que la
+  // hidratación no cuadra. Con dos decimales el número es el mismo en los dos lados.
+  const pos = (n: number) => +n.toFixed(2);
   return (
     <svg width="26" height="16" viewBox="0 0 26 16" aria-hidden>
       <line x1="1" y1="14.5" x2="25" y2="14.5" stroke="var(--t-rule)" strokeWidth="1" />
       <path d="M 25 14.5 A 24 24 0 0 0 1 14.5" fill="none" stroke="var(--t-rule2)" strokeWidth="1" />
-      <circle cx={13 - 12 * Math.cos(rad)} cy={14.5 - 12 * Math.sin(rad)} r="2" fill="var(--t-accent2)" />
+      <circle cx={pos(13 - 12 * Math.cos(rad))} cy={pos(14.5 - 12 * Math.sin(rad))} r="2" fill="var(--t-accent2)" />
     </svg>
   );
 }
@@ -97,7 +102,8 @@ function detalleDe(e: Evento): Detalle {
       return {
         icono: <IconoLuna evento={e} />,
         titulo: "Luna",
-        texto: `sale por el ${e.desde} · ${e.fase}, ${Math.round(e.iluminacion * 100)} % iluminada`,
+        // El rumbo no va aquí: la Luna lo enseña en la columna donde los demás ponen su altitud.
+        texto: `${e.fase}, ${Math.round(e.iluminacion * 100)} % iluminada`,
         hora: e.hora,
       };
     case "planeta":
@@ -123,16 +129,16 @@ function Fila({ evento }: { evento: Evento }) {
       {/* `display: contents` en escritorio: los dos datos son celdas del grid.
           En móvil el envoltorio se vuelve visible y los pone en una sola línea. */}
       <span className="obs-datos">
-        <span className="obs-dato" title="altitud máxima sobre el horizonte">
-          {evento.tipo === "luna" ? (
-            <span className="obs-dato-vacio">saliendo</span>
-          ) : (
-            <>
-              <ArcoAltitud grados={evento.altitud} />
-              {num(evento.altitud)}°
-            </>
-          )}
-        </span>
+        {/* La Luna sale por donde sale y punto: su altitud en ese momento es cero, así que
+            esta columna le sirve para lo único que importa, hacia dónde mirar. */}
+        {evento.tipo === "luna" ? (
+          <span className="obs-dato obs-rumbo" title="por dónde sale">{evento.desde}</span>
+        ) : (
+          <span className="obs-dato" title="altitud máxima sobre el horizonte">
+            <ArcoAltitud grados={evento.altitud} />
+            {num(evento.altitud)}°
+          </span>
+        )}
         <span className="obs-dato" title="magnitud aparente (menos es más brillante)">
           <PuntoBrillo magnitud={evento.magnitud} />
           {num(evento.magnitud, 1)}
@@ -142,15 +148,71 @@ function Fila({ evento }: { evento: Evento }) {
   );
 }
 
+// ─── Línea de estado ──────────────────────────────────────────────────────────
+
+const nombreDe = (e: Evento) => (e.tipo === "luna" ? "Luna" : e.nombre);
+
+/** "3h 12m", "12m 30s", "45s": la unidad pequeña solo mientras aún importa. */
+function cuenta(ms: number): string {
+  const s = Math.max(0, Math.round(ms / 1000));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  if (h) return `${h}h ${m}m`;
+  if (m) return `${m}m ${s % 60}s`;
+  return `${s}s`;
+}
+
+/**
+ * Cabecera viva: dónde se mira y cuánto falta para lo próximo que hay que pillar al
+ * vuelo — un paso de satélite o la salida de la Luna; los planetas están ahí horas y no
+ * necesitan cuenta atrás. Mientras ocurre, la cuenta se da la vuelta y sube, en verde:
+ * es el momento de estar fuera mirando, no leyendo esto.
+ */
+function LineaEstado({ sede, eventos }: { sede: string; eventos: Evento[] }) {
+  // Null hasta el primer tick: el reloj del servidor no es el del navegador y la
+  // hidratación se quejaría de la diferencia. Ese segundo en blanco no se ve — el
+  // tecleo del prompt tarda más que eso en destapar el contenido.
+  const [ahora, setAhora] = useState<number | null>(null);
+  useEffect(() => {
+    const id = setInterval(() => setAhora(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  if (ahora === null) return <p className="obs-estado">↳ location: {sede}</p>;
+
+  const enCurso = eventos.find((e) => e.instante <= ahora && ahora <= e.instanteFin);
+  const proximo = eventos.find((e) => e.instante > ahora);
+
+  return (
+    <p className="obs-estado">
+      ↳ location: {sede} ·{" "}
+      {enCurso ? (
+        <span style={{ color: "var(--t-accent)" }}>
+          now: {nombreDe(enCurso)} +{cuenta(ahora - enCurso.instante)}
+        </span>
+      ) : proximo ? (
+        <span>next: {nombreDe(proximo)} in {cuenta(proximo.instante - ahora)}</span>
+      ) : (
+        <span>next: nada previsto</span>
+      )}
+    </p>
+  );
+}
+
 // ─── Página ───────────────────────────────────────────────────────────────────
 
-export default function Vista({ noches }: { noches: Noche[] }) {
+// Los criterios del prompt salen de las constantes del motor: si allí cambia el listón,
+// la cabecera no puede seguir presumiendo del viejo.
+const COMANDO = `./observatorio --min-altitude=${ALTITUD_MINIMA} --max-magnitude=${MAGNITUD_MAXIMA}`;
+
+export default function Vista({ noches, sede }: { noches: Noche[]; sede: string }) {
   const total = noches.reduce((n, x) => n + x.eventos.length, 0);
+  const fugaces = noches.flatMap((n) => n.eventos.filter((e) => e.tipo !== "planeta"));
 
   return (
     <TerminalShell
       title="observatorio"
-      prompt={{ host: "observatorio", path: "~/apps", command: "./observatorio --dias=7" }}
+      prompt={{ host: "observatorio", path: "~/apps", command: COMANDO }}
     >
       <style>{`
         .obs-page {
@@ -158,19 +220,9 @@ export default function Vista({ noches }: { noches: Noche[] }) {
           padding: clamp(2rem, 5vw, 3.5rem) clamp(1.1rem, 4vw, 2rem);
           display: flex; flex-direction: column;
         }
-        .obs-page h1 {
-          font-family: var(--t-serif); font-weight: 400;
-          font-size: clamp(2rem, 6vw, 2.8rem); color: var(--t-ink); margin: 0;
-        }
-        .obs-sub { color: var(--t-ink3); font-size: 0.9rem; margin: 0.5rem 0 1rem; line-height: 1.5; }
-        .obs-criterios {
-          display: flex; flex-wrap: wrap; gap: 0.4rem;
-          font-family: var(--t-mono); font-size: 0.68rem; color: var(--t-ink3);
-          margin: 0 0 2rem; padding: 0; list-style: none;
-        }
-        .obs-criterios li {
-          border: 1px solid var(--t-rule); border-radius: 999px; padding: 2px 9px;
-          background: var(--t-paper2);
+        .obs-estado {
+          font-family: var(--t-mono); font-size: 0.75rem; color: var(--t-ink3);
+          font-variant-numeric: tabular-nums; margin: 0 0 1.6rem;
         }
 
         .obs-noche { margin-bottom: 1.6rem; }
@@ -178,7 +230,7 @@ export default function Vista({ noches }: { noches: Noche[] }) {
           display: flex; align-items: center; gap: 0.7rem; margin-bottom: 0.5rem;
           font-family: var(--t-mono); font-size: 0.72rem;
         }
-        .obs-noche-cab .obs-fecha { color: var(--t-accent2); text-transform: lowercase; }
+        .obs-noche-cab .obs-fecha { color: var(--t-accent2); }
         .obs-noche-cab .obs-regla { flex: 1; height: 1px; background: var(--t-rule2); }
         .obs-noche-cab .obs-sede { color: var(--t-ink4); }
 
@@ -200,15 +252,13 @@ export default function Vista({ noches }: { noches: Noche[] }) {
           font-family: var(--t-mono); font-size: 0.8rem; color: var(--t-ink2);
           min-width: 4.6rem; justify-content: flex-end;
         }
-        .obs-dato-vacio { color: var(--t-ink4); font-size: 0.7rem; min-width: 0; }
+        /* El rumbo de la Luna no es una cifra que alinear con las de arriba: centrado y
+           un punto más apagado, para que no compita con las altitudes. */
+        .obs-rumbo { justify-content: center; color: var(--t-ink3); }
 
         .obs-vacio {
           border: 1px dashed var(--t-rule); border-radius: 8px; padding: 1.5rem;
           text-align: center; color: var(--t-ink3); font-size: 0.85rem;
-        }
-        .obs-nota {
-          font-size: 0.72rem; color: var(--t-ink4); line-height: 1.6;
-          border-top: 1px solid var(--t-rule2); padding-top: 1rem; margin-top: 0.5rem;
         }
 
         @media (max-width: 560px) {
@@ -219,17 +269,7 @@ export default function Vista({ noches }: { noches: Noche[] }) {
       `}</style>
 
       <main className="obs-page">
-        <h1>Observatorio</h1>
-        <p className="obs-sub">
-          Lo que se puede ver a simple vista las próximas siete noches, calculado para el sitio
-          donde estaré cada una de ellas. Nada de madrugadas: solo lo que ocurre antes de las 00:00.
-        </p>
-        <ul className="obs-criterios">
-          <li>altitud ≥ {ALTITUD_MINIMA}°</li>
-          <li>satélites con magnitud ≤ {num(MAGNITUD_MAXIMA)}</li>
-          <li>Luna a partir de las {HORA_MINIMA_LUNA}:00</li>
-          <li>cielo ya oscuro</li>
-        </ul>
+        <LineaEstado sede={sede} eventos={fugaces} />
 
         {total === 0 ? (
           <p className="obs-vacio">
@@ -241,7 +281,8 @@ export default function Vista({ noches }: { noches: Noche[] }) {
               <div className="obs-noche-cab">
                 <span className="obs-fecha">{noche.etiqueta}</span>
                 <span className="obs-regla" />
-                <span className="obs-sede">{noche.sede}</span>
+                {/* La sede solo cuando no es la de la cabecera: si no, sería repetirla siete veces. */}
+                {noche.sede !== sede && <span className="obs-sede">{noche.sede}</span>}
               </div>
               {noche.eventos.map((e) => (
                 <Fila key={`${e.tipo}-${e.instante}`} evento={e} />
@@ -250,20 +291,14 @@ export default function Vista({ noches }: { noches: Noche[] }) {
           ))
         )}
 
-        <p className="obs-nota">
-          Satélites propagados con SGP4 sobre los elementos orbitales de Celestrak; Luna y planetas,
-          con efemérides VSOP87/ELP. La magnitud de un satélite es una estimación: depende de cómo le
-          dé el Sol a los paneles, así que tómala como orden de magnitud y no como promesa.
-        </p>
-
         <WhyFooter
           question="¿Por qué un observatorio?"
           date="23 de julio de 2026"
           style={{ marginTop: "auto", paddingTop: "2rem" }}
         >
-          <p>Desde La Manga la Luna sale del mar. Es de esas cosas que no se pueden fotografiar bien y hay que estar.</p>
-          <p>El problema es acordarse: cuando te enteras de que pasaba la estación espacial, pasó anteayer.</p>
-          <p>Así que esta página no intenta ser un planetario. Solo contesta a una pregunta: ¿merece la pena salir esta noche, y a qué hora?</p>
+          <p>Ver salir la Luna por el horizonte me fascina. No se gasta: siempre es más grande, más naranja y más rápida de lo que uno recordaba.</p>
+          <p>También me gusta enseñar satélites. La estación espacial, por ejemplo, se ve a simple vista, pero solo durante unos minutos y solo si sabes cuándo mirar.</p>
+          <p>Las dos cosas tienen el mismo problema: hay que enterarse a tiempo. Así que hice un observatorio que reúne todo eso en un solo sitio.</p>
         </WhyFooter>
       </main>
     </TerminalShell>

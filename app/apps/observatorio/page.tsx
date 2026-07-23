@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { agenda } from "./engine";
+import { agenda, sedeParaFecha } from "./engine";
 import { cargarSatelites } from "./tle";
 import Vista from "./vista";
 
@@ -15,10 +15,11 @@ export const fetchCache = "default-cache";
 
 export const metadata: Metadata = {
   title: "Observatorio",
-  description: "Qué se ve en el cielo las próximas noches, antes de medianoche.",
+  description: "Qué se ve en el cielo las próximas noches.",
 };
 
 export default async function Observatorio() {
-  const noches = agenda(await cargarSatelites(), new Date());
-  return <Vista noches={noches} />;
+  const ahora = new Date();
+  const noches = agenda(await cargarSatelites(), ahora);
+  return <Vista noches={noches} sede={sedeParaFecha(ahora).nombre} />;
 }
