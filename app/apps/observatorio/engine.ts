@@ -9,7 +9,7 @@
 
 import * as Astro from "astronomy-engine";
 import {
-  twoline2satrec, propagate, gstime, jday, sunPos, shadowFraction,
+  twoline2satrec, propagate, gstime, jday, sunPos,
   eciToEcf, geodeticToEcf, ecfToLookAngles, degreesToRadians, radiansToDegrees,
 } from "satellite.js";
 
@@ -192,6 +192,33 @@ export function altitudSolar(fecha: Date, obs: Astro.Observer): number {
   return Astro.Horizon(fecha, obs, eq.ra, eq.dec).altitude;
 }
 
+const RADIO_TIERRA_KM = 6378.137; // WGS84
+const RADIO_SOL_KM = 695700;
+
+// Fracción del disco solar que la Tierra tapa vista desde el satélite: 0 = a plena
+// luz, 1 = umbra total. Intersección de dos círculos (Sol y Tierra proyectados sobre
+// el cielo del satélite). Es JS puro; satellite.js solo la trae en su build WASM (7.x),
+// que cuelga el bundler — por eso vive aquí y nos quedamos en la 6.x sin WASM.
+function shadowFraction(rsunUA: number[], sat: { x: number; y: number; z: number }): number {
+  const sol = [rsunUA[0] * UA_KM, rsunUA[1] * UA_KM, rsunUA[2] * UA_KM];
+  const solLen = Math.hypot(sol[0], sol[1], sol[2]);
+  const pos = [sat.x, sat.y, sat.z];
+  const posLen = Math.hypot(pos[0], pos[1], pos[2]);
+  // Producto del satélite con la dirección antisolar (hacia la sombra).
+  const dot = -(pos[0] * sol[0] + pos[1] * sol[1] + pos[2] * sol[2]) / solLen;
+  if (dot <= 0) return 0; // satélite en el lado diurno de la Tierra
+  const rE = Math.asin(RADIO_TIERRA_KM / posLen); // radio angular de la Tierra
+  const rS = Math.asin(RADIO_SOL_KM / solLen);    // radio angular del Sol
+  const d = Math.acos(dot / posLen);              // separación angular Tierra–Sol
+  if (d <= rE - rS) return 1; // disco solar dentro del de la Tierra → umbra
+  if (d >= rE + rS) return 0; // discos separados → plena luz
+  // Penumbra: área de solape de los dos discos / área del disco solar.
+  const a = rS * rS * Math.acos((d * d + rS * rS - rE * rE) / (2 * d * rS));
+  const b = rE * rE * Math.acos((d * d + rE * rE - rS * rS) / (2 * d * rE));
+  const c = 0.5 * Math.sqrt((-d + rS + rE) * (d + rS - rE) * (d - rS + rE) * (d + rS + rE));
+  return (a + b - c) / (Math.PI * rS * rS);
+}
+
 type MuestraSat = { fecha: Date; altitud: number; azimut: number; magnitud: number };
 
 /** Estado del satélite visto desde la sede, o null si está bajo el horizonte o a oscuras. */
@@ -216,7 +243,7 @@ function muestraSatelite(sat: Satelite, satrec: ReturnType<typeof twoline2satrec
   if (shadowFraction(sol.rsun, pv.position) > 0.5) return null;
   if (altitudSolar(fecha, obsAstro) > SOL_MAXIMO) return null;
 
-  const solEci = { x: sol.rsun.x * UA_KM, y: sol.rsun.y * UA_KM, z: sol.rsun.z * UA_KM };
+  const solEci = { x: sol.rsun[0] * UA_KM, y: sol.rsun[1] * UA_KM, z: sol.rsun[2] * UA_KM };
   const solEcf = eciToEcf(solEci, gmst);
   const obsEcf = geodeticToEcf(obsGd);
   const fase = angulo(resta(solEcf, satEcf), resta(obsEcf, satEcf));
