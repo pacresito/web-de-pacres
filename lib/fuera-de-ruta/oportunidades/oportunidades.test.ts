@@ -4,7 +4,7 @@
 import assert from "assert";
 import { oportunidades } from "./oportunidades";
 import type { Destino, DatosViajes } from "../tipos";
-import type { MatrizViajes } from "../planificador/geo";
+import type { MatrizViajes } from "../geo";
 import navarra from "../../../data/fuera-de-ruta/navarra.json";
 import matrizNavarra from "../../../data/fuera-de-ruta/matriz-navarra.json";
 

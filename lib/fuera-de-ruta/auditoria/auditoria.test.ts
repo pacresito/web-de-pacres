@@ -5,7 +5,7 @@ import assert from "assert";
 import { auditar } from "./auditoria";
 import { resumenMiViaje } from "../viaje/mi-viaje";
 import type { DatosViajes, Destino } from "../tipos";
-import type { MatrizViajes } from "../planificador/geo";
+import type { MatrizViajes } from "../geo";
 import navarra from "../../../data/fuera-de-ruta/navarra.json";
 import matriz from "../../../data/fuera-de-ruta/matriz-navarra.json";
 

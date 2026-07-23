@@ -9,7 +9,7 @@
 // `cadenaVecinos`, la misma que usa el panel— y su `tipo` —para el criterio de que la
 // oportunidad sea «diferenciada» (aporta un tipo que el viaje aún no tiene)—.
 import type { Destino } from "../tipos";
-import { tiempoCoche, seg2min, type MatrizViajes } from "../planificador/geo";
+import { tiempoCoche, seg2min, type MatrizViajes } from "../geo";
 import { cadenaVecinos } from "../viaje/mi-viaje";
 
 // Destino que enriquece el viaje sin desviarlo apenas. `desvioMin` = minutos de coche

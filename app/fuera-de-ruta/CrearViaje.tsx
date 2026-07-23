@@ -3,12 +3,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { DatosViajes } from "@/lib/fuera-de-ruta/tipos";
-import type { MatrizViajes } from "@/lib/fuera-de-ruta/planificador/geo";
+import type { MatrizViajes } from "@/lib/fuera-de-ruta/geo";
 import type { Filtros } from "@/lib/fuera-de-ruta/filtrar";
 import { filtrosAQuery } from "@/lib/fuera-de-ruta/url-filtros";
 import { BLOQUES, camposDe, type Bloque, type Campo, type Respuestas } from "@/lib/fuera-de-ruta/cuestionario/preguntas";
 import { serializarViaje } from "@/lib/fuera-de-ruta/cuestionario/viaje-url";
-import { tomarParaAbrir } from "@/lib/fuera-de-ruta/planificador/guardados";
+import { tomarParaAbrir } from "@/lib/fuera-de-ruta/viaje/guardados";
 import { PasoBloque, Resumen } from "./_crear-viaje/Cuestionario";
 import Resultado from "./_crear-viaje/Resultado";
 

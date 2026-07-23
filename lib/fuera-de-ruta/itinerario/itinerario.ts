@@ -4,12 +4,11 @@
 // salida y conducción a la siguiente; ancla el día en la base donde se duerme (salida y
 // regreso) y cruza cada jornada contra las horas de luz. Determinista, IA cero.
 // Puro. Test: `npx tsx lib/fuera-de-ruta/itinerario/itinerario.test.ts`.
-import type { Destino, DatosViajes, Restaurante } from "../tipos";
+import type { Comida, Destino, DatosViajes, Restaurante, Ritmo } from "../tipos";
 import type { ZonaAlojamiento } from "../alojamiento/alojamiento";
-import { tiempoCoche, kmCoche, ordenarDia, seg2min, centroDe, type MatrizViajes } from "../planificador/geo";
-import { horasDeLuz } from "../planificador/sol";
-import { COMIDA_MIN, VISITA_DEFECTO } from "../planificador/presupuesto";
-import type { Comida, Ritmo } from "../planificador/tipos";
+import { tiempoCoche, kmCoche, ordenarDia, seg2min, centroDe, type MatrizViajes } from "../geo";
+import { horasDeLuz } from "../sol";
+import { COMIDA_MIN, VISITA_DEFECTO } from "../presupuesto";
 import type { DiaViaje } from "../viaje/mi-viaje";
 
 // Hora de salida por defecto según ritmo (minutos desde medianoche): quien va a un ritmo

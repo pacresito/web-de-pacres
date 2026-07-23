@@ -3,7 +3,7 @@
 // aquí (y su matriz), sin tocar las páginas. Una provincia del mapa sin entrada es
 // escaparate: mismas pantallas, sin sitios.
 import type { DatosViajes } from "./tipos";
-import type { MatrizViajes } from "./planificador/geo";
+import type { MatrizViajes } from "./geo";
 import navarra from "@/data/fuera-de-ruta/navarra.json";
 import matrizNavarra from "@/data/fuera-de-ruta/matriz-navarra.json";
 

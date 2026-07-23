@@ -1,7 +1,7 @@
-// Test de lógica pura: `npx tsx lib/fuera-de-ruta/planificador/geo.test.ts`. Fuera del build.
+// Test de lógica pura: `npx tsx lib/fuera-de-ruta/geo.test.ts`. Fuera del build.
 import assert from "assert";
 import { tiempoCoche, ordenarDia, type MatrizViajes } from "./geo";
-import matrizNavarra from "../../../data/fuera-de-ruta/matriz-navarra.json";
+import matrizNavarra from "../../data/fuera-de-ruta/matriz-navarra.json";
 
 // Matriz sintética: 4 puntos en línea (a-b-c-d), tiempo = distancia entre índices.
 // Simétrica; el orden óptimo desde cada extremo es recorrer la línea sin saltos.

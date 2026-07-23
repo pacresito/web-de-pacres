@@ -4,7 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Destino, Restaurante } from "@/lib/fuera-de-ruta/tipos";
 import { duracion, mapsHref, rango } from "@/lib/fuera-de-ruta/formato";
-import { tiempoCoche } from "@/lib/fuera-de-ruta/planificador/geo";
+import { tiempoCoche } from "@/lib/fuera-de-ruta/geo";
 import { datosDe, matrizDe, PROVINCIAS_CON_DATOS } from "@/lib/fuera-de-ruta/datos";
 import Portada from "./Portada";
 

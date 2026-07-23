@@ -7,7 +7,7 @@
 // decisión de Pablo)—, nunca de un GPS inventado. Puro. Test al lado.
 import type { Destino } from "../tipos";
 import type { ResumenViaje } from "../viaje/mi-viaje";
-import { tiempoCoche, seg2min, SALTO_ZONA_MIN, type MatrizViajes } from "../planificador/geo";
+import { tiempoCoche, seg2min, SALTO_ZONA_MIN, type MatrizViajes } from "../geo";
 
 // Una base de alojamiento: la localidad, los días que cubre, las paradas que quedan a mano
 // (para el porqué) y —si mudarse aquí desde la zona anterior evita un trayecto largo— los

@@ -1,4 +1,4 @@
-// Test de lógica pura: `npx tsx lib/fuera-de-ruta/planificador/sol.test.ts`. Fuera del build.
+// Test de lógica pura: `npx tsx lib/fuera-de-ruta/sol.test.ts`. Fuera del build.
 import assert from "assert";
 import { horasDeLuz } from "./sol";
 

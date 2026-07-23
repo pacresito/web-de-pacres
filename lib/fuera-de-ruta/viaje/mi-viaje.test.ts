@@ -3,7 +3,7 @@
 import assert from "assert";
 import { resumenMiViaje, elegirEquilibrado, presupuestoDia } from "./mi-viaje";
 import type { DatosViajes, Destino } from "../tipos";
-import type { MatrizViajes } from "../planificador/geo";
+import type { MatrizViajes } from "../geo";
 import navarra from "../../../data/fuera-de-ruta/navarra.json";
 import matriz from "../../../data/fuera-de-ruta/matriz-navarra.json";
 

@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import type { DatosViajes } from "@/lib/fuera-de-ruta/tipos";
-import type { MatrizViajes } from "@/lib/fuera-de-ruta/planificador/geo";
+import type { MatrizViajes } from "@/lib/fuera-de-ruta/geo";
 import { queryAFiltros } from "@/lib/fuera-de-ruta/url-filtros";
 import { parsearViaje } from "@/lib/fuera-de-ruta/cuestionario/viaje-url";
 

@@ -7,7 +7,7 @@ import type { ResumenViaje } from "@/lib/fuera-de-ruta/viaje/mi-viaje";
 import type { Hallazgo } from "@/lib/fuera-de-ruta/auditoria/auditoria";
 import type { Oportunidad } from "@/lib/fuera-de-ruta/oportunidades/oportunidades";
 import type { ZonaAlojamiento } from "@/lib/fuera-de-ruta/alojamiento/alojamiento";
-import { guardarViaje } from "@/lib/fuera-de-ruta/planificador/guardados";
+import { guardarViaje } from "@/lib/fuera-de-ruta/viaje/guardados";
 import { duracion } from "@/lib/fuera-de-ruta/formato";
 
 // Panel «Mi viaje» (§4.12-4.13): lo seleccionado, tiempo total, km y reparto por días,

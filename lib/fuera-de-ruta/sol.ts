@@ -1,7 +1,7 @@
 // Amanecer y atardecer por fecha y coordenadas, con la ecuación solar (NOAA),
 // sin dependencias. Devuelve minutos desde la medianoche local en la zona horaria
 // dada (por defecto, la peninsular española). Lo usa el planificador para el
-// presupuesto de horas de luz. Test: `npx tsx lib/fuera-de-ruta/planificador/sol.test.ts`.
+// presupuesto de horas de luz. Test: `npx tsx lib/fuera-de-ruta/sol.test.ts`.
 
 const rad = Math.PI / 180;
 

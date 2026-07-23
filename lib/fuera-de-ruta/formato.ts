@@ -1,7 +1,6 @@
 // Formateo de datos de /fuera-de-ruta compartido entre índice, ficha y planificador
 // (puro, sin React).
-import type { Rango } from "./tipos";
-import type { Comida, Ritmo } from "./planificador/tipos";
+import type { Comida, Rango, Ritmo } from "./tipos";
 
 // Decimales en estilo español: 2.5 → "2,5".
 const num = (n: number) => String(n).replace(".", ",");

@@ -1,7 +1,7 @@
 // Lookup de tiempos de coche en la matriz precalculada (OSRM, ver
 // scripts/build-fuera-de-ruta-matriz.mjs) y orden óptimo de un día por fuerza bruta (TSP
-// abierto). Lógica pura. Test: `npx tsx lib/fuera-de-ruta/planificador/geo.test.ts`.
-import type { Destino } from "../tipos";
+// abierto). Lógica pura. Test: `npx tsx lib/fuera-de-ruta/geo.test.ts`.
+import type { Destino } from "./tipos";
 
 export type MatrizViajes = {
   ids: string[];         // slugs de destino, en el orden de filas y columnas

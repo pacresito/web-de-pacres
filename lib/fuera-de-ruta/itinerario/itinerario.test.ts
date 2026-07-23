@@ -7,7 +7,7 @@ import type { OpcionesItinerario } from "./itinerario";
 import { resumenMiViaje } from "../viaje/mi-viaje";
 import { zonasAlojamiento } from "../alojamiento/alojamiento";
 import type { DatosViajes } from "../tipos";
-import type { MatrizViajes } from "../planificador/geo";
+import type { MatrizViajes } from "../geo";
 import navarra from "../../../data/fuera-de-ruta/navarra.json";
 import matriz from "../../../data/fuera-de-ruta/matriz-navarra.json";
 

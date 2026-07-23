@@ -2,7 +2,7 @@
 // planificador (Viaje). Los mapeos son tablas explícitas, no lógica lista-para-lucirse:
 // se leen de un vistazo y se ajustan sin miedo. Puro, con test al lado.
 import type { Acceso, Perfil } from "../motor/tipos";
-import type { Comida, Ritmo } from "../planificador/tipos";
+import type { Comida, Ritmo } from "../tipos";
 import { uno, varios, type Respuestas } from "./preguntas";
 
 export type Viaje = { dias: number; fecha: string; ritmo: Ritmo; comida: Comida };

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { provinciaDeSlug } from "@/lib/fuera-de-ruta/provincias";
 import { aViaje } from "@/lib/fuera-de-ruta/cuestionario/mapear";
 import { resumen as resumenPerfil } from "@/lib/fuera-de-ruta/cuestionario/resumen";
-import { borrarGuardado, leerGuardados, marcarParaAbrir, type ViajeGuardado } from "@/lib/fuera-de-ruta/planificador/guardados";
+import { borrarGuardado, leerGuardados, marcarParaAbrir, type ViajeGuardado } from "@/lib/fuera-de-ruta/viaje/guardados";
 
 // «Mis viajes»: lo que dejó el botón Guardar del panel «Mi viaje», en este navegador.
 // Lo monta GuardadosCliente sin SSR, así que la lista se lee ya en el primer render.

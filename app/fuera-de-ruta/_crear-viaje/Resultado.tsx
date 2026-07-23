@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import type { DatosViajes, Destino } from "@/lib/fuera-de-ruta/tipos";
-import type { MatrizViajes } from "@/lib/fuera-de-ruta/planificador/geo";
+import type { MatrizViajes } from "@/lib/fuera-de-ruta/geo";
 import type { Respuestas } from "@/lib/fuera-de-ruta/cuestionario/preguntas";
 import { filtrarDestinos, type Filtros } from "@/lib/fuera-de-ruta/filtrar";
 import { recomendar } from "@/lib/fuera-de-ruta/motor/motor";

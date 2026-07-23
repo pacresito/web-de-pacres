@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { DatosViajes, Destino } from "@/lib/fuera-de-ruta/tipos";
-import type { MatrizViajes } from "@/lib/fuera-de-ruta/planificador/geo";
-import type { Ritmo } from "@/lib/fuera-de-ruta/planificador/tipos";
+import type { DatosViajes, Destino, Ritmo } from "@/lib/fuera-de-ruta/tipos";
+import type { MatrizViajes } from "@/lib/fuera-de-ruta/geo";
 import { duracion } from "@/lib/fuera-de-ruta/formato";
 import type { Itinerario } from "@/lib/fuera-de-ruta/itinerario/itinerario";
 import { CIERRE, totalesViaje, alternativasLluvia } from "@/lib/fuera-de-ruta/guia/guia";

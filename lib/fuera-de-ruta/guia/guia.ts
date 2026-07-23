@@ -2,9 +2,8 @@
 // itinerario de la Fase E—, no cuatro procesos: aquí solo vive lo que hay que derivar para
 // ellas —totales del viaje, consejos del día y las alternativas de lluvia precalculadas—.
 // Determinista, IA cero. Puro. Test: `npx tsx lib/fuera-de-ruta/guia/guia.test.ts`.
-import type { Destino } from "../tipos";
-import { tiempoCoche, kmCoche, seg2min, type MatrizViajes } from "../planificador/geo";
-import type { Ritmo } from "../planificador/tipos";
+import type { Destino, Ritmo } from "../tipos";
+import { tiempoCoche, kmCoche, seg2min, type MatrizViajes } from "../geo";
 import { estanciaPorRitmo, type DiaItin, type Itinerario } from "../itinerario/itinerario";
 
 // Frase de cierre obligatoria de las guías (§1.9): no garantizamos datos de terceros.

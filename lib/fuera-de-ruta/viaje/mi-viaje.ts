@@ -3,11 +3,10 @@
 // actividad —esa es la regla del flujo—: si no caben, el día se marca `apretado` y el
 // panel avisa, pero todas se colocan. Estimación honesta para el panel; la cronología
 // real (horas, pivote de comida) la construye la Fase E. Puro. Test al lado.
-import type { Destino } from "../tipos";
-import { tiempoCoche, kmCoche, seg2min, centroDe, SALTO_ZONA_MIN, type MatrizViajes } from "../planificador/geo";
-import { horasDeLuz } from "../planificador/sol";
-import { RITMO_MIN, COMIDA_MIN, visitaMin } from "../planificador/presupuesto";
-import type { Comida, Ritmo } from "../planificador/tipos";
+import type { Comida, Destino, Ritmo } from "../tipos";
+import { tiempoCoche, kmCoche, seg2min, centroDe, SALTO_ZONA_MIN, type MatrizViajes } from "../geo";
+import { horasDeLuz } from "../sol";
+import { RITMO_MIN, COMIDA_MIN, visitaMin } from "../presupuesto";
 
 export type OpcionesViaje = { dias: number; ritmo: Ritmo; comida: Comida; fecha: Date };
 
