@@ -99,6 +99,10 @@ export default function CrearViaje({ datos, matriz, provincia, filtros, viajeIni
     }
   }, [respuestas, filtros, provincia]);
 
+  // Cada paso sustituye al anterior sin navegar, así que hereda su scroll y se abre por
+  // la mitad (el botón «Seguir» vive abajo). Mismo arreglo que en la guía.
+  useEffect(() => { window.scrollTo(0, 0); }, [paso]);
+
   const cambiar = (campo: Campo, valor: string | string[] | undefined) =>
     setRespuestas((r) => conCampo(r, campo, valor));
 

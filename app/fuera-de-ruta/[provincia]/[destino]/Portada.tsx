@@ -25,14 +25,29 @@ export default function Portada({ fotos, creditos, nombre, queEs, overlay }: Pro
   const credito = creditos[activa];
   const sinFoto = <div className="fr-s4-hero-fallback"><span>foto en camino</span></div>;
 
+  // El crédito acompaña a la foto que se está mirando, así que va bajo cada una de las
+  // dos grandes — y son excluyentes por media query, igual que ellas.
+  const pieDeFoto = (clase: string) =>
+    credito && (
+      <p className={`fr-s4-credito ${clase}`}>
+        Foto:{" "}
+        {credito.url
+          ? <a href={credito.url} target="_blank" rel="noreferrer">{lineaCredito(credito)} ↗</a>
+          : lineaCredito(credito)}
+      </p>
+    );
+
   return (
     <>
+      {/* El «‹» y los badges van fuera de `hero-img`: su `overflow: hidden` recortaba
+          por la mitad los badges, que asoman por debajo del borde de la foto. */}
       <div className="fr-s4-hero--movil">
         <div className="fr-s4-hero-img">
           {foto ? <Image src={foto} alt={nombre} fill sizes="100vw" priority /> : sinFoto}
-          {overlay}
         </div>
+        {overlay}
       </div>
+      {pieDeFoto("fr-s4-credito--movil")}
       <div className="fr-s4-cabecera--movil">
         <h1 className="fr-s4-h1">{nombre}</h1>
         <p className="fr-s4-lead">{queEs}</p>
@@ -41,6 +56,7 @@ export default function Portada({ fotos, creditos, nombre, queEs, overlay }: Pro
       <div className="fr-s4-galeria-principal">
         {foto ? <Image src={foto} alt={nombre} fill sizes="(max-width: 900px) 100vw, 760px" /> : sinFoto}
       </div>
+      {pieDeFoto("fr-s4-credito--desktop")}
       {fotos.length > 1 && (
         <div className="fr-s4-thumbs">
           {fotos.map((src, i) => (
@@ -56,14 +72,6 @@ export default function Portada({ fotos, creditos, nombre, queEs, overlay }: Pro
             </button>
           ))}
         </div>
-      )}
-      {credito && (
-        <p className="fr-s4-credito">
-          Foto:{" "}
-          {credito.url
-            ? <a href={credito.url} target="_blank" rel="noreferrer">{lineaCredito(credito)} ↗</a>
-            : lineaCredito(credito)}
-        </p>
       )}
     </>
   );

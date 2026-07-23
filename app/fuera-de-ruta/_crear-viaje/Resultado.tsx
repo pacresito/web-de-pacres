@@ -113,7 +113,7 @@ export default function Resultado({ datos, matriz, provincia, filtros, respuesta
         matriz={matriz}
         ritmo={viaje.ritmo}
         provincia={provincia}
-        onAtras={() => setVerItinerario(false)}
+        onAtras={() => { setVerItinerario(false); window.scrollTo(0, 0); }}
         onHoraSalida={(dia, min) => setHoraSalida((h) => ({ ...h, [dia]: min }))}
       />
     );

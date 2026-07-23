@@ -71,13 +71,18 @@
   .fr-s4-thumb:hover { border-color: var(--fr-tinta); }
 }
 .fr-s4-thumb:active { border-color: var(--fr-tinta); }
-/* Crédito de la foto que se está mirando: letra pequeña, no compite con el contenido. */
+/* Crédito de la foto que se está mirando: letra pequeña, no compite con el contenido.
+   Va bajo su foto grande, y hay uno por breakpoint —móvil y escritorio— como ellas. */
 .fr-s4-credito {
-  margin-top: -18px; /* la columna separa 26px: acercarlo a su galería */
-  font: 400 12px var(--fr-font-mono), monospace;
+  margin-top: -18px; /* la columna separa 26px: acercarlo a su foto */
+  font: 400 11px/1.45 var(--fr-font-mono), monospace;
   color: rgba(28, 47, 94, 0.6);
 }
 .fr-s4-credito a { color: inherit; }
+.fr-s4-credito--desktop { display: none; }
+/* En móvil los badges asoman por debajo del hero, así que el crédito no se le acerca
+   más de la cuenta; a 10px cabe de una línea. */
+.fr-s4-credito--movil { margin-top: 0; font-size: 10px; }
 
 /* Secciones de contenido (comparten título Baloo 800 20px) */
 .fr-s4-titulo { font: 800 20px var(--fr-font-baloo), sans-serif; color: var(--fr-tinta); }
@@ -199,6 +204,8 @@
   .fr-s4-h1 { font-size: 46px; }
   .fr-s4-lead { font-size: 16.5px; max-width: 640px; }
   .fr-s4-hero--movil { display: none; }
+  .fr-s4-credito--movil { display: none; }
+  .fr-s4-credito--desktop { display: block; }
   .fr-s4-galeria-principal { display: block; }
   .fr-s4-thumb { width: 104px; height: 70px; }
   .fr-s4-lateral { position: sticky; top: 20px; }
