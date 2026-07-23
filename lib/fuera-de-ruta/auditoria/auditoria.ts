@@ -18,6 +18,9 @@ export type Hallazgo = {
   accion?: "comparar";
 };
 
+// Coche de ir y volver de la base a partir del cual el día se avisa (minutos).
+const DIA_LARGO_MIN = 120;
+
 // Un destino requiere reserva si trae el campo `reserva` (texto que la describe); el
 // `plazoReserva` es complementario y puede faltar.
 const requiereReserva = (d: Destino) => d.reserva != null;
@@ -89,6 +92,23 @@ export function auditar(resumen: ResumenViaje, seleccion: Destino[], zonas: Zona
           ? `Mejor base para dormir: ${pueblos[0]}.`
           : `Os proponemos dormir en ${pueblos.length} zonas: ${listaNatural(pueblos)}.`,
     });
+
+    // Días atados a una base lejana: mudarse más veces no siempre compensa (lo decide
+    // `zonasAlojamiento` por lo que ahorra), pero el día largo hay que decirlo —antes
+    // salía en el plan y nadie lo mencionaba—. Es coche de ir y volver, sin contar el
+    // de entre paradas.
+    const largos = zonas.flatMap((z) =>
+      z.dias.filter((_, i) => (z.cocheDiaMin?.[i] ?? 0) >= DIA_LARGO_MIN));
+    if (largos.length > 0) {
+      hallazgos.push({
+        nivel: "aviso",
+        tipo: "alojamiento",
+        texto:
+          largos.length === 1
+            ? `El día ${largos[0]} pasaréis más de ${DIA_LARGO_MIN / 60} h en el coche solo para ir y volver del alojamiento.`
+            : `Los días ${listaNatural(largos.map(String))} pasaréis más de ${DIA_LARGO_MIN / 60} h en el coche solo para ir y volver del alojamiento.`,
+      });
+    }
   }
 
   return hallazgos;

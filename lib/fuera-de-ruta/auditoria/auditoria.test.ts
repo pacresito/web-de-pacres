@@ -50,6 +50,21 @@ h = auditar(resumenMiViaje(holgada, m, opts), holgada, [
 const aloj = h.find((x) => x.tipo === "alojamiento")!;
 assert.strictEqual(aloj.nivel, "idea", "la línea de alojamiento es una idea 💡");
 assert.ok(aloj.texto.includes("Elizondo") && aloj.texto.includes("Zudaire"), "nombra las bases");
+assert.strictEqual(h.filter((x) => x.tipo === "alojamiento").length, 1, "sin días largos, solo la línea 💡");
+
+// --- Día atado a una base lejana: se avisa, con su número. Antes salía en el plan y
+// nadie lo mencionaba (mudarse más no siempre compensa, callarlo nunca) ---
+h = auditar(resumenMiViaje(holgada, m, opts), holgada, [
+  { pueblo: "Orbaizeta", dias: [1, 2], paradas: [], cocheDiaMin: [147, 67] },
+]);
+const largo = h.find((x) => x.tipo === "alojamiento" && x.nivel === "aviso")!;
+assert.ok(largo, "el día de 147 min de ir y volver se avisa");
+assert.ok(largo.texto.includes("día 1") && !largo.texto.includes("día 2"), "nombra solo el día largo");
+assert.ok(
+  !auditar(resumenMiViaje(holgada, m, opts), holgada, [
+    { pueblo: "Zudaire", dias: [1], paradas: [], cocheDiaMin: [119] },
+  ]).some((x) => x.nivel === "aviso" && x.tipo === "alojamiento"),
+  "justo por debajo del listón no se avisa");
 
 // --- Estructural: la auditoría nunca elimina; todo hallazgo es informativo ---
 for (const x of auditar(resumenMiViaje(todos, m, { ...opts, dias: 1 }), todos)) {
