@@ -71,6 +71,13 @@
   .fr-s4-thumb:hover { border-color: var(--fr-tinta); }
 }
 .fr-s4-thumb:active { border-color: var(--fr-tinta); }
+/* Crédito de la foto que se está mirando: letra pequeña, no compite con el contenido. */
+.fr-s4-credito {
+  margin-top: -18px; /* la columna separa 26px: acercarlo a su galería */
+  font: 400 12px var(--fr-font-mono), monospace;
+  color: rgba(28, 47, 94, 0.6);
+}
+.fr-s4-credito a { color: inherit; }
 
 /* Secciones de contenido (comparten título Baloo 800 20px) */
 .fr-s4-titulo { font: 800 20px var(--fr-font-baloo), sans-serif; color: var(--fr-tinta); }

@@ -6,6 +6,7 @@ import type { Destino, Restaurante } from "@/lib/fuera-de-ruta/tipos";
 import { duracion, mapsHref, rango } from "@/lib/fuera-de-ruta/formato";
 import { tiempoCoche } from "@/lib/fuera-de-ruta/geo";
 import { datosDe, matrizDe, PROVINCIAS_CON_DATOS } from "@/lib/fuera-de-ruta/datos";
+import { creditoDe } from "@/lib/fuera-de-ruta/creditos";
 import Portada from "./Portada";
 
 // Ficha de destino (Server Component): URL propia y compartible, colgando de su
@@ -145,6 +146,7 @@ export default async function FichaDestino({ params }: Props) {
             {/* Hero móvil + galería: la foto grande cambia al pulsar una miniatura */}
             <Portada
               fotos={galeria}
+              creditos={galeria.map(creditoDe)}
               nombre={d.nombre}
               queEs={d.queEs}
               overlay={

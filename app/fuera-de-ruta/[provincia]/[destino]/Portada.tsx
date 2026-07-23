@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import type { ReactNode } from "react";
+import { lineaCredito, type Credito } from "@/lib/fuera-de-ruta/creditos";
 
 // Portada de la ficha: la foto grande y el título. Es cliente (y no la ficha entera)
 // solo por el estado de qué foto se está mirando: al pulsar una miniatura pasa a
@@ -12,14 +13,16 @@ import type { ReactNode } from "react";
 // y las miniaturas, y sacarla la dejaría debajo de la tira.
 type Props = {
   fotos: string[];
+  creditos: (Credito | undefined)[]; // en paralelo a `fotos`; hueco = foto de Cris
   nombre: string;
   queEs: string;
   overlay: ReactNode; // «‹» y badges que solapan el hero en móvil
 };
 
-export default function Portada({ fotos, nombre, queEs, overlay }: Props) {
+export default function Portada({ fotos, creditos, nombre, queEs, overlay }: Props) {
   const [activa, setActiva] = useState(0);
   const foto = fotos[activa];
+  const credito = creditos[activa];
   const sinFoto = <div className="fr-s4-hero-fallback"><span>foto en camino</span></div>;
 
   return (
@@ -53,6 +56,14 @@ export default function Portada({ fotos, nombre, queEs, overlay }: Props) {
             </button>
           ))}
         </div>
+      )}
+      {credito && (
+        <p className="fr-s4-credito">
+          Foto:{" "}
+          {credito.url
+            ? <a href={credito.url} target="_blank" rel="noreferrer">{lineaCredito(credito)} ↗</a>
+            : lineaCredito(credito)}
+        </p>
       )}
     </>
   );
