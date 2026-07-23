@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@pdf-lib/fontkit": "^1.1.1",
+    "astronomy-engine": "^2.1.19",
     "ioredis": "^5.10.1",
     "leaflet": "^1.9.4",
     "matter-js": "^0.20.0",
@@ -18,6 +19,7 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "resend": "^6.12.2",
+    "satellite.js": "^7.1.0",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
