@@ -4,7 +4,7 @@ import { Fragment, useEffect, useState } from "react";
 import TerminalShell from "../../components/TerminalShell";
 import WhyFooter from "../../components/WhyFooter";
 import {
-  ALTITUD_MINIMA, MAGNITUD_MAXIMA, MARCO_MINUTOS,
+  ALTITUD_MINIMA, MAGNITUD_MAXIMA, MARCO_INICIO_H, MARCO_MINUTOS,
   type Evento, type EventoLuna, type Noche, type FilaPlaneta, type Ventana, type PuntoArco,
 } from "./engine";
 
@@ -169,19 +169,21 @@ function BandaVisibilidad({ ventana, ahoraPct }: { ventana: Ventana; ahoraPct: n
   );
 }
 
-/** Minutos transcurridos desde las 18:00 (hora de Madrid), o null si estamos fuera del marco. */
-function minutosDesde18(d: Date): number | null {
+/** Minutos transcurridos desde el inicio del marco (hora de Madrid), o null si estamos fuera. */
+function minutosEnMarco(d: Date): number | null {
   const p = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Madrid", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(d);
   const hh = +p.find((x) => x.type === "hour")!.value;
   const mm = +p.find((x) => x.type === "minute")!.value;
-  const min = hh >= 18 ? (hh - 18) * 60 + mm : hh < 2 ? (hh + 6) * 60 + mm : -1;
+  // El marco cruza la medianoche (18:00–02:00): la madrugada cuenta como hora + 24.
+  const horaMarco = hh >= MARCO_INICIO_H ? hh : hh + 24;
+  const min = (horaMarco - MARCO_INICIO_H) * 60 + mm;
   return min >= 0 && min <= MARCO_MINUTOS ? min : null;
 }
 
 function TablaPlanetas({ filas }: { filas: FilaPlaneta[] }) {
   const [ahora, setAhora] = useState<number | null>(null);
   useEffect(() => {
-    const tick = () => setAhora(minutosDesde18(new Date()));
+    const tick = () => setAhora(minutosEnMarco(new Date()));
     tick();
     const id = setInterval(tick, 30000);
     return () => clearInterval(id);
@@ -221,7 +223,7 @@ function TrayectoriaCielo({ puntos, luna }: { puntos: PuntoArco[]; luna: { az: n
   const xy = (az: number, alt: number): [number, number] => {
     const r = R * (1 - Math.min(90, Math.max(0, alt)) / 90);
     const a = (az * Math.PI) / 180;
-    return [+(c + r * Math.sin(a)).toFixed(2), +(c - r * Math.cos(a)).toFixed(2)];
+    return [redondo(c + r * Math.sin(a)), redondo(c - r * Math.cos(a))];
   };
   const trazo = (pts: PuntoArco[]) =>
     pts.map((p, k) => `${k ? "L" : "M"} ${xy(p.az, p.alt).join(" ")}`).join(" ");

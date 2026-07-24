@@ -96,7 +96,8 @@ const RUMBOS = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
                 "S", "SSO", "SO", "OSO", "O", "ONO", "NO", "NNO"];
 
 export function rumbo(azimutGrados: number): string {
-  return RUMBOS[Math.round((azimutGrados % 360) / 22.5) % 16];
+  const az = ((azimutGrados % 360) + 360) % 360; // normaliza también azimuts negativos
+  return RUMBOS[Math.round(az / 22.5) % 16];
 }
 
 function angulo(a: Vec3, b: Vec3): number {
@@ -226,7 +227,7 @@ function shadowFraction(rsunUA: number[], sat: { x: number; y: number; z: number
   return (a + b - c) / (Math.PI * rS * rS);
 }
 
-const redondo2 = (n: number) => +n.toFixed(2);
+const redondo = (n: number) => +n.toFixed(2);
 
 // Un instante del satélite sobre el horizonte: dónde está y si en ese momento se ve. `vis` es
 // que esté al sol y el observador a oscuras; el listón de altitud NO entra aquí (el arco se
@@ -271,7 +272,7 @@ function muestraSatelite(sat: Satelite, satrec: ReturnType<typeof twoline2satrec
 function posLuna(obs: Astro.Observer, fecha: Date): { az: number; alt: number } {
   const eq = Astro.Equator(Astro.Body.Moon, fecha, obs, true, true);
   const h = Astro.Horizon(fecha, obs, eq.ra, eq.dec, "normal");
-  return { az: redondo2(h.azimuth), alt: redondo2(h.altitude) };
+  return { az: redondo(h.azimuth), alt: redondo(h.altitude) };
 }
 
 /** La Luna solo si está sobre el horizonte; para pintarla como punto en la carta del satélite. */
@@ -287,7 +288,7 @@ function lunaEnCielo(obs: Astro.Observer, fecha: Date): { az: number; alt: numbe
  * su cumbre. Preserva la semántica del muestreo anterior: mismo predicado, mismos tramos.
  */
 function pasosDelArco(sat: Satelite, arco: Muestra[], sede: Sede): EventoSatelite[] {
-  const trayectoria: PuntoArco[] = arco.map((m) => ({ az: redondo2(m.az), alt: redondo2(m.alt), vis: m.vis }));
+  const trayectoria: PuntoArco[] = arco.map((m) => ({ az: redondo(m.az), alt: redondo(m.alt), vis: m.vis }));
   const obs = new Astro.Observer(sede.lat, sede.lon, 0);
   const pasos: EventoSatelite[] = [];
   let tramo: Muestra[] = [];
