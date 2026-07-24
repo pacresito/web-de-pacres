@@ -22,22 +22,6 @@ export const HORA_MINIMA_LUNA = 20;    // la salida de la Luna interesa a partir
 export const DIAS = 7;                 // horizonte de la previsión
 export const MARGEN_MINUTOS = 10;      // un evento sigue en la lista hasta 10 min después
 const PASO_SEGUNDOS = 30;              // muestreo de la órbita
-const PASO_PLANETAS_MINUTOS = 5;
-
-// Los planetas no comparten el listón de los satélites: Venus con −4 se sigue viendo
-// pegado al horizonte y Saturno con +0.5 no. Lo que los tumba es la extinción
-// atmosférica, ~0.28 mag por masa de aire (≈ 1/sen h), así que la altura mínima sale
-// de cuánta puede tragar cada uno antes de perderse.
-const MAGNITUD_LIMITE_OJO = 4;         // lo más débil que se distingue con algo de ciudad
-const EXTINCION_POR_AIRMASS = 0.28;
-const ALTITUD_MINIMA_PLANETA = 5;      // más abajo mandan la bruma y el terreno, no la óptica
-
-/** Altura a la que un planeta de esa magnitud deja de verse a simple vista. */
-export function altitudMinimaPlaneta(magnitud: number): number {
-  const airmassMax = (MAGNITUD_LIMITE_OJO - magnitud) / EXTINCION_POR_AIRMASS;
-  if (airmassMax <= 1) return 90; // no se ve ni en el cenit
-  return Math.max(ALTITUD_MINIMA_PLANETA, radiansToDegrees(Math.asin(1 / airmassMax)));
-}
 
 // Nada de madrugada: todo evento debe caer antes de las 00:00 hora local. Como todos
 // ocurren de noche, basta con exigir que la hora local sea de tarde/noche.
@@ -172,16 +156,9 @@ export type EventoLuna = EventoBase & {
   anguloFase: number;   // 0° nueva, 180° llena — creciente por debajo de 180
 };
 
-export type EventoPlaneta = EventoBase & {
-  tipo: "planeta";
-  nombre: string;
-  horaFin: string;      // cuándo baja de la altitud mínima (o medianoche)
-  altitud: number;      // altitud máxima mientras es visible
-  magnitud: number;
-  desde: string;
-};
-
-export type Evento = EventoSatelite | EventoLuna | EventoPlaneta;
+// Los planetas ya no son eventos de la agenda: viven en su propia tabla (ver más abajo),
+// porque están horas en el cielo y no piden cuenta atrás como un paso o una salida de Luna.
+export type Evento = EventoSatelite | EventoLuna;
 
 export type Noche = {
   clave: string;
@@ -385,55 +362,120 @@ const PLANETAS: { nombre: string; body: Astro.Body }[] = [
   { nombre: "Saturno", body: Astro.Body.Saturn },
 ];
 
+// El marco de la tabla es un día "de tarde": de las 18:00 a las 02:00 de la mañana
+// siguiente (8 h). La franja de visibilidad es la ventana real de cada planeta dentro de
+// ese marco; si asoma pegada a un borde, ese extremo queda abierto (sin hora): antes de las
+// 18:00 o después de las 02:00 no nos importa lo que haga.
+export const MARCO_INICIO_H = 18;
+export const MARCO_FIN_H = 26;                              // 02:00 del día siguiente
+export const MARCO_MINUTOS = (MARCO_FIN_H - MARCO_INICIO_H) * 60; // 480
+const PASO_TABLA_MIN = 5;         // muestreo fino de la noche que se enseña
+const PASO_REAPARICION_MIN = 20;  // muestreo grueso al buscar la vuelta de un planeta
+const DIAS_REAPARICION = 90;      // hasta dónde se busca la reaparición; más allá, "en unos meses"
+
+export type FasePlaneta = {
+  iluminacion: number;       // fracción del disco iluminada, 0–1
+  anguloFase: number;        // grados; 0 = lleno
+  ringTilt: number | null;   // inclinación del anillo, grados (solo Saturno; null el resto)
+};
+
+export type Ventana = {
+  desdeMin: number;       // minutos desde las 18:00 en que empieza a verse (0–480)
+  hastaMin: number;       // minutos desde las 18:00 en que deja de verse (0–480)
+  horaInicio: string;     // HH:MM local
+  horaFin: string;        // HH:MM local
+  abiertoInicio: boolean; // ya se veía en el borde del marco (18:00) → sin etiqueta
+  abiertoFin: boolean;    // seguía viéndose en el otro borde (02:00) → sin etiqueta
+};
+
+export type FilaPlaneta = {
+  nombre: string;
+  fase: FasePlaneta;
+  ventana: Ventana | null; // la de esta noche, o null si no se ve
+  vuelveEl: string | null; // "12 ago" si vuelve dentro de 90 días; null si tarda más ("en unos meses")
+};
+
+const FMT_DIA_MES = new Intl.DateTimeFormat("es-ES", { timeZone: TZ, day: "numeric", month: "short" });
+
+/** Fase del planeta en un instante: fracción iluminada, ángulo y, en Saturno, el anillo. */
+function faseEn(body: Astro.Body, fecha: Date): FasePlaneta {
+  const il = Astro.Illumination(body, fecha);
+  return { iluminacion: il.phase_fraction, anguloFase: il.phase_angle, ringTilt: il.ring_tilt ?? null };
+}
+
+type VentanaCruda = { inicio: Date; fin: Date; abiertoInicio: boolean; abiertoFin: boolean };
+
 /**
- * Planetas visibles a simple vista entre el anochecer y las 00:00, uno por noche, con la
- * ventana en que se les ve por encima de su altitud mínima. A los planetas no se les aplica
- * el corte de magnitud de los satélites: Saturno nunca llegaría a −1 y aun así se ve bien.
+ * Ventana visible de un planeta dentro del marco 18:00–02:00 de la noche que arranca en
+ * `medianoche` (00:00 local de ese día): el tramo en que asoma sobre el horizonte con el Sol
+ * ya de crepúsculo (−6°). Sin listón de altura —basta con que se le vea, aunque sea bajo— pero
+ * con el cielo oscurecido: un planeta pegado al Sol a plena luz no cuenta. `null` si esa noche
+ * no llega a verse. `paso` fino para la noche que se pinta, grueso al buscar la reaparición.
  */
-export function planetasVisibles(desde: Date, hasta: Date): EventoPlaneta[] {
-  const eventos: EventoPlaneta[] = [];
-
-  for (let dia = 0; dia < DIAS; dia++) {
-    const medianoche = new Date(medianocheLocal(desde).getTime() + dia * 24 * 3600 * 1000);
-    const sede = sedeParaFecha(medianoche);
-    const obs = new Astro.Observer(sede.lat, sede.lon, 0);
-
-    // Ventana: desde que el Sol baja de −6° hasta la medianoche local siguiente.
-    const anochecer = Astro.SearchAltitude(Astro.Body.Sun, obs, -1, medianoche, 1, SOL_MAXIMO);
-    if (!anochecer) continue;
-    const inicio = new Date(Math.max(anochecer.date.getTime(), desde.getTime()));
-    const fin = new Date(Math.min(medianoche.getTime() + 24 * 3600 * 1000, hasta.getTime()));
-    if (inicio >= fin) continue;
-
-    for (const planeta of PLANETAS) {
-      const magnitud = Astro.Illumination(planeta.body, inicio).mag;
-      const altitudMinima = altitudMinimaPlaneta(magnitud);
-      let primera: { fecha: Date; azimut: number } | null = null;
-      let ultima: Date | null = null;
-      let altitudMax = -90;
-      for (let t = inicio.getTime(); t <= fin.getTime(); t += PASO_PLANETAS_MINUTOS * 60000) {
-        const fecha = new Date(t);
-        const eq = Astro.Equator(planeta.body, fecha, obs, true, true);
-        const h = Astro.Horizon(fecha, obs, eq.ra, eq.dec, "normal");
-        if (h.altitude < altitudMinima) continue;
-        primera ??= { fecha, azimut: h.azimuth };
-        ultima = fecha;
-        altitudMax = Math.max(altitudMax, h.altitude);
-      }
-      if (!primera || !ultima) continue;
-      eventos.push({
-        ...marca(primera.fecha, sede),
-        tipo: "planeta",
-        nombre: planeta.nombre,
-        horaFin: partesLocales(ultima).hhmm,
-        instanteFin: ultima.getTime(),
-        altitud: altitudMax,
-        magnitud,
-        desde: rumbo(primera.azimut),
-      });
-    }
+function ventanaNoche(body: Astro.Body, medianoche: Date, obs: Astro.Observer, paso: number): VentanaCruda | null {
+  const T0 = medianoche.getTime() + MARCO_INICIO_H * 3600 * 1000;
+  const T1 = medianoche.getTime() + MARCO_FIN_H * 3600 * 1000;
+  let inicio: Date | null = null, fin: Date | null = null, tPrimera = 0, tUltima = 0;
+  for (let t = T0; t <= T1; t += paso * 60000) {
+    const fecha = new Date(t);
+    const eq = Astro.Equator(body, fecha, obs, true, true);
+    if (Astro.Horizon(fecha, obs, eq.ra, eq.dec, "normal").altitude <= 0) continue;
+    if (altitudSolar(fecha, obs) > SOL_MAXIMO) continue;
+    if (!inicio) { inicio = fecha; tPrimera = t; }
+    fin = fecha; tUltima = t;
   }
-  return eventos;
+  if (!inicio || !fin) return null;
+  return { inicio, fin, abiertoInicio: tPrimera === T0, abiertoFin: tUltima === T1 };
+}
+
+/** Instante nocturno de referencia (20:00 local) para calcular la fase de un planeta. */
+const nocheDe = (medianoche: Date) => new Date(medianoche.getTime() + 20 * 3600 * 1000);
+
+/**
+ * Los cinco planetas a simple vista, en orden fijo, para la tabla del observatorio. Cada uno
+ * con su fase y, si se ve esta noche, la ventana dentro del marco 18:00–02:00; si no, la
+ * fecha en que vuelve a verse (barrido día a día, hasta seis meses).
+ */
+export function tablaPlanetas(ahora: Date): FilaPlaneta[] {
+  // Noche que se enseña: la de esta tarde; de madrugada (antes de las 02:00), la que sigue
+  // abierta, que empezó ayer.
+  let base = medianocheLocal(ahora);
+  if (partesLocales(ahora).hora < 2) base = new Date(base.getTime() - 24 * 3600 * 1000);
+
+  const obsDe = (medianoche: Date) => {
+    const sede = sedeParaFecha(nocheDe(medianoche));
+    return new Astro.Observer(sede.lat, sede.lon, 0);
+  };
+
+  return PLANETAS.map(({ nombre, body }) => {
+    const v = ventanaNoche(body, base, obsDe(base), PASO_TABLA_MIN);
+    if (v) {
+      const T0 = base.getTime() + MARCO_INICIO_H * 3600 * 1000;
+      return {
+        nombre,
+        fase: faseEn(body, v.inicio),
+        ventana: {
+          desdeMin: Math.round((v.inicio.getTime() - T0) / 60000),
+          hastaMin: Math.round((v.fin.getTime() - T0) / 60000),
+          horaInicio: partesLocales(v.inicio).hhmm,
+          horaFin: partesLocales(v.fin).hhmm,
+          abiertoInicio: v.abiertoInicio,
+          abiertoFin: v.abiertoFin,
+        },
+        vuelveEl: null,
+      };
+    }
+    // No se ve esta noche: la primera noche que sí, día a día con muestreo grueso.
+    let vuelveEl: string | null = null;
+    for (let d = 1; d <= DIAS_REAPARICION; d++) {
+      const noche = new Date(base.getTime() + d * 24 * 3600 * 1000);
+      if (ventanaNoche(body, noche, obsDe(noche), PASO_REAPARICION_MIN)) {
+        vuelveEl = FMT_DIA_MES.format(noche).replace(".", "");
+        break;
+      }
+    }
+    return { nombre, fase: faseEn(body, nocheDe(base)), ventana: null, vuelveEl };
+  });
 }
 
 // ─── Agenda del cielo ─────────────────────────────────────────────────────────
@@ -447,7 +489,6 @@ export function agenda(satelites: Satelite[], ahora: Date, dias = DIAS): Noche[]
   const eventos: Evento[] = [
     ...satelites.flatMap((s) => pasosVisibles(s, desde, hasta)),
     ...salidasDeLuna(desde, hasta),
-    ...planetasVisibles(desde, hasta),
   ].sort((a, b) => a.instante - b.instante);
 
   const hoy = partesLocales(ahora).fechaISO;

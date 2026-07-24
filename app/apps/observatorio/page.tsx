@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { agenda, sedeParaFecha } from "./engine";
+import { agenda, sedeParaFecha, tablaPlanetas } from "./engine";
 import { cargarSatelites } from "./tle";
 import Vista from "./vista";
 
@@ -21,5 +21,6 @@ export const metadata: Metadata = {
 export default async function Observatorio() {
   const ahora = new Date();
   const noches = agenda(await cargarSatelites(), ahora);
-  return <Vista noches={noches} sede={sedeParaFecha(ahora).nombre} />;
+  const planetas = tablaPlanetas(ahora);
+  return <Vista noches={noches} planetas={planetas} sede={sedeParaFecha(ahora).nombre} />;
 }

@@ -4,9 +4,8 @@
 import * as Astro from "astronomy-engine";
 import {
   sedeParaFecha, rumbo, magnitudSatelite, partesLocales, nombreFase,
-  pasosVisibles, salidasDeLuna, planetasVisibles, agenda, altitudSolar,
-  altitudMinimaPlaneta,
-  ALTITUD_MINIMA, MAGNITUD_MAXIMA, SOL_MAXIMO, HORA_MINIMA_LUNA, MARGEN_MINUTOS,
+  pasosVisibles, salidasDeLuna, tablaPlanetas, agenda,
+  ALTITUD_MINIMA, MAGNITUD_MAXIMA, HORA_MINIMA_LUNA, MARGEN_MINUTOS, MARCO_MINUTOS,
   type Satelite,
 } from "./engine";
 
@@ -104,28 +103,29 @@ const HASTA = new Date(AHORA.getTime() + 7 * 24 * 3600 * 1000);
   check("luna: sale por el cuadrante este", lunas.every((l) => l.azimut > 40 && l.azimut < 140));
 }
 
-// 7. Planetas
+// 7. Tabla de planetas
 {
-  const planetas = planetasVisibles(AHORA, HASTA);
-  console.log(`  … ${planetas.length} apariciones de planetas: ` +
-    [...new Set(planetas.map((p) => p.nombre))].join(", "));
-  check("planetas: hay alguno", planetas.length > 0);
-  check("planetas: todos por encima de su altitud mínima",
-    planetas.every((p) => p.altitud >= altitudMinimaPlaneta(p.magnitud)));
-  check("altitud mínima: Venus (−4) baja al suelo, Marte (+1.5) no",
-    altitudMinimaPlaneta(-4) === 5 && altitudMinimaPlaneta(1.5) > 5);
-  check("altitud mínima: cuanto más débil, más alto tiene que estar",
-    altitudMinimaPlaneta(2) > altitudMinimaPlaneta(0));
-  // Venus baja de 15° a las 22:05 el 23 de julio y con −4.3 se siguió viendo casi una
-  // hora más: es el caso que destapó que el listón de los satélites no le valía.
-  check("planetas: Venus del 23 de julio dura bastante más allá de los 15°",
-    planetas.some((p) => p.nombre === "Venus" && p.noche === "2026-07-23" && p.horaFin >= "22:50"),
-    planetas.find((p) => p.noche === "2026-07-23")?.horaFin ?? "");
-  check("planetas: ninguno de madrugada", planetas.every((p) => +p.hora.slice(0, 2) >= 12));
-  check("planetas: el Sol está bajo el horizonte", planetas.every((p) =>
-    altitudSolar(new Date(p.instante), new Astro.Observer(37.66, -0.72, 0)) <= SOL_MAXIMO + 0.01));
-  check("planetas: magnitudes en rango razonable",
-    planetas.every((p) => p.magnitud > -5 && p.magnitud < 3));
+  const tabla = tablaPlanetas(AHORA);
+  console.log(`  … tabla: ` + tabla.map((f) => `${f.nombre}${f.ventana ? "✓" : f.vuelveEl ? `→${f.vuelveEl}` : "·"}`).join(" "));
+  check("tabla: cinco planetas en orden fijo",
+    tabla.length === 5 && tabla[0].nombre === "Mercurio" && tabla[4].nombre === "Saturno");
+  check("tabla: iluminación entre 0 y 1",
+    tabla.every((f) => f.fase.iluminacion >= 0 && f.fase.iluminacion <= 1));
+  check("tabla: solo Saturno trae inclinación de anillo",
+    tabla.every((f) => (f.nombre === "Saturno") === (f.fase.ringTilt !== null)));
+  const visibles = tabla.filter((f) => f.ventana);
+  check("tabla: alguno visible esta noche", visibles.length > 0);
+  check("tabla: las ventanas caen dentro del marco 0–480 y con inicio antes que fin",
+    visibles.every((f) => f.ventana!.desdeMin >= 0 && f.ventana!.hastaMin <= MARCO_MINUTOS
+      && f.ventana!.desdeMin < f.ventana!.hastaMin));
+  check("tabla: un extremo abierto es siempre el borde del marco",
+    visibles.every((f) => (!f.ventana!.abiertoInicio || f.ventana!.desdeMin === 0)
+      && (!f.ventana!.abiertoFin || f.ventana!.hastaMin === MARCO_MINUTOS)));
+  check("tabla: Venus se ve esta noche (23 jul, La Manga)",
+    tabla.find((f) => f.nombre === "Venus")?.ventana != null,
+    tabla.find((f) => f.nombre === "Venus")?.ventana?.horaFin ?? "");
+  check("tabla: quien no se ve trae fecha de vuelta o queda vacío",
+    tabla.filter((f) => !f.ventana).every((f) => f.vuelveEl === null || /\d/.test(f.vuelveEl)));
 }
 
 // 8. Agenda: agrupación y orden
