@@ -85,6 +85,10 @@ const HASTA = new Date(AHORA.getTime() + 7 * 24 * 3600 * 1000);
     pasos.every((p) => p.duracionMin >= 1 && p.duracionMin <= 8));
   check("pasos: la ISS es la que más aparece",
     pasos.filter((p) => p.nombre === "ISS").length >= pasos.filter((p) => p.nombre === "Tiangong").length);
+  check("pasos: cada uno trae su arco (≥ 2 puntos, todos sobre el horizonte)",
+    pasos.every((p) => p.trayectoria.length >= 2 && p.trayectoria.every((q) => q.alt >= 0)));
+  check("pasos: el arco cubre la parte visible reportada (alcanza la cumbre)",
+    pasos.every((p) => Math.max(...p.trayectoria.map((q) => q.alt)) >= p.altitud - 0.01));
 }
 
 // 6. Salidas de Luna

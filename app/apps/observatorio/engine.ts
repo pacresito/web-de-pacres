@@ -135,6 +135,10 @@ export type EventoBase = {
   instanteFin: number;  // epoch ms del final; igual al comienzo si el evento es un instante
 };
 
+// Un punto de la trayectoria dibujada: dónde está el objeto (rumbo y altura) y si en ese
+// instante se ve (trazo continuo) o no (discontinuo, p. ej. el satélite dentro de la sombra).
+export type PuntoArco = { az: number; alt: number; vis: boolean };
+
 export type EventoSatelite = EventoBase & {
   tipo: "satelite";
   nombre: string;
@@ -144,6 +148,8 @@ export type EventoSatelite = EventoBase & {
   magnitud: number;
   desde: string;        // rumbo por el que aparece
   hasta: string;        // rumbo por el que se pierde
+  trayectoria: PuntoArco[]; // el arco entero sobre el horizonte, para la carta del cielo
+  luna: { az: number; alt: number } | null; // dónde está la Luna durante el paso, o null si no ha salido
 };
 
 export type EventoLuna = EventoBase & {
@@ -220,11 +226,16 @@ function shadowFraction(rsunUA: number[], sat: { x: number; y: number; z: number
   return (a + b - c) / (Math.PI * rS * rS);
 }
 
-type MuestraSat = { fecha: Date; altitud: number; azimut: number; magnitud: number };
+const redondo2 = (n: number) => +n.toFixed(2);
 
-/** Estado del satélite visto desde la sede, o null si está bajo el horizonte o a oscuras. */
+// Un instante del satélite sobre el horizonte: dónde está y si en ese momento se ve. `vis` es
+// que esté al sol y el observador a oscuras; el listón de altitud NO entra aquí (el arco se
+// dibuja entero, hasta el horizonte), solo al decidir qué tramo se reporta como paso.
+type Muestra = { fecha: Date; alt: number; az: number; mag: number; vis: boolean };
+
+/** Estado del satélite visto desde la sede, o null si está bajo el horizonte. */
 function muestraSatelite(sat: Satelite, satrec: ReturnType<typeof twoline2satrec>,
-                         fecha: Date, sede: Sede, obsAstro: Astro.Observer): MuestraSat | null {
+                         fecha: Date, sede: Sede, obsAstro: Astro.Observer): Muestra | null {
   const pv = propagate(satrec, fecha);
   if (!pv) return null;
 
@@ -236,58 +247,93 @@ function muestraSatelite(sat: Satelite, satrec: ReturnType<typeof twoline2satrec
   };
   const satEcf = eciToEcf(pv.position, gmst);
   const mira = ecfToLookAngles(obsGd, satEcf);
-  const altitud = radiansToDegrees(mira.elevation);
-  if (altitud < ALTITUD_MINIMA) return null;
+  const alt = radiansToDegrees(mira.elevation);
+  if (alt < 0) return null; // bajo el horizonte: fuera del arco
 
-  // El satélite tiene que estar al sol y el observador a oscuras.
   const sol = sunPos(jday(fecha));
-  if (shadowFraction(sol.rsun, pv.position) > 0.5) return null;
-  if (altitudSolar(fecha, obsAstro) > SOL_MAXIMO) return null;
-
   const solEci = { x: sol.rsun[0] * UA_KM, y: sol.rsun[1] * UA_KM, z: sol.rsun[2] * UA_KM };
   const solEcf = eciToEcf(solEci, gmst);
   const obsEcf = geodeticToEcf(obsGd);
   const fase = angulo(resta(solEcf, satEcf), resta(obsEcf, satEcf));
 
+  const alSol = shadowFraction(sol.rsun, pv.position) <= 0.5;
+  const observadorAOscuras = altitudSolar(fecha, obsAstro) <= SOL_MAXIMO;
   return {
     fecha,
-    altitud,
-    azimut: radiansToDegrees(mira.azimuth),
-    magnitud: magnitudSatelite(sat.magEstandar, mira.rangeSat, fase),
+    alt,
+    az: radiansToDegrees(mira.azimuth),
+    mag: magnitudSatelite(sat.magEstandar, mira.rangeSat, fase),
+    vis: alSol && observadorAOscuras,
   };
 }
 
-/** Convierte un tramo continuo de muestras visibles en el evento que se enseña. */
-function pasoDesdeMuestras(sat: Satelite, tramo: MuestraSat[], sede: Sede): EventoSatelite {
-  const cumbre = tramo.reduce((a, b) => (b.altitud > a.altitud ? b : a));
-  const masBrillante = Math.min(...tramo.map((m) => m.magnitud));
-  const inicio = tramo[0], fin = tramo[tramo.length - 1];
-  return {
-    ...marca(inicio.fecha, sede),
-    tipo: "satelite",
-    nombre: sat.nombre,
-    horaFin: partesLocales(fin.fecha).hhmm,
-    instanteFin: fin.fecha.getTime(),
-    duracionMin: Math.max(1, Math.round((fin.fecha.getTime() - inicio.fecha.getTime()) / 60000)),
-    altitud: cumbre.altitud,
-    magnitud: masBrillante,
-    desde: rumbo(inicio.azimut),
-    hasta: rumbo(fin.azimut),
+/** Rumbo y altura de la Luna vista desde la sede en un instante. */
+function posLuna(obs: Astro.Observer, fecha: Date): { az: number; alt: number } {
+  const eq = Astro.Equator(Astro.Body.Moon, fecha, obs, true, true);
+  const h = Astro.Horizon(fecha, obs, eq.ra, eq.dec, "normal");
+  return { az: redondo2(h.azimuth), alt: redondo2(h.altitude) };
+}
+
+/** La Luna solo si está sobre el horizonte; para pintarla como punto en la carta del satélite. */
+function lunaEnCielo(obs: Astro.Observer, fecha: Date): { az: number; alt: number } | null {
+  const p = posLuna(obs, fecha);
+  return p.alt > 0 ? p : null;
+}
+
+/**
+ * De un arco entero sobre el horizonte, los pasos reportables: cada tramo continuo en que el
+ * satélite se ve (al sol, observador a oscuras) por encima de la altitud mínima y con brillo
+ * suficiente. Cada evento se lleva el arco completo (para la carta) y la posición de la Luna en
+ * su cumbre. Preserva la semántica del muestreo anterior: mismo predicado, mismos tramos.
+ */
+function pasosDelArco(sat: Satelite, arco: Muestra[], sede: Sede): EventoSatelite[] {
+  const trayectoria: PuntoArco[] = arco.map((m) => ({ az: redondo2(m.az), alt: redondo2(m.alt), vis: m.vis }));
+  const obs = new Astro.Observer(sede.lat, sede.lon, 0);
+  const pasos: EventoSatelite[] = [];
+  let tramo: Muestra[] = [];
+
+  const cerrar = () => {
+    if (tramo.length >= 2 && esDeLaNoche(tramo[0].fecha)) {
+      const masBrillante = Math.min(...tramo.map((m) => m.mag));
+      if (masBrillante <= MAGNITUD_MAXIMA) {
+        const cumbre = tramo.reduce((a, b) => (b.alt > a.alt ? b : a));
+        const inicio = tramo[0], fin = tramo[tramo.length - 1];
+        pasos.push({
+          ...marca(inicio.fecha, sede),
+          tipo: "satelite",
+          nombre: sat.nombre,
+          horaFin: partesLocales(fin.fecha).hhmm,
+          instanteFin: fin.fecha.getTime(),
+          duracionMin: Math.max(1, Math.round((fin.fecha.getTime() - inicio.fecha.getTime()) / 60000)),
+          altitud: cumbre.alt,
+          magnitud: masBrillante,
+          desde: rumbo(inicio.az),
+          hasta: rumbo(fin.az),
+          trayectoria,
+          luna: lunaEnCielo(obs, cumbre.fecha),
+        });
+      }
+    }
+    tramo = [];
   };
+
+  for (const m of arco) {
+    if (m.vis && m.alt >= ALTITUD_MINIMA) tramo.push(m);
+    else cerrar();
+  }
+  cerrar();
+  return pasos;
 }
 
 /** Pasos visibles de un satélite entre `desde` y `hasta`, ya filtrados por los criterios. */
 export function pasosVisibles(sat: Satelite, desde: Date, hasta: Date): EventoSatelite[] {
   const satrec = twoline2satrec(sat.tle1, sat.tle2);
   const pasos: EventoSatelite[] = [];
-  let tramo: MuestraSat[] = [];
+  let arco: Muestra[] = [];
 
-  const cerrarTramo = (sede: Sede) => {
-    if (tramo.length >= 2) {
-      const paso = pasoDesdeMuestras(sat, tramo, sede);
-      if (paso.magnitud <= MAGNITUD_MAXIMA && esDeLaNoche(tramo[0].fecha)) pasos.push(paso);
-    }
-    tramo = [];
+  const cerrarArco = () => {
+    if (arco.length) pasos.push(...pasosDelArco(sat, arco, sedeParaFecha(arco[0].fecha)));
+    arco = [];
   };
 
   for (let t = desde.getTime(); t <= hasta.getTime(); t += PASO_SEGUNDOS * 1000) {
@@ -295,10 +341,10 @@ export function pasosVisibles(sat: Satelite, desde: Date, hasta: Date): EventoSa
     const sede = sedeParaFecha(fecha);
     const obsAstro = new Astro.Observer(sede.lat, sede.lon, 0);
     const m = muestraSatelite(sat, satrec, fecha, sede, obsAstro);
-    if (m) tramo.push(m);
-    else cerrarTramo(sede);
+    if (m) arco.push(m);
+    else cerrarArco();
   }
-  cerrarTramo(sedeParaFecha(hasta));
+  cerrarArco();
   return pasos;
 }
 

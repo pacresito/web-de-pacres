@@ -5,13 +5,10 @@ import TerminalShell from "../../components/TerminalShell";
 import WhyFooter from "../../components/WhyFooter";
 import {
   ALTITUD_MINIMA, MAGNITUD_MAXIMA, MARCO_MINUTOS,
-  type Evento, type EventoLuna, type Noche, type FilaPlaneta, type Ventana,
+  type Evento, type EventoLuna, type Noche, type FilaPlaneta, type Ventana, type PuntoArco,
 } from "./engine";
 
 // ─── Piezas visuales ──────────────────────────────────────────────────────────
-
-const num = (n: number, decimales = 0) =>
-  n.toFixed(decimales).replace("-", "−"); // menos tipográfico, que el guion queda pobre
 
 /** Disco lunar con su fase real: la parte iluminada es la que se verá esa noche. */
 function IconoLuna({ evento, tam = 18 }: { evento: EventoLuna; tam?: number }) {
@@ -211,35 +208,61 @@ function TablaPlanetas({ filas }: { filas: FilaPlaneta[] }) {
   );
 }
 
-/** Cuarto de círculo del horizonte al cenit, con la marca donde culmina el objeto. */
-function ArcoAltitud({ grados }: { grados: number }) {
-  const rad = (grados * Math.PI) / 180;
-  // Redondeado a centésimas de píxel, y no por estética: Math.cos no está fijado por la
-  // norma IEEE y Node y el navegador discrepan en el último bit → React canta que la
-  // hidratación no cuadra. Con dos decimales el número es el mismo en los dos lados.
-  const pos = (n: number) => +n.toFixed(2);
-  return (
-    <svg width="26" height="16" viewBox="0 0 26 16" aria-hidden>
-      <line x1="1" y1="14.5" x2="25" y2="14.5" stroke="var(--t-rule)" strokeWidth="1" />
-      <path d="M 25 14.5 A 24 24 0 0 0 1 14.5" fill="none" stroke="var(--t-rule2)" strokeWidth="1" />
-      <circle cx={pos(13 - 12 * Math.cos(rad))} cy={pos(14.5 - 12 * Math.sin(rad))} r="2" fill="var(--t-accent2)" />
-    </svg>
-  );
-}
+/**
+ * Carta polar del cielo del paso de un satélite: círculo con el N arriba (E a la derecha) y la
+ * trayectoria de su salida a su puesta. La curvatura da la altura —centro = cenit, borde =
+ * horizonte— y el trazo es continuo mientras se ve y punteado cuando no (dentro de la sombra de la
+ * Tierra). El punto dorado, si lo hay, es la Luna: hacia dónde mirar de refilón durante el paso.
+ */
+function TrayectoriaCielo({ puntos, luna }: { puntos: PuntoArco[]; luna: { az: number; alt: number } | null }) {
+  const tam = 78, c = tam / 2, R = c - 6;
+  // Math.sin/cos no están fijados por IEEE (ver PROJECT.md): redondear el resultado para que
+  // servidor y navegador coincidan y la hidratación no se queje.
+  const xy = (az: number, alt: number): [number, number] => {
+    const r = R * (1 - Math.min(90, Math.max(0, alt)) / 90);
+    const a = (az * Math.PI) / 180;
+    return [+(c + r * Math.sin(a)).toFixed(2), +(c - r * Math.cos(a)).toFixed(2)];
+  };
+  const trazo = (pts: PuntoArco[]) =>
+    pts.map((p, k) => `${k ? "L" : "M"} ${xy(p.az, p.alt).join(" ")}`).join(" ");
 
-/** Punto cuyo tamaño imita el brillo: cuanto más negativa la magnitud, más gordo. */
-function PuntoBrillo({ magnitud }: { magnitud: number }) {
-  const r = Math.min(5.5, Math.max(1.6, 2 - magnitud * 0.8));
+  // Tramos continuos por visibilidad: cada uno un solo path (guionado parejo, sin remates sueltos).
+  // El punto de frontera entra en los dos tramos para que la línea no se corte al cambiar de estilo.
+  const tramos: { vis: boolean; d: string }[] = [];
+  for (let i = 0; i < puntos.length; ) {
+    let j = i;
+    while (j + 1 < puntos.length && puntos[j + 1].vis === puntos[i].vis) j++;
+    const hasta = Math.min(j + 1, puntos.length - 1); // arrastra la frontera
+    tramos.push({ vis: puntos[i].vis, d: trazo(puntos.slice(i, hasta + 1)) });
+    i = j + 1;
+  }
+  const ini = puntos.length ? xy(puntos[0].az, puntos[0].alt) : null;
+  const pl = luna ? xy(luna.az, luna.alt) : null;
+
   return (
-    <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden>
-      <circle cx="6" cy="6" r={r} fill="var(--t-ink)" />
+    <svg width={tam} height={tam} viewBox={`0 0 ${tam} ${tam}`} aria-hidden>
+      {/* Rejilla: horizonte, anillo intermedio (45°) y cruz de rumbos. El N va arriba, sin rótulo. */}
+      <circle cx={c} cy={c} r={R} fill="none" stroke="var(--t-rule2)" />
+      <circle cx={c} cy={c} r={R / 2} fill="none" stroke="var(--t-rule2)" opacity="0.5" />
+      <line x1={c} y1={c - R} x2={c} y2={c + R} stroke="var(--t-rule2)" opacity="0.4" />
+      <line x1={c - R} y1={c} x2={c + R} y2={c} stroke="var(--t-rule2)" opacity="0.4" />
+
+      {tramos.map((t, i) => (
+        <path key={i} d={t.d} fill="none" stroke="var(--t-accent2)" strokeWidth="1.8"
+          strokeLinecap="round" strokeLinejoin="round"
+          strokeDasharray={t.vis ? undefined : "0.1 3.2"} opacity={t.vis ? 1 : 0.7} />
+      ))}
+      {ini && <circle cx={ini[0]} cy={ini[1]} r="1.8" fill="var(--t-accent2)" />}
+
+      {pl && <circle cx={pl[0]} cy={pl[1]} r="2.6" fill="#d8c27f" />}
     </svg>
   );
 }
 
 // ─── Filas ────────────────────────────────────────────────────────────────────
 
-type Detalle = { icono: React.ReactNode; titulo: string; texto: string; hora: string };
+// `meta` va inline junto al título: la duración en el satélite, el rumbo de salida en la Luna.
+type Detalle = { icono: React.ReactNode; titulo: string; meta: string; hora: string };
 
 function detalleDe(e: Evento): Detalle {
   switch (e.tipo) {
@@ -247,20 +270,12 @@ function detalleDe(e: Evento): Detalle {
       return {
         icono: <IconoSatelite />,
         titulo: e.nombre,
-        // En los pasos rasantes el inicio y el final caen en el mismo minuto: sobra el "hasta".
-        texto: e.horaFin === e.hora
-          ? `cruza del ${e.desde} al ${e.hasta} en menos de un minuto`
-          : `cruza del ${e.desde} al ${e.hasta} · ${e.duracionMin} min, hasta las ${e.horaFin}`,
+        // En los pasos rasantes el inicio y el final caen en el mismo minuto: no llega a un minuto.
+        meta: e.horaFin === e.hora ? "< 1 min" : `${e.duracionMin} min`,
         hora: e.hora,
       };
     case "luna":
-      return {
-        icono: <IconoLuna evento={e} />,
-        titulo: "Luna",
-        // El rumbo no va aquí: la Luna lo enseña en la columna donde los demás ponen su altitud.
-        texto: `${e.fase}, ${Math.round(e.iluminacion * 100)} % iluminada`,
-        hora: e.hora,
-      };
+      return { icono: <IconoLuna evento={e} />, titulo: "Luna", meta: e.desde, hora: e.hora };
   }
 }
 
@@ -272,26 +287,15 @@ function Fila({ evento }: { evento: Evento }) {
       <span className="obs-icono">{d.icono}</span>
       <span className="obs-cuerpo">
         <span className="obs-titulo">{d.titulo}</span>
-        <span className="obs-texto">{d.texto}</span>
+        {d.meta && <span className="obs-meta">{d.meta}</span>}
       </span>
-      {/* `display: contents` en escritorio: los dos datos son celdas del grid.
-          En móvil el envoltorio se vuelve visible y los pone en una sola línea. */}
-      <span className="obs-datos">
-        {/* La Luna sale por donde sale y punto: su altitud en ese momento es cero, así que
-            esta columna le sirve para lo único que importa, hacia dónde mirar. */}
-        {evento.tipo === "luna" ? (
-          <span className="obs-dato obs-rumbo" title="por dónde sale">{evento.desde}</span>
-        ) : (
-          <span className="obs-dato" title="altitud máxima sobre el horizonte">
-            <ArcoAltitud grados={evento.altitud} />
-            {num(evento.altitud)}°
-          </span>
-        )}
-        <span className="obs-dato" title="magnitud aparente (menos es más brillante)">
-          <PuntoBrillo magnitud={evento.magnitud} />
-          {num(evento.magnitud, 1)}
+      {/* La carta del cielo (trayectoria + Luna de fondo) es solo del satélite; la Luna se resuelve
+          con su rumbo de salida en el texto. */}
+      {evento.tipo === "satelite" && (
+        <span className="obs-grafico">
+          <TrayectoriaCielo puntos={evento.trayectoria} luna={evento.luna} />
         </span>
-      </span>
+      )}
     </div>
   );
 }
@@ -394,25 +398,17 @@ export default function Vista({ noches, planetas, sede }: { noches: Noche[]; pla
 
         .obs-fila {
           display: grid; align-items: center; gap: 0 0.75rem;
-          grid-template-columns: 3.2rem 18px 1fr auto auto;
+          grid-template-columns: 3.2rem 18px 1fr auto;
           padding: 0.55rem 0.2rem;
           border-bottom: 1px solid var(--t-rule2);
         }
         .obs-fila:last-child { border-bottom: none; }
         .obs-hora { font-family: var(--t-mono); font-size: 0.85rem; color: var(--t-ink); }
         .obs-icono { display: flex; align-items: center; justify-content: center; }
-        .obs-cuerpo { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+        .obs-cuerpo { display: flex; align-items: baseline; gap: 0.55rem; min-width: 0; }
         .obs-titulo { font-size: 0.92rem; color: var(--t-ink); }
-        .obs-texto { font-size: 0.74rem; color: var(--t-ink3); }
-        .obs-datos { display: contents; }
-        .obs-dato {
-          display: flex; align-items: center; gap: 0.3rem;
-          font-family: var(--t-mono); font-size: 0.8rem; color: var(--t-ink2);
-          min-width: 4.6rem; justify-content: flex-end;
-        }
-        /* El rumbo de la Luna no es una cifra que alinear con las de arriba: centrado y
-           un punto más apagado, para que no compita con las altitudes. */
-        .obs-rumbo { justify-content: center; color: var(--t-ink3); }
+        .obs-meta { font-family: var(--t-mono); font-size: 0.74rem; color: var(--t-ink3); }
+        .obs-grafico { display: flex; align-items: center; justify-content: center; }
 
         .obs-vacio {
           border: 1px dashed var(--t-rule); border-radius: 8px; padding: 1.5rem;
@@ -449,9 +445,6 @@ export default function Vista({ noches, planetas, sede }: { noches: Noche[]; pla
         .obs-ahora-dot { position: absolute; top: 3px; width: 5px; height: 5px; border-radius: 50%; background: var(--t-ink2); transform: translateX(-50%); }
 
         @media (max-width: 560px) {
-          .obs-fila { grid-template-columns: 3.2rem 18px 1fr; row-gap: 0.3rem; }
-          .obs-datos { display: flex; gap: 1rem; grid-column: 3; }
-          .obs-dato { justify-content: flex-start; min-width: 0; }
           .obs-prow { grid-template-columns: 4.4rem 3.4rem 1fr; gap: 0 0.7rem; }
         }
       `}</style>
