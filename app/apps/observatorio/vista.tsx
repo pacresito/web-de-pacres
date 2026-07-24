@@ -215,7 +215,7 @@ function TablaPlanetas({ filas }: { filas: FilaPlaneta[] }) {
  * Tierra). El punto dorado, si lo hay, es la Luna: hacia dónde mirar de refilón durante el paso.
  */
 function TrayectoriaCielo({ puntos, luna }: { puntos: PuntoArco[]; luna: { az: number; alt: number } | null }) {
-  const tam = 78, c = tam / 2, R = c - 6;
+  const tam = 52, c = tam / 2, R = c - 5; // N arriba por convención, sin rótulo
   // Math.sin/cos no están fijados por IEEE (ver PROJECT.md): redondear el resultado para que
   // servidor y navegador coincidan y la hidratación no se queje.
   const xy = (az: number, alt: number): [number, number] => {
@@ -241,20 +241,19 @@ function TrayectoriaCielo({ puntos, luna }: { puntos: PuntoArco[]; luna: { az: n
 
   return (
     <svg width={tam} height={tam} viewBox={`0 0 ${tam} ${tam}`} aria-hidden>
-      {/* Rejilla: horizonte, anillo intermedio (45°) y cruz de rumbos. El N va arriba, sin rótulo. */}
+      {/* Horizonte y cruz de rumbos, sin más adornos: la carta es pequeña a propósito */}
       <circle cx={c} cy={c} r={R} fill="none" stroke="var(--t-rule2)" />
-      <circle cx={c} cy={c} r={R / 2} fill="none" stroke="var(--t-rule2)" opacity="0.5" />
       <line x1={c} y1={c - R} x2={c} y2={c + R} stroke="var(--t-rule2)" opacity="0.4" />
       <line x1={c - R} y1={c} x2={c + R} y2={c} stroke="var(--t-rule2)" opacity="0.4" />
 
       {tramos.map((t, i) => (
-        <path key={i} d={t.d} fill="none" stroke="var(--t-accent2)" strokeWidth="1.8"
+        <path key={i} d={t.d} fill="none" stroke="var(--t-accent2)" strokeWidth="1.6"
           strokeLinecap="round" strokeLinejoin="round"
-          strokeDasharray={t.vis ? undefined : "0.1 3.2"} opacity={t.vis ? 1 : 0.7} />
+          strokeDasharray={t.vis ? undefined : "0.1 3"} opacity={t.vis ? 1 : 0.7} />
       ))}
-      {ini && <circle cx={ini[0]} cy={ini[1]} r="1.8" fill="var(--t-accent2)" />}
+      {ini && <circle cx={ini[0]} cy={ini[1]} r="1.6" fill="var(--t-accent2)" />}
 
-      {pl && <circle cx={pl[0]} cy={pl[1]} r="2.6" fill="#d8c27f" />}
+      {pl && <circle cx={pl[0]} cy={pl[1]} r="2.4" fill="#d8c27f" />}
     </svg>
   );
 }
@@ -275,7 +274,7 @@ function detalleDe(e: Evento): Detalle {
         hora: e.hora,
       };
     case "luna":
-      return { icono: <IconoLuna evento={e} />, titulo: "Luna", meta: e.desde, hora: e.hora };
+      return { icono: <IconoLuna evento={e} />, titulo: "Luna", meta: "", hora: e.hora };
   }
 }
 
@@ -289,13 +288,13 @@ function Fila({ evento }: { evento: Evento }) {
         <span className="obs-titulo">{d.titulo}</span>
         {d.meta && <span className="obs-meta">{d.meta}</span>}
       </span>
-      {/* La carta del cielo (trayectoria + Luna de fondo) es solo del satélite; la Luna se resuelve
-          con su rumbo de salida en el texto. */}
-      {evento.tipo === "satelite" && (
-        <span className="obs-grafico">
-          <TrayectoriaCielo puntos={evento.trayectoria} luna={evento.luna} />
-        </span>
-      )}
+      {/* Misma columna para todos: el satélite pinta su carta del cielo; la Luna, en su sitio, el
+          rumbo por el que sale, apagado para no competir con la carta. */}
+      <span className="obs-grafico">
+        {evento.tipo === "satelite"
+          ? <TrayectoriaCielo puntos={evento.trayectoria} luna={evento.luna} />
+          : <span className="obs-rumbo">{evento.desde}</span>}
+      </span>
     </div>
   );
 }
@@ -378,7 +377,9 @@ export default function Vista({ noches, planetas, sede }: { noches: Noche[]; pla
     >
       <style>{`
         .obs-page {
-          max-width: 780px; margin: 0 auto; min-height: 100dvh;
+          /* width:100% es necesario, no cosmético: como ítem flex con margin auto, sin él encoge
+             al ancho del contenido (~370px) y el max-width nunca llega a aplicar. */
+          width: 100%; max-width: 620px; margin: 0 auto; min-height: 100dvh;
           padding: clamp(2rem, 5vw, 3.5rem) clamp(1.1rem, 4vw, 2rem);
           display: flex; flex-direction: column;
         }
@@ -387,7 +388,7 @@ export default function Vista({ noches, planetas, sede }: { noches: Noche[]; pla
           font-variant-numeric: tabular-nums; margin: 0 0 1.6rem;
         }
 
-        .obs-noche { margin-bottom: 1.6rem; }
+        .obs-noche { margin-bottom: 1rem; }
         .obs-noche-cab {
           display: flex; align-items: center; gap: 0.7rem; margin-bottom: 0.5rem;
           font-family: var(--t-mono); font-size: 0.72rem;
@@ -396,19 +397,22 @@ export default function Vista({ noches, planetas, sede }: { noches: Noche[]; pla
         .obs-noche-cab .obs-regla { flex: 1; height: 1px; background: var(--t-rule2); }
         .obs-noche-cab .obs-sede { color: var(--t-ink4); }
 
+        /* Columnas de ancho fijo y grupo centrado: las filas quedan alineadas entre sí (mismo
+           punto para hora, nombre y carta) y agrupadas al centro, no estiradas de lado a lado.
+           Sin separador entre eventos: la raya del día ya delimita cada noche. */
         .obs-fila {
-          display: grid; align-items: center; gap: 0 0.75rem;
-          grid-template-columns: 3.2rem 18px 1fr auto;
-          padding: 0.55rem 0.2rem;
-          border-bottom: 1px solid var(--t-rule2);
+          display: grid; align-items: center; justify-content: center; gap: 0 0.9rem;
+          grid-template-columns: 3.2rem 18px 9.5rem 52px;
+          padding: 0.3rem 0.2rem;
         }
-        .obs-fila:last-child { border-bottom: none; }
         .obs-hora { font-family: var(--t-mono); font-size: 0.85rem; color: var(--t-ink); }
         .obs-icono { display: flex; align-items: center; justify-content: center; }
         .obs-cuerpo { display: flex; align-items: baseline; gap: 0.55rem; min-width: 0; }
         .obs-titulo { font-size: 0.92rem; color: var(--t-ink); }
         .obs-meta { font-family: var(--t-mono); font-size: 0.74rem; color: var(--t-ink3); }
-        .obs-grafico { display: flex; align-items: center; justify-content: center; }
+        .obs-grafico { display: flex; align-items: center; justify-content: center; min-width: 52px; }
+        /* El rumbo de la Luna ocupa el sitio de la carta: apagado y en mono, a juego con la rejilla. */
+        .obs-rumbo { font-family: var(--t-mono); font-size: 0.82rem; color: var(--t-ink4); }
 
         .obs-vacio {
           border: 1px dashed var(--t-rule); border-radius: 8px; padding: 1.5rem;
