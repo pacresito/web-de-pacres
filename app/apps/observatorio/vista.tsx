@@ -185,6 +185,14 @@ function posicionEn(puntos: PuntoArco[], ahora: number): { az: number; alt: numb
   return { az: a.az + salto * k, alt: a.alt + (b.alt - a.alt) * k };
 }
 
+/**
+ * ¿Ese instante cae dentro del paso que se reporta —el tramo que de verdad se ve—? El arco
+ * dibujado es más largo: el satélite asoma por el horizonte unos minutos antes de alcanzar la
+ * altura mínima, y sigue ahí un rato después de apagarse.
+ */
+const enPaso = (paso: EventoSatelite, ahora: number) =>
+  ahora >= paso.instante && ahora <= paso.instanteFin;
+
 function CartaCielo({ paso, detallada = false, giro = 0, ahora = null }: {
   paso: EventoSatelite; detallada?: boolean; giro?: number; ahora?: number | null;
 }) {
@@ -193,6 +201,8 @@ function CartaCielo({ paso, detallada = false, giro = 0, ahora = null }: {
   const flecha = flechaD(pts);
   const luna = paso.luna ? xy(paso.luna.az, paso.luna.alt) : null;
   const viva = ahora === null ? null : posicionEn(pts, ahora);
+  const [vx, vy] = viva ? xy(viva.az, viva.alt) : [0, 0];
+  const brillando = ahora !== null && enPaso(paso, ahora);
   // El lienzo es el mismo (104) para la miniatura y para la pantalla completa, así que el
   // trazo y los rótulos se adelgazan al ampliar: si no, la carta grande sale a brochazos.
   const rotulo = detallada ? 6.5 : 8;
@@ -222,10 +232,14 @@ function CartaCielo({ paso, detallada = false, giro = 0, ahora = null }: {
 
         {luna && <circle cx={luna[0]} cy={luna[1]} r={detallada ? 4.6 : 3.4} fill="#98a2ab" stroke="#6f7880" strokeWidth="0.9" />}
 
-        {viva && <>
-          <circle cx={xy(viva.az, viva.alt)[0]} cy={xy(viva.az, viva.alt)[1]} r="6" fill="var(--t-accent)" opacity="0.25" className="obs-latido" />
-          <circle cx={xy(viva.az, viva.alt)[0]} cy={xy(viva.az, viva.alt)[1]} r="2.9" fill="var(--t-accent)" stroke="var(--t-paper)" strokeWidth="0.8" />
-        </>}
+        {/* Dónde está el satélite ahora mismo: relleno y latiendo mientras se ve, hueco cuando
+            está sobre el horizonte pero aún apagado —ahí, pero no todavía—. */}
+        {viva && (brillando
+          ? <>
+              <circle cx={vx} cy={vy} r="6" fill="var(--t-accent)" opacity="0.25" className="obs-latido" />
+              <circle cx={vx} cy={vy} r="2.9" fill="var(--t-accent)" stroke="var(--t-paper)" strokeWidth="0.8" />
+            </>
+          : <circle cx={vx} cy={vy} r="2.9" fill="var(--t-paper)" stroke="var(--t-accent)" strokeWidth="1.1" />)}
       </g>
     </svg>
   );
@@ -495,7 +509,7 @@ function PantallaCompleta({ paso, onCerrar }: { paso: EventoSatelite; onCerrar: 
   const ahora = useAhora(1000);
   const [brujula, activar] = useBrujula();
   const rumbo = typeof brujula === "number" ? brujula : null;
-  const enCurso = ahora !== null && posicionEn(paso.trayectoria, ahora) !== null;
+  const enCurso = ahora !== null && enPaso(paso, ahora);
   const frena = (e: React.MouseEvent) => e.stopPropagation();
 
   return (
@@ -513,8 +527,6 @@ function PantallaCompleta({ paso, onCerrar }: { paso: EventoSatelite; onCerrar: 
 
       <div className="obs-leyenda" onClick={frena}>
         <div className="obs-leyenda-fila">
-          {/* El punto verde solo tiene sentido mientras el satélite está sobre el horizonte;
-              el resto del tiempo, lo útil es cuánto falta. */}
           <span>{enCurso
             ? <><span className="obs-verde">●</span> dónde mirar ahora</>
             : ahora !== null && ahora < paso.instante
