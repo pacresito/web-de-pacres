@@ -325,12 +325,20 @@ function PistaSatelites({ pasos }: { pasos: EventoSatelite[] }) {
   );
 }
 
+/**
+ * Cuánto falta para verlo, en minutos desde el inicio del marco: esta noche, la hora a la que
+ * asoma; si no se ve, la noche en que vuelve —siempre después de las de hoy— y al final los que
+ * tardan más de tres meses.
+ */
+const asoma = (p: FilaPlaneta) =>
+  p.ventana ? p.ventana.desdeMin : (p.vuelveEnDias ?? Infinity) * 24 * 60;
+
 function LineaDeTiempo({ cielo }: { cielo: Cielo }) {
   const ahora = useAhora(30000);
   const enMarco = ahora === null ? null : minutosEnMarco(new Date(ahora));
-  // Los que se ven van primero y en el orden en que asoman: las barras dibujan una escalera.
-  const planetas = [...cielo.planetas].sort((a, b) =>
-    (a.ventana ? a.ventana.desdeMin : Infinity) - (b.ventana ? b.ventana.desdeMin : Infinity));
+  // Todos en el orden en que asoman: las barras de esta noche dibujan una escalera y detrás
+  // quedan los ausentes, del que vuelve antes al que vuelve después.
+  const planetas = [...cielo.planetas].sort((a, b) => asoma(a) - asoma(b));
 
   return (
     <div className="obs-tl">
@@ -428,14 +436,21 @@ function Satelites({ cielo, onAbrir }: { cielo: Cielo; onAbrir: (p: EventoSateli
 
 // ─── La carta a pantalla completa ─────────────────────────────────────────────
 
-/** Rumbo al que apunta el móvil, en grados, o null mientras no haya brújula. */
-function useBrujula(): [number | null, () => void] {
-  const [rumbo, setRumbo] = useState<number | null>(null);
-  const oyente = useRef<((e: DeviceOrientationEvent) => void) | null>(null);
+/** Rumbo en grados desde el norte · "sin-norte" si el móvil no lo da · null si está apagada. */
+type Brujula = number | "sin-norte" | null;
 
-  useEffect(() => () => {
-    if (oyente.current) window.removeEventListener("deviceorientation", oyente.current, true);
-  }, []);
+/**
+ * Hacia dónde apunta el móvil. El `alpha` de `deviceorientation` es relativo a una referencia
+ * arbitraria del arranque (Chrome en Android): gira bien, pero no sabe dónde está el norte, así
+ * que la carta salía desviada por el rumbo que se tuviera al activar. El evento con norte real
+ * es `deviceorientationabsolute`; en iOS, que no lo tiene, el rumbo es `webkitCompassHeading`.
+ * Sin lectura absoluta no se gira la carta: se dice que no hay brújula.
+ */
+function useBrujula(): [Brujula, () => void] {
+  const [brujula, setBrujula] = useState<Brujula>(null);
+  const apagar = useRef<(() => void) | null>(null);
+
+  useEffect(() => () => apagar.current?.(), []);
 
   const activar = async () => {
     // iOS exige pedir permiso desde un gesto del usuario; el resto de navegadores, no.
@@ -444,20 +459,29 @@ function useBrujula(): [number | null, () => void] {
     }) | undefined;
     if (DOE?.requestPermission && (await DOE.requestPermission()) !== "granted") return;
 
-    oyente.current = (e) => {
+    const evento = "ondeviceorientationabsolute" in window ? "deviceorientationabsolute" : "deviceorientation";
+    const oyente = (e: DeviceOrientationEvent) => {
       const iOS = (e as DeviceOrientationEvent & { webkitCompassHeading?: number }).webkitCompassHeading;
-      setRumbo(iOS ?? (e.alpha === null ? 0 : 360 - e.alpha));
+      if (iOS !== undefined) { setBrujula(iOS); return; }
+      if (e.alpha === null || !e.absolute) { setBrujula("sin-norte"); apagar.current?.(); return; }
+      // `alpha` crece en sentido antihorario desde el norte, y la pantalla puede ir girada
+      // respecto al móvil: el rumbo es el que mira su borde de arriba, no el del aparato.
+      setBrujula((360 - e.alpha + (window.screen.orientation?.angle ?? 0)) % 360);
     };
-    window.addEventListener("deviceorientation", oyente.current, true);
-    setRumbo(0);
+    window.addEventListener(evento, oyente, true);
+    apagar.current = () => window.removeEventListener(evento, oyente, true);
+
+    // Sin magnetómetro no llega ningún evento: mejor decirlo que dejar el botón muerto.
+    setTimeout(() => setBrujula((b) => b ?? "sin-norte"), 3000);
   };
 
-  return [rumbo, activar];
+  return [brujula, activar];
 }
 
 function PantallaCompleta({ paso, onCerrar }: { paso: EventoSatelite; onCerrar: () => void }) {
   const ahora = useAhora(1000);
-  const [rumbo, activar] = useBrujula();
+  const [brujula, activar] = useBrujula();
+  const rumbo = typeof brujula === "number" ? brujula : null;
   const enCurso = ahora !== null && posicionEn(paso.trayectoria, ahora) !== null;
   const frena = (e: React.MouseEvent) => e.stopPropagation();
 
@@ -485,9 +509,11 @@ function PantallaCompleta({ paso, onCerrar }: { paso: EventoSatelite; onCerrar: 
               : <>el paso ya ha terminado</>}</span>
           {paso.luna && <span><span style={{ color: "#98a2ab" }}>●</span> Luna en {paso.luna.rumbo} · {Math.round(paso.luna.alt)}°</span>}
         </div>
-        {rumbo === null
+        {brujula === null
           ? <button className="obs-boton" onClick={(e) => { frena(e); activar(); }}>Activar brújula</button>
-          : <div className="obs-rumbo">brújula activa · rumbo {Math.round(((rumbo % 360) + 360) % 360)}°</div>}
+          : brujula === "sin-norte"
+            ? <div className="obs-rumbo">este móvil no da el norte · carta al norte</div>
+            : <div className="obs-rumbo">brújula activa · rumbo {Math.round(brujula) % 360}°</div>}
       </div>
     </div>
   );

@@ -384,8 +384,9 @@ export type Ventana = {
 export type FilaPlaneta = {
   nombre: string;
   fase: FasePlaneta;
-  ventana: Ventana | null; // la de esta noche, o null si no se ve
-  vuelveEl: string | null; // "12 ago" si vuelve dentro de 90 días; null si tarda más ("en unos meses")
+  ventana: Ventana | null;     // la de esta noche, o null si no se ve
+  vuelveEl: string | null;     // "12 ago" si vuelve dentro de 90 días; null si tarda más ("en unos meses")
+  vuelveEnDias: number | null; // noches que faltan para esa vuelta; ordena la tabla, y null si tarda más
 };
 
 /** Fase del planeta en un instante: fracción iluminada, ángulo y, en Saturno, el anillo. */
@@ -449,18 +450,21 @@ export function tablaPlanetas(ahora: Date): FilaPlaneta[] {
           abiertoFin: v.abiertoFin,
         },
         vuelveEl: null,
+        vuelveEnDias: null,
       };
     }
     // No se ve esta noche: la primera noche que sí, día a día con muestreo grueso.
     let vuelveEl: string | null = null;
+    let vuelveEnDias: number | null = null;
     for (let d = 1; d <= DIAS_REAPARICION; d++) {
       const noche = new Date(base.getTime() + d * 24 * 3600 * 1000);
       if (ventanaNoche(body, noche, obsDe(noche), PASO_REAPARICION_MIN)) {
         vuelveEl = diaYMes(noche);
+        vuelveEnDias = d;
         break;
       }
     }
-    return { nombre, fase: faseEn(body, nocheDe(base)), ventana: null, vuelveEl };
+    return { nombre, fase: faseEn(body, nocheDe(base)), ventana: null, vuelveEl, vuelveEnDias };
   });
 }
 
