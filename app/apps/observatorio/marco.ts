@@ -1,0 +1,61 @@
+// El marco de la noche: de las 18:00 a las 02:00 de la mañana siguiente. Todo lo que pinta el
+// observatorio comparte este eje —planetas, Luna y satélites—; fuera de él no miramos.
+//
+// Va en su propio módulo, sin dependencias, porque lo usan las dos orillas: el motor en el
+// servidor y la vista en el navegador. Importarlo del motor arrastraría astronomy-engine y
+// satellite.js al bundle de cliente.
+
+export const MARCO_INICIO_H = 18;
+export const MARCO_FIN_H = 26;                                    // 02:00 del día siguiente
+export const MARCO_MINUTOS = (MARCO_FIN_H - MARCO_INICIO_H) * 60; // 480
+
+const TZ = "Europe/Madrid";
+
+const FMT_PARTES = new Intl.DateTimeFormat("en-CA", {
+  timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit",
+  hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+});
+
+/** La fecha vista desde Madrid: todo el cálculo va en UTC, la hora local solo al etiquetar. */
+export function partesLocales(fecha: Date) {
+  const p = Object.fromEntries(FMT_PARTES.formatToParts(fecha).map((x) => [x.type, x.value]));
+  return { mes: +p.month, dia: +p.day, hora: +p.hour, minuto: +p.minute, hhmm: `${p.hour}:${p.minute}` };
+}
+
+/** Minutos desde las 18:00 en que cae `fecha`, o null si queda fuera del marco. */
+export function minutosEnMarco(fecha: Date): number | null {
+  const { hora, minuto } = partesLocales(fecha);
+  // El marco cruza la medianoche: la madrugada cuenta como hora + 24.
+  const h = hora >= MARCO_INICIO_H ? hora : hora + 24;
+  const min = (h - MARCO_INICIO_H) * 60 + minuto;
+  return min >= 0 && min <= MARCO_MINUTOS ? min : null;
+}
+
+/** Medianoche local (00:00) del día en que cae `fecha`, como instante UTC. */
+export function medianocheLocal(fecha: Date): Date {
+  const { hora, minuto } = partesLocales(fecha);
+  const t = new Date(fecha);
+  t.setUTCMinutes(t.getUTCMinutes() - hora * 60 - minuto);
+  t.setUTCSeconds(0, 0);
+  return t;
+}
+
+/** Medianoche del día cuyo marco está abierto: de madrugada, la de ayer — la noche sigue viva. */
+export function baseDelMarco(ahora: Date): Date {
+  const base = medianocheLocal(ahora);
+  const deMadrugada = partesLocales(ahora).hora < MARCO_FIN_H - 24;
+  return deMadrugada ? new Date(base.getTime() - 24 * 3600 * 1000) : base;
+}
+
+/** Instantes de apertura y cierre del marco que arranca en la medianoche `base`. */
+export function bordesDelMarco(base: Date): [number, number] {
+  return [base.getTime() + MARCO_INICIO_H * 3600 * 1000, base.getTime() + MARCO_FIN_H * 3600 * 1000];
+}
+
+// "sáb, 26" → "sáb 26": el día tal como se lee en la lista de próximos pasos.
+const FMT_DIA = new Intl.DateTimeFormat("es-ES", { timeZone: TZ, weekday: "short", day: "numeric" });
+export const etiquetaDia = (fecha: Date) => FMT_DIA.format(fecha).replace(",", "");
+
+// "12 ago": la fecha de vuelta de lo que esta noche no se ve.
+const FMT_DIA_MES = new Intl.DateTimeFormat("es-ES", { timeZone: TZ, day: "numeric", month: "short" });
+export const diaYMes = (fecha: Date) => FMT_DIA_MES.format(fecha).replace(".", "");

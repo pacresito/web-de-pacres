@@ -1,309 +1,241 @@
 "use client";
 
-import { Fragment, useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import TerminalShell from "../../components/TerminalShell";
 import WhyFooter from "../../components/WhyFooter";
-import {
-  ALTITUD_MINIMA, MAGNITUD_MAXIMA, MARCO_INICIO_H, MARCO_MINUTOS,
-  type Evento, type EventoLuna, type Noche, type FilaPlaneta, type Ventana, type PuntoArco,
-} from "./engine";
+import { MARCO_MINUTOS, minutosEnMarco } from "./marco";
+import type { Cielo, EventoSatelite, FilaPlaneta, PuntoArco } from "./engine";
 
-// ─── Piezas visuales ──────────────────────────────────────────────────────────
-
-/** Disco lunar con su fase real: la parte iluminada es la que se verá esa noche. */
-function IconoLuna({ evento, tam = 18 }: { evento: EventoLuna; tam?: number }) {
-  const r = tam / 2 - 1;
-  const creciente = evento.anguloFase < 180;
-  // El terminador es una semielipse: su semieje horizontal va de r (luna nueva) a 0 (llena).
-  const rx = r * Math.abs(1 - 2 * evento.iluminacion);
-  const barrido = evento.iluminacion > 0.5 ? 1 : 0;
-  // `lado` es el limbo que dibuja el borde exterior de la sombra: la creciente ilumina la
-  // derecha (sombra a la izquierda), la menguante al revés. El barrido de la segunda mitad
-  // hace la sombra fina en fase gibosa y gruesa en creciente.
-  const lado = creciente ? 0 : 1;
-  return (
-    <svg width={tam} height={tam} viewBox={`0 0 ${tam} ${tam}`} aria-hidden>
-      <circle cx={tam / 2} cy={tam / 2} r={r} fill="var(--t-paper2)" stroke="var(--t-rule)" />
-      <path
-        d={`M ${tam / 2} ${tam / 2 - r}
-            A ${r} ${r} 0 0 ${lado} ${tam / 2} ${tam / 2 + r}
-            A ${rx} ${r} 0 0 ${barrido === lado ? 0 : 1} ${tam / 2} ${tam / 2 - r} Z`}
-        fill="var(--t-ink2)"
-      />
-    </svg>
-  );
-}
-
-function IconoSatelite({ tam = 18 }: { tam?: number }) {
-  return (
-    <svg width={tam} height={tam} viewBox="0 0 18 18" aria-hidden fill="none" stroke="var(--t-accent2)" strokeWidth="1.3">
-      <circle cx="9" cy="9" r="2.4" fill="var(--t-accent2)" stroke="none" />
-      <rect x="0.8" y="6.6" width="4.4" height="4.8" rx="0.6" />
-      <rect x="12.8" y="6.6" width="4.4" height="4.8" rx="0.6" />
-      <line x1="5.2" y1="9" x2="6.6" y2="9" />
-      <line x1="11.4" y1="9" x2="12.8" y2="9" />
-    </svg>
-  );
-}
-
-// ─── Tabla de planetas ────────────────────────────────────────────────────────
-// Panorama estable, arriba del todo: cada planeta con su disco (color y textura evocada,
-// más su fase real como la Luna) y la banda de visibilidad dentro del marco 18:00–02:00.
-
-const RP = 15; // radio del disco de planeta
 const redondo = (n: number) => +n.toFixed(2);
 
-// Color y rasgo de cada planeta. Son su identidad: no viran con el tema (ver PROJECT.md).
-const ESTILO_PLANETA: Record<string, { base: string; dark: string; sig: "craters" | "plain" | "mars" | "jupiter" }> = {
-  Mercurio: { base: "#a49a8c", dark: "#6f685e", sig: "craters" },
-  Venus:    { base: "#ecdca6", dark: "#c9b579", sig: "plain" },
-  Marte:    { base: "#c66a40", dark: "#8f4426", sig: "mars" },
-  Júpiter:  { base: "#e3bd82", dark: "#c08f52", sig: "jupiter" },
-  Saturno:  { base: "#e2cd93", dark: "#c4a970", sig: "plain" },
+// ─── Los cuerpos ──────────────────────────────────────────────────────────────
+// Color y rasgo de cada cuerpo. Son su identidad: no viran con el tema (ver PROJECT.md).
+// La textura es un apunte, no un mapa: dos manchas y una banda bastan para que un disco de
+// 22 px se reconozca; más detalle a ese tamaño solo ensucia.
+
+const R = 11;                 // radio del disco
+const CX = 18, CY = 12;       // centro dentro del lienzo (36 × 24, ancho para el anillo)
+const SOMBRA = "rgba(0,0,0,0.20)";
+const LUZ = "rgba(255,255,255,0.16)";
+
+function Craters() {
+  return <>
+    <circle cx={CX - 4} cy={CY - 3} r="2.6" fill="none" stroke={SOMBRA} strokeWidth="0.9" />
+    <circle cx={CX + 3} cy={CY + 3.5} r="1.7" fill="none" stroke={SOMBRA} strokeWidth="0.9" />
+    <circle cx={CX - 1} cy={CY + 5} r="1.1" fill={SOMBRA} />
+  </>;
+}
+
+const CUERPOS: Record<string, { color: string; textura: React.ReactNode }> = {
+  Mercurio: { color: "#8f8a80", textura: <Craters /> },
+  Venus: {
+    color: "#e6cf87",
+    textura: <>
+      <ellipse cx={CX - 2} cy={CY - 4} rx="8" ry="2" fill={LUZ} />
+      <ellipse cx={CX + 1} cy={CY + 4} rx="7" ry="1.6" fill={SOMBRA} />
+    </>,
+  },
+  Marte: {
+    color: "#c0512e",
+    textura: <>
+      <ellipse cx={CX - 3} cy={CY + 1} rx="4.5" ry="3" fill={SOMBRA} />
+      <ellipse cx={CX + 4} cy={CY - 3} rx="2.5" ry="1.6" fill={SOMBRA} />
+      <ellipse cx={CX} cy={CY - R + 1.5} rx="3.5" ry="1.6" fill="rgba(255,255,255,0.45)" />
+    </>,
+  },
+  Júpiter: {
+    color: "#cb9f63",
+    textura: <>
+      <rect x={CX - R} y={CY - 6.5} width={R * 2} height="2" fill={SOMBRA} />
+      <rect x={CX - R} y={CY - 1} width={R * 2} height="2.4" fill={SOMBRA} />
+      <rect x={CX - R} y={CY + 4.5} width={R * 2} height="1.8" fill={SOMBRA} />
+      <ellipse cx={CX + 3} cy={CY + 3} rx="2.2" ry="1.3" fill="rgba(162,59,42,0.55)" />
+    </>,
+  },
+  Saturno: {
+    color: "#dcc27f",
+    textura: <>
+      <rect x={CX - R} y={CY - 4} width={R * 2} height="1.8" fill={SOMBRA} />
+      <rect x={CX - R} y={CY + 2} width={R * 2} height="1.6" fill={SOMBRA} />
+    </>,
+  },
+  Luna: {
+    color: "#d9d2c2",
+    textura: <>
+      <ellipse cx={CX - 3.5} cy={CY - 3} rx="4" ry="3" fill={SOMBRA} />
+      <ellipse cx={CX + 2.5} cy={CY + 1} rx="3.2" ry="2.4" fill={SOMBRA} />
+      <ellipse cx={CX - 1} cy={CY + 5.5} rx="2.6" ry="1.6" fill={SOMBRA} />
+      <circle cx={CX + 4.5} cy={CY - 5} r="1.6" fill="none" stroke={LUZ} strokeWidth="0.8" />
+    </>,
+  },
 };
 
-// Terminador de la fase, igual que la Luna: la parte oscura del disco según la fracción
-// iluminada. El lado iluminado va fijo a la izquierda — pintar la orientación real del
-// terminador de cada planeta sería otro cálculo, y lo que se lee de un vistazo es cuánto disco
-// falta, no por dónde. El barrido de la segunda mitad: sombra fina cuando el disco está casi
-// lleno (ilum > 0.5), gruesa cuando es un creciente (ilum < 0.5).
-function faseD(cx: number, cy: number, ilum: number): string {
-  const rx = redondo(RP * Math.abs(1 - 2 * ilum));
-  const barrido = ilum > 0.5 ? 0 : 1;
-  return `M ${cx} ${cy - RP} A ${RP} ${RP} 0 0 1 ${cx} ${cy + RP} A ${rx} ${RP} 0 0 ${barrido} ${cx} ${cy - RP} Z`;
+/**
+ * Terminador de la fase: la parte oscura del disco. `sombraDerecha` dice de qué lado cae —en
+ * la Luna es real (la creciente ilumina la derecha), en los planetas va fija a la izquierda:
+ * de un vistazo se lee cuánto disco falta, no por dónde—.
+ */
+function sombraD(ilum: number, sombraDerecha: boolean): string {
+  const rx = redondo(R * Math.abs(1 - 2 * ilum)); // semieje del terminador: R en nueva, 0 en llena
+  const limbo = sombraDerecha ? 1 : 0;
+  // El terminador se comba hacia fuera cuando el disco está casi lleno y hacia dentro cuando
+  // es un creciente: así la sombra sale fina o gruesa según toque.
+  const comba = ilum > 0.5 === !sombraDerecha ? 1 : 0;
+  return `M ${CX} ${CY - R} A ${R} ${R} 0 0 ${limbo} ${CX} ${CY + R} A ${rx} ${R} 0 0 ${comba} ${CX} ${CY - R} Z`;
 }
 
-/** El rasgo dibujado de cada planeta: bandas, mancha, cráteres… Nada para los lisos. */
-function Rasgo({ sig, cx, cy }: { sig: string; cx: number; cy: number }) {
-  const linea = "rgba(0,0,0,0.18)";
-  switch (sig) {
-    case "mars": return <>
-      <ellipse cx={cx - 3} cy={cy + 2} rx={4} ry={3} fill="rgba(0,0,0,0.22)" />
-      <circle cx={cx + 1} cy={cy - RP + 3} r={2.2} fill="rgba(255,255,255,0.55)" />
-    </>;
-    case "jupiter": return <>
-      <line x1={cx - RP + 2} y1={cy - 5} x2={cx + RP - 2} y2={cy - 5} stroke={linea} strokeWidth="1.4" />
-      <line x1={cx - RP + 1} y1={cy} x2={cx + RP - 1} y2={cy} stroke={linea} strokeWidth="1.6" />
-      <line x1={cx - RP + 2} y1={cy + 5} x2={cx + RP - 2} y2={cy + 5} stroke={linea} strokeWidth="1.2" />
-      <ellipse cx={cx + 3} cy={cy + 4} rx={2.4} ry={1.5} fill="#a23b2a" />
-    </>;
-    case "craters": return <>
-      <circle cx={cx - 3} cy={cy - 2} r={2} fill="none" stroke={linea} strokeWidth="0.9" />
-      <circle cx={cx + 2} cy={cy + 3} r={1.4} fill="none" stroke={linea} strokeWidth="0.9" />
-    </>;
-    default: return null;
-  }
-}
-
-/** Disco del planeta: color propio, su rasgo, la fase encima y —en Saturno— el anillo real. */
-function DiscoPlaneta({ fila }: { fila: FilaPlaneta }) {
-  const est = ESTILO_PLANETA[fila.nombre];
-  const esSaturno = fila.nombre === "Saturno";
-  // Saturno necesita más lienzo para que el anillo no salga cortado.
-  const W = esSaturno ? 54 : 32, H = esSaturno ? 34 : 32;
-  const cx = W / 2, cy = H / 2;
-  const gid = `obs-grad-${fila.nombre}`;
-  const { iluminacion, ringTilt } = fila.fase;
+/** Disco de un cuerpo: su color, su textura, la fase real encima y —en Saturno— el anillo. */
+function Disco({ nombre, iluminacion, sombraDerecha = false, ringTilt = null }: {
+  nombre: string; iluminacion: number; sombraDerecha?: boolean; ringTilt?: number | null;
+}) {
+  const { color, textura } = CUERPOS[nombre];
+  const recorte = `obs-disco-${nombre}`;
 
   // Anillo a la inclinación real (aprox): ry = rx·sen(tilt). El sen() no está fijado por IEEE
-  // → se redondea para que servidor y navegador coincidan y no rompa la hidratación.
-  let anilloAtras = null, anilloDelante = null;
-  if (esSaturno && ringTilt != null) {
-    const rx = RP * 1.7;
-    const ry = redondo(rx * Math.sin((Math.abs(ringTilt) * Math.PI) / 180));
-    anilloAtras   = <g transform={`rotate(-18 ${cx} ${cy})`}><path d={`M ${cx - rx} ${cy} A ${rx} ${ry} 0 0 1 ${cx + rx} ${cy}`} fill="none" stroke="#cdb075" strokeWidth="2.4" opacity="0.9" /></g>;
-    anilloDelante = <g transform={`rotate(-18 ${cx} ${cy})`}><path d={`M ${cx + rx} ${cy} A ${rx} ${ry} 0 0 1 ${cx - rx} ${cy}`} fill="none" stroke="#cdb075" strokeWidth="2.4" /></g>;
-  }
+  // (ver PROJECT.md) → se redondea para que servidor y navegador coincidan en la hidratación.
+  const rx = R * 1.55;
+  const ry = ringTilt === null ? 0 : redondo(rx * Math.sin((Math.abs(ringTilt) * Math.PI) / 180));
+  const arco = (desde: number, hasta: number) =>
+    `M ${CX + desde * rx} ${CY} A ${rx} ${ry} 0 0 1 ${CX + hasta * rx} ${CY}`;
 
   return (
-    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} aria-hidden>
-      <defs>
-        {fila.nombre === "Júpiter" ? (
-          <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#eccf97" /><stop offset="0.35" stopColor="#cc9d5f" />
-            <stop offset="0.55" stopColor="#e6c288" /><stop offset="0.75" stopColor="#bd9256" />
-            <stop offset="1" stopColor="#e3bd82" />
-          </linearGradient>
-        ) : (
-          <radialGradient id={gid} cx="0.38" cy="0.35" r="0.75">
-            <stop offset="0" stopColor={est.base} /><stop offset="1" stopColor={est.dark} />
-          </radialGradient>
-        )}
-      </defs>
-      {anilloAtras}
-      <circle cx={cx} cy={cy} r={RP} fill={`url(#${gid})`} />
-      <Rasgo sig={est.sig} cx={cx} cy={cy} />
-      <path d={faseD(cx, cy, iluminacion)} fill="rgba(8,6,3,0.68)" />
-      <circle cx={cx} cy={cy} r={RP} fill="none" stroke="rgba(0,0,0,0.15)" />
-      {anilloDelante}
+    <svg width="36" height="24" viewBox="0 0 36 24" aria-hidden>
+      <defs><clipPath id={recorte}><circle cx={CX} cy={CY} r={R} /></clipPath></defs>
+      {ringTilt !== null && (
+        <g transform={`rotate(-18 ${CX} ${CY})`}>
+          <path d={arco(-1, 1)} fill="none" stroke="#cdb075" strokeWidth="1.8" opacity="0.75" />
+        </g>
+      )}
+      <circle cx={CX} cy={CY} r={R} fill={color} />
+      <g clipPath={`url(#${recorte})`}>
+        {textura}
+        <path d={sombraD(iluminacion, sombraDerecha)} fill="rgba(6,5,2,0.7)" />
+      </g>
+      <circle cx={CX} cy={CY} r={R} fill="none" stroke="rgba(0,0,0,0.35)" />
+      {ringTilt !== null && (
+        <g transform={`rotate(-18 ${CX} ${CY})`}>
+          <path d={arco(1, -1)} fill="none" stroke="#cdb075" strokeWidth="1.8" />
+        </g>
+      )}
     </svg>
   );
 }
 
-// Marco fijo 18:00–02:00 (480 min). La franja verde es la ventana visible; los extremos que
-// tocan el borde quedan abiertos, sin hora.
-const TICKS: [number, string][] = [[0, "18"], [120, "20"], [240, "22"], [360, "00"], [480, "02"]];
+// ─── La carta del cielo ───────────────────────────────────────────────────────
+// Círculo = el cielo entero, con el N arriba y el E a la izquierda: es la vista de quien
+// levanta el móvil y mira hacia arriba, no un mapa. El centro es el cenit y el borde, el
+// horizonte. El trazo va continuo mientras el satélite se ve y punteado cuando entra en la
+// sombra de la Tierra.
 
-function BandaVisibilidad({ ventana, ahoraPct }: { ventana: Ventana; ahoraPct: number | null }) {
-  const pos = (min: number) => redondo((Math.min(MARCO_MINUTOS, Math.max(0, min)) / MARCO_MINUTOS) * 100);
-  const izq = pos(ventana.desdeMin), der = pos(ventana.hastaMin);
-  return (
-    <div className="obs-banda">
-      <div className="obs-track" />
-      <div className="obs-seg" style={{ left: `${izq}%`, width: `${redondo(der - izq)}%` }} />
-      {TICKS.map(([min, etq]) => (
-        <Fragment key={min}>
-          <span className="obs-tickline" style={{ left: `${pos(min)}%` }} />
-          <span className="obs-tick" style={{ left: `${pos(min)}%` }}>{etq}</span>
-        </Fragment>
-      ))}
-      {/* Marcador de "ahora": solo entre las 18:00 y las 02:00. Null en el primer render
-          (servidor) → aparece tras montar, sin choque de hidratación con el reloj. */}
-      {ahoraPct !== null && <>
-        <span className="obs-ahora-dot" style={{ left: `${ahoraPct}%` }} />
-        <span className="obs-ahora" style={{ left: `${ahoraPct}%` }} />
-      </>}
-      {!ventana.abiertoInicio && <span className="obs-edge" style={{ left: `${izq}%` }}>{ventana.horaInicio}</span>}
-      {!ventana.abiertoFin && <span className="obs-edge" style={{ left: `${der}%` }}>{ventana.horaFin}</span>}
-    </div>
-  );
+const C = 52, RADIO = 46; // el lienzo es siempre 104 × 104; el tamaño lo pone el CSS
+
+/** Punto de la carta para un rumbo y una altura. */
+function xy(az: number, alt: number, radio = RADIO): [number, number] {
+  const r = radio * (1 - Math.min(90, Math.max(0, alt)) / 90);
+  const a = (az * Math.PI) / 180;
+  // Math.sin/cos no están fijados por IEEE (ver PROJECT.md): redondear para que servidor y
+  // navegador coincidan y la hidratación no se queje.
+  return [redondo(C - r * Math.sin(a)), redondo(C - r * Math.cos(a))];
 }
 
-/** Minutos transcurridos desde el inicio del marco (hora de Madrid), o null si estamos fuera. */
-function minutosEnMarco(d: Date): number | null {
-  const p = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Madrid", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(d);
-  const hh = +p.find((x) => x.type === "hour")!.value;
-  const mm = +p.find((x) => x.type === "minute")!.value;
-  // El marco cruza la medianoche (18:00–02:00): la madrugada cuenta como hora + 24.
-  const horaMarco = hh >= MARCO_INICIO_H ? hh : hh + 24;
-  const min = (horaMarco - MARCO_INICIO_H) * 60 + mm;
-  return min >= 0 && min <= MARCO_MINUTOS ? min : null;
-}
-
-function TablaPlanetas({ filas }: { filas: FilaPlaneta[] }) {
-  const [ahora, setAhora] = useState<number | null>(null);
-  useEffect(() => {
-    const tick = () => setAhora(minutosEnMarco(new Date()));
-    tick();
-    const id = setInterval(tick, 30000);
-    return () => clearInterval(id);
-  }, []);
-  const ahoraPct = ahora === null ? null : redondo((ahora / MARCO_MINUTOS) * 100);
-
-  return (
-    <section className="obs-noche">
-      <div className="obs-noche-cab"><span className="obs-fecha">Planetas</span><span className="obs-regla" /></div>
-      {filas.map((f) => (
-        <div className="obs-prow" key={f.nombre}>
-          <span className="obs-pnombre">{f.nombre}</span>
-          <span className="obs-pdisco"><DiscoPlaneta fila={f} /></span>
-          {f.ventana ? (
-            <BandaVisibilidad ventana={f.ventana} ahoraPct={ahoraPct} />
-          ) : (
-            <span className="obs-pvuelve">
-              {f.vuelveEl ? <>Vuelve el <b>{f.vuelveEl}</b></> : <>Vuelve en <b>unos meses</b></>}
-            </span>
-          )}
-        </div>
-      ))}
-    </section>
-  );
-}
-
-/**
- * Carta polar del cielo del paso de un satélite: círculo con el N arriba (E a la derecha) y la
- * trayectoria de su salida a su puesta. La curvatura da la altura —centro = cenit, borde =
- * horizonte— y el trazo es continuo mientras se ve y punteado cuando no (dentro de la sombra de la
- * Tierra). El punto dorado, si lo hay, es la Luna: hacia dónde mirar de refilón durante el paso.
- */
-function TrayectoriaCielo({ puntos, luna }: { puntos: PuntoArco[]; luna: { az: number; alt: number } | null }) {
-  const tam = 52, c = tam / 2, R = c - 5; // N arriba por convención, sin rótulo
-  // Math.sin/cos no están fijados por IEEE (ver PROJECT.md): redondear el resultado para que
-  // servidor y navegador coincidan y la hidratación no se queje.
-  const xy = (az: number, alt: number): [number, number] => {
-    const r = R * (1 - Math.min(90, Math.max(0, alt)) / 90);
-    const a = (az * Math.PI) / 180;
-    return [redondo(c + r * Math.sin(a)), redondo(c - r * Math.cos(a))];
-  };
+/** Tramos continuos por visibilidad; la frontera entra en los dos para que la línea no se corte. */
+function tramos(puntos: PuntoArco[]): { vis: boolean; d: string }[] {
   const trazo = (pts: PuntoArco[]) =>
     pts.map((p, k) => `${k ? "L" : "M"} ${xy(p.az, p.alt).join(" ")}`).join(" ");
-
-  // Tramos continuos por visibilidad: cada uno un solo path (guionado parejo, sin remates sueltos).
-  // El punto de frontera entra en los dos tramos para que la línea no se corte al cambiar de estilo.
-  const tramos: { vis: boolean; d: string }[] = [];
+  const salida: { vis: boolean; d: string }[] = [];
   for (let i = 0; i < puntos.length; ) {
     let j = i;
     while (j + 1 < puntos.length && puntos[j + 1].vis === puntos[i].vis) j++;
-    const hasta = Math.min(j + 1, puntos.length - 1); // arrastra la frontera
-    tramos.push({ vis: puntos[i].vis, d: trazo(puntos.slice(i, hasta + 1)) });
+    const hasta = Math.min(j + 1, puntos.length - 1);
+    salida.push({ vis: puntos[i].vis, d: trazo(puntos.slice(i, hasta + 1)) });
     i = j + 1;
   }
-  const ini = puntos.length ? xy(puntos[0].az, puntos[0].alt) : null;
-  const pl = luna ? xy(luna.az, luna.alt) : null;
+  return salida;
+}
+
+/**
+ * Punta de flecha al final del arco, para saber hacia dónde corre el satélite. Apunta en la
+ * dirección del último tramo con recorrido: al ras del horizonte las muestras se amontonan y
+ * las dos finales solas dan una dirección temblorosa, pero irse muy atrás desvía la punta de
+ * la curva que se está dibujando.
+ */
+function flechaD(puntos: PuntoArco[]): string | null {
+  if (puntos.length < 2) return null;
+  const [xf, yf] = xy(puntos[puntos.length - 1].az, puntos[puntos.length - 1].alt);
+  const antes = puntos.slice(0, -1).reverse()
+    .map((p) => xy(p.az, p.alt))
+    .find(([x, y]) => Math.hypot(x - xf, y - yf) >= 1.5);
+  if (!antes) return null;
+
+  const a = Math.atan2(yf - antes[1], xf - antes[0]);
+  const ala = (giro: number) =>
+    `${redondo(xf - 4 * Math.cos(a + giro))} ${redondo(yf - 4 * Math.sin(a + giro))}`;
+  return `M ${ala(0.5)} L ${xf} ${yf} L ${ala(-0.5)}`;
+}
+
+/** Dónde está el satélite en un instante, interpolando entre las dos muestras que lo rodean. */
+function posicionEn(puntos: PuntoArco[], ahora: number): { az: number; alt: number } | null {
+  if (puntos.length < 2 || ahora < puntos[0].t || ahora > puntos[puntos.length - 1].t) return null;
+  const i = puntos.findIndex((p) => p.t >= ahora);
+  if (i <= 0) return puntos[0];
+  const a = puntos[i - 1], b = puntos[i];
+  const k = (ahora - a.t) / (b.t - a.t);
+  // El rumbo puede cruzar el norte (350° → 10°): se interpola por el camino corto.
+  const salto = ((b.az - a.az + 540) % 360) - 180;
+  return { az: a.az + salto * k, alt: a.alt + (b.alt - a.alt) * k };
+}
+
+function CartaCielo({ paso, detallada = false, giro = 0, ahora = null }: {
+  paso: EventoSatelite; detallada?: boolean; giro?: number; ahora?: number | null;
+}) {
+  const pts = paso.trayectoria;
+  const [ix, iy] = xy(pts[0].az, pts[0].alt);
+  const flecha = flechaD(pts);
+  const luna = paso.luna ? xy(paso.luna.az, paso.luna.alt) : null;
+  const viva = ahora === null ? null : posicionEn(pts, ahora);
+  // El lienzo es el mismo (104) para la miniatura y para la pantalla completa, así que el
+  // trazo y los rótulos se adelgazan al ampliar: si no, la carta grande sale a brochazos.
+  const rotulo = detallada ? 6.5 : 8;
+  const grosor = detallada ? 1.2 : 1.7;
 
   return (
-    <svg width={tam} height={tam} viewBox={`0 0 ${tam} ${tam}`} aria-hidden>
-      {/* Horizonte y cruz de rumbos, sin más adornos: la carta es pequeña a propósito */}
-      <circle cx={c} cy={c} r={R} fill="none" stroke="var(--t-rule2)" />
-      <line x1={c} y1={c - R} x2={c} y2={c + R} stroke="var(--t-rule2)" opacity="0.4" />
-      <line x1={c - R} y1={c} x2={c + R} y2={c} stroke="var(--t-rule2)" opacity="0.4" />
+    <svg viewBox="0 0 104 104" className="obs-carta" aria-hidden>
+      <circle cx={C} cy={C} r={RADIO} fill="none" stroke="var(--t-rule)" />
+      <circle cx={C} cy={C} r={RADIO / 2} fill="none" stroke="var(--t-rule2)" strokeDasharray="2 3" />
+      {detallada && <circle cx={C} cy={C} r={RADIO * 0.75} fill="none" stroke="var(--t-rule2)" strokeDasharray="2 3" />}
+      <circle cx={C} cy={C} r="1.6" fill="var(--t-ink3)" />
 
-      {tramos.map((t, i) => (
-        <path key={i} d={t.d} fill="none" stroke="var(--t-accent2)" strokeWidth="1.6"
-          strokeLinecap="round" strokeLinejoin="round"
-          strokeDasharray={t.vis ? undefined : "0.1 3"} opacity={t.vis ? 1 : 0.7} />
-      ))}
-      {ini && <circle cx={ini[0]} cy={ini[1]} r="1.6" fill="var(--t-accent2)" />}
+      <g transform={`rotate(${redondo(giro)} ${C} ${C})`}>
+        <text x={C} y="12" textAnchor="middle" fontSize={rotulo} fill="var(--t-ink3)">N</text>
+        <text x={C} y="99" textAnchor="middle" fontSize={rotulo} fill="var(--t-ink4)">S</text>
+        <text x="9" y="55" textAnchor="middle" fontSize={rotulo} fill="var(--t-ink4)">E</text>
+        <text x="96" y="55" textAnchor="middle" fontSize={rotulo} fill="var(--t-ink4)">O</text>
 
-      {pl && <circle cx={pl[0]} cy={pl[1]} r="2.4" fill="#d8c27f" />}
+        {tramos(pts).map((t, i) => (
+          <path key={i} d={t.d} fill="none" stroke="var(--t-ink)" strokeWidth={grosor * (t.vis ? 1 : 0.85)}
+            strokeLinecap="round" strokeLinejoin="round" strokeDasharray={t.vis ? undefined : "1.5 3"} />
+        ))}
+        <circle cx={ix} cy={iy} r="2.2" fill="var(--t-ink)" />
+        {flecha && <path d={flecha} fill="none" stroke="var(--t-ink)" strokeWidth={grosor} strokeLinecap="round" strokeLinejoin="round" />}
+
+        {luna && <circle cx={luna[0]} cy={luna[1]} r={detallada ? 4.6 : 3.4} fill="#98a2ab" stroke="#6f7880" strokeWidth="0.9" />}
+
+        {viva && <>
+          <circle cx={xy(viva.az, viva.alt)[0]} cy={xy(viva.az, viva.alt)[1]} r="6" fill="var(--t-accent)" opacity="0.25" className="obs-latido" />
+          <circle cx={xy(viva.az, viva.alt)[0]} cy={xy(viva.az, viva.alt)[1]} r="2.9" fill="var(--t-accent)" stroke="var(--t-paper)" strokeWidth="0.8" />
+        </>}
+      </g>
     </svg>
   );
 }
 
-// ─── Filas ────────────────────────────────────────────────────────────────────
+// ─── Formatos ─────────────────────────────────────────────────────────────────
 
-// `meta` va inline junto al título: la duración en el satélite, el rumbo de salida en la Luna.
-type Detalle = { icono: React.ReactNode; titulo: string; meta: string; hora: string };
+/** "-3,4": la magnitud como se escribe en español, con una decimal. */
+const mag = (m: number) => m.toFixed(1).replace(".", ",");
 
-function detalleDe(e: Evento): Detalle {
-  switch (e.tipo) {
-    case "satelite":
-      return {
-        icono: <IconoSatelite />,
-        titulo: e.nombre,
-        // En los pasos rasantes el inicio y el final caen en el mismo minuto: no llega a un minuto.
-        meta: e.horaFin === e.hora ? "< 1 min" : `${e.duracionMin} min`,
-        hora: e.hora,
-      };
-    case "luna":
-      return { icono: <IconoLuna evento={e} />, titulo: "Luna", meta: "", hora: e.hora };
-  }
-}
-
-function Fila({ evento }: { evento: Evento }) {
-  const d = detalleDe(evento);
-  return (
-    <div className="obs-fila">
-      <span className="obs-hora">{d.hora}</span>
-      <span className="obs-icono">{d.icono}</span>
-      <span className="obs-cuerpo">
-        <span className="obs-titulo">{d.titulo}</span>
-        {d.meta && <span className="obs-meta">{d.meta}</span>}
-      </span>
-      {/* Misma columna para todos: el satélite pinta su carta del cielo; la Luna, en su sitio, el
-          rumbo por el que sale, apagado para no competir con la carta. */}
-      <span className="obs-grafico">
-        {evento.tipo === "satelite"
-          ? <TrayectoriaCielo puntos={evento.trayectoria} luna={evento.luna} />
-          : <span className="obs-rumbo">{evento.desde}</span>}
-      </span>
-    </div>
-  );
-}
-
-// ─── Línea de estado ──────────────────────────────────────────────────────────
-
-const nombreDe = (e: Evento) => (e.tipo === "luna" ? "Luna" : e.nombre);
+/** "6m", o "< 1m" en los pasos rasantes, que entran y salen dentro del mismo minuto. */
+const duracion = (p: EventoSatelite) => (p.horaFin === p.hora ? "< 1m" : `${p.duracionMin}m`);
 
 /** "3h 12m", "12m 30s", "45s": la unidad pequeña solo mientras aún importa. */
 function cuenta(ms: number): string {
@@ -315,172 +247,406 @@ function cuenta(ms: number): string {
   return `${s}s`;
 }
 
-/** Resumen fijo de arriba: dónde se mira y cuántos planetas se ven esta noche. */
-function LineaPlanetas({ sede, visibles }: { sede: string; visibles: number }) {
+/** Reloj compartido: null hasta montar, para que el servidor no pinte una hora que el navegador contradiga. */
+function useAhora(cada: number): number | null {
+  const [ahora, setAhora] = useState<number | null>(null);
+  useEffect(() => {
+    // Suscribirse al reloj empieza por leerlo: sin esta primera lectura, la marca de "ahora"
+    // tardaría hasta 30 s en aparecer.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- es la lectura inicial, no una cascada
+    setAhora(Date.now());
+    const id = setInterval(() => setAhora(Date.now()), cada);
+    return () => clearInterval(id);
+  }, [cada]);
+  return ahora;
+}
+
+// ─── La línea de tiempo ───────────────────────────────────────────────────────
+
+const HORAS = ["18", "20", "22", "00", "02"];
+
+/** Posición dentro del marco, en % del eje. */
+const pct = (min: number) => redondo((Math.min(MARCO_MINUTOS, Math.max(0, min)) / MARCO_MINUTOS) * 100);
+
+/** La pista de lo que esta noche no se ve: una vía fantasma con el día en que vuelve. */
+function Vuelve({ cuando }: { cuando: string | null }) {
+  return <div className="obs-fantasma">↩ vuelve {cuando ?? "en unos meses"}</div>;
+}
+
+function PistaPlaneta({ fila }: { fila: FilaPlaneta }) {
+  if (!fila.ventana) return <div className="obs-pista"><Vuelve cuando={fila.vuelveEl} /></div>;
+  const izq = pct(fila.ventana.desdeMin);
   return (
-    <p className="obs-estado">
-      ↳ location: {sede} · visibles: <span style={{ color: "var(--t-accent)" }}>{visibles}</span>
-    </p>
+    <div className="obs-pista">
+      <span className="obs-barra" style={{
+        left: `${izq}%`,
+        width: `${redondo(pct(fila.ventana.hastaMin) - izq)}%`,
+        background: CUERPOS[fila.nombre].color,
+      }} />
+    </div>
   );
 }
 
-/**
- * Cabecera viva de la agenda: cuántos eventos hay esta semana y cuánto falta para lo próximo
- * que hay que pillar al vuelo — un paso de satélite o la salida de la Luna. Mientras ocurre,
- * la cuenta se da la vuelta y sube, en verde: es el momento de estar fuera mirando.
- */
-function LineaEstado({ eventos }: { eventos: Evento[] }) {
-  // Null hasta el primer tick: el reloj del servidor no es el del navegador y la
-  // hidratación se quejaría de la diferencia. Ese segundo en blanco no se ve — el
-  // tecleo del prompt tarda más que eso en destapar el contenido.
-  const [ahora, setAhora] = useState<number | null>(null);
-  useEffect(() => {
-    const id = setInterval(() => setAhora(Date.now()), 1000);
-    return () => clearInterval(id);
+function PistaLuna({ cielo }: { cielo: Cielo }) {
+  if (!cielo.luna) return <div className="obs-pista"><Vuelve cuando={cielo.lunaVuelveEl} /></div>;
+  const min = minutosEnMarco(new Date(cielo.luna.instante)) ?? 0;
+  const x = pct(min);
+  // Pasada la mitad derecha del eje, la hora se pone a la izquierda del rombo: si no, se sale.
+  const alaIzquierda = x > 62;
+  return (
+    <div className="obs-pista">
+      <span className="obs-rombo" style={{ left: `${x}%` }} />
+      <span className="obs-lunahora" style={alaIzquierda ? { right: `${redondo(100 - x)}%`, marginRight: 12, textAlign: "right" } : { left: `${x}%`, marginLeft: 12 }}>
+        <b>{cielo.luna.hora}</b> <span className="obs-mut">{cielo.luna.desde}</span>
+      </span>
+    </div>
+  );
+}
+
+function PistaSatelites({ pasos }: { pasos: EventoSatelite[] }) {
+  if (!pasos.length) return <div className="obs-pista obs-pista-sat"><span className="obs-sinpasos">sin pasos esta noche</span></div>;
+  return (
+    <div className="obs-pista obs-pista-sat">
+      {pasos.map((p) => {
+        const x = `${pct(minutosEnMarco(new Date(p.instante)) ?? 0)}%`;
+        return (
+          <span key={p.instante}>
+            <span className="obs-marca-sat" style={{ left: x }} />
+            <span className="obs-marca-hora" style={{ left: x }}>{p.hora}</span>
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+function LineaDeTiempo({ cielo }: { cielo: Cielo }) {
+  const ahora = useAhora(30000);
+  const enMarco = ahora === null ? null : minutosEnMarco(new Date(ahora));
+  // Los que se ven van primero y en el orden en que asoman: las barras dibujan una escalera.
+  const planetas = [...cielo.planetas].sort((a, b) =>
+    (a.ventana ? a.ventana.desdeMin : Infinity) - (b.ventana ? b.ventana.desdeMin : Infinity));
+
+  return (
+    <div className="obs-tl">
+      <div className="obs-eje"><div className="obs-eje-horas">{HORAS.map((h) => <span key={h}>{h}</span>)}</div></div>
+
+      <div className="obs-tl-cuerpo">
+        <div className="obs-columna">
+          {planetas.map((p) => (
+            <div className="obs-etq" key={p.nombre} style={p.ventana ? undefined : { opacity: 0.4 }}>
+              <Disco nombre={p.nombre} iluminacion={p.fase.iluminacion} ringTilt={p.fase.ringTilt} />
+              <span>{p.nombre}</span>
+            </div>
+          ))}
+          <span className="obs-sep" />
+          <div className="obs-etq" style={cielo.luna ? undefined : { opacity: 0.4 }}>
+            <Disco nombre="Luna" iluminacion={cielo.luna?.iluminacion ?? 0.5}
+              sombraDerecha={(cielo.luna?.anguloFase ?? 0) >= 180} />
+            <span>Luna</span>
+          </div>
+          <div className="obs-etq obs-etq-sat"><span className="obs-sect">Satélites</span></div>
+        </div>
+
+        <div className="obs-columna obs-columna-pistas">
+          {enMarco !== null && <>
+            <span className="obs-ahora" style={{ left: `${pct(enMarco)}%` }} />
+            <span className="obs-ahora-etq" style={{ left: `${pct(enMarco)}%` }}>ahora</span>
+          </>}
+          {planetas.map((p) => <PistaPlaneta key={p.nombre} fila={p} />)}
+          <span className="obs-sep" />
+          <PistaLuna cielo={cielo} />
+          <PistaSatelites pasos={cielo.pasos} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── La tarjeta de satélites ──────────────────────────────────────────────────
+
+function FilaPaso({ paso, onAbrir }: { paso: EventoSatelite; onAbrir: () => void }) {
+  return (
+    <div className="obs-paso" onClick={onAbrir} role="button" tabIndex={0}
+      onKeyDown={(e) => e.key === "Enter" && onAbrir()}>
+      <span className="obs-mini">
+        <CartaCielo paso={paso} />
+        <span className="obs-lupa">⤢</span>
+      </span>
+      <span className="obs-paso-datos">
+        <span className="obs-paso-nombre">{paso.nombre}</span>
+        <span><b className="obs-paso-hora">{paso.hora}</b> <span className="obs-mut">· {duracion(paso)}</span></span>
+        <span className="obs-mut">Mag {mag(paso.magnitud)} · máx {Math.round(paso.altitud)}°</span>
+        <span className="obs-paso-luna">
+          {paso.luna
+            ? <><span style={{ color: "#98a2ab" }}>●</span> Luna en {paso.luna.rumbo} · {Math.round(paso.luna.alt)}° alt</>
+            : <>☾ bajo el horizonte</>}
+        </span>
+      </span>
+    </div>
+  );
+}
+
+function Satelites({ cielo, onAbrir }: { cielo: Cielo; onAbrir: (p: EventoSatelite) => void }) {
+  const n = cielo.pasos.length;
+  return (
+    <section className="obs-card">
+      <div className="obs-card-cab">
+        <span className="obs-sect">Satélites · {n ? `${n} paso${n > 1 ? "s" : ""}` : "sin pasos"}</span>
+        {n > 0 && <span className="obs-hint">toca la carta → brújula</span>}
+      </div>
+
+      {n > 0 && (
+        <div className="obs-pasos">
+          {cielo.pasos.map((p) => <FilaPaso key={p.instante} paso={p} onAbrir={() => onAbrir(p)} />)}
+        </div>
+      )}
+
+      <div className="obs-proximos">
+        <div className="obs-sect obs-proximos-tit">Próximos pasos</div>
+        {cielo.proximos.map((p) => (
+          <div className="obs-proximo" key={p.instante}>
+            <span>{p.dia} · {p.hora} {p.nombre}</span>
+            <span className="obs-mut">{duracion(p)} · Mag {mag(p.magnitud)} · máx {Math.round(p.altitud)}°</span>
+          </div>
+        ))}
+        {cielo.ausentes.map((a) => (
+          <div className="obs-proximo" key={a.nombre}>
+            <span>{a.nombre}</span>
+            <span className="obs-mut">↩ vuelve {a.vuelveEl ?? "en unas semanas"}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+// ─── La carta a pantalla completa ─────────────────────────────────────────────
+
+/** Rumbo al que apunta el móvil, en grados, o null mientras no haya brújula. */
+function useBrujula(): [number | null, () => void] {
+  const [rumbo, setRumbo] = useState<number | null>(null);
+  const oyente = useRef<((e: DeviceOrientationEvent) => void) | null>(null);
+
+  useEffect(() => () => {
+    if (oyente.current) window.removeEventListener("deviceorientation", oyente.current, true);
   }, []);
 
-  const total = <span style={{ color: "var(--t-accent)" }}>{eventos.length}</span>;
-  if (ahora === null) return <p className="obs-estado">↳ events: {total}</p>;
+  const activar = async () => {
+    // iOS exige pedir permiso desde un gesto del usuario; el resto de navegadores, no.
+    const DOE = window.DeviceOrientationEvent as (typeof DeviceOrientationEvent & {
+      requestPermission?: () => Promise<PermissionState>;
+    }) | undefined;
+    if (DOE?.requestPermission && (await DOE.requestPermission()) !== "granted") return;
 
-  const enCurso = eventos.find((e) => e.instante <= ahora && ahora <= e.instanteFin);
-  const proximo = eventos.find((e) => e.instante > ahora);
+    oyente.current = (e) => {
+      const iOS = (e as DeviceOrientationEvent & { webkitCompassHeading?: number }).webkitCompassHeading;
+      setRumbo(iOS ?? (e.alpha === null ? 0 : 360 - e.alpha));
+    };
+    window.addEventListener("deviceorientation", oyente.current, true);
+    setRumbo(0);
+  };
+
+  return [rumbo, activar];
+}
+
+function PantallaCompleta({ paso, onCerrar }: { paso: EventoSatelite; onCerrar: () => void }) {
+  const ahora = useAhora(1000);
+  const [rumbo, activar] = useBrujula();
+  const enCurso = ahora !== null && posicionEn(paso.trayectoria, ahora) !== null;
+  const frena = (e: React.MouseEvent) => e.stopPropagation();
+
+  return (
+    <div className="obs-full" onClick={onCerrar}>
+      <div className="obs-full-cab">
+        <span><b>{paso.nombre}</b> <span className="obs-mut">· {paso.hora} · {duracion(paso)}</span></span>
+        <button className="obs-cerrar" onClick={onCerrar}>cerrar ✕</button>
+      </div>
+
+      <div className="obs-norte">▲ {rumbo === null ? "norte" : "estás mirando aquí"}</div>
+
+      <div className="obs-full-carta" onClick={frena}>
+        <CartaCielo paso={paso} detallada giro={rumbo === null ? 0 : -rumbo} ahora={ahora} />
+      </div>
+
+      <div className="obs-leyenda" onClick={frena}>
+        <div className="obs-leyenda-fila">
+          {/* El punto verde solo tiene sentido mientras el satélite está sobre el horizonte;
+              el resto del tiempo, lo útil es cuánto falta. */}
+          <span>{enCurso
+            ? <><span className="obs-verde">●</span> dónde mirar ahora</>
+            : ahora !== null && ahora < paso.instante
+              ? <>empieza en {cuenta(paso.instante - ahora)}</>
+              : <>el paso ya ha terminado</>}</span>
+          {paso.luna && <span><span style={{ color: "#98a2ab" }}>●</span> Luna en {paso.luna.rumbo} · {Math.round(paso.luna.alt)}°</span>}
+          <span>— — — en la sombra de la Tierra</span>
+        </div>
+        {rumbo === null
+          ? <button className="obs-boton" onClick={(e) => { frena(e); activar(); }}>Activar brújula</button>
+          : <div className="obs-rumbo">brújula activa · rumbo {Math.round(((rumbo % 360) + 360) % 360)}°</div>}
+        <div className="obs-pista-uso">Sostén el móvil en alto y gira hasta alinear ▲ con el cielo.</div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Línea de estado ──────────────────────────────────────────────────────────
+
+/**
+ * El resumen de arriba: dónde se mira, cuántos planetas se ven y cuánto falta para lo próximo
+ * que hay que pillar al vuelo. Mientras ocurre, la cuenta se da la vuelta y sube, en verde:
+ * es el momento de estar fuera mirando.
+ */
+function LineaEstado({ cielo }: { cielo: Cielo }) {
+  const ahora = useAhora(1000);
+  const visibles = cielo.planetas.filter((p) => p.ventana).length;
+  const cabecera = <>↳ location: {cielo.sede} · visibles: <span className="obs-verde">{visibles}</span></>;
+
+  if (ahora === null) return <p className="obs-estado">{cabecera}</p>;
+
+  const enCurso = cielo.citas.find((c) => c.instante <= ahora && ahora <= c.instanteFin);
+  const proximo = cielo.citas.find((c) => c.instante > ahora);
 
   return (
     <p className="obs-estado">
-      ↳ events: {total} ·{" "}
-      {enCurso ? (
-        <span style={{ color: "var(--t-accent)" }}>
-          now: {nombreDe(enCurso)} +{cuenta(ahora - enCurso.instante)}
-        </span>
-      ) : proximo ? (
-        <span>next: {nombreDe(proximo)} in {cuenta(proximo.instante - ahora)}</span>
-      ) : (
-        <span>next: nada previsto</span>
-      )}
+      {cabecera} ·{" "}
+      {enCurso
+        ? <span className="obs-verde">now: {enCurso.nombre} +{cuenta(ahora - enCurso.instante)}</span>
+        : proximo
+          ? <span>next event: {proximo.nombre} in {cuenta(proximo.instante - ahora)}</span>
+          : <span>next event: nada previsto</span>}
     </p>
   );
 }
 
 // ─── Página ───────────────────────────────────────────────────────────────────
 
-// Los criterios del prompt salen de las constantes del motor: si allí cambia el listón,
-// la cabecera no puede seguir presumiendo del viejo.
-const COMANDO = `./observatorio --min-altitude=${ALTITUD_MINIMA} --max-magnitude=${MAGNITUD_MAXIMA}`;
+export default function Vista({ cielo, comando }: { cielo: Cielo; comando: string }) {
+  const [abierto, setAbierto] = useState<EventoSatelite | null>(null);
 
-export default function Vista({ noches, planetas, sede }: { noches: Noche[]; planetas: FilaPlaneta[]; sede: string }) {
-  const total = noches.reduce((n, x) => n + x.eventos.length, 0);
-  const fugaces = noches.flatMap((n) => n.eventos);
-  const planetasVisibles = planetas.filter((p) => p.ventana).length;
+  // Con la carta a pantalla completa, la página de detrás no debe moverse.
+  useEffect(() => {
+    if (!abierto) return;
+    const previo = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = previo; };
+  }, [abierto]);
 
   return (
-    <TerminalShell
-      title="observatorio"
-      prompt={{ host: "observatorio", path: "~/apps", command: COMANDO }}
-    >
+    <TerminalShell title="observatorio" prompt={{ host: "observatorio", path: "~/apps", command: comando }}>
       <style>{`
+        /* width:100% es necesario, no cosmético: como ítem flex con margin auto, sin él encoge
+           al ancho del contenido y el max-width nunca llega a aplicar. */
         .obs-page {
-          /* width:100% es necesario, no cosmético: como ítem flex con margin auto, sin él encoge
-             al ancho del contenido (~370px) y el max-width nunca llega a aplicar. */
-          width: 100%; max-width: 620px; margin: 0 auto; min-height: 100dvh;
-          padding: clamp(2rem, 5vw, 3.5rem) clamp(1.1rem, 4vw, 2rem);
+          width: 100%; max-width: 900px; margin: 0 auto; min-height: 100dvh;
+          padding: clamp(1.6rem, 4vw, 2.6rem) clamp(1.1rem, 4vw, 2rem);
           display: flex; flex-direction: column;
+          font-family: var(--t-mono); font-variant-numeric: tabular-nums;
         }
-        .obs-estado {
-          font-family: var(--t-mono); font-size: 0.75rem; color: var(--t-ink3);
-          font-variant-numeric: tabular-nums; margin: 0 0 1.6rem;
-        }
+        .obs-mut { color: var(--t-ink3); }
+        .obs-verde { color: var(--t-accent); }
+        .obs-sect { font-size: 0.62rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--t-ink3); }
+        .obs-estado { font-size: 0.75rem; color: var(--t-ink3); margin: 0 0 1.8rem; }
 
-        .obs-noche { margin-bottom: 1rem; }
-        .obs-noche-cab {
-          display: flex; align-items: center; gap: 0.7rem; margin-bottom: 0.5rem;
-          font-family: var(--t-mono); font-size: 0.72rem;
-        }
-        .obs-noche-cab .obs-fecha { color: var(--t-accent2); }
-        .obs-noche-cab .obs-regla { flex: 1; height: 1px; background: var(--t-rule2); }
-        .obs-noche-cab .obs-sede { color: var(--t-ink4); }
+        /* ── Línea de tiempo ── */
+        .obs-eje { display: flex; margin-bottom: 8px; padding-left: var(--obs-etq); }
+        .obs-eje-horas { flex: 1; display: flex; justify-content: space-between; font-size: 0.6rem; color: var(--t-ink4); }
+        /* La columna de etiquetas da para el disco (36 px, con sitio para el anillo de Saturno)
+           más el nombre más largo, "Mercurio", en mono. */
+        .obs-tl { --obs-etq: 108px; }
+        .obs-tl-cuerpo { display: flex; }
+        /* Las dos columnas comparten estructura de filas: por eso quedan alineadas sin rejilla. */
+        .obs-columna { display: flex; flex-direction: column; gap: 11px; }
+        .obs-columna:first-child { width: var(--obs-etq); flex: none; }
+        .obs-columna-pistas { flex: 1; position: relative; min-width: 0; }
+        .obs-sep { height: 1px; background: var(--t-rule2); margin: 2px 0; }
+        .obs-columna-pistas .obs-sep { background: none; }
 
-        /* Columnas de ancho fijo y grupo centrado: las filas quedan alineadas entre sí (mismo
-           punto para hora, nombre y carta) y agrupadas al centro, no estiradas de lado a lado.
-           Sin separador entre eventos: la raya del día ya delimita cada noche. */
-        .obs-fila {
-          display: grid; align-items: center; justify-content: center; gap: 0 0.9rem;
-          grid-template-columns: 3.2rem 18px 9.5rem 52px;
-          padding: 0.3rem 0.2rem;
-        }
-        .obs-hora { font-family: var(--t-mono); font-size: 0.85rem; color: var(--t-ink); }
-        .obs-icono { display: flex; align-items: center; justify-content: center; }
-        .obs-cuerpo { display: flex; align-items: baseline; gap: 0.55rem; min-width: 0; }
-        .obs-titulo { font-size: 0.92rem; color: var(--t-ink); }
-        .obs-meta { font-family: var(--t-mono); font-size: 0.74rem; color: var(--t-ink3); }
-        .obs-grafico { display: flex; align-items: center; justify-content: center; min-width: 52px; }
-        /* El rumbo de la Luna ocupa el sitio de la carta: apagado y en mono, a juego con la rejilla. */
-        .obs-rumbo { font-family: var(--t-mono); font-size: 0.82rem; color: var(--t-ink4); }
+        .obs-etq { height: 28px; display: flex; align-items: center; gap: 6px; font-size: 0.75rem; color: var(--t-ink); }
+        .obs-etq-sat { height: 22px; }
+        .obs-pista { height: 28px; position: relative; }
+        .obs-pista-sat { height: 22px; }
 
-        .obs-vacio {
-          border: 1px dashed var(--t-rule); border-radius: 8px; padding: 1.5rem;
-          text-align: center; color: var(--t-ink3); font-size: 0.85rem;
+        .obs-barra { position: absolute; top: 6px; height: 16px; border-radius: 8px; }
+        .obs-fantasma {
+          position: absolute; top: 6px; left: 0; right: 0; height: 16px;
+          border: 1px dashed var(--t-rule); border-radius: 8px;
+          display: flex; align-items: center; justify-content: center;
+          font-size: 0.62rem; color: var(--t-ink3);
         }
+        .obs-rombo {
+          position: absolute; top: 50%; width: 10px; height: 10px; background: var(--t-ink2);
+          transform: translate(-50%, -50%) rotate(45deg);
+        }
+        .obs-lunahora { position: absolute; top: 50%; transform: translateY(-50%); font-size: 0.66rem; white-space: nowrap; color: var(--t-ink); }
+        .obs-sinpasos { position: absolute; left: 0; font-size: 0.62rem; color: var(--t-ink4); }
+        .obs-marca-sat { position: absolute; top: 0; width: 2px; height: 12px; background: var(--t-accent); transform: translateX(-50%); }
+        .obs-marca-hora { position: absolute; top: 13px; font-size: 0.55rem; color: var(--t-accent); transform: translateX(-50%); }
 
-        /* Tabla de planetas: nombre · disco con fase · banda de visibilidad */
-        .obs-prow {
-          display: grid; align-items: center; gap: 0 1.1rem;
-          grid-template-columns: 5rem 3.6rem 1fr;
-          padding: 0.8rem 0.2rem; border-bottom: 1px solid var(--t-rule2);
-        }
-        .obs-prow:last-child { border-bottom: none; }
-        .obs-pnombre { font-size: 0.9rem; color: var(--t-ink); }
-        .obs-pdisco { display: flex; align-items: center; justify-content: center; }
-        .obs-pvuelve { font-size: 0.78rem; color: var(--t-ink3); }
-        .obs-pvuelve b { color: var(--t-accent2); font-weight: 600; }
+        .obs-ahora { position: absolute; top: -4px; bottom: 24px; width: 2px; background: var(--t-accent); opacity: 0.9; z-index: 2; }
+        .obs-ahora-etq { position: absolute; top: -16px; transform: translateX(-50%); font-size: 0.55rem; color: var(--t-accent); z-index: 2; }
 
-        .obs-banda { position: relative; height: 40px; }
-        .obs-track {
-          position: absolute; left: 0; right: 0; top: 16px; height: 8px; background: var(--t-rule2);
-          -webkit-mask: linear-gradient(90deg, transparent 0, #000 6%, #000 94%, transparent 100%);
-                  mask: linear-gradient(90deg, transparent 0, #000 6%, #000 94%, transparent 100%);
+        /* ── Tarjeta de satélites ── */
+        .obs-card {
+          margin-top: 2rem; background: var(--t-paper2); border: 1px solid var(--t-rule);
+          border-radius: 12px; padding: 18px;
         }
-        .obs-seg { position: absolute; top: 16px; height: 8px; border-radius: 5px; background: var(--t-accent); opacity: 0.85; }
-        .obs-tick { position: absolute; top: 0; font-size: 0.6rem; color: var(--t-ink4); transform: translateX(-50%); font-family: var(--t-mono); }
-        .obs-tickline { position: absolute; top: 12px; width: 1px; height: 16px; background: var(--t-rule); }
-        .obs-edge {
-          position: absolute; top: 28px; font-size: 0.6rem; color: var(--t-accent2);
-          transform: translateX(-50%); font-family: var(--t-mono); font-variant-numeric: tabular-nums;
+        .obs-card-cab { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: 14px; }
+        .obs-hint { font-size: 0.6rem; color: var(--t-ink4); }
+        .obs-pasos { display: flex; flex-wrap: wrap; gap: 16px; }
+        .obs-paso { display: flex; gap: 14px; align-items: center; flex: 1 1 250px; cursor: pointer; transition: transform 0.12s ease; }
+        .obs-mini { position: relative; flex: none; line-height: 0; }
+        .obs-carta { width: 104px; height: 104px; }
+        .obs-lupa { position: absolute; right: 2px; bottom: 2px; font-size: 0.62rem; color: var(--t-ink4); line-height: 1; }
+        .obs-paso-datos { display: flex; flex-direction: column; gap: 2px; font-size: 0.75rem; color: var(--t-ink); min-width: 0; }
+        .obs-paso-nombre { font-size: 0.88rem; }
+        .obs-paso-hora { font-size: 0.95rem; font-weight: 700; }
+        .obs-paso-luna { font-size: 0.62rem; color: var(--t-ink3); margin-top: 2px; }
+
+        .obs-proximos { margin-top: 16px; padding-top: 12px; border-top: 1px dashed var(--t-rule); font-size: 0.62rem; color: var(--t-ink3); }
+        .obs-proximos-tit { margin-bottom: 4px; }
+        .obs-proximo { display: flex; justify-content: space-between; gap: 1rem; line-height: 1.9; }
+
+        /* ── Carta a pantalla completa ── */
+        .obs-full {
+          position: fixed; inset: 0; z-index: 50; background: var(--t-paper);
+          display: flex; flex-direction: column; align-items: center; justify-content: center;
+          gap: 4px; padding: 16px; overflow-y: auto; animation: obs-fade 0.18s ease;
+          font-family: var(--t-mono); color: var(--t-ink);
         }
-        /* Marcador sutil de la hora actual sobre la banda */
-        .obs-ahora { position: absolute; top: 8px; width: 2px; height: 24px; background: var(--t-ink2); opacity: 0.55; border-radius: 1px; transform: translateX(-50%); }
-        .obs-ahora-dot { position: absolute; top: 3px; width: 5px; height: 5px; border-radius: 50%; background: var(--t-ink2); transform: translateX(-50%); }
+        .obs-full-cab { width: 100%; max-width: 560px; display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: 8px; font-size: 0.95rem; }
+        .obs-cerrar {
+          font: inherit; font-size: 0.75rem; color: var(--t-ink3); background: none;
+          border: 1px solid var(--t-rule); border-radius: 7px; padding: 5px 10px; cursor: pointer;
+        }
+        .obs-norte { height: 16px; font-size: 0.6rem; letter-spacing: 0.05em; color: var(--t-accent); }
+        .obs-full-carta .obs-carta { width: min(80vw, 58vh, 500px); height: min(80vw, 58vh, 500px); }
+        .obs-leyenda { width: 100%; max-width: 520px; margin-top: 14px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+        .obs-leyenda-fila { display: flex; gap: 18px; flex-wrap: wrap; justify-content: center; font-size: 0.7rem; color: var(--t-ink3); }
+        .obs-rumbo { font-size: 0.75rem; color: var(--t-accent); }
+        .obs-pista-uso { text-align: center; font-size: 0.62rem; color: var(--t-ink4); }
+        .obs-boton {
+          font: inherit; font-size: 0.75rem; font-weight: 700; color: var(--t-paper);
+          background: var(--t-accent); border: none; border-radius: 9px; padding: 10px 18px; cursor: pointer;
+        }
+        .obs-latido { transform-box: fill-box; transform-origin: center; animation: obs-latido 1.6s ease-out infinite; }
+        @keyframes obs-fade { from { opacity: 0 } to { opacity: 1 } }
+        @keyframes obs-latido { 0% { opacity: 0.55; transform: scale(0.5) } 100% { opacity: 0; transform: scale(2.1) } }
+
+        @media (hover: hover) { .obs-paso:hover { transform: scale(1.03); } }
+        .obs-paso:active { transform: scale(1.03); }
 
         @media (max-width: 560px) {
-          .obs-prow { grid-template-columns: 4.4rem 3.4rem 1fr; gap: 0 0.7rem; }
+          .obs-etq { font-size: 0.65rem; gap: 2px; }
+          .obs-carta { width: 88px; height: 88px; }
+          .obs-paso { flex: 1 1 100%; }
         }
       `}</style>
 
       <main className="obs-page">
-        <LineaPlanetas sede={sede} visibles={planetasVisibles} />
-
-        <TablaPlanetas filas={planetas} />
-
-        <LineaEstado eventos={fugaces} />
-
-        {total === 0 ? (
-          <p className="obs-vacio">
-            Semana floja: nada supera el listón estas noches. Vuelve en unos días.
-          </p>
-        ) : (
-          noches.map((noche) => (
-            <section className="obs-noche" key={noche.clave}>
-              <div className="obs-noche-cab">
-                <span className="obs-fecha">{noche.etiqueta}</span>
-                <span className="obs-regla" />
-                {/* La sede solo cuando no es la de la cabecera: si no, sería repetirla siete veces. */}
-                {noche.sede !== sede && <span className="obs-sede">{noche.sede}</span>}
-              </div>
-              {noche.eventos.map((e) => (
-                <Fila key={`${e.tipo}-${e.instante}`} evento={e} />
-              ))}
-            </section>
-          ))
-        )}
+        <LineaEstado cielo={cielo} />
+        <LineaDeTiempo cielo={cielo} />
+        <Satelites cielo={cielo} onAbrir={setAbierto} />
 
         <WhyFooter
           question="¿Por qué un observatorio?"
@@ -492,6 +658,8 @@ export default function Vista({ noches, planetas, sede }: { noches: Noche[]; pla
           <p>Las dos cosas tienen el mismo problema: hay que enterarse a tiempo. Así que hice un observatorio que reúne todo eso en un solo sitio.</p>
         </WhyFooter>
       </main>
+
+      {abierto && <PantallaCompleta paso={abierto} onCerrar={() => setAbierto(null)} />}
     </TerminalShell>
   );
 }

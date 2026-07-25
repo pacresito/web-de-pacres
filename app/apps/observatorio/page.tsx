@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { agenda, sedeParaFecha, tablaPlanetas } from "./engine";
+import { ALTITUD_MINIMA, MAGNITUD_MAXIMA, cielo } from "./engine";
 import { cargarSatelites } from "./tle";
 import Vista from "./vista";
 
@@ -18,9 +18,11 @@ export const metadata: Metadata = {
   description: "Qué se ve en el cielo las próximas noches.",
 };
 
+// Los criterios del prompt salen de las constantes del motor: si allí cambia el listón, la
+// cabecera no puede seguir presumiendo del viejo. Se arma aquí, en el servidor, para que la
+// vista no tenga que importar el motor —y con él, astronomy-engine— al navegador.
+const COMANDO = `./observatorio --min-altitude=${ALTITUD_MINIMA} --max-magnitude=${MAGNITUD_MAXIMA}`;
+
 export default async function Observatorio() {
-  const ahora = new Date();
-  const noches = agenda(await cargarSatelites(), ahora);
-  const planetas = tablaPlanetas(ahora);
-  return <Vista noches={noches} planetas={planetas} sede={sedeParaFecha(ahora).nombre} />;
+  return <Vista cielo={cielo(await cargarSatelites(), new Date())} comando={COMANDO} />;
 }

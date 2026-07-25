@@ -3,11 +3,12 @@
 // visibilidad se comprueban como invariantes sobre eventos reales (TLE fijo abajo).
 import * as Astro from "astronomy-engine";
 import {
-  sedeParaFecha, rumbo, magnitudSatelite, partesLocales, nombreFase,
-  pasosVisibles, salidasDeLuna, tablaPlanetas, agenda,
-  ALTITUD_MINIMA, MAGNITUD_MAXIMA, HORA_MINIMA_LUNA, MARGEN_MINUTOS, MARCO_MINUTOS,
+  sedeParaFecha, rumbo, magnitudSatelite,
+  pasosVisibles, salidasDeLuna, tablaPlanetas, cielo,
+  ALTITUD_MINIMA, MAGNITUD_MAXIMA, MARGEN_MINUTOS,
   type Satelite,
 } from "./engine";
+import { MARCO_MINUTOS, minutosEnMarco, partesLocales } from "./marco";
 
 let fails = 0;
 function check(name: string, ok: boolean, detail = "") {
@@ -66,8 +67,6 @@ const HASTA = new Date(AHORA.getTime() + 7 * 24 * 3600 * 1000);
   check("rumbo: 90° = E", rumbo(90) === "E");
   check("rumbo: 247.5° = OSO", rumbo(247.5) === "OSO");
   check("rumbo: 350° vuelve a N", rumbo(350) === "N");
-  check("fase lunar: 180° = luna llena", nombreFase(180) === "luna llena");
-  check("fase lunar: 0° = luna nueva", nombreFase(0) === "luna nueva");
 }
 
 // 5. Pasos de satélite: los criterios se cumplen en todos los devueltos
@@ -95,8 +94,8 @@ const HASTA = new Date(AHORA.getTime() + 7 * 24 * 3600 * 1000);
 {
   const lunas = salidasDeLuna(AHORA, HASTA);
   console.log(`  … ${lunas.length} salidas de Luna en ventana`);
-  check("luna: todas entre las 20:00 y las 00:00",
-    lunas.every((l) => +l.hora.slice(0, 2) >= HORA_MINIMA_LUNA));
+  check("luna: todas dentro del marco 18:00–02:00",
+    lunas.every((l) => minutosEnMarco(new Date(l.instante)) !== null));
   check("luna: en la salida está pegada al horizonte", lunas.every((l) => {
     const obs = new Astro.Observer(37.66, -0.72, 0);
     const t = new Date(l.instante);
@@ -132,29 +131,33 @@ const HASTA = new Date(AHORA.getTime() + 7 * 24 * 3600 * 1000);
     tabla.filter((f) => !f.ventana).every((f) => f.vuelveEl === null || /\d/.test(f.vuelveEl)));
 }
 
-// 8. Agenda: agrupación y orden
+// 8. El cielo de la noche: reparto entre lo de hoy, lo que viene y lo que no viene
 {
-  const noches = agenda(SATELITES, AHORA);
-  check("agenda: noches en orden cronológico",
-    noches.every((n, i) => i === 0 || n.clave > noches[i - 1].clave));
-  check("agenda: eventos ordenados dentro de cada noche",
-    noches.every((n) => n.eventos.every((e, i) => i === 0 || e.instante >= n.eventos[i - 1].instante)));
-  check("agenda: todos los eventos de una noche comparten su clave",
-    noches.every((n) => n.eventos.every((e) => e.noche === n.clave)));
-  check("agenda: en julio todo se ve desde La Manga",
-    noches.every((n) => n.sede === "La Manga"));
-  check("agenda: la noche de hoy se etiqueta Hoy y la siguiente Mañana",
-    noches[0].etiqueta === "Hoy" && noches[1].etiqueta === "Mañana");
-  check("agenda: el resto lleva fecha capitalizada",
-    noches.slice(2).every((n) => /^\p{Lu}.., \d/u.test(n.etiqueta)), noches[2]?.etiqueta);
+  const c = cielo(SATELITES, AHORA);
+  console.log(`  … esta noche: ${c.pasos.length} pasos · próximos: ${c.proximos.length} · ausentes: ${c.ausentes.map((a) => `${a.nombre}→${a.vuelveEl}`).join(" ")}`);
+  check("cielo: en julio se mira desde La Manga", c.sede === "La Manga");
+  check("cielo: los pasos de esta noche caen dentro del marco",
+    c.pasos.every((p) => minutosEnMarco(new Date(p.instante)) !== null));
+  check("cielo: los próximos van después de los de esta noche, y como mucho dos",
+    c.proximos.length <= 2 && c.proximos.every((p) => c.pasos.every((h) => p.instante > h.instante)));
+  check("cielo: ausente es el satélite que no sale en los próximos",
+    c.ausentes.every((a) => !c.proximos.some((p) => p.nombre === a.nombre)));
+  check("cielo: quien vuelve trae fecha o nada, nunca basura",
+    c.ausentes.every((a) => a.vuelveEl === null || /\d/.test(a.vuelveEl)));
+  check("cielo: o hay Luna esta noche o hay fecha de vuelta, no las dos",
+    (c.luna === null) !== (c.lunaVuelveEl === null));
+  check("cielo: las citas van en orden cronológico",
+    c.citas.every((x, i) => i === 0 || x.instante >= c.citas[i - 1].instante));
+  check("cielo: la Luna entra en las citas como Moon",
+    c.citas.every((x) => ["ISS", "Tiangong", "Moon"].includes(x.nombre)));
+  check("cielo: cada arco lleva sus instantes en orden",
+    c.pasos.concat(c.proximos).every((p) => p.trayectoria.every((q, i) => i === 0 || q.t > p.trayectoria[i - 1].t)));
 
   // Margen: rebobinar el reloj justo detrás de un paso lo mantiene en la lista.
-  const paso = noches.flatMap((n) => n.eventos).find((e) => e.tipo === "satelite")!;
+  const paso = c.proximos[0] ?? c.pasos[0];
   const despues = new Date(paso.instanteFin + (MARGEN_MINUTOS - 1) * 60000);
-  const sigue = agenda(SATELITES, despues, 1)
-    .flatMap((n) => n.eventos)
-    .some((e) => e.tipo === "satelite" && e.instanteFin === paso.instanteFin);
-  check("agenda: un paso recién terminado aguanta el margen de 10 min", sigue);
+  check("cielo: un paso recién terminado aguanta el margen de 10 min",
+    cielo(SATELITES, despues, 1).citas.some((x) => x.instanteFin === paso.instanteFin));
 }
 
 console.log(fails === 0 ? "\nTodo OK" : `\n${fails} fallos`);
