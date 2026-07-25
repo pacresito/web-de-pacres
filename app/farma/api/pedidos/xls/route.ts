@@ -1,8 +1,9 @@
-// Descarga la bolsa de un pedido (admin) en el .xls que importa UnycopWin. Recalcula
-// los pedidos desde el snapshot actual y saca la bolsa del pedido (pendiente o ya
-// hecho); el nombre es `AAAA-MM-DD Pedido.xls`.
+// Descarga de un pedido (admin) en el .xls que importa UnycopWin. Baja el catálogo
+// ENTERO del pedido recalculado desde el snapshot actual —las referencias que no hay
+// que reponer van con cantidad 0—, valga el pedido para pendiente, hecho o manual.
+// El nombre es `AAAA-MM-DD Pedido.xls`.
 import { getRol } from "../../../auth";
-import { cargarBolsaManual, cargarEstadoPedidos } from "@/lib/farma/pedidos-store";
+import { cargarLineasPedido, cargarMeta } from "@/lib/farma/pedidos-store";
 import { generarBolsa } from "@/lib/farma/xls";
 
 export async function GET(request: Request): Promise<Response> {
@@ -15,18 +16,13 @@ export async function GET(request: Request): Promise<Response> {
     return Response.json({ error: "pedido requerido" }, { status: 400 });
   }
 
-  const { resultado, meta } = await cargarEstadoPedidos();
-  // Pendiente/hecho lo da el estado; si no, es un pedido manual (no cumple #1) y se
-  // recalcula su bolsa desde el snapshot. Mismas líneas en ambos casos.
-  const bolsa =
-    [...resultado.pendientes, ...resultado.hechos].find((b) => b.pedido === pedido) ??
-    (await cargarBolsaManual(pedido));
-  if (!bolsa) {
+  const [lineas, meta] = await Promise.all([cargarLineasPedido(pedido), cargarMeta()]);
+  if (lineas.length === 0) {
     return Response.json({ error: "El pedido no tiene líneas" }, { status: 404 });
   }
 
   const fecha = meta?.fechaInforme || new Date().toISOString().slice(0, 10);
-  const xls = generarBolsa(bolsa.lineas);
+  const xls = generarBolsa(lineas);
   return new Response(new Uint8Array(xls), {
     headers: {
       "Content-Type": "application/vnd.ms-excel",

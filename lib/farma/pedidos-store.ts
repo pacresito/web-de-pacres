@@ -6,8 +6,10 @@ import { KEYS } from "./keys";
 import {
   bolsaDePedido,
   calcularPedidos,
+  lineasDePedido,
   listarPedidos,
   type BolsaPedido,
+  type LineaPedido,
   type PedidosDeCodigo,
   type RefPedidos,
   type ResultadoPedidos,
@@ -32,11 +34,17 @@ function numHash(h: Record<string, string>): Record<string, number> {
   return Object.fromEntries(Object.entries(h).map(([k, v]) => [k, Number(v)]));
 }
 
+// Metadatos del último inventario subido (null hasta la primera subida).
+export async function cargarMeta(): Promise<MetaInventario | null> {
+  const raw = await redis.get(KEYS.meta());
+  return raw ? JSON.parse(raw) : null;
+}
+
 export async function cargarEstadoPedidos(now: number = Date.now()): Promise<EstadoPedidos> {
-  const [refRaw, pedCodRaw, metaRaw, stock, stmin, hechos, pvp] = await Promise.all([
+  const [refRaw, pedCodRaw, meta, stock, stmin, hechos, pvp] = await Promise.all([
     redis.get(KEYS.refPedidos()),
     redis.get(KEYS.pedidoCodigos()),
-    redis.get(KEYS.meta()),
+    cargarMeta(),
     redis.hgetall(KEYS.stock()),
     redis.hgetall(KEYS.stmin()),
     redis.hgetall(KEYS.pedidosHechos()),
@@ -51,16 +59,14 @@ export async function cargarEstadoPedidos(now: number = Date.now()): Promise<Est
 
   return {
     resultado,
-    meta: metaRaw ? JSON.parse(metaRaw) : null,
+    meta,
     pvpCambiados,
     pedidos: listarPedidos(pedidosDeCodigo, refPedidos),
   };
 }
 
-// Bolsa de un pedido concreto recalculada desde el snapshot, sin exigir la condición
-// #1 (la usa el pedido manual de B5 y, como fallback, la descarga del .xls). Devuelve
-// null si en ese pedido no hay nada que pedir.
-export async function cargarBolsaManual(pedido: string): Promise<BolsaPedido | null> {
+// Lo que hace falta para recalcular un pedido suelto (sin las listas ni el estado).
+async function cargarSnapshot() {
   const [refRaw, pedCodRaw, stock, stmin] = await Promise.all([
     redis.get(KEYS.refPedidos()),
     redis.get(KEYS.pedidoCodigos()),
@@ -69,5 +75,19 @@ export async function cargarBolsaManual(pedido: string): Promise<BolsaPedido | n
   ]);
   const refPedidos: RefPedidos = refRaw ? JSON.parse(refRaw) : {};
   const pedidosDeCodigo: PedidosDeCodigo = pedCodRaw ? JSON.parse(pedCodRaw) : {};
-  return bolsaDePedido(pedido, numHash(stock), refPedidos, numHash(stmin), pedidosDeCodigo);
+  return { refPedidos, pedidosDeCodigo, stock: numHash(stock), stMin: numHash(stmin) };
+}
+
+// Bolsa de un pedido concreto recalculada desde el snapshot, sin exigir la condición
+// #1 (la usa el pedido manual de B5). Devuelve null si no hay nada que pedir.
+export async function cargarBolsaManual(pedido: string): Promise<BolsaPedido | null> {
+  const { refPedidos, pedidosDeCodigo, stock, stMin } = await cargarSnapshot();
+  return bolsaDePedido(pedido, stock, refPedidos, stMin, pedidosDeCodigo);
+}
+
+// Catálogo completo del pedido (con las líneas a 0) para el .xls. Vacío si el pedido
+// no tiene ninguna referencia en el universo de Ventas.
+export async function cargarLineasPedido(pedido: string): Promise<LineaPedido[]> {
+  const { refPedidos, pedidosDeCodigo, stock, stMin } = await cargarSnapshot();
+  return lineasDePedido(pedido, stock, refPedidos, stMin, pedidosDeCodigo);
 }

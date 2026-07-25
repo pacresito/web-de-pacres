@@ -100,6 +100,28 @@ export function listarPedidos(pedidosDeCodigo: PedidosDeCodigo, refPedidos: RefP
   return [...pedidos].sort((a, b) => a.localeCompare(b, "es"));
 }
 
+// TODAS las líneas de un pedido, incluidas las de cantidad 0: es lo que baja al .xls,
+// donde María quiere el catálogo entero del pedido (las que no se piden, con 0). El
+// universo sigue siendo Ventas: un código del Excel del lab sin historial no está en
+// `refPedidos` y por tanto no tiene línea.
+export function lineasDePedido(
+  pedido: string,
+  stock: Stocks,
+  refPedidos: RefPedidos,
+  stMin: StMins,
+  pedidosDeCodigo: PedidosDeCodigo,
+): LineaPedido[] {
+  const lineas: LineaPedido[] = [];
+  for (const [codigo, ref] of Object.entries(refPedidos)) {
+    if (!(pedidosDeCodigo[codigo] ?? []).includes(pedido)) continue;
+    const existencias = stock[codigo] ?? 0;
+    const cantidad = cantidadAPedir(stMin[codigo] ?? 0, ref, existencias, tamanoCaja(codigo, pedidosDeCodigo[codigo] ?? []));
+    lineas.push({ codigo, denominacion: ref.denominacion, cantidad, existencias, consumo: ref.consumoMensual, min: stMin[codigo] ?? null });
+  }
+  lineas.sort((a, b) => a.denominacion.localeCompare(b.denominacion, "es"));
+  return lineas;
+}
+
 // Bolsa de un pedido concreto saltándose la condición #1: para el pedido manual que
 // María genera aunque nada haya roto stock. Mismas líneas (cantidad > 0) y orden que
 // tendría en `pendientes`. Devuelve null si no hay nada que pedir en ese pedido.
@@ -110,18 +132,8 @@ export function bolsaDePedido(
   stMin: StMins,
   pedidosDeCodigo: PedidosDeCodigo,
 ): BolsaPedido | null {
-  const lineas: LineaPedido[] = [];
-  for (const [codigo, ref] of Object.entries(refPedidos)) {
-    if (!(pedidosDeCodigo[codigo] ?? []).includes(pedido)) continue;
-    const existencias = stock[codigo] ?? 0;
-    const cantidad = cantidadAPedir(stMin[codigo] ?? 0, ref, existencias, tamanoCaja(codigo, pedidosDeCodigo[codigo] ?? []));
-    if (cantidad > 0) {
-      lineas.push({ codigo, denominacion: ref.denominacion, cantidad, existencias, consumo: ref.consumoMensual, min: stMin[codigo] ?? null });
-    }
-  }
-  if (lineas.length === 0) return null;
-  lineas.sort((a, b) => a.denominacion.localeCompare(b.denominacion, "es"));
-  return { pedido, lineas };
+  const lineas = lineasDePedido(pedido, stock, refPedidos, stMin, pedidosDeCodigo).filter((l) => l.cantidad > 0);
+  return lineas.length === 0 ? null : { pedido, lineas };
 }
 
 export function calcularPedidos(

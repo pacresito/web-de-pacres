@@ -1,6 +1,6 @@
 // Test de lógica pura: `npx tsx lib/farma/pedidos.test.ts`. Fuera del build.
 import assert from "assert";
-import { bolsaDePedido, calcularPedidos, listarPedidos, type PedidosDeCodigo, type RefPedidos, type Stocks, type StMins } from "./pedidos";
+import { bolsaDePedido, calcularPedidos, lineasDePedido, listarPedidos, type PedidosDeCodigo, type RefPedidos, type Stocks, type StMins } from "./pedidos";
 
 const AHORA = Date.parse("2026-06-26T10:00:00Z");
 const haceDias = (n: number) => AHORA - n * 24 * 60 * 60 * 1000;
@@ -196,6 +196,18 @@ const pedCinfa: PedidosDeCodigo = Object.fromEntries(C.map((c) => [c, ["CINFA"]]
   const ref: RefPedidos = { "000001": { denominacion: "CINFA-A", lab: "CINFA", consumoMensual: 14 } };
   const bolsa = bolsaDePedido("CINFA", { "000001": 1 }, ref, {}, { "000001": ["CINFA"] });
   assert.strictEqual(bolsa!.lineas[0].cantidad, 13, "no-Lacer: cantidad exacta 14−1 = 13");
+}
+
+// --- lineasDePedido (el .xls): catálogo entero del pedido, lo cubierto con cantidad 0 ---
+{
+  // 3 artículos servidos de sobra (stock 20 > consumo 10) y 3 por reponer (stock 2).
+  const stock: Stocks = Object.fromEntries(C.map((c, i) => [c, i < 3 ? 20 : 2]));
+  const lineas = lineasDePedido("CINFA", stock, seisCinfa(10), {}, pedCinfa);
+  assert.strictEqual(lineas.length, 6, "las 6 referencias del pedido, se pidan o no");
+  assert.deepStrictEqual(lineas.map((l) => l.cantidad), [0, 0, 0, 8, 8, 8], "las cubiertas van a 0");
+  // La bolsa de pantalla sigue viendo solo lo que hay que pedir.
+  assert.strictEqual(bolsaDePedido("CINFA", stock, seisCinfa(10), {}, pedCinfa)!.lineas.length, 3, "la bolsa filtra los 0");
+  assert.deepStrictEqual(lineasDePedido("BAYER", stock, seisCinfa(10), {}, pedCinfa), [], "pedido ajeno: sin líneas");
 }
 
 console.log("pedidos.test.ts ✓");
