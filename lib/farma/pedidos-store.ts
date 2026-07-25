@@ -25,7 +25,6 @@ export interface MetaInventario {
 export interface EstadoPedidos {
   resultado: ResultadoPedidos;
   meta: MetaInventario | null; // null hasta la primera subida de inventario
-  pvpCambiados: number; // artículos con cambio de PVP pendiente de reetiquetar
   pedidos: string[]; // todos los pedidos del universo (buscador del pedido manual, B5)
 }
 
@@ -41,26 +40,23 @@ export async function cargarMeta(): Promise<MetaInventario | null> {
 }
 
 export async function cargarEstadoPedidos(now: number = Date.now()): Promise<EstadoPedidos> {
-  const [refRaw, pedCodRaw, meta, stock, stmin, hechos, pvp] = await Promise.all([
+  const [refRaw, pedCodRaw, meta, stock, stmin, hechos] = await Promise.all([
     redis.get(KEYS.refPedidos()),
     redis.get(KEYS.pedidoCodigos()),
     cargarMeta(),
     redis.hgetall(KEYS.stock()),
     redis.hgetall(KEYS.stmin()),
     redis.hgetall(KEYS.pedidosHechos()),
-    redis.hgetall(KEYS.pvp()),
   ]);
 
   const refPedidos: RefPedidos = refRaw ? JSON.parse(refRaw) : {};
   const pedidosDeCodigo: PedidosDeCodigo = pedCodRaw ? JSON.parse(pedCodRaw) : {};
   const stMin = numHash(stmin);
   const resultado = calcularPedidos(numHash(stock), refPedidos, stMin, pedidosDeCodigo, numHash(hechos), now);
-  const pvpCambiados = Object.values(pvp).filter((v) => JSON.parse(v).pending).length;
 
   return {
     resultado,
     meta,
-    pvpCambiados,
     pedidos: listarPedidos(pedidosDeCodigo, refPedidos),
   };
 }

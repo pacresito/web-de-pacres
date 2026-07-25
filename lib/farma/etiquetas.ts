@@ -12,6 +12,14 @@ export type Tamano = "S" | "M" | "L";
 // Diámetro en mm de cada tamaño (medido en los PDF de María).
 export const DIAMETROS: Record<Tamano, number> = { S: 21.2, M: 39.0, L: 56.7 };
 
+// Cuántas etiquetas de cada tamaño caben en una hoja A4, contadas con `empaquetar`
+// (lo fija etiquetas.test.ts). Sumar 1/capacidad estima qué fracción de hoja llevan
+// unas etiquetas sin empaquetarlas de verdad, que es demasiado caro para un contador
+// que se recalcula en cada pulsación. Mezclando tamaños la estimación se queda algo
+// corta (los pequeños caen en los huecos de los grandes), y eso juega a favor: cuando
+// dice "hoja llena", lo está.
+export const POR_HOJA: Record<Tamano, number> = { S: 105, M: 32, L: 13 };
+
 export interface Etiqueta {
   diametro: number; // mm
   titulo?: string; // texto fino encima (denominación, "2ª unidad"); se parte en líneas

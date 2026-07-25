@@ -3,7 +3,8 @@
 // —solo el 21%/10% aparece en la pantalla PVP para reetiquetar—, y un pendiente
 // antiguo de un medicamento se limpia al reprocesarse.
 import assert from "assert";
-import { diffPvp, sanearBorrador, type RegistroPvp } from "./pvp";
+import { diffPvp, fraseHoja, resumenEtiquetas, sanearBorrador, type BorradorEtiquetas, type LineaPvp, type RegistroPvp } from "./pvp";
+import { POR_HOJA } from "./etiquetas";
 
 const F = "2026-07-02";
 const base = (p: Partial<RegistroPvp> = {}): RegistroPvp => ({
@@ -46,5 +47,31 @@ assert.deepStrictEqual(limpio.cantidades, { a: 3 }, "solo cantidades enteras ≥
 assert.strictEqual(limpio.extras.length, 1, "solo la fila extra bien formada");
 assert.deepStrictEqual(sanearBorrador(null), { tamanos: {}, cantidades: {}, extras: [] }, "no-objeto → borrador vacío");
 assert.deepStrictEqual(sanearBorrador({ extras: "nope" }).extras, [], "extras no-array → []");
+
+// resumenEtiquetas: personalizadas = líneas manuales; unidades = copias imprimibles.
+{
+  const pendiente = (codigo: string): LineaPvp => ({
+    codigo, denominacion: "X", oldPrice: 1, newPrice: 2, firstSeen: F, lastSeen: F, pending: true,
+  });
+  const borrador: BorradorEtiquetas = {
+    tamanos: { "000001": "L" }, // el resto, S por defecto
+    cantidades: { "000001": 2, "extra-1": 3 },
+    extras: [
+      { id: "extra-1", tipo: "promo", denominacion: "3x2", precio: null },
+      { id: "extra-2", tipo: "precio", denominacion: "", precio: null }, // sin precio: no imprime
+    ],
+  };
+  const r = resumenEtiquetas([pendiente("000001"), pendiente("000002")], borrador);
+  assert.strictEqual(r.personalizadas, 2, "las dos líneas manuales cuentan, se impriman o no");
+  assert.strictEqual(r.unidades, 6, "2 grandes + 1 (por defecto) + 3 copias de la promo");
+  assert.ok(Math.abs(r.hojas - (2 / POR_HOJA.L + 4 / POR_HOJA.S)) < 1e-9, "la hoja se estima por tamaño");
+  assert.strictEqual(resumenEtiquetas([], { tamanos: {}, cantidades: {}, extras: [] }).unidades, 0, "sin nada, nada que imprimir");
+}
+
+// fraseHoja: porcentaje hasta llenar la primera hoja; luego, hojas enteras.
+assert.strictEqual(fraseHoja(0.452), "llevas el 45% de una hoja");
+assert.strictEqual(fraseHoja(1), "¡ya llenas una hoja entera!");
+assert.strictEqual(fraseHoja(1.8), "¡ya llenas una hoja entera!");
+assert.strictEqual(fraseHoja(2.1), "¡ya llenas 2 hojas enteras!");
 
 console.log("pvp.test.ts ✓");

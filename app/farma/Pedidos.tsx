@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { BolsaPedido, ResultadoPedidos } from "@/lib/farma/pedidos";
 import { PEDIDO_LACER } from "@/lib/farma/cajas-lacer";
 import type { MetaInventario } from "@/lib/farma/pedidos-store";
+import type { ResumenEtiquetas } from "@/lib/farma/pvp";
 import { fechaMadrid, haceX } from "@/lib/farma/tiempo";
 import Buscador from "./Buscador";
 import PanelResumen from "./PanelResumen";
@@ -23,7 +24,7 @@ export default function Pedidos({
   resultado: ResultadoPedidos;
   pedidos: string[];
   meta: MetaInventario | null;
-  resumen: { pvpCambiados: number; descuentosInferidos: number };
+  resumen: { pvpCambiados: number; etiquetas: ResumenEtiquetas; descuentosInferidos: number };
 }) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -173,6 +174,7 @@ export default function Pedidos({
             pedidos={pendientes.length}
             meta={meta}
             pvpCambiados={resumen.pvpCambiados}
+            etiquetas={resumen.etiquetas}
             descuentosInferidos={resumen.descuentosInferidos}
             ahora={ahora}
           />

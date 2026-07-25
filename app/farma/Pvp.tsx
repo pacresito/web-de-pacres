@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { BorradorEtiquetas, FilaExtra, LineaPvp, Tamano } from "@/lib/farma/pvp";
+import { fraseHoja, resumenEtiquetas, type BorradorEtiquetas, type FilaExtra, type LineaPvp, type Tamano } from "@/lib/farma/pvp";
 import { DIAMETROS, expandir, type FuenteEtiqueta } from "@/lib/farma/etiquetas";
 import type { FuentesEtiqueta } from "@/lib/farma/etiquetas-pdf";
 import { contarMetrica } from "./contarMetrica";
@@ -36,6 +36,11 @@ const PROMOS: Record<string, { titulo?: string; texto: string }> = {
   "2ª unidad -50%": { titulo: "2ª unidad", texto: "-50%" },
   "3x2": { texto: "3x2" },
 };
+
+// Número destacado de las líneas de recuento (mismo tratamiento que el panel de María).
+const Fuerte = ({ n }: { n: number }) => (
+  <b className="font-semibold" style={{ color: "var(--fa-ink)" }}>{n}</b>
+);
 
 const euro = (n: number) =>
   n.toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
@@ -89,6 +94,9 @@ export default function Pvp({ pendientes, borrador }: { pendientes: LineaPvp[]; 
 
   const tamanoDe = (id: string) => tamanos[id] ?? "S";
   const cantidadDe = (id: string) => cantidades[id] ?? 1;
+  // Recuento en vivo (líneas manuales, copias y hoja que llenan) sobre el estado actual:
+  // el borrador de Redis va con retraso por el autosave, el estado no.
+  const resumen = resumenEtiquetas(pendientes, { tamanos, cantidades, extras });
 
   // Autosave (debounce) del borrador de etiquetado en Redis: sobrevive a las recargas.
   // Se saltan el primer render (el estado ya viene del prop) y se podan tamaños/cantidades
@@ -127,7 +135,7 @@ export default function Pvp({ pendientes, borrador }: { pendientes: LineaPvp[]; 
         if (promo) fuentes.push({ ...comun, ...promo });
         continue;
       }
-      if (x.precio == null) continue;
+      if (x.precio == null) continue; // mismo criterio que `extraImprimible`, con el tipo estrechado
       fuentes.push({ ...comun, precio: x.precio, ...(x.tipo === "texto-precio" ? { titulo: x.denominacion } : {}) });
     }
     return fuentes;
@@ -267,15 +275,27 @@ export default function Pvp({ pendientes, borrador }: { pendientes: LineaPvp[]; 
 
   return (
     <div>
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
-        <p className="fa-t-ink2 text-sm">
+      <div className="mb-2 flex flex-wrap items-start justify-between gap-3">
+        <div className="fa-t-ink2 flex flex-col gap-[3px] text-sm">
           {pendientes.length > 0 && (
-            <>
-              <b className="font-semibold" style={{ color: "var(--fa-ink)" }}>{pendientes.length}</b>{" "}
+            <p>
+              <Fuerte n={pendientes.length} />{" "}
               {pendientes.length === 1 ? "precio cambiado pendiente" : "precios cambiados pendientes"} de reetiquetar
-            </>
+            </p>
           )}
-        </p>
+          {resumen.personalizadas > 0 && (
+            <p>
+              <Fuerte n={resumen.personalizadas} />{" "}
+              {resumen.personalizadas === 1 ? "etiqueta personalizada" : "etiquetas personalizadas"}
+            </p>
+          )}
+          {resumen.unidades > 0 && (
+            <p>
+              <Fuerte n={resumen.unidades} />{" "}
+              {resumen.unidades === 1 ? "etiqueta para imprimir" : "etiquetas para imprimir"}, {fraseHoja(resumen.hojas)}
+            </p>
+          )}
+        </div>
         <div className="flex gap-2">
           <button
             type="button"

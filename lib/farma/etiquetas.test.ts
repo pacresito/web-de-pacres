@@ -1,6 +1,6 @@
 // Test de lógica pura: `npx tsx lib/farma/etiquetas.test.ts`. Fuera del build.
 import assert from "assert";
-import { formatoPrecio, expandir, empaquetar, A4, DIAMETROS, type Etiqueta } from "./etiquetas";
+import { formatoPrecio, expandir, empaquetar, A4, DIAMETROS, POR_HOJA, type Etiqueta, type Tamano } from "./etiquetas";
 
 // --- formatoPrecio: entero grande + decimales pegados con € ---
 assert.deepStrictEqual(formatoPrecio(21.95), { entero: "21", decimales: ",95€" });
@@ -54,5 +54,13 @@ for (const hoja of hojas) {
 // --- paginación: si no caben en una hoja, se abre otra ---
 const desborde = empaquetar(Array(60).fill({ diametro: DIAMETROS.L, entero: "9", decimales: ",95€" }), A4);
 assert.ok(desborde.length > 1, "60 grandes no caben en una sola hoja");
+
+// --- POR_HOJA: la capacidad publicada es la que sale de empaquetar de verdad ---
+// El contador de la pantalla PVP estima con ella; si el packing cambia, cambia aquí.
+for (const t of Object.keys(DIAMETROS) as Tamano[]) {
+  const cap = POR_HOJA[t];
+  const llenas = empaquetar(Array(cap * 2).fill({ diametro: DIAMETROS[t], texto: "3x2" }), A4);
+  assert.strictEqual(llenas[0].length, cap, `en una hoja caben ${cap} etiquetas ${t}`);
+}
 
 console.log("etiquetas.test.ts OK");

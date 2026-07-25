@@ -1,6 +1,7 @@
 "use client";
 
 import type { MetaInventario } from "@/lib/farma/pedidos-store";
+import { fraseHoja, type ResumenEtiquetas } from "@/lib/farma/pvp";
 import { fechaMadrid, haceX } from "@/lib/farma/tiempo";
 
 // Tarjeta "Resumen del día" de /farma/maria: el estado del día en solo lectura (los
@@ -11,12 +12,14 @@ export default function PanelResumen({
   pedidos,
   meta,
   pvpCambiados,
+  etiquetas,
   descuentosInferidos,
   ahora,
 }: {
   pedidos: number;
   meta: MetaInventario | null;
   pvpCambiados: number;
+  etiquetas: ResumenEtiquetas;
   descuentosInferidos: number;
   ahora: number | null;
 }) {
@@ -28,7 +31,16 @@ export default function PanelResumen({
       <div className="fa-t-ink2 flex flex-col gap-[7px] text-sm">
         <p><Cuenta n={pedidos} uno="pedido pendiente" varios="pedidos pendientes" /></p>
         <p><Cuenta n={descuentosInferidos} uno="descuento por revisar" varios="descuentos por revisar" /></p>
-        <p><Cuenta n={pvpCambiados} uno="precio cambiado" varios="precios cambiados" /></p>
+        <p>
+          <Cuenta n={pvpCambiados} uno="precio cambiado" varios="precios cambiados" />
+          {etiquetas.personalizadas > 0 && <> + <Cuenta n={etiquetas.personalizadas} uno="personalizado" varios="personalizados" /></>}
+        </p>
+        {/* La hoja de etiquetas solo se anuncia cuando ya sale a cuenta imprimirla. */}
+        {etiquetas.hojas >= 1 && (
+          <p className="fa-t-green">
+            <b className="font-semibold">{etiquetas.unidades}</b> etiquetas para imprimir, {fraseHoja(etiquetas.hojas)}
+          </p>
+        )}
       </div>
       <div className="fa-t-ink3 mt-3 border-t pt-3 text-[13px] leading-[1.55]" style={{ borderColor: "var(--fa-rule)" }}>
         {meta ? (

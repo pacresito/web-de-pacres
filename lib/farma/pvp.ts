@@ -2,6 +2,8 @@
 // subida de inventario (diff contra el histórico, marca `pending` lo que cambió) y lo
 // lee la pantalla PVP. Sin Redis para que el diff sea testeable; la lectura del hash
 // vive en `pvp-store.ts` (mismo patrón que pedidos.ts / pedidos-store.ts).
+import { POR_HOJA } from "./etiquetas";
+
 export interface RegistroPvp {
   denominacion: string;
   oldPrice: number; // PVP anterior (la línea base previa)
@@ -34,6 +36,45 @@ export interface BorradorEtiquetas {
   tamanos: Record<string, Tamano>;
   cantidades: Record<string, number>;
   extras: FilaExtra[];
+}
+
+// ¿Esta línea manual imprime etiqueta? Las promos siempre; las de precio, solo cuando
+// ya tienen número (una fila recién añadida todavía no).
+export function extraImprimible(x: FilaExtra): boolean {
+  return x.tipo === "promo" || x.precio != null;
+}
+
+// Lo que se cuenta de las etiquetas en curso: las líneas manuales que María ha añadido,
+// las copias que se imprimirían y cuánta hoja A4 llenan (1 = una hoja entera). Se usa
+// en la pantalla PVP sobre el estado en vivo y en el panel sobre el borrador guardado.
+export interface ResumenEtiquetas {
+  personalizadas: number;
+  unidades: number;
+  hojas: number;
+}
+
+export function resumenEtiquetas(pendientes: LineaPvp[], borrador: BorradorEtiquetas): ResumenEtiquetas {
+  const ids = [
+    ...pendientes.map((p) => p.codigo),
+    ...borrador.extras.filter(extraImprimible).map((x) => x.id),
+  ];
+  let unidades = 0;
+  let hojas = 0;
+  for (const id of ids) {
+    const copias = borrador.cantidades[id] ?? 1;
+    unidades += copias;
+    hojas += copias / POR_HOJA[borrador.tamanos[id] ?? "S"];
+  }
+  return { personalizadas: borrador.extras.length, unidades, hojas };
+}
+
+// Cómo se le cuenta a María lo que lleva: mientras no complete una hoja, el porcentaje
+// que lleva; a partir de ahí, las hojas enteras que ya llena.
+export function fraseHoja(hojas: number): string {
+  const enteras = Math.floor(hojas);
+  if (enteras === 1) return "¡ya llenas una hoja entera!";
+  if (enteras > 1) return `¡ya llenas ${enteras} hojas enteras!`;
+  return `llevas el ${Math.round(hojas * 100)}% de una hoja`;
 }
 
 const TAMANOS_VALIDOS: Tamano[] = ["S", "M", "L"];
