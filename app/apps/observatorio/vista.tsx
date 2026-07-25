@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import TerminalShell from "../../components/TerminalShell";
 import WhyFooter from "../../components/WhyFooter";
 import { MARCO_MINUTOS, minutosEnMarco } from "./marco";
-import type { Cielo, EventoSatelite, FilaPlaneta, PuntoArco } from "./engine";
+import type { Cielo, Evento, EventoSatelite, FilaPlaneta, PuntoArco } from "./engine";
 
 const redondo = (n: number) => +n.toFixed(2);
 
@@ -122,10 +122,10 @@ function Disco({ nombre, iluminacion, sombraDerecha = false, ringTilt = null }: 
 }
 
 // ─── La carta del cielo ───────────────────────────────────────────────────────
-// Círculo = el cielo entero, con el N arriba y el E a la izquierda: es la vista de quien
-// levanta el móvil y mira hacia arriba, no un mapa. El centro es el cenit y el borde, el
-// horizonte. El trazo va continuo mientras el satélite se ve y punteado cuando entra en la
-// sombra de la Tierra.
+// Círculo = el cielo entero, con el N arriba y el E a la derecha, como un mapa visto desde
+// arriba —y no como el cielo visto desde abajo, que pondría el E a la izquierda—. El centro
+// es el cenit y el borde, el horizonte. El trazo va continuo mientras el satélite se ve y
+// punteado cuando entra en la sombra de la Tierra.
 
 const C = 52, RADIO = 46; // el lienzo es siempre 104 × 104; el tamaño lo pone el CSS
 
@@ -135,7 +135,7 @@ function xy(az: number, alt: number, radio = RADIO): [number, number] {
   const a = (az * Math.PI) / 180;
   // Math.sin/cos no están fijados por IEEE (ver PROJECT.md): redondear para que servidor y
   // navegador coincidan y la hidratación no se queje.
-  return [redondo(C - r * Math.sin(a)), redondo(C - r * Math.cos(a))];
+  return [redondo(C + r * Math.sin(a)), redondo(C - r * Math.cos(a))];
 }
 
 /** Tramos continuos por visibilidad; la frontera entra en los dos para que la línea no se corte. */
@@ -208,8 +208,8 @@ function CartaCielo({ paso, detallada = false, giro = 0, ahora = null }: {
       <g transform={`rotate(${redondo(giro)} ${C} ${C})`}>
         <text x={C} y="12" textAnchor="middle" fontSize={rotulo} fill="var(--t-ink3)">N</text>
         <text x={C} y="99" textAnchor="middle" fontSize={rotulo} fill="var(--t-ink4)">S</text>
-        <text x="9" y="55" textAnchor="middle" fontSize={rotulo} fill="var(--t-ink4)">E</text>
-        <text x="96" y="55" textAnchor="middle" fontSize={rotulo} fill="var(--t-ink4)">O</text>
+        <text x="9" y="55" textAnchor="middle" fontSize={rotulo} fill="var(--t-ink4)">O</text>
+        <text x="96" y="55" textAnchor="middle" fontSize={rotulo} fill="var(--t-ink4)">E</text>
 
         {tramos(pts).map((t, i) => (
           <path key={i} d={t.d} fill="none" stroke="var(--t-ink)" strokeWidth={grosor * (t.vis ? 1 : 0.85)}
@@ -287,35 +287,40 @@ function PistaPlaneta({ fila }: { fila: FilaPlaneta }) {
   );
 }
 
-function PistaLuna({ cielo }: { cielo: Cielo }) {
-  if (!cielo.luna) return <div className="obs-pista"><Vuelve cuando={cielo.lunaVuelveEl} /></div>;
-  const min = minutosEnMarco(new Date(cielo.luna.instante)) ?? 0;
-  const x = pct(min);
-  // Pasada la mitad derecha del eje, la hora se pone a la izquierda del rombo: si no, se sale.
+/**
+ * Un instante en la pista: su señal (rombo la Luna, raya verde un satélite) y, al lado, la
+ * hora con el detalle que la acompaña —el rumbo por el que sale, el nombre del satélite—.
+ */
+function Marca({ evento, clase, detalle }: { evento: Evento; clase: string; detalle: string }) {
+  const x = pct(minutosEnMarco(new Date(evento.instante)) ?? 0);
+  // Pasada la mitad derecha del eje, el texto se pone a la izquierda de la señal: si no, se sale.
   const alaIzquierda = x > 62;
   return (
-    <div className="obs-pista">
-      <span className="obs-rombo" style={{ left: `${x}%` }} />
-      <span className="obs-lunahora" style={alaIzquierda ? { right: `${redondo(100 - x)}%`, marginRight: 12, textAlign: "right" } : { left: `${x}%`, marginLeft: 12 }}>
-        <b>{cielo.luna.hora}</b> <span className="obs-mut">{cielo.luna.desde}</span>
+    <>
+      <span className={clase} style={{ left: `${x}%` }} />
+      <span className="obs-marca-txt" style={alaIzquierda
+        ? { right: `${redondo(100 - x)}%`, marginRight: 12, textAlign: "right" }
+        : { left: `${x}%`, marginLeft: 12 }}>
+        <b>{evento.hora}</b> <span className="obs-mut">{detalle}</span>
       </span>
+    </>
+  );
+}
+
+function PistaLuna({ cielo }: { cielo: Cielo }) {
+  if (!cielo.luna) return <div className="obs-pista"><Vuelve cuando={cielo.lunaVuelveEl} /></div>;
+  return (
+    <div className="obs-pista">
+      <Marca evento={cielo.luna} clase="obs-rombo" detalle={cielo.luna.desde} />
     </div>
   );
 }
 
 function PistaSatelites({ pasos }: { pasos: EventoSatelite[] }) {
-  if (!pasos.length) return <div className="obs-pista obs-pista-sat"><span className="obs-sinpasos">sin pasos esta noche</span></div>;
+  if (!pasos.length) return <div className="obs-pista"><span className="obs-sinpasos">sin pasos esta noche</span></div>;
   return (
-    <div className="obs-pista obs-pista-sat">
-      {pasos.map((p) => {
-        const x = `${pct(minutosEnMarco(new Date(p.instante)) ?? 0)}%`;
-        return (
-          <span key={p.instante}>
-            <span className="obs-marca-sat" style={{ left: x }} />
-            <span className="obs-marca-hora" style={{ left: x }}>{p.hora}</span>
-          </span>
-        );
-      })}
+    <div className="obs-pista">
+      {pasos.map((p) => <Marca key={p.instante} evento={p} clase="obs-raya" detalle={p.nombre} />)}
     </div>
   );
 }
@@ -376,7 +381,7 @@ function FilaPaso({ paso, onAbrir }: { paso: EventoSatelite; onAbrir: () => void
       <span className="obs-paso-datos">
         <span className="obs-paso-nombre">{paso.nombre}</span>
         <span><b className="obs-paso-hora">{paso.hora}</b> <span className="obs-mut">· {duracion(paso)}</span></span>
-        <span className="obs-mut">Mag {mag(paso.magnitud)} · máx {Math.round(paso.altitud)}°</span>
+        <span className="obs-mut">Mag {mag(paso.magnitud)} · ∡ {Math.round(paso.altitud)}°</span>
         <span className="obs-paso-luna">
           {paso.luna
             ? <><span style={{ color: "#98a2ab" }}>●</span> Luna en {paso.luna.rumbo} · {Math.round(paso.luna.alt)}° alt</>
@@ -407,7 +412,7 @@ function Satelites({ cielo, onAbrir }: { cielo: Cielo; onAbrir: (p: EventoSateli
         {cielo.proximos.map((p) => (
           <div className="obs-proximo" key={p.instante}>
             <span>{p.dia} · {p.hora} {p.nombre}</span>
-            <span className="obs-mut">{duracion(p)} · Mag {mag(p.magnitud)} · máx {Math.round(p.altitud)}°</span>
+            <span className="obs-mut">{duracion(p)} · Mag {mag(p.magnitud)} · ∡ {Math.round(p.altitud)}°</span>
           </div>
         ))}
         {cielo.ausentes.map((a) => (
@@ -479,12 +484,10 @@ function PantallaCompleta({ paso, onCerrar }: { paso: EventoSatelite; onCerrar: 
               ? <>empieza en {cuenta(paso.instante - ahora)}</>
               : <>el paso ya ha terminado</>}</span>
           {paso.luna && <span><span style={{ color: "#98a2ab" }}>●</span> Luna en {paso.luna.rumbo} · {Math.round(paso.luna.alt)}°</span>}
-          <span>— — — en la sombra de la Tierra</span>
         </div>
         {rumbo === null
           ? <button className="obs-boton" onClick={(e) => { frena(e); activar(); }}>Activar brújula</button>
           : <div className="obs-rumbo">brújula activa · rumbo {Math.round(((rumbo % 360) + 360) % 360)}°</div>}
-        <div className="obs-pista-uso">Sostén el móvil en alto y gira hasta alinear ▲ con el cielo.</div>
       </div>
     </div>
   );
@@ -563,9 +566,7 @@ export default function Vista({ cielo, comando }: { cielo: Cielo; comando: strin
         .obs-columna-pistas .obs-sep { background: none; }
 
         .obs-etq { height: 28px; display: flex; align-items: center; gap: 6px; font-size: 0.75rem; color: var(--t-ink); }
-        .obs-etq-sat { height: 22px; }
         .obs-pista { height: 28px; position: relative; }
-        .obs-pista-sat { height: 22px; }
 
         .obs-barra { position: absolute; top: 6px; height: 16px; border-radius: 8px; }
         .obs-fantasma {
@@ -574,14 +575,12 @@ export default function Vista({ cielo, comando }: { cielo: Cielo; comando: strin
           display: flex; align-items: center; justify-content: center;
           font-size: 0.62rem; color: var(--t-ink3);
         }
-        .obs-rombo {
-          position: absolute; top: 50%; width: 10px; height: 10px; background: var(--t-ink2);
-          transform: translate(-50%, -50%) rotate(45deg);
-        }
-        .obs-lunahora { position: absolute; top: 50%; transform: translateY(-50%); font-size: 0.66rem; white-space: nowrap; color: var(--t-ink); }
-        .obs-sinpasos { position: absolute; left: 0; font-size: 0.62rem; color: var(--t-ink4); }
-        .obs-marca-sat { position: absolute; top: 0; width: 2px; height: 12px; background: var(--t-accent); transform: translateX(-50%); }
-        .obs-marca-hora { position: absolute; top: 13px; font-size: 0.55rem; color: var(--t-accent); transform: translateX(-50%); }
+        /* Las dos señales de un instante comparten sitio y tamaño: rombo la Luna, raya el satélite. */
+        .obs-rombo, .obs-raya { position: absolute; top: 50%; }
+        .obs-rombo { width: 10px; height: 10px; background: var(--t-ink2); transform: translate(-50%, -50%) rotate(45deg); }
+        .obs-raya { width: 3px; height: 16px; border-radius: 1px; background: var(--t-accent); transform: translate(-50%, -50%); }
+        .obs-marca-txt { position: absolute; top: 50%; transform: translateY(-50%); font-size: 0.66rem; white-space: nowrap; color: var(--t-ink); }
+        .obs-sinpasos { position: absolute; top: 50%; left: 0; transform: translateY(-50%); font-size: 0.62rem; color: var(--t-ink4); }
 
         .obs-ahora { position: absolute; top: -4px; bottom: 24px; width: 2px; background: var(--t-accent); opacity: 0.9; z-index: 2; }
         .obs-ahora-etq { position: absolute; top: -16px; transform: translateX(-50%); font-size: 0.55rem; color: var(--t-accent); z-index: 2; }
@@ -593,8 +592,10 @@ export default function Vista({ cielo, comando }: { cielo: Cielo; comando: strin
         }
         .obs-card-cab { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: 14px; }
         .obs-hint { font-size: 0.6rem; color: var(--t-ink4); }
-        .obs-pasos { display: flex; flex-wrap: wrap; gap: 16px; }
-        .obs-paso { display: flex; gap: 14px; align-items: center; flex: 1 1 250px; cursor: pointer; transition: transform 0.12s ease; }
+        /* Los pasos se reparten el ancho, pero con tope: así uno solo queda centrado en vez de
+           estirado, y dos se quedan a un palmo de los bordes de la tarjeta. */
+        .obs-pasos { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px 32px; padding: 0 16px; }
+        .obs-paso { display: flex; gap: 14px; align-items: center; flex: 1 1 250px; max-width: 340px; cursor: pointer; transition: transform 0.12s ease; }
         .obs-mini { position: relative; flex: none; line-height: 0; }
         .obs-carta { width: 104px; height: 104px; }
         .obs-lupa { position: absolute; right: 2px; bottom: 2px; font-size: 0.62rem; color: var(--t-ink4); line-height: 1; }
@@ -624,7 +625,6 @@ export default function Vista({ cielo, comando }: { cielo: Cielo; comando: strin
         .obs-leyenda { width: 100%; max-width: 520px; margin-top: 14px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
         .obs-leyenda-fila { display: flex; gap: 18px; flex-wrap: wrap; justify-content: center; font-size: 0.7rem; color: var(--t-ink3); }
         .obs-rumbo { font-size: 0.75rem; color: var(--t-accent); }
-        .obs-pista-uso { text-align: center; font-size: 0.62rem; color: var(--t-ink4); }
         .obs-boton {
           font: inherit; font-size: 0.75rem; font-weight: 700; color: var(--t-paper);
           background: var(--t-accent); border: none; border-radius: 9px; padding: 10px 18px; cursor: pointer;
