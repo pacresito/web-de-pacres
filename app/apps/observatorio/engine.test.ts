@@ -3,7 +3,7 @@
 // visibilidad se comprueban como invariantes sobre eventos reales (TLE fijo abajo).
 import * as Astro from "astronomy-engine";
 import {
-  sedeParaFecha, rumbo, magnitudSatelite,
+  sedeParaFecha, rumbo, magnitudSatelite, umbralSolar,
   pasosVisibles, salidasDeLuna, tablaPlanetas, cielo,
   ALTITUD_MINIMA, MAGNITUD_MAXIMA, MARGEN_MINUTOS,
   type Satelite,
@@ -59,6 +59,12 @@ const HASTA = new Date(AHORA.getTime() + 7 * 24 * 3600 * 1000);
     magnitudSatelite(-1.8, 500, 0.3) < magnitudSatelite(-1.8, 500, FASE_MEDIA));
   check("magnitud: casi a contraluz apenas brilla",
     magnitudSatelite(-1.8, 500, 2.9) > 2);
+  check("umbral: cuanto más brilla un astro, menos crepúsculo pide",
+    umbralSolar(-4.3) > umbralSolar(-1.8) && umbralSolar(-1.8) > umbralSolar(0.5));
+  check("umbral: Venus se ve al ocaso y Saturno bien entrado el crepúsculo",
+    umbralSolar(-4.3) === 0 && Math.abs(umbralSolar(0.5) - -6.75) < 1e-9);
+  check("umbral: acotado en el crepúsculo náutico por débil que sea",
+    umbralSolar(20) === -12);
 }
 
 // 4. Rumbos
@@ -127,6 +133,13 @@ const HASTA = new Date(AHORA.getTime() + 7 * 24 * 3600 * 1000);
   check("tabla: Venus se ve esta noche (23 jul, La Manga)",
     tabla.find((f) => f.nombre === "Venus")?.ventana != null,
     tabla.find((f) => f.nombre === "Venus")?.ventana?.horaFin ?? "");
+  check("tabla: Venus es el más brillante de los cinco",
+    tabla.every((f) => f.nombre === "Venus" || f.magnitud > tabla.find((v) => v.nombre === "Venus")!.magnitud));
+  // Pablo lo vio nítido a las 21:15, con el Sol aún en el horizonte: el criterio de −6° fijo
+  // arrancaba su barra media hora tarde.
+  check("tabla: Venus asoma con el Sol todavía alto (no espera al crepúsculo)",
+    tabla.find((f) => f.nombre === "Venus")!.ventana!.horaInicio < "21:20",
+    tabla.find((f) => f.nombre === "Venus")!.ventana!.horaInicio);
   check("tabla: quien no se ve trae fecha de vuelta o queda vacío",
     tabla.filter((f) => !f.ventana).every((f) => f.vuelveEl === null || /\d/.test(f.vuelveEl)));
 }

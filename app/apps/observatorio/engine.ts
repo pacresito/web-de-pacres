@@ -372,6 +372,17 @@ export type FasePlaneta = {
   ringTilt: number | null;   // inclinación del anillo, grados (solo Saturno; null el resto)
 };
 
+/**
+ * Altura del Sol a partir de la cual un astro de magnitud `mag` se despega del cielo aún claro.
+ * No hay un único crepúsculo que valga para todos: Venus (−4,3) se ve con el Sol todavía en el
+ * horizonte, y Saturno (+0,5) pide el crepúsculo bien entrado. Recta de andar por casa —seis
+ * grados para magnitud 0 y grado y medio más por cada magnitud de menos brillo— acotada entre
+ * el ocaso y el crepúsculo náutico: por debajo de −12° ya es noche cerrada para cualquiera.
+ */
+export function umbralSolar(mag: number): number {
+  return Math.min(0, Math.max(-12, -6 - 1.5 * mag));
+}
+
 export type Ventana = {
   desdeMin: number;       // minutos desde las 18:00 en que empieza a verse (0–480)
   hastaMin: number;       // minutos desde las 18:00 en que deja de verse (0–480)
@@ -383,6 +394,7 @@ export type Ventana = {
 
 export type FilaPlaneta = {
   nombre: string;
+  magnitud: number;            // brillo aparente; cuanto más bajo, más brilla
   fase: FasePlaneta;
   ventana: Ventana | null;     // la de esta noche, o null si no se ve
   vuelveEl: string | null;     // "12 ago" si vuelve dentro de 90 días; null si tarda más ("en unos meses")
@@ -399,19 +411,26 @@ type VentanaCruda = { inicio: Date; fin: Date; abiertoInicio: boolean; abiertoFi
 
 /**
  * Ventana visible de un planeta dentro del marco 18:00–02:00 de la noche que arranca en
- * `medianoche` (00:00 local de ese día): el tramo en que asoma sobre el horizonte con el Sol
- * ya de crepúsculo (−6°). Sin listón de altura —basta con que se le vea, aunque sea bajo— pero
- * con el cielo oscurecido: un planeta pegado al Sol a plena luz no cuenta. `null` si esa noche
- * no llega a verse. `paso` fino para la noche que se pinta, grueso al buscar la reaparición.
+ * `medianoche` (00:00 local de ese día): el tramo en que asoma sobre el horizonte con el cielo
+ * ya bastante oscuro para su brillo (ver `umbralSolar`). Sin listón de altura —basta con que se
+ * le vea, aunque sea bajo—, pero un planeta pegado al Sol a plena luz no cuenta. `null` si esa
+ * noche no llega a verse. `paso` fino para la noche que se pinta, grueso al buscar la vuelta.
+ *
+ * Lo de no exigir altura mínima no es un olvido, y no hay que "arreglarlo": desde La Manga el
+ * horizonte es el mar y el cielo está limpio, así que un planeta se sigue viendo —rojo y casi
+ * tocando el agua— hasta su ocaso. Comprobado con Venus, visible hasta las 23:20 del 24 jul 2026
+ * cuando se ponía a las 23:24. Un listón de altura recortaría la ventana por donde sí acierta.
  */
-function ventanaNoche(body: Astro.Body, medianoche: Date, obs: Astro.Observer, paso: number): VentanaCruda | null {
+function ventanaNoche(body: Astro.Body, medianoche: Date, obs: Astro.Observer, paso: number,
+                      mag: number): VentanaCruda | null {
   const [T0, T1] = bordesDelMarco(medianoche);
+  const umbral = umbralSolar(mag);
   let inicio: Date | null = null, fin: Date | null = null, tPrimera = 0, tUltima = 0;
   for (let t = T0; t <= T1; t += paso * 60000) {
     const fecha = new Date(t);
     const eq = Astro.Equator(body, fecha, obs, true, true);
     if (Astro.Horizon(fecha, obs, eq.ra, eq.dec, "normal").altitude <= 0) continue;
-    if (altitudSolar(fecha, obs) > SOL_MAXIMO) continue;
+    if (altitudSolar(fecha, obs) > umbral) continue;
     if (!inicio) { inicio = fecha; tPrimera = t; }
     fin = fecha; tUltima = t;
   }
@@ -435,11 +454,15 @@ export function tablaPlanetas(ahora: Date): FilaPlaneta[] {
   };
 
   return PLANETAS.map(({ nombre, body }) => {
-    const v = ventanaNoche(body, base, obsDe(base), PASO_TABLA_MIN);
+    // El brillo apenas se mueve de una noche a la siguiente, así que el de esta noche sirve
+    // también para decidir cuánto crepúsculo pide el planeta en las que vienen.
+    const magnitud = redondo(Astro.Illumination(body, nocheDe(base)).mag);
+    const v = ventanaNoche(body, base, obsDe(base), PASO_TABLA_MIN, magnitud);
     if (v) {
       const [T0] = bordesDelMarco(base);
       return {
         nombre,
+        magnitud,
         fase: faseEn(body, v.inicio),
         ventana: {
           desdeMin: Math.round((v.inicio.getTime() - T0) / 60000),
@@ -458,13 +481,13 @@ export function tablaPlanetas(ahora: Date): FilaPlaneta[] {
     let vuelveEnDias: number | null = null;
     for (let d = 1; d <= DIAS_REAPARICION; d++) {
       const noche = new Date(base.getTime() + d * 24 * 3600 * 1000);
-      if (ventanaNoche(body, noche, obsDe(noche), PASO_REAPARICION_MIN)) {
+      if (ventanaNoche(body, noche, obsDe(noche), PASO_REAPARICION_MIN, magnitud)) {
         vuelveEl = diaYMes(noche);
         vuelveEnDias = d;
         break;
       }
     }
-    return { nombre, fase: faseEn(body, nocheDe(base)), ventana: null, vuelveEl, vuelveEnDias };
+    return { nombre, magnitud, fase: faseEn(body, nocheDe(base)), ventana: null, vuelveEl, vuelveEnDias };
   });
 }
 
@@ -494,11 +517,12 @@ export type Cielo = {
 
 /** Todo lo que el observatorio enseña de una noche, calculado de una vez. */
 export function cielo(satelites: Satelite[], ahora: Date, dias = DIAS): Cielo {
-  // El barrido arranca un poco antes de ahora: lo que acaba de pasar sigue interesando
-  // —te asomas y aún lo pillas, o al menos sabes que era eso lo que has visto—.
-  const desde = new Date(ahora.getTime() - MARGEN_MINUTOS * 60000);
-  const hasta = new Date(ahora.getTime() + dias * 24 * 3600 * 1000);
+  // El barrido arranca en la apertura del marco, no en "ahora": la noche se enseña entera,
+  // y lo que ya ha ocurrido sigue en su sitio —te dice qué era esa luz que viste a las diez—.
+  // De día, cuando el marco aún no ha abierto, basta con mirar desde un poco antes de ahora.
   const [abre, cierra] = bordesDelMarco(baseDelMarco(ahora));
+  const desde = new Date(Math.min(ahora.getTime() - MARGEN_MINUTOS * 60000, abre));
+  const hasta = new Date(ahora.getTime() + dias * 24 * 3600 * 1000);
 
   const pasosSemana = satelites
     .flatMap((s) => pasosVisibles(s, desde, hasta))

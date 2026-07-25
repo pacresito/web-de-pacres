@@ -9,6 +9,10 @@ export const MARCO_INICIO_H = 18;
 export const MARCO_FIN_H = 26;                                    // 02:00 del día siguiente
 export const MARCO_MINUTOS = (MARCO_FIN_H - MARCO_INICIO_H) * 60; // 480
 
+// La noche se sigue enseñando dos horas después de cerrar el marco: a las 03:00 lo que
+// interesa es lo que ha pasado esta noche, no lo que traerá la de mañana. A las 04:00 releva.
+const RELEVO_H = 28;
+
 const TZ = "Europe/Madrid";
 
 const FMT_PARTES = new Intl.DateTimeFormat("en-CA", {
@@ -43,7 +47,7 @@ export function medianocheLocal(fecha: Date): Date {
 /** Medianoche del día cuyo marco está abierto: de madrugada, la de ayer — la noche sigue viva. */
 export function baseDelMarco(ahora: Date): Date {
   const base = medianocheLocal(ahora);
-  const deMadrugada = partesLocales(ahora).hora < MARCO_FIN_H - 24;
+  const deMadrugada = partesLocales(ahora).hora < RELEVO_H - 24;
   return deMadrugada ? new Date(base.getTime() - 24 * 3600 * 1000) : base;
 }
 
