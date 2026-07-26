@@ -375,12 +375,25 @@ export type FasePlaneta = {
 /**
  * Altura del Sol a partir de la cual un astro de magnitud `mag` se despega del cielo aún claro.
  * No hay un único crepúsculo que valga para todos: Venus (−4,3) se ve con el Sol todavía en el
- * horizonte, y Saturno (+0,5) pide el crepúsculo bien entrado. Recta de andar por casa —seis
- * grados para magnitud 0 y grado y medio más por cada magnitud de menos brillo— acotada entre
- * el ocaso y el crepúsculo náutico: por debajo de −12° ya es noche cerrada para cualquiera.
+ * horizonte, y Saturno (+0,5) pide el crepúsculo bien entrado.
+ *
+ * Es el *arcus visionis* del astro —el arco de visión con que la astronomía babilónica tabulaba
+ * las primeras y últimas apariciones de cada planeta—, pero con la recta calibrada contra lo que
+ * Pablo ve desde La Manga: AV = 6° + 1,5·mag, más agresiva que el ajuste clásico (7° + 1,1·mag),
+ * que llegaba trece minutos tarde a Venus. Se aparta a propósito de la tabla: la babilónica mide
+ * apariciones heliacas —el astro casi tocando el horizonte, con la extinción de cinco masas de
+ * aire— y aquí se pregunta por un planeta ya alto y por alguien que sabe dónde mirar.
+ *
+ * Sin acotar: para Venus la recta pide el Sol un pelo por encima del horizonte (AV negativo), y
+ * es correcto —así se vio—. Un tope en 0° lo retrasaría 5–10 min en la mayoría de las noches, y
+ * más cuanto más brilla: justo las noches en que antes se ve. Por el otro extremo, el planeta
+ * más débil (Marte, +1,9) se queda en −8,9°, lejos del crepúsculo náutico.
+ *
+ * Lo riguroso sería Schaefer 1993 (brillo del cielo y umbral de contraste), mucha más maquinaria
+ * de la que esto pide.
  */
 export function umbralSolar(mag: number): number {
-  return Math.min(0, Math.max(-12, -6 - 1.5 * mag));
+  return -6 - 1.5 * mag;
 }
 
 export type Ventana = {

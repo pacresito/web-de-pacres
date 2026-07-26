@@ -61,10 +61,10 @@ const HASTA = new Date(AHORA.getTime() + 7 * 24 * 3600 * 1000);
     magnitudSatelite(-1.8, 500, 2.9) > 2);
   check("umbral: cuanto más brilla un astro, menos crepúsculo pide",
     umbralSolar(-4.3) > umbralSolar(-1.8) && umbralSolar(-1.8) > umbralSolar(0.5));
-  check("umbral: Venus se ve al ocaso y Saturno bien entrado el crepúsculo",
-    umbralSolar(-4.3) === 0 && Math.abs(umbralSolar(0.5) - -6.75) < 1e-9);
-  check("umbral: acotado en el crepúsculo náutico por débil que sea",
-    umbralSolar(20) === -12);
+  check("umbral: Venus se ve antes del ocaso y Saturno bien entrado el crepúsculo",
+    Math.abs(umbralSolar(-4.3) - 0.45) < 1e-9 && Math.abs(umbralSolar(0.5) - -6.75) < 1e-9);
+  check("umbral: sin acotar, Venus pide el Sol aún alto y el más débil no llega al náutico",
+    umbralSolar(-4.9) > 0 && umbralSolar(1.9) > -12);
 }
 
 // 4. Rumbos
@@ -135,10 +135,12 @@ const HASTA = new Date(AHORA.getTime() + 7 * 24 * 3600 * 1000);
     tabla.find((f) => f.nombre === "Venus")?.ventana?.horaFin ?? "");
   check("tabla: Venus es el más brillante de los cinco",
     tabla.every((f) => f.nombre === "Venus" || f.magnitud > tabla.find((v) => v.nombre === "Venus")!.magnitud));
-  // Pablo lo vio nítido a las 21:15, con el Sol aún en el horizonte: el criterio de −6° fijo
-  // arrancaba su barra media hora tarde.
-  check("tabla: Venus asoma con el Sol todavía alto (no espera al crepúsculo)",
-    tabla.find((f) => f.nombre === "Venus")!.ventana!.horaInicio < "21:20",
+  // Único dato observado: Pablo vio Venus a las 21:15, a 25° de altura y con el Sol en el
+  // horizonte. Es lo que calibra la recta de `umbralSolar`. Ojo si algún día se afina con más
+  // noches: 21:15 es cuando se fijó, no cuando apareció — una cota, no una medida, y el umbral
+  // real puede estar antes. Si algún cambio retrasa el arranque, este check salta.
+  check("tabla: Venus asoma para las 21:15 que Pablo observó",
+    tabla.find((f) => f.nombre === "Venus")!.ventana!.horaInicio <= "21:15",
     tabla.find((f) => f.nombre === "Venus")!.ventana!.horaInicio);
   check("tabla: quien no se ve trae fecha de vuelta o queda vacío",
     tabla.filter((f) => !f.ventana).every((f) => f.vuelveEl === null || /\d/.test(f.vuelveEl)));
