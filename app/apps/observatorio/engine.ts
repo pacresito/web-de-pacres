@@ -373,21 +373,17 @@ export type FasePlaneta = {
 };
 
 /**
- * Altura del Sol a partir de la cual un astro de magnitud `mag` se despega del cielo aún claro.
- * No hay un único crepúsculo que valga para todos: Venus (−4,3) se ve con el Sol todavía en el
- * horizonte, y Saturno (+0,5) pide el crepúsculo bien entrado.
+ * Altura del Sol (negativa = bajo el horizonte) a partir de la cual un astro de magnitud `mag`
+ * se despega del cielo aún claro. No hay un crepúsculo único que valga para todos: Venus (−4,3)
+ * se ve con el Sol todavía en el horizonte y Saturno (+0,5) lo pide bien entrado.
  *
- * Es el *arcus visionis* del astro —el arco de visión con que la astronomía babilónica tabulaba
- * las primeras y últimas apariciones de cada planeta—, pero con la recta calibrada contra lo que
- * Pablo ve desde La Manga: AV = 6° + 1,5·mag, más agresiva que el ajuste clásico (7° + 1,1·mag),
- * que llegaba trece minutos tarde a Venus. Se aparta a propósito de la tabla: la babilónica mide
- * apariciones heliacas —el astro casi tocando el horizonte, con la extinción de cinco masas de
- * aire— y aquí se pregunta por un planeta ya alto y por alguien que sabe dónde mirar.
+ * Recta calibrada con lo observado desde La Manga: Venus nítido a las 21:15 del 23 jul 2026, a
+ * 25° de altura y con el Sol en el horizonte. No es el *arcus visionis* de las tablas, que se
+ * define con el astro asomando por el horizonte y no encaja con un planeta ya alto: no la
+ * "arregles" para que case con él (7° + 1,1·mag llega trece minutos tarde a esa observación).
  *
- * Sin acotar: para Venus la recta pide el Sol un pelo por encima del horizonte (AV negativo), y
- * es correcto —así se vio—. Un tope en 0° lo retrasaría 5–10 min en la mayoría de las noches, y
- * más cuanto más brilla: justo las noches en que antes se ve. Por el otro extremo, el planeta
- * más débil (Marte, +1,9) se queda en −8,9°, lejos del crepúsculo náutico.
+ * Sin acotar a propósito: para Venus pide el Sol un pelo por encima del horizonte, y es correcto
+ * —así se vio—; un tope en 0° lo retrasa 5–10 min en la mayoría de las noches en que se ve.
  *
  * Lo riguroso sería Schaefer 1993 (brillo del cielo y umbral de contraste), mucha más maquinaria
  * de la que esto pide.
@@ -425,14 +421,12 @@ type VentanaCruda = { inicio: Date; fin: Date; abiertoInicio: boolean; abiertoFi
 /**
  * Ventana visible de un planeta dentro del marco 18:00–02:00 de la noche que arranca en
  * `medianoche` (00:00 local de ese día): el tramo en que asoma sobre el horizonte con el cielo
- * ya bastante oscuro para su brillo (ver `umbralSolar`). Sin listón de altura —basta con que se
- * le vea, aunque sea bajo—, pero un planeta pegado al Sol a plena luz no cuenta. `null` si esa
- * noche no llega a verse. `paso` fino para la noche que se pinta, grueso al buscar la vuelta.
+ * ya bastante oscuro para su brillo (ver `umbralSolar`). `null` si esa noche no llega a verse.
+ * `paso` fino para la noche que se pinta, grueso al buscar la vuelta.
  *
- * Lo de no exigir altura mínima no es un olvido, y no hay que "arreglarlo": desde La Manga el
- * horizonte es el mar y el cielo está limpio, así que un planeta se sigue viendo —rojo y casi
- * tocando el agua— hasta su ocaso. Comprobado con Venus, visible hasta las 23:20 del 24 jul 2026
- * cuando se ponía a las 23:24. Un listón de altura recortaría la ventana por donde sí acierta.
+ * Sin listón de altura a propósito: desde La Manga el horizonte es el mar, y Venus se vio hasta
+ * las 23:20 del 24 jul 2026 poniéndose a las 23:24. Poner uno recortaría la ventana por donde
+ * más acierta.
  */
 function ventanaNoche(body: Astro.Body, medianoche: Date, obs: Astro.Observer, paso: number,
                       mag: number): VentanaCruda | null {
