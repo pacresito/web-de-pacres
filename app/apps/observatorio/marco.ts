@@ -1,13 +1,13 @@
-// El marco de la noche: de las 18:00 a las 02:00 de la mañana siguiente. Todo lo que pinta el
+// El marco de la noche: de las 19:00 a la 01:00 de la mañana siguiente. Todo lo que pinta el
 // observatorio comparte este eje —planetas, Luna y satélites—; fuera de él no miramos.
 //
 // Va en su propio módulo, sin dependencias, porque lo usan las dos orillas: el motor en el
 // servidor y la vista en el navegador. Importarlo del motor arrastraría astronomy-engine y
 // satellite.js al bundle de cliente.
 
-export const MARCO_INICIO_H = 18;
-export const MARCO_FIN_H = 26;                                    // 02:00 del día siguiente
-export const MARCO_MINUTOS = (MARCO_FIN_H - MARCO_INICIO_H) * 60; // 480
+export const MARCO_INICIO_H = 19;
+export const MARCO_FIN_H = 25;                                    // 01:00 del día siguiente
+export const MARCO_MINUTOS = (MARCO_FIN_H - MARCO_INICIO_H) * 60; // 360
 
 // La noche se sigue enseñando dos horas después de cerrar el marco: a las 03:00 lo que
 // interesa es lo que ha pasado esta noche, no lo que traerá la de mañana. A las 04:00 releva.
@@ -26,7 +26,7 @@ export function partesLocales(fecha: Date) {
   return { mes: +p.month, dia: +p.day, hora: +p.hour, minuto: +p.minute, hhmm: `${p.hour}:${p.minute}` };
 }
 
-/** Minutos desde las 18:00 en que cae `fecha`, o null si queda fuera del marco. */
+/** Minutos desde la apertura del marco en que cae `fecha`, o null si queda fuera de él. */
 export function minutosEnMarco(fecha: Date): number | null {
   const { hora, minuto } = partesLocales(fecha);
   // El marco cruza la medianoche: la madrugada cuenta como hora + 24.

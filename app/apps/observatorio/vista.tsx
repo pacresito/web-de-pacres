@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import TerminalShell from "../../components/TerminalShell";
 import WhyFooter from "../../components/WhyFooter";
-import { MARCO_MINUTOS, minutosEnMarco } from "./marco";
+import { MARCO_INICIO_H, MARCO_MINUTOS, minutosEnMarco } from "./marco";
 import type { Cielo, Evento, EventoSatelite, FilaPlaneta, PuntoArco } from "./engine";
 
 const redondo = (n: number) => +n.toFixed(2);
@@ -186,12 +186,13 @@ function posicionEn(puntos: PuntoArco[], ahora: number): { az: number; alt: numb
 }
 
 /**
- * ¿Ese instante cae dentro del paso que se reporta —el tramo que de verdad se ve—? El arco
- * dibujado es más largo: el satélite asoma por el horizonte unos minutos antes de alcanzar la
- * altura mínima, y sigue ahí un rato después de apagarse.
+ * ¿Ese instante cae dentro de lo que se ve? La ventana es la del arco iluminado, más ancha que
+ * el tramo reportado (`instante`–`instanteFin`, el que pasa el corte de altura y de brillo):
+ * el satélite ya brilla subiendo desde el horizonte y sigue brillando al bajar. Con el tramo
+ * corto, la carta cantaba "terminado" con la ISS todavía cruzando el cielo.
  */
 const enPaso = (paso: EventoSatelite, ahora: number) =>
-  ahora >= paso.instante && ahora <= paso.instanteFin;
+  ahora >= paso.visibleDesde && ahora <= paso.visibleHasta;
 
 function CartaCielo({ paso, detallada = false, giro = 0, ahora = null }: {
   paso: EventoSatelite; detallada?: boolean; giro?: number; ahora?: number | null;
@@ -279,16 +280,15 @@ function useAhora(cada: number): number | null {
 
 // ─── La línea de tiempo ───────────────────────────────────────────────────────
 
-const HORAS = ["18", "20", "22", "00", "02"];
+// Las horas rotuladas, de dos en dos y sin las de los extremos: el marco entero es la noche y
+// sus bordes se leen en el propio borde de la pista. 24 = medianoche. La rejilla usa las mismas.
+const HORAS = [20, 22, 24];
 
 /** Posición dentro del marco, en % del eje. */
 const pct = (min: number) => redondo((Math.min(MARCO_MINUTOS, Math.max(0, min)) / MARCO_MINUTOS) * 100);
 
-/** Las horas del eje, repartidas: 0 %, 25 %… — la rejilla se cuelga de las mismas marcas. */
-const pctHora = (i: number) => redondo((i / (HORAS.length - 1)) * 100);
-
-// La rejilla se salta las horas de los extremos: ahí ya está el borde del marco.
-const HORAS_REJILLA = HORAS.slice(1, -1);
+/** Dónde cae una hora en punto del marco, en % del eje. */
+const pctHora = (h: number) => pct((h - MARCO_INICIO_H) * 60);
 
 /** La pista de lo que esta noche no se ve: una vía fantasma con el día en que vuelve. */
 function Vuelve({ cuando }: { cuando: string | null }) {
@@ -329,11 +329,20 @@ function Marca({ evento, clase, detalle }: { evento: Evento; clase: string; deta
   );
 }
 
+/**
+ * La salida de la Luna. Cuando ocurre con el cielo aún claro se apaga entera —rombo hueco y
+ * todo atenuado—: la hora sigue siendo cierta, pero no hay nada que salir a ver. Se apaga la
+ * mala en vez de resaltar la buena porque el verde de resaltar ya es el color de los satélites
+ * y de la línea de ahora, y porque lo normal es que la salida sí se vea: llamativo debe ser lo
+ * excepcional.
+ */
 function PistaLuna({ cielo }: { cielo: Cielo }) {
   if (!cielo.luna) return <div className="obs-pista"><Vuelve cuando={cielo.lunaVuelveEl} /></div>;
+  const { aOscuras, desde } = cielo.luna;
   return (
-    <div className="obs-pista">
-      <Marca evento={cielo.luna} clase="obs-rombo" detalle={cielo.luna.desde} />
+    <div className={`obs-pista${aOscuras ? "" : " obs-apagada"}`}>
+      <Marca evento={cielo.luna} clase={`obs-rombo${aOscuras ? "" : " obs-rombo-luz"}`}
+        detalle={aOscuras ? desde : `${desde} · aún con luz`} />
     </div>
   );
 }
@@ -364,7 +373,11 @@ function LineaDeTiempo({ cielo }: { cielo: Cielo }) {
 
   return (
     <div className="obs-tl">
-      <div className="obs-eje"><div className="obs-eje-horas">{HORAS.map((h) => <span key={h}>{h}</span>)}</div></div>
+      <div className="obs-eje">
+        {HORAS.map((h) => (
+          <span key={h} style={{ left: `${pctHora(h)}%` }}>{String(h % 24).padStart(2, "0")}</span>
+        ))}
+      </div>
 
       <div className="obs-tl-cuerpo">
         <div className="obs-columna">
@@ -388,7 +401,7 @@ function LineaDeTiempo({ cielo }: { cielo: Cielo }) {
         </div>
 
         <div className="obs-columna obs-columna-pistas">
-          {HORAS_REJILLA.map((h, i) => <span key={h} className="obs-rejilla" style={{ left: `${pctHora(i + 1)}%` }} />)}
+          {HORAS.map((h) => <span key={h} className="obs-rejilla" style={{ left: `${pctHora(h)}%` }} />)}
           {enMarco !== null && <>
             <span className="obs-ahora" style={{ left: `${pct(enMarco)}%` }} />
             <span className="obs-ahora-punto" style={{ left: `${pct(enMarco)}%` }} />
@@ -529,8 +542,8 @@ function PantallaCompleta({ paso, onCerrar }: { paso: EventoSatelite; onCerrar: 
         <div className="obs-leyenda-fila">
           <span>{enCurso
             ? <><span className="obs-verde">●</span> dónde mirar ahora</>
-            : ahora !== null && ahora < paso.instante
-              ? <>empieza en {cuenta(paso.instante - ahora)}</>
+            : ahora !== null && ahora < paso.visibleDesde
+              ? <>empieza en {cuenta(paso.visibleDesde - ahora)}</>
               : <>el paso ya ha terminado</>}</span>
           {paso.luna && <span><span style={{ color: "#98a2ab" }}>●</span> Luna en {paso.luna.rumbo} · {Math.round(paso.luna.alt)}°</span>}
         </div>
@@ -603,8 +616,10 @@ export default function Vista({ cielo, comando }: { cielo: Cielo; comando: strin
         .obs-estado { font-size: 0.75rem; color: var(--t-ink3); margin: 0 0 1.8rem; }
 
         /* ── Línea de tiempo ── */
-        .obs-eje { display: flex; margin-bottom: 8px; padding-left: var(--obs-etq); }
-        .obs-eje-horas { flex: 1; display: flex; justify-content: space-between; font-size: 0.6rem; color: var(--t-ink4); }
+        /* Las horas se colocan por su sitio real en el marco, no repartidas: así los rótulos y
+           las verticales de la rejilla salen de la misma cuenta y no pueden desalinearse. */
+        .obs-eje { position: relative; height: 0.75rem; margin-bottom: 8px; margin-left: var(--obs-etq); }
+        .obs-eje span { position: absolute; transform: translateX(-50%); font-size: 0.6rem; color: var(--t-ink4); }
         /* La columna de etiquetas da para el disco (36 px, con sitio para el anillo de Saturno)
            más el nombre más largo, "Mercurio", en mono. */
         .obs-tl { --obs-etq: 108px; }
@@ -617,6 +632,10 @@ export default function Vista({ cielo, comando }: { cielo: Cielo; comando: strin
         .obs-columna-pistas .obs-sep { background: none; }
 
         .obs-etq { height: 28px; display: flex; align-items: center; gap: 6px; font-size: 0.75rem; color: var(--t-ink); }
+        /* Satélites no tiene disco, así que arrancaba pegado al borde de la columna, siete píxeles
+           a la izquierda de los planetas: el lienzo del disco es más ancho que el disco, que
+           empieza en CX − R. El rótulo se alinea con el dibujo, no con el lienzo. */
+        .obs-etq-sat { padding-left: 7px; }
         .obs-etq-txt { display: flex; flex-direction: column; line-height: 1.15; min-width: 0; }
         .obs-etq-mag { font-size: 0.55rem; color: var(--t-ink4); }
         .obs-pista { height: 28px; position: relative; }
@@ -634,10 +653,13 @@ export default function Vista({ cielo, comando }: { cielo: Cielo; comando: strin
         }
         /* Las dos señales de un instante comparten sitio y tamaño: rombo la Luna, raya el satélite. */
         .obs-rombo, .obs-raya { position: absolute; top: 50%; }
-        .obs-rombo { width: 10px; height: 10px; background: var(--t-ink2); transform: translate(-50%, -50%) rotate(45deg); }
+        .obs-rombo { box-sizing: border-box; width: 10px; height: 10px; background: var(--t-ink2); transform: translate(-50%, -50%) rotate(45deg); }
+        .obs-rombo-luz { background: none; border: 1px solid var(--t-ink3); }
         .obs-raya { width: 3px; height: 16px; border-radius: 1px; background: var(--t-accent); transform: translate(-50%, -50%); }
+        .obs-apagada { opacity: 0.45; }
         .obs-marca-txt { position: absolute; top: 50%; transform: translateY(-50%); font-size: 0.66rem; white-space: nowrap; color: var(--t-ink); }
-        .obs-sinpasos { position: absolute; top: 50%; left: 0; transform: translateY(-50%); font-size: 0.62rem; color: var(--t-ink4); }
+        /* Centrada en la pista, como el "vuelve en unos meses" de las vías fantasma. */
+        .obs-sinpasos { position: absolute; top: 50%; left: 0; right: 0; transform: translateY(-50%); text-align: center; font-size: 0.62rem; color: var(--t-ink4); }
 
         /* Llega hasta la última pista: la de satélites es justo donde interesa ver si el paso
            de las 22:26 ya ha caído por detrás de ahora. */

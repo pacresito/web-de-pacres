@@ -100,8 +100,14 @@ const HASTA = new Date(AHORA.getTime() + 7 * 24 * 3600 * 1000);
 {
   const lunas = salidasDeLuna(AHORA, HASTA);
   console.log(`  … ${lunas.length} salidas de Luna en ventana`);
-  check("luna: todas dentro del marco 18:00–02:00",
+  check("luna: todas dentro del marco de la noche",
     lunas.every((l) => minutosEnMarco(new Date(l.instante)) !== null));
+  check("luna: la salida del 28 jul 2026 queda marcada como con-luz (Sol a +3°, observado)",
+    salidasDeLuna(new Date("2026-07-28T12:00:00Z"), new Date("2026-07-29T00:00:00Z"))
+      .every((l) => !l.aOscuras));
+  check("luna: la del 29 jul 2026 sí sale a oscuras (Sol a −2,9°)",
+    salidasDeLuna(new Date("2026-07-29T12:00:00Z"), new Date("2026-07-30T00:00:00Z"))
+      .every((l) => l.aOscuras));
   check("luna: en la salida está pegada al horizonte", lunas.every((l) => {
     const obs = new Astro.Observer(37.66, -0.72, 0);
     const t = new Date(l.instante);
@@ -124,7 +130,7 @@ const HASTA = new Date(AHORA.getTime() + 7 * 24 * 3600 * 1000);
     tabla.every((f) => (f.nombre === "Saturno") === (f.fase.ringTilt !== null)));
   const visibles = tabla.filter((f) => f.ventana);
   check("tabla: alguno visible esta noche", visibles.length > 0);
-  check("tabla: las ventanas caen dentro del marco 0–480 y con inicio antes que fin",
+  check("tabla: las ventanas caen dentro del marco y con inicio antes que fin",
     visibles.every((f) => f.ventana!.desdeMin >= 0 && f.ventana!.hastaMin <= MARCO_MINUTOS
       && f.ventana!.desdeMin < f.ventana!.hastaMin));
   check("tabla: un extremo abierto es siempre el borde del marco",
@@ -167,12 +173,20 @@ const HASTA = new Date(AHORA.getTime() + 7 * 24 * 3600 * 1000);
     c.citas.every((x) => ["ISS", "Tiangong", "Moon"].includes(x.nombre)));
   check("cielo: cada arco lleva sus instantes en orden",
     c.pasos.concat(c.proximos).every((p) => p.trayectoria.every((q, i) => i === 0 || q.t > p.trayectoria[i - 1].t)));
+  check("cielo: la ventana visible envuelve al tramo reportado y no se sale del arco",
+    c.pasos.concat(c.proximos).every((p) =>
+      p.visibleDesde <= p.instante && p.visibleHasta >= p.instanteFin
+      && p.visibleDesde >= p.trayectoria[0].t
+      && p.visibleHasta <= p.trayectoria[p.trayectoria.length - 1].t));
+  check("cielo: la ventana visible es toda ella arco iluminado",
+    c.pasos.concat(c.proximos).every((p) =>
+      p.trayectoria.filter((q) => q.t >= p.visibleDesde && q.t <= p.visibleHasta).every((q) => q.vis)));
 
   // Margen: rebobinar el reloj justo detrás de un paso lo mantiene en la lista.
   const paso = c.proximos[0] ?? c.pasos[0];
   const despues = new Date(paso.instanteFin + (MARGEN_MINUTOS - 1) * 60000);
   check("cielo: un paso recién terminado aguanta el margen de 10 min",
-    cielo(SATELITES, despues, 1).citas.some((x) => x.instanteFin === paso.instanteFin));
+    cielo(SATELITES, despues, 1).citas.some((x) => x.instanteFin === paso.visibleHasta));
 }
 
 console.log(fails === 0 ? "\nTodo OK" : `\n${fails} fallos`);

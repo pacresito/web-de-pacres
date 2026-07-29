@@ -112,6 +112,13 @@ export type EventoSatelite = EventoBase & {
   // El rumbo de entrada y salida no viaja aparte: la carta del cielo ya lo dibuja, y lo que
   // acompaña al texto es la magnitud —el dato que dice si vale la pena salir a mirar—.
   trayectoria: PuntoArco[]; // el arco entero sobre el horizonte, para la carta del cielo
+  // Lo que dura de verdad en el cielo, de borde a borde de la parte iluminada del arco. Es más
+  // largo que `instante`–`instanteFin`, que acota el tramo *reportable* (por encima de la
+  // altitud mínima y del corte de magnitud): el satélite ya se ve mientras sube desde el
+  // horizonte y sigue viéndose al bajar, hasta que se pone o entra en la sombra de la Tierra.
+  // Por eso la cuenta atrás y el punto que late en la carta van con estos, no con aquellos.
+  visibleDesde: number;
+  visibleHasta: number;
   luna: PosicionLuna | null; // dónde está la Luna durante el paso, o null si no ha salido
 };
 
@@ -124,6 +131,7 @@ export type EventoLuna = EventoBase & {
   desde: string;        // rumbo por el que sale
   iluminacion: number;  // 0–1
   anguloFase: number;   // 0° nueva, 180° llena — creciente por debajo de 180
+  aOscuras: boolean;    // si al salir hay cielo suficiente para verla (ver `SOL_MAXIMO_LUNA`)
 };
 
 // Los planetas ya no son eventos de la agenda: viven en su propia tabla (ver más abajo),
@@ -241,14 +249,22 @@ function pasosDelArco(sat: Satelite, arco: Muestra[], sede: Sede): EventoSatelit
   }));
   const obs = new Astro.Observer(sede.lat, sede.lon, 0);
   const pasos: EventoSatelite[] = [];
-  let tramo: Muestra[] = [];
+  let tramo: number[] = []; // índices en `arco`, para poder mirar a los lados del tramo
+
+  // Hasta dónde llega, en esa dirección, la racha iluminada que contiene a `i`: el satélite ya
+  // se ve subiendo desde el horizonte y sigue viéndose al bajar, fuera del tramo reportable.
+  const bordeIluminado = (i: number, dir: -1 | 1) => {
+    while (arco[i + dir]?.vis) i += dir;
+    return arco[i].fecha.getTime();
+  };
 
   const cerrar = () => {
-    if (tramo.length >= 2 && esDeLaNoche(tramo[0].fecha)) {
-      const masBrillante = Math.min(...tramo.map((m) => m.mag));
+    const ms = tramo.map((i) => arco[i]);
+    if (ms.length >= 2 && esDeLaNoche(ms[0].fecha)) {
+      const masBrillante = Math.min(...ms.map((m) => m.mag));
       if (masBrillante <= MAGNITUD_MAXIMA) {
-        const cumbre = tramo.reduce((a, b) => (b.alt > a.alt ? b : a));
-        const inicio = tramo[0], fin = tramo[tramo.length - 1];
+        const cumbre = ms.reduce((a, b) => (b.alt > a.alt ? b : a));
+        const inicio = ms[0], fin = ms[ms.length - 1];
         pasos.push({
           ...marca(inicio.fecha),
           tipo: "satelite",
@@ -259,6 +275,8 @@ function pasosDelArco(sat: Satelite, arco: Muestra[], sede: Sede): EventoSatelit
           altitud: cumbre.alt,
           magnitud: masBrillante,
           trayectoria,
+          visibleDesde: bordeIluminado(tramo[0], -1),
+          visibleHasta: bordeIluminado(tramo[tramo.length - 1], +1),
           luna: lunaEnCielo(obs, cumbre.fecha),
         });
       }
@@ -266,10 +284,10 @@ function pasosDelArco(sat: Satelite, arco: Muestra[], sede: Sede): EventoSatelit
     tramo = [];
   };
 
-  for (const m of arco) {
-    if (m.vis && m.alt >= ALTITUD_MINIMA) tramo.push(m);
+  arco.forEach((m, i) => {
+    if (m.vis && m.alt >= ALTITUD_MINIMA) tramo.push(i);
     else cerrar();
-  }
+  });
   cerrar();
   return pasos;
 }
@@ -320,7 +338,23 @@ export function reaparicionSatelite(sat: Satelite, desde: Date): string | null {
 // veinte ya se ha despegado del horizonte y deja de ser lo que salías a ver.
 const SALIDA_LUNA_MINUTOS = 20;
 
-/** Salidas de la Luna que caen dentro del marco 18:00–02:00 — el espectáculo desde La Manga. */
+/**
+ * Con el Sol por encima del horizonte no se ve salir la Luna; con el Sol puesto, sí. Sale de lo
+ * observado desde La Manga el 28 jul 2026: salió a las 20:53 con el Sol a +3,1° y no se vio; a
+ * las 21:00, con el Sol casi puesto, ya estaba despegada del horizonte.
+ *
+ * Un único listón, sin corregir por fase, porque dentro del marco de la noche la Luna que asoma
+ * es casi siempre la llena o poco menos —las salidas de las fases finas caen de madrugada o de
+ * día—. La excepción es la que sale rozando el cierre del marco, ya en cuarto: para esa, cero
+ * grados es optimista. Si alguna se anuncia y no se ve, es aquí donde hay que bajar.
+ *
+ * No vale `umbralSolar`, calibrado con planetas: aplicado a la magnitud de la Luna daría el Sol
+ * doce grados por encima del horizonte. Un disco recién salido tampoco compite con un planeta ya
+ * alto —en el horizonte pierde dos magnitudes largas de extinción—.
+ */
+export const SOL_MAXIMO_LUNA = 0;
+
+/** Salidas de la Luna que caen dentro del marco de la noche — el espectáculo desde La Manga. */
 export function salidasDeLuna(desde: Date, hasta: Date): EventoLuna[] {
   const eventos: EventoLuna[] = [];
   let cursor = desde;
@@ -342,6 +376,7 @@ export function salidasDeLuna(desde: Date, hasta: Date): EventoLuna[] {
         desde: rumbo(horizonte.azimuth),
         iluminacion: Astro.Illumination(Astro.Body.Moon, salida.date).phase_fraction,
         anguloFase: Astro.MoonPhase(salida.date),
+        aOscuras: altitudSolar(salida.date, obs) <= SOL_MAXIMO_LUNA,
       });
     }
     cursor = new Date(salida.date.getTime() + 60 * 60 * 1000);
@@ -360,8 +395,8 @@ const PLANETAS: { nombre: string; body: Astro.Body }[] = [
 ];
 
 // La franja de visibilidad es la ventana real de cada planeta dentro del marco de la noche;
-// si asoma pegada a un borde, ese extremo queda abierto (sin hora): antes de las 18:00 o
-// después de las 02:00 no nos importa lo que haga.
+// si asoma pegada a un borde, ese extremo queda abierto (sin hora): fuera del marco no nos
+// importa lo que haga.
 const PASO_TABLA_MIN = 5;         // muestreo fino de la noche que se enseña
 const PASO_REAPARICION_MIN = 20;  // muestreo grueso al buscar la vuelta de un planeta
 const DIAS_REAPARICION = 90;      // hasta dónde se busca la reaparición; más allá, "en unos meses"
@@ -393,12 +428,12 @@ export function umbralSolar(mag: number): number {
 }
 
 export type Ventana = {
-  desdeMin: number;       // minutos desde las 18:00 en que empieza a verse (0–480)
-  hastaMin: number;       // minutos desde las 18:00 en que deja de verse (0–480)
+  desdeMin: number;       // minutos desde la apertura del marco en que empieza a verse
+  hastaMin: number;       // minutos desde la apertura del marco en que deja de verse
   horaInicio: string;     // HH:MM local
   horaFin: string;        // HH:MM local
-  abiertoInicio: boolean; // ya se veía en el borde del marco (18:00) → sin etiqueta
-  abiertoFin: boolean;    // seguía viéndose en el otro borde (02:00) → sin etiqueta
+  abiertoInicio: boolean; // ya se veía al abrir el marco → sin etiqueta
+  abiertoFin: boolean;    // seguía viéndose al cerrarlo → sin etiqueta
 };
 
 export type FilaPlaneta = {
@@ -419,7 +454,7 @@ function faseEn(body: Astro.Body, fecha: Date): FasePlaneta {
 type VentanaCruda = { inicio: Date; fin: Date; abiertoInicio: boolean; abiertoFin: boolean };
 
 /**
- * Ventana visible de un planeta dentro del marco 18:00–02:00 de la noche que arranca en
+ * Ventana visible de un planeta dentro del marco de la noche que arranca en
  * `medianoche` (00:00 local de ese día): el tramo en que asoma sobre el horizonte con el cielo
  * ya bastante oscuro para su brillo (ver `umbralSolar`). `null` si esa noche no llega a verse.
  * `paso` fino para la noche que se pinta, grueso al buscar la vuelta.
@@ -450,7 +485,7 @@ const nocheDe = (medianoche: Date) => new Date(medianoche.getTime() + 20 * 3600 
 
 /**
  * Los cinco planetas a simple vista, en orden fijo, para la tabla del observatorio. Cada uno
- * con su fase y, si se ve esta noche, la ventana dentro del marco 18:00–02:00; si no, la
+ * con su fase y, si se ve esta noche, la ventana dentro del marco; si no, la
  * fecha en que vuelve a verse (barrido día a día, hasta seis meses).
  */
 export function tablaPlanetas(ahora: Date): FilaPlaneta[] {
@@ -542,13 +577,13 @@ export function cielo(satelites: Satelite[], ahora: Date, dias = DIAS): Cielo {
   const futuros = pasosSemana.filter((p) => p.instante > cierra);
   const lunaEstaNoche = lunas.find(deEstaNoche) ?? null;
   const proximaLuna = lunas.find((l) => l.instante > cierra);
+  // La cuenta atrás se cuelga de la ventana en que el objeto se ve —el arco iluminado entero en
+  // un satélite—, no del tramo reportable: si no, canta "terminado" con la ISS aún en el cielo.
   const citas: Cita[] = [...pasosSemana, ...lunas.filter((l) => l.instante <= hasta.getTime())]
-    .sort((a, b) => a.instante - b.instante)
-    .map((e) => ({
-      nombre: e.tipo === "luna" ? "Moon" : e.nombre,
-      instante: e.instante,
-      instanteFin: e.instanteFin,
-    }));
+    .map((e) => e.tipo === "luna"
+      ? { nombre: "Moon", instante: e.instante, instanteFin: e.instanteFin }
+      : { nombre: e.nombre, instante: e.visibleDesde, instanteFin: e.visibleHasta })
+    .sort((a, b) => a.instante - b.instante);
 
   return {
     sede: sedeParaFecha(ahora).nombre,
