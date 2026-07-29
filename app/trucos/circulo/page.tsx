@@ -4,25 +4,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import TerminalShell from "../../components/TerminalShell";
 import WhyFooter from "../../components/WhyFooter";
 import Certificado from "../../components/Certificado";
+import { computeScore, fitCircle } from "./engine";
 
 type Phase = "idle" | "drawing" | "score" | "alive" | "caught";
 
 const THRESHOLD = 0.88;
 const CIRCLE_HOLD_MS = 1000;
-
-function computeScore(pts: { x: number; y: number }[]): number {
-  if (pts.length < 20) return 0;
-  const cx = pts.reduce((s, p) => s + p.x, 0) / pts.length;
-  const cy = pts.reduce((s, p) => s + p.y, 0) / pts.length;
-  const dists = pts.map(p => Math.hypot(p.x - cx, p.y - cy));
-  const mean = dists.reduce((s, d) => s + d, 0) / dists.length;
-  if (mean < 20) return 0;
-  const std = Math.sqrt(dists.reduce((s, d) => s + (d - mean) ** 2, 0) / dists.length);
-  const roundness = Math.max(0, 1 - std / mean);
-  const d0 = Math.hypot(pts[pts.length - 1].x - pts[0].x, pts[pts.length - 1].y - pts[0].y);
-  const closure = Math.max(0, 1 - d0 / (mean * 1.5));
-  return Math.min(1, roundness * 0.7 + closure * 0.3);
-}
 
 export default function CirculoPerfecto() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -313,12 +300,9 @@ export default function CirculoPerfecto() {
       if (score >= THRESHOLD) {
         timeoutsRef.current.push(setTimeout(() => {
           if (phaseRef.current !== "score") return;
-          const pts = ptsRef.current;
-          const cx = pts.reduce((s, p) => s + p.x, 0) / pts.length;
-          const cy = pts.reduce((s, p) => s + p.y, 0) / pts.length;
-          const dists = pts.map(p => Math.hypot(p.x - cx, p.y - cy));
-          const r = Math.max(30, Math.min(100, dists.reduce((s, d) => s + d, 0) / dists.length));
-          launchAlive(cx, cy, r);
+          // El círculo que echa a andar es el que se ha dibujado: mismo ajuste que la nota.
+          const { cx, cy, r } = fitCircle(ptsRef.current);
+          launchAlive(cx, cy, Math.max(30, Math.min(100, r)));
         }, 700));
       } else {
         timeoutsRef.current.push(setTimeout(() => {
