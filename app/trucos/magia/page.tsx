@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import TerminalShell from "../../components/TerminalShell";
 import WhyFooter from "../../components/WhyFooter";
+import { anchoDeCarta, reparte, RITMO, type Reparto, type Spot } from "./reparto";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -99,6 +100,17 @@ function spellName(beast: Beast): string {
   return `${VALUE_ES[beast.value]} de ${SUIT_ES[beast.suit]}`;
 }
 
+// De dónde sale cada carta: un mazo centrado por encima del escenario. Vive
+// fuera de la caja (overflow visible), así el hueco que deja al vaciarse no
+// desplaza nada. El desnivel por índice es lo que lo hace parecer un mazo.
+function deckSpot(rep: Reparto, cardW: number, i: number): Spot {
+  return {
+    x: (rep.ancho - cardW) / 2 + i * 0.3,
+    y: -(rep.cardH + 14) - i * 0.5,
+    r: ((i % 3) - 1) * 0.6,
+  };
+}
+
 // ─── CardFace ─────────────────────────────────────────────────────────────────
 
 // Símbolos SVG de los palos (handoff editorial). Se renderiza una vez por página;
@@ -147,10 +159,14 @@ function CardFace({ beast, w }: { beast: Beast; w: number }) {
           <rect x="5.5" y="5.5" width="89" height="131" rx="3" fill="none" stroke="#1c1c1a" strokeWidth="0.9" />
           <rect x="8.5" y="8.5" width="83" height="125" rx="2" fill="none" stroke="#1c1c1a" strokeWidth="0.45" />
 
-          {/* valor centrado + separador con rombo, arriba y (rotado) abajo */}
+          {/* valor y palo + separador con rombo, arriba y (rotado) abajo. El palo
+              va aquí, y no solo en las pipas del centro, porque en el reparto la
+              carta se elige sobre el montón: esta banda es lo único que se ve de
+              las cartas tapadas, y sin el palo no identifica la carta. */}
           {[false, true].map((flip) => (
             <g key={String(flip)} transform={flip ? "rotate(180 50 71)" : undefined}>
-              <text x="51.5" y="33" textAnchor="middle" fontSize="20" fontWeight="500" letterSpacing="3" fill={suitColor}>{beast.value}</text>
+              <text x="40" y="33" textAnchor="middle" fontSize="20" fontWeight="500" fill={suitColor}>{beast.value}</text>
+              <use href={symbol} x="52" y="20" width="14" height="14" fill={suitColor} />
               <path d="M30 40 H45 M55 40 H70" stroke="#1c1c1a" strokeWidth="0.7" />
               <rect x="48" y="38" width="4" height="4" transform="rotate(45 50 40)" fill="#00b87a" />
             </g>
@@ -404,16 +420,54 @@ export default function MagiaPage() {
   // El animal se precarga en beginSpell; la animación del reveal espera a que
   // esté listo para no salir cortada en la primera carga.
   const [animalReady, setAnimalReady] = useState(false);
+  // Reparto en marcha: `rep` son las posiciones de esta mano y `dealt` dice si
+  // ya han aterrizado — hasta entonces no se puede señalar montón.
+  const [rep, setRep] = useState<Reparto | null>(null);
+  const [dealt, setDealt] = useState(false);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   useEffect(() => {
     function calc() {
-      const vw = Math.min(window.innerWidth, 480);
-      setCardW(Math.min(68, Math.max(44, Math.floor((vw - 72) / 3))));
+      const w = anchoDeCarta(window.innerWidth);
+      setCardW(w);
+      // Las posiciones son píxeles, así que un reparto en marcha se rehace.
+      setRep((r) => (r ? reparte(w) : r));
+      setDealt(false);
     }
     calc();
     window.addEventListener("resize", calc);
     return () => window.removeEventListener("resize", calc);
   }, []);
+
+  // El reparto: las 21 cartas salen del mazo de una en una, cada una con su
+  // retardo, y se quedan en el montón.
+  useEffect(() => {
+    const els = cardRefs.current;
+    if (!rep || !stageRef.current || els.length < 21 || els.some((el) => !el)) return;
+
+    const put = (el: HTMLDivElement, s: Spot) => {
+      el.style.transform = `translate(${s.x.toFixed(2)}px, ${s.y.toFixed(2)}px) rotate(${s.r.toFixed(2)}deg)`;
+    };
+    els.forEach((el, i) => {
+      el!.style.transition = "none";
+      el!.style.zIndex = String(100 - i);          // en el mazo, la primera a repartir arriba
+      put(el!, deckSpot(rep, cardW, i));
+    });
+
+    // Reflow forzado para fijar la salida: sin él la transición arranca ya en el
+    // montón. Un requestAnimationFrame no vale, se congela en segundo plano.
+    void stageRef.current.offsetWidth;
+
+    const timers = els.map((el, i) => {
+      el!.style.transition = `transform ${RITMO.vuelo}ms ${RITMO.ease} ${RITMO.intervalo * i}ms`;
+      put(el!, rep.spots[i]);
+      // en vuelo se invierte el orden: cada carta cae sobre las ya repartidas
+      return window.setTimeout(() => { el!.style.zIndex = String(200 + i); }, RITMO.intervalo * i);
+    });
+    timers.push(window.setTimeout(() => setDealt(true), RITMO.intervalo * 20 + RITMO.vuelo));
+    return () => timers.forEach(clearTimeout);
+  }, [rep, cardW]);
 
   const guide = SPIRIT_GUIDES[guideIdx];
   const revealBeast = deck[10];
@@ -428,6 +482,10 @@ export default function MagiaPage() {
     setSpinStarted(false);
     setSpinDone(false);
     setPhase("dealing");
+    // Las posiciones del montón se sortean aquí, en el handler: sortearlas
+    // durante el render rompe la hidratación.
+    setRep(reparte(cardW));
+    setDealt(false);
 
     // Precarga del animal elegido: hay reparto + ruleta por delante, así que
     // para cuando se llega al reveal la imagen ya está en caché.
@@ -437,14 +495,18 @@ export default function MagiaPage() {
     pre.src = SPIRIT_GUIDES[newIdx].img;
   }
 
+  // Hasta que el reparto termina no hay montón que señalar.
   function onCharmClick(col: number) {
-    if (phase !== "dealing") return;
+    if (phase !== "dealing" || !dealt) return;
     const newDeck = castSpell(deck, col);
     setDeck(newDeck);
     if (round === 2) {
       setPhase("spinner");
+      setRep(null);
     } else {
       setRound((r) => r + 1);
+      setRep(reparte(cardW));
+      setDealt(false);
     }
   }
 
@@ -452,7 +514,6 @@ export default function MagiaPage() {
   const onWheelSettle = useCallback(() => setSpinDone(true), []);
 
   const mono = "var(--t-mono)";
-  const cardGap = Math.max(3, Math.floor(cardW * 0.07));
 
   return (
     <TerminalShell title="magia" prompt={{ host: "magia", path: "~/trucos", command: "./magia --cartas=21" }}>
@@ -531,26 +592,50 @@ export default function MagiaPage() {
           <div style={{ textAlign: "center" }}>
             <p style={{ color: "var(--t-ink4)", fontSize: "0.7rem", fontFamily: mono }}>Ronda {round + 1} de 3</p>
             <p style={{ color: "var(--t-ink)", fontSize: "1rem", fontWeight: 600, marginTop: "0.3rem", fontFamily: mono }}>
-              ¿En qué columna está tu carta?
+              ¿En qué montón está tu carta?
             </p>
             <p style={{ color: "var(--t-ink3)", fontSize: "0.78rem", fontFamily: mono, marginTop: "0.3rem" }}>
               {round === 0 ? "Elige una carta. Grábatela en la mente." : ROUND_HINTS[round]}
             </p>
           </div>
-          <div key={round} style={{ display: "flex", gap: 14, alignItems: "flex-start", animation: "fadeUp 0.25s ease" }}>
-            {[0, 1, 2].map((col) => (
-              <div
-                key={col}
-                className="magia-col"
-                onClick={() => onCharmClick(col)}
-                style={{ gap: cardGap }}
-              >
-                {getCharm(deck, col).map((beast, i) => (
-                  <CardFace key={i} beast={beast} w={cardW} />
-                ))}
-              </div>
-            ))}
-          </div>
+          {rep && (
+            <div
+              ref={stageRef}
+              style={{
+                position: "relative", width: rep.ancho, height: rep.alto,
+                marginTop: rep.cardH + 24,   // hueco del mazo, que vive fuera de la caja
+              }}
+            >
+              {[0, 1, 2].map((col) => (
+                <div
+                  key={col}
+                  className="magia-col"
+                  onClick={() => onCharmClick(col)}
+                  style={{
+                    position: "absolute", top: -8, left: col * rep.pitch,
+                    width: rep.montonAncho, height: rep.alto + 16,
+                    opacity: dealt ? 1 : 0, pointerEvents: dealt ? "auto" : "none",
+                    transition: "opacity 0.5s ease",
+                  }}
+                />
+              ))}
+              {/* La posición inicial va en el style (el mazo) para que el primer
+                  pintado ya salga de ahí; a partir de ahí la mueve el efecto. */}
+              {deck.map((beast, i) => (
+                <div
+                  key={i}
+                  ref={(el) => { cardRefs.current[i] = el; }}
+                  style={{
+                    position: "absolute", top: 0, left: 0,
+                    pointerEvents: "none", willChange: "transform",
+                    transform: `translate(${deckSpot(rep, cardW, i).x}px, ${deckSpot(rep, cardW, i).y}px)`,
+                  }}
+                >
+                  <CardFace beast={beast} w={cardW} />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
