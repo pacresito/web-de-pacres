@@ -265,12 +265,14 @@ export default function CalculadoraRPN() {
           justify-content: center;
         }
 
+        /* Viñeta, no gris plano: sobre un fondo del mismo tono que la carcasa el
+           marco desaparece, y sus sombras son negras — no recortan nada. */
         .hp-wrap.is-fullscreen {
           position: fixed;
           inset: 0;
           z-index: 9999;
           margin: 0;
-          background: #111;
+          background: radial-gradient(circle at 50% 38%, #17171b 0%, #050506 78%);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -296,6 +298,18 @@ export default function CalculadoraRPN() {
             0 4px 8px rgba(0,0,0,0.4),
             0 20px 60px rgba(0,0,0,0.5);
           position: relative;
+        }
+
+        /* Sobre fondo oscuro el marco se define por luz, no por sombra: grafito en
+           vez de negro y anillo claro en lugar de la sombra proyectada, que ahí no
+           se ve. El fullscreen es oscuro venga del tema que venga. */
+        [data-theme="dark"] .hp-body,
+        .hp-wrap.is-fullscreen .hp-body {
+          background: #1e1e22;
+          box-shadow:
+            0 0 0 1px rgba(255,255,255,0.12),
+            inset 0 1px 0 rgba(255,255,255,0.08),
+            0 20px 60px rgba(0,0,0,0.6);
         }
 
         /* IR notch at top center */
@@ -665,9 +679,9 @@ export default function CalculadoraRPN() {
         /* ── Legend ── */
         .legend {
           padding: 0.75rem 1rem;
-          border: 1px solid rgba(0,0,0,0.07);
+          border: 1px solid var(--t-rule);
           border-radius: 6px;
-          background: #ffffff;
+          background: var(--t-paper2);
         }
 
         .legend-title {
