@@ -2,7 +2,7 @@
 // No es parte del build; verifica la nota del trazo sin navegador.
 import { computeScore, fitCircle, type Pt } from "./engine";
 
-const THRESHOLD = 0.88; // el de page.tsx
+const THRESHOLD = 0.92; // el de page.tsx
 
 let fails = 0;
 function check(name: string, ok: boolean, detail = "") {

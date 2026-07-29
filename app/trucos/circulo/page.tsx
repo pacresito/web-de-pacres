@@ -8,7 +8,7 @@ import { computeScore, fitCircle } from "./engine";
 
 type Phase = "idle" | "drawing" | "score" | "alive" | "caught";
 
-const THRESHOLD = 0.88;
+const THRESHOLD = 0.92;
 const CIRCLE_HOLD_MS = 1000;
 
 export default function CirculoPerfecto() {
@@ -346,7 +346,7 @@ export default function CirculoPerfecto() {
   const pct = Math.round(displayScore * 100);
 
   return (
-    <TerminalShell title="círculo" prompt={{ host: "circulo", path: "~/trucos", command: "./circulo --threshold=0.88" }}>
+    <TerminalShell title="círculo" prompt={{ host: "circulo", path: "~/trucos", command: "./circulo --threshold=0.92" }}>
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "2rem 2rem 4rem", flex: 1 }}>
       <style>{`
         * { box-sizing: border-box; margin: 0; padding: 0; }
