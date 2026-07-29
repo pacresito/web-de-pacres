@@ -421,11 +421,14 @@ export default function MagiaPage() {
   // esté listo para no salir cortada en la primera carga.
   const [animalReady, setAnimalReady] = useState(false);
   // Reparto en marcha: `rep` son las posiciones de esta mano y `dealt` dice si
-  // ya han aterrizado — hasta entonces no se puede señalar montón.
+  // ya está echada la última carta — hasta entonces, pinchar acelera el reparto
+  // en vez de elegir montón.
   const [rep, setRep] = useState<Reparto | null>(null);
   const [dealt, setDealt] = useState(false);
   const stageRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
+  // Acelerar el reparto en marcha: lo instala el efecto que reparte.
+  const prisaRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     function calc() {
@@ -445,6 +448,7 @@ export default function MagiaPage() {
   useEffect(() => {
     const els = cardRefs.current;
     if (!rep || !stageRef.current || els.length < 21 || els.some((el) => !el)) return;
+    const plan = rep, stage = stageRef.current;
 
     const put = (el: HTMLDivElement, s: Spot) => {
       el.style.transform = `translate(${s.x.toFixed(2)}px, ${s.y.toFixed(2)}px) rotate(${s.r.toFixed(2)}deg)`;
@@ -452,21 +456,51 @@ export default function MagiaPage() {
     els.forEach((el, i) => {
       el!.style.transition = "none";
       el!.style.zIndex = String(100 - i);          // en el mazo, la primera a repartir arriba
-      put(el!, deckSpot(rep, cardW, i));
+      put(el!, deckSpot(plan, cardW, i));
     });
 
-    // Reflow forzado para fijar la salida: sin él la transición arranca ya en el
-    // montón. Un requestAnimationFrame no vale, se congela en segundo plano.
-    void stageRef.current.offsetWidth;
+    // El calendario del reparto en tiempo absoluto: cuándo sale cada carta y
+    // cuándo se puede señalar montón —en cuanto sale la última, sin esperar a
+    // que aterrice—. `programar` lo reescribe: con factor < 1 acelera lo que
+    // queda, que es lo que pasa al pinchar sin esperar.
+    const timers: number[] = [];
+    let salidas = els.map((_, i) => performance.now() + RITMO.intervalo * i);
+    let elegible = salidas[20];
+    let vuelo = RITMO.vuelo;
 
-    const timers = els.map((el, i) => {
-      el!.style.transition = `transform ${RITMO.vuelo}ms ${RITMO.ease} ${RITMO.intervalo * i}ms`;
-      put(el!, rep.spots[i]);
-      // en vuelo se invierte el orden: cada carta cae sobre las ya repartidas
-      return window.setTimeout(() => { el!.style.zIndex = String(200 + i); }, RITMO.intervalo * i);
-    });
-    timers.push(window.setTimeout(() => setDealt(true), RITMO.intervalo * 20 + RITMO.vuelo));
-    return () => timers.forEach(clearTimeout);
+    function programar(factor: number) {
+      const ahora = performance.now();
+      salidas = salidas.map((s) => ahora + Math.max(0, s - ahora) * factor);
+      elegible = ahora + Math.max(0, elegible - ahora) * factor;
+      vuelo *= factor;
+
+      timers.forEach(clearTimeout);
+      timers.length = 0;
+
+      // Congelar cada carta donde esté cancela su transición pendiente. El
+      // reflow fija ese punto de partida: sin él la nueva transición arranca ya
+      // en el montón. Un requestAnimationFrame no vale, se congela en segundo
+      // plano. Las lecturas van juntas y antes de escribir, no una por carta.
+      const donde = els.map((el) => getComputedStyle(el!).transform);
+      els.forEach((el, i) => { el!.style.transition = "none"; el!.style.transform = donde[i]; });
+      void stage.offsetWidth;
+
+      els.forEach((el, i) => {
+        const espera = Math.max(0, salidas[i] - ahora);
+        el!.style.transition = `transform ${vuelo}ms ${RITMO.ease} ${espera}ms`;
+        put(el!, plan.spots[i]);
+        // en vuelo se invierte el orden: cada carta cae sobre las ya repartidas
+        timers.push(window.setTimeout(() => { el!.style.zIndex = String(200 + i); }, espera));
+      });
+      timers.push(window.setTimeout(() => setDealt(true), Math.max(0, elegible - ahora)));
+    }
+
+    programar(1);
+    prisaRef.current = () => programar(RITMO.prisa);
+    return () => {
+      timers.forEach(clearTimeout);
+      prisaRef.current = null;
+    };
   }, [rep, cardW]);
 
   const guide = SPIRIT_GUIDES[guideIdx];
@@ -601,9 +635,14 @@ export default function MagiaPage() {
           {rep && (
             <div
               ref={stageRef}
+              // Pinchar mientras reparte no elige montón: acelera lo que queda.
+              // Las cajas de los montones no reciben el clic hasta que termina,
+              // así que ese clic prematuro llega aquí.
+              onClick={() => { if (!dealt) prisaRef.current?.(); }}
               style={{
                 position: "relative", width: rep.ancho, height: rep.alto,
                 marginTop: rep.cardH + 24,   // hueco del mazo, que vive fuera de la caja
+                cursor: dealt ? "default" : "pointer",
               }}
             >
               {[0, 1, 2].map((col) => (

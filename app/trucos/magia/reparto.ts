@@ -20,7 +20,9 @@ export interface Reparto {
 
 // Ritmo y desorden calibrados a ojo con un prototipo suelto, a ancho de carta
 // REF; a cualquier otro ancho se escalan.
-export const RITMO = { intervalo: 200, vuelo: 1000, ease: "cubic-bezier(.22,1.1,.36,1)" };
+// `prisa` es lo que se multiplica a lo que queda de reparto cuando alguien
+// pincha sin esperar: quien ya ha visto su carta no tiene por qué aguantar.
+export const RITMO = { intervalo: 200, vuelo: 1000, prisa: 0.25, ease: "cubic-bezier(.22,1.1,.36,1)" };
 const REF = 64, CAIDA = 50, DESX = 5, DESY = 10, GIRO = 15, SEP = 12;
 
 // La banda identificativa, en unidades del viewBox 100×142 del CardFace.
