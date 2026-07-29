@@ -42,12 +42,12 @@ const ITEMS: LabItem[] = [
 ];
 
 // Orden y etiqueta plural de cada grupo. El orden manda el de aparición en ITEMS.
-const GROUPS: { type: string; label: string }[] = [
-  { type: "web",        label: "webs" },
-  { type: "app",        label: "apps" },
-  { type: "juego",      label: "juegos" },
-  { type: "truco",      label: "trucos" },
-  { type: "easter-egg", label: "easter-eggs" },
+// Un grupo puede reunir varios tipos: juegos y trucos comparten caja.
+const GROUPS: { key: string; label: string; types: string[] }[] = [
+  { key: "web",           label: "webs",          types: ["web"] },
+  { key: "app",           label: "apps",          types: ["app"] },
+  { key: "distracciones", label: "distracciones", types: ["juego", "truco"] },
+  { key: "easter-egg",    label: "easter-eggs",   types: ["easter-egg"] },
 ];
 
 const CMD = "ls ~/lab --group --fold";
@@ -149,7 +149,7 @@ export default function Laboratorio() {
   const router = useRouter();
   const [contentReady, setContentReady] = useState(false);
   const [visibleGroups, setVisibleGroups] = useState(0); // cuántas cajas se han revelado (aparición secuencial)
-  const [openType, setOpenType] = useState<string | null>("web"); // solo un grupo abierto a la vez; web al aterrizar (colapsado en móvil, ver effect)
+  const [openKey, setOpenKey] = useState<string | null>("web"); // solo un grupo abierto a la vez; web al aterrizar (colapsado en móvil, ver effect)
 
   useEffect(() => {
     const delay = 120 + CMD.length * 26 + 200;
@@ -159,7 +159,7 @@ export default function Laboratorio() {
       // preview) innerWidth puede ser 0 aún; 0 no es un móvil real, así que solo colapsamos
       // con un ancho válido ≤700. El contenido sigue oculto hasta contentReady: sin saltos.
       const w = window.innerWidth;
-      if (w > 0 && w <= 700) setOpenType(null);
+      if (w > 0 && w <= 700) setOpenKey(null);
       setContentReady(true);
       let count = 0;
       iv = setInterval(() => {
@@ -171,7 +171,7 @@ export default function Laboratorio() {
     return () => { clearTimeout(t); clearInterval(iv); };
   }, []);
 
-  const toggle = (type: string) => setOpenType(prev => (prev === type ? null : type));
+  const toggle = (key: string) => setOpenKey(prev => (prev === key ? null : key));
 
   const available = ITEMS.filter(i => i.status === "available").length;
   const off = ITEMS.length - available;
@@ -214,10 +214,10 @@ export default function Laboratorio() {
               {GROUPS.map((g, idx) => {
                 const revealed = idx < visibleGroups;
                 return (
-                  <div key={g.type} className={revealed ? "t-row-in" : undefined} style={{ visibility: revealed ? undefined : "hidden" }}>
+                  <div key={g.key} className={revealed ? "t-row-in" : undefined} style={{ visibility: revealed ? undefined : "hidden" }}>
                     <Group label={g.label}
-                      items={ITEMS.filter(i => i.type === g.type)}
-                      open={openType === g.type} onToggle={() => toggle(g.type)} />
+                      items={ITEMS.filter(i => g.types.includes(i.type))}
+                      open={openKey === g.key} onToggle={() => toggle(g.key)} />
                   </div>
                 );
               })}
