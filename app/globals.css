@@ -227,9 +227,7 @@
   opacity: 1;
   transform: none;
 }
-@media (prefers-reduced-motion: reduce) {
-  .t-section-wrap { opacity: 1 !important; transform: none !important; transition: none !important; }
-}
+/* Sin prefers-reduced-motion: decisión, no olvido — la web se ve como se diseñó. */
 
 .t-content-wrap {
   opacity: 0; transform: translateY(12px);
