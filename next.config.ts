@@ -5,6 +5,10 @@ import type { NextConfig } from "next";
 // o nonces. No hay login ni datos de terceros, así que una CSP añadiría
 // complejidad sin beneficio real. Las cabeceras de abajo cubren lo barato.
 const nextConfig: NextConfig = {
+  // Next coge un lock en <distDir>/lock, así que un build con el dev server vivo
+  // falla. Con NEXT_DIST_DIR el build va a su propio directorio y convive.
+  distDir: process.env.NEXT_DIST_DIR ?? ".next",
+
   async redirects() {
     return [
       { source: "/l", destination: "/webs/lagartijas", permanent: false },
