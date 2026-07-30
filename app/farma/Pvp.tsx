@@ -24,10 +24,13 @@ import { TrashIcon, PlusIcon } from "./icons";
 // etiquetas-pdf.ts.
 
 const TODAS = "__todas__";
+// El radio del botón es una escala comprimida (ordena los tamaños de un vistazo sin que
+// el selector ocupe media fila), no el diámetro real.
 const TAMANOS: { valor: Tamano; radio: number; titulo: string }[] = [
   { valor: "S", radio: 5, titulo: "Pequeño" },
   { valor: "M", radio: 7, titulo: "Mediano" },
   { valor: "L", radio: 9, titulo: "Grande" },
+  { valor: "XL", radio: 11, titulo: "Extra grande" },
 ];
 
 // Cómo se imprime cada promo fija (título fino opcional + texto principal en negrita),
@@ -233,7 +236,7 @@ export default function Pvp({ pendientes, borrador }: { pendientes: LineaPvp[]; 
 
   function EtiquetaCell({ id, onTrash, titulo, ocupado: fila }: { id: string; onTrash: () => void; titulo: string; ocupado: boolean }) {
     return (
-      <span className="inline-flex items-center justify-end gap-1">
+      <span className="inline-flex items-center gap-1">
         {TAMANOS.map((t) => (
           <button
             key={t.valor}
@@ -261,7 +264,7 @@ export default function Pvp({ pendientes, borrador }: { pendientes: LineaPvp[]; 
 
   function CantidadCell({ id }: { id: string }) {
     return (
-      <span className="fa-mono inline-flex items-center justify-end gap-1">
+      <span className="fa-mono inline-flex items-center gap-1">
         <button type="button" onClick={() => cambiarCantidad(id, -1)} className="fa-iconbtn fa-iconbtn-edit" style={{ width: 22, height: 22 }}>
           −
         </button>
@@ -344,11 +347,11 @@ export default function Pvp({ pendientes, borrador }: { pendientes: LineaPvp[]; 
               <th className="fa-th">Código</th>
               <th className="fa-th">Denominación</th>
               <th className="fa-th">Fecha</th>
-              <th className="fa-th fa-th-r">PVP antiguo</th>
-              <th className="fa-th fa-th-r">Variación</th>
+              <th className="fa-th">PVP antiguo</th>
+              <th className="fa-th">Variación</th>
               <th className="fa-th fa-th-r">PVP nuevo</th>
-              <th className="fa-th fa-th-r">Etiqueta</th>
-              <th className="fa-th fa-th-r">Uds.</th>
+              <th className="fa-th">Etiqueta</th>
+              <th className="fa-th">Uds.</th>
             </tr>
           </thead>
           <tbody>
@@ -371,8 +374,8 @@ export default function Pvp({ pendientes, borrador }: { pendientes: LineaPvp[]; 
                   )}
                 </td>
                 <td className="fa-td fa-t-muted2">-</td>
-                <td className="fa-td fa-th-r fa-t-muted2">-</td>
-                <td className="fa-td fa-th-r fa-t-muted2">-</td>
+                <td className="fa-td fa-t-muted2">-</td>
+                <td className="fa-td fa-t-muted2">-</td>
                 <td className="fa-td fa-th-r">
                   {x.tipo !== "promo" ? (
                     <PrecioInput valor={x.precio} onChange={(precio) => actualizarExtra(x.id, { precio })} />
@@ -380,10 +383,10 @@ export default function Pvp({ pendientes, borrador }: { pendientes: LineaPvp[]; 
                     <span className="fa-t-muted2">-</span>
                   )}
                 </td>
-                <td className="fa-td fa-th-r">
+                <td className="fa-td">
                   <EtiquetaCell id={x.id} onTrash={() => quitarExtra(x.id)} titulo="Quitar línea" ocupado={false} />
                 </td>
-                <td className="fa-td fa-th-r">
+                <td className="fa-td">
                   <CantidadCell id={x.id} />
                 </td>
               </tr>
@@ -397,18 +400,18 @@ export default function Pvp({ pendientes, borrador }: { pendientes: LineaPvp[]; 
                   <td className="fa-td fa-mono fa-t-ink3 whitespace-nowrap">{a.codigo}</td>
                   <td className="fa-td">{a.denominacion}</td>
                   <td className="fa-td fa-mono fa-t-ink3 whitespace-nowrap">{a.firstSeen}</td>
-                  <td className="fa-td fa-mono fa-th-r fa-t-muted2 line-through">{euro(a.oldPrice)}</td>
-                  <td className={`fa-td fa-mono fa-th-r whitespace-nowrap ${sube ? "fa-t-green" : "fa-t-red"}`}>
+                  <td className="fa-td fa-mono fa-t-muted2 line-through">{euro(a.oldPrice)}</td>
+                  <td className={`fa-td fa-mono whitespace-nowrap ${sube ? "fa-t-green" : "fa-t-red"}`}>
                     {sube ? "+" : "−"}
                     {euro(Math.abs(delta))}
                   </td>
                   <td className="fa-td fa-mono fa-th-r whitespace-nowrap font-semibold" style={{ color: "var(--fa-ink)" }}>
                     {euro(a.newPrice)}
                   </td>
-                  <td className="fa-td fa-th-r">
+                  <td className="fa-td">
                     <EtiquetaCell id={a.codigo} onTrash={() => marcar(a.codigo)} titulo="Reetiquetado" ocupado={trabajando} />
                   </td>
-                  <td className="fa-td fa-th-r">
+                  <td className="fa-td">
                     <CantidadCell id={a.codigo} />
                   </td>
                 </tr>

@@ -1,6 +1,8 @@
 // Claves Redis de /farma. En desarrollo llevan sufijo `-dev` (misma convención que
 // el resto del sitio) para no pisar los datos de producción desde local.
-// La app deja el default (lo decide NODE_ENV); el seed pasa `dev` explícito.
+// La app deja el default (lo decide NODE_ENV); el seed pasa `dev` explícito. **Un script
+// suelto (`npx tsx`) no es development**: sin `NODE_ENV`, el default apunta a PROD y una
+// escritura de diagnóstico pisa los datos de María. Pasar el flag siempre, y a mano.
 const esDev = process.env.NODE_ENV === "development";
 
 const farmaKey = (base: string, dev: boolean): string => (dev ? `${base}-dev` : base);

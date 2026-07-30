@@ -7,10 +7,21 @@
 // (entero grande + decimales pegados, `21` + `,95€`) o un texto ("3x2", "-50%")— y, si
 // hace falta, un título fino encima (denominación o "2ª unidad"), como en los PDF.
 
-export type Tamano = "S" | "M" | "L";
+export type Tamano = "S" | "M" | "L" | "XL";
 
-// Diámetro en mm de cada tamaño (medido en los PDF de María).
-export const DIAMETROS: Record<Tamano, number> = { S: 21.2, M: 39.0, L: 56.7 };
+// Diámetro en mm que María mide con la regla sobre el papel ya impreso — no el que
+// dice el PDF. Su impresora encoge la A4 para meterla en el área que alcanza a imprimir,
+// así que el círculo se dibuja más grande para que salga de este tamaño. El factor está
+// ajustado sobre sus medidas (36 mm de un círculo de 39; 53 de uno de 56,7): al derivar
+// M y L se mueven ≤ 0,3 mm respecto a los diámetros originales, invisible en papel.
+// Cambiar de impresora = volver a medir un impreso y recalcular ESCALA_IMPRESION.
+export const DIAMETROS_PAPEL: Record<Tamano, number> = { S: 29, M: 36, L: 53, XL: 77 };
+export const ESCALA_IMPRESION = 0.93;
+
+// Diámetro en mm con el que se dibuja el círculo en el PDF.
+export const DIAMETROS = Object.fromEntries(
+  Object.entries(DIAMETROS_PAPEL).map(([t, mm]) => [t, mm / ESCALA_IMPRESION]),
+) as Record<Tamano, number>;
 
 // Cuántas etiquetas de cada tamaño caben en una hoja A4, contadas con `empaquetar`
 // (lo fija etiquetas.test.ts). Sumar 1/capacidad estima qué fracción de hoja llevan
@@ -18,7 +29,7 @@ export const DIAMETROS: Record<Tamano, number> = { S: 21.2, M: 39.0, L: 56.7 };
 // que se recalcula en cada pulsación. Mezclando tamaños la estimación se queda algo
 // corta (los pequeños caen en los huecos de los grandes), y eso juega a favor: cuando
 // dice "hoja llena", lo está.
-export const POR_HOJA: Record<Tamano, number> = { S: 105, M: 32, L: 13 };
+export const POR_HOJA: Record<Tamano, number> = { S: 46, M: 31, L: 13, XL: 6 };
 
 export interface Etiqueta {
   diametro: number; // mm

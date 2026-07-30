@@ -34,7 +34,7 @@ assert.strictEqual(diffPvp("X", 10, F, base({ newPrice: 10, pending: true }), fa
 
 // sanearBorrador: conserva lo válido y descarta lo que ensuciaría el render.
 const limpio = sanearBorrador({
-  tamanos: { "123": "M", "456": "XL", "789": 1 }, // solo "M" es válido
+  tamanos: { "123": "M", "456": "gigante", "789": 1 }, // solo "M" es válido
   cantidades: { a: 3, b: 0, c: 2.5, d: "x" }, // solo enteros ≥ 1
   extras: [
     { id: "extra-1", tipo: "promo", denominacion: "3x2", precio: null },

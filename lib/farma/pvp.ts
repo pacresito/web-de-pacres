@@ -2,7 +2,7 @@
 // subida de inventario (diff contra el histórico, marca `pending` lo que cambió) y lo
 // lee la pantalla PVP. Sin Redis para que el diff sea testeable; la lectura del hash
 // vive en `pvp-store.ts` (mismo patrón que pedidos.ts / pedidos-store.ts).
-import { POR_HOJA } from "./etiquetas";
+import { DIAMETROS, POR_HOJA, type Tamano } from "./etiquetas";
 
 export interface RegistroPvp {
   denominacion: string;
@@ -20,8 +20,10 @@ export interface LineaPvp extends RegistroPvp {
 // Borrador de etiquetado que persiste entre recargas (blob farma:pvp-etiquetas):
 // tamaño y cantidad por línea (clave = código real de un pendiente o id de una línea
 // manual) y las líneas manuales que María añade. Tipos aquí (puros) para compartirlos
-// entre el componente cliente <Pvp> y el store.
-export type Tamano = "S" | "M" | "L";
+// entre el componente cliente <Pvp> y el store. El tamaño es el de `etiquetas.ts` (se
+// re-exporta, no se redeclara: una lista de tamaños que se olvide de crecer guardaría
+// borradores mutilados).
+export type { Tamano };
 
 // Línea manual de etiqueta: "precio" (precio libre, la denominación no se imprime),
 // "texto-precio" (denominación + precio) o "promo" (texto fijo).
@@ -77,7 +79,7 @@ export function fraseHoja(hojas: number): string {
   return `llevas el ${Math.round(hojas * 100)}% de una hoja`;
 }
 
-const TAMANOS_VALIDOS: Tamano[] = ["S", "M", "L"];
+const TAMANOS_VALIDOS = Object.keys(DIAMETROS) as Tamano[];
 const TIPOS_EXTRA: FilaExtra["tipo"][] = ["precio", "texto-precio", "promo"];
 
 const obj = (v: unknown): Record<string, unknown> =>
