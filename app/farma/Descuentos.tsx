@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { rankear, type LabDescuento } from "@/lib/farma/prioridades";
+import { mismaEntrada, rankear, type LabDescuento } from "@/lib/farma/prioridades";
 import Buscador from "./Buscador";
 import { PencilIcon, CheckIcon, XIcon, ConfirmarIcon, PlusIcon } from "./icons";
 
@@ -20,6 +20,10 @@ type Fila = ReturnType<typeof rankear>[number] & { principio: string };
 // Normaliza lo tecleado en un campo de descuento: solo dígitos y un decimal, tope 100.
 // El "-" se cae con el filtro (nunca < 0) y >100 se recorta a 100. Deja pasar cadenas
 // intermedias ("", "3.") mientras se escribe.
+// "Sólo uno" cuenta LABORATORIOS, no entradas: un principio con la genérica y una dosis
+// del mismo lab sigue teniendo un solo lab.
+const unLab = (labs: LabDescuento[]): boolean => new Set(labs.map((l) => l.lab)).size === 1;
+
 function sanearDescuento(raw: string): string {
   const limpio = raw.replace(",", ".").replace(/[^\d.]/g, "");
   const [ent, dec] = limpio.split(".");
@@ -38,10 +42,13 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
   const [ocupado, setOcupado] = useState<string | null>(null); // denominación guardando
   const [error, setError] = useState("");
 
-  // Alta de descuento: principio (de los existentes) → lab (de los que aún no lo tienen)
-  // → valor. No crea principios ni labs nuevos (se valida también en el servidor).
+  // Alta de descuento: principio (de los existentes) → dosis (opcional) → lab (de los que
+  // aún no lo tienen) → valor. No crea principios ni labs nuevos (se valida también en el
+  // servidor). La dosis va antes del lab a propósito: es la que decide qué labs quedan
+  // disponibles (con dosis valen todos, incluido el que ya tiene la entrada genérica).
   const [anadiendo, setAnadiendo] = useState(false);
   const [nPrincipio, setNPrincipio] = useState<string | null>(null);
+  const [nDosis, setNDosis] = useState("");
   const [nLab, setNLab] = useState<string | null>(null);
   const [nDescuento, setNDescuento] = useState("");
   const [guardandoAlta, setGuardandoAlta] = useState(false);
@@ -65,10 +72,7 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
   }, [data]);
 
   const totalInferidos = useMemo(() => todas.filter((f) => f.inferido).length, [todas]);
-  const totalUno = useMemo(
-    () => todas.filter((f) => data[f.principio].length === 1).length,
-    [todas, data],
-  );
+  const totalUno = useMemo(() => todas.filter((f) => unLab(data[f.principio])).length, [todas, data]);
 
   const activo = seleccion !== null || soloInferidos || soloUno;
 
@@ -78,7 +82,7 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
   const filtradas = useMemo(() => {
     if (!activo) return [];
     let xs = todas;
-    if (soloUno) xs = xs.filter((f) => data[f.principio].length === 1);
+    if (soloUno) xs = xs.filter((f) => unLab(data[f.principio]));
     if (soloInferidos) xs = xs.filter((f) => f.inferido);
     // Un principio es clave de `data`; si no, la selección es un laboratorio.
     if (seleccion)
@@ -95,10 +99,10 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
 
   const visibles = filtradas.slice(0, LIMITE);
 
-  function patchLocal(principio: string, lab: string, cambio: Partial<LabDescuento>) {
+  function patchLocal(f: Fila, cambio: Partial<LabDescuento>) {
     setData((d) => ({
       ...d,
-      [principio]: d[principio].map((l) => (l.lab === lab ? { ...l, ...cambio } : l)),
+      [f.principio]: d[f.principio].map((l) => (mismaEntrada(l, f.lab, f.dosis) ? { ...l, ...cambio } : l)),
     }));
   }
 
@@ -129,19 +133,19 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
       return;
     }
     setOcupado(f.denominacion);
-    const ok = await post("/farma/api/descuento", { principio: f.principio, lab: f.lab, valor });
+    const ok = await post("/farma/api/descuento", { principio: f.principio, lab: f.lab, dosis: f.dosis, valor });
     setOcupado(null);
     if (ok) {
-      patchLocal(f.principio, f.lab, { descuento: valor, inferido: false });
+      patchLocal(f, { descuento: valor, inferido: false });
       setEditando(null);
     }
   }
 
   async function confirmar(f: Fila) {
     setOcupado(f.denominacion);
-    const ok = await post("/farma/api/descuento/check", { principio: f.principio, lab: f.lab });
+    const ok = await post("/farma/api/descuento/check", { principio: f.principio, lab: f.lab, dosis: f.dosis });
     setOcupado(null);
-    if (ok) patchLocal(f.principio, f.lab, { inferido: false });
+    if (ok) patchLocal(f, { inferido: false });
   }
 
   function empezar(f: Fila) {
@@ -164,18 +168,24 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
     if (activar) limpiarBusqueda();
   }
 
-  // Labs que aún NO tienen el principio elegido (los únicos que se pueden añadir).
+  // Labs que se pueden añadir al principio elegido: los que aún no tienen esa entrada.
+  // Sin dosis, la entrada es la genérica → quedan fuera los labs que ya la tienen. Con
+  // dosis, la entrada es nueva para cualquier lab → valen todos.
   const labsDisponibles = useMemo(() => {
     if (!nPrincipio) return [];
-    const yaTiene = new Set(data[nPrincipio].map((l) => l.lab));
+    const dosis = nDosis.trim();
+    const yaTiene = new Set(
+      data[nPrincipio].filter((l) => (l.dosis ?? "") === dosis.toUpperCase()).map((l) => l.lab),
+    );
     const set = new Set<string>();
     for (const labs of Object.values(data)) for (const l of labs) if (!yaTiene.has(l.lab)) set.add(l.lab);
     return [...set].sort((a, b) => a.localeCompare(b, "es"));
-  }, [data, nPrincipio]);
+  }, [data, nPrincipio, nDosis]);
 
   function cerrarAlta() {
     setAnadiendo(false);
     setNPrincipio(null);
+    setNDosis("");
     setNLab(null);
     setNDescuento("");
     setError("");
@@ -191,12 +201,13 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
       setError("Descuento entre 0 y 100.");
       return;
     }
+    const dosis = nDosis.trim().toUpperCase() || undefined;
     setGuardandoAlta(true);
-    const ok = await post("/farma/api/descuento/add", { principio: nPrincipio, lab: nLab, valor });
+    const ok = await post("/farma/api/descuento/add", { principio: nPrincipio, lab: nLab, dosis, valor });
     setGuardandoAlta(false);
     if (ok) {
       const principio = nPrincipio;
-      setData((d) => ({ ...d, [principio]: [...d[principio], { lab: nLab, descuento: valor, inferido: false }] }));
+      setData((d) => ({ ...d, [principio]: [...d[principio], { lab: nLab, dosis, descuento: valor, inferido: false }] }));
       cerrarAlta();
       setSeleccion(principio); // deja a la vista el principio recién ampliado
     }
@@ -247,10 +258,22 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
               </div>
             </label>
             <label className="fa-t-muted flex flex-col gap-1 text-[12px]">
+              Dosis (opcional)
+              <input
+                type="text"
+                value={nDosis}
+                onChange={(e) => setNDosis(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") anadir(); else if (e.key === "Escape") cerrarAlta(); }}
+                placeholder="Ej: 0,5 mg"
+                className="fa-input"
+                style={{ width: 120 }}
+              />
+            </label>
+            <label className="fa-t-muted flex flex-col gap-1 text-[12px]">
               Laboratorio
               <div className="w-56">
                 <Buscador
-                  key={nPrincipio ?? "sin-principio"}
+                  key={`${nPrincipio ?? "sin-principio"}-${nDosis.trim() ? "dosis" : "generica"}`}
                   items={labsDisponibles}
                   onSelect={setNLab}
                   onClear={() => setNLab(null)}

@@ -19,13 +19,16 @@ const ROW_BORDER = "#D0C8B8";
 // los 5 primeros. Si el 5º puesto está empatado (varios labs comparten prioridad), se
 // incluyen todos los de esa prioridad —nunca se parte un empate, sería arbitrario elegir
 // entre labs con el mismo margen—, así que pueden salir más de 5 filas.
+// Las filas con dosis quedan FUERA del corte (ni cuentan ni se recortan): son la
+// excepción que avisa de que ese lab tiene otra tarifa para esa dosis, y esconderla —
+// justo cuando su descuento es el peor, que es lo normal— sería peor que no tenerla.
 const TOPE = 5;
-function top<T extends { prioridad: number | null }>(filas: T[]): T[] {
-  if (filas.length <= TOPE) return filas;
-  const corte = filas[TOPE - 1].prioridad;
-  let fin = TOPE;
-  while (fin < filas.length && filas[fin].prioridad === corte) fin++;
-  return filas.slice(0, fin);
+function top<T extends { prioridad: number | null; dosis?: string }>(filas: T[]): T[] {
+  const genericas = filas.filter((f) => !f.dosis);
+  if (genericas.length <= TOPE) return filas;
+  const corte = genericas[TOPE - 1].prioridad;
+  let vistas = 0;
+  return filas.filter((f) => f.dosis !== undefined || ++vistas <= TOPE || f.prioridad === corte);
 }
 
 const th: React.CSSProperties = {
@@ -123,7 +126,7 @@ export default function Prioridades({ data }: { data: Record<string, LabDescuent
                 const checkColor = isSel ? "#fff" : CHECK;
                 return (
                   <tr
-                    key={f.lab}
+                    key={f.denominacion}
                     onClick={() => setSel(i)}
                     style={{
                       background: isSel ? "#000080" : i % 2 !== 0 ? "#FFFFF0" : "#FFF",

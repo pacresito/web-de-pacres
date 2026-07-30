@@ -38,7 +38,9 @@ async function main(): Promise<void> {
       nuevosPrincipios++;
       continue;
     }
-    const presentes = new Set(existentes.map((l) => l.lab));
+    // Solo cuentan las entradas genéricas: el seed nunca trae dosis (canon.py las quita),
+    // así que un lab que en prod solo tenga una excepción por dosis sigue necesitando la suya.
+    const presentes = new Set(existentes.filter((l) => !l.dosis).map((l) => l.lab));
     const anadir = labs.filter((l) => !presentes.has(l.lab));
     if (anadir.length) merged[principio] = [...existentes, ...anadir];
     nuevosLabs += anadir.length;

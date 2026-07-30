@@ -11,7 +11,7 @@ type Descuentos = Record<string, LabDescuento[]>;
 
 const firma = (labs: LabDescuento[]): string =>
   labs
-    .map((l) => `${l.lab}=${l.descuento}${l.inferido ? "*" : ""}`)
+    .map((l) => `${l.lab}${l.dosis ? ` ${l.dosis}` : ""}=${l.descuento}${l.inferido ? "*" : ""}`)
     .sort()
     .join("|");
 
