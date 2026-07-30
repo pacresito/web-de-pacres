@@ -29,8 +29,8 @@ const n = rankear("Y", [
 ]);
 assert.deepStrictEqual(n.map((f) => [f.lab, f.prioridad]), [["CON", 1], ["SIN", null]]);
 
-// Dosis: entra en la denominación (delante del lab) y rankea en la misma lista que las
-// genéricas, incluidas las del mismo lab.
+// Dosis: entra en la denominación (delante del lab), rankea en la misma lista que las
+// genéricas y luego se coloca bajo la de su lab, saltándose el orden de prioridad.
 const d = rankear("LORAZEPAM", [
   { lab: "KERN", descuento: 40, inferido: false },
   { lab: "NORMON", descuento: 30, inferido: false },
@@ -45,6 +45,31 @@ assert.deepStrictEqual(
   ],
 );
 assert.strictEqual(d[2].dosis, "0,5 MG");
+
+// Varias dosis del mismo lab: van juntas bajo su genérica, por descuento desc, aunque
+// eso rompa el orden de la columna Prioridad. La dosis de un lab sin genérica (MABO)
+// se queda en su puesto rankeado.
+const g = rankear("IBUPROFENO", [
+  { lab: "NORMON", descuento: 50, inferido: false },
+  { lab: "CINFA", descuento: 30, inferido: false },
+  { lab: "NORMON", descuento: 25, inferido: false, dosis: "600X40" },
+  { lab: "KERN", descuento: 20, inferido: false },
+  { lab: "MABO", descuento: 15, inferido: false, dosis: "SOBRES" },
+  { lab: "KERN", descuento: 10, inferido: false, dosis: "600X20" },
+  { lab: "NORMON", descuento: null, inferido: false, dosis: "SUSP" },
+]);
+assert.deepStrictEqual(
+  g.map((f) => [f.denominacion, f.prioridad]),
+  [
+    ["IBUPROFENO NORMON", 1],
+    ["IBUPROFENO 600X40 NORMON", 3],
+    ["IBUPROFENO SUSP NORMON", null],
+    ["IBUPROFENO CINFA", 2],
+    ["IBUPROFENO KERN", 4],
+    ["IBUPROFENO 600X20 KERN", 6],
+    ["IBUPROFENO SOBRES MABO", 5],
+  ],
+);
 
 // Identidad de una entrada: lab + dosis. La genérica no es la de una dosis, ni al revés.
 const generica = { lab: "NORMON", descuento: 30, inferido: false };

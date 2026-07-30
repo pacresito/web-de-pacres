@@ -29,11 +29,29 @@ export function mismaEntrada(l: LabDescuento, lab: string, dosis?: string): bool
 const denominar = (principio: string, l: LabDescuento): string =>
   l.dosis ? `${principio} ${l.dosis} ${l.lab}` : `${principio} ${l.lab}`;
 
+/** Junta cada entrada con dosis bajo la genérica de su mismo lab, en el orden en que
+ *  vienen (por descuento desc). La dosis es una excepción a la tarifa de su lab: leerla
+ *  lejos de esa tarifa no dice nada, así que la cercanía manda sobre el ranking. La dosis
+ *  de un lab que no tiene genérica en el principio se queda en su puesto rankeado. */
+function agrupar(filas: FilaPrioridad[]): FilaPrioridad[] {
+  const conGenerica = new Set(filas.filter((f) => !f.dosis).map((f) => f.lab));
+  const dosisPorLab = new Map<string, FilaPrioridad[]>();
+  for (const f of filas) {
+    if (f.dosis && conGenerica.has(f.lab)) dosisPorLab.set(f.lab, [...(dosisPorLab.get(f.lab) ?? []), f]);
+  }
+  if (dosisPorLab.size === 0) return filas;
+
+  return filas.flatMap((f) =>
+    f.dosis ? (conGenerica.has(f.lab) ? [] : [f]) : [f, ...(dosisPorLab.get(f.lab) ?? [])],
+  );
+}
+
 /** Ordena los labs de un principio por descuento desc. Empates = misma prioridad
  *  (dense rank: 60,50,50,10 → 1,2,2,3). Labs sin descuento conocido van al final
  *  con prioridad null. Las entradas con dosis rankean en la MISMA lista que las
- *  genéricas: su número de prioridad compara cosas no comparables, pero la dosis va
- *  en la denominación y es lo que se lee. */
+ *  genéricas —su número de prioridad compara cosas no comparables, pero la dosis va
+ *  en la denominación y es lo que se lee—, y luego `agrupar` las recoloca bajo su
+ *  genérica: el orden de las filas ya no es el de la columna Prioridad. */
 export function rankear(principio: string, labs: LabDescuento[]): FilaPrioridad[] {
   const conDescuento = labs
     .filter((l): l is LabDescuento & { descuento: number } => l.descuento !== null)
@@ -54,5 +72,5 @@ export function rankear(principio: string, labs: LabDescuento[]): FilaPrioridad[
     filas.push({ denominacion: denominar(principio, l), lab: l.lab, dosis: l.dosis, descuento: null, inferido: l.inferido, prioridad: null });
   }
 
-  return filas;
+  return agrupar(filas);
 }

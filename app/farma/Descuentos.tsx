@@ -3,19 +3,23 @@
 import { useMemo, useState } from "react";
 import { mismaEntrada, rankear, type LabDescuento } from "@/lib/farma/prioridades";
 import Buscador from "./Buscador";
-import { PencilIcon, CheckIcon, XIcon, ConfirmarIcon, PlusIcon } from "./icons";
+import { PencilIcon, CheckIcon, XIcon, ConfirmarIcon, PlusIcon, TrashIcon } from "./icons";
+import { MAX_DOSIS } from "./api/dosis";
 
 // Descuentos: la tabla de Prioridades en modo edición. María elige en el autocompletar un
-// principio activo O un laboratorio y ve solo ese; corrige el descuento de cada lab. Dos
+// principio activo O un laboratorio y ve solo ese; corrige el descuento de cada lab. Tres
 // filtros de revisión combinables con la selección: "Inferidos" (descuentos que decidimos
-// nosotros, sin validar) y "Sólo uno" (principios con un único laboratorio). El número
-// inferido se pinta sutil; se puede confirmar (dar por bueno) o editar — ambos apagan el
-// flag. Mismo dato y orden que Prioridades (reusa rankear); la escritura va al blob
-// farma:descuentos.
+// nosotros, sin validar), "Sólo uno" (principios con un único laboratorio) y "Con dosis"
+// (las entradas con dosis y la genérica de su lab, que es la tarifa a la que excepcionan).
+// El número inferido se pinta sutil; se puede confirmar (dar por bueno) o editar — ambos
+// apagan el flag. De una entrada con dosis se edita también la dosis y se puede borrar la
+// línea entera: las da de alta María a mano, no el pipeline. Mismo dato y orden que
+// Prioridades (reusa rankear); la escritura va al blob farma:descuentos.
 
 const LIMITE = 100; // tope de filas pintadas (el universo son miles): filtra o busca para afinar
 
-type Fila = ReturnType<typeof rankear>[number] & { principio: string };
+type Chip = "inferidos" | "uno" | "dosis";
+type Fila = ReturnType<typeof rankear>[number] & { principio: string; orden: number };
 
 // Normaliza lo tecleado en un campo de descuento: solo dígitos y un decimal, tope 100.
 // El "-" se cae con el filtro (nunca < 0) y >100 se recorta a 100. Deja pasar cadenas
@@ -23,6 +27,11 @@ type Fila = ReturnType<typeof rankear>[number] & { principio: string };
 // "Sólo uno" cuenta LABORATORIOS, no entradas: un principio con la genérica y una dosis
 // del mismo lab sigue teniendo un solo lab.
 const unLab = (labs: LabDescuento[]): boolean => new Set(labs.map((l) => l.lab)).size === 1;
+
+// "Con dosis" arrastra la genérica del mismo lab: la dosis excepciona esa tarifa y sola no
+// se puede juzgar.
+const grupoDosis = (labs: LabDescuento[], f: { lab: string; dosis?: string }): boolean =>
+  f.dosis !== undefined || labs.some((l) => l.dosis && l.lab === f.lab);
 
 function sanearDescuento(raw: string): string {
   const limpio = raw.replace(",", ".").replace(/[^\d.]/g, "");
@@ -35,10 +44,11 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
   const [data, setData] = useState(inicial);
   const [seleccion, setSeleccion] = useState<string | null>(null); // principio O lab elegido en el autocompletar
   const [busquedaKey, setBusquedaKey] = useState(0); // se incrementa para remontar el buscador y vaciar su campo
-  const [soloInferidos, setSoloInferidos] = useState(false);
-  const [soloUno, setSoloUno] = useState(false);
+  const [chip, setChip] = useState<Chip | null>(null); // filtro de revisión, uno cada vez
   const [editando, setEditando] = useState<string | null>(null); // denominación (fila) en edición
   const [draft, setDraft] = useState("");
+  const [draftDosis, setDraftDosis] = useState("");
+  const [borrando, setBorrando] = useState(false); // el borrado de la fila en edición, pendiente de confirmar
   const [ocupado, setOcupado] = useState<string | null>(null); // denominación guardando
   const [error, setError] = useState("");
 
@@ -56,7 +66,7 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
   const todas: Fila[] = useMemo(
     () =>
       Object.entries(data).flatMap(([principio, labs]) =>
-        rankear(principio, labs).map((f) => ({ ...f, principio })),
+        rankear(principio, labs).map((f, orden) => ({ ...f, principio, orden })),
       ),
     [data],
   );
@@ -73,29 +83,23 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
 
   const totalInferidos = useMemo(() => todas.filter((f) => f.inferido).length, [todas]);
   const totalUno = useMemo(() => todas.filter((f) => unLab(data[f.principio])).length, [todas, data]);
+  const totalDosis = useMemo(() => todas.filter((f) => f.dosis).length, [todas]);
 
-  const activo = seleccion !== null || soloInferidos || soloUno;
+  const activo = seleccion !== null || chip !== null;
 
-  // La selección (principio o lab) y los chips se combinan. Orden: por principio y, dentro,
-  // por prioridad (mejor descuento primero; sin descuento al final), para conservar la
-  // comparación entre labs.
+  // La selección (principio o lab) y el chip se combinan. Orden: por principio y, dentro,
+  // el que da `rankear` — por prioridad, con las dosis recolocadas bajo su genérica.
   const filtradas = useMemo(() => {
     if (!activo) return [];
     let xs = todas;
-    if (soloUno) xs = xs.filter((f) => unLab(data[f.principio]));
-    if (soloInferidos) xs = xs.filter((f) => f.inferido);
+    if (chip === "uno") xs = xs.filter((f) => unLab(data[f.principio]));
+    if (chip === "inferidos") xs = xs.filter((f) => f.inferido);
+    if (chip === "dosis") xs = xs.filter((f) => grupoDosis(data[f.principio], f));
     // Un principio es clave de `data`; si no, la selección es un laboratorio.
     if (seleccion)
       xs = data[seleccion] ? xs.filter((f) => f.principio === seleccion) : xs.filter((f) => f.lab === seleccion);
-    return [...xs].sort((a, b) => {
-      const p = a.principio.localeCompare(b.principio, "es");
-      if (p !== 0) return p;
-      if (a.prioridad === b.prioridad) return 0;
-      if (a.prioridad === null) return 1;
-      if (b.prioridad === null) return -1;
-      return a.prioridad - b.prioridad;
-    });
-  }, [activo, todas, data, soloUno, soloInferidos, seleccion]);
+    return [...xs].sort((a, b) => a.principio.localeCompare(b.principio, "es") || a.orden - b.orden);
+  }, [activo, todas, data, chip, seleccion]);
 
   const visibles = filtradas.slice(0, LIMITE);
 
@@ -126,18 +130,44 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
     }
   }
 
+  // La dosis solo se edita en las entradas que ya la tienen, y no puede quedar vacía:
+  // sin dosis sería la tarifa genérica del lab, que es otra entrada (se borra, no se vacía).
   async function guardar(f: Fila) {
     const valor = Number(draft);
     if (draft.trim() === "" || !Number.isFinite(valor) || valor < 0 || valor > 100) {
       setError("Descuento entre 0 y 100.");
       return;
     }
+    const nuevaDosis = f.dosis ? draftDosis.trim().toUpperCase() : undefined;
+    if (f.dosis && !nuevaDosis) {
+      setError("La dosis no puede quedar vacía: para quitarla, borra la línea.");
+      return;
+    }
     setOcupado(f.denominacion);
-    const ok = await post("/farma/api/descuento", { principio: f.principio, lab: f.lab, dosis: f.dosis, valor });
+    const ok = await post("/farma/api/descuento", {
+      principio: f.principio,
+      lab: f.lab,
+      dosis: f.dosis,
+      nuevaDosis,
+      valor,
+    });
     setOcupado(null);
     if (ok) {
-      patchLocal(f, { descuento: valor, inferido: false });
+      patchLocal(f, { descuento: valor, inferido: false, dosis: nuevaDosis });
       setEditando(null);
+    }
+  }
+
+  async function borrar(f: Fila) {
+    setOcupado(f.denominacion);
+    const ok = await post("/farma/api/descuento/delete", { principio: f.principio, lab: f.lab, dosis: f.dosis });
+    setOcupado(null);
+    if (ok) {
+      setData((d) => ({
+        ...d,
+        [f.principio]: d[f.principio].filter((l) => !mismaEntrada(l, f.lab, f.dosis)),
+      }));
+      cerrarEdicion();
     }
   }
 
@@ -151,7 +181,14 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
   function empezar(f: Fila) {
     setError("");
     setDraft(f.descuento === null ? "" : String(f.descuento));
+    setDraftDosis(f.dosis ?? "");
+    setBorrando(false);
     setEditando(f.denominacion);
+  }
+
+  function cerrarEdicion() {
+    setEditando(null);
+    setBorrando(false);
   }
 
   // Vacía la búsqueda: quita la selección y remonta el buscador (limpia su campo de texto).
@@ -160,11 +197,10 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
     setBusquedaKey((k) => k + 1);
   }
 
-  // Chips excluyentes entre sí; al activar uno se apaga el otro y se limpia la búsqueda.
-  function toggleChip(cual: "inferidos" | "uno") {
-    const activar = cual === "inferidos" ? !soloInferidos : !soloUno;
-    setSoloInferidos(cual === "inferidos" ? activar : false);
-    setSoloUno(cual === "uno" ? activar : false);
+  // Chips excluyentes entre sí; al activar uno se apagan los demás y se limpia la búsqueda.
+  function toggleChip(cual: Chip) {
+    const activar = chip !== cual;
+    setChip(activar ? cual : null);
     if (activar) limpiarBusqueda();
   }
 
@@ -232,13 +268,17 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
           >
             <PlusIcon /> Añadir descuento
           </button>
-          <button type="button" onClick={() => toggleChip("inferidos")} className={`fa-chip ${soloInferidos ? "fa-chip-on" : ""}`}>
+          <button type="button" onClick={() => toggleChip("inferidos")} className={`fa-chip ${chip === "inferidos" ? "fa-chip-on" : ""}`}>
             <span className="fa-chip-box"><CheckIcon /></span>
             Inferidos <span className="fa-chip-count">({totalInferidos})</span>
           </button>
-          <button type="button" onClick={() => toggleChip("uno")} className={`fa-chip ${soloUno ? "fa-chip-on" : ""}`}>
+          <button type="button" onClick={() => toggleChip("uno")} className={`fa-chip ${chip === "uno" ? "fa-chip-on" : ""}`}>
             <span className="fa-chip-box"><CheckIcon /></span>
             Sólo uno <span className="fa-chip-count">({totalUno})</span>
+          </button>
+          <button type="button" onClick={() => toggleChip("dosis")} className={`fa-chip ${chip === "dosis" ? "fa-chip-on" : ""}`}>
+            <span className="fa-chip-box"><CheckIcon /></span>
+            Con dosis <span className="fa-chip-count">({totalDosis})</span>
           </button>
         </div>
 
@@ -262,6 +302,7 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
               <input
                 type="text"
                 value={nDosis}
+                maxLength={MAX_DOSIS}
                 onChange={(e) => setNDosis(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") anadir(); else if (e.key === "Escape") cerrarAlta(); }}
                 placeholder="Ej: 0,5 mg"
@@ -322,7 +363,7 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
                   <th className="fa-th">Denominación</th>
                   <th className="fa-th fa-th-r">Descuento</th>
                   <th className="fa-th">Prioridad</th>
-                  <th className="fa-th" style={{ width: 96 }}></th>
+                  <th className="fa-th" style={{ width: 124 }}></th>
                 </tr>
               </thead>
               <tbody>
@@ -332,10 +373,31 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
                   return (
                     <tr key={f.denominacion} className="fa-row">
                       <td className="fa-td">
-                        <span className={f.inferido ? "fa-t-muted2" : "font-medium"} style={f.inferido ? undefined : { color: "var(--fa-ink)" }}>
-                          {f.denominacion}
-                        </span>
-                        {f.inferido && <span className="fa-tag ml-1.5">inferido</span>}
+                        {enEdicion && f.dosis ? (
+                          <span className="inline-flex items-center gap-1.5" style={{ color: "var(--fa-ink)" }}>
+                            {f.principio}
+                            <input
+                              type="text"
+                              value={draftDosis}
+                              maxLength={MAX_DOSIS}
+                              onChange={(e) => setDraftDosis(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") guardar(f);
+                                else if (e.key === "Escape") cerrarEdicion();
+                              }}
+                              className="fa-edit-input"
+                              style={{ width: 130, textAlign: "left" }}
+                            />
+                            {f.lab}
+                          </span>
+                        ) : (
+                          <>
+                            <span className={f.inferido ? "fa-t-muted2" : "font-medium"} style={f.inferido ? undefined : { color: "var(--fa-ink)" }}>
+                              {f.denominacion}
+                            </span>
+                            {f.inferido && <span className="fa-tag ml-1.5">inferido</span>}
+                          </>
+                        )}
                       </td>
                       <td className="fa-td fa-th-r">
                         {enEdicion ? (
@@ -346,7 +408,7 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
                             onChange={(e) => setDraft(sanearDescuento(e.target.value))}
                             onKeyDown={(e) => {
                               if (e.key === "Enter") guardar(f);
-                              else if (e.key === "Escape") setEditando(null);
+                              else if (e.key === "Escape") cerrarEdicion();
                             }}
                             autoFocus
                             className="fa-edit-input fa-mono"
@@ -359,12 +421,27 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
                       </td>
                       <td className="fa-td fa-mono fa-t-ink3">{f.prioridad ?? "—"}</td>
                       <td className="fa-td fa-th-r">
-                        {enEdicion ? (
+                        {enEdicion && borrando ? (
+                          <span className="inline-flex items-center justify-end gap-1">
+                            <span className="fa-t-red text-[12px]">¿Borrar?</span>
+                            <button type="button" title="Sí, borrar la línea" onClick={() => borrar(f)} disabled={trabajando} className="fa-iconbtn fa-iconbtn-danger-on">
+                              {trabajando ? "…" : <TrashIcon />}
+                            </button>
+                            <button type="button" title="No" onClick={() => setBorrando(false)} disabled={trabajando} className="fa-iconbtn fa-iconbtn-cancel">
+                              <XIcon />
+                            </button>
+                          </span>
+                        ) : enEdicion ? (
                           <span className="inline-flex justify-end gap-1">
+                            {f.dosis && (
+                              <button type="button" title="Borrar descuento" onClick={() => setBorrando(true)} disabled={trabajando} className="fa-iconbtn fa-iconbtn-danger">
+                                <TrashIcon />
+                              </button>
+                            )}
                             <button type="button" title="Guardar" onClick={() => guardar(f)} disabled={trabajando} className="fa-iconbtn fa-iconbtn-accept">
                               {trabajando ? "…" : <CheckIcon />}
                             </button>
-                            <button type="button" title="Cancelar" onClick={() => setEditando(null)} disabled={trabajando} className="fa-iconbtn fa-iconbtn-cancel">
+                            <button type="button" title="Cancelar" onClick={cerrarEdicion} disabled={trabajando} className="fa-iconbtn fa-iconbtn-cancel">
                               <XIcon />
                             </button>
                           </span>

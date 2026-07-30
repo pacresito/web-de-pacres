@@ -191,6 +191,10 @@
 .fa-iconbtn-cancel:hover:not(:disabled) { background: #f4f6f8; }
 .fa-iconbtn-confirm { border-color: var(--fa-green-border); background: var(--fa-green-bg); color: var(--fa-green); }
 .fa-iconbtn-confirm:hover:not(:disabled) { background: var(--fa-green-hover); }
+.fa-iconbtn-danger { color: var(--fa-muted); }
+.fa-iconbtn-danger:hover:not(:disabled) { background: var(--fa-red-bg); color: var(--fa-red); }
+.fa-iconbtn-danger-on { background: var(--fa-red); color: #fff; }
+.fa-iconbtn-danger-on:hover:not(:disabled) { background: #b91c1c; }
 
 /* Editor numérico inline. */
 .fa-edit-input {
