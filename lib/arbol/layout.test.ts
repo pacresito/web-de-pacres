@@ -144,6 +144,13 @@ assert.deepStrictEqual(
   "y él queda en medio, para que cada trazo una a dos vecinos",
 );
 
+// --- La sangre llega más lejos que la línea directa: los tíos sí, sus parejas no ---
+const desdeElHijo = layout("p26", TODAS);
+const nodo = (id: string) => desdeElHijo.nodos.find((n) => n.id === id)!;
+assert.ok(nodo("p126").consanguineo && !nodo("p126").lineaDirecta, "un tío comparte sangre y no está en la línea directa");
+for (const suya of parejaDirecta(g, "p126")) assert.ok(!nodo(suya).consanguineo, "…y su pareja no la comparte");
+assert.ok(desdeElHijo.nodos.every((n) => !n.lineaDirecta || n.consanguineo), "la línea directa siempre es sangre");
+
 // --- Vínculos: cada uno cuelga de algo pintado, y reparte hacia la derecha ---
 for (const l of [inicial, conHermanos, layout("p126", TODAS)]) {
   for (const v of l.vinculos) {

@@ -339,9 +339,10 @@ function Nodo({
         width={ANCHO_NODO}
         height={ALTO_NODO}
         rx={8}
-        // La línea directa lleva relleno, no solo borde: al alejarse, 2px de trazo
-        // desaparecen y una mancha de color no.
-        fill={nodo.esPuntoDeVista ? "#00b87a" : nodo.lineaDirecta ? "#e4f4ed" : "#ffffff"}
+        // Tres escalones del mismo verde, del punto de vista hacia fuera: él, su línea
+        // directa y quien comparte sangre sin estar en ella. La línea directa lleva
+        // relleno y no solo borde: al alejarse, 2px de trazo desaparecen y una mancha no.
+        fill={nodo.esPuntoDeVista ? "#00b87a" : nodo.lineaDirecta ? "#e4f4ed" : nodo.consanguineo ? "#f4fbf8" : "#ffffff"}
         stroke={nodo.esPuntoDeVista ? "#00b87a" : nodo.lineaDirecta ? "#4a4a48" : "#d4d4d2"}
         strokeWidth={nodo.lineaDirecta ? 2 : 1}
       />

@@ -12,7 +12,7 @@
 // algoritmo es el clásico de contornos: cada subárbol se coloca por su cuenta y se
 // empuja hacia un lado hasta que sus columnas dejan de solaparse con lo ya colocado.
 
-import { ascendientes, descendientes, parejaDirecta, visibles, type Grafo } from "./grafo";
+import { ascendientes, consanguineos, descendientes, parejaDirecta, visibles, type Grafo } from "./grafo";
 import { ordenarPareja } from "./personas";
 import type { Union } from "./tree";
 
@@ -39,6 +39,8 @@ export interface NodoLayout {
   nivel: number;
   /** Ascendencia y descendencia directas del punto de vista (él incluido). */
   lineaDirecta: boolean;
+  /** Comparte sangre con el punto de vista: los tíos sí, sus parejas no. Incluye la línea directa. */
+  consanguineo: boolean;
   esPuntoDeVista: boolean;
   /** Forma pareja aquí: es de quien los hijos heredan el apellido, y por eso lo lleva. */
   esPareja: boolean;
@@ -213,6 +215,7 @@ export function calcularLayout(g: Grafo, opciones: OpcionesLayout): Layout {
 
   // --- De unidades a coordenadas ---
   const lineaDirecta = new Set<string>([puntoDeVista, ...ascendientes(g, puntoDeVista), ...descendientes(g, puntoDeVista)]);
+  const sangre = consanguineos(g, puntoDeVista);
   const posicion = new Map<string, { x: number; y: number }>();
   const nodos: NodoLayout[] = [];
   const contadores: Contador[] = [];
@@ -237,6 +240,7 @@ export function calcularLayout(g: Grafo, opciones: OpcionesLayout): Layout {
         y,
         nivel: unidad.nivel,
         lineaDirecta: lineaDirecta.has(pid),
+        consanguineo: sangre.has(pid),
         esPuntoDeVista: pid === puntoDeVista,
         esPareja: unidad.id.startsWith("u:"),
       });
