@@ -22,23 +22,27 @@ type LabItem = {
   secretHref?: string; // puerta oculta: navega aquí al clicar SIN afordance visible (solo farma → stats)
 };
 
+// Orden: webs primero (por creación), luego la web `soon`, y después apps, juegos,
+// trucos y easter-eggs. Un experimento nuevo entra en su grupo, nunca al final, y
+// se renumera `num` al insertarlo.
 const ITEMS: LabItem[] = [
   { id: "lucas",       num: "01", type: "web",        title: "Dr. Lucas Crespo",     description: `Perfil profesional de un aeronáutico de ${calcularEdad(new Date(2020, 2, 30))} años.`, status: "available", href: "/webs/lucas",       cta: "Ver perfil →" },
   { id: "lagartijas",  num: "02", type: "web",        title: "Lagartijas de Lucas",  description: "Las lagartijas de cuentas que hace a mano, una a una.",                             status: "available", href: "/webs/lagartijas",  cta: "Verlas →" },
   { id: "farma",       num: "03", type: "web",        title: "Farmacia",             description: "Gestión de pedidos, inventario y prioridades de venta.",                          status: "private",   href: "/farma",           cta: "Privada", secretHref: "/webs/farma-stats" },
   { id: "fuera-de-ruta", num: "04", type: "web",      title: "Fuera de Ruta",       description: "Destinos chulos pero poco conocidos, filtrables y con mapa.",                         status: "available", href: "/fuera-de-ruta",           cta: "Explorar →" },
-  { id: "placeholder", num: "05", type: "web",        title: "Aquí va lo importante", description: "Aquí podría ir tu web. Dime tu idea y lo implementamos.",                            status: "soon",      href: null,               cta: "En construcción" },
-  { id: "rpncalc",     num: "06", type: "app",        title: "Calculadora RPN",       description: "Para los que piensan en pila.",                                                       status: "available", href: "/apps/RPNcalc",     cta: "Abrir →" },
-  { id: "fluidos",     num: "07", type: "app",        title: "Fluidos",               description: "Agua, fuego, tierra. Controla los elementos.",                                        status: "available", href: "/apps/fluidos",     cta: "Abrir →" },
-  { id: "orbitas",     num: "08", type: "app",        title: "Órbitas",               description: "Lanza cuerpos y míralos orbitar, chocar y escapar.",                                  status: "available", href: "/apps/orbitas",     cta: "Abrir →" },
-  { id: "observatorio", num: "09", type: "app",       title: "Observatorio",          description: "Qué se ve en el cielo esta noche.",                                                   status: "available", href: "/apps/observatorio", cta: "Abrir →" },
-  { id: "espiral",     num: "10", type: "juego",      title: "Espiral",               description: "Dos caminos distintos, una sola decisión.",                                        status: "available", href: "/juegos/espiral",   cta: "Jugar →" },
-  { id: "laberinto",   num: "11", type: "juego",      title: "Laberinto",             description: "Inclina el móvil o usa el ratón.",                                                    status: "available", href: "/juegos/laberinto", cta: "Jugar →" },
-  { id: "circulo",     num: "12", type: "truco",      title: "Círculo perfecto",      description: "Dibuja el círculo más perfecto que puedas.",                                          status: "available", href: "/trucos/circulo",   cta: "Probar →" },
-  { id: "magia",       num: "13", type: "truco",      title: "Magia de la buena",     description: "Piensa en una carta. No me la digas.",                                                status: "available", href: "/trucos/magia",     cta: "Probar →" },
-  { id: "letras",      num: "14", type: "easter-egg", title: "Las letras caen",       description: "Algo pasa si sabes dónde pinchar.",                                                   status: "hidden",    href: "/",                cta: "Ir a probarlo →" },
-  { id: "color",       num: "15", type: "easter-egg", title: "Cambio de tema",        description: `Cambio de tema dinámico en el diseño "Original".`,                                                               status: "hidden", href: "/home/original", cta: "Ir a probarlo →" },
-  { id: "guestbook",   num: "16", type: "easter-egg", title: "Libro de firmas",       description: "Deja tu firma. Como los de toda la vida.",                                            status: "available", href: "/guestbook",       cta: "Firmar →" },
+  { id: "arbol",       num: "05", type: "web",        title: "Árbol genealógico",     description: "La familia entera en un lienzo, desde los bisabuelos.",                               status: "available", href: "/arbol",           cta: "Abrir →" },
+  { id: "placeholder", num: "06", type: "web",        title: "Aquí va lo importante", description: "Aquí podría ir tu web. Dime tu idea y lo implementamos.",                            status: "soon",      href: null,               cta: "En construcción" },
+  { id: "rpncalc",     num: "07", type: "app",        title: "Calculadora RPN",       description: "Para los que piensan en pila.",                                                       status: "available", href: "/apps/RPNcalc",     cta: "Abrir →" },
+  { id: "fluidos",     num: "08", type: "app",        title: "Fluidos",               description: "Agua, fuego, tierra. Controla los elementos.",                                        status: "available", href: "/apps/fluidos",     cta: "Abrir →" },
+  { id: "orbitas",     num: "09", type: "app",        title: "Órbitas",               description: "Lanza cuerpos y míralos orbitar, chocar y escapar.",                                  status: "available", href: "/apps/orbitas",     cta: "Abrir →" },
+  { id: "observatorio", num: "10", type: "app",       title: "Observatorio",          description: "Qué se ve en el cielo esta noche.",                                                   status: "available", href: "/apps/observatorio", cta: "Abrir →" },
+  { id: "espiral",     num: "11", type: "juego",      title: "Espiral",               description: "Dos caminos distintos, una sola decisión.",                                        status: "available", href: "/juegos/espiral",   cta: "Jugar →" },
+  { id: "laberinto",   num: "12", type: "juego",      title: "Laberinto",             description: "Inclina el móvil o usa el ratón.",                                                    status: "available", href: "/juegos/laberinto", cta: "Jugar →" },
+  { id: "circulo",     num: "13", type: "truco",      title: "Círculo perfecto",      description: "Dibuja el círculo más perfecto que puedas.",                                          status: "available", href: "/trucos/circulo",   cta: "Probar →" },
+  { id: "magia",       num: "14", type: "truco",      title: "Magia de la buena",     description: "Piensa en una carta. No me la digas.",                                                status: "available", href: "/trucos/magia",     cta: "Probar →" },
+  { id: "letras",      num: "15", type: "easter-egg", title: "Las letras caen",       description: "Algo pasa si sabes dónde pinchar.",                                                   status: "hidden",    href: "/",                cta: "Ir a probarlo →" },
+  { id: "color",       num: "16", type: "easter-egg", title: "Cambio de tema",        description: `Cambio de tema dinámico en el diseño "Original".`,                                                               status: "hidden", href: "/home/original", cta: "Ir a probarlo →" },
+  { id: "guestbook",   num: "17", type: "easter-egg", title: "Libro de firmas",       description: "Deja tu firma. Como los de toda la vida.",                                            status: "available", href: "/guestbook",       cta: "Firmar →" },
 ];
 
 // Orden y etiqueta plural de cada grupo. El orden manda el de aparición en ITEMS.
@@ -53,9 +57,9 @@ const GROUPS: { key: string; label: string; types: string[] }[] = [
 const CMD = "ls ~/lab --group --fold";
 
 // Altura máxima del grupo abierto: fija para poder animar el max-height (truco CSS de
-// acordeón). Holgada para los grupos actuales (≤5 items = 3 filas); si un grupo crece
-// mucho, subir este valor.
-const OPEN_MAXH = 760;
+// acordeón). El caso peor es el móvil, a una columna: el grupo más grande son 6 items
+// (719px medidos). Al añadir uno, medir y subir esto — de lo que sobre no se ve nada.
+const OPEN_MAXH = 820;
 
 // ─── Subcomponents ────────────────────────────────────────────────────────────
 
