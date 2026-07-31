@@ -1,5 +1,9 @@
 import redis from "./redis";
 
+// El dedup lo hace cada ruta, no este módulo, porque la semántica cambia por juego:
+// espiral guarda una entrada por nombre+velocidad (top 10 global); laberinto, una
+// positiva y una negativa por nombre.
+
 export interface RankEntry {
   name: string;
   date: string | null;

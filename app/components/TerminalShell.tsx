@@ -21,6 +21,8 @@ interface Props {
   variant?: "terminal" | "chrome";
   prompt?: PromptConfig;
   backUrl?: string;
+  /** El destino del botón atrás ya está maximizado (rankings → juego): navega sin
+   *  animación de restaurar. */
   destMaximized?: boolean;
   hideChrome?: boolean;
   children: ReactNode;
@@ -39,6 +41,8 @@ export default function TerminalShell({
   const router = useRouter();
   const [animClass, setAnimClass] = useState("");
   const [winH, setWinH] = useState<string | null>(null);
+  // Nace a 0 y sube tras el prompt. En un preview headless los timers se degradan y el
+  // fade no llega nunca: confirmar opacity:1 en el DOM antes de capturar, o forzarla.
   const [contentVisible, setContentVisible] = useState(variant === "terminal" ? !prompt : false);
   // El tema vive en data-theme de <html> (lo pone el hook); el wrapper hereda los tokens.
   const [theme, setTheme] = usePersistedTheme();
