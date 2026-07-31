@@ -187,37 +187,52 @@ export function calcularLayout(g: Grafo, opciones: OpcionesLayout): Layout {
 
   // --- Colocación: DFS desde el punto de vista, empujando por contornos ---
   const visitados = new Set<string>();
+  // La sangre del punto de vista es la espina del recorrido: por ahí no se sube apartando
+  // a los padres, se les entrega lo ya colocado para que le hagan sitio entre sus hermanos.
+  const espina = new Set<string>([puntoDeVista, ...ascendientes(g, puntoDeVista)]);
+  /** Ramas que cuelgan de la espina, con la altura y el lado por los que se colgarán al final. */
+  const diferidas: { unidadId: string; ramaId: string; nivel: number; ancla: number; lado: number }[] = [];
 
   /** Cada rama de ascendencia va a la altura del miembro del que cuelga, y se aparta hacia fuera. */
-  const ramasDeAscendencia = (unidad: Unidad): { id: string; ancla: number; lado: number }[] => {
-    const salida: { id: string; ancla: number; lado: number }[] = [];
+  const ramasDeAscendencia = (unidad: Unidad): { id: string; ancla: number; lado: number; sube: boolean }[] => {
+    const salida: { id: string; ancla: number; lado: number; sube: boolean }[] = [];
     unidad.miembros.forEach((m, i) => {
       const uid = g.unionDeHijo.get(m);
       const id = uid && unidadDeUnion.get(uid);
-      if (id) salida.push({ id, ...sitioDelMiembro(unidad, i) });
+      if (id) salida.push({ id, sube: espina.has(m), ...sitioDelMiembro(unidad, i) });
     });
-    for (const c of contadorDePadres.get(unidad.id) ?? []) salida.push({ id: c.id, ancla: 0, lado: 1 });
+    for (const c of contadorDePadres.get(unidad.id) ?? []) salida.push({ id: c.id, ancla: 0, lado: 1, sube: false });
     return salida;
   };
 
-  const ramasDeDescendencia = (unidad: Unidad): string[] => {
-    const salida: string[] = [];
+  const ramasDeDescendencia = (unidad: Unidad): { id: string; contador: boolean }[] => {
+    const salida: { id: string; contador: boolean }[] = [];
     for (const uid of unidad.uniones) {
-      for (const c of g.unionPorId.get(uid)!.children) if (mostrados.has(c)) salida.push(unidadDePersona.get(c)!);
+      for (const c of g.unionPorId.get(uid)!.children) {
+        if (mostrados.has(c)) salida.push({ id: unidadDePersona.get(c)!, contador: false });
+      }
       const contador = contadorDeHijos.get(uid);
-      if (contador) salida.push(contador.id);
+      if (contador) salida.push({ id: contador.id, contador: true });
     }
     return salida;
   };
 
-  function colocar(unidad: Unidad): Bloque {
+  /** `entrante` es el bloque ya colocado del hijo por el que se ha llegado: no se recoloca, se le hace sitio. */
+  function colocar(unidad: Unidad, entrante?: { id: string; bloque: Bloque; lado: number }): Bloque {
     visitados.add(unidad.id);
     let base = bloqueDeUnidad(unidad);
 
-    // Los hijos, todos juntos y centrados enfrente.
-    const descendencia = ramasDeDescendencia(unidad)
-      .filter((id) => !visitados.has(id))
-      .map((id) => colocar(unidades.get(id)!));
+    // Los hijos, todos juntos y centrados enfrente, cada uno en su orden: el que ya venía
+    // colocado ocupa el suyo, y son los demás los que le rodean. El contador de los que
+    // faltan no tiene edad con la que ordenarse, así que va por donde el que ya está
+    // colocado no crece: si no, acaba al fondo de la rama entera y lejos de sus padres.
+    const hijos = ramasDeDescendencia(unidad);
+    if (entrante && entrante.lado < 0) hijos.sort((a, b) => Number(b.contador) - Number(a.contador));
+    const descendencia: Bloque[] = [];
+    for (const { id } of hijos) {
+      if (id === entrante?.id) descendencia.push(entrante.bloque);
+      else if (!visitados.has(id)) descendencia.push(colocar(unidades.get(id)!));
+    }
     if (descendencia.length > 0) {
       const paquete = empaquetar(descendencia);
       centrar(paquete, unidad.nivel - 1, 0);
@@ -226,18 +241,38 @@ export function calcularLayout(g: Grafo, opciones: OpcionesLayout): Layout {
     }
 
     // Cada rama de padres, a la altura de su miembro; si una rama colateral ya ocupa
-    // ese sitio, se aparta hacia fuera hasta que las columnas dejan de solaparse.
-    for (const { id, ancla, lado } of ramasDeAscendencia(unidad)) {
-      if (visitados.has(id)) continue;
+    // ese sitio, se aparta hacia fuera hasta que las columnas dejan de solaparse. Las que
+    // salen de la espina esperan a que esté entera: mientras crece, lo colocado todavía
+    // no es todo lo que habrá, y apartarse de un árbol a medias las manda demasiado lejos.
+    const enLaEspina = entrante !== undefined || unidad.miembros.includes(puntoDeVista);
+    const ramas = ramasDeAscendencia(unidad);
+    const subida = enLaEspina ? ramas.find((r) => r.sube && !visitados.has(r.id)) : undefined;
+    for (const { id, ancla, lado } of ramas) {
+      if (visitados.has(id) || id === subida?.id) continue;
+      if (enLaEspina) {
+        diferidas.push({ unidadId: unidad.id, ramaId: id, nivel: unidad.nivel + 1, ancla, lado });
+        continue;
+      }
       const bloque = colocar(unidades.get(id)!);
       centrar(bloque, unidad.nivel + 1, ancla);
       desplazar(bloque, separacionMinima(base, bloque, lado));
       base = fusionar(base, bloque);
     }
-    return base;
+    if (!subida) return base;
+    return colocar(unidades.get(subida.id)!, { id: unidad.id, bloque: base, lado: subida.lado });
   }
 
-  const bloque = colocar(unidades.get(unidadDePersona.get(puntoDeVista)!)!);
+  let bloque = colocar(unidades.get(unidadDePersona.get(puntoDeVista)!)!);
+  // De la generación más lejana a la más cercana: la rama que cuelga de más arriba elige
+  // sitio primero y la de al lado del punto de vista —casi siempre la política— se aparta.
+  diferidas.sort((a, b) => b.nivel - a.nivel);
+  for (const { unidadId, ramaId, nivel, ancla, lado } of diferidas) {
+    if (visitados.has(ramaId)) continue;
+    const rama = colocar(unidades.get(ramaId)!);
+    centrar(rama, nivel, bloque.y.get(unidadId)! + ancla);
+    desplazar(rama, separacionMinima(bloque, rama, lado));
+    bloque = fusionar(bloque, rama);
+  }
 
   // --- De unidades a coordenadas ---
   const lineaDirecta = new Set<string>([puntoDeVista, ...ascendientes(g, puntoDeVista), ...descendientes(g, puntoDeVista)]);

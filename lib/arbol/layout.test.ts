@@ -4,6 +4,7 @@ import assert from "assert";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 import { construirGrafo, parejaDirecta, visibles } from "./grafo";
+import { ordenarPareja } from "./personas";
 import { ALTO_CONTADOR, ALTO_NODO, ANCHO_COLUMNA, calcularLayout, type Layout } from "./layout";
 import type { ArbolData } from "./tree";
 
@@ -58,6 +59,29 @@ assert.ok(inicial.nodos.find((n) => n.id === "p26")!.x > 0, "los hijos, a la der
 const pareja = inicial.nodos.filter((n) => n.nivel === 0 && [...g.unionesDePartner.get("p25")!].length > 0 && n.x === 0);
 assert.strictEqual(pareja.length, 2, "el punto de vista y su pareja, en la misma columna");
 assert.notStrictEqual(pareja[0].y, pareja[1].y, "…a distinta altura");
+
+// --- Los hermanos salen en el orden en que vinieron, mire quien mire ---
+// Quien mira es uno de ellos y no por eso se pone el primero de la fila. Vale para toda
+// su línea de subida, que es por la que se ordena el árbol.
+for (const pid of ["p25", "p26", "p126"]) {
+  const donde = new Map(layout(pid, TODAS).nodos.map((n) => [n.id, n.y]));
+  let quien: string | undefined = pid;
+  for (let union = g.unionDeHijo.get(quien); union; union = g.unionDeHijo.get(quien!)) {
+    const u = g.unionPorId.get(union)!;
+    const alturas = u.children.map((c) => donde.get(c)!).filter((y) => y !== undefined);
+    assert.deepStrictEqual(alturas, [...alturas].sort((a, b) => a - b), `${pid}: los hermanos de ${quien} desordenados`);
+    [quien] = ordenarPareja(u.partners, (p) => g.personaPorId.get(p));
+  }
+}
+
+// --- Cada rama se acomoda junto a la suya ---
+// Un reparto que cruza media pantalla delata una rama entera desterrada al fondo de otra:
+// es lo que pasaba cuando los abuelos paternos y los maternos acababan en el mismo sitio.
+const reparto = (l: Layout) => Math.max(...l.vinculos.flatMap((v) => v.hijos.map((h) => Math.abs(h.y - v.y))));
+for (const pid of ["p25", "p26", "p126", "p131"]) {
+  const salto = reparto(layout(pid));
+  assert.ok(salto < 500, `${pid}: el reparto más largo del arranque mide ${salto.toFixed(0)}px`);
+}
 
 // --- Determinista: mismo estado, mismo dibujo ---
 assert.deepStrictEqual(layout("p25"), inicial, "dos cálculos idénticos dan el mismo layout");

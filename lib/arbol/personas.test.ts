@@ -80,7 +80,7 @@ assert.deepStrictEqual(linaje.get("p63")!.nuevos, ["Forasté", "Puget"], "quien 
 assert.deepStrictEqual(linaje.get("p25")!.todos, ["Crespo", "Velasco"], "el de la madre completa al escrito");
 assert.deepStrictEqual(linaje.get("p26")!, { todos: ["Crespo", "Bordallo"], escritos: 0, nuevos: [] }, "el hijo, entero deducido");
 const conDos = data.people.filter((p) => linaje.get(p.id)!.todos.length === 2).length;
-assert.strictEqual(conDos, 221, `221 con los dos apellidos, de 104 que los traían escritos`);
+assert.strictEqual(conDos, 237, `237 con los dos apellidos, de 108 que los traían escritos`);
 for (const p of data.people) {
   const { todos, escritos, nuevos } = linaje.get(p.id)!;
   assert.ok(todos.length <= 2 && escritos <= todos.length, `${p.id}: ${todos.length} apellidos`);
