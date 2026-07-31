@@ -48,6 +48,8 @@ export interface NodoLayout {
 export interface Vinculo {
   unionId: string;
   tipo: Union["tipo"];
+  /** La unión acabó (divorcio o ruptura): se dibuja partida. */
+  roto: boolean;
   /** Ancla del reparto: el punto medio de la pareja, o el contador que la sustituye. */
   x: number;
   y: number;
@@ -83,6 +85,8 @@ interface Unidad {
   nivel: number;
   /** Los miembros de una pareja se pintan juntos; vacío si la unidad es un contador. */
   miembros: string[];
+  /** Las uniones que los apilan: más de una si alguien se casó dos veces. */
+  uniones: string[];
   contador?: Omit<Contador, "x" | "y">;
   /** Lo que ocupa a lo alto, que es por donde se empaqueta. */
   alto: number;
@@ -110,21 +114,17 @@ export function calcularLayout(g: Grafo, opciones: OpcionesLayout): Layout {
   const unidadDePersona = new Map<string, string>();
   const unidadDeUnion = new Map<string, string>();
 
-  for (const u of g.unionPorId.values()) {
-    const miembros = ordenarPareja(
-      u.partners.filter((p) => mostrados.has(p)),
-      (id) => g.personaPorId.get(id),
-    );
-    if (miembros.length === 0) continue;
-    const id = `u:${u.id}`;
-    unidades.set(id, { id, nivel: nivelDe(miembros[0]), miembros, alto: altoDe(miembros.length) });
-    unidadDeUnion.set(u.id, id);
+  for (const grupo of agruparUniones(g, mostrados)) {
+    const id = `u:${grupo.uniones[0]}`;
+    const { miembros } = grupo;
+    unidades.set(id, { id, nivel: nivelDe(miembros[0]), miembros, uniones: grupo.uniones, alto: altoDe(miembros.length) });
+    for (const uid of grupo.uniones) unidadDeUnion.set(uid, id);
     for (const p of miembros) unidadDePersona.set(p, id);
   }
   for (const p of mostrados) {
     if (unidadDePersona.has(p)) continue;
     const id = `p:${p}`;
-    unidades.set(id, { id, nivel: nivelDe(p), miembros: [p], alto: altoDe(1) });
+    unidades.set(id, { id, nivel: nivelDe(p), miembros: [p], uniones: [], alto: altoDe(1) });
     unidadDePersona.set(p, id);
   }
 
@@ -173,12 +173,13 @@ export function calcularLayout(g: Grafo, opciones: OpcionesLayout): Layout {
   };
 
   const ramasDeDescendencia = (unidad: Unidad): string[] => {
-    if (!unidad.id.startsWith("u:")) return [];
-    const union = g.unionPorId.get(unidad.id.slice(2))!;
-    const hijos = union.children.filter((c) => mostrados.has(c)).map((c) => unidadDePersona.get(c)!);
-    const contador = contadorDeHijos.get(union.id);
-    if (contador) hijos.push(contador.id);
-    return hijos;
+    const salida: string[] = [];
+    for (const uid of unidad.uniones) {
+      for (const c of g.unionPorId.get(uid)!.children) if (mostrados.has(c)) salida.push(unidadDePersona.get(c)!);
+      const contador = contadorDeHijos.get(uid);
+      if (contador) salida.push(contador.id);
+    }
+    return salida;
   };
 
   function colocar(unidad: Unidad): Bloque {
@@ -254,6 +255,7 @@ export function calcularLayout(g: Grafo, opciones: OpcionesLayout): Layout {
     vinculos.push({
       unionId: u.id,
       tipo: u.tipo,
+      roto: u.roto === true,
       x: ancla.x,
       y: ancla.y,
       pareja: partners.length >= 2 ? [partners[0].y, partners[1].y] : undefined,
@@ -268,9 +270,10 @@ export function calcularLayout(g: Grafo, opciones: OpcionesLayout): Layout {
 }
 
 /**
- * Qué personas entran: el punto de vista con toda su ascendencia y descendencia, su
- * pareja con la ascendencia de ella, y las uniones abiertas a mano (sus dos partners,
- * sus hijos y las parejas de esos hijos). Lo demás queda detrás de un contador.
+ * Qué personas entran: el punto de vista con toda su ascendencia y descendencia, las
+ * parejas de todos ellos, la ascendencia de la suya propia, y las uniones abiertas a
+ * mano —solo sus partners y sus hijos: la pareja de un hijo llega al abrir la unión de
+ * ese hijo, no antes—. Lo demás queda detrás de un contador.
  */
 function seleccionar(g: Grafo, pov: string, expandidas: Set<string>, permitidos: Set<string> | null): Set<string> {
   const dentro = new Set<string>([pov, ...ascendientes(g, pov), ...descendientes(g, pov)]);
@@ -288,10 +291,7 @@ function seleccionar(g: Grafo, pov: string, expandidas: Set<string>, permitidos:
       if (!union.partners.some((p) => dentro.has(p)) && !union.children.some((c) => dentro.has(c))) continue;
       const antes = dentro.size;
       for (const p of union.partners) dentro.add(p);
-      for (const hijo of union.children) {
-        dentro.add(hijo);
-        for (const c of parejaDirecta(g, hijo)) dentro.add(c);
-      }
+      for (const hijo of union.children) dentro.add(hijo);
       if (dentro.size !== antes) cambiado = true;
     }
   }
@@ -309,9 +309,41 @@ const crearContador = (id: string, nivel: number, contador: Omit<Contador, "x" |
   id,
   nivel,
   miembros: [],
+  uniones: [],
   contador,
   alto: ALTO_CONTADOR,
 });
+
+/**
+ * Las uniones mostradas, agrupadas por la gente que comparten: quien se casó dos veces
+ * sale una sola vez en el lienzo, con una pareja encima y otra debajo. Cada nueva unión
+ * se cuelga por el extremo donde ya está quien la trae, así que el trazo de una pareja
+ * sigue uniendo a dos vecinos.
+ */
+function agruparUniones(g: Grafo, mostrados: Set<string>): { uniones: string[]; miembros: string[] }[] {
+  const grupos: { uniones: string[]; miembros: string[] }[] = [];
+  const grupoDePersona = new Map<string, { uniones: string[]; miembros: string[] }>();
+
+  for (const u of g.unionPorId.values()) {
+    const suyos = ordenarPareja(
+      u.partners.filter((p) => mostrados.has(p)),
+      (id) => g.personaPorId.get(id),
+    );
+    if (suyos.length === 0) continue;
+    const grupo = suyos.map((p) => grupoDePersona.get(p)).find((x) => x);
+    if (!grupo) {
+      grupos.push({ uniones: [u.id], miembros: suyos });
+      for (const p of suyos) grupoDePersona.set(p, grupos[grupos.length - 1]);
+      continue;
+    }
+    grupo.uniones.push(u.id);
+    const pendientes = suyos.filter((p) => !grupoDePersona.has(p));
+    if (u.partners.includes(grupo.miembros[0])) grupo.miembros.unshift(...pendientes);
+    else grupo.miembros.push(...pendientes);
+    for (const p of pendientes) grupoDePersona.set(p, grupo);
+  }
+  return grupos;
+}
 
 function bloqueDeUnidad(u: Unidad): Bloque {
   return { y: new Map([[u.id, 0]]), contorno: new Map([[u.nivel, [-u.alto / 2, u.alto / 2]]]) };

@@ -3,7 +3,7 @@
 import assert from "assert";
 import { readFileSync } from "fs";
 import { resolve } from "path";
-import { construirGrafo, visibles } from "./grafo";
+import { construirGrafo, parejaDirecta, visibles } from "./grafo";
 import { ALTO_CONTADOR, ALTO_NODO, ANCHO_COLUMNA, calcularLayout, type Layout } from "./layout";
 import type { ArbolData } from "./tree";
 
@@ -76,6 +76,16 @@ assert.ok(
   !conHermanos.contadores.some((c) => c.unionId === unionPadres && c.sentido === "hijos"),
   "el contador desaparece al abrirlo",
 );
+// Pero solo a los hijos: la pareja de cada uno llega al abrir la unión de ese hijo.
+const cunada = [...parejaDirecta(g, "p131")];
+assert.ok(cunada.length === 1, "el hermano tiene pareja documentada");
+assert.ok(!conHermanos.nodos.some((n) => cunada.includes(n.id)), "…que no entra con él");
+const suUnion = g.unionesDePartner.get("p131")![0];
+assert.ok(
+  layout("p25", new Set([unionPadres, suUnion])).nodos.some((n) => cunada.includes(n.id)),
+  "y aparece al abrir la unión del hermano",
+);
+
 // Y cerrar deshace exactamente lo que abrió.
 assert.deepStrictEqual(layout("p25", new Set()), inicial, "quitar la unión de las expandidas vuelve al inicio");
 
@@ -96,7 +106,7 @@ assert.ok(
 // --- Abrirlo todo alcanza el árbol entero desde cualquier punto de vista ---
 for (const pid of ["p25", "p26", "p126", "p1"]) {
   const todo = layout(pid, TODAS);
-  assert.strictEqual(todo.nodos.length, 415, `${pid} alcanza las 415 personas abriéndolo todo`);
+  assert.strictEqual(todo.nodos.length, 416, `${pid} alcanza las 416 personas abriéndolo todo`);
   assert.strictEqual(todo.contadores.length, 0, `${pid} no deja contadores pendientes`);
   revisar(todo, pid, `${pid} todo abierto`);
 }
@@ -108,7 +118,7 @@ for (const pid of ["p25", "p26", "p126", "p131", "p124"]) {
   revisar(acotado, pid, `${pid} acotado`);
 }
 assert.strictEqual(layout("p126", TODAS, true).nodos.length, 342, "desde un hermano se ven 342");
-assert.strictEqual(layout("p25", TODAS, true).nodos.length, 415, "desde el punto de vista por defecto, todas");
+assert.strictEqual(layout("p26", TODAS, true).nodos.length, 416, "solo desde el hijo se llega a todas");
 
 // Y sin abrir nada, ocultar no deja ni un contador hacia una rama no conectada.
 const conectados = visibles(g, "p126");
@@ -122,6 +132,16 @@ for (const c of layout("p126", new Set(), true).contadores) {
 assert.ok(
   layout("p126", TODAS).nodos.length > visibles(g, "p126").size,
   "sin el interruptor se llega más allá de los conectados",
+);
+
+// --- Quien se casó dos veces sale una vez, entre sus dos parejas ---
+const todoAbierto = layout("p25", TODAS);
+const pepeYSusMujeres = ["p441", "p16", "p17"].map((id) => todoAbierto.nodos.find((n) => n.id === id)!);
+assert.ok(pepeYSusMujeres.every((n) => n?.x === pepeYSusMujeres[1].x), "los tres comparten columna");
+assert.deepStrictEqual(
+  [...pepeYSusMujeres].sort((a, b) => a.y - b.y).map((n) => n.id),
+  ["p441", "p16", "p17"],
+  "y él queda en medio, para que cada trazo una a dos vecinos",
 );
 
 // --- Vínculos: cada uno cuelga de algo pintado, y reparte hacia la derecha ---

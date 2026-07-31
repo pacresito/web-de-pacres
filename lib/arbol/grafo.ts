@@ -140,14 +140,11 @@ function conConyuges(g: Grafo, personas: Set<string>): Set<string> {
 }
 
 /**
- * Quién está "conectado" con X: sus consanguíneos y los de su pareja, más los cónyuges
- * de unos y otros (como nodo suelto, sin arrastrar la ascendencia de cada cónyuge).
- * Es "quien comparte un ancestro conmigo", no "mi línea vertical".
+ * Quién está "conectado" con X: sus consanguíneos y los cónyuges de todos ellos, como
+ * nodo suelto y sin arrastrar la familia de cada uno. Es "quien comparte un ancestro
+ * conmigo", así que la familia política queda fuera — también la de mi propia pareja,
+ * que es de mis hijos y no mía.
  */
 export function visibles(g: Grafo, x: string): Set<string> {
-  const out = conConyuges(g, consanguineos(g, x));
-  for (const pareja of parejaDirecta(g, x)) {
-    for (const p of conConyuges(g, consanguineos(g, pareja))) out.add(p);
-  }
-  return out;
+  return conConyuges(g, consanguineos(g, x));
 }

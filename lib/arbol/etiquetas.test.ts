@@ -7,15 +7,33 @@ const persona = (p: Partial<Persona>): Persona => ({ id: "x", nombre: "X", apell
 const APAGADOS = { fechas: false, dudoso: false, notas: false };
 
 // --- Partir el nombre ---
-assert.deepStrictEqual(partirNombre("Lucas", 26, 1), ["Lucas"], "un nombre corto no se parte");
+const entero = (nombre: string, ancho: number, lineas: number) =>
+  partirNombre(nombre, nombre.length, ancho, lineas).map((r) => r.escrito);
+
+assert.deepStrictEqual(entero("Lucas", 26, 1), ["Lucas"], "un nombre corto no se parte");
 assert.deepStrictEqual(
-  partirNombre("Federico Maestre de San Juan", 26, 2),
+  entero("Federico Maestre de San Juan", 26, 2),
   ["Federico Maestre de San", "Juan"],
   "el más largo del árbol cabe en dos líneas",
 );
-assert.deepStrictEqual(partirNombre("Federico Maestre de San Juan", 26, 1), ["Federico Maestre de San J…"], "en una, se recorta");
-assert.deepStrictEqual(partirNombre("A".repeat(30), 26, 1), ["A".repeat(25) + "…"], "una palabra sin espacios se corta");
-assert.ok(partirNombre("Uno dos tres cuatro cinco seis siete ocho nueve", 21, 2).length === 2, "nunca más líneas de las pedidas");
+assert.deepStrictEqual(entero("Federico Maestre de San Juan", 26, 1), ["Federico Maestre de San J…"], "en una, se recorta");
+assert.deepStrictEqual(entero("A".repeat(30), 26, 1), ["A".repeat(25) + "…"], "una palabra sin espacios se corta");
+assert.ok(entero("Uno dos tres cuatro cinco seis siete ocho nueve", 21, 2).length === 2, "nunca más líneas de las pedidas");
+
+// El apellido heredado se separa en cada renglón, esté donde esté el corte de línea.
+assert.deepStrictEqual(
+  partirNombre("Chiara Teresa Torres Cardona", "Chiara Teresa".length, 40, 1),
+  [{ escrito: "Chiara Teresa", heredado: " Torres Cardona" }],
+  "lo deducido va aparte",
+);
+assert.deepStrictEqual(
+  partirNombre("Chiara Teresa Torres Cardona", "Chiara Teresa Torres".length, 21, 2),
+  [
+    { escrito: "Chiara Teresa Torres", heredado: "" },
+    { escrito: "", heredado: "Cardona" },
+  ],
+  "el renglón que solo trae heredado no lleva nada escrito",
+);
 
 // --- Fechas: solo lo que consta, sin inventar el año que falta ---
 assert.strictEqual(fechasDe(persona({ birth: 1986 })), "1986");

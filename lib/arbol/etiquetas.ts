@@ -18,26 +18,42 @@ export interface Segmento {
   incierto: boolean;
 }
 
+/** Un renglón del nombre, con el apellido heredado aparte para pintarlo distinto. */
+export interface Renglon {
+  escrito: string;
+  heredado: string;
+}
+
 /**
  * Parte el nombre en como mucho `lineas` renglones de `ancho` caracteres, sin cortar
- * palabras salvo que una sola no quepa. Lo que no entra se recorta con puntos suspensivos.
+ * palabras salvo que una sola no quepa. Lo que no entra se recorta con puntos
+ * suspensivos. `heredadoDesde` es el carácter en el que empiezan los apellidos deducidos
+ * del árbol, que van aparte en cada renglón.
  */
-export function partirNombre(nombre: string, ancho: number, lineas: number): string[] {
-  const salida: string[] = [];
+export function partirNombre(nombre: string, heredadoDesde: number, ancho: number, lineas: number): Renglon[] {
+  const renglon = (texto: string, inicio: number): Renglon => {
+    const corte = Math.min(Math.max(heredadoDesde - inicio, 0), texto.length);
+    return { escrito: texto.slice(0, corte), heredado: texto.slice(corte) };
+  };
+
+  const salida: Renglon[] = [];
   let resto = nombre.trim();
+  let inicio = 0;
   while (resto.length > 0 && salida.length < lineas) {
     if (resto.length <= ancho) {
-      salida.push(resto);
+      salida.push(renglon(resto, inicio));
       break;
     }
     if (salida.length === lineas - 1) {
-      salida.push(resto.slice(0, ancho - 1).trimEnd() + "…");
+      salida.push(renglon(resto.slice(0, ancho - 1).trimEnd() + "…", inicio));
       break;
     }
     const corte = resto.lastIndexOf(" ", ancho);
     const en = corte > 0 ? corte : ancho;
-    salida.push(resto.slice(0, en).trimEnd());
-    resto = resto.slice(en).trimStart();
+    salida.push(renglon(resto.slice(0, en).trimEnd(), inicio));
+    const siguiente = resto.slice(en);
+    inicio += resto.length - siguiente.trimStart().length;
+    resto = siguiente.trimStart();
   }
   return salida;
 }

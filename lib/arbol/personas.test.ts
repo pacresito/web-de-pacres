@@ -3,7 +3,7 @@ import assert from "assert";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 import { construirGrafo } from "./grafo";
-import { apellidosNuevos, esHombre, esMujer, etiquetaDe, ordenarPareja } from "./personas";
+import { apellidosDe, esHombre, esMujer, etiquetaDe, ordenarPareja } from "./personas";
 import type { ArbolData, Persona } from "./tree";
 
 const persona = (nombre: string, apellidos: string[] = []): Persona => ({ id: nombre, nombre, apellidos, fuentes: [] });
@@ -11,8 +11,8 @@ const persona = (nombre: string, apellidos: string[] = []): Persona => ({ id: no
 // --- Quién es hombre: por el nombre de pila, y sin regla de terminación ---
 assert.ok(esHombre(persona("Pablo")), "Pablo");
 assert.ok(esHombre(persona("José Manuel")), "el compuesto se mira por el primero");
-assert.ok(esHombre(persona("Su marido")), "el marcador es explícito");
-assert.ok(!esHombre(persona("Su mujer")), "y el otro también");
+assert.ok(esHombre(persona("Marido")), "el marcador es explícito");
+assert.ok(esMujer(persona("Mujer")), "y el otro también");
 assert.ok(!esHombre(persona("Carmen")), "Carmen");
 for (const trampa of ["Rocío", "Amparo", "Socorro", "Consuelo"]) {
   assert.ok(!esHombre(persona(trampa)), `${trampa} acaba en o y es de mujer`);
@@ -34,13 +34,28 @@ assert.deepStrictEqual(ordenarPareja(["mujer", "nadie"], buscar), ["nadie", "muj
 assert.deepStrictEqual(ordenarPareja(["x", "z"], buscar), ["x", "z"], "dos mujeres: manda el documento");
 assert.deepStrictEqual(ordenarPareja(["m"], buscar), ["m"], "una sola persona no es pareja");
 
-// --- La etiqueta ---
+// --- La etiqueta, y dónde empieza lo que no consta escrito ---
 const conApellidos = persona("José", ["Cardona", "Torres"]);
-assert.strictEqual(etiquetaDe(conApellidos, 2, []), "José Cardona Torres");
-assert.strictEqual(etiquetaDe(conApellidos, 1, []), "José Cardona");
-assert.strictEqual(etiquetaDe(conApellidos, 0, []), "José");
-assert.strictEqual(etiquetaDe(conApellidos, "nuevos", ["Torres"]), "José Torres", "en «nuevos» solo el que estrena");
-assert.strictEqual(etiquetaDe(persona("Lucas"), 2, []), "Lucas", "sin apellidos documentados, el nombre");
+const suyos = { todos: ["Cardona", "Torres"], escritos: 2, nuevos: ["Torres"] };
+assert.deepStrictEqual(etiquetaDe(conApellidos, 2, suyos), { texto: "José Cardona Torres", heredadoDesde: 19 });
+assert.strictEqual(etiquetaDe(conApellidos, 1, suyos).texto, "José Cardona");
+assert.strictEqual(etiquetaDe(conApellidos, 0, suyos).texto, "José");
+assert.strictEqual(etiquetaDe(conApellidos, "nuevos", suyos).texto, "José Torres", "en «nuevos» solo el que estrena");
+
+const heredera = persona("Chiara Teresa");
+const heredados = { todos: ["Pieravanti", "Torres"], escritos: 0, nuevos: [] };
+assert.deepStrictEqual(
+  etiquetaDe(heredera, 2, heredados),
+  { texto: "Chiara Teresa Pieravanti Torres", heredadoDesde: "Chiara Teresa".length },
+  "sin nada escrito, los dos apellidos son deducidos",
+);
+assert.strictEqual(etiquetaDe(heredera, "nuevos", heredados).texto, "Chiara Teresa", "lo heredado nunca estrena nada");
+assert.strictEqual(
+  etiquetaDe(persona("Carmen", ["Bordallo"]), 2, { todos: ["Bordallo", "Cardona"], escritos: 1, nuevos: ["Bordallo"] })
+    .heredadoDesde,
+  "Carmen Bordallo".length,
+  "con uno escrito, el corte cae después de él",
+);
 
 // --- Sobre los datos de verdad ---
 const data: ArbolData = JSON.parse(readFileSync(resolve("seed/arbol.json"), "utf-8"));
@@ -57,12 +72,20 @@ assert.strictEqual(
 );
 
 // El apellido lo estrena quien lo trae, y sus descendientes ya no lo repiten.
-const nuevos = apellidosNuevos(construirGrafo(data));
-assert.deepStrictEqual(nuevos.get("p25"), [], "Pablo no estrena «Crespo»: ya lo lleva su padre");
-assert.deepStrictEqual(nuevos.get("p63"), ["Forasté", "Puget"], "quien corona una línea los enseña los dos");
+const linaje = apellidosDe(construirGrafo(data));
+assert.deepStrictEqual(linaje.get("p25")!.nuevos, [], "Pablo no estrena «Crespo»: ya lo lleva su padre");
+assert.deepStrictEqual(linaje.get("p63")!.nuevos, ["Forasté", "Puget"], "quien corona una línea los enseña los dos");
+
+// Y el que no consta se hereda: el primero del padre y el segundo de la madre.
+assert.deepStrictEqual(linaje.get("p25")!.todos, ["Crespo", "Velasco"], "el de la madre completa al escrito");
+assert.deepStrictEqual(linaje.get("p26")!, { todos: ["Crespo", "Bordallo"], escritos: 0, nuevos: [] }, "el hijo, entero deducido");
+const conDos = data.people.filter((p) => linaje.get(p.id)!.todos.length === 2).length;
+assert.strictEqual(conDos, 221, `221 con los dos apellidos, de 104 que los traían escritos`);
 for (const p of data.people) {
-  const propios = nuevos.get(p.id)!;
-  assert.ok(propios.every((a) => p.apellidos.includes(a)), `${p.id} estrena un apellido que no es suyo`);
+  const { todos, escritos, nuevos } = linaje.get(p.id)!;
+  assert.ok(todos.length <= 2 && escritos <= todos.length, `${p.id}: ${todos.length} apellidos`);
+  assert.deepStrictEqual(todos.slice(0, escritos), p.apellidos.slice(0, escritos), `${p.id}: lo escrito va primero y literal`);
+  assert.ok(nuevos.every((a) => todos.includes(a)), `${p.id} estrena un apellido que no es suyo`);
 }
 
 console.log(`personas.test.ts OK (${parejas.length} parejas colocadas)`);

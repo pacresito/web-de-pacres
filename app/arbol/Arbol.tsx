@@ -8,7 +8,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { construirGrafo } from "@/lib/arbol/grafo";
 import { CAMPOS_COMPLETOS, detalleDe, nombreIncierto, partirNombre, type Campos } from "@/lib/arbol/etiquetas";
-import { apellidosNuevos, etiquetaDe, type Apellidos } from "@/lib/arbol/personas";
+import { apellidosDe, etiquetaDe, type Etiqueta, type ModoApellidos } from "@/lib/arbol/personas";
 import {
   ALTO_CONTADOR,
   ALTO_NODO,
@@ -26,6 +26,7 @@ const ESCALA_MIN = 0.12;
 const ESCALA_MAX = 2.2;
 const ARRASTRE_MINIMO = 8; // px: por debajo de esto el gesto es un toque, no un arrastre
 const INCIERTO = "#c2410c"; // el dato que el documento no daba por seguro
+const HEREDADO = "#9a9a97"; // el apellido que se deduce del árbol y no consta escrito
 
 /** La cámara se guarda relativa al punto de vista: así lo persigue sin efectos ni saltos. */
 interface Vista {
@@ -56,9 +57,9 @@ export default function Arbol({ data }: { data: ArbolData }) {
   const [puntoDeVista, setPuntoDeVista] = useState(inicial);
   const [abiertas, setAbiertas] = useState<Set<string>>(() => new Set());
   const [todoDesplegado, setTodoDesplegado] = useState(false);
-  const [ocultarNoConectados, setOcultarNoConectados] = useState(false);
+  const [ocultarNoConectados, setOcultarNoConectados] = useState(true);
   const [campos, setCampos] = useState<Campos>(CAMPOS_COMPLETOS);
-  const [apellidos, setApellidos] = useState<Apellidos>("nuevos");
+  const [apellidos, setApellidos] = useState<ModoApellidos>("nuevos");
   const [panelAbierto, setPanelAbierto] = useState(false);
   const [vista, setVista] = useState<Vista>(CENTRADA);
   const [tamano, setTamano] = useState({ w: 0, h: 0 });
@@ -71,7 +72,7 @@ export default function Arbol({ data }: { data: ArbolData }) {
     () => (todoDesplegado ? new Set(grafo.unionPorId.keys()) : abiertas),
     [todoDesplegado, abiertas, grafo],
   );
-  const nuevos = useMemo(() => apellidosNuevos(grafo), [grafo]);
+  const linaje = useMemo(() => apellidosDe(grafo), [grafo]);
 
   const layout = useMemo(
     () => calcularLayout(grafo, { puntoDeVista, expandidas, ocultarNoConectados }),
@@ -132,7 +133,7 @@ export default function Arbol({ data }: { data: ArbolData }) {
     setPuntoDeVista(inicial);
     setAbiertas(new Set());
     setTodoDesplegado(false);
-    setOcultarNoConectados(false);
+    setOcultarNoConectados(true);
     setCampos(CAMPOS_COMPLETOS);
     setApellidos("nuevos");
     setVista(CENTRADA);
@@ -238,9 +239,7 @@ export default function Arbol({ data }: { data: ArbolData }) {
 
           {layout.vinculos.map((v) => (
             <g key={v.unionId} stroke="#c4c4c2" strokeWidth={1.5} fill="none">
-              {/* El trazo de la pareja va más marcado: en una columna apretada es lo
-                  único que distingue a un matrimonio de dos vecinos cualesquiera. */}
-              {v.pareja && <line x1={v.x} y1={v.pareja[0]} x2={v.x} y2={v.pareja[1]} stroke="#8a8a87" strokeWidth={2.5} />}
+              {v.pareja && <LineaDePareja x={v.x} extremos={v.pareja} roto={v.roto} />}
               {v.hijos.map((h, i) => (
                 <path
                   key={i}
@@ -267,7 +266,7 @@ export default function Arbol({ data }: { data: ArbolData }) {
                 nodo={n}
                 persona={persona}
                 campos={campos}
-                etiqueta={etiquetaDe(persona, apellidos, nuevos.get(n.id) ?? [])}
+                etiqueta={etiquetaDe(persona, apellidos, linaje.get(n.id)!)}
                 onElegir={() => arrastre.current <= ARRASTRE_MINIMO && elegirPuntoDeVista(n.id)}
               />
             );
@@ -325,11 +324,11 @@ function Nodo({
   nodo: NodoLayout;
   persona: Persona;
   campos: Campos;
-  etiqueta: string;
+  etiqueta: Etiqueta;
   onElegir: () => void;
 }) {
   const detalle = detalleDe(persona, campos);
-  const lineas = partirNombre(etiqueta, CARACTERES_POR_LINEA, detalle.length > 0 ? 1 : 2);
+  const lineas = partirNombre(etiqueta.texto, etiqueta.heredadoDesde, CARACTERES_POR_LINEA, detalle.length > 0 ? 1 : 2);
   const primeraY = nodo.y + (detalle.length > 0 || lineas.length > 1 ? -4 : 5);
   const dudoso = nombreIncierto(persona, campos);
   return (
@@ -355,7 +354,9 @@ function Nodo({
       >
         {lineas.map((linea, i) => (
           <tspan key={i} x={nodo.x} y={primeraY + i * 15}>
-            {linea}
+            {linea.escrito}
+            {/* El apellido deducido del árbol se pinta apagado: no lo decía el documento. */}
+            {linea.heredado && <tspan fill={nodo.esPuntoDeVista ? "#a9e6cd" : HEREDADO}>{linea.heredado}</tspan>}
           </tspan>
         ))}
       </text>
@@ -374,6 +375,32 @@ function Nodo({
         </text>
       )}
     </g>
+  );
+}
+
+/** Lo que se abre a cada lado del corte de una unión rota. */
+const HUECO_ROTURA = 7;
+
+/**
+ * El trazo que une a los dos miembros de una pareja, más marcado que el resto: en una
+ * columna apretada es lo único que distingue a un matrimonio de dos vecinos cualesquiera.
+ * La unión que acabó se dibuja partida, que es como la tachaba el documento.
+ */
+function LineaDePareja({ x, extremos, roto }: { x: number; extremos: [number, number]; roto: boolean }) {
+  const [arriba, abajo] = [...extremos].sort((a, b) => a - b);
+  const centro = (arriba + abajo) / 2;
+  const tramos = roto
+    ? [
+        [arriba, centro - HUECO_ROTURA],
+        [centro + HUECO_ROTURA, abajo],
+      ]
+    : [[arriba, abajo]];
+  return (
+    <>
+      {tramos.map(([desde, hasta], i) => (
+        <line key={i} x1={x} y1={desde} x2={x} y2={hasta} stroke="#8a8a87" strokeWidth={2.5} />
+      ))}
+    </>
   );
 }
 
@@ -423,8 +450,8 @@ function Controles({
 }: {
   campos: Campos;
   setCampos: (c: Campos) => void;
-  apellidos: Apellidos;
-  setApellidos: (a: Apellidos) => void;
+  apellidos: ModoApellidos;
+  setApellidos: (a: ModoApellidos) => void;
   ocultar: boolean;
   setOcultar: (v: boolean) => void;
   abierto: boolean;
@@ -464,7 +491,7 @@ function Controles({
       {abierto && (
         <div className="flex w-60 flex-col gap-3 rounded-xl border border-neutral-200 bg-white p-3 shadow-lg">
           <div className="flex flex-col gap-1">
-            <p className="px-1 text-[11px] font-semibold tracking-wide text-neutral-400 uppercase">Mostrar en cada nodo</p>
+            <p className="px-1 text-[11px] font-semibold tracking-wide text-neutral-400 uppercase">En cada nodo</p>
             {/* «Nuevos» solo los enseña quien los estrena en su línea; 1 y 2, todo el mundo. */}
             <div className="flex items-center gap-1 rounded-lg bg-neutral-100 px-3 py-1.5">
               <span className="flex-1 text-[13px] text-neutral-700">Apellidos</span>
@@ -481,13 +508,15 @@ function Controles({
                 </button>
               ))}
             </div>
-            {interruptor(campos.fechas, "Fechas", () => setCampos({ ...campos, fechas: !campos.fechas }))}
-            {interruptor(campos.notas, "Notas y apodos", () => setCampos({ ...campos, notas: !campos.notas }))}
-            {interruptor(campos.dudoso, "Resaltar dato dudoso", () => setCampos({ ...campos, dudoso: !campos.dudoso }))}
+            {/* Todos los interruptores se enuncian por lo que hacen al marcarlos, y de
+                entrada están los cuatro apagados: el árbol de partida es el de siempre. */}
+            {interruptor(!campos.fechas, "Ocultar fechas", () => setCampos({ ...campos, fechas: !campos.fechas }))}
+            {interruptor(!campos.notas, "Ocultar notas y apodos", () => setCampos({ ...campos, notas: !campos.notas }))}
+            {interruptor(!campos.dudoso, "No resaltar dudosos", () => setCampos({ ...campos, dudoso: !campos.dudoso }))}
           </div>
           <div className="flex flex-col gap-1">
             <p className="px-1 text-[11px] font-semibold tracking-wide text-neutral-400 uppercase">Ramas</p>
-            {interruptor(ocultar, "Ocultar no conectadas", () => setOcultar(!ocultar))}
+            {interruptor(!ocultar, "Mostrar no conectadas", () => setOcultar(!ocultar))}
           </div>
         </div>
       )}

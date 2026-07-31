@@ -22,6 +22,8 @@ export interface Union {
   id: string;
   partners: string[]; // 1 (progenitor sin pareja documentada) o 2 ids
   tipo: "matrimonio" | "pareja" | null;
+  /** La unión acabó: divorcio si fue matrimonio, ruptura si fue pareja. */
+  roto?: boolean;
   children: string[];
   fuentes: string[];
   xref?: string;
