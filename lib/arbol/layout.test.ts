@@ -78,6 +78,11 @@ for (const pid of ["p25", "p26", "p126"]) {
 // Un reparto que cruza media pantalla delata una rama entera desterrada al fondo de otra:
 // es lo que pasaba cuando los abuelos paternos y los maternos acababan en el mismo sitio.
 const reparto = (l: Layout) => Math.max(...l.vinculos.flatMap((v) => v.hijos.map((h) => Math.abs(h.y - v.y))));
+/** De dónde a dónde llega el trazo vertical de una unión. */
+const tramo = (v: Layout["vinculos"][number]): [number, number] => [
+  Math.min(v.y, ...v.hijos.map((h) => h.y)),
+  Math.max(v.y, ...v.hijos.map((h) => h.y)),
+];
 for (const pid of ["p25", "p26", "p126", "p131"]) {
   const salto = reparto(layout(pid));
   assert.ok(salto < 500, `${pid}: el reparto más largo del arranque mide ${salto.toFixed(0)}px`);
@@ -152,6 +157,17 @@ for (const pov of ["p25", "p26"]) {
       }
       // Dos marcas nunca comparten borde: se taparían la una a la otra.
       assert.strictEqual(new Set(n.pendientes.map((p) => p.arriba)).size, n.pendientes.length, `${n.id}: dos + en el mismo borde`);
+    }
+    // Y dos repartos que bajan por el mismo hueco y se pisan de altura no comparten trazo:
+    // sobre la misma vertical se leen como una sola línea, y una rama parece colgar de otra.
+    const bajan = l.vinculos.filter((v) => v.hijos.length > 0);
+    for (const a of bajan) {
+      for (const b of bajan) {
+        if (a === b || a.canal !== b.canal) continue;
+        const [desdeA, hastaA] = tramo(a);
+        const [desdeB, hastaB] = tramo(b);
+        assert.ok(hastaA <= desdeB || hastaB <= desdeA, `${pov} con ${abierta} abierta: ${a.unionId} y ${b.unionId} se dibujan encima`);
+      }
     }
   }
 }

@@ -268,7 +268,7 @@ export default function Arbol({ data }: { data: ArbolData }) {
           {layout.vinculos.map((v) => (
             <g key={v.unionId} stroke="#c4c4c2" strokeWidth={1.5} fill="none">
               {v.hijos.map((h, i) => (
-                <path key={i} d={`M ${v.x} ${v.y} H ${(v.x + h.x) / 2} V ${h.y} H ${h.x - h.ancho / 2}`} />
+                <path key={i} d={`M ${v.x} ${v.y} H ${v.canal} V ${h.y} H ${h.x - h.ancho / 2}`} />
               ))}
               {v.pareja && <TrazoDePareja x={v.x} extremos={v.pareja} tipo={v.tipo} roto={v.roto} />}
             </g>

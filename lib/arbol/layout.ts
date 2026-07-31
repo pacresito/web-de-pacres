@@ -23,6 +23,8 @@ export const ALTO_CONTADOR = 30;
 export const ANCHO_COLUMNA = 288; // de una generación a la siguiente
 const SEP_PAREJA = 26; // entre los dos miembros de una pareja: por ahí pasa su vínculo, y ahí se lee de qué tipo es
 const SEP_UNIDAD = 38; // entre unidades distintas: más que SEP_PAREJA, para que se note quién va con quién
+const SEP_CARRIL = 18; // entre dos repartos que bajan por el mismo hueco
+const CARRILES = 3; // los que caben en el hueco (ANCHO_COLUMNA − ANCHO_NODO) sin meterse bajo un nodo
 
 export interface OpcionesLayout {
   puntoDeVista: string;
@@ -68,6 +70,8 @@ export interface Vinculo {
   /** Ancla del reparto: el punto medio de la pareja, o el contador que la sustituye. */
   x: number;
   y: number;
+  /** Por dónde baja el reparto hacia los hijos: el hueco entre columnas, con su carril. */
+  canal: number;
   /** Alturas de los dos miembros, para la línea que los une. */
   pareja?: [number, number];
   /** Adónde va cada trazo de descendencia y qué ancho tiene lo que hay allí, para tocarlo. */
@@ -324,6 +328,7 @@ export function calcularLayout(g: Grafo, opciones: OpcionesLayout): Layout {
       roto: u.roto === true,
       x: ancla.x,
       y: ancla.y,
+      canal: ancla.x + ANCHO_COLUMNA / 2,
       pareja: partners.length >= 2 ? [partners[0].y, partners[1].y] : undefined,
       // Cada trazo muere en el borde de lo que va a tocar, y una pastilla es más estrecha.
       hijos: [
@@ -336,7 +341,37 @@ export function calcularLayout(g: Grafo, opciones: OpcionesLayout): Layout {
     });
   }
 
+  repartirCarriles(vinculos);
   return { nodos, vinculos, contadores, limites: limitesDe(nodos, contadores) };
+}
+
+/**
+ * Dos repartos que bajan por el mismo hueco entre columnas y se pisan de altura se
+ * dibujan sobre la misma vertical y se leen como un solo trazo: los tíos de una rama
+ * parecen colgar del abuelo de la otra. Pasa por vecindad y no por parentesco —la mujer
+ * de un hijo vive en la fila de los hijos de otra familia—, así que no se arregla
+ * moviendo a nadie: al que llega después se le corre el trazo a un carril libre del hueco.
+ */
+function repartirCarriles(vinculos: Vinculo[]): void {
+  const porHueco = new Map<number, Vinculo[]>();
+  for (const v of vinculos) {
+    if (v.hijos.length > 0) porHueco.set(v.canal, [...(porHueco.get(v.canal) ?? []), v]);
+  }
+  for (const grupo of porHueco.values()) {
+    const alto = (v: Vinculo): [number, number] => [
+      Math.min(v.y, ...v.hijos.map((h) => h.y)),
+      Math.max(v.y, ...v.hijos.map((h) => h.y)),
+    ];
+    const ocupados: number[] = []; // hasta dónde llega lo dibujado en cada carril
+    for (const v of [...grupo].sort((a, b) => alto(a)[0] - alto(b)[0])) {
+      const [desde, hasta] = alto(v);
+      let carril = ocupados.findIndex((y) => y < desde);
+      if (carril < 0) carril = ocupados.length < CARRILES ? ocupados.length : ocupados.indexOf(Math.min(...ocupados));
+      ocupados[carril] = hasta;
+      // A un lado y al otro del centro del hueco: el trazo no debe acabar bajo un nodo.
+      v.canal += Math.ceil(carril / 2) * SEP_CARRIL * (carril % 2 === 0 ? -1 : 1);
+    }
+  }
 }
 
 /**
