@@ -4,11 +4,16 @@
 
 export interface Persona {
   id: string;
-  name: string;
+  /** El nombre de pila, ya separado de los apellidos por `scripts/fix-datos.py`. */
+  nombre: string;
+  /** Cero, uno o dos. Cuántos se pintan lo decide un interruptor global. */
+  apellidos: string[];
   birth?: number;
   death?: number;
-  rawDates?: string;
-  uncertain?: boolean;
+  /** Cómo le llama la familia, cuando el docx lo apuntaba entre paréntesis. */
+  apodo?: string;
+  /** Qué dato marcaba el docx como dudoso — nunca "esta persona es dudosa". */
+  incierto?: "nombre" | "fechas";
   nota?: string;
   fuentes: string[];
 }

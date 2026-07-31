@@ -20,12 +20,14 @@ export default async function ArbolPage() {
   const data: ArbolData = raw ? JSON.parse(raw) : { people: [], unions: [], roots: {} };
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-4 px-4 py-6">
-      <nav className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold">Árbol genealógico</h1>
+    <div className="flex h-full flex-col">
+      <nav className="flex items-center justify-between border-b border-neutral-200 px-4 py-2">
+        <h1 className="text-[15px] font-semibold">Árbol genealógico</h1>
         <LogoutButton />
       </nav>
-      <Arbol data={data} />
+      <div className="min-h-0 flex-1">
+        <Arbol data={data} />
+      </div>
     </div>
   );
 }

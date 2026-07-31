@@ -8,5 +8,6 @@ export const metadata: Metadata = {
 };
 
 export default function ArbolLayout({ children }: { children: React.ReactNode }) {
-  return <div className="min-h-screen bg-[#fafaf7] text-neutral-900">{children}</div>;
+  // El lienzo se come la pantalla entera: se arrastra, no se hace scroll.
+  return <div className="h-dvh overflow-hidden bg-[#fafaf7] text-neutral-900">{children}</div>;
 }
