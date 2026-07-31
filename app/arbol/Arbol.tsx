@@ -19,7 +19,7 @@ import {
   type Contador,
   type NodoLayout,
 } from "@/lib/arbol/layout";
-import type { ArbolData, Persona } from "@/lib/arbol/tree";
+import type { ArbolData, Persona, Union } from "@/lib/arbol/tree";
 
 const POR_DEFECTO = "p25";
 const ESCALA_MIN = 0.12;
@@ -56,6 +56,8 @@ export default function Arbol({ data }: { data: ArbolData }) {
   const inicial = grafo.personaPorId.has(POR_DEFECTO) ? POR_DEFECTO : (data.people[0]?.id ?? POR_DEFECTO);
   const [puntoDeVista, setPuntoDeVista] = useState(inicial);
   const [abiertas, setAbiertas] = useState<Set<string>>(() => new Set());
+  // Aparte de las abiertas: de estas se ha pedido solo la pareja, no sus hijos.
+  const [parejas, setParejas] = useState<Set<string>>(() => new Set());
   const [todoDesplegado, setTodoDesplegado] = useState(false);
   const [ocultarNoConectados, setOcultarNoConectados] = useState(true);
   const [campos, setCampos] = useState<Campos>(CAMPOS_COMPLETOS);
@@ -75,8 +77,8 @@ export default function Arbol({ data }: { data: ArbolData }) {
   const linaje = useMemo(() => apellidosDe(grafo), [grafo]);
 
   const layout = useMemo(
-    () => calcularLayout(grafo, { puntoDeVista, expandidas, ocultarNoConectados }),
-    [grafo, puntoDeVista, expandidas, ocultarNoConectados],
+    () => calcularLayout(grafo, { puntoDeVista, expandidas, parejas, ocultarNoConectados }),
+    [grafo, puntoDeVista, expandidas, parejas, ocultarNoConectados],
   );
 
   // El hueco disponible manda el tamaño del lienzo. La primera medida se toma a mano
@@ -106,6 +108,7 @@ export default function Arbol({ data }: { data: ArbolData }) {
     if (id === puntoDeVista) {
       // Volver a tocar al que ya lo es es la forma de replegarlo todo.
       setAbiertas(new Set());
+      setParejas(new Set());
       setTodoDesplegado(false);
       return;
     }
@@ -119,19 +122,42 @@ export default function Arbol({ data }: { data: ArbolData }) {
     }
   }
 
-  /** Abrir y cerrar son la misma acción sobre la misma unión: el contador y la pareja. */
-  function alternarRama(unionId: string) {
+  /**
+   * Abrir y cerrar son dos acciones y no una sola con memoria: sobre la misma unión
+   * pueden convivir el contador de los hijos y la manija de la pareja ya traída, y un
+   * único interruptor haría que pulsar el contador cerrase en vez de abrir.
+   */
+  function abrirRama(unionId: string) {
+    setAbiertas((previas) => new Set(todoDesplegado ? expandidas : previas).add(unionId));
+    setTodoDesplegado(false); // a partir de aquí manda lo que se abra a mano
+  }
+
+  function cerrarRama(unionId: string) {
     setAbiertas((previas) => {
       const siguientes = new Set(todoDesplegado ? expandidas : previas);
-      if (!siguientes.delete(unionId)) siguientes.add(unionId);
+      siguientes.delete(unionId);
       return siguientes;
     });
-    setTodoDesplegado(false); // a partir de aquí manda lo que se abra a mano
+    // Se lleva también a la pareja que se hubiera pedido suelta: la manija cierra la
+    // unión entera, y si no, replegarla dejaría media puesta sin nada que la anuncie.
+    setParejas((previas) => {
+      if (!previas.has(unionId)) return previas;
+      const siguientes = new Set(previas);
+      siguientes.delete(unionId);
+      return siguientes;
+    });
+    setTodoDesplegado(false);
+  }
+
+  /** El «+» trae a la pareja y nada más: los hijos siguen detrás de su propio contador. */
+  function mostrarPareja(unionId: string) {
+    setParejas((previas) => new Set(previas).add(unionId));
   }
 
   function reiniciar() {
     setPuntoDeVista(inicial);
     setAbiertas(new Set());
+    setParejas(new Set());
     setTodoDesplegado(false);
     setOcultarNoConectados(true);
     setCampos(CAMPOS_COMPLETOS);
@@ -237,15 +263,14 @@ export default function Arbol({ data }: { data: ArbolData }) {
             />
           ))}
 
+          {/* El reparto arranca en la propia unión y muere en el borde de cada hijo: los
+              tramos que cruzan un nodo quedan tapados por él, y lo que se ve toca a los dos. */}
           {layout.vinculos.map((v) => (
             <g key={v.unionId} stroke="#c4c4c2" strokeWidth={1.5} fill="none">
-              {v.pareja && <LineaDePareja x={v.x} extremos={v.pareja} roto={v.roto} />}
               {v.hijos.map((h, i) => (
-                <path
-                  key={i}
-                  d={`M ${v.x + ANCHO_NODO / 2} ${v.y} H ${(v.x + h.x) / 2} V ${h.y} H ${h.x - ANCHO_NODO / 2}`}
-                />
+                <path key={i} d={`M ${v.x} ${v.y} H ${(v.x + h.x) / 2} V ${h.y} H ${h.x - h.ancho / 2}`} />
               ))}
+              {v.pareja && <TrazoDePareja x={v.x} extremos={v.pareja} tipo={v.tipo} roto={v.roto} />}
             </g>
           ))}
 
@@ -253,7 +278,7 @@ export default function Arbol({ data }: { data: ArbolData }) {
             <ContadorRama
               key={`${c.sentido}:${c.unionId}`}
               contador={c}
-              onAbrir={() => arrastre.current <= ARRASTRE_MINIMO && alternarRama(c.unionId)}
+              onAbrir={() => arrastre.current <= ARRASTRE_MINIMO && abrirRama(c.unionId)}
             />
           ))}
 
@@ -272,6 +297,19 @@ export default function Arbol({ data }: { data: ArbolData }) {
             );
           })}
 
+          {/* Las parejas que no se pintan, asomando por su borde. Como la manija, van
+              después de los nodos: por encima del suyo y por delante para pulsarlas. */}
+          {layout.nodos.flatMap((n) =>
+            n.pendientes.map((p) => (
+              <MasPareja
+                key={`+:${p.unionId}`}
+                x={n.x}
+                y={n.y + (p.arriba ? -ALTO_NODO / 2 : ALTO_NODO / 2)}
+                onAbrir={() => arrastre.current <= ARRASTRE_MINIMO && mostrarPareja(p.unionId)}
+              />
+            )),
+          )}
+
           {/* Lo que se abrió a mano se cierra por donde se abrió: en su propia unión.
               Va después de los nodos para quedar por encima y poder pulsarse. */}
           {layout.vinculos
@@ -281,7 +319,7 @@ export default function Arbol({ data }: { data: ArbolData }) {
                 key={`x:${v.unionId}`}
                 x={v.x + ANCHO_NODO / 2 + 14}
                 y={v.y}
-                onPulsar={() => arrastre.current <= ARRASTRE_MINIMO && alternarRama(v.unionId)}
+                onPulsar={() => arrastre.current <= ARRASTRE_MINIMO && cerrarRama(v.unionId)}
               />
             ))}
         </g>
@@ -302,6 +340,7 @@ export default function Arbol({ data }: { data: ArbolData }) {
         onDesplegarTodo={() => {
           setTodoDesplegado(!todoDesplegado);
           setAbiertas(new Set());
+          setParejas(new Set());
         }}
         onReiniciar={reiniciar}
       />
@@ -379,29 +418,81 @@ function Nodo({
   );
 }
 
-/** Lo que se abre a cada lado del corte de una unión rota. */
-const HUECO_ROTURA = 7;
+const UNIDA = "#8a8a87";
+const GUION = "4 3"; // el trazo de la unión que acabó, rota como el tachón del documento
+// Un corazón de 14×11 centrado en el origen: la marca de los novios que no se casaron.
+// Más pequeño no cabía la grieta del roto sin volverse un borrón a tamaño de lectura.
+const CORAZON = "M 0 5.5 C -7.4 0.3 -7.3 -5.6 -3.8 -5.6 C -1.4 -5.6 0 -3.9 0 -2.7 C 0 -3.9 1.4 -5.6 3.8 -5.6 C 7.3 -5.6 7.4 0.3 0 5.5 Z";
+// La grieta del que se rompió, del escote al pico y en zigzag para que no parezca el trazo.
+const GRIETA = "M 0 -2.7 L 1.7 -0.8 L -1.4 1.2 L 1.2 3.2 L 0 5.5";
+// El trazo muere justo en el corazón, que por arriba es el escote y por abajo el pico.
+const ESCOTE = 2.7;
+const PICO = 5.5;
 
 /**
  * El trazo que une a los dos miembros de una pareja, más marcado que el resto: en una
  * columna apretada es lo único que distingue a un matrimonio de dos vecinos cualesquiera.
- * La unión que acabó se dibuja partida, que es como la tachaba el documento.
+ * Y dice qué unión es: **a rayas si se rompió** y **con un corazón si fueron novios y no
+ * matrimonio** —partido si además se rompió, y entonces el trazo se queda entero: la
+ * rotura ya la cuenta el corazón, y las dos rayas sueltas que quedaban a los lados de él
+ * no se leían como un trazo discontinuo—. El corazón va relleno para comerse el trazo por
+ * dentro y se pinta el último, tapando también el arranque de los hijos.
  */
-function LineaDePareja({ x, extremos, roto }: { x: number; extremos: [number, number]; roto: boolean }) {
+function TrazoDePareja({
+  x,
+  extremos,
+  tipo,
+  roto,
+}: {
+  x: number;
+  extremos: [number, number];
+  tipo: Union["tipo"];
+  roto: boolean;
+}) {
   const [arriba, abajo] = [...extremos].sort((a, b) => a - b);
   const centro = (arriba + abajo) / 2;
-  const tramos = roto
-    ? [
-        [arriba, centro - HUECO_ROTURA],
-        [centro + HUECO_ROTURA, abajo],
-      ]
-    : [[arriba, abajo]];
+  // El corazón se lleva su trozo de trazo: por arriba hasta el escote y por abajo hasta
+  // el pico, que es donde el dibujo lo espera. A la misma distancia quedaba despegado.
+  const tramos: [number, number][] =
+    tipo === "pareja"
+      ? [
+          [arriba, centro - ESCOTE],
+          [centro + PICO, abajo],
+        ]
+      : [[arriba, abajo]];
   return (
     <>
       {tramos.map(([desde, hasta], i) => (
-        <line key={i} x1={x} y1={desde} x2={x} y2={hasta} stroke="#8a8a87" strokeWidth={2.5} />
+        <line
+          key={i}
+          x1={x}
+          y1={desde}
+          x2={x}
+          y2={hasta}
+          stroke={UNIDA}
+          strokeWidth={2.5}
+          strokeDasharray={roto && tipo !== "pareja" ? GUION : undefined}
+        />
       ))}
+      {tipo === "pareja" && (
+        <g transform={`translate(${x} ${centro})`} stroke={UNIDA} fill="#ffffff">
+          <path d={CORAZON} strokeWidth={1.4} />
+          {roto && <path d={GRIETA} strokeWidth={1} fill="none" />}
+        </g>
+      )}
     </>
+  );
+}
+
+/** La pareja que no se pinta: un «+» discreto asomando por el borde en que ella iría. */
+function MasPareja({ x, y, onAbrir }: { x: number; y: number; onAbrir: () => void }) {
+  return (
+    <g onClick={onAbrir} className="cursor-pointer">
+      <circle cx={x} cy={y} r={13} fill="#ffffff" fillOpacity={0} />
+      <circle cx={x} cy={y} r={7.5} fill="#ffffff" stroke="#b6b6b3" />
+      <line x1={x - 3.5} y1={y} x2={x + 3.5} y2={y} stroke="#8a8a87" strokeWidth={1.3} />
+      <line x1={x} y1={y - 3.5} x2={x} y2={y + 3.5} stroke="#8a8a87" strokeWidth={1.3} />
+    </g>
   );
 }
 
@@ -432,6 +523,32 @@ function ContadorRama({ contador, onAbrir }: { contador: Contador; onAbrir: () =
         +{contador.cantidad} {contador.sentido}
       </text>
     </g>
+  );
+}
+
+/** Los cuatro trazos, tal cual salen en el lienzo: es lo único que dice qué significan. */
+const UNIONES: { texto: string; tipo: Union["tipo"]; roto: boolean }[] = [
+  { texto: "Matrimonio", tipo: "matrimonio", roto: false },
+  { texto: "Novios", tipo: "pareja", roto: false },
+  { texto: "Divorcio", tipo: "matrimonio", roto: true },
+  { texto: "Ya no novios", tipo: "pareja", roto: true },
+];
+
+function Leyenda() {
+  return (
+    <div className="flex flex-col gap-1">
+      <p className="px-1 text-[11px] font-semibold tracking-wide text-neutral-400 uppercase">Uniones</p>
+      <div className="grid grid-cols-2 gap-x-2">
+        {UNIONES.map(({ texto, tipo, roto }) => (
+          <div key={texto} className="flex items-center gap-1.5">
+            <svg width={18} height={30} className="shrink-0">
+              <TrazoDePareja x={9} extremos={[2, 28]} tipo={tipo} roto={roto} />
+            </svg>
+            <span className="text-[11px] text-neutral-600">{texto}</span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -519,6 +636,7 @@ function Controles({
             <p className="px-1 text-[11px] font-semibold tracking-wide text-neutral-400 uppercase">Ramas</p>
             {interruptor(!ocultar, "Mostrar no conectadas", () => setOcultar(!ocultar))}
           </div>
+          <Leyenda />
         </div>
       )}
       <div className="flex flex-wrap justify-end gap-2">

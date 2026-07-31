@@ -10,8 +10,8 @@ import type { ArbolData } from "./tree";
 const data: ArbolData = JSON.parse(readFileSync(resolve("seed/arbol.json"), "utf-8"));
 const g = construirGrafo(data);
 const TODAS = new Set(g.unionPorId.keys());
-const layout = (pov: string, expandidas = new Set<string>(), ocultar = false) =>
-  calcularLayout(g, { puntoDeVista: pov, expandidas, ocultarNoConectados: ocultar });
+const layout = (pov: string, expandidas = new Set<string>(), ocultar = false, parejas = new Set<string>()) =>
+  calcularLayout(g, { puntoDeVista: pov, expandidas, parejas, ocultarNoConectados: ocultar });
 
 /** Nadie repetido, nadie fuera de la columna de su generación, nadie encima de otro. */
 function revisar(l: Layout, pov: string, etiqueta: string): void {
@@ -85,6 +85,52 @@ assert.ok(
   layout("p25", new Set([unionPadres, suUnion])).nodos.some((n) => cunada.includes(n.id)),
   "y aparece al abrir la unión del hermano",
 );
+
+// --- La pareja que falta se anuncia en el nodo del que sí está, y no ocupa sitio ---
+const hermano = conHermanos.nodos.find((n) => n.id === "p131")!;
+assert.deepStrictEqual(
+  hermano.pendientes.map((p) => p.unionId),
+  [suUnion],
+  "el hermano lleva la marca de la pareja que no entró",
+);
+
+// Y el «+» trae a la pareja y solo a ella: los hijos siguen tras su contador.
+const sobrinos = g.unionPorId.get(suUnion)!.children;
+assert.ok(sobrinos.length > 0, "la unión del hermano tiene hijos que dejar fuera");
+const conCunada = layout("p25", new Set([unionPadres]), false, new Set([suUnion]));
+assert.ok(conCunada.nodos.some((n) => cunada.includes(n.id)), "el + trae a la pareja");
+assert.ok(!conCunada.nodos.some((n) => sobrinos.includes(n.id)), "…y no a sus hijos");
+assert.ok(
+  conCunada.contadores.some((c) => c.unionId === suUnion && c.sentido === "hijos" && c.cantidad === sobrinos.length),
+  "…que se quedan enteros tras su contador",
+);
+// Y se puede deshacer: la manija sale sobre la unión que trajo a la pareja.
+assert.ok(
+  conCunada.vinculos.find((v) => v.unionId === suUnion)!.colapsable,
+  "la unión de la que se pidió la pareja ofrece plegarse",
+);
+
+// Y no se queda ninguna sin anunciar: si alguien está en el lienzo y la suya no, su nodo
+// la marca. Es lo que hace alcanzable a quien no tuvo hijos, que hasta entonces no tenía
+// contador ninguno del que colgar.
+for (const pov of ["p25", "p26"]) {
+  for (const abierta of g.unionPorId.keys()) {
+    const l = layout(pov, new Set([abierta]));
+    revisar(l, pov, `${pov} con ${abierta} abierta`);
+    const dentro = new Set(l.nodos.map((n) => n.id));
+    for (const n of l.nodos) {
+      for (const uid of g.unionesDePartner.get(n.id) ?? []) {
+        if (g.unionPorId.get(uid)!.partners.every((p) => dentro.has(p))) continue;
+        assert.ok(
+          n.pendientes.some((p) => p.unionId === uid),
+          `${pov} con ${abierta} abierta: la pareja de ${n.id} en ${uid} no se anuncia`,
+        );
+      }
+      // Dos marcas nunca comparten borde: se taparían la una a la otra.
+      assert.strictEqual(new Set(n.pendientes.map((p) => p.arriba)).size, n.pendientes.length, `${n.id}: dos + en el mismo borde`);
+    }
+  }
+}
 
 // Y cerrar deshace exactamente lo que abrió.
 assert.deepStrictEqual(layout("p25", new Set()), inicial, "quitar la unión de las expandidas vuelve al inicio");

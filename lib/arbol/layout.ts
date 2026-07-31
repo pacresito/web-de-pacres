@@ -21,13 +21,15 @@ export const ALTO_NODO = 48;
 export const ANCHO_CONTADOR = 116;
 export const ALTO_CONTADOR = 30;
 export const ANCHO_COLUMNA = 288; // de una generación a la siguiente
-const SEP_PAREJA = 12; // entre los dos miembros de una pareja: por ahí pasa su vínculo
-const SEP_UNIDAD = 28; // entre unidades distintas: más que SEP_PAREJA, para que se note quién va con quién
+const SEP_PAREJA = 26; // entre los dos miembros de una pareja: por ahí pasa su vínculo, y ahí se lee de qué tipo es
+const SEP_UNIDAD = 38; // entre unidades distintas: más que SEP_PAREJA, para que se note quién va con quién
 
 export interface OpcionesLayout {
   puntoDeVista: string;
   /** Uniones abiertas a mano: se pintan enteras, con sus partners y sus hijos. */
   expandidas: Set<string>;
+  /** Uniones de las que solo se ha pedido la pareja: sus hijos siguen tras su contador. */
+  parejas: Set<string>;
   ocultarNoConectados: boolean;
 }
 
@@ -44,20 +46,32 @@ export interface NodoLayout {
   esPuntoDeVista: boolean;
   /** Forma pareja aquí: es de quien los hijos heredan el apellido, y por eso lo lleva. */
   esPareja: boolean;
+  /**
+   * Uniones suyas cuya pareja no se pinta, con el borde por el que asomarlas. No ocupan
+   * sitio —son una marca sobre el propio nodo—, así que no entran en el empaquetado.
+   */
+  pendientes: ParejaPendiente[];
+}
+
+/** La pareja que no está: por qué unión llega y por qué borde del nodo se la llama. */
+export interface ParejaPendiente {
+  unionId: string;
+  arriba: boolean;
 }
 
 /** Una unión pintada: la pareja y el reparto hacia sus hijos visibles. */
 export interface Vinculo {
   unionId: string;
   tipo: Union["tipo"];
-  /** La unión acabó (divorcio o ruptura): se dibuja partida. */
+  /** La unión acabó (divorcio o ruptura): el trazo va a rayas. */
   roto: boolean;
   /** Ancla del reparto: el punto medio de la pareja, o el contador que la sustituye. */
   x: number;
   y: number;
   /** Alturas de los dos miembros, para la línea que los une. */
   pareja?: [number, number];
-  hijos: { x: number; y: number }[];
+  /** Adónde va cada trazo de descendencia y qué ancho tiene lo que hay allí, para tocarlo. */
+  hijos: { x: number; y: number; ancho: number }[];
   /** Se abrió a mano y cerrarla se llevaría gente: es la que ofrece el botón de plegar. */
   colapsable: boolean;
 }
@@ -101,15 +115,17 @@ interface Bloque {
 }
 
 export function calcularLayout(g: Grafo, opciones: OpcionesLayout): Layout {
-  const { puntoDeVista, expandidas, ocultarNoConectados } = opciones;
+  const { puntoDeVista, expandidas, parejas, ocultarNoConectados } = opciones;
   const genPov = g.generacion.get(puntoDeVista);
   if (genPov === undefined) throw new Error(`Punto de vista desconocido: ${puntoDeVista}.`);
   const nivelDe = (pid: string) => genPov - g.generacion.get(pid)!;
 
+  const vacio = new Set<string>();
   const permitidos = ocultarNoConectados ? visibles(g, puntoDeVista) : null;
-  const mostrados = seleccionar(g, puntoDeVista, expandidas, permitidos);
+  const mostrados = seleccionar(g, puntoDeVista, expandidas, parejas, permitidos);
   // Lo que se ve sin abrir nada: plegar una unión que ya estaría aquí no haría nada.
-  const nucleo = expandidas.size > 0 ? seleccionar(g, puntoDeVista, new Set(), permitidos) : mostrados;
+  const pedido = expandidas.size > 0 || parejas.size > 0;
+  const nucleo = pedido ? seleccionar(g, puntoDeVista, vacio, vacio, permitidos) : mostrados;
 
   // --- Unidades: una por unión mostrada, más las personas sueltas y los contadores ---
   const unidades = new Map<string, Unidad>();
@@ -130,15 +146,25 @@ export function calcularLayout(g: Grafo, opciones: OpcionesLayout): Layout {
     unidadDePersona.set(p, id);
   }
 
-  // Cada unión anuncia lo que se deja fuera: los hijos que no ha traído si ya está en
-  // pantalla, o los padres que le faltan a quien sí lo está.
+  // Cada unión anuncia lo que se deja fuera: la pareja que no está y los hijos que no ha
+  // traído si ya está en pantalla, o los padres que le faltan a quien sí lo está.
   const contadorDeHijos = new Map<string, Unidad>(); // unionId → unidad
   const contadorDePadres = new Map<string, Unidad[]>(); // unidadId del primer hijo → unidades
+  const pendienteDePersona = new Map<string, ParejaPendiente[]>(); // el que sí está → sus parejas fuera
   const permitido = (pid: string) => !permitidos || permitidos.has(pid);
 
   for (const u of g.unionPorId.values()) {
     const unidadUnion = unidadDeUnion.get(u.id);
     if (unidadUnion) {
+      // La pareja que falta se anuncia aunque no haya hijos detrás: si no, a quien no los
+      // tuvo no hay forma de sacarlo, que es justo donde más se echa de menos.
+      const falta = u.partners.find((p) => !mostrados.has(p) && permitido(p));
+      if (falta) {
+        const junto = u.partners.find((p) => mostrados.has(p))!;
+        const [primero] = ordenarPareja(u.partners, (p) => g.personaPorId.get(p));
+        const pendiente = { unionId: u.id, arriba: primero === falta };
+        pendienteDePersona.set(junto, [...(pendienteDePersona.get(junto) ?? []), pendiente]);
+      }
       const ocultos = u.children.filter((c) => !mostrados.has(c) && permitido(c));
       if (ocultos.length === 0) continue;
       const id = `c:${u.id}`;
@@ -243,6 +269,7 @@ export function calcularLayout(g: Grafo, opciones: OpcionesLayout): Layout {
         consanguineo: sangre.has(pid),
         esPuntoDeVista: pid === puntoDeVista,
         esPareja: unidad.id.startsWith("u:"),
+        pendientes: bordesLibres(pendienteDePersona.get(pid) ?? [], i, unidad.miembros.length),
       });
     });
   }
@@ -263,9 +290,13 @@ export function calcularLayout(g: Grafo, opciones: OpcionesLayout): Layout {
       x: ancla.x,
       y: ancla.y,
       pareja: partners.length >= 2 ? [partners[0].y, partners[1].y] : undefined,
-      hijos: pendientes ? [...hijos, { x: pendientes.x, y: pendientes.y }] : hijos,
+      // Cada trazo muere en el borde de lo que va a tocar, y una pastilla es más estrecha.
+      hijos: [
+        ...hijos.map((h) => ({ ...h, ancho: ANCHO_NODO })),
+        ...(pendientes ? [{ x: pendientes.x, y: pendientes.y, ancho: ANCHO_CONTADOR }] : []),
+      ],
       colapsable:
-        expandidas.has(u.id) &&
+        (expandidas.has(u.id) || parejas.has(u.id)) &&
         (u.partners.some((p) => !nucleo.has(p)) || u.children.some((c) => mostrados.has(c) && !nucleo.has(c))),
     });
   }
@@ -277,9 +308,16 @@ export function calcularLayout(g: Grafo, opciones: OpcionesLayout): Layout {
  * Qué personas entran: el punto de vista con toda su ascendencia y descendencia, las
  * parejas de todos ellos, la ascendencia de la suya propia, y las uniones abiertas a
  * mano —solo sus partners y sus hijos: la pareja de un hijo llega al abrir la unión de
- * ese hijo, no antes—. Lo demás queda detrás de un contador.
+ * ese hijo, no antes—. De las pedidas por el «+» entra solo la pareja. Lo demás queda
+ * detrás de un contador.
  */
-function seleccionar(g: Grafo, pov: string, expandidas: Set<string>, permitidos: Set<string> | null): Set<string> {
+function seleccionar(
+  g: Grafo,
+  pov: string,
+  expandidas: Set<string>,
+  parejas: Set<string>,
+  permitidos: Set<string> | null,
+): Set<string> {
   const dentro = new Set<string>([pov, ...ascendientes(g, pov), ...descendientes(g, pov)]);
   for (const d of [...dentro]) for (const c of parejaDirecta(g, d)) dentro.add(c);
   for (const pareja of parejaDirecta(g, pov)) for (const a of ascendientes(g, pareja)) dentro.add(a);
@@ -289,13 +327,13 @@ function seleccionar(g: Grafo, pov: string, expandidas: Set<string>, permitidos:
   let cambiado = true;
   while (cambiado) {
     cambiado = false;
-    for (const uid of expandidas) {
+    for (const uid of new Set([...expandidas, ...parejas])) {
       const union = g.unionPorId.get(uid);
       if (!union) continue;
       if (!union.partners.some((p) => dentro.has(p)) && !union.children.some((c) => dentro.has(c))) continue;
       const antes = dentro.size;
       for (const p of union.partners) dentro.add(p);
-      for (const hijo of union.children) dentro.add(hijo);
+      if (expandidas.has(uid)) for (const hijo of union.children) dentro.add(hijo);
       if (dentro.size !== antes) cambiado = true;
     }
   }
@@ -304,6 +342,22 @@ function seleccionar(g: Grafo, pov: string, expandidas: Set<string>, permitidos:
   const filtrado = new Set<string>();
   for (const p of dentro) if (permitidos.has(p)) filtrado.add(p);
   return filtrado;
+}
+
+/**
+ * Cada pareja pendiente sale por el borde en que ella iría, salvo que ese borde ya lo
+ * ocupe la pareja pintada del nodo (el miembro `i` de una unidad de `total`) o el
+ * pendiente anterior: entonces se va al otro, que es el que queda libre.
+ */
+function bordesLibres(pendientes: ParejaPendiente[], i: number, total: number): ParejaPendiente[] {
+  const salida: ParejaPendiente[] = [];
+  for (const { unionId, arriba } of pendientes) {
+    let borde = arriba;
+    if (total > 1 && (borde ? i > 0 : i < total - 1)) borde = !borde;
+    if (salida.some((p) => p.arriba === borde)) borde = !borde;
+    salida.push({ unionId, arriba: borde });
+  }
+  return salida;
 }
 
 const altoDe = (miembros: number) => miembros * ALTO_NODO + (miembros - 1) * SEP_PAREJA;
