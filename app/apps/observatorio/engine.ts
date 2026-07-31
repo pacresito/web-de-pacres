@@ -335,8 +335,8 @@ export function reaparicionSatelite(sat: Satelite, desde: Date): string | null {
 // ─── Luna ─────────────────────────────────────────────────────────────────────
 
 // Lo que dura el espectáculo: la Luna sube un cuarto de grado por minuto, así que en
-// veinte ya se ha despegado del horizonte y deja de ser lo que salías a ver.
-const SALIDA_LUNA_MINUTOS = 20;
+// diez ya se ha despegado del horizonte y deja de ser lo que salías a ver.
+const SALIDA_LUNA_MINUTOS = 10;
 
 /**
  * Con el Sol por encima del horizonte no se ve salir la Luna; con el Sol puesto, sí. Sale de lo

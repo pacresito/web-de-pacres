@@ -567,20 +567,24 @@ function PantallaCompleta({ paso, onCerrar }: { paso: EventoSatelite; onCerrar: 
 function LineaEstado({ cielo }: { cielo: Cielo }) {
   const ahora = useAhora(1000);
   const visibles = cielo.planetas.filter((p) => p.ventana).length;
-  const cabecera = <>↳ location: {cielo.sede} · visibles: <span className="obs-verde">{visibles}</span></>;
+  const cabecera = <>↳ location: <span className="obs-verde">{cielo.sede}</span> · visibles: <span className="obs-verde">{visibles}</span></>;
 
   if (ahora === null) return <p className="obs-estado">{cabecera}</p>;
 
   const enCurso = cielo.citas.find((c) => c.instante <= ahora && ahora <= c.instanteFin);
   const proximo = cielo.citas.find((c) => c.instante > ahora);
+  // El verde marca lo que hay que atender ya: lo que está ocurriendo y lo que entra en 5 minutos.
+  const inminente = proximo !== undefined && proximo.instante - ahora < 5 * 60_000;
 
   return (
     <p className="obs-estado">
       {cabecera} ·{" "}
       {enCurso
-        ? <span className="obs-verde">now: {enCurso.nombre} +{cuenta(ahora - enCurso.instante)}</span>
+        ? <span>now: <span className="obs-verde">{enCurso.nombre} +{cuenta(ahora - enCurso.instante)}</span></span>
         : proximo
-          ? <span>next event: {proximo.nombre} in {cuenta(proximo.instante - ahora)}</span>
+          ? <span>next event: {inminente
+              ? <span className="obs-verde">{proximo.nombre} in {cuenta(proximo.instante - ahora)}</span>
+              : <>{proximo.nombre} in {cuenta(proximo.instante - ahora)}</>}</span>
           : <span>next event: nada previsto</span>}
     </p>
   );
