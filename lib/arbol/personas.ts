@@ -10,56 +10,15 @@ import type { Persona } from "./tree";
 export type ModoApellidos = "nuevos" | 0 | 1 | 2;
 
 /**
- * Nombres de pila de hombre que aparecen en el árbol. Solo sirven para colocar al
- * hombre encima de la mujer en cada pareja: fuera de ahí, el sexo no se usa ni se
- * guarda. La lista es explícita —y no una regla sobre la terminación— porque en
- * español la regla falla justo donde importa (Rocío, Amparo, Socorro son de mujer).
- * Si una pareja sale al revés, el arreglo es añadir el nombre aquí.
- */
-const HOMBRES = new Set([
-  "Aladino", "Alberto", "Alejandro", "Alessandro", "Alfonso", "Alfredo", "Ambrosio", "Antonio", "Aquilino", "Arturo",
-  "Audemio", "Ballan", "Bruno", "Carlos", "Cecilio", "César", "Dani", "David", "Diego", "Edgar", "Eduardo", "Eladio",
-  "Eliseo", "Enrique", "Eric", "Evelino", "Evelio", "Federico", "Feliciano", "Felicísimo", "Fernando", "Froilán",
-  "Félix", "Gabi", "Gabriel", "Gerardo", "Ginés", "Gonzalo", "Goyo", "Guillermo", "Hijo", "Horacio", "Isidoro", "Iván",
-  "Iyán", "Jaime", "Javi", "Javier", "Jero", "Joaquín", "Jorge", "Jose", "José", "Juan", "Julio", "Lucas", "Luis",
-  "Luka", "Manolo", "Manuel", "Mariano", "Marido", "Massimo", "Mateo", "Miguel", "Nacho", "Nazario", "Pablo", "Paco", "Pedro",
-  "Pepe", "Rafa", "Raúl", "Ricardo", "Rober", "Rubén", "Santi", "Sergio", "Señor", "Venancio", "Vicente", "Víctor",
-  "Ladi", "Yago", "Álvaro", "Ángel", "Óscar",
-]);
-
-/**
- * Nombres de mujer que no acaban en -a, que es la regla que cubre a las demás. Sirven
- * para el caso contrario: si a una de los dos se la reconoce mujer, el otro sube aunque
- * su nombre no conste (`Ruth + Sin nombre`).
- */
-const MUJERES = new Set([
-  "Ascensión", "Belén", "Carmen", "Concepción", "Consuelo", "Cruz", "Dolores", "Encarna", "Encarnación", "Flor",
-  "Inés", "Isabel", "Juani", "Leonor", "Lourdes", "Magda", "Mar", "Mari", "Marijose", "Marili", "Marilu", "Mariló",
-  "Marisol", "Mercedes", "Montse", "Mujer", "Nieves", "Nori", "Paz", "Pilar", "Raquel", "Rocío", "Rosario", "Ruth",
-  "Salomé", "Socorro", "Sol", "Soledad", "Vega", "Yoli",
-]);
-
-/** Por el nombre de pila, y solo cuando no hay duda. */
-export function esHombre(p: Persona): boolean {
-  return HOMBRES.has(p.nombre.split(" ")[0]);
-}
-
-export function esMujer(p: Persona): boolean {
-  if (esHombre(p)) return false;
-  const pila = p.nombre.split(" ")[0];
-  return MUJERES.has(pila) || pila.endsWith("a");
-}
-
-/**
- * El hombre arriba y la mujer abajo. Si no se reconoce a ninguno de los dos, se respeta
- * el orden del documento en vez de inventarse un criterio.
+ * El hombre arriba y la mujer abajo. Si ninguno de los dos trae sexo, se respeta el
+ * orden del documento en vez de inventarse un criterio.
  */
 export function ordenarPareja(ids: string[], persona: (id: string) => Persona | undefined): string[] {
   if (ids.length !== 2) return ids;
   const [a, b] = ids.map(persona);
   if (!a || !b) return ids;
-  if (esHombre(a) || esMujer(b)) return ids;
-  if (esHombre(b) || esMujer(a)) return [ids[1], ids[0]];
+  if (a.sexo === "h" || b.sexo === "m") return ids;
+  if (b.sexo === "h" || a.sexo === "m") return [ids[1], ids[0]];
   return ids;
 }
 
@@ -121,8 +80,7 @@ function progenitores(g: Grafo, id: string): [string | undefined, string | undef
   if (!union) return [undefined, undefined];
   const [uno, otro] = ordenarPareja(union.partners, (p) => g.personaPorId.get(p));
   if (otro) return [uno, otro]; // ordenarPareja ya ha puesto al hombre delante
-  const solo = g.personaPorId.get(uno);
-  return solo && esMujer(solo) ? [undefined, uno] : [uno, undefined];
+  return g.personaPorId.get(uno)?.sexo === "m" ? [undefined, uno] : [uno, undefined];
 }
 
 /** El nombre tal como se pinta, con la marca de dónde empieza lo que no consta escrito. */

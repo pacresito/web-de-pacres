@@ -3,26 +3,22 @@ import assert from "assert";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 import { construirGrafo } from "./grafo";
-import { apellidosDe, esHombre, esMujer, etiquetaDe, ordenarPareja } from "./personas";
+import { apellidosDe, etiquetaDe, ordenarPareja } from "./personas";
 import type { ArbolData, Persona } from "./tree";
 
-const persona = (nombre: string, apellidos: string[] = []): Persona => ({ id: nombre, nombre, apellidos, fuentes: [] });
+const persona = (nombre: string, apellidos: string[] = [], sexo?: "h" | "m"): Persona => ({
+  id: nombre,
+  nombre,
+  apellidos,
+  sexo,
+  fuentes: [],
+});
 
-// --- Quién es hombre: por el nombre de pila, y sin regla de terminación ---
-assert.ok(esHombre(persona("Pablo")), "Pablo");
-assert.ok(esHombre(persona("José Manuel")), "el compuesto se mira por el primero");
-assert.ok(esHombre(persona("Marido")), "el marcador es explícito");
-assert.ok(esMujer(persona("Mujer")), "y el otro también");
-assert.ok(!esHombre(persona("Carmen")), "Carmen");
-for (const trampa of ["Rocío", "Amparo", "Socorro", "Consuelo"]) {
-  assert.ok(!esHombre(persona(trampa)), `${trampa} acaba en o y es de mujer`);
-}
-
-// --- La pareja: el hombre arriba, y si hay duda manda el documento ---
+// --- La pareja: el hombre arriba, y si nadie trae sexo manda el documento ---
 const gente = new Map([
-  ["h", persona("Ricardo")],
-  ["m", persona("Lola")],
-  ["mujer", persona("Ruth")],
+  ["h", persona("Ricardo", [], "h")],
+  ["m", persona("Lola", [], "m")],
+  ["mujer", persona("Ruth", [], "m")],
   ["nadie", persona("Sin nombre")],
   ["x", persona("Yodelina")],
   ["z", persona("Binta")],
@@ -31,7 +27,7 @@ const buscar = (id: string) => gente.get(id);
 assert.deepStrictEqual(ordenarPareja(["m", "h"], buscar), ["h", "m"], "el hombre sube");
 assert.deepStrictEqual(ordenarPareja(["h", "m"], buscar), ["h", "m"], "y si ya estaba arriba, se queda");
 assert.deepStrictEqual(ordenarPareja(["mujer", "nadie"], buscar), ["nadie", "mujer"], "si solo se reconoce a la mujer, sube el otro");
-assert.deepStrictEqual(ordenarPareja(["x", "z"], buscar), ["x", "z"], "dos mujeres: manda el documento");
+assert.deepStrictEqual(ordenarPareja(["x", "z"], buscar), ["x", "z"], "sin sexo ninguno: manda el documento");
 assert.deepStrictEqual(ordenarPareja(["m"], buscar), ["m"], "una sola persona no es pareja");
 
 // --- La etiqueta, y dónde empieza lo que no consta escrito ---
@@ -60,15 +56,22 @@ assert.strictEqual(
 // --- Sobre los datos de verdad ---
 const data: ArbolData = JSON.parse(readFileSync(resolve("seed/arbol.json"), "utf-8"));
 const porId = new Map(data.people.map((p) => [p.id, p]));
+// El sexo lo trae todo el mundo menos quien no tiene ni nombre, y así ninguna pareja
+// queda por colocar: dos del mismo sexo no sabríamos cuál subir.
+assert.deepStrictEqual(
+  data.people.filter((p) => !p.sexo).map((p) => p.nombre),
+  ["Sin nombre", "Sin nombre", "Sin nombre", "Sin nombre"],
+  "sin sexo solo los anónimos",
+);
 const parejas = data.unions.filter((u) => u.partners.length === 2);
-const sinResolver = parejas.filter((u) => {
+const sinColocar = parejas.filter((u) => {
   const [a, b] = u.partners.map((id) => porId.get(id)!);
-  return esHombre(a) === esHombre(b) && !esMujer(a) && !esMujer(b);
+  return a.sexo === b.sexo;
 });
 assert.strictEqual(
-  sinResolver.length,
+  sinColocar.length,
   0,
-  `parejas sin colocar: ${sinResolver.map((u) => u.partners.map((p) => porId.get(p)!.nombre).join(" + ")).join(", ")}`,
+  `parejas sin colocar: ${sinColocar.map((u) => u.partners.map((p) => porId.get(p)!.nombre).join(" + ")).join(", ")}`,
 );
 
 // El apellido lo estrena quien lo trae, y sus descendientes ya no lo repiten.

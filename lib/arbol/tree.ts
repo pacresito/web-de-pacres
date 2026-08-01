@@ -8,6 +8,12 @@ export interface Persona {
   nombre: string;
   /** Cero, uno o dos. Cuántos se pintan lo decide un interruptor global. */
   apellidos: string[];
+  /**
+   * Coloca al hombre encima de cada pareja y dice de quién viene cada apellido. No sale
+   * de los Word: lo escribe `scripts/correcciones.py` uno a uno, y solo falta en los
+   * cuatro «Sin nombre».
+   */
+  sexo?: "h" | "m";
   birth?: number;
   death?: number;
   /** Cómo le llama la familia, cuando el docx lo apuntaba entre paréntesis. */
