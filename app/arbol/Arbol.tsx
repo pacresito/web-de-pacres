@@ -224,7 +224,13 @@ export default function Arbol({ data }: { data: ArbolData }) {
     if (!nodo) return;
     const alGirar = (e: WheelEvent) => {
       e.preventDefault();
-      setVista((v) => conZoom(v, Math.exp(-e.deltaY / 400), e.clientX, e.clientY, nodo.getBoundingClientRect()));
+      // El pellizco de trackpad llega como rueda con ctrlKey; la rueda a secas —y el
+      // deslizar con dos dedos— desplaza. El zoom ya lo dan el pellizco y ctrl+rueda.
+      if (e.ctrlKey) {
+        setVista((v) => conZoom(v, Math.exp(-e.deltaY / 400), e.clientX, e.clientY, nodo.getBoundingClientRect()));
+        return;
+      }
+      setVista((v) => ({ ...v, dx: v.dx + e.deltaX / v.escala, dy: v.dy + e.deltaY / v.escala }));
     };
     nodo.addEventListener("wheel", alGirar, { passive: false });
     return () => nodo.removeEventListener("wheel", alGirar);
