@@ -150,12 +150,11 @@ export function calcularLayout(g: Grafo, opciones: OpcionesLayout): Layout {
   if (genPov === undefined) throw new Error(`Punto de vista desconocido: ${puntoDeVista}.`);
   const nivelDe = (pid: string) => genPov - g.generacion.get(pid)!;
 
-  const vacio = new Set<string>();
   const permitidos = ocultarNoConectados ? visibles(g, puntoDeVista) : null;
   const mostrados = seleccionar(g, puntoDeVista, expandidas, parejas, permitidos);
-  // Lo que se ve sin abrir nada: plegar una unión que ya estaría aquí no haría nada.
+  // Plegar una unión que ya estaría aquí no haría nada.
   const pedido = expandidas.size > 0 || parejas.size > 0;
-  const nucleo = pedido ? seleccionar(g, puntoDeVista, vacio, vacio, permitidos) : mostrados;
+  const nucleo = pedido ? nucleoDe(g, puntoDeVista, permitidos) : mostrados;
 
   // --- Unidades: una por unión mostrada, más las personas sueltas y los contadores ---
   const unidades = new Map<string, Unidad>();
@@ -446,6 +445,14 @@ function repartirCarriles(vinculos: Vinculo[]): void {
       v.canal += Math.ceil(carril / 2) * SEP_CARRIL * (carril % 2 === 0 ? -1 : 1);
     }
   }
+}
+
+/**
+ * Lo que se ve sin abrir nada: el suelo al que devuelve plegar, y el punto de partida
+ * desde el que se cuenta qué uniones hay que abrir para llegar hasta alguien.
+ */
+export function nucleoDe(g: Grafo, pov: string, permitidos: Set<string> | null = null): Set<string> {
+  return seleccionar(g, pov, new Set(), new Set(), permitidos);
 }
 
 /**

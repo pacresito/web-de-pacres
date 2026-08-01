@@ -20,12 +20,17 @@ import {
   type Contador,
   type NodoLayout,
 } from "@/lib/arbol/layout";
+import { calcularRecuento, type Fraccion } from "@/lib/arbol/recuento";
 import type { ArbolData, Persona, Union } from "@/lib/arbol/tree";
+import Recuento from "./Recuento";
 
 const POR_DEFECTO = "p25";
 const ESCALA_MIN = 0.12;
 const ESCALA_MAX = 2.2;
 const ARRASTRE_MINIMO = 8; // px: por debajo de esto el gesto es un toque, no un arrastre
+// Señalar una fracción del recuento atenúa el resto del lienzo en vez de encender lo suyo:
+// el verde ya tiene tres escalones y un cuarto tono los emborronaría.
+const ATENUADO = 0.15;
 const INCIERTO = "#c2410c"; // el dato que el documento no daba por seguro
 const HEREDADO = "#9a9a97"; // el apellido que se deduce del árbol y no consta escrito
 
@@ -64,6 +69,9 @@ export default function Arbol({ data }: { data: ArbolData }) {
   const [campos, setCampos] = useState<Campos>(CAMPOS_COMPLETOS);
   const [apellidos, setApellidos] = useState<ModoApellidos>("nuevos");
   const [panelAbierto, setPanelAbierto] = useState(false);
+  const [recuentoAbierto, setRecuentoAbierto] = useState(false);
+  /** Lo que se resalta del lienzo: el numerador de la fracción señalada, o nada. */
+  const [resaltados, setResaltados] = useState<Set<string> | null>(null);
   const [vista, setVista] = useState<Vista>(CENTRADA);
   const [tamano, setTamano] = useState({ w: 0, h: 0 });
 
@@ -80,6 +88,10 @@ export default function Arbol({ data }: { data: ArbolData }) {
   const layout = useMemo(
     () => calcularLayout(grafo, { puntoDeVista, expandidas, parejas, ocultarNoConectados }),
     [grafo, puntoDeVista, expandidas, parejas, ocultarNoConectados],
+  );
+  const cuentas = useMemo(
+    () => calcularRecuento(grafo, { puntoDeVista, ocultarNoConectados }, new Set(layout.nodos.map((n) => n.id))),
+    [grafo, puntoDeVista, ocultarNoConectados, layout],
   );
 
   // El hueco disponible manda el tamaño del lienzo. La primera medida se toma a mano
@@ -128,26 +140,43 @@ export default function Arbol({ data }: { data: ArbolData }) {
    * pueden convivir el contador de los hijos y la manija de la pareja ya traída, y un
    * único interruptor haría que pulsar el contador cerrase en vez de abrir.
    */
-  function abrirRama(unionId: string) {
-    setAbiertas((previas) => new Set(todoDesplegado ? expandidas : previas).add(unionId));
+  function abrirRamas(uniones: string[]) {
+    setAbiertas((previas) => {
+      const siguientes = new Set(todoDesplegado ? expandidas : previas);
+      for (const unionId of uniones) siguientes.add(unionId);
+      return siguientes;
+    });
     setTodoDesplegado(false); // a partir de aquí manda lo que se abra a mano
   }
 
-  function cerrarRama(unionId: string) {
+  function cerrarRamas(uniones: string[]) {
     setAbiertas((previas) => {
       const siguientes = new Set(todoDesplegado ? expandidas : previas);
-      siguientes.delete(unionId);
+      for (const unionId of uniones) siguientes.delete(unionId);
       return siguientes;
     });
     // Se lleva también a la pareja que se hubiera pedido suelta: la manija cierra la
     // unión entera, y si no, replegarla dejaría media puesta sin nada que la anuncie.
     setParejas((previas) => {
-      if (!previas.has(unionId)) return previas;
+      if (!uniones.some((unionId) => previas.has(unionId))) return previas;
       const siguientes = new Set(previas);
-      siguientes.delete(unionId);
+      for (const unionId of uniones) siguientes.delete(unionId);
       return siguientes;
     });
     setTodoDesplegado(false);
+  }
+
+  /**
+   * Una fracción del recuento no se puede desplegar en aislado: para pintar a un primo
+   * segundo hay que abrir antes la unión de sus padres, y así hasta el punto de vista.
+   * Pulsarla trae lo pedido y todo lo que hace falta para llegar; pulsarla ya llena quita
+   * justo esas uniones y la repliega hasta el núcleo, como la manija «−» del lienzo.
+   */
+  function pulsarFraccion({ puestos, alcanzables, uniones }: Fraccion) {
+    setResaltados(null); // lo que acaba de llegar se ve, no se atenúa
+    if (uniones.length === 0) return;
+    if (puestos.length === alcanzables) cerrarRamas(uniones);
+    else abrirRamas(uniones);
   }
 
   /** El «+» trae a la pareja y nada más: los hijos siguen detrás de su propio contador. */
@@ -240,6 +269,8 @@ export default function Arbol({ data }: { data: ArbolData }) {
   const niveles = useMemo(() => [...new Set(layout.nodos.map((n) => n.nivel))].sort((a, b) => a - b), [layout]);
   const generacionPov = grafo.generacion.get(puntoDeVista) ?? 0;
   const { minY, maxY } = layout.limites;
+  /** Con una fracción señalada, todo lo que no es suyo se va al fondo. Sin ella, nada cambia. */
+  const opacidadDe = (id?: string) => (!resaltados || (id && resaltados.has(id)) ? undefined : ATENUADO);
 
   return (
     <div ref={contenedor} className="relative h-full w-full touch-none overflow-hidden bg-neutral-50">
@@ -272,29 +303,33 @@ export default function Arbol({ data }: { data: ArbolData }) {
 
           {/* El reparto arranca en la propia unión y muere en el borde de cada hijo: los
               tramos que cruzan un nodo quedan tapados por él, y lo que se ve toca a los dos. */}
-          {layout.vinculos.map((v) => (
-            <g key={v.unionId} stroke="#c4c4c2" strokeWidth={1.5} fill="none">
-              {v.hijos.map((h, i) => (
-                <path
-                  key={i}
-                  d={
-                    h.recto
-                      ? `M ${v.x} ${v.y} ${horizontal(h.x - h.ancho / 2, v.y, h.saltos)}`
-                      : `M ${v.x} ${v.y} ${horizontal(v.canal, v.y, v.saltos)} V ${h.y} ${horizontal(h.x - h.ancho / 2, h.y, h.saltos)}`
-                  }
-                />
-              ))}
-              {v.pareja && <TrazoDePareja x={v.x} extremos={v.pareja} tipo={v.tipo} roto={v.roto} />}
-            </g>
-          ))}
+          <g opacity={opacidadDe()}>
+            {layout.vinculos.map((v) => (
+              <g key={v.unionId} stroke="#c4c4c2" strokeWidth={1.5} fill="none">
+                {v.hijos.map((h, i) => (
+                  <path
+                    key={i}
+                    d={
+                      h.recto
+                        ? `M ${v.x} ${v.y} ${horizontal(h.x - h.ancho / 2, v.y, h.saltos)}`
+                        : `M ${v.x} ${v.y} ${horizontal(v.canal, v.y, v.saltos)} V ${h.y} ${horizontal(h.x - h.ancho / 2, h.y, h.saltos)}`
+                    }
+                  />
+                ))}
+                {v.pareja && <TrazoDePareja x={v.x} extremos={v.pareja} tipo={v.tipo} roto={v.roto} />}
+              </g>
+            ))}
+          </g>
 
-          {layout.contadores.map((c) => (
-            <ContadorRama
-              key={`${c.sentido}:${c.unionId}`}
-              contador={c}
-              onAbrir={() => arrastre.current <= ARRASTRE_MINIMO && abrirRama(c.unionId)}
-            />
-          ))}
+          <g opacity={opacidadDe()}>
+            {layout.contadores.map((c) => (
+              <ContadorRama
+                key={`${c.sentido}:${c.unionId}`}
+                contador={c}
+                onAbrir={() => arrastre.current <= ARRASTRE_MINIMO && abrirRamas([c.unionId])}
+              />
+            ))}
+          </g>
 
           {layout.nodos.map((n) => {
             const persona = personaPorId.get(n.id);
@@ -306,39 +341,50 @@ export default function Arbol({ data }: { data: ArbolData }) {
                 persona={persona}
                 campos={campos}
                 etiqueta={etiquetaDe(persona, apellidos, linaje.get(n.id)!)}
+                opacidad={opacidadDe(n.id)}
                 onElegir={() => arrastre.current <= ARRASTRE_MINIMO && elegirPuntoDeVista(n.id)}
               />
             );
           })}
 
-          {/* Las parejas que no se pintan, asomando por su borde. Como la manija, van
-              después de los nodos: por encima del suyo y por delante para pulsarlas. */}
-          {layout.nodos.flatMap((n) =>
-            n.pendientes.map((p) => (
-              <MasPareja
-                key={`+:${p.unionId}`}
-                x={n.x}
-                y={n.y + (p.arriba ? -ALTO_NODO / 2 : ALTO_NODO / 2)}
-                onAbrir={() => arrastre.current <= ARRASTRE_MINIMO && mostrarPareja(p.unionId)}
-              />
-            )),
-          )}
+          <g opacity={opacidadDe()}>
+            {/* Las parejas que no se pintan, asomando por su borde. Como la manija, van
+                después de los nodos: por encima del suyo y por delante para pulsarlas. */}
+            {layout.nodos.flatMap((n) =>
+              n.pendientes.map((p) => (
+                <MasPareja
+                  key={`+:${p.unionId}`}
+                  x={n.x}
+                  y={n.y + (p.arriba ? -ALTO_NODO / 2 : ALTO_NODO / 2)}
+                  onAbrir={() => arrastre.current <= ARRASTRE_MINIMO && mostrarPareja(p.unionId)}
+                />
+              )),
+            )}
 
-          {/* Lo que se abrió a mano se cierra por donde se abrió: en su propia unión.
-              Va después de los nodos para quedar por encima y poder pulsarse. */}
-          {layout.vinculos
-            .filter((v) => v.colapsable)
-            .map((v) => (
-              <Manija
-                key={`x:${v.unionId}`}
-                x={v.x + ANCHO_NODO / 2 + 14}
-                y={v.y}
-                onPulsar={() => arrastre.current <= ARRASTRE_MINIMO && cerrarRama(v.unionId)}
-              />
-            ))}
+            {/* Lo que se abrió a mano se cierra por donde se abrió: en su propia unión.
+                Va después de los nodos para quedar por encima y poder pulsarse. */}
+            {layout.vinculos
+              .filter((v) => v.colapsable)
+              .map((v) => (
+                <Manija
+                  key={`x:${v.unionId}`}
+                  x={v.x + ANCHO_NODO / 2 + 14}
+                  y={v.y}
+                  onPulsar={() => arrastre.current <= ARRASTRE_MINIMO && cerrarRamas([v.unionId])}
+                />
+              ))}
+          </g>
         </g>
         )}
       </svg>
+
+      <Recuento
+        cuentas={cuentas}
+        abierto={recuentoAbierto}
+        setAbierto={setRecuentoAbierto}
+        onPulsar={pulsarFraccion}
+        onResaltar={(ids) => setResaltados(ids ? new Set(ids) : null)}
+      />
 
       <Controles
         campos={campos}
@@ -372,12 +418,14 @@ function Nodo({
   persona,
   campos,
   etiqueta,
+  opacidad,
   onElegir,
 }: {
   nodo: NodoLayout;
   persona: Persona;
   campos: Campos;
   etiqueta: Etiqueta;
+  opacidad?: number;
   onElegir: () => void;
 }) {
   const detalle = detalleDe(persona, campos);
@@ -385,7 +433,7 @@ function Nodo({
   const primeraY = nodo.y + (detalle.length > 0 || lineas.length > 1 ? -4 : 5);
   const dudoso = nombreIncierto(persona, campos);
   return (
-    <g onClick={onElegir} className="cursor-pointer">
+    <g onClick={onElegir} opacity={opacidad} className="cursor-pointer">
       <rect
         x={nodo.x - ANCHO_NODO / 2}
         y={nodo.y - ALTO_NODO / 2}
