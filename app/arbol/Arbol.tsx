@@ -16,6 +16,7 @@ import {
   ANCHO_CONTADOR,
   ANCHO_NODO,
   calcularLayout,
+  RADIO_SALTO,
   type Contador,
   type NodoLayout,
 } from "@/lib/arbol/layout";
@@ -268,7 +269,14 @@ export default function Arbol({ data }: { data: ArbolData }) {
           {layout.vinculos.map((v) => (
             <g key={v.unionId} stroke="#c4c4c2" strokeWidth={1.5} fill="none">
               {v.hijos.map((h, i) => (
-                <path key={i} d={`M ${v.x} ${v.y} H ${v.canal} V ${h.y} H ${h.x - h.ancho / 2}`} />
+                <path
+                  key={i}
+                  d={
+                    h.recto
+                      ? `M ${v.x} ${v.y} ${horizontal(h.x - h.ancho / 2, v.y, h.saltos)}`
+                      : `M ${v.x} ${v.y} ${horizontal(v.canal, v.y, v.saltos)} V ${h.y} ${horizontal(h.x - h.ancho / 2, h.y, h.saltos)}`
+                  }
+                />
               ))}
               {v.pareja && <TrazoDePareja x={v.x} extremos={v.pareja} tipo={v.tipo} roto={v.roto} />}
             </g>
@@ -438,6 +446,15 @@ const PICO = 5.5;
  * no se leían como un trazo discontinuo—. El corazón va relleno para comerse el trazo por
  * dentro y se pinta el último, tapando también el arranque de los hijos.
  */
+/**
+ * Un tramo horizontal hacia la derecha que salta por encima de los trazos que se cruza:
+ * sin el saltito, un cruce y una bifurcación hacia dos hijos se dibujan igual.
+ */
+function horizontal(hasta: number, y: number, saltos: number[]): string {
+  const arcos = saltos.map((x) => `H ${x - RADIO_SALTO} A ${RADIO_SALTO} ${RADIO_SALTO} 0 0 1 ${x + RADIO_SALTO} ${y}`);
+  return [...arcos, `H ${hasta}`].join(" ");
+}
+
 function TrazoDePareja({
   x,
   extremos,

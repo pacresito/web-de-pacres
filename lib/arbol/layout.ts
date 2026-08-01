@@ -24,6 +24,8 @@ export const ANCHO_COLUMNA = 288; // de una generación a la siguiente
 const SEP_PAREJA = 26; // entre los dos miembros de una pareja: por ahí pasa su vínculo, y ahí se lee de qué tipo es
 const SEP_UNIDAD = 38; // entre unidades distintas: más que SEP_PAREJA, para que se note quién va con quién
 const SEP_CARRIL = 18; // entre dos repartos que bajan por el mismo hueco
+export const RADIO_SALTO = 5; // el saltito con que un trazo pasa por encima de otro sin tocarlo
+const DESNIVEL_MINIMO = 10; // por debajo de esto el codo del reparto se lee como un defecto, no como un quiebro
 const CARRILES = 3; // los que caben en el hueco (ANCHO_COLUMNA − ANCHO_NODO) sin meterse bajo un nodo
 
 export interface OpcionesLayout {
@@ -74,8 +76,14 @@ export interface Vinculo {
   canal: number;
   /** Alturas de los dos miembros, para la línea que los une. */
   pareja?: [number, number];
-  /** Adónde va cada trazo de descendencia y qué ancho tiene lo que hay allí, para tocarlo. */
-  hijos: { x: number; y: number; ancho: number }[];
+  /** Verticales ajenas que cruza el tramo de salida de la unión, para saltarlas. */
+  saltos: number[];
+  /**
+   * Adónde va cada trazo de descendencia y qué ancho tiene lo que hay allí, para tocarlo.
+   * `recto` va de la unión al hijo de un tirón: el desnivel es tan corto que el codo se
+   * leería como un defecto del dibujo y no como el quiebro que reparte hacia otra altura.
+   */
+  hijos: { x: number; y: number; ancho: number; saltos: number[]; recto: boolean }[];
   /** Se abrió a mano y cerrarla se llevaría gente: es la que ofrece el botón de plegar. */
   colapsable: boolean;
 }
@@ -358,10 +366,13 @@ export function calcularLayout(g: Grafo, opciones: OpcionesLayout): Layout {
       y: ancla.y,
       canal: ancla.x + ANCHO_COLUMNA / 2,
       pareja: partners.length >= 2 ? [partners[0].y, partners[1].y] : undefined,
+      saltos: [],
       // Cada trazo muere en el borde de lo que va a tocar, y una pastilla es más estrecha.
       hijos: [
-        ...hijos.map((h) => ({ ...h, ancho: ANCHO_NODO })),
-        ...(pendientes ? [{ x: pendientes.x, y: pendientes.y, ancho: ANCHO_CONTADOR }] : []),
+        ...hijos.map((h) => ({ ...h, ancho: ANCHO_NODO, saltos: [], recto: recto(h.y, ancla.y) })),
+        ...(pendientes
+          ? [{ x: pendientes.x, y: pendientes.y, ancho: ANCHO_CONTADOR, saltos: [], recto: recto(pendientes.y, ancla.y) }]
+          : []),
       ],
       colapsable:
         (expandidas.has(u.id) || parejas.has(u.id)) &&
@@ -370,7 +381,42 @@ export function calcularLayout(g: Grafo, opciones: OpcionesLayout): Layout {
   }
 
   repartirCarriles(vinculos);
+  marcarSaltos(vinculos);
   return { nodos, vinculos, contadores, limites: limitesDe(nodos, contadores) };
+}
+
+/**
+ * Por dónde un tramo horizontal pasa por delante de la vertical de otro reparto. El dibujo
+ * lo marca con un saltito: sin él, cruzarse y bifurcarse hacia dos hijos se ven igual, y lo
+ * que en un árbol dice quién desciende de quién es justamente la bifurcación.
+ */
+function marcarSaltos(vinculos: Vinculo[]): void {
+  const verticales = vinculos
+    .filter((v) => v.hijos.length > 0)
+    .map((v) => ({
+      de: v,
+      x: v.canal,
+      desde: Math.min(v.y, ...v.hijos.map((h) => h.y)),
+      hasta: Math.max(v.y, ...v.hijos.map((h) => h.y)),
+    }));
+
+  /** Las verticales ajenas que corta el tramo horizontal `y`, de `x1` a `x2`. Sin rozar los extremos. */
+  const cortes = (suyo: Vinculo, y: number, x1: number, x2: number): number[] =>
+    verticales
+      .filter(({ de, x, desde, hasta }) => {
+        if (de === suyo) return false;
+        const dentro = x > Math.min(x1, x2) + RADIO_SALTO && x < Math.max(x1, x2) - RADIO_SALTO;
+        return dentro && desde < y - RADIO_SALTO && hasta > y + RADIO_SALTO;
+      })
+      .map(({ x }) => x)
+      .sort((a, b) => a - b);
+
+  for (const v of vinculos) {
+    v.saltos = cortes(v, v.y, v.x, v.canal);
+    // El tramo recto va a la altura de la unión y no a la del hijo: así lo comparte con la
+    // salida hacia los demás en vez de dibujar un raíl paralelo a tres píxeles.
+    for (const h of v.hijos) h.saltos = cortes(v, h.recto ? v.y : h.y, h.recto ? v.x : v.canal, h.x - h.ancho / 2);
+  }
 }
 
 /**
@@ -476,6 +522,14 @@ function aunLado(contorno: [number, number] | undefined, altura: number, lado: n
   if (lado > 0) return Math.max(0, altura + ALTO_NODO / 2 + SEP_UNIDAD - min);
   return Math.min(0, altura - ALTO_NODO / 2 - SEP_UNIDAD - max);
 }
+
+/**
+ * El hijo cae tan cerca de la altura de la unión que el codo no repartiría nada: el trazo
+ * va derecho a él. Un hijo nunca queda exactamente enfrente —lo que se centra ante sus
+ * padres es el paquete entero de hermanos, no uno de ellos— y ese resto de píxeles se
+ * dibujaba como dos esquinas seguidas.
+ */
+const recto = (hijo: number, union: number) => Math.abs(hijo - union) < DESNIVEL_MINIMO;
 
 const altoDe = (miembros: number) => miembros * ALTO_NODO + (miembros - 1) * SEP_PAREJA;
 const media = (xs: number[]) => xs.reduce((s, x) => s + x, 0) / xs.length;

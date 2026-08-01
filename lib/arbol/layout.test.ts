@@ -96,6 +96,26 @@ for (const pid of ["p25", "p26", "p126", "p131"]) {
   assert.ok(salto < 500, `${pid}: el reparto más largo del arranque mide ${salto.toFixed(0)}px`);
 }
 
+// --- Un desnivel de tres píxeles no es un quiebro, es un defecto ---
+// Nadie cae exactamente enfrente de sus padres, porque lo que se centra ante ellos es el
+// paquete entero de hermanos: ese resto se dibujaba como dos esquinas seguidas.
+const desdeLosPadres = inicial.vinculos.find((v) => v.unionId === g.unionDeHijo.get("p25"))!;
+const haciaElPov = desdeLosPadres.hijos.find((h) => h.y === pov.y)!;
+assert.ok(haciaElPov, "el reparto de los padres alcanza al punto de vista");
+assert.ok(haciaElPov.recto, "…y le llega de un tirón, sin codo");
+for (const v of inicial.vinculos) {
+  for (const h of v.hijos) {
+    assert.ok(h.recto || Math.abs(h.y - v.y) >= 10, `${v.unionId}: codo de ${Math.abs(h.y - v.y).toFixed(1)}px`);
+  }
+}
+
+// Y el dibujo de arranque no lleva ninguno: ahí no se cruza nada.
+assert.strictEqual(
+  inicial.vinculos.reduce((n, v) => n + v.saltos.length + v.hijos.reduce((m, h) => m + h.saltos.length, 0), 0),
+  0,
+  "el arranque se dibuja sin saltos",
+);
+
 // --- Determinista: mismo estado, mismo dibujo ---
 assert.deepStrictEqual(layout("p25"), inicial, "dos cálculos idénticos dan el mismo layout");
 
@@ -165,6 +185,21 @@ for (const pov of ["p25", "p26"]) {
       }
       // Dos marcas nunca comparten borde: se taparían la una a la otra.
       assert.strictEqual(new Set(n.pendientes.map((p) => p.arriba)).size, n.pendientes.length, `${n.id}: dos + en el mismo borde`);
+    }
+    // Cada salto cae sobre la vertical de otro reparto y dentro del tramo que lo lleva:
+    // un arco donde no se cruza nada se leería como un cruce que no existe.
+    const canales = new Set(l.vinculos.filter((v) => v.hijos.length > 0).map((v) => v.canal));
+    for (const v of l.vinculos) {
+      const dentro = (x: number, a: number, b: number) => x > Math.min(a, b) && x < Math.max(a, b);
+      for (const x of v.saltos) {
+        assert.ok(canales.has(x) && dentro(x, v.x, v.canal), `${pov} con ${abierta}: salto suelto en ${v.unionId}`);
+      }
+      for (const h of v.hijos) {
+        for (const x of h.saltos) {
+          const arranca = h.recto ? v.x : v.canal;
+          assert.ok(canales.has(x) && dentro(x, arranca, h.x), `${pov} con ${abierta}: salto suelto en ${v.unionId}`);
+        }
+      }
     }
     // Y dos repartos que bajan por el mismo hueco y se pisan de altura no comparten trazo:
     // sobre la misma vertical se leen como una sola línea, y una rama parece colgar de otra.
