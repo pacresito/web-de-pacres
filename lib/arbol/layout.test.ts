@@ -61,15 +61,23 @@ assert.strictEqual(pareja.length, 2, "el punto de vista y su pareja, en la misma
 assert.notStrictEqual(pareja[0].y, pareja[1].y, "…a distinta altura");
 
 // --- Los hermanos salen en el orden en que vinieron, mire quien mire ---
-// Quien mira es uno de ellos y no por eso se pone el primero de la fila. Vale para toda
-// su línea de subida, que es por la que se ordena el árbol.
+// Quien mira es uno de ellos y no por eso se pone el primero de la fila. Y el que sube con
+// pareja se va al extremo del lado que ocupa en ella, para que la familia de ella quepa
+// debajo sin cruzar a sus hermanos. Vale para toda la línea de subida, que es por la que
+// se ordena el árbol.
 for (const pid of ["p25", "p26", "p126"]) {
-  const donde = new Map(layout(pid, TODAS).nodos.map((n) => [n.id, n.y]));
+  const l = layout(pid, TODAS);
+  const donde = new Map(l.nodos.map((n) => [n.id, n.y]));
   let quien: string | undefined = pid;
   for (let union = g.unionDeHijo.get(quien); union; union = g.unionDeHijo.get(quien!)) {
     const u = g.unionPorId.get(union)!;
-    const alturas = u.children.map((c) => donde.get(c)!).filter((y) => y !== undefined);
-    assert.deepStrictEqual(alturas, [...alturas].sort((a, b) => a - b), `${pid}: los hermanos de ${quien} desordenados`);
+    const suya = donde.get(quien!)!;
+    const hermanos = u.children.filter((c) => c !== quien).map((c) => donde.get(c)!).filter((y) => y !== undefined);
+    assert.deepStrictEqual(hermanos, [...hermanos].sort((a, b) => a - b), `${pid}: los hermanos de ${quien} desordenados`);
+    if (l.nodos.find((n) => n.id === quien)!.esPareja && hermanos.length > 0) {
+      const fuera = suya < Math.min(...hermanos) || suya > Math.max(...hermanos);
+      assert.ok(fuera, `${pid}: ${quien} sube con pareja y se queda en medio de sus hermanos`);
+    }
     [quien] = ordenarPareja(u.partners, (p) => g.personaPorId.get(p));
   }
 }

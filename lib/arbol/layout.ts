@@ -118,6 +118,24 @@ interface Bloque {
   contorno: Map<number, [number, number]>;
 }
 
+/** Una rama de padres: de qué miembro cuelga, hacia dónde se aparta y si por ahí sube la sangre. */
+interface RamaArriba {
+  id: string;
+  ancla: number;
+  lado: number;
+  sube: boolean;
+  /** El miembro del que cuelga comparte unidad con su pareja: entre los dos parten la columna. */
+  enPareja: boolean;
+}
+
+/** El hijo por el que se ha llegado a una unidad, ya colocado con todo lo que trae detrás. */
+interface Entrante {
+  id: string;
+  bloque: Bloque;
+  lado: number;
+  enPareja: boolean;
+}
+
 export function calcularLayout(g: Grafo, opciones: OpcionesLayout): Layout {
   const { puntoDeVista, expandidas, parejas, ocultarNoConectados } = opciones;
   const genPov = g.generacion.get(puntoDeVista);
@@ -195,45 +213,45 @@ export function calcularLayout(g: Grafo, opciones: OpcionesLayout): Layout {
   // a los padres, se les entrega lo ya colocado para que le hagan sitio entre sus hermanos.
   const espina = new Set<string>([puntoDeVista, ...ascendientes(g, puntoDeVista)]);
   /** Ramas que cuelgan de la espina, con la altura y el lado por los que se colgarán al final. */
-  const diferidas: { unidadId: string; ramaId: string; nivel: number; ancla: number; lado: number }[] = [];
+  const diferidas: { unidadId: string; ramaId: string; nivel: number; ancla: number; lado: number; enPareja: boolean }[] = [];
 
   /** Cada rama de ascendencia va a la altura del miembro del que cuelga, y se aparta hacia fuera. */
-  const ramasDeAscendencia = (unidad: Unidad): { id: string; ancla: number; lado: number; sube: boolean }[] => {
-    const salida: { id: string; ancla: number; lado: number; sube: boolean }[] = [];
+  const ramasDeAscendencia = (unidad: Unidad): RamaArriba[] => {
+    const salida: RamaArriba[] = [];
+    const enPareja = unidad.miembros.length > 1;
     unidad.miembros.forEach((m, i) => {
       const uid = g.unionDeHijo.get(m);
       const id = uid && unidadDeUnion.get(uid);
-      if (id) salida.push({ id, sube: espina.has(m), ...sitioDelMiembro(unidad, i) });
+      if (id) salida.push({ id, sube: espina.has(m), enPareja, ...sitioDelMiembro(unidad, i) });
     });
-    for (const c of contadorDePadres.get(unidad.id) ?? []) salida.push({ id: c.id, ancla: 0, lado: 1, sube: false });
+    for (const c of contadorDePadres.get(unidad.id) ?? []) {
+      salida.push({ id: c.id, ancla: 0, lado: 1, sube: false, enPareja: false });
+    }
     return salida;
   };
 
-  const ramasDeDescendencia = (unidad: Unidad): { id: string; contador: boolean }[] => {
-    const salida: { id: string; contador: boolean }[] = [];
+  const ramasDeDescendencia = (unidad: Unidad): string[] => {
+    const salida: string[] = [];
     for (const uid of unidad.uniones) {
-      for (const c of g.unionPorId.get(uid)!.children) {
-        if (mostrados.has(c)) salida.push({ id: unidadDePersona.get(c)!, contador: false });
-      }
+      for (const c of g.unionPorId.get(uid)!.children) if (mostrados.has(c)) salida.push(unidadDePersona.get(c)!);
       const contador = contadorDeHijos.get(uid);
-      if (contador) salida.push({ id: contador.id, contador: true });
+      if (contador) salida.push(contador.id);
     }
     return salida;
   };
 
   /** `entrante` es el bloque ya colocado del hijo por el que se ha llegado: no se recoloca, se le hace sitio. */
-  function colocar(unidad: Unidad, entrante?: { id: string; bloque: Bloque; lado: number }): Bloque {
+  function colocar(unidad: Unidad, entrante?: Entrante): Bloque {
     visitados.add(unidad.id);
     let base = bloqueDeUnidad(unidad);
 
     // Los hijos, todos juntos y centrados enfrente, cada uno en su orden: el que ya venía
-    // colocado ocupa el suyo, y son los demás los que le rodean. El contador de los que
-    // faltan no tiene edad con la que ordenarse, así que va por donde el que ya está
-    // colocado no crece: si no, acaba al fondo de la rama entera y lejos de sus padres.
-    const hijos = ramasDeDescendencia(unidad);
-    if (entrante && entrante.lado < 0) hijos.sort((a, b) => Number(b.contador) - Number(a.contador));
+    // colocado ocupa el suyo y son los demás los que le rodean… salvo que venga con pareja.
+    // Entonces parte la columna en dos, y sus hermanos van enteros al lado que a él le toca
+    // —los del padre arriba, los de la madre abajo—: por el hueco que deja tiene que pasar
+    // el trazo de la familia de ella, y repartirlos a su alrededor lo obliga a cruzarlos.
     const descendencia: Bloque[] = [];
-    for (const { id } of hijos) {
+    for (const id of alLadoQueLeToca(ramasDeDescendencia(unidad), entrante)) {
       if (id === entrante?.id) descendencia.push(entrante.bloque);
       else if (!visitados.has(id)) descendencia.push(colocar(unidades.get(id)!));
     }
@@ -251,29 +269,39 @@ export function calcularLayout(g: Grafo, opciones: OpcionesLayout): Layout {
     const enLaEspina = entrante !== undefined || unidad.miembros.includes(puntoDeVista);
     const ramas = ramasDeAscendencia(unidad);
     const subida = enLaEspina ? ramas.find((r) => r.sube && !visitados.has(r.id)) : undefined;
-    for (const { id, ancla, lado } of ramas) {
+    for (const { id, ancla, lado, enPareja } of ramas) {
       if (visitados.has(id) || id === subida?.id) continue;
       if (enLaEspina) {
-        diferidas.push({ unidadId: unidad.id, ramaId: id, nivel: unidad.nivel + 1, ancla, lado });
+        diferidas.push({ unidadId: unidad.id, ramaId: id, nivel: unidad.nivel + 1, ancla, lado, enPareja });
         continue;
       }
       const bloque = colocar(unidades.get(id)!);
       centrar(bloque, unidad.nivel + 1, ancla);
+      if (enPareja) desplazar(bloque, aunLado(bloque.contorno.get(unidad.nivel), ancla, lado));
       desplazar(bloque, separacionMinima(base, bloque, lado));
       base = fusionar(base, bloque);
     }
     if (!subida) return base;
-    return colocar(unidades.get(subida.id)!, { id: unidad.id, bloque: base, lado: subida.lado });
+    return colocar(unidades.get(subida.id)!, {
+      id: unidad.id,
+      bloque: base,
+      lado: subida.lado,
+      enPareja: subida.enPareja,
+    });
   }
 
   let bloque = colocar(unidades.get(unidadDePersona.get(puntoDeVista)!)!);
   // De la generación más lejana a la más cercana: la rama que cuelga de más arriba elige
   // sitio primero y la de al lado del punto de vista —casi siempre la política— se aparta.
   diferidas.sort((a, b) => b.nivel - a.nivel);
-  for (const { unidadId, ramaId, nivel, ancla, lado } of diferidas) {
+  for (const { unidadId, ramaId, nivel, ancla, lado, enPareja } of diferidas) {
     if (visitados.has(ramaId)) continue;
     const rama = colocar(unidades.get(ramaId)!);
-    centrar(rama, nivel, bloque.y.get(unidadId)! + ancla);
+    const altura = bloque.y.get(unidadId)! + ancla;
+    centrar(rama, nivel, altura);
+    // Aquí el hijo del que cuelga la rama ya está colocado en otro sitio, así que no puede
+    // hacer sitio a sus hermanos desde dentro: se les corre entero al lado que a él le toca.
+    if (enPareja) desplazar(rama, aunLado(rama.contorno.get(nivel - 1), altura, lado));
     desplazar(rama, separacionMinima(bloque, rama, lado));
     bloque = fusionar(bloque, rama);
   }
@@ -428,6 +456,25 @@ function bordesLibres(pendientes: ParejaPendiente[], i: number, total: number): 
     salida.push({ unionId, arriba: borde });
   }
   return salida;
+}
+
+/**
+ * Los hermanos, con el que sube movido al extremo del lado que ocupa en su pareja: arriba
+ * del todo si él va debajo de ella —así los suyos le quedan encima— y al revés si va
+ * encima. Sin pareja no parte nada y se queda donde le toca por edad.
+ */
+function alLadoQueLeToca(ramas: string[], entrante?: Entrante): string[] {
+  if (!entrante?.enPareja) return ramas;
+  const otros = ramas.filter((id) => id !== entrante.id);
+  return entrante.lado < 0 ? [...otros, entrante.id] : [entrante.id, ...otros];
+}
+
+/** Lo que hay que desplazar para dejar la columna `contorno` entera por encima o por debajo de `altura`. */
+function aunLado(contorno: [number, number] | undefined, altura: number, lado: number): number {
+  if (!contorno) return 0;
+  const [min, max] = contorno;
+  if (lado > 0) return Math.max(0, altura + ALTO_NODO / 2 + SEP_UNIDAD - min);
+  return Math.min(0, altura - ALTO_NODO / 2 - SEP_UNIDAD - max);
 }
 
 const altoDe = (miembros: number) => miembros * ALTO_NODO + (miembros - 1) * SEP_PAREJA;
