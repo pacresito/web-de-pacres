@@ -1,24 +1,26 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { mismaEntrada, rankear, type LabDescuento } from "@/lib/farma/prioridades";
+import { Fragment, useMemo, useState } from "react";
+import { mismaEntrada, rankear, sinGenerica, type LabDescuento } from "@/lib/farma/prioridades";
 import Buscador from "./Buscador";
 import { PencilIcon, CheckIcon, XIcon, ConfirmarIcon, PlusIcon, TrashIcon } from "./icons";
 import { MAX_DOSIS } from "./api/dosis";
 
 // Descuentos: la tabla de Prioridades en modo edición. María elige en el autocompletar un
-// principio activo O un laboratorio y ve solo ese; corrige el descuento de cada lab. Tres
+// principio activo O un laboratorio y ve solo ese; corrige el descuento de cada lab. Cuatro
 // filtros de revisión combinables con la selección: "Inferidos" (descuentos que decidimos
-// nosotros, sin validar), "Sólo uno" (principios con un único laboratorio) y "Con dosis"
-// (las entradas con dosis y la genérica de su lab, que es la tarifa a la que excepcionan).
+// nosotros, sin validar), "Sólo uno" (principios con un único laboratorio), "Con dosis"
+// (las entradas con dosis y la genérica de su lab, que es la tarifa a la que excepcionan)
+// y "Sin genérica" (labs cuya tarifa es solo la de unas dosis concretas).
 // El número inferido se pinta sutil; se puede confirmar (dar por bueno) o editar — ambos
-// apagan el flag. De una entrada con dosis se edita también la dosis y se puede borrar la
-// línea entera: las da de alta María a mano, no el pipeline. Mismo dato y orden que
-// Prioridades (reusa rankear); la escritura va al blob farma:descuentos.
+// apagan el flag. La dosis se edita en cualquier fila, y ponerla o quitarla cambia a qué
+// aplica el descuento: eso pide confirmación aparte, porque la fila se va de sitio y el
+// error no se ve luego. Borrar sigue siendo solo de las entradas con dosis. Mismo dato y
+// orden que Prioridades (reusa rankear); la escritura va al blob farma:descuentos.
 
 const LIMITE = 100; // tope de filas pintadas (el universo son miles): filtra o busca para afinar
 
-type Chip = "inferidos" | "uno" | "dosis";
+type Chip = "inferidos" | "uno" | "dosis" | "sin-generica";
 type Fila = ReturnType<typeof rankear>[number] & { principio: string; orden: number };
 
 // Normaliza lo tecleado en un campo de descuento: solo dígitos y un decimal, tope 100.
@@ -49,6 +51,7 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
   const [draft, setDraft] = useState("");
   const [draftDosis, setDraftDosis] = useState("");
   const [borrando, setBorrando] = useState(false); // el borrado de la fila en edición, pendiente de confirmar
+  const [confirmando, setConfirmando] = useState(false); // poner o quitar la dosis, pendiente de confirmar
   const [ocupado, setOcupado] = useState<string | null>(null); // denominación guardando
   const [error, setError] = useState("");
 
@@ -84,6 +87,10 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
   const totalInferidos = useMemo(() => todas.filter((f) => f.inferido).length, [todas]);
   const totalUno = useMemo(() => todas.filter((f) => unLab(data[f.principio])).length, [todas, data]);
   const totalDosis = useMemo(() => todas.filter((f) => f.dosis).length, [todas]);
+  const totalSinGenerica = useMemo(
+    () => todas.filter((f) => sinGenerica(data[f.principio], f.lab)).length,
+    [todas, data],
+  );
 
   const activo = seleccion !== null || chip !== null;
 
@@ -95,6 +102,7 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
     if (chip === "uno") xs = xs.filter((f) => unLab(data[f.principio]));
     if (chip === "inferidos") xs = xs.filter((f) => f.inferido);
     if (chip === "dosis") xs = xs.filter((f) => grupoDosis(data[f.principio], f));
+    if (chip === "sin-generica") xs = xs.filter((f) => sinGenerica(data[f.principio], f.lab));
     // Un principio es clave de `data`; si no, la selección es un laboratorio.
     if (seleccion)
       xs = data[seleccion] ? xs.filter((f) => f.principio === seleccion) : xs.filter((f) => f.lab === seleccion);
@@ -130,17 +138,18 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
     }
   }
 
-  // La dosis solo se edita en las entradas que ya la tienen, y no puede quedar vacía:
-  // sin dosis sería la tarifa genérica del lab, que es otra entrada (se borra, no se vacía).
-  async function guardar(f: Fila) {
+  // Vaciar la dosis de una fila que la tenía, o ponérsela a una que no, cambia a qué
+  // aplica el descuento (ver la cabecera): se pide confirmación una vez, no en el renombre
+  // de una dosis por otra, que es la misma excepción con otro nombre.
+  async function guardar(f: Fila, confirmado = false) {
     const valor = Number(draft);
     if (draft.trim() === "" || !Number.isFinite(valor) || valor < 0 || valor > 100) {
       setError("Descuento entre 0 y 100.");
       return;
     }
-    const nuevaDosis = f.dosis ? draftDosis.trim().toUpperCase() : undefined;
-    if (f.dosis && !nuevaDosis) {
-      setError("La dosis no puede quedar vacía: para quitarla, borra la línea.");
+    const nuevaDosis = draftDosis.trim().toUpperCase() || undefined;
+    if (!confirmado && !f.dosis !== !nuevaDosis) {
+      setConfirmando(true);
       return;
     }
     setOcupado(f.denominacion);
@@ -148,13 +157,13 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
       principio: f.principio,
       lab: f.lab,
       dosis: f.dosis,
-      nuevaDosis,
+      nuevaDosis: nuevaDosis ?? "",
       valor,
     });
     setOcupado(null);
     if (ok) {
       patchLocal(f, { descuento: valor, inferido: false, dosis: nuevaDosis });
-      setEditando(null);
+      cerrarEdicion();
     }
   }
 
@@ -183,12 +192,14 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
     setDraft(f.descuento === null ? "" : String(f.descuento));
     setDraftDosis(f.dosis ?? "");
     setBorrando(false);
+    setConfirmando(false);
     setEditando(f.denominacion);
   }
 
   function cerrarEdicion() {
     setEditando(null);
     setBorrando(false);
+    setConfirmando(false);
   }
 
   // Vacía la búsqueda: quita la selección y remonta el buscador (limpia su campo de texto).
@@ -280,6 +291,10 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
             <span className="fa-chip-box"><CheckIcon /></span>
             Con dosis <span className="fa-chip-count">({totalDosis})</span>
           </button>
+          <button type="button" onClick={() => toggleChip("sin-generica")} className={`fa-chip ${chip === "sin-generica" ? "fa-chip-on" : ""}`}>
+            <span className="fa-chip-box"><CheckIcon /></span>
+            Sin genérica <span className="fa-chip-count">({totalSinGenerica})</span>
+          </button>
         </div>
 
         {anadiendo && (
@@ -370,21 +385,24 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
                 {visibles.map((f) => {
                   const enEdicion = editando === f.denominacion;
                   const trabajando = ocupado === f.denominacion;
+                  const huerfana = sinGenerica(data[f.principio], f.lab);
                   return (
-                    <tr key={f.denominacion} className="fa-row">
+                    <Fragment key={f.denominacion}>
+                    <tr className="fa-row">
                       <td className="fa-td">
-                        {enEdicion && f.dosis ? (
+                        {enEdicion ? (
                           <span className="inline-flex items-center gap-1.5" style={{ color: "var(--fa-ink)" }}>
                             {f.principio}
                             <input
                               type="text"
                               value={draftDosis}
                               maxLength={MAX_DOSIS}
-                              onChange={(e) => setDraftDosis(e.target.value)}
+                              onChange={(e) => { setDraftDosis(e.target.value); setConfirmando(false); }}
                               onKeyDown={(e) => {
-                                if (e.key === "Enter") guardar(f);
+                                if (e.key === "Enter") guardar(f, confirmando);
                                 else if (e.key === "Escape") cerrarEdicion();
                               }}
+                              placeholder="sin dosis"
                               className="fa-edit-input"
                               style={{ width: 130, textAlign: "left" }}
                             />
@@ -396,6 +414,7 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
                               {f.denominacion}
                             </span>
                             {f.inferido && <span className="fa-tag ml-1.5">inferido</span>}
+                            {huerfana && <span className="fa-tag ml-1.5">sin genérica</span>}
                           </>
                         )}
                       </td>
@@ -407,7 +426,7 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
                             value={draft}
                             onChange={(e) => setDraft(sanearDescuento(e.target.value))}
                             onKeyDown={(e) => {
-                              if (e.key === "Enter") guardar(f);
+                              if (e.key === "Enter") guardar(f, confirmando);
                               else if (e.key === "Escape") cerrarEdicion();
                             }}
                             autoFocus
@@ -438,7 +457,7 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
                                 <TrashIcon />
                               </button>
                             )}
-                            <button type="button" title="Guardar" onClick={() => guardar(f)} disabled={trabajando} className="fa-iconbtn fa-iconbtn-accept">
+                            <button type="button" title="Guardar" onClick={() => guardar(f, confirmando)} disabled={trabajando} className="fa-iconbtn fa-iconbtn-accept">
                               {trabajando ? "…" : <CheckIcon />}
                             </button>
                             <button type="button" title="Cancelar" onClick={cerrarEdicion} disabled={trabajando} className="fa-iconbtn fa-iconbtn-cancel">
@@ -459,6 +478,19 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
                         )}
                       </td>
                     </tr>
+                    {enEdicion && confirmando && (
+                      <tr>
+                        <td colSpan={4} className="fa-td">
+                          <div className="fa-note-amber px-3 py-2 text-[12.5px] leading-[1.5]">
+                            {f.dosis
+                              ? `Al quitar la dosis, este descuento pasará a valer para TODAS las presentaciones de ${f.lab} en ${f.principio}, no solo para ${f.dosis}.`
+                              : `${f.lab} dejará de tener descuento general en ${f.principio}: solo lo tendrá en la dosis «${draftDosis.trim().toUpperCase()}». Las demás presentaciones se quedan sin descuento hasta que las añadas.`}
+                            {" "}Pulsa ✓ otra vez para guardarlo.
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    </Fragment>
                   );
                 })}
               </tbody>

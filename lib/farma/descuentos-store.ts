@@ -13,6 +13,17 @@ export async function cargarDescuentos(): Promise<Descuentos> {
   return raw ? JSON.parse(raw) : {};
 }
 
+// Cuántos estados anteriores se guardan. El blob son ~50 KB: diez caben de sobra y
+// cubren una tarde de edición, que es el plazo en el que se detecta un error.
+const HISTORIAL = 10;
+
+/** Guarda el blob apilando el anterior en el historial: toda escritura es deshacible
+ *  (restaurar = `LINDEX` + `SET`). Pasa por aquí todo lo que muta descuentos. */
 export async function guardarDescuentos(data: Descuentos): Promise<void> {
+  const previo = await redis.get(KEYS.descuentos());
+  if (previo) {
+    await redis.lpush(KEYS.descuentosHistorial(), previo);
+    await redis.ltrim(KEYS.descuentosHistorial(), 0, HISTORIAL - 1);
+  }
   await redis.set(KEYS.descuentos(), JSON.stringify(data));
 }

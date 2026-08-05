@@ -1,6 +1,6 @@
 // Test de lógica pura: `npx tsx lib/farma/prioridades.test.ts`. Fuera del build.
 import assert from "assert";
-import { mismaEntrada, rankear } from "./prioridades";
+import { mismaEntrada, rankear, sinGenerica } from "./prioridades";
 
 // Orden por descuento desc, denominación = principio + lab.
 const r = rankear("AMLODIPINO", [
@@ -79,5 +79,17 @@ assert.ok(!mismaEntrada(generica, "NORMON", "0,5 MG"));
 assert.ok(mismaEntrada(media, "NORMON", "0,5 MG"));
 assert.ok(!mismaEntrada(media, "NORMON"));
 assert.ok(!mismaEntrada(media, "KERN", "0,5 MG"));
+
+// Un lab solo con dosis no tiene tarifa general; el que tiene genérica sí, aunque además
+// excepcione alguna dosis. Un lab que no está en el principio tampoco tiene tarifa.
+const conYSin = [
+  { lab: "NORMON", descuento: 30, inferido: false, dosis: "COMP" },
+  { lab: "NORMON", descuento: 70, inferido: false, dosis: "CAPS" },
+  { lab: "KERN", descuento: 65, inferido: false },
+  { lab: "KERN", descuento: 10, inferido: false, dosis: "600X20" },
+];
+assert.ok(sinGenerica(conYSin, "NORMON"));
+assert.ok(!sinGenerica(conYSin, "KERN"));
+assert.ok(sinGenerica(conYSin, "CINFA"));
 
 console.log("prioridades.test.ts ✓");

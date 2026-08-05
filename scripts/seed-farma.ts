@@ -20,17 +20,19 @@ async function main(): Promise<void> {
 
   const redis = new Redis(url);
 
-  // Descuentos (Prioridades). Una vez sembrado, el blob lo gobierna María (lo edita
-  // desde la pantalla Descuentos, incl. altas de labs). Por eso NO se sobrescribe: se
-  // MERGEA — el blob existente gana en todo conflicto y el seed solo AÑADE lo que falta
-  // (principios nuevos como los que mete Pablo por el pipeline, o labs nuevos de un
-  // principio). Así un re-seed nunca borra lo que María validó ni sus altas.
+  // Descuentos (Prioridades). Una vez sembrado, el blob lo gobierna María (lo edita desde
+  // la pantalla Descuentos, incl. altas de labs). Por eso el seed solo puede AÑADIR
+  // PRINCIPIOS ENTEROS que no existan: dentro de uno que ya existe no escribe nada, ni
+  // siquiera un lab que falte. Lo contrario resucitaría lo que María quitó —convertir la
+  // genérica de un lab en una dosis la deja "faltando", y el seed la repondría con la
+  // tarifa vieja, en silencio y contra lo que ella acaba de corregir—. Los labs que se
+  // omiten se listan: si alguno es real, entra a mano con `aplicar-descuentos.ts`.
   const seedDesc = JSON.parse(readFileSync(resolve("seed/prioridades.json"), "utf-8")) as Descuentos;
   const rawPrev = await redis.get(KEYS.descuentos(dev));
   const prev: Descuentos = rawPrev ? JSON.parse(rawPrev) : {};
   const merged: Descuentos = { ...prev };
   let nuevosPrincipios = 0;
-  let nuevosLabs = 0;
+  const omitidos: string[] = [];
   for (const [principio, labs] of Object.entries(seedDesc)) {
     const existentes = merged[principio];
     if (!existentes) {
@@ -38,18 +40,20 @@ async function main(): Promise<void> {
       nuevosPrincipios++;
       continue;
     }
-    // Solo cuentan las entradas genéricas: el seed nunca trae dosis (canon.py las quita),
-    // así que un lab que en prod solo tenga una excepción por dosis sigue necesitando la suya.
-    const presentes = new Set(existentes.filter((l) => !l.dosis).map((l) => l.lab));
-    const anadir = labs.filter((l) => !presentes.has(l.lab));
-    if (anadir.length) merged[principio] = [...existentes, ...anadir];
-    nuevosLabs += anadir.length;
+    // Cuenta cualquier entrada del lab, con dosis o sin ella: un lab que solo tiene dosis
+    // no es un lab que falte, es uno cuya tarifa general se decidió que no existe.
+    const presentes = new Set(existentes.map((l) => l.lab));
+    for (const l of labs) if (!presentes.has(l.lab)) omitidos.push(`${principio} / ${l.lab}`);
   }
   await redis.set(KEYS.descuentos(dev), JSON.stringify(merged));
   console.log(
     `Descuentos en ${KEYS.descuentos(dev)}: ${Object.keys(merged).length} principios ` +
-      `(+${nuevosPrincipios} principios, +${nuevosLabs} labs nuevos; el resto se conserva).`,
+      `(+${nuevosPrincipios} principios nuevos; el resto se conserva intacto).`,
   );
+  if (omitidos.length) {
+    console.log(`  ${omitidos.length} labs del seed NO añadidos (el principio ya existía):`);
+    for (const o of omitidos) console.log(`    ${o}`);
+  }
 
   // Ventas: ref:pedidos (blob) + stmin (hash). El StMín lo gobierna María a partir de
   // aquí; solo se siembran los > 0 (StMín 0 = nunca rotura, no aporta a Pedidos ni a Mínimos).

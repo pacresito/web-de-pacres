@@ -2,9 +2,12 @@
 // el flag `inferido` (pasa a validado por María). Única admin = María, sin
 // concurrencia → read-modify-write directo del blob. Solo admin.
 //
-// `nuevaDosis` renombra la dosis de la entrada, que es media identidad: solo para entradas
-// que YA la tienen y nunca a vacío —quitarle la dosis a una entrada la convertiría en la
-// tarifa genérica del lab, que es otra cosa; para eso se borra la entrada—.
+// `nuevaDosis` cambia la dosis de la entrada, que es media identidad, y en los dos
+// sentidos: ponérsela a una genérica (la tarifa resultó ser la de una presentación, no la
+// del lab) y quitársela (era general después de todo). Ese es el ÚNICO camino entre las
+// dos formas: borrar y volver a crear deja un hueco en el que el mostrador lee una tarifa
+// que ya se sabe falsa. La colisión con otra entrada del mismo lab la corta el 409 —que al
+// quitar la dosis es justo el guard de "solo si el lab no tiene ya genérica"—.
 import { getRol } from "../../auth";
 import { cargarDescuentos, guardarDescuentos } from "@/lib/farma/descuentos-store";
 import { mismaEntrada } from "@/lib/farma/prioridades";
@@ -44,14 +47,19 @@ export async function POST(request: Request): Promise<Response> {
     if (nuevaDosis instanceof Error) {
       return Response.json({ error: nuevaDosis.message }, { status: 400 });
     }
-    if (!fila.dosis || !nuevaDosis) {
-      return Response.json({ error: "La dosis no se puede quitar ni añadir al editar" }, { status: 400 });
-    }
-    if (nuevaDosis !== fila.dosis) {
+    if ((nuevaDosis ?? "") !== (fila.dosis ?? "")) {
       if (data[principio].some((l) => mismaEntrada(l, lab, nuevaDosis))) {
-        return Response.json({ error: "Ese laboratorio ya tiene esa dosis" }, { status: 409 });
+        return Response.json(
+          {
+            error: nuevaDosis
+              ? "Ese laboratorio ya tiene esa dosis"
+              : "Ese laboratorio ya tiene una tarifa general en este principio",
+          },
+          { status: 409 },
+        );
       }
-      fila.dosis = nuevaDosis;
+      if (nuevaDosis) fila.dosis = nuevaDosis;
+      else delete fila.dosis;
     }
   }
 

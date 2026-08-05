@@ -11,6 +11,11 @@ export const KEYS = {
   // Descuentos por (principio, lab). Ya no es ref estático: es el dato MUTABLE que
   // edita María (pantalla Descuentos). Prioridades lo lee y rankea.
   descuentos: (dev: boolean = esDev) => farmaKey("farma:descuentos", dev),
+  // Historial de `descuentos`: lista con los N blobs anteriores (el 0 es el último). La
+  // escribe `guardarDescuentos` antes de pisar el dato; es el deshacer de un error de
+  // María, que ahora puede cambiar la identidad de una entrada (convertir una genérica en
+  // dosis) y eso no se ve al mirar la tabla.
+  descuentosHistorial: (dev: boolean = esDev) => farmaKey("farma:descuentos:historial", dev),
 
   // Referencia de Ventas (estática, sembrada): blob JSON codigo → {denominacion, lab, consumoMensual}.
   refPedidos: (dev: boolean = esDev) => farmaKey("farma:ref:pedidos", dev),

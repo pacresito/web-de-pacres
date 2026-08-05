@@ -26,6 +26,14 @@ export function mismaEntrada(l: LabDescuento, lab: string, dosis?: string): bool
   return l.lab === lab && (l.dosis ?? "") === (dosis ?? "");
 }
 
+/** Un lab sin entrada genérica en el principio: sus dosis no excepcionan una tarifa, SON
+ *  toda su tarifa —fuera de ellas no tiene descuento conocido—. Pasa cuando la genérica
+ *  resultó ser una dosis con otro nombre (PREGABALINA NORMON: el descuento era el de
+ *  cápsulas) y se convirtió. Lo pinta Descuentos; el rankeo ya las deja en su puesto. */
+export function sinGenerica(labs: LabDescuento[], lab: string): boolean {
+  return !labs.some((l) => l.lab === lab && !l.dosis);
+}
+
 const denominar = (principio: string, l: LabDescuento): string =>
   l.dosis ? `${principio} ${l.dosis} ${l.lab}` : `${principio} ${l.lab}`;
 
