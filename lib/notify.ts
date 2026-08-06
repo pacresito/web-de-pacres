@@ -11,6 +11,17 @@ export interface SendEmailOptions {
   html?: string;
 }
 
+const ENTIDADES: Record<string, string> = {
+  "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+};
+
+/** Escapa un dato que llega de fuera antes de meterlo en el HTML de un email. Aquí no
+ *  hay React que escape por nosotros: lo que teclea quien registra una partida entra
+ *  crudo en el marcado. */
+export function escapeHtml(s: string): string {
+  return s.replace(/[&<>"']/g, (c) => ENTIDADES[c]);
+}
+
 /**
  * Envía un email de notificación. En desarrollo no envía nada (mantiene la
  * lógica original de los routes). Nunca lanza: registra el error y sigue, para

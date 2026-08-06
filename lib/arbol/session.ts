@@ -2,16 +2,12 @@
 // Caduca a los 90 días (dato de consulta familiar, no hace falta re-login semanal
 // como en farma). Módulo puro (solo crypto): testeable con `npx tsx`.
 import { createHmac, timingSafeEqual } from "crypto";
+import { comparaSecreto } from "../secreto";
 
 const DIAS_VALIDEZ = 90;
 
-/** Compara la clave en tiempo constante (mismo patrón que lib/registro.ts). */
 export function passwordOk(input: unknown): boolean {
-  const pass = process.env.ARBOL_PASSWORD;
-  if (!pass || typeof input !== "string") return false;
-  const a = Buffer.from(input);
-  const b = Buffer.from(pass);
-  return a.length === b.length && timingSafeEqual(a, b);
+  return comparaSecreto(input, process.env.ARBOL_PASSWORD);
 }
 
 function secret(): string {

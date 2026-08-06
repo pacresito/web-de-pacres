@@ -1,4 +1,5 @@
 import { handleRegistroGet, handleRegistroPost, computeWinner, isStringArray, isNumberMatrix } from "@/lib/registro";
+import { escapeHtml } from "@/lib/notify";
 
 const KEY =
   process.env.NODE_ENV === "development"
@@ -36,7 +37,7 @@ function buildEmailHtml(record: CastleRecord) {
   const headerCols = players
     .map((p) => {
       const hl = !isEmpate && p === winner;
-      return `<th style="padding:10px 14px;text-align:center;color:#fff;background:${hl ? "#fbbf24" : "#78b5d0"};border-left:1px solid rgba(0,0,0,0.2);">${p}</th>`;
+      return `<th style="padding:10px 14px;text-align:center;color:#fff;background:${hl ? "#fbbf24" : "#78b5d0"};border-left:1px solid rgba(0,0,0,0.2);">${escapeHtml(p)}</th>`;
     })
     .join("");
 
@@ -67,7 +68,7 @@ function buildEmailHtml(record: CastleRecord) {
 <body style="margin:0;padding:24px;background:#EBF5FB;font-family:sans-serif;">
   <div style="max-width:480px;margin:0 auto;">
     <h1 style="text-align:center;color:#1e3a5f;font-size:22px;margin:0 0 4px;">🏰 Castle Combo</h1>
-    <p style="text-align:center;color:#4d91c0;font-size:14px;margin:0 0 20px;">${date}</p>
+    <p style="text-align:center;color:#4d91c0;font-size:14px;margin:0 0 20px;">${escapeHtml(date)}</p>
     <table style="width:100%;border-collapse:collapse;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.15);">
       <thead>
         <tr style="background:#4d91c0;border-bottom:4px solid rgba(255,255,255,0.85);">
@@ -83,7 +84,7 @@ function buildEmailHtml(record: CastleRecord) {
         </tr>
       </tbody>
     </table>
-    <p style="text-align:center;margin-top:16px;font-weight:bold;color:#fff;background:#fbbf24;padding:10px;border-radius:8px;">🏆 ${winner}</p>
+    <p style="text-align:center;margin-top:16px;font-weight:bold;color:#fff;background:#fbbf24;padding:10px;border-radius:8px;">🏆 ${escapeHtml(winner)}</p>
   </div>
 </body>
 </html>`;
@@ -98,8 +99,8 @@ export async function POST(request: Request) {
     key: KEY,
     ratePrefix: "ratelimit:registro:castle-combo:",
     requiredFields: ["date", "players", "scores"],
-    validate: ({ players, scores }) =>
-      isStringArray(players) && isNumberMatrix(scores) && scores.length === players.length,
+    validate: ({ date, players, scores }) =>
+      typeof date === "string" && isStringArray(players) && isNumberMatrix(scores) && scores.length === players.length,
     buildRecord: ({ date, players, scores }) => {
       const totals = scores.map((ps) => ps.reduce((a, b) => a + b, 0));
       return { date, players, scores, totals, winner: computeWinner(players, totals) };

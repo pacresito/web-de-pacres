@@ -1,18 +1,12 @@
 // Login de /farma: compara la clave con las dos env (admin/user), con rate limit
 // por IP (reutiliza el de registros) y cookie firmada con el rol. Acertar resetea
 // el contador, como en lib/registro.ts.
-import { timingSafeEqual } from "crypto";
 import { checkRateLimit, clearRateLimit, clientIp } from "@/lib/registro";
+import { comparaSecreto } from "@/lib/secreto";
 import { signSession, type Rol } from "@/lib/farma/session";
 
 const RATE_PREFIX = process.env.NODE_ENV === "development" ? "farma:login-dev:" : "farma:login:";
 const PROD = process.env.NODE_ENV === "production";
-
-function match(input: string, expected: string | undefined): boolean {
-  if (!expected) return false;
-  const a = Buffer.from(input), b = Buffer.from(expected);
-  return a.length === b.length && timingSafeEqual(a, b);
-}
 
 export async function POST(request: Request): Promise<Response> {
   const ip = clientIp(request);
@@ -33,8 +27,8 @@ export async function POST(request: Request): Promise<Response> {
 
   // Admin: comparación estricta. Usuario: normalizada (la teclea María a diario).
   let rol: Rol | null = null;
-  if (match(pw, process.env.FARMA_ADMIN_PASSWORD)) rol = "admin";
-  else if (match(pw.toLowerCase(), process.env.FARMA_USER_PASSWORD?.toLowerCase())) rol = "user";
+  if (comparaSecreto(pw, process.env.FARMA_ADMIN_PASSWORD)) rol = "admin";
+  else if (comparaSecreto(pw.toLowerCase(), process.env.FARMA_USER_PASSWORD?.toLowerCase())) rol = "user";
   if (!rol) {
     return Response.json({ error: "Clave incorrecta" }, { status: 401 });
   }

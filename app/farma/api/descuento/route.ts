@@ -9,7 +9,7 @@
 // que ya se sabe falsa. La colisión con otra entrada del mismo lab la corta el 409 —que al
 // quitar la dosis es justo el guard de "solo si el lab no tiene ya genérica"—.
 import { getRol } from "../../auth";
-import { cargarDescuentos, guardarDescuentos } from "@/lib/farma/descuentos-store";
+import { cargarDescuentos, guardarDescuentos, labsDe } from "@/lib/farma/descuentos-store";
 import { mismaEntrada } from "@/lib/farma/prioridades";
 import { leerDosis } from "../dosis";
 
@@ -37,8 +37,9 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const data = await cargarDescuentos();
-  const fila = data[principio]?.find((l) => mismaEntrada(l, lab, dosis));
-  if (!fila) {
+  const labs = labsDe(data, principio);
+  const fila = labs?.find((l) => mismaEntrada(l, lab, dosis));
+  if (!labs || !fila) {
     return Response.json({ error: "Principio o lab desconocido" }, { status: 404 });
   }
 
@@ -48,7 +49,7 @@ export async function POST(request: Request): Promise<Response> {
       return Response.json({ error: nuevaDosis.message }, { status: 400 });
     }
     if ((nuevaDosis ?? "") !== (fila.dosis ?? "")) {
-      if (data[principio].some((l) => mismaEntrada(l, lab, nuevaDosis))) {
+      if (labs.some((l) => mismaEntrada(l, lab, nuevaDosis))) {
         return Response.json(
           {
             error: nuevaDosis

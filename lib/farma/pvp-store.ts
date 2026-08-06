@@ -3,14 +3,17 @@
 // puros y viven en `pvp.ts` (mismo patrón que pedidos.ts / pedidos-store.ts).
 import redis from "@/lib/redis";
 import { KEYS } from "./keys";
-import type { BorradorEtiquetas, LineaPvp, RegistroPvp } from "./pvp";
+import { leerRegistroPvp, type BorradorEtiquetas, type LineaPvp } from "./pvp";
 
 // Artículos cuyo PVP cambió y siguen pendientes de reetiquetar, ordenados por
 // denominación (es lo que María lee para localizarlos).
 export async function cargarPvpPendientes(): Promise<LineaPvp[]> {
   const pvp = await redis.hgetall(KEYS.pvp());
   return Object.entries(pvp)
-    .map(([codigo, v]) => ({ codigo, ...(JSON.parse(v) as RegistroPvp) }))
+    .flatMap(([codigo, v]) => {
+      const reg = leerRegistroPvp(codigo, v);
+      return reg ? [{ codigo, ...reg }] : [];
+    })
     .filter((r) => r.pending)
     .sort((a, b) => a.denominacion.localeCompare(b.denominacion, "es"));
 }

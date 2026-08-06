@@ -1,7 +1,7 @@
 // Da por bueno un descuento inferido sin cambiar su valor: apaga `inferido` en el
 // blob farma:descuentos. Mismo read-modify-write que /descuento. Solo admin.
 import { getRol } from "../../../auth";
-import { cargarDescuentos, guardarDescuentos } from "@/lib/farma/descuentos-store";
+import { cargarDescuentos, guardarDescuentos, labsDe } from "@/lib/farma/descuentos-store";
 import { mismaEntrada } from "@/lib/farma/prioridades";
 import { leerDosis } from "../../dosis";
 
@@ -26,7 +26,7 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const data = await cargarDescuentos();
-  const fila = data[principio]?.find((l) => mismaEntrada(l, lab, dosis));
+  const fila = labsDe(data, principio)?.find((l) => mismaEntrada(l, lab, dosis));
   if (!fila) {
     return Response.json({ error: "Principio o lab desconocido" }, { status: 404 });
   }

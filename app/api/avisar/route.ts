@@ -31,7 +31,12 @@ export async function POST(request: Request) {
     return new Response("Firma inválida", { status: 401 });
   }
 
-  const { texto } = JSON.parse(cuerpo);
+  let texto: unknown;
+  try {
+    ({ texto } = JSON.parse(cuerpo));
+  } catch {
+    return Response.json({ error: "JSON inválido" }, { status: 400 });
+  }
   if (typeof texto !== "string" || texto.length === 0) {
     return Response.json({ error: "Aviso sin texto" }, { status: 400 });
   }

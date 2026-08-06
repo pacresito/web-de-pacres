@@ -13,6 +13,14 @@ export async function cargarDescuentos(): Promise<Descuentos> {
   return raw ? JSON.parse(raw) : {};
 }
 
+/** Los labs de un principio, o undefined si no existe. El principio viene del cuerpo de
+ *  la petición, así que el acceso pasa por `Object.hasOwn`: `data["__proto__"]` devuelve
+ *  Object.prototype, que es truthy y no tiene `.find` — el guard de la ruta no lo corta
+ *  y revienta con un 500. Toda lectura por principio entra por aquí. */
+export function labsDe(data: Descuentos, principio: string): LabDescuento[] | undefined {
+  return Object.hasOwn(data, principio) ? data[principio] : undefined;
+}
+
 // Cuántos estados anteriores se guardan. El blob son ~50 KB: diez caben de sobra y
 // cubren una tarde de edición, que es el plazo en el que se detecta un error.
 const HISTORIAL = 10;

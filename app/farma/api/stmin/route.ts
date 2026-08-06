@@ -30,7 +30,9 @@ export async function POST(request: Request): Promise<Response> {
 
   const refRaw = await redis.get(KEYS.refPedidos());
   const ref: RefPedidos = refRaw ? JSON.parse(refRaw) : {};
-  const conocido = codigo in ref || (await redis.hexists(KEYS.stock(), codigo));
+  // Object.hasOwn y no `in`: `in` recorre el prototipo, así que "toString" o "constructor"
+  // pasarían por artículo conocido y acabarían escritos en el hash.
+  const conocido = Object.hasOwn(ref, codigo) || (await redis.hexists(KEYS.stock(), codigo));
   if (!conocido) {
     return Response.json({ error: "Artículo desconocido" }, { status: 404 });
   }

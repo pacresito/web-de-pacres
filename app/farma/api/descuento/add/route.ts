@@ -6,7 +6,7 @@
 // viene a cubrir—. No crea principios ni laboratorios nuevos —eso es tarea de Pablo por el
 // pipeline—. Única admin = María, sin concurrencia → read-modify-write directo. Solo admin.
 import { getRol } from "../../../auth";
-import { cargarDescuentos, guardarDescuentos } from "@/lib/farma/descuentos-store";
+import { cargarDescuentos, guardarDescuentos, labsDe } from "@/lib/farma/descuentos-store";
 import { mismaEntrada } from "@/lib/farma/prioridades";
 import { leerDosis } from "../../dosis";
 
@@ -34,7 +34,7 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const data = await cargarDescuentos();
-  const labsDelPrincipio = data[principio];
+  const labsDelPrincipio = labsDe(data, principio);
   if (!labsDelPrincipio) {
     return Response.json({ error: "El principio activo no existe" }, { status: 404 });
   }

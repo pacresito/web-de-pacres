@@ -3,7 +3,7 @@
 // genéricas vienen del pipeline y el seed las repondría —para bajar un lab de un principio,
 // la tarifa nueva—. Única admin = María, sin concurrencia → read-modify-write. Solo admin.
 import { getRol } from "../../../auth";
-import { cargarDescuentos, guardarDescuentos } from "@/lib/farma/descuentos-store";
+import { cargarDescuentos, guardarDescuentos, labsDe } from "@/lib/farma/descuentos-store";
 import { mismaEntrada } from "@/lib/farma/prioridades";
 import { leerDosis } from "../../dosis";
 
@@ -31,9 +31,9 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const data = await cargarDescuentos();
-  const labs = data[principio];
+  const labs = labsDe(data, principio);
   const i = labs?.findIndex((l) => mismaEntrada(l, lab, dosis)) ?? -1;
-  if (i === -1) {
+  if (!labs || i === -1) {
     return Response.json({ error: "Principio o lab desconocido" }, { status: 404 });
   }
 

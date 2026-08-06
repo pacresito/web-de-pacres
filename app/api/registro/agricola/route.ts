@@ -1,4 +1,5 @@
 import { handleRegistroGet, handleRegistroPost, computeWinner, isStringArray, isNumberMatrix } from "@/lib/registro";
+import { escapeHtml } from "@/lib/notify";
 import {
   type Animal,
   ANIMALS,
@@ -49,7 +50,7 @@ function buildEmailHtml(record: AgricolaRecord) {
   const headerCols = players
     .map((p) => {
       const hl = !isEmpate && p === winner;
-      return `<th style="padding:10px 14px;text-align:center;color:${hl ? C.cream : "#e8d5b0"};background:${hl ? C.amber : "rgba(255,255,255,0.07)"};border-left:1px solid rgba(255,255,255,0.12);">${p}</th>`;
+      return `<th style="padding:10px 14px;text-align:center;color:${hl ? C.cream : "#e8d5b0"};background:${hl ? C.amber : "rgba(255,255,255,0.07)"};border-left:1px solid rgba(255,255,255,0.12);">${escapeHtml(p)}</th>`;
     })
     .join("");
 
@@ -127,7 +128,7 @@ function buildEmailHtml(record: AgricolaRecord) {
 <body style="margin:0;padding:24px;background:#FAF3E0;font-family:serif;">
   <div style="max-width:400px;margin:0 auto;">
     <h1 style="text-align:center;color:${C.headerBg};font-size:22px;margin:0 0 2px;letter-spacing:0.04em;">Agrícola</h1>
-    <p style="text-align:center;color:${C.amber};font-size:13px;margin:0 0 20px;">All Creatures Big and Small · ${date}</p>
+    <p style="text-align:center;color:${C.amber};font-size:13px;margin:0 0 20px;">All Creatures Big and Small · ${escapeHtml(date)}</p>
     <table style="width:100%;border-collapse:collapse;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.15);border:2px solid ${C.headerBg};">
       <thead>
         <tr style="background:${C.headerBg};border-bottom:3px solid ${C.amber};">
@@ -139,7 +140,7 @@ function buildEmailHtml(record: AgricolaRecord) {
         ${bodyRows}
       </tbody>
     </table>
-    <p style="text-align:center;margin-top:16px;font-weight:bold;color:${C.cream};background:${C.amber};padding:10px;border-radius:8px;">🏆 ${winner}</p>
+    <p style="text-align:center;margin-top:16px;font-weight:bold;color:${C.cream};background:${C.amber};padding:10px;border-radius:8px;">🏆 ${escapeHtml(winner)}</p>
   </div>
 </body>
 </html>`;
@@ -154,8 +155,8 @@ export async function POST(request: Request) {
     key: KEY,
     ratePrefix: "ratelimit:registro:agricola:",
     requiredFields: ["date", "players", "inputs"],
-    validate: ({ players, inputs }) =>
-      isStringArray(players) && isNumberMatrix(inputs) && inputs.length === players.length,
+    validate: ({ date, players, inputs }) =>
+      typeof date === "string" && isStringArray(players) && isNumberMatrix(inputs) && inputs.length === players.length,
     // El servidor es la fuente única de finals y winner: los recalcula desde los
     // inputs en vez de confiar en los que manda el cliente.
     buildRecord: ({ date, players, inputs }) => {

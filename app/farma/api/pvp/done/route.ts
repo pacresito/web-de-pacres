@@ -4,7 +4,7 @@
 import { getRol } from "../../../auth";
 import redis from "@/lib/redis";
 import { KEYS } from "@/lib/farma/keys";
-import type { RegistroPvp } from "@/lib/farma/pvp";
+import { leerRegistroPvp } from "@/lib/farma/pvp";
 
 export async function POST(request: Request): Promise<Response> {
   if ((await getRol()) !== "admin") {
@@ -27,8 +27,8 @@ export async function POST(request: Request): Promise<Response> {
   for (const codigo of codigos) {
     const raw = pvp[codigo];
     if (!raw) continue;
-    const reg = JSON.parse(raw) as RegistroPvp;
-    if (!reg.pending) continue;
+    const reg = leerRegistroPvp(codigo, raw);
+    if (!reg?.pending) continue;
     pipe.hset(KEYS.pvp(), codigo, JSON.stringify({ ...reg, pending: false }));
     limpiados++;
   }

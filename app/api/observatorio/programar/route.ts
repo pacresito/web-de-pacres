@@ -2,6 +2,7 @@ import { Client } from "@upstash/qstash";
 import { avisosDeLaNoche } from "@/app/apps/observatorio/avisos";
 import { cielo } from "@/app/apps/observatorio/engine";
 import { cargarSatelites } from "@/app/apps/observatorio/tle";
+import { comparaSecreto } from "@/lib/secreto";
 
 // El cron diario del observatorio: a mediodía calcula la noche que viene y deja programado en
 // QStash un aviso por evento.
@@ -15,8 +16,8 @@ import { cargarSatelites } from "@/app/apps/observatorio/tle";
 // ni un TLE que descargar, ni una efeméride que resolver.
 
 export async function GET(request: Request) {
-  const secreto = process.env.CRON_SECRET;
-  if (!secreto || request.headers.get("authorization") !== `Bearer ${secreto}`) {
+  const cabecera = request.headers.get("authorization") ?? "";
+  if (!comparaSecreto(cabecera.replace("Bearer ", ""), process.env.CRON_SECRET)) {
     return new Response("No autorizado", { status: 401 });
   }
 

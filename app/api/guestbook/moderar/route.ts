@@ -1,7 +1,12 @@
 import { listAll, setHidden, remove } from "@/lib/guestbook";
-import { passwordOk, checkRateLimit, clearRateLimit, clientIp } from "@/lib/registro";
+import { checkRateLimit, clearRateLimit, clientIp } from "@/lib/registro";
+import { comparaSecreto } from "@/lib/secreto";
 
 const RATE_PREFIX = "ratelimit:guestbook:moderar:";
+
+// Clave propia, no la de los registros de partidas: aquella circula entre quien juega y
+// esto borra firmas con un HDEL que no tiene deshacer.
+const passwordOk = (input: unknown) => comparaSecreto(input, process.env.GUESTBOOK_PASSWORD);
 
 /**
  * Dos caminos:

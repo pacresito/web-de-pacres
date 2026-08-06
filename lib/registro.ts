@@ -1,29 +1,25 @@
 // Lógica compartida entre los registros de partidas (Castle Combo y Agrícola).
-import { timingSafeEqual } from "crypto";
 import redis from "./redis";
+import { comparaSecreto } from "./secreto";
 import { sendEmail, type SendEmailOptions } from "./notify";
 
-const PASSWORD = process.env.REGISTRO_PASSWORD;
-
-/** Compara la clave en tiempo constante. Si difieren las longitudes devuelve false
- *  sin comparar (timingSafeEqual lanzaría); como el largo de PASSWORD es fijo, esto
- *  no reintroduce timing explotable. */
+/** Clave de escritura de los registros de partidas. La moderación del guestbook tiene
+ *  la suya (GUESTBOOK_PASSWORD): esta circula entre quien juega. */
 export function passwordOk(input: unknown): boolean {
-  if (!PASSWORD || typeof input !== "string") return false;
-  const a = Buffer.from(input);
-  const b = Buffer.from(PASSWORD);
-  return a.length === b.length && timingSafeEqual(a, b);
+  return comparaSecreto(input, process.env.REGISTRO_PASSWORD);
 }
 const PAGE_SIZE = 10;
 const RATE_MAX = 5;
 const RATE_TTL = 1800; // 30 min
 
-/** Incrementa el contador por IP y devuelve si sigue dentro del límite. */
+/** Incrementa el contador por IP y devuelve si sigue dentro del límite.
+ *  El SET NX fija la caducidad al crear la clave, en la misma transacción que el INCR:
+ *  con un EXPIRE aparte, un fallo entre los dos comandos deja la clave sin TTL y esa IP
+ *  bloqueada para siempre. */
 export async function checkRateLimit(ip: string, prefix: string, max = RATE_MAX, ttl = RATE_TTL): Promise<boolean> {
   const key = prefix + ip;
-  const attempts = await redis.incr(key);
-  if (attempts === 1) await redis.expire(key, ttl);
-  return attempts <= max;
+  const res = await redis.multi().set(key, 0, "EX", ttl, "NX").incr(key).exec();
+  return Number(res?.[1]?.[1] ?? max + 1) <= max;
 }
 
 export async function clearRateLimit(ip: string, prefix: string): Promise<void> {
@@ -52,7 +48,7 @@ export function isNumberMatrix(v: unknown): v is number[][] {
   );
 }
 
-export interface PaginatedList<T> {
+interface PaginatedList<T> {
   records: T[];
   total: number;
   page: number;
@@ -60,7 +56,7 @@ export interface PaginatedList<T> {
 }
 
 /** Lista paginada (más reciente primero) de una lista Redis de records JSON. */
-export async function paginatedList<T>(key: string, page: number): Promise<PaginatedList<T>> {
+async function paginatedList<T>(key: string, page: number): Promise<PaginatedList<T>> {
   const total = await redis.llen(key);
   const start = (page - 1) * PAGE_SIZE;
   const raw = await redis.lrange(key, start, start + PAGE_SIZE - 1);
@@ -82,8 +78,10 @@ export async function paginatedList<T>(key: string, page: number): Promise<Pagin
  *  Público a propósito: alimenta el historial de partidas dentro de la calc. El dato
  *  (nombres de pila + puntuaciones) no es sensible; solo el POST (escritura) pide clave. */
 export async function handleRegistroGet(request: Request, key: string): Promise<Response> {
-  const page = Math.max(1, parseInt(new URL(request.url).searchParams.get("page") ?? "1", 10));
-  return Response.json(await paginatedList(key, page));
+  // `?page=abc` da NaN, y Math.max(1, NaN) es NaN, no 1: sin este guard el NaN llega a
+  // LRANGE y Redis responde error, que sale como un 500 en una ruta pública.
+  const n = parseInt(new URL(request.url).searchParams.get("page") ?? "1", 10);
+  return Response.json(await paginatedList(key, Number.isFinite(n) ? Math.max(1, n) : 1));
 }
 
 interface RegistroBody {

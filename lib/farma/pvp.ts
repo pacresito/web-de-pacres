@@ -17,6 +17,18 @@ export interface LineaPvp extends RegistroPvp {
   codigo: string;
 }
 
+/** Lee un registro del hash. `null` si el valor está corrupto: una línea ilegible entre
+ *  miles no puede tumbar la pantalla de PVP entera ni el marcado masivo, pero tampoco
+ *  desaparecer sin dejar rastro en los logs. */
+export function leerRegistroPvp(codigo: string, raw: string): RegistroPvp | null {
+  try {
+    return JSON.parse(raw) as RegistroPvp;
+  } catch {
+    console.error(`farma:pvp — registro ilegible en ${codigo}, se salta`);
+    return null;
+  }
+}
+
 // Borrador de etiquetado que persiste entre recargas (blob farma:pvp-etiquetas):
 // tamaño y cantidad por línea (clave = código real de un pendiente o id de una línea
 // manual) y las líneas manuales que María añade. Tipos aquí (puros) para compartirlos

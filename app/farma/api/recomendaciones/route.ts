@@ -31,11 +31,13 @@ export async function POST(request: Request): Promise<Response> {
 
   const refRaw = await redis.get(KEYS.refPedidos());
   const ref: RefPedidos = refRaw ? JSON.parse(refRaw) : {};
-  if (!(codigo in ref)) {
+  // Object.hasOwn y no `in`: `in` recorre el prototipo, así que "toString" o "constructor"
+  // pasarían por artículo conocido.
+  if (!Object.hasOwn(ref, codigo)) {
     return Response.json({ error: "Artículo desconocido" }, { status: 404 });
   }
   const lista = [...new Set(recomendados as string[])].filter((c) => c !== codigo);
-  if (lista.some((c) => !(c in ref))) {
+  if (lista.some((c) => !Object.hasOwn(ref, c))) {
     return Response.json({ error: "Recomendado desconocido" }, { status: 404 });
   }
 
