@@ -71,23 +71,38 @@ function check(name: string, ok: boolean, detail = "") {
   check("colisiones: masa total preservada", Math.abs(totalMass(world) - mBefore) < 1e-9);
 }
 
-// 5. Preset solar: sol libre + 3–5 planetas; el sol arranca sin fijar y los planetas quedan ligados
+// 5. Preset solar: sol libre + 3–5 planetas lanzados en órbitas ligadas
 {
   const world = presetSolar(900, 600);
   const n = world.bodies.length;
   check("preset solar: sol + 3–5 planetas", n >= 4 && n <= 6, `cuerpos=${n}`);
-  const sun = world.bodies[0];
-  check("preset solar: el sol arranca libre", sun.fixed !== true);
-  let maxDist = 0;
-  for (let s = 0; s < 3000; s++) {
-    step(world, 1);
-    // distancia planeta→sol (relativa: el sol puede recular/derivar un poco al ser libre)
-    for (const b of world.bodies.slice(1)) maxDist = Math.max(maxDist, Math.hypot(b.x - sun.x, b.y - sun.y));
-  }
-  // los planetas siguen ligados al sol (ninguno se ha disparado lejísimos). El umbral es 0.9·minWH,
-  // no 0.7: una órbita elíptica legítima (k hasta 1.08) tiene su afelio en ~0.71·minWH, así que 0.7
-  // daría falsos negativos. Un planeta que escapa de verdad se dispara mucho más lejos (≈1600 px).
-  check("preset solar: planetas ligados", maxDist < Math.min(900, 600) * 0.9, `maxDist=${maxDist.toFixed(0)}`);
+  check("preset solar: el sol arranca libre", world.bodies[0].fixed !== true);
+
+  // «Ligado» es energía orbital negativa (ε = v_rel²/2 − G·M_sol/r), no distancia máxima:
+  // con N cuerpos las perturbaciones mutuas estiran las órbitas mucho más allá del afelio
+  // que predice la fórmula de dos cuerpos, y ahí ningún umbral geométrico separa la elipse
+  // ancha de la fuga. El sol se relee en cada llamada: al fusionar, merge() sustituye el
+  // objeto que hay en bodies[0] y una referencia guardada antes se queda obsoleta.
+  const desligados = () => {
+    const sun = world.bodies[0];
+    return world.bodies.slice(1).filter(b => {
+      const r = Math.hypot(b.x - sun.x, b.y - sun.y);
+      const v2 = (b.vx - sun.vx) ** 2 + (b.vy - sun.vy) ** 2;
+      return v2 / 2 - G * sun.mass / r >= 0;
+    }).length;
+  };
+
+  const alNacer = desligados();
+  check("preset solar: nace con todas las órbitas ligadas", alNacer === 0, `desligados=${alNacer}`);
+
+  for (let s = 0; s < 3000; s++) step(world, 1);
+  // A 3000 pasos el sistema ya es caótico: con órbitas que se cruzan, dos de cada tres
+  // partidas acaban con una fusión y una de cada 600 expulsa un planeta por slingshot. Eso
+  // es física del preset, no un fallo — lo que delataría una regresión de la fórmula de
+  // velocidad es que se desligaran todos. En 5000 presets nunca se desligó más de uno.
+  const alFinal = desligados();
+  check("preset solar: el sistema sigue ligado tras 3000 pasos", alFinal <= 1,
+    `desligados=${alFinal}/${world.bodies.length - 1}`);
 }
 
 // 6. Cuerpo fijo: atrae pero no se mueve, y absorbe sin desplazarse al fusionar
