@@ -1,6 +1,6 @@
 // Formateo de datos de /fuera-de-ruta compartido entre índice, ficha y planificador
 // (puro, sin React).
-import type { Comida, Rango, Ritmo } from "./tipos";
+import type { Rango } from "./tipos";
 
 // Decimales en estilo español: 2.5 → "2,5".
 const num = (n: number) => String(n).replace(".", ",");
@@ -20,17 +20,3 @@ export const duracion = (min: number) => {
 // la guía y los popups del mapa del viaje — una sola forma de construir la URL.
 export const mapsHref = (gps: [number, number]) =>
   `https://www.google.com/maps/search/?api=1&query=${gps[0]},${gps[1]}`;
-
-// Cómo se llaman de cara al usuario los valores del encargo. Viven aquí porque los
-// dicen dos pantallas (el planificador y «Mis viajes») y tienen que coincidir.
-export const RITMO_TEXTO: Record<Ritmo, string> = {
-  relajado: "tranquilo",
-  medio: "normal",
-  activo: "a tope",
-};
-export const COMIDA_TEXTO: Record<Comida, string> = {
-  restaurante: "restaurante",
-  picnic: "picnic",
-  "da-igual": "da igual",
-  "solo-cena": "solo cena",
-};

@@ -45,7 +45,7 @@ export function anchoDeCarta(vw: number): number {
 function rad(deg: number) { return (deg * Math.PI) / 180; }
 
 /** La banda de una carta, como rectángulo girado en coordenadas del escenario. */
-export function obbBanda(s: Spot, { cardW, cardH }: Caja): Obb {
+function obbBanda(s: Spot, { cardW, cardH }: Caja): Obb {
   const cos = Math.cos(rad(s.r)), sin = Math.sin(rad(s.r));
   const bw = (BANDA.x1 - BANDA.x0) * cardW / 100, bh = (BANDA.y1 - BANDA.y0) * cardH / 142;
   // centro de la banda en el sistema de la carta, medido desde su centro
@@ -59,7 +59,7 @@ export function obbBanda(s: Spot, { cardW, cardH }: Caja): Obb {
 }
 
 /** La carta entera, con el margen de seguridad. */
-export function obbCarta(s: Spot, { cardW, cardH }: Caja): Obb {
+function obbCarta(s: Spot, { cardW, cardH }: Caja): Obb {
   return {
     cx: s.x + cardW / 2, cy: s.y + cardH / 2,
     ex: cardW / 2 + MARGEN, ey: cardH / 2 + MARGEN,

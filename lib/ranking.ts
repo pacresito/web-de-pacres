@@ -14,7 +14,7 @@ export interface RankEntry {
 export const VALID_SPEEDS = ["slow", "normal", "fast"] as const;
 export type SpeedLevel = (typeof VALID_SPEEDS)[number];
 
-export function parseEntry(member: string, score: number): RankEntry {
+function parseEntry(member: string, score: number): RankEntry {
   try {
     const parsed = JSON.parse(member);
     return { name: parsed.name ?? member, date: parsed.date ?? null, score, speed: parsed.speed ?? null };
@@ -33,7 +33,7 @@ export async function readRanking(key: string, start = 0, stop = -1): Promise<Ra
   return out;
 }
 
-export interface Slot {
+interface Slot {
   member: string;
   score: number;
   entry: RankEntry;

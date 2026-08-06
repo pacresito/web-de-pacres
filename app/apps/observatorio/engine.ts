@@ -20,7 +20,7 @@ import {
 
 export const ALTITUD_MINIMA = 15;      // grados sobre el horizonte
 export const MAGNITUD_MAXIMA = -1;     // solo satélites más brillantes que esto
-export const SOL_MAXIMO = -6;          // el observador necesita el Sol bajo el horizonte
+const SOL_MAXIMO = -6;          // el observador necesita el Sol bajo el horizonte
 export const DIAS = 7;                 // horizonte de la previsión
 export const MARGEN_MINUTOS = 10;      // un evento sigue en la lista hasta 10 min después
 const PASO_SEGUNDOS = 30;              // muestreo de la órbita
@@ -156,7 +156,7 @@ export type Satelite = { nombre: string; magEstandar: number; tle1: string; tle2
  * crepúsculo se define geométricamente, y así este criterio coincide con el
  * anochecer que busca `SearchAltitude` para los planetas.
  */
-export function altitudSolar(fecha: Date, obs: Astro.Observer): number {
+function altitudSolar(fecha: Date, obs: Astro.Observer): number {
   const eq = Astro.Equator(Astro.Body.Sun, fecha, obs, true, true);
   return Astro.Horizon(fecha, obs, eq.ra, eq.dec).altitude;
 }
@@ -326,7 +326,7 @@ const DIAS_REAPARICION_SAT = 30;
  * Se llama solo cuando no tiene ningún paso en la semana: es un barrido caro comparado con
  * el de la agenda.
  */
-export function reaparicionSatelite(sat: Satelite, desde: Date): string | null {
+function reaparicionSatelite(sat: Satelite, desde: Date): string | null {
   const hasta = new Date(desde.getTime() + DIAS_REAPARICION_SAT * 24 * 3600 * 1000);
   const [primero] = pasosVisibles(sat, desde, hasta, PASO_BUSQUEDA_SEGUNDOS);
   return primero ? diaYMes(new Date(primero.instante)) : null;
@@ -352,7 +352,7 @@ const SALIDA_LUNA_MINUTOS = 10;
  * doce grados por encima del horizonte. Un disco recién salido tampoco compite con un planeta ya
  * alto —en el horizonte pierde dos magnitudes largas de extinción—.
  */
-export const SOL_MAXIMO_LUNA = 0;
+const SOL_MAXIMO_LUNA = 0;
 
 /** Salidas de la Luna que caen dentro del marco de la noche — el espectáculo desde La Manga. */
 export function salidasDeLuna(desde: Date, hasta: Date): EventoLuna[] {

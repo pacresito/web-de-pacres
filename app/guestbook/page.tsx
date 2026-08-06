@@ -28,8 +28,8 @@ function Firmas({ entries }: { entries: PublicEntry[] }) {
   }
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      {entries.map((e, i) => (
-        <div key={i} style={{ borderLeft: "3px solid var(--t-accent)", paddingLeft: 14 }}>
+      {entries.map((e) => (
+        <div key={`${e.date}-${e.name}-${e.message}`} style={{ borderLeft: "3px solid var(--t-accent)", paddingLeft: 14 }}>
           <p style={{ fontFamily: SANS, fontSize: 14.5, color: "var(--t-ink)", lineHeight: 1.5, margin: 0, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
             {e.message}
           </p>

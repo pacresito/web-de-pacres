@@ -3,9 +3,9 @@
 
 // Constantes de simulación (no SI: el prompt --G=6.67e-11 es decorativo, aquí G es de juego).
 export const G = 1;            // constante gravitatoria en unidades de simulación
-export const SOFTENING = 4;    // ε: evita la singularidad cuando dos cuerpos casi coinciden
-export const MAX_BODIES = 50;
-export const ESCAPE_MARGIN = 1600; // px fuera del viewport a los que un cuerpo se da por escapado
+const SOFTENING = 4;    // ε: evita la singularidad cuando dos cuerpos casi coinciden
+const MAX_BODIES = 50;
+const ESCAPE_MARGIN = 1600; // px fuera del viewport a los que un cuerpo se da por escapado
 const RADIUS_K = 2.4;          // radio = RADIUS_K · masa^(1/3) → conserva "volumen" al fusionar
 
 // Masa del cuerpo más pesado de cada preset (fuente única para colorear su botón).

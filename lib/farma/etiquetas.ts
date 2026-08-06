@@ -15,8 +15,8 @@ export type Tamano = "S" | "M" | "L" | "XL";
 // ajustado sobre sus medidas (36 mm de un círculo de 39; 53 de uno de 56,7): al derivar
 // M y L se mueven ≤ 0,3 mm respecto a los diámetros originales, invisible en papel.
 // Cambiar de impresora = volver a medir un impreso y recalcular ESCALA_IMPRESION.
-export const DIAMETROS_PAPEL: Record<Tamano, number> = { S: 29, M: 36, L: 53, XL: 77 };
-export const ESCALA_IMPRESION = 0.93;
+const DIAMETROS_PAPEL: Record<Tamano, number> = { S: 29, M: 36, L: 53, XL: 77 };
+const ESCALA_IMPRESION = 0.93;
 
 // Diámetro en mm con el que se dibuja el círculo en el PDF.
 export const DIAMETROS = Object.fromEntries(

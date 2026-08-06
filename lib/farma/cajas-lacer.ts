@@ -7,9 +7,9 @@
 // "EXPOSITOR / EXP. 12 UDS" de las plantillas. Una excepción de 12 no listada solo
 // puede quedarse corta medio expositor (se pide de 6 en 6) — nunca parte una caja.
 export const PEDIDO_LACER = "LACER";
-export const CAJA_LACER_DEFAULT = 6;
+const CAJA_LACER_DEFAULT = 6;
 
-export const CAJAS_LACER: Record<string, number> = {
+const CAJAS_LACER: Record<string, number> = {
   "162974": 12, // CEPILLO MEDIO + PASTA 5 ML (EXP. 12 UDS)
   "162982": 12, // CEPILLO SUAVE + PASTA 5 ML (EXP. 12 UDS)
   "183818": 12, // CEPILLO MINI SUAVE (EXP. 12 UDS)

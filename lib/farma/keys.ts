@@ -40,8 +40,9 @@ export const KEYS = {
   // ruta de recomendaciones. El seed solo lo puebla si no existe (no pisa a María).
   recomendaciones: (dev: boolean = esDev) => farmaKey("farma:recomendaciones", dev),
   // Contadores de uso por día (YYYY-MM-DD, Madrid): hash campo→conteo con HINCRBY.
-  // Sin TTL (a ~3.650 hashes diminutos en 10 años, escala de sobra). Internos, no
-  // se exponen en la web; se consultan con scripts/farma-metricas.ts.
+  // Sin TTL (a ~3.650 hashes diminutos en 10 años, escala de sobra). Agregados y sin
+  // ningún dato identificable — por eso pueden pintarse en una página sin clave. Un
+  // campo nuevo tiene que seguir cumpliéndolo.
   metricas: (fecha: string, dev: boolean = esDev) => farmaKey(`farma:metricas:${fecha}`, dev),
   // Motivo del último inventario rechazado (fecha + texto breve), para diagnóstico.
   metricasErrorInventario: (dev: boolean = esDev) =>

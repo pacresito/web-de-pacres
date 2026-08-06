@@ -6,7 +6,7 @@
 // satellite.js al bundle de cliente.
 
 export const MARCO_INICIO_H = 19;
-export const MARCO_FIN_H = 25;                                    // 01:00 del día siguiente
+const MARCO_FIN_H = 25;                                    // 01:00 del día siguiente
 export const MARCO_MINUTOS = (MARCO_FIN_H - MARCO_INICIO_H) * 60; // 360
 
 // La noche se sigue enseñando dos horas después de cerrar el marco: a las 03:00 lo que
@@ -36,7 +36,7 @@ export function minutosEnMarco(fecha: Date): number | null {
 }
 
 /** Medianoche local (00:00) del día en que cae `fecha`, como instante UTC. */
-export function medianocheLocal(fecha: Date): Date {
+function medianocheLocal(fecha: Date): Date {
   const { hora, minuto } = partesLocales(fecha);
   const t = new Date(fecha);
   t.setUTCMinutes(t.getUTCMinutes() - hora * 60 - minuto);

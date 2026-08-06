@@ -33,7 +33,7 @@ function madridOffsetMs(utcMs: number): number {
 
 /** Próximo lunes 00:00 en Europe/Madrid (siempre estrictamente futuro). Vercel
  *  corre en UTC, por eso se calcula el offset real de Madrid en esa fecha. */
-export function nextMondayMadrid(now: Date = new Date()): Date {
+function nextMondayMadrid(now: Date = new Date()): Date {
   const f = new Intl.DateTimeFormat("en-GB", {
     timeZone: TZ, weekday: "short", year: "numeric", month: "2-digit", day: "2-digit",
   });
