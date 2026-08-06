@@ -588,6 +588,22 @@ export default function Home() {
           .rec-arrow:hover { border-color: var(--blue-accent); color: var(--blue-accent); }
           .footer-ln:hover { color: var(--blue-accent); }
         }
+
+        /* Movimiento reducido: las animaciones saltan a su estado final en vez
+           de apagarse — varias entran desde opacity 0 con fill-mode both. El
+           delay negativo no es adorno: sin él se quedan clavadas en el fotograma
+           inicial y el contenido nunca llega a verse. */
+        @media (prefers-reduced-motion: reduce) {
+          *, *::before, *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            animation-delay: -1ms !important;
+            transition-duration: 0.01ms !important;
+            transition-delay: 0s !important;
+          }
+          /* El reveal deja de esperar al observer: el contenido nace visible. */
+          .reveal { opacity: 1 !important; transform: none !important; }
+        }
       `}</style>
 
       <div ref={cursorGlowRef} className="cursor-glow" />

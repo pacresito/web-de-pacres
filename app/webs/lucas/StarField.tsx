@@ -73,6 +73,7 @@ export default function StarField() {
   return (
     <div
       ref={ref}
+      className="lc-stars"
       style={{
         position: 'fixed',
         inset: 0,

@@ -711,6 +711,21 @@ export default function HomeTempPage() {
           font-size: 0.48rem; letter-spacing: 0.1em; color: rgba(0,255,255,0.25);
           animation: cornerBlink 4s ease-in-out infinite;
         }
+
+        /* Movimiento reducido: las animaciones saltan a su estado final en vez
+           de apagarse — el hero entra inline con fill-mode both desde opacity 0.
+           El delay negativo no es adorno: sin él las tres palabras del nombre se
+           quedan clavadas en el fotograma inicial, invisibles. Aquí importa más
+           que en el resto de landings: hay glitch y flicker. */
+        @media (prefers-reduced-motion: reduce) {
+          *, *::before, *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            animation-delay: -1ms !important;
+            transition-duration: 0.01ms !important;
+            transition-delay: 0s !important;
+          }
+        }
       `}</style>
 
       <Starfield />

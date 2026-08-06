@@ -627,6 +627,21 @@ body {
   .skills-section { padding: 2rem 1.5rem; }
   .tl-footer { padding: 1.5rem; flex-direction: column; gap: 0.5rem; align-items: flex-start; }
 }
+
+/* Movimiento reducido: las animaciones saltan a su estado final en vez de
+   apagarse — varias entran desde opacity 0 con fill-mode both. El delay
+   negativo no es adorno: sin él se quedan clavadas en el fotograma inicial
+   y el contenido nunca llega a verse. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: -1ms !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
+  }
+  html { scroll-behavior: auto !important; }
+}
 `;
 
 function RecsSlider() {

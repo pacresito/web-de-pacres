@@ -362,6 +362,24 @@ export default function Lucas() {
         }
         .lc-footer a:active { color: #378ADD; }
         @media (hover: hover) { .lc-footer a:hover { color: #378ADD; } }
+
+        /* Movimiento reducido: las animaciones saltan a su estado final en vez
+           de apagarse, con delay negativo para que ninguna se quede clavada en
+           su fotograma inicial. */
+        @media (prefers-reduced-motion: reduce) {
+          *, *::before, *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            animation-delay: -1ms !important;
+            transition-duration: 0.01ms !important;
+            transition-delay: 0s !important;
+          }
+          /* Las estrellas son opacidad pura, sin movimiento: conservan su
+             fundido. Cortarlo las dejaría encendiéndose de golpe cada pocos
+             segundos, que es peor que el fundido para quien pide menos motion.
+             La transición vive inline en StarField.tsx (3000 ms). */
+          .lc-stars > * { transition-duration: 3000ms !important; }
+        }
       `}</style>
 
       <StarField />

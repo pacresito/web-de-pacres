@@ -689,3 +689,17 @@
     align-items: baseline;
   }
 }
+
+/* Movimiento reducido: las animaciones saltan a su estado final en vez de
+   apagarse, con delay negativo para que ninguna se quede clavada en su
+   fotograma inicial. Acotado a `.editorial` — este archivo entra en el CSS
+   global y sin acotar alcanzaría a todo el sitio. */
+@media (prefers-reduced-motion: reduce) {
+  .editorial, .editorial *, .editorial *::before, .editorial *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: -1ms !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
+  }
+}

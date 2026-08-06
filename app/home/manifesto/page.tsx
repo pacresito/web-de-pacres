@@ -610,25 +610,28 @@ body:has(.vE.wf-page) { background: var(--bg); }
   .vE-end__h { font-size: 52px; }
 }
 
-/* ── Hero entrance (CSS animation, no JS needed) ──
-   Sin prefers-reduced-motion: decisión, no olvido — la web se ve como se diseñó. */
-@keyframes vE-hero-fade {
-  from { opacity: 0; transform: translateY(24px); }
-  to   { opacity: 1; transform: translateY(0); }
+/* ── Hero entrance (CSS animation, no JS needed) ── */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes vE-hero-fade {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .vE-hero__meta { animation: vE-hero-fade .55s cubic-bezier(.4,0,.2,1) both; }
+  .vE-h1         { animation: vE-hero-fade .55s cubic-bezier(.4,0,.2,1) .12s both; }
+  .vE-hero__bot  { animation: vE-hero-fade .55s cubic-bezier(.4,0,.2,1) .26s both; }
 }
-.vE-hero__meta { animation: vE-hero-fade .55s cubic-bezier(.4,0,.2,1) both; }
-.vE-h1         { animation: vE-hero-fade .55s cubic-bezier(.4,0,.2,1) .12s both; }
-.vE-hero__bot  { animation: vE-hero-fade .55s cubic-bezier(.4,0,.2,1) .26s both; }
 
 /* ── Reveal on scroll ── */
-.vE-reveal {
-  opacity: 0;
-  transform: translateY(36px);
-  transition: opacity 0.65s cubic-bezier(.4,0,.2,1), transform 0.65s cubic-bezier(.4,0,.2,1);
-}
-.vE-reveal.vE-in {
-  opacity: 1;
-  transform: translateY(0);
+@media (prefers-reduced-motion: no-preference) {
+  .vE-reveal {
+    opacity: 0;
+    transform: translateY(36px);
+    transition: opacity 0.65s cubic-bezier(.4,0,.2,1), transform 0.65s cubic-bezier(.4,0,.2,1);
+  }
+  .vE-reveal.vE-in {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 .vE-t-cursor { display: inline-block; width: 6px; height: 11px; background: var(--t-ink); vertical-align: middle; margin-left: 1px; animation: vE-t-blink 0.7s steps(1) infinite; }
 @keyframes vE-t-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }

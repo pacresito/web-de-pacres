@@ -160,12 +160,14 @@ export default function Lagartijas() {
         .lg-hero-target { transition: transform .2s ease; }
         @media (hover: hover) { .lg-hero-target:hover { transform: scale(1.04); } }
 
-        /* Animaciones decorativas. Sin prefers-reduced-motion: decisión, no olvido. */
-        .lg-anim-bob     { animation: lg-bobby 1.3s ease-in-out infinite; }
-        .lg-anim-spin    { animation: lg-spin 16s linear infinite; }
-        .lg-anim-twinkle { animation: lg-twinkle 3s ease-in-out infinite; }
-        .lg-anim-popin   { animation: lg-popin .3s ease-out; }
-        .lg-anim-crawl   { animation: lg-crawl 2.6s ease-in-out infinite; }
+        /* Animaciones decorativas solo si el usuario no pide reducir movimiento */
+        @media (prefers-reduced-motion: no-preference) {
+          .lg-anim-bob     { animation: lg-bobby 1.3s ease-in-out infinite; }
+          .lg-anim-spin    { animation: lg-spin 16s linear infinite; }
+          .lg-anim-twinkle { animation: lg-twinkle 3s ease-in-out infinite; }
+          .lg-anim-popin   { animation: lg-popin .3s ease-out; }
+          .lg-anim-crawl   { animation: lg-crawl 2.6s ease-in-out infinite; }
+        }
 
         /* Ajustes solo de móvil: menos fotos, encuadernación más fina y línea roja
            pegada al margen (como el mockup de Claude Design). */
