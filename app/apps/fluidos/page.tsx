@@ -10,13 +10,16 @@ import {
 } from "./engine";
 import { render } from "./render";
 
-const TOOL_DEFS: { id: Tool; label: string; key: string; color: string; border: string }[] = [
-  { id: WATER, label: "Agua",   key: "1", color: "#3b82f6", border: "rgba(59,130,246,0.4)" },
-  { id: FIRE,  label: "Fuego",  key: "2", color: "#f97316", border: "rgba(249,115,22,0.4)" },
-  { id: SAND,  label: "Tierra", key: "3", color: "#c2a96e", border: "rgba(194,169,110,0.4)" },
-  { id: WALL,  label: "Madera", key: "4", color: "#8b5e3c", border: "rgba(139,94,60,0.4)" },
-  { id: MOVE,  label: "Mover",  key: "5", color: "#a78bfa", border: "rgba(167,139,250,0.4)" },
-  { id: ERASE, label: "Borrar", key: "6", color: "#111827", border: "rgba(17,24,39,0.4)" },
+// Un color por herramienta; borde, fondo y brillo del estado activo se derivan de él. Borrar
+// no pinta ningún elemento: lleva la tinta del tema, porque un neutro fijo solo se lee sobre
+// uno de los dos fondos (los cinco colores vivos contrastan con ambos).
+const TOOL_DEFS: { id: Tool; label: string; key: string; color: string }[] = [
+  { id: WATER, label: "Agua",   key: "1", color: "#3b82f6" },
+  { id: FIRE,  label: "Fuego",  key: "2", color: "#f97316" },
+  { id: SAND,  label: "Tierra", key: "3", color: "#c2a96e" },
+  { id: WALL,  label: "Madera", key: "4", color: "#8b5e3c" },
+  { id: MOVE,  label: "Mover",  key: "5", color: "#a78bfa" },
+  { id: ERASE, label: "Borrar", key: "6", color: "var(--t-ink2)" },
 ];
 
 export default function Fluidos() {
@@ -401,22 +404,22 @@ export default function Fluidos() {
 
         {/* Toolbar */}
         <div className="toolbar">
-          {TOOL_DEFS.map(({ id, label, key, color, border }) => {
+          {TOOL_DEFS.map(({ id, label, key, color }) => {
             const isActive = tool === id;
             return (
               <button
                 key={id}
                 className={`tool-btn${isActive ? " active" : ""}`}
                 style={isActive ? {
-                  "--active-border": border,
-                  "--active-bg":     `${color}18`,
+                  "--active-border": `color-mix(in srgb, ${color} 40%, transparent)`,
+                  "--active-bg":     `color-mix(in srgb, ${color} 9%, transparent)`,
                   "--active-color":  color,
                 } as React.CSSProperties : {}}
                 onClick={() => setToolSync(id)}
               >
                 <span
                   className="tool-dot"
-                  style={{ background: color, boxShadow: isActive ? `0 0 6px ${color}88` : "none" }}
+                  style={{ background: color, boxShadow: isActive ? `0 0 6px color-mix(in srgb, ${color} 53%, transparent)` : "none" }}
                 />
                 <span className="tool-label">{label}</span>
                 <span className="tool-key">{key}</span>
