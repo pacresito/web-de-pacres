@@ -14,8 +14,9 @@ export interface Persona {
    * cuatro «Sin nombre».
    */
   sexo?: "h" | "m";
-  birth?: number;
-  death?: number;
+  /** Con la precisión que consta: `"1986"` o `"1986-03-01"`. Solo los Word dan defunción. */
+  birth?: string;
+  death?: string;
   /** Cómo le llama la familia, cuando el docx lo apuntaba entre paréntesis. */
   apodo?: string;
   /** Qué dato marcaba el docx como dudoso — nunca "esta persona es dudosa". */

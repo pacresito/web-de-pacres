@@ -1,16 +1,24 @@
 // Qué texto lleva cada nodo. Puro: `npx tsx lib/arbol/etiquetas.test.ts`.
 
+import { edadDe, escribir, type Fecha } from "./fechas";
 import type { Persona } from "./tree";
+
+/**
+ * Cuánta fecha se enseña. De entrada ninguna: quien mira el árbol quiere saber quién es
+ * cada uno y cuántos años tiene, y una cifra más por nodo lo carga sin decir mucho más.
+ */
+export type ModoFechas = "ocultar" | "año" | "completa";
 
 /** Qué campos opcionales se pintan; el interruptor es global, nunca por persona. */
 export interface Campos {
-  fechas: boolean;
+  fechas: ModoFechas;
+  edad: boolean;
   /** Resalta **el dato** que el documento marcaba como dudoso, no la persona entera. */
   dudoso: boolean;
   notas: boolean;
 }
 
-export const CAMPOS_COMPLETOS: Campos = { fechas: true, dudoso: true, notas: true };
+export const CAMPOS_POR_DEFECTO: Campos = { fechas: "ocultar", edad: true, dudoso: true, notas: true };
 
 /** Un trozo de la línea de detalle, con su propia marca de duda. */
 export interface Segmento {
@@ -59,10 +67,12 @@ export function partirNombre(nombre: string, heredadoDesde: number, ancho: numbe
 }
 
 /** Fechas tal como constan: si solo se sabe el fallecimiento, se dice así. */
-export function fechasDe(p: Persona): string {
-  if (p.birth && p.death) return `${p.birth}–${p.death}`;
-  if (p.birth) return `${p.birth}`;
-  if (p.death) return `†${p.death}`;
+export function fechasDe(p: Persona, modo: ModoFechas): string {
+  if (modo === "ocultar") return "";
+  const fecha = (f: Fecha) => (modo === "completa" ? escribir(f) : f.slice(0, 4));
+  if (p.birth && p.death) return `${fecha(p.birth)}–${fecha(p.death)}`;
+  if (p.birth) return fecha(p.birth);
+  if (p.death) return `†${fecha(p.death)}`;
   return "";
 }
 
@@ -70,14 +80,23 @@ export function fechasDe(p: Persona): string {
 const LARGO_DETALLE = 36;
 
 /** La línea de debajo del nombre, por trozos: cada uno sabe si es el dato dudoso. */
-export function detalleDe(p: Persona, campos: Campos): Segmento[] {
+export function detalleDe(p: Persona, campos: Campos, hoy: Fecha): Segmento[] {
   const trozos: Segmento[] = [];
-  const fechas = campos.fechas ? fechasDe(p) : "";
-  if (fechas) trozos.push({ texto: fechas, incierto: campos.dudoso && p.incierto === "fechas" });
+  const dudaEnLasFechas = campos.dudoso && p.incierto === "fechas";
+  const fechas = fechasDe(p, campos.fechas);
+  if (fechas) trozos.push({ texto: fechas, incierto: dudaEnLasFechas });
+  // La edad sale de las mismas fechas, así que arrastra su duda aunque estén ocultas. Y
+  // como de entrada las fechas no se ven, la edad de un fallecido tiene que decir por sí
+  // sola que lo es: lo dice el verbo, que no hay que descifrar ni buscar en la leyenda.
+  const edad = campos.edad ? edadDe(p, hoy) : null;
+  if (edad !== null) {
+    const años = `${edad} ${edad === 1 ? "año" : "años"}`;
+    trozos.push({ texto: p.death ? `vivió ${años}` : años, incierto: dudaEnLasFechas });
+  }
   if (campos.notas && p.apodo) trozos.push({ texto: `«${p.apodo}»`, incierto: false });
   if (campos.notas && p.nota) trozos.push({ texto: p.nota, incierto: false });
 
-  // Una nota larga se recorta antes de desbordar el nodo; las fechas nunca sobran.
+  // Una nota larga se recorta antes de desbordar el nodo; fechas y edad nunca sobran.
   const salida: Segmento[] = [];
   let largo = 0;
   for (const trozo of trozos) {

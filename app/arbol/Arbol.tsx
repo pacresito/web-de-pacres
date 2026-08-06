@@ -8,7 +8,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { acotar, brujulaDe, conZoom, type Encuadre, type Rumbo, type Vista } from "@/lib/arbol/camara";
 import { construirGrafo } from "@/lib/arbol/grafo";
-import { CAMPOS_COMPLETOS, detalleDe, nombreIncierto, partirNombre, type Campos } from "@/lib/arbol/etiquetas";
+import {
+  CAMPOS_POR_DEFECTO,
+  detalleDe,
+  nombreIncierto,
+  partirNombre,
+  type Campos,
+  type ModoFechas,
+} from "@/lib/arbol/etiquetas";
 import { apellidosDe, etiquetaDe, type Etiqueta, type ModoApellidos } from "@/lib/arbol/personas";
 import {
   ALTO_CONTADOR,
@@ -35,7 +42,7 @@ const HEREDADO = "#9a9a97"; // el apellido que se deduce del árbol y no consta 
 
 const CENTRADA: Vista = { dx: 0, dy: 0, escala: 0.85 };
 
-export default function Arbol({ data }: { data: ArbolData }) {
+export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
   const grafo = useMemo(() => construirGrafo(data), [data]);
   const personaPorId = grafo.personaPorId;
 
@@ -46,7 +53,7 @@ export default function Arbol({ data }: { data: ArbolData }) {
   const [parejas, setParejas] = useState<Set<string>>(() => new Set());
   const [todoDesplegado, setTodoDesplegado] = useState(false);
   const [ocultarNoConectados, setOcultarNoConectados] = useState(true);
-  const [campos, setCampos] = useState<Campos>(CAMPOS_COMPLETOS);
+  const [campos, setCampos] = useState<Campos>(CAMPOS_POR_DEFECTO);
   const [apellidos, setApellidos] = useState<ModoApellidos>("nuevos");
   const [panelAbierto, setPanelAbierto] = useState(false);
   const [recuentoAbierto, setRecuentoAbierto] = useState(false);
@@ -186,7 +193,7 @@ export default function Arbol({ data }: { data: ArbolData }) {
     setParejas(new Set());
     setTodoDesplegado(false);
     setOcultarNoConectados(true);
-    setCampos(CAMPOS_COMPLETOS);
+    setCampos(CAMPOS_POR_DEFECTO);
     setApellidos("nuevos");
     setVista(CENTRADA);
   }
@@ -341,6 +348,7 @@ export default function Arbol({ data }: { data: ArbolData }) {
                 nodo={n}
                 persona={persona}
                 campos={campos}
+                hoy={hoy}
                 etiqueta={etiquetaDe(persona, apellidos, linaje.get(n.id)!)}
                 opacidad={opacidadDe(n.id)}
                 onElegir={() => arrastre.current <= ARRASTRE_MINIMO && elegirPuntoDeVista(n.id)}
@@ -453,6 +461,7 @@ function Nodo({
   nodo,
   persona,
   campos,
+  hoy,
   etiqueta,
   opacidad,
   onElegir,
@@ -460,11 +469,12 @@ function Nodo({
   nodo: NodoLayout;
   persona: Persona;
   campos: Campos;
+  hoy: string;
   etiqueta: Etiqueta;
   opacidad?: number;
   onElegir: () => void;
 }) {
-  const detalle = detalleDe(persona, campos);
+  const detalle = detalleDe(persona, campos, hoy);
   const lineas = partirNombre(etiqueta.texto, etiqueta.heredadoDesde, CARACTERES_POR_LINEA, detalle.length > 0 ? 1 : 2);
   const primeraY = nodo.y + (detalle.length > 0 || lineas.length > 1 ? -4 : 5);
   const dudoso = nombreIncierto(persona, campos);
@@ -698,6 +708,23 @@ function Controles({
     </button>
   );
 
+  /** Una fila de opciones excluyentes, para lo que no es un sí o un no. */
+  const eleccion = <T,>(titulo: string, opciones: readonly T[], actual: T, alElegir: (v: T) => void, nombrar: (v: T) => string) => (
+    <div className="flex items-center gap-1 rounded-lg bg-neutral-100 px-3 py-1.5">
+      <span className="flex-1 text-[13px] text-neutral-700">{titulo}</span>
+      {opciones.map((opcion) => (
+        <button
+          key={String(opcion)}
+          type="button"
+          onClick={() => alElegir(opcion)}
+          className={`h-6 rounded-md px-2 text-[12px] ${actual === opcion ? "bg-neutral-900 text-white" : "text-neutral-500"}`}
+        >
+          {nombrar(opcion)}
+        </button>
+      ))}
+    </div>
+  );
+
   const boton = (texto: string, alPulsar: () => void) => (
     <button
       key={texto}
@@ -716,24 +743,13 @@ function Controles({
           <div className="flex flex-col gap-1">
             <p className="px-1 text-[11px] font-semibold tracking-wide text-neutral-400 uppercase">En cada nodo</p>
             {/* «Nuevos» solo los enseña quien los estrena en su línea; 1 y 2, todo el mundo. */}
-            <div className="flex items-center gap-1 rounded-lg bg-neutral-100 px-3 py-1.5">
-              <span className="flex-1 text-[13px] text-neutral-700">Apellidos</span>
-              {(["nuevos", 0, 1, 2] as const).map((n) => (
-                <button
-                  key={n}
-                  type="button"
-                  onClick={() => setApellidos(n)}
-                  className={`h-6 rounded-md px-2 text-[12px] ${
-                    apellidos === n ? "bg-neutral-900 text-white" : "text-neutral-500"
-                  }`}
-                >
-                  {n === "nuevos" ? "nuevos" : n}
-                </button>
-              ))}
-            </div>
-            {/* Todos los interruptores se enuncian por lo que hacen al marcarlos, y de
-                entrada están los cuatro apagados: el árbol de partida es el de siempre. */}
-            {interruptor(!campos.fechas, "Ocultar fechas", () => setCampos({ ...campos, fechas: !campos.fechas }))}
+            {eleccion("Apellidos", ["nuevos", 0, 1, 2] as const, apellidos, setApellidos, String)}
+            {/* La fecha entera solo la tienen los del calendario de cumpleaños; para el
+                resto, «completa» sigue enseñando el año a secas. */}
+            {eleccion("Fechas", ["ocultar", "año", "completa"] as const, campos.fechas, (f: ModoFechas) => setCampos({ ...campos, fechas: f }), (f) => (f === "ocultar" ? "no" : f))}
+            {/* Los interruptores se enuncian por lo que hacen al marcarlos, y de entrada
+                están apagados: el árbol de partida es el de siempre. */}
+            {interruptor(!campos.edad, "Ocultar edad", () => setCampos({ ...campos, edad: !campos.edad }))}
             {interruptor(!campos.notas, "Ocultar notas y apodos", () => setCampos({ ...campos, notas: !campos.notas }))}
             {interruptor(!campos.dudoso, "No resaltar dudosos", () => setCampos({ ...campos, dudoso: !campos.dudoso }))}
           </div>
