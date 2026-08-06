@@ -6,6 +6,7 @@
 // está cerrada, el diseño llega después.
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { acotar, brujulaDe, conZoom, type Encuadre, type Rumbo, type Vista } from "@/lib/arbol/camara";
 import { construirGrafo } from "@/lib/arbol/grafo";
 import { CAMPOS_COMPLETOS, detalleDe, nombreIncierto, partirNombre, type Campos } from "@/lib/arbol/etiquetas";
 import { apellidosDe, etiquetaDe, type Etiqueta, type ModoApellidos } from "@/lib/arbol/personas";
@@ -25,8 +26,6 @@ import type { ArbolData, Persona, Union } from "@/lib/arbol/tree";
 import Recuento from "./Recuento";
 
 const POR_DEFECTO = "p25";
-const ESCALA_MIN = 0.12;
-const ESCALA_MAX = 2.2;
 const ARRASTRE_MINIMO = 8; // px: por debajo de esto el gesto es un toque, no un arrastre
 // Señalar una fracción del recuento atenúa el resto del lienzo en vez de encender lo suyo:
 // el verde ya tiene tres escalones y un cuarto tono los emborronaría.
@@ -34,26 +33,7 @@ const ATENUADO = 0.15;
 const INCIERTO = "#c2410c"; // el dato que el documento no daba por seguro
 const HEREDADO = "#9a9a97"; // el apellido que se deduce del árbol y no consta escrito
 
-/** La cámara se guarda relativa al punto de vista: así lo persigue sin efectos ni saltos. */
-interface Vista {
-  dx: number;
-  dy: number;
-  escala: number;
-}
-
 const CENTRADA: Vista = { dx: 0, dy: 0, escala: 0.85 };
-
-/** Acerca o aleja dejando quieto el punto que hay bajo los dedos (o bajo el cursor). */
-function conZoom(v: Vista, factor: number, px: number, py: number, caja: DOMRect): Vista {
-  const escala = Math.min(ESCALA_MAX, Math.max(ESCALA_MIN, v.escala * factor));
-  if (escala === v.escala) return v;
-  const desfase = 1 / v.escala - 1 / escala;
-  return {
-    escala,
-    dx: v.dx + (px - caja.left - caja.width / 2) * desfase,
-    dy: v.dy + (py - caja.top - caja.height / 2) * desfase,
-  };
-}
 
 export default function Arbol({ data }: { data: ArbolData }) {
   const grafo = useMemo(() => construirGrafo(data), [data]);
@@ -115,7 +95,23 @@ export default function Arbol({ data }: { data: ArbolData }) {
   }, []);
 
   const anclaje = layout.nodos.find((n) => n.esPuntoDeVista);
-  const centro = { x: (anclaje?.x ?? 0) + vista.dx, y: (anclaje?.y ?? 0) + vista.dy };
+  const ancla = { x: anclaje?.x ?? 0, y: anclaje?.y ?? 0 };
+  const centro = { x: ancla.x + vista.dx, y: ancla.y + vista.dy };
+
+  // El encuadre se guarda en un ref porque lo consultan gestos que no se rehacen en cada
+  // render (la rueda) y las funciones de actualización de setVista, que solo ven la vista.
+  // Y se reacota al cambiar él: desplegar una rama o mudar el punto de vista mueven los
+  // límites bajo una cámara que ya estaba puesta.
+  const encuadre = useRef<Encuadre>({ ancla, limites: layout.limites, w: 0, h: 0 });
+  useEffect(() => {
+    encuadre.current = { ancla: { x: ancla.x, y: ancla.y }, limites: layout.limites, w: tamano.w, h: tamano.h };
+    setVista((v) => acotar(v, encuadre.current));
+  }, [ancla.x, ancla.y, layout.limites, tamano.w, tamano.h]);
+
+  /** Los gestos mueven la cámara por aquí: moverla sin acotar es perderse. */
+  function mover(paso: (v: Vista) => Vista) {
+    setVista((v) => acotar(paso(v), encuadre.current));
+  }
 
   function elegirPuntoDeVista(id: string) {
     if (id === puntoDeVista) {
@@ -221,7 +217,7 @@ export default function Arbol({ data }: { data: ArbolData }) {
       // ratón trae siempre uno o dos píxeles de temblor, y pinchar y pinchar movía la
       // vista sin que nadie la arrastrase.
       if (arrastre.current > ARRASTRE_MINIMO) {
-        setVista((v) => ({ ...v, dx: v.dx - dx / v.escala, dy: v.dy - dy / v.escala }));
+        mover((v) => ({ ...v, dx: v.dx - dx / v.escala, dy: v.dy - dy / v.escala }));
       }
       return;
     }
@@ -244,7 +240,7 @@ export default function Arbol({ data }: { data: ArbolData }) {
 
   function ajustarZoom(factor: number, px: number, py: number) {
     const caja = contenedor.current?.getBoundingClientRect();
-    if (caja) setVista((v) => conZoom(v, factor, px, py, caja));
+    if (caja) mover((v) => conZoom(v, factor, px, py, caja));
   }
 
   // La rueda con preventDefault necesita un listener no pasivo.
@@ -255,16 +251,21 @@ export default function Arbol({ data }: { data: ArbolData }) {
       e.preventDefault();
       // El pellizco de trackpad llega como rueda con ctrlKey; la rueda a secas —y el
       // deslizar con dos dedos— desplaza. El zoom ya lo dan el pellizco y ctrl+rueda.
+      // Acota aquí y no por `mover`: el listener se registra una vez y no ve el render.
       if (e.ctrlKey) {
-        setVista((v) => conZoom(v, Math.exp(-e.deltaY / 400), e.clientX, e.clientY, nodo.getBoundingClientRect()));
+        const caja = nodo.getBoundingClientRect();
+        setVista((v) => acotar(conZoom(v, Math.exp(-e.deltaY / 400), e.clientX, e.clientY, caja), encuadre.current));
         return;
       }
-      setVista((v) => ({ ...v, dx: v.dx + e.deltaX / v.escala, dy: v.dy + e.deltaY / v.escala }));
+      setVista((v) =>
+        acotar({ ...v, dx: v.dx + e.deltaX / v.escala, dy: v.dy + e.deltaY / v.escala }, encuadre.current),
+      );
     };
     nodo.addEventListener("wheel", alGirar, { passive: false });
     return () => nodo.removeEventListener("wheel", alGirar);
   }, []);
 
+  const brujula = brujulaDe(vista, tamano.w, tamano.h);
   const transformacion = `translate(${tamano.w / 2} ${tamano.h / 2}) scale(${vista.escala}) translate(${-centro.x} ${-centro.y})`;
   const niveles = useMemo(() => [...new Set(layout.nodos.map((n) => n.nivel))].sort((a, b) => a - b), [layout]);
   const generacionPov = grafo.generacion.get(puntoDeVista) ?? 0;
@@ -378,6 +379,14 @@ export default function Arbol({ data }: { data: ArbolData }) {
         )}
       </svg>
 
+      {brujula && (
+        <Brujula
+          posicion={brujula}
+          nombre={personaPorId.get(puntoDeVista)?.nombre ?? ""}
+          onVolver={() => mover(() => CENTRADA)}
+        />
+      )}
+
       <Recuento
         cuentas={cuentas}
         abierto={recuentoAbierto}
@@ -395,7 +404,6 @@ export default function Arbol({ data }: { data: ArbolData }) {
         setOcultar={setOcultarNoConectados}
         abierto={panelAbierto}
         setAbierto={setPanelAbierto}
-        onCentrar={() => setVista(CENTRADA)}
         todoDesplegado={todoDesplegado}
         onDesplegarTodo={() => {
           setTodoDesplegado(!todoDesplegado);
@@ -405,6 +413,34 @@ export default function Arbol({ data }: { data: ArbolData }) {
         onReiniciar={reiniciar}
       />
     </div>
+  );
+}
+
+/**
+ * La brújula: cuando el punto de vista se va de la pantalla asoma por el borde en su
+ * dirección, con su nombre, y devuelve a él. Sustituye al botón de centrar, que estaba
+ * siempre y no decía nada; esta solo aparece cuando hace falta y dice hacia dónde.
+ */
+function Brujula({ posicion, nombre, onVolver }: { posicion: Rumbo; nombre: string; onVolver: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onVolver}
+      style={{ left: posicion.x, top: posicion.y }}
+      className="absolute flex h-8 -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 rounded-full border border-neutral-200 bg-white pr-3 pl-2.5 text-[12px] font-medium whitespace-nowrap text-neutral-700 shadow-lg"
+    >
+      <svg width={13} height={13} viewBox="-6.5 -6.5 13 13" style={{ transform: `rotate(${posicion.angulo}deg)` }}>
+        <path
+          d="M -4.5 0 H 4 M 1 -3 L 4 0 L 1 3"
+          fill="none"
+          stroke="#00b87a"
+          strokeWidth={1.7}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+      {nombre}
+    </button>
   );
 }
 
@@ -632,7 +668,6 @@ function Controles({
   setOcultar,
   abierto,
   setAbierto,
-  onCentrar,
   todoDesplegado,
   onDesplegarTodo,
   onReiniciar,
@@ -645,7 +680,6 @@ function Controles({
   setOcultar: (v: boolean) => void;
   abierto: boolean;
   setAbierto: (v: boolean) => void;
-  onCentrar: () => void;
   todoDesplegado: boolean;
   onDesplegarTodo: () => void;
   onReiniciar: () => void;
@@ -713,7 +747,6 @@ function Controles({
       <div className="flex flex-wrap justify-end gap-2">
         {boton(todoDesplegado ? "Plegar todo" : "Desplegar todo", onDesplegarTodo)}
         {boton("Reiniciar", onReiniciar)}
-        {boton("Centrar", onCentrar)}
         {boton(abierto ? "Cerrar" : "Ver", () => setAbierto(!abierto))}
       </div>
     </div>
