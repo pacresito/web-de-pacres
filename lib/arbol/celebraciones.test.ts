@@ -15,7 +15,7 @@ import {
   type Dirigida,
 } from "./celebraciones";
 import { construirGrafo } from "./grafo";
-import { onomasticaDe, primerDomingoDeMayo } from "./santoral";
+import { onomasticaDePersona, primerDomingoDeMayo } from "./santoral";
 import type { ArbolData } from "./tree";
 
 // --- La cuenta atrás ---
@@ -56,9 +56,9 @@ for (const hoy of ["2026-01-01", "2026-03-01", "2026-08-06", "2026-12-20"]) {
       if (c.tipo === "cumpleaños") assert.ok(c.edad !== null && c.edad >= 0, `${c.nombre}: edad imposible`);
       else assert.strictEqual(c.edad, null, `${c.nombre}: solo el cumpleaños cuenta años`);
       if (c.tipo === "onomástica") {
-        const santo = onomasticaDe(persona(c.id!).nombre)!;
+        const santo = onomasticaDePersona(persona(c.id!))!;
         const año = Number(c.fecha.slice(0, 4));
-        assert.strictEqual(typeof santo === "function" ? santo(año) : santo, c.fecha.slice(5), `${c.nombre}: santo movido`);
+        assert.strictEqual(typeof santo === "function" ? santo(año) : santo, c.fecha.slice(5), `${c.nombre}: la onomástica no cae donde dice la tabla`);
       }
     }
   }

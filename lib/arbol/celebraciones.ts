@@ -5,7 +5,7 @@
 import { añoDe, conDia, edadDe, MS_DIA, type Fecha } from "./fechas";
 import { type Grafo } from "./grafo";
 import { declinar, parentescos } from "./parentesco";
-import { onomasticaDe, primerDomingoDeMayo, type DiaDelAño } from "./santoral";
+import { onomasticaDePersona, primerDomingoDeMayo, type DiaDelAño } from "./santoral";
 
 /** Cuánto se mira hacia delante. Más allá deja de ser un aviso y pasa a ser un listado. */
 export const VENTANA = 30;
@@ -92,8 +92,8 @@ export function proximasCelebraciones(g: Grafo, pov: string, hoy: Fecha, ventana
     if (nacimiento && conDia(nacimiento)) {
       cabe("cumpleaños", nacimiento.slice(5), (fecha) => añoDe(fecha) - añoDe(nacimiento));
     }
-    const santo = onomasticaDe(persona.nombre);
-    if (santo) cabe("onomástica", santo);
+    const suNombre = onomasticaDePersona(persona);
+    if (suNombre) cabe("onomástica", suNombre);
   }
 
   // Los dos días entran solos y siempre, sin depender de que quede nadie a quien felicitar.
@@ -196,32 +196,31 @@ export function felicitacion(c: Celebracion): string {
     return `El tuyo, dentro de ${faltan} días. Tiempo de sobra para insinuar el regalo.`;
   }
   if (tipo === "onomástica") {
-    if (faltan === 0) return "Hoy es tu santo. Medio cumpleaños, sin la parte de envejecer.";
-    return faltan === 1 ? "Mañana es tu santo." : `Tu santo, dentro de ${faltan} días.`;
+    if (faltan === 0) return "Hoy es el día de tu nombre. Medio cumpleaños, sin la parte de envejecer.";
+    return faltan === 1 ? "Mañana es el día de tu nombre." : `El día de tu nombre, dentro de ${faltan} días.`;
   }
   return elDia(c);
 }
 
 /**
- * El día del padre y el de la madre, dicho a quien mira. **La broma solo aparece cuando
- * hay alguien de quien reírse**: quien no tiene hijos ni conserva a ese progenitor recibe
- * el aviso a secas, porque ese día ya le pesa bastante sin que el árbol haga gracias.
- * En el lienzo los hijos caen a la derecha del punto de vista y los padres a la izquierda,
- * así que las dos direcciones son literales.
+ * El día del padre y el de la madre, dicho a quien mira y sin hablar de la pantalla: es
+ * el único aviso del panel que va de la vida de fuera. **La broma solo aparece cuando hay
+ * alguien de quien reírse**: a quien no le quedan ni hijos ni ese progenitor se le da la
+ * fecha y nada más, porque ese día ya le pesa bastante sin que le hagan gracias.
  */
 function elDia({ tipo, faltan, dirigida }: Celebracion): string {
   const quien = tipo === "día del padre" ? "padre" : "madre";
   if (dirigida === "propio") {
-    if (faltan === 0) return `Hoy es el ${tipo}, y va por ti: los responsables están a tu derecha.`;
-    if (faltan === 1) return `Mañana es el ${tipo}, y va por ti.`;
+    if (faltan === 0) return `Hoy es el ${tipo}, y va por ti. Aprovecha, que dura veinticuatro horas.`;
+    if (faltan === 1) return `Mañana es el ${tipo}, y va por ti. Ve dejando pistas.`;
     return `El ${tipo} va por ti, dentro de ${faltan} días.`;
   }
   if (dirigida === "progenitor") {
-    if (faltan === 0) return `Hoy es el ${tipo}: tu ${quien} está una columna a tu izquierda.`;
+    if (faltan === 0) return `Hoy es el ${tipo}. Ya sabes a quién llamar.`;
     if (faltan === 1) return `Mañana es el ${tipo}. Ve pensando qué le dices a tu ${quien}.`;
     return `El ${tipo}, dentro de ${faltan} días. Tiempo de sobra para acordarte de tu ${quien}.`;
   }
-  if (faltan === 0) return `Hoy es el ${tipo}. Un buen día para mirar árbol arriba.`;
+  if (faltan === 0) return `Hoy es el ${tipo}. Unos lo celebran y otros lo recuerdan.`;
   return faltan === 1 ? `Mañana es el ${tipo}.` : `El ${tipo}, dentro de ${faltan} días.`;
 }
 
@@ -235,4 +234,8 @@ const CUMPLES: ((edad: number) => string)[] = [
 
 /** Lo que anuncia el botón cerrado cuando hoy es el día del punto de vista. */
 export const anuncio = ({ tipo }: Celebracion): string =>
-  tipo === "cumpleaños" ? "🎂 Es tu cumpleaños" : tipo === "onomástica" ? "🎉 Hoy es tu santo" : `🎉 Es el ${tipo}`;
+  tipo === "cumpleaños"
+    ? "🎂 Es tu cumpleaños"
+    : tipo === "onomástica"
+      ? "🎉 Es el día de tu nombre"
+      : `🎉 Es el ${tipo}`;

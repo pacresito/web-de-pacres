@@ -75,7 +75,7 @@ function Fila({ celebracion: c }: { celebracion: Celebracion }) {
         {c.parentesco && <span className="text-neutral-400"> · {c.parentesco}</span>}
       </span>
       <span className="shrink-0 text-[11px] whitespace-nowrap text-neutral-500">
-        {c.tipo === "cumpleaños" ? `cumple ${c.edad}` : "santo"}
+        {c.tipo === "cumpleaños" ? `cumple ${c.edad}` : "onomástica"}
       </span>
     </div>
   );

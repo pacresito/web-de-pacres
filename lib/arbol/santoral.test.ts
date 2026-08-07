@@ -1,6 +1,22 @@
 // Test de lógica pura: `npx tsx lib/arbol/santoral.test.ts`. Fuera del build.
 import assert from "assert";
-import { normalizar, onomasticaDe, pascua, primerDomingoDeMayo, viernesDeDolores } from "./santoral";
+import {
+  normalizar,
+  onomasticaDe,
+  onomasticaDePersona,
+  pascua,
+  primerDomingoDeMayo,
+  viernesDeDolores,
+} from "./santoral";
+
+// --- La excepción por persona: el nodo lleva el nombre corto y el día no se resiente ---
+// p23 se llama María Ángeles, en el árbol va como María, y celebra con las Ángeles.
+assert.strictEqual(onomasticaDe("María"), "09-12");
+assert.strictEqual(onomasticaDePersona({ id: "p23", nombre: "María" }), "08-02");
+// Al que no está apuntado le manda su nombre, como a todo el mundo.
+assert.strictEqual(onomasticaDePersona({ id: "p318", nombre: "María" }), onomasticaDe("María"));
+// Y a Pepe no le hizo falta excepción: su nombre ya lo lleva al 19 de marzo.
+assert.strictEqual(onomasticaDePersona({ id: "p29", nombre: "Pepe" }), "03-19");
 
 // --- El calendario móvil, contra años conocidos: el algoritmo no se lee, se comprueba ---
 const escribir = (ms: number) => new Date(ms).toISOString().slice(0, 10);
@@ -22,8 +38,12 @@ assert.strictEqual(normalizar("  Ángel   María "), "angel maria");
 // El nombre tal cual, con tilde o sin ella y escriba quien lo escriba.
 assert.strictEqual(onomasticaDe("José"), "03-19");
 assert.strictEqual(onomasticaDe("Jose"), "03-19");
-assert.strictEqual(onomasticaDe("Ángel"), "10-02");
 assert.strictEqual(onomasticaDe("Carmen"), "07-16");
+
+// Los Ángel, las Ángeles y las María Ángeles de esta familia celebran todos el mismo día.
+for (const nombre of ["Ángel", "Ángeles", "María Ángeles"]) assert.strictEqual(onomasticaDe(nombre), "08-02", nombre);
+// Pero Ángela no: es otro nombre y va por su cuenta.
+assert.strictEqual(onomasticaDe("Ángela"), "01-27");
 
 // Los apodos con los que aparece media familia en los documentos.
 assert.strictEqual(onomasticaDe("Pepe"), onomasticaDe("José"));

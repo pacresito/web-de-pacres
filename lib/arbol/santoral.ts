@@ -1,4 +1,4 @@
-// El día del santo de cada nombre. Puro: `npx tsx lib/arbol/santoral.test.ts`.
+// Qué día celebra su onomástica cada nombre. Puro: `npx tsx lib/arbol/santoral.test.ts`.
 //
 // La tabla es a mano y por diseño: casi ningún nombre tiene un solo santo —Vicente sale
 // 23 veces en el calendario y Ricardo 10—, así que aquí no hay un dato que consultar sino
@@ -76,9 +76,8 @@ const CALENDARIO: [DiaDelAño, string[]][] = [
   ["07-29", ["marta"]],
   ["07-31", ["ignacio", "ignacia"]],
   ["08-01", ["alfonso", "alfonsa"]],
-  // La Virgen de los Ángeles, que es la de las Ángeles de esta familia. El 2 de octubre
-  // son los Ángeles Custodios, y de esos sale Ángel: no es el mismo día ni el mismo santo.
-  ["08-02", ["angeles", "maria angeles"]],
+  // Los Ángeles de esta familia lo celebran aquí, no el 2 de octubre que da el calendario.
+  ["08-02", ["angel", "angeles", "maria angeles"]],
   ["08-03", ["lidia"]],
   ["08-05", ["nieves"]],
   ["08-06", ["felicisimo"]],
@@ -101,7 +100,6 @@ const CALENDARIO: [DiaDelAño, string[]][] = [
   ["09-24", ["mercedes"]],
   ["09-29", ["miguel", "gabriel", "rafael", "gabriela", "rafaela"]],
   ["09-30", ["jeronimo", "sofia"]],
-  ["10-02", ["angel"]],
   ["10-04", ["francisco"]],
   ["10-06", ["bruno"]],
   ["10-07", ["rosario"]],
@@ -256,3 +254,17 @@ export function onomasticaDe(nombre: string): DiaDelAño | null {
 
 const buscar = (clave: string): DiaDelAño | null =>
   SANTORAL[clave] ?? SANTORAL[APODOS[clave] ?? ""] ?? null;
+
+/**
+ * Quien no celebra la onomástica que le tocaría por su nombre. Va por id, y aquí en vez
+ * de en el JSON: es una costumbre de una persona, no un dato que dijera su documento. Es
+ * lo que permite que en el nodo vaya el nombre por el que se la conoce sin que eso le
+ * cambie el día.
+ */
+const POR_PERSONA: Record<string, DiaDelAño> = {
+  p23: "08-02", // en el árbol es María, se llama María Ángeles y celebra con las Ángeles
+};
+
+/** La onomástica de alguien: la suya si la tiene apuntada, y si no la de su nombre. */
+export const onomasticaDePersona = (p: { id: string; nombre: string }): DiaDelAño | null =>
+  POR_PERSONA[p.id] ?? onomasticaDe(p.nombre);
