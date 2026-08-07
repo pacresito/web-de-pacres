@@ -7,6 +7,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { acotar, brujulaDe, conZoom, type Encuadre, type Rumbo, type Vista } from "@/lib/arbol/camara";
+import { proximasCelebraciones } from "@/lib/arbol/celebraciones";
 import { construirGrafo } from "@/lib/arbol/grafo";
 import {
   CAMPOS_POR_DEFECTO,
@@ -30,6 +31,7 @@ import {
 } from "@/lib/arbol/layout";
 import { calcularRecuento, type Fraccion } from "@/lib/arbol/recuento";
 import type { ArbolData, Persona, Union } from "@/lib/arbol/tree";
+import Celebraciones from "./Celebraciones";
 import Recuento from "./Recuento";
 
 const POR_DEFECTO = "p25";
@@ -56,7 +58,9 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
   const [campos, setCampos] = useState<Campos>(CAMPOS_POR_DEFECTO);
   const [apellidos, setApellidos] = useState<ModoApellidos>("nuevos");
   const [panelAbierto, setPanelAbierto] = useState(false);
-  const [recuentoAbierto, setRecuentoAbierto] = useState(false);
+  // Los dos paneles de arriba comparten el borde superior, así que se turnan: en un móvil
+  // abiertos a la vez se pisan, y el que queda debajo no se lee ni se puede cerrar.
+  const [arriba, setArriba] = useState<"recuento" | "celebraciones" | null>(null);
   /** Lo que se resalta del lienzo: el numerador de la fracción señalada, o nada. */
   const [resaltados, setResaltados] = useState<Set<string> | null>(null);
   const [vista, setVista] = useState<Vista>(CENTRADA);
@@ -79,6 +83,15 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
   const cuentas = useMemo(
     () => calcularRecuento(grafo, { puntoDeVista, ocultarNoConectados }, new Set(layout.nodos.map((n) => n.id))),
     [grafo, puntoDeVista, ocultarNoConectados, layout],
+  );
+  const celebraciones = useMemo(
+    () => proximasCelebraciones(grafo, puntoDeVista, hoy),
+    [grafo, puntoDeVista, hoy],
+  );
+  /** Quien cumple años hoy se lleva además una tarta en su nodo, sin abrir nada. */
+  const cumplenHoy = useMemo(
+    () => new Set(celebraciones.filter((c) => c.tipo === "cumpleaños" && c.faltan === 0).map((c) => c.id!)),
+    [celebraciones],
   );
 
   // El hueco disponible manda el tamaño del lienzo. La primera medida se toma a mano
@@ -349,6 +362,7 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
                 persona={persona}
                 campos={campos}
                 hoy={hoy}
+                cumpleHoy={cumplenHoy.has(n.id)}
                 etiqueta={etiquetaDe(persona, apellidos, linaje.get(n.id)!)}
                 opacidad={opacidadDe(n.id)}
                 onElegir={() => arrastre.current <= ARRASTRE_MINIMO && elegirPuntoDeVista(n.id)}
@@ -397,10 +411,16 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
 
       <Recuento
         cuentas={cuentas}
-        abierto={recuentoAbierto}
-        setAbierto={setRecuentoAbierto}
+        abierto={arriba === "recuento"}
+        setAbierto={(v) => setArriba(v ? "recuento" : null)}
         onPulsar={pulsarFraccion}
         onResaltar={(ids) => setResaltados(ids ? new Set(ids) : null)}
+      />
+
+      <Celebraciones
+        lista={celebraciones}
+        abierto={arriba === "celebraciones"}
+        setAbierto={(v) => setArriba(v ? "celebraciones" : null)}
       />
 
       <Controles
@@ -462,6 +482,7 @@ function Nodo({
   persona,
   campos,
   hoy,
+  cumpleHoy,
   etiqueta,
   opacidad,
   onElegir,
@@ -470,6 +491,7 @@ function Nodo({
   persona: Persona;
   campos: Campos;
   hoy: string;
+  cumpleHoy: boolean;
   etiqueta: Etiqueta;
   opacidad?: number;
   onElegir: () => void;
@@ -508,6 +530,13 @@ function Nodo({
           </tspan>
         ))}
       </text>
+      {/* La esquina de arriba a la derecha es la única que no usa ni la manija ni el «+»
+          de la pareja, así que la tarta cabe sin taparle nada a nadie. */}
+      {cumpleHoy && (
+        <text x={nodo.x + ANCHO_NODO / 2 - 13} y={nodo.y - ALTO_NODO / 2 + 5} textAnchor="middle" fontSize={15}>
+          🎂
+        </text>
+      )}
       {detalle.length > 0 && (
         <text x={nodo.x} y={nodo.y + 14} textAnchor="middle" fontSize={11}>
           {detalle.map((segmento, i) => (

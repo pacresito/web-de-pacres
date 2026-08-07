@@ -3,6 +3,8 @@
 /** Una fecha con la precisión que consta: `"1986"` o `"1986-03-01"`. */
 export type Fecha = string;
 
+export const MS_DIA = 86_400_000;
+
 /** De la mayoría solo se sabe el año; el día lo tienen los del calendario de cumpleaños. */
 export const conDia = (f: Fecha): boolean => f.length > 4;
 
@@ -11,6 +13,12 @@ export const añoDe = (f: Fecha): number => Number(f.slice(0, 4));
 /** Como se escribe en España, con los ceros: `"1986-03-01"` → `"01/03/1986"`. */
 export const escribir = (f: Fecha): string =>
   conDia(f) ? `${f.slice(8, 10)}/${f.slice(5, 7)}/${f.slice(0, 4)}` : f;
+
+const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+
+/** Sin el año, para una lista que ya se sabe cuál es: `"2026-03-14"` → `"14 mar"`. */
+export const escribirCorto = (f: Fecha): string =>
+  conDia(f) ? `${Number(f.slice(8, 10))} ${MESES[Number(f.slice(5, 7)) - 1]}` : f;
 
 /**
  * Los años cumplidos entre dos fechas, contados con la precisión que tengan las dos:

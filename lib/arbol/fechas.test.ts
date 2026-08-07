@@ -1,6 +1,6 @@
 // Test de lógica pura: `npx tsx lib/arbol/fechas.test.ts`. Fuera del build.
 import assert from "assert";
-import { añoDe, conDia, edadDe, edadEntre, escribir } from "./fechas";
+import { añoDe, conDia, edadDe, edadEntre, escribir, escribirCorto } from "./fechas";
 
 // --- Leer y escribir ---
 assert.strictEqual(añoDe("1986"), 1986);
@@ -8,6 +8,9 @@ assert.strictEqual(añoDe("1986-03-01"), 1986);
 assert.ok(!conDia("1986") && conDia("1986-03-01"));
 assert.strictEqual(escribir("1986-03-01"), "01/03/1986");
 assert.strictEqual(escribir("1986"), "1986", "sin día no hay nada que formatear");
+assert.strictEqual(escribirCorto("2026-03-01"), "1 mar", "la corta va sin el cero de delante");
+assert.strictEqual(escribirCorto("2026-12-25"), "25 dic");
+assert.strictEqual(escribirCorto("1986"), "1986");
 
 // --- Años naturales cuando a alguna fecha le falta el día ---
 assert.strictEqual(edadEntre("1945", "2018"), 73);
