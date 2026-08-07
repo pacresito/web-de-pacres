@@ -49,16 +49,13 @@ assert.strictEqual(fechasDe(persona({ birth: "1945-05-31", death: "2018" }), "co
 assert.strictEqual(fechasDe(persona({ birth: "1986-03-01" }), "ocultar"), "");
 
 // --- Detalle: cada campo se enciende por separado, para todos a la vez ---
-const p = persona({ birth: "1976", nota: "de Japón", apodo: "Chon" });
+const p = persona({ birth: "1976", nota: "Chon · de Japón" });
 assert.deepStrictEqual(detalleCon(p, APAGADOS), [], "todo apagado deja solo el nombre");
 assert.deepStrictEqual(detalleCon(p, { ...APAGADOS, fechas: "año" }), [{ texto: "1976", incierto: false }]);
 assert.deepStrictEqual(
   detalleCon(p, { ...APAGADOS, notas: true }),
-  [
-    { texto: "«Chon»", incierto: false },
-    { texto: "de Japón", incierto: false },
-  ],
-  "el apodo va con las notas, entrecomillado",
+  [{ texto: "Chon · de Japón", incierto: false, nota: true }],
+  "la nota se marca como tal para pintarla en cursiva",
 );
 assert.deepStrictEqual(detalleCon(persona({}), CAMPOS_POR_DEFECTO), [], "sin datos no hay línea");
 assert.deepStrictEqual(detalleCon(p, CAMPOS_POR_DEFECTO)[0], { texto: "50 años", incierto: false }, "de entrada, la edad sin fecha");

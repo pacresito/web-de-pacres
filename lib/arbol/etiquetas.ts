@@ -24,6 +24,8 @@ export const CAMPOS_POR_DEFECTO: Campos = { fechas: "ocultar", edad: true, dudos
 export interface Segmento {
   texto: string;
   incierto: boolean;
+  /** La nota va en cursiva: lo demás de la línea son datos, y ella es lo que se anotó. */
+  nota?: boolean;
 }
 
 /** Un renglón del nombre, con el apellido heredado aparte para pintarlo distinto. */
@@ -93,8 +95,7 @@ export function detalleDe(p: Persona, campos: Campos, hoy: Fecha): Segmento[] {
     const años = `${edad} ${edad === 1 ? "año" : "años"}`;
     trozos.push({ texto: p.death ? `vivió ${años}` : años, incierto: dudaEnLasFechas });
   }
-  if (campos.notas && p.apodo) trozos.push({ texto: `«${p.apodo}»`, incierto: false });
-  if (campos.notas && p.nota) trozos.push({ texto: p.nota, incierto: false });
+  if (campos.notas && p.nota) trozos.push({ texto: p.nota, incierto: false, nota: true });
 
   // Una nota larga se recorta antes de desbordar el nodo; fechas y edad nunca sobran.
   const salida: Segmento[] = [];

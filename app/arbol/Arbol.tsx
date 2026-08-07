@@ -543,7 +543,7 @@ function Nodo({
             <tspan
               key={i}
               fill={segmento.incierto ? INCIERTO : nodo.esPuntoDeVista ? "#e6fff5" : "#8a8a87"}
-              fontStyle={segmento.incierto ? "italic" : undefined}
+              fontStyle={segmento.incierto || segmento.nota ? "italic" : undefined}
             >
               {i > 0 && " · "}
               {segmento.texto}
@@ -779,7 +779,7 @@ function Controles({
             {/* Los interruptores se enuncian por lo que hacen al marcarlos, y de entrada
                 están apagados: el árbol de partida es el de siempre. */}
             {interruptor(!campos.edad, "Ocultar edad", () => setCampos({ ...campos, edad: !campos.edad }))}
-            {interruptor(!campos.notas, "Ocultar notas y apodos", () => setCampos({ ...campos, notas: !campos.notas }))}
+            {interruptor(!campos.notas, "Ocultar notas", () => setCampos({ ...campos, notas: !campos.notas }))}
             {interruptor(!campos.dudoso, "No resaltar dudosos", () => setCampos({ ...campos, dudoso: !campos.dudoso }))}
           </div>
           <div className="flex flex-col gap-1">
