@@ -80,6 +80,16 @@ assert.deepStrictEqual(
   [],
   "sin nacimiento no se inventa una edad",
 );
+assert.deepStrictEqual(
+  detalleCon(persona({ birth: "1917" }), { ...APAGADOS, edad: true }),
+  [],
+  "ni al que pasaría de 100 sin que conste su defunción",
+);
+assert.deepStrictEqual(
+  detalleCon(persona({ birth: "1917" }), { ...APAGADOS, fechas: "año" }),
+  [{ texto: "1917", incierto: false }],
+  "…pero su nacimiento consta y se enseña",
+);
 
 // --- Una nota larga se recorta antes de desbordar el nodo ---
 const charlatan = persona({ birth: "2004", nota: "(mamá MªLuisa Pérez-Cuadrado de la Torre)" });

@@ -1,6 +1,6 @@
 // Test de lógica pura: `npx tsx lib/arbol/fechas.test.ts`. Fuera del build.
 import assert from "assert";
-import { añoDe, conDia, edadDe, edadEntre, escribir, escribirCorto } from "./fechas";
+import { añoDe, conDia, edadDe, edadEntre, escribir, escribirCorto, seLeSuponeFallecido } from "./fechas";
 
 // --- Leer y escribir ---
 assert.strictEqual(añoDe("1986"), 1986);
@@ -28,5 +28,13 @@ assert.strictEqual(edadDe({ birth: "1946-08-16" }, HOY), 79, "vivo: hasta hoy");
 assert.strictEqual(edadDe({ birth: "1945-05-31", death: "2018" }, HOY), 73, "fallecido: hasta su muerte");
 assert.strictEqual(edadDe({ death: "1992" }, HOY), null, "sin nacimiento no hay edad que dar");
 assert.strictEqual(edadDe({}, HOY), null);
+
+// --- A quien pasaría de 100 sin constar defunción se le supone fallecido ---
+assert.strictEqual(edadDe({ birth: "1917" }, HOY), null, "109 años sin defunción: no se le da edad");
+assert.strictEqual(edadDe({ birth: "1926" }, HOY), null, "los 100 justos ya entran");
+assert.strictEqual(edadDe({ birth: "1927" }, HOY), 99, "y los 99 siguen contando");
+assert.strictEqual(edadDe({ birth: "1900", death: "1999" }, HOY), 99, "al que sí consta se le cuenta hasta su muerte");
+assert.ok(!seLeSuponeFallecido({ birth: "1900", death: "1999" }, HOY), "constar muerto no es suponerlo");
+assert.ok(!seLeSuponeFallecido({}, HOY), "sin nacimiento no se supone nada");
 
 console.log("fechas.test.ts OK");

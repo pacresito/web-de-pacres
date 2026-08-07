@@ -33,10 +33,23 @@ export function edadEntre(desde: Fecha, hasta: Fecha): number {
 }
 
 /**
+ * Los documentos anotan la defunción, pero no siempre. A quien hoy la alcanzara sin que
+ * conste nada, el árbol no lo da por vivo: callar no es decir que sigue aquí. La mayor
+ * edad que se llega a enseñar son, pues, 99 años.
+ */
+export const EDAD_IMPROBABLE = 100;
+
+/** Se le supone fallecido aunque el documento no lo diga: hoy pasaría de lo que se cumple. */
+export const seLeSuponeFallecido = (p: { birth?: Fecha; death?: Fecha }, hoy: Fecha): boolean =>
+  !p.death && p.birth !== undefined && edadEntre(p.birth, hoy) >= EDAD_IMPROBABLE;
+
+/**
  * La edad que tiene, o la que tenía al morir. `hoy` llega del servidor y no de este
  * proceso: calcularlo aquí lo pondría a discrepar entre el render de Next y la hidratación
- * cada vez que uno de los dos cruzara la medianoche antes que el otro.
+ * cada vez que uno de los dos cruzara la medianoche antes que el otro. A quien se le supone
+ * fallecido no se le da ninguna: la que saldría se cuenta hasta hoy, y hoy ya no está.
  */
 export function edadDe(p: { birth?: Fecha; death?: Fecha }, hoy: Fecha): number | null {
-  return p.birth ? edadEntre(p.birth, p.death ?? hoy) : null;
+  if (!p.birth || seLeSuponeFallecido(p, hoy)) return null;
+  return edadEntre(p.birth, p.death ?? hoy);
 }

@@ -2,7 +2,7 @@
 // las onomásticas y los dos días que la familia se felicita entera, de los que viven.
 // Puro: `npx tsx lib/arbol/celebraciones.test.ts`.
 
-import { añoDe, conDia, edadDe, MS_DIA, type Fecha } from "./fechas";
+import { añoDe, conDia, MS_DIA, seLeSuponeFallecido, type Fecha } from "./fechas";
 import { type Grafo } from "./grafo";
 import { declinar, parentescos } from "./parentesco";
 import { onomasticaDePersona, primerDomingoDeMayo, type DiaDelAño } from "./santoral";
@@ -17,12 +17,6 @@ export const VENTANA = 30;
  * alguien celebrando algo cada semana y el aviso dejaría de avisar.
  */
 const CERCANA = new Set(["bisabuelos", "abuelos", "padres", "tíos", "hermanos", "primos", "hijos", "sobrinos", "nietos"]);
-
-/**
- * Los documentos anotan la defunción, pero no siempre. A quien hoy pasaría de esta edad
- * sin que conste nada, el árbol no lo da por vivo: callar no es decir que sigue aquí.
- */
-const EDAD_IMPROBABLE = 100;
 
 export type TipoCelebracion = "cumpleaños" | "onomástica" | "día del padre" | "día de la madre";
 
@@ -151,11 +145,7 @@ function familiaCercana(g: Grafo, pov: string): Map<string, string | null> {
   return salida;
 }
 
-const vive = (p: { birth?: Fecha; death?: Fecha }, hoy: Fecha): boolean => {
-  if (p.death) return false;
-  const edad = edadDe(p, hoy);
-  return edad === null || edad < EDAD_IMPROBABLE;
-};
+const vive = (p: { birth?: Fecha; death?: Fecha }, hoy: Fecha): boolean => !p.death && !seLeSuponeFallecido(p, hoy);
 
 /** La próxima vez que caiga ese día, contando hoy como 0. Vale para los que se mueven. */
 export function proximaVez(hoy: Fecha, diaDelAño: DiaDelAño): { fecha: Fecha; faltan: number } {
