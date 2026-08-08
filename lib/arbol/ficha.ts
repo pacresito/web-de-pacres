@@ -64,7 +64,7 @@ export function fichaDe(g: Grafo, id: string, o: OpcionesFicha): Ficha {
     marcas: identidad.marcas,
     nota: identidad.nota,
     aviso: p.nombre === SIN_NOMBRE && !p.birth && !p.death ? AVISO_SIN_NADA : undefined,
-    filas: filasDe(g, p, o.pertenencia),
+    filas: filasDe(g, p, o.linaje, o.pertenencia),
   };
 }
 
@@ -100,10 +100,10 @@ function generacion(nivel: number): string {
  * que anunciar que no consta sería contestar a una pregunta que nadie ha hecho, y en un
  * niño suena a reproche.
  */
-function filasDe(g: Grafo, p: Persona, pertenencia?: Pertenencia): Fila[] {
+function filasDe(g: Grafo, p: Persona, linaje: Map<string, Apellidos>, pertenencia?: Pertenencia): Fila[] {
   const filas = [fila("Padres", padres(g, p.id), "no constan"), ...ramas(pertenencia)];
   for (const [clave, valor] of [
-    ["Unión", uniones(g, p.id)],
+    ["Unión", uniones(g, p.id, linaje)],
     ["Hijos", hijos(g, p.id)],
   ]) {
     if (valor !== "") filas.push({ clave, valor, falta: false });
@@ -128,7 +128,7 @@ function padres(g: Grafo, id: string): string {
  * donde consta lo que consta—, al revés que la segunda línea del bloque de identidad, que
  * solo contesta a quién es esta persona.
  */
-function uniones(g: Grafo, id: string): string {
+function uniones(g: Grafo, id: string, linaje: Map<string, Apellidos>): string {
   const escritas: string[] = [];
   for (const uid of g.unionesDePartner.get(id) ?? []) {
     const u = g.unionPorId.get(uid)!;
@@ -136,7 +136,7 @@ function uniones(g: Grafo, id: string): string {
     if (otro === undefined) continue; // progenitor sin pareja documentada: la unión no es con nadie
     const verbo = u.tipo === "pareja" ? "pareja de" : `${declinado(g, id, "casado", "casada")} con`;
     const final = u.roto ? (u.tipo === "pareja" ? " · ya no" : " · divorciados") : "";
-    escritas.push(`${verbo} ${nombrar(g, otro)}${final}`);
+    escritas.push(`${verbo} ${nombrar(g, otro, linaje.get(otro)?.todos[0])}${final}`);
   }
   return escritas.join("; ");
 }
@@ -166,8 +166,14 @@ function ramas(pertenencia?: Pertenencia): Fila[] {
 const enumerar = (partes: string[]): string =>
   partes.length <= 1 ? (partes[0] ?? "") : `${partes.slice(0, -1).join(", ")} y ${partes[partes.length - 1]}`;
 
-function nombrar(g: Grafo, id: string): string {
+/**
+ * Cómo se nombra a alguien dentro de una fila: su nombre y su año. **El cónyuge además
+ * lleva apellido**, porque es el único de la ficha que trae uno de fuera: los padres y los
+ * hijos comparten el del sujeto, que está escrito en grande ahí arriba.
+ */
+function nombrar(g: Grafo, id: string, apellido?: string): string {
   const p = g.personaPorId.get(id);
   if (!p) return "";
-  return p.birth ? `${p.nombre} (${añoDe(p.birth)})` : p.nombre;
+  const llamado = apellido ? `${p.nombre} ${apellido}` : p.nombre;
+  return p.birth ? `${llamado} (${añoDe(p.birth)})` : llamado;
 }

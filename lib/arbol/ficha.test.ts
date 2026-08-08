@@ -104,6 +104,12 @@ assert.strictEqual(
   "las dos uniones, en su orden, y con lo que fue de cada una",
 );
 assert.strictEqual(
+  valor(ficha("p2"), "Unión"),
+  "casada con Pablo Serrano (1902)",
+  "el cónyuge lleva apellido: es el único de la ficha que trae uno de fuera",
+);
+assert.strictEqual(valor(ficha("p2"), "Hijos"), "Genoveva (1930), Julián (1934)", "y los hijos no, que llevan el de casa");
+assert.strictEqual(
   valor(ficha("p6"), "Unión"),
   "casado con Rosa (1959) · divorciados",
   "y a los «Sin nombre», que no traen sexo, los declina su cónyuge",
