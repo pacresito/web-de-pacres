@@ -3,7 +3,6 @@
 import assert from "assert";
 import { readFileSync } from "fs";
 import { resolve } from "path";
-import { CAMPOS_POR_DEFECTO, type Campos } from "./etiquetas";
 import { construirGrafo } from "./grafo";
 import { homonimias, identidadDe, LARGOS_NODO, libretaDe, type OpcionesIdentidad } from "./identidad";
 import { apellidosDe } from "./personas";
@@ -54,7 +53,7 @@ const linaje = apellidosDe(g);
 const HOY = "2026-08-08";
 const opciones = (o: Partial<OpcionesIdentidad> = {}): OpcionesIdentidad => ({
   linaje,
-  campos: CAMPOS_POR_DEFECTO,
+  fechas: "año",
   apellidos: 2,
   hoy: HOY,
   largos: { titulo: 80, contexto: 80 },
@@ -111,7 +110,7 @@ assert.deepStrictEqual(
   "cede el apellido, que además se lee subiendo",
 );
 assert.deepStrictEqual(
-  identidadDe(g, "p3", opciones({ campos: { ...CAMPOS_POR_DEFECTO, fechas: "ocultar" } })).titulo.at(-1)?.pinta,
+  identidadDe(g, "p3", opciones({ fechas: "ocultar" })).titulo.at(-1)?.pinta,
   "heredado",
   "sin fechas no hay paréntesis vacío",
 );
@@ -120,26 +119,23 @@ assert.deepStrictEqual(
 const incierto = identidadDe(g, "p7", opciones());
 assert.deepStrictEqual(incierto.titulo.at(-1), { texto: " (¿1980?)", pinta: "año" }, "el dato dudoso, entre interrogantes");
 assert.deepStrictEqual(incierto.marcas, ["incierto"]);
-const APAGADOS: Campos = { fechas: "año", dudoso: false, notas: false };
-const EN_EDAD: Campos = { ...CAMPOS_POR_DEFECTO, fechas: "edad" };
 assert.deepStrictEqual(
-  identidadDe(g, "p5", opciones({ campos: EN_EDAD })).titulo.at(-1),
+  identidadDe(g, "p5", opciones({ fechas: "edad" })).titulo.at(-1),
   { texto: " (67 años)", pinta: "año" },
   "la edad ocupa el sitio del año, sin tocar la escalera de la segunda línea",
 );
 assert.deepStrictEqual(
-  identidadDe(g, "p7", opciones({ campos: EN_EDAD })).titulo.at(-1),
+  identidadDe(g, "p7", opciones({ fechas: "edad" })).titulo.at(-1),
   { texto: " (¿46 años?)", pinta: "año" },
   "y arrastra la duda de la fecha de la que sale",
 );
 assert.strictEqual(
-  identidadDe(g, "p1", opciones({ campos: EN_EDAD })).titulo.at(-1)?.pinta,
+  identidadDe(g, "p1", opciones({ fechas: "edad" })).titulo.at(-1)?.pinta,
   "nombre",
   "al que pasaría de 100 sin que conste su defunción no se le da ninguna",
 );
-assert.deepStrictEqual(identidadDe(g, "p7", opciones({ campos: APAGADOS })).marcas, [], "con el interruptor apagado, nada");
-assert.strictEqual(identidadDe(g, "p5", opciones()).nota, "«de Italia»", "la nota va entrecomillada, y solo si se pide");
-assert.strictEqual(identidadDe(g, "p5", opciones({ campos: APAGADOS })).nota, undefined);
+assert.strictEqual(identidadDe(g, "p5", opciones()).nota, "de Italia", "la nota va tal cual la escribió el documento");
+assert.strictEqual(identidadDe(g, "p1", opciones()).nota, undefined, "y quien no la tiene no la trae");
 assert.deepStrictEqual(
   identidadDe(g, "p3", opciones({ homonimia: { cual: 1, total: 3, conAño: false } })).marcas,
   ["1 de 3 con este nombre"],
@@ -169,7 +165,7 @@ assert.strictEqual(crudos.size, 27, "con los apellidos tal como vienen del docum
 for (const p of data.people) {
   const { titulo, contexto } = identidadDe(real, p.id, {
     linaje: libreta.linaje,
-    campos: CAMPOS_POR_DEFECTO,
+    fechas: "año",
     apellidos: "nuevos",
     hoy: HOY,
     largos: LARGOS_NODO,

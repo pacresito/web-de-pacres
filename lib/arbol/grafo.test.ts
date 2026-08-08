@@ -3,7 +3,7 @@
 import assert from "assert";
 import { readFileSync } from "fs";
 import { resolve } from "path";
-import { construirGrafo, ascendientes, consanguineos, descendientes, parejaDirecta, visibles } from "./grafo";
+import { construirGrafo, ascendientes, consanguineos, descendientes, parejaDirecta, pasosDesde, visibles } from "./grafo";
 import type { ArbolData } from "./tree";
 
 const data: ArbolData = JSON.parse(readFileSync(resolve("seed/arbol.json"), "utf-8"));
@@ -85,5 +85,17 @@ for (const p of data.people) {
   assert.ok(v.has(p.id), `${p.id} debe verse a sí mismo`);
   for (const c of parejaDirecta(g, p.id)) assert.ok(v.has(c), `${p.id} debe ver a su pareja`);
 }
+
+// --- Los pasos: el árbol es una sola pieza y todos se alcanzan desde cualquiera ---
+for (const pov of ["p25", "p1", "p289"]) {
+  assert.strictEqual(pasosDesde(g, pov).size, data.people.length, `desde ${pov} no se llega a todos`);
+}
+const pasos = pasosDesde(g, "p25");
+assert.strictEqual(pasos.get("p25"), 0);
+// Un padre, un hermano y una pareja valen uno; el abuelo dos y el primo hermano tres, que
+// es como los cuenta la familia al explicar de qué se conocen.
+assert.deepStrictEqual(["p124", "p126", "p24", "p26"].map((id) => pasos.get(id)), [1, 1, 1, 1]);
+assert.strictEqual(pasos.get("p84"), 2, "el abuelo, a dos");
+assert.strictEqual(Math.max(...pasos.values()), 7, "y el más lejano de todos, a siete");
 
 console.log("grafo.test.ts OK");

@@ -116,6 +116,40 @@ export function descendientes(g: Grafo, x: string): Set<string> {
   return out;
 }
 
+/**
+ * A cuántos eslabones de familia queda cada uno de X. Un eslabón es un padre, un hijo, un
+ * hermano o una pareja: los cuatro pasos que la familia cuenta como uno, y por eso una tía
+ * está a dos y un primo hermano a tres. El árbol es una sola pieza, así que nadie se queda
+ * fuera del mapa.
+ */
+export function pasosDesde(g: Grafo, x: string): Map<string, number> {
+  const pasos = new Map([[x, 0]]);
+  let frente = [x];
+  while (frente.length > 0) {
+    const siguiente: string[] = [];
+    for (const a of frente) {
+      const paso = pasos.get(a)! + 1;
+      for (const b of vecinos(g, a)) {
+        if (pasos.has(b)) continue;
+        pasos.set(b, paso);
+        siguiente.push(b);
+      }
+    }
+    frente = siguiente;
+  }
+  return pasos;
+}
+
+/** Padres y hermanos por la unión de la que X es hijo; parejas e hijos, por las suyas. */
+function* vecinos(g: Grafo, x: string): Generator<string> {
+  const nacimiento = g.unionPorId.get(g.unionDeHijo.get(x) ?? "");
+  if (nacimiento) yield* [...nacimiento.partners, ...nacimiento.children];
+  for (const uid of g.unionesDePartner.get(x) ?? []) {
+    const propia = g.unionPorId.get(uid)!;
+    yield* [...propia.partners, ...propia.children];
+  }
+}
+
 /** Los partners de las uniones propias de X (más de uno si hubo segundas nupcias). */
 export function parejaDirecta(g: Grafo, x: string): Set<string> {
   const out = new Set<string>();

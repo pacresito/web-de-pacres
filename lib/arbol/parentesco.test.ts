@@ -4,7 +4,7 @@ import assert from "assert";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 import { construirGrafo } from "./grafo";
-import { declinar, parentescos, terminoDe, PAREJAS, SIN_PARENTESCO } from "./parentesco";
+import { declinar, parentescos, relacionesDesde, terminoDe, PAREJAS, SIN_PALABRA, SIN_PARENTESCO } from "./parentesco";
 import type { ArbolData } from "./tree";
 
 // --- La regla: el ancestro común más cercano nombra el parentesco ---
@@ -113,5 +113,29 @@ const desdeElHijo = new Set([...parentescos(g, "p26").values()].map((p) => p.ter
 for (const termino of ["tatarabuelos", "tíos bisabuelos", "tíos abuelos segundos", "otros tíos", "primos terceros"]) {
   assert.ok(desdeElHijo.has(termino), `desde p26 tendría que salir «${termino}»`);
 }
+
+// --- Nombrar a uno solo: lo que lee la ficha, que no es lo mismo que repartir cajones ---
+const relaciones = relacionesDesde(g, "p25");
+assert.strictEqual(relaciones.size, data.people.length, "alguien se queda sin relación que leer");
+assert.strictEqual(relaciones.get("p25")!.frase, "Es tu Centro");
+assert.strictEqual(relaciones.get("p24")!.frase, "Es tu pareja", "la suya no es «la pareja de tu hermano»");
+assert.strictEqual(relaciones.get("p124")!.frase, "Es tu padre");
+assert.strictEqual(relaciones.get("p26")!.frase, "Es tu hijo");
+assert.deepStrictEqual(
+  [relaciones.get("p124")!.pasos, relaciones.get("p126")!.pasos, relaciones.get("p24")!.pasos],
+  [1, 1, 1],
+  "un padre, un hermano y una pareja están a un paso",
+);
+
+// De quien entró casándose se dice de quién es pareja: son 100 de las 416 desde Pablo, y
+// dejarlos en «no hay palabra» sería no saber nombrar a un tío político.
+const parejas = [...parentescos(g, "p25")].filter(([, p]) => p.termino === PAREJAS).map(([id]) => id);
+const nombradas = parejas.filter((id) => relaciones.get(id)!.frase.startsWith("Es la pareja de tu "));
+assert.ok(nombradas.length >= parejas.length * 0.9, `solo ${nombradas.length} de ${parejas.length} parejas se saben nombrar`);
+assert.strictEqual(
+  relaciones.get([...parentescos(g, "p25")].find(([, p]) => p.termino === SIN_PARENTESCO)![0])!.frase,
+  SIN_PALABRA,
+  "y a quien no ata nada con la familia se le da la distancia, que es lo único cierto",
+);
 
 console.log("parentesco.test.ts OK");

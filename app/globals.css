@@ -87,8 +87,11 @@
   --paper: #101113;
   --soft:  #1a1c1f;
   --soft2: #232629;
-  --line:  #383b40;
-  --mut:   #8e9095;
+  --line:  #4a4e55;
+  /* Más claro que el #8e9095 del diseño: el texto secundario lleva encima la opacidad de
+     su generación, y multiplicadas las dos cosas el gris del handoff se caía de ilegible
+     a dos generaciones de distancia. */
+  --mut:   #b0b2b8;
   --ink:   #eae8e5;
   --acc:   oklch(0.76 0.09 300);
   --acch:  oklch(0.3 0.05 300);
@@ -105,16 +108,32 @@
 .arbol .g2 { opacity: 0.72; }
 .arbol .g3 { opacity: 0.56; }
 .arbol .g4 { opacity: 0.42; }
-[data-theme="dark"] .arbol .g1 { opacity: 0.9; }
-[data-theme="dark"] .arbol .g2 { opacity: 0.78; }
-[data-theme="dark"] .arbol .g3 { opacity: 0.64; }
-[data-theme="dark"] .arbol .g4 { opacity: 0.52; }
+[data-theme="dark"] .arbol .g1 { opacity: 0.92; }
+[data-theme="dark"] .arbol .g2 { opacity: 0.82; }
+[data-theme="dark"] .arbol .g3 { opacity: 0.7; }
+[data-theme="dark"] .arbol .g4 { opacity: 0.6; }
+
+/* La sombra de la hoja viene de donde la hoja llega: de abajo cuando sube tapando el
+   lienzo, y de la derecha cuando con sitio se convierte en columna. */
+.arbol .hoja { box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.13); }
+@media (min-width: 768px) {
+  .arbol .hoja { box-shadow: -8px 0 30px rgba(0, 0, 0, 0.13); }
+}
 
 /* El lienzo va en SVG y ahí un atributo de presentación (fill="var(--paper)") no resuelve
    la variable: los colores del dibujo tienen que entrar por clase o por `style`. */
-.arbol .nd     { fill: var(--paper); stroke: var(--line); stroke-width: 1; }
-.arbol .nd-dir { fill: var(--paper); stroke: var(--ink); stroke-width: 1.5; }
-.arbol .nd-pov { fill: var(--acch); stroke: var(--acc); stroke-width: 2; }
+/* El fondo mide la cercanía y el borde dice otra cosa: así las dos preguntas —«cuánto es
+   mío» y «dónde estoy yo»— no se pelean por el mismo canal. Cuatro pisadas del mismo
+   morado sobre el papel, que en oscuro salen oscuras porque el papel lo es. */
+.arbol .nd     { fill: var(--paper); }
+.arbol .nd-con { fill: color-mix(in oklab, var(--acc) 7%, var(--paper)); }
+.arbol .nd-dir { fill: color-mix(in oklab, var(--acc) 15%, var(--paper)); }
+.arbol .nd-pov { fill: color-mix(in oklab, var(--acc) 30%, var(--paper)); }
+/* El borde: el trazo grueso es la línea directa y el morado, dónde estás mirando —tú o la
+   ficha que tengas abierta—. */
+.arbol .bd     { stroke: var(--line); stroke-width: 1; }
+.arbol .bd-dir { stroke: var(--ink);  stroke-width: 1.5; }
+.arbol .bd-acc { stroke: var(--acc);  stroke-width: 2; }
 /* El segundo eje se dice con el peso del trazo, nunca con color. */
 .arbol .lk     { fill: none; stroke: var(--line); stroke-width: 1; }
 .arbol .lk-dir { fill: none; stroke: var(--ink); stroke-width: 2; }
@@ -123,7 +142,9 @@
 .arbol .nm-fecha { fill: var(--mut); }
 .arbol .ct       { fill: var(--mut); }
 .arbol .banda-a  { fill: var(--paper); }
-.arbol .banda-b  { fill: var(--soft); }
+/* Media pisada de --soft: la banda es gris y los nodos son morados, pero si pesa tanto
+   como el fondo del nodo más flojo, en las columnas pares deja de verse quién es familia. */
+.arbol .banda-b  { fill: color-mix(in oklab, var(--soft) 45%, var(--paper)); }
 .arbol .pieza    { fill: var(--paper); stroke: var(--line); }
 .arbol .pieza-tx { fill: var(--mut); }
 .arbol .par      { fill: none; stroke: var(--mut); }

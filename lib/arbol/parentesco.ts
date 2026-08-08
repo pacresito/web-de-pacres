@@ -7,7 +7,7 @@
 // segundo —los primos, hasta el tercero—; pasado el tope el cajón conserva el término
 // base y suelta el ordinal: «otros sobrinos».
 
-import { ascendientes, descendientes, parejaDirecta, type Grafo } from "./grafo";
+import { ascendientes, descendientes, parejaDirecta, pasosDesde, type Grafo } from "./grafo";
 
 /** Los dos cajones de quien no tiene término propio, al final de su fila y en este orden. */
 export const PAREJAS = "parejas";
@@ -91,6 +91,61 @@ function conOrdinal(base: string, n: number, tope: number): string {
   if (n <= 1) return base;
   return n <= tope ? `${base} ${ORDINALES[n]}` : `otros ${base}`;
 }
+
+// --- La relación con uno solo, tal como la lee la ficha ---
+
+/** Cuando la lengua no llega, lo único que queda es la distancia, y se dice así. */
+export const SIN_PALABRA = "No hay palabra para esta relación";
+
+export interface Relacion {
+  /** Ya declinada y lista para leer: «Es tu prima», «Es la pareja de tu tío». */
+  frase: string;
+  /** Eslabones de familia hasta el punto de vista: un padre, un hijo, un hermano, una pareja. */
+  pasos: number;
+  /** Generación relativa al punto de vista, como en el layout: los padres +1. */
+  nivel: number;
+}
+
+/**
+ * Lo que la ficha dice arriba del todo, para todo el árbol de una vez. El panel reparte a
+ * la familia en cajones y aquí hay que nombrar a uno solo, así que los cajones no sirven
+ * tal cual: **de quien entró casándose se dice de quién es pareja**, que es lo que lo ata
+ * a la familia, y solo cuando ni por ahí hay palabra se cae en la distancia.
+ */
+export function relacionesDesde(g: Grafo, pov: string): Map<string, Relacion> {
+  const cajones = parentescos(g, pov);
+  const pasos = pasosDesde(g, pov);
+  const salida = new Map<string, Relacion>();
+  for (const [id, { termino, nivel }] of cajones) {
+    salida.set(id, { frase: fraseDe(g, cajones, pov, id, termino), pasos: pasos.get(id)!, nivel });
+  }
+  return salida;
+}
+
+/**
+ * Los dos cajones no son palabras, y «otros sobrinos» tampoco: es el término al que se le
+ * ha caído el ordinal porque nadie lo usa, y en singular diría de alguien que es «tu otro
+ * sobrino», que no significa nada.
+ */
+const sinPalabra = (termino: string): boolean =>
+  termino === PAREJAS || termino === SIN_PARENTESCO || termino.startsWith("otros ");
+
+function fraseDe(g: Grafo, cajones: Map<string, Parentesco>, pov: string, id: string, termino: string): string {
+  if (id === pov) return "Es tu Centro";
+  if (!sinPalabra(termino)) return `Es tu ${unaSola(g, id, termino)}`;
+  if (termino === PAREJAS) {
+    const suyas = parejaDirecta(g, id);
+    if (suyas.has(pov)) return "Es tu pareja";
+    for (const otro of suyas) {
+      const suyo = cajones.get(otro)?.termino;
+      if (suyo && !sinPalabra(suyo)) return `Es la pareja de tu ${unaSola(g, otro, suyo)}`;
+    }
+  }
+  return SIN_PALABRA;
+}
+
+const unaSola = (g: Grafo, id: string, termino: string): string =>
+  declinar(termino, 1, g.personaPorId.get(id)?.sexo === "m" ? 1 : 0);
 
 const IRREGULARES: Record<string, string> = { padre: "madre" };
 

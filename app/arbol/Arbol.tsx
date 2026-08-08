@@ -7,11 +7,14 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { acotar, brujulaDe, conZoom, type Encuadre, type Rumbo, type Vista } from "@/lib/arbol/camara";
+import { FECHAS_POR_DEFECTO, type ModoFechas } from "@/lib/arbol/fechas";
 import { proximasCelebraciones } from "@/lib/arbol/celebraciones";
 import { construirGrafo } from "@/lib/arbol/grafo";
-import { CAMPOS_POR_DEFECTO, type Campos, type ModoFechas } from "@/lib/arbol/etiquetas";
-import { identidadDe, LARGOS_NODO, libretaDe, type Identidad, type Pinta } from "@/lib/arbol/identidad";
+import { fichaDe } from "@/lib/arbol/ficha";
+import { identidadDe, LARGOS_FILA, LARGOS_NODO, libretaDe, type Identidad, type Pinta } from "@/lib/arbol/identidad";
+import { relacionesDesde } from "@/lib/arbol/parentesco";
 import type { ModoApellidos } from "@/lib/arbol/personas";
+import { calcularRamas } from "@/lib/arbol/ramas";
 import {
   ALTO_CONTADOR,
   ALTO_NODO,
@@ -25,7 +28,9 @@ import {
 } from "@/lib/arbol/layout";
 import { calcularRecuento, type Fraccion } from "@/lib/arbol/recuento";
 import type { ArbolData, Union } from "@/lib/arbol/tree";
-import Celebraciones from "./Celebraciones";
+import Celebraciones, { AvisoCelebraciones } from "./Celebraciones";
+import Ficha from "./Ficha";
+import Hoja from "./Hoja";
 import Recuento from "./Recuento";
 
 const POR_DEFECTO = "p25";
@@ -43,17 +48,22 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
 
   const inicial = grafo.personaPorId.has(POR_DEFECTO) ? POR_DEFECTO : (data.people[0]?.id ?? POR_DEFECTO);
   const [puntoDeVista, setPuntoDeVista] = useState(inicial);
+  /** De dónde se vino: la ficha del centro de ahora es la que ofrece deshacer la mudanza. */
+  const [anterior, setAnterior] = useState<string | null>(null);
   const [abiertas, setAbiertas] = useState<Set<string>>(() => new Set());
   // Aparte de las abiertas: de estas se ha pedido solo la pareja, no sus hijos.
   const [parejas, setParejas] = useState<Set<string>>(() => new Set());
   const [todoDesplegado, setTodoDesplegado] = useState(false);
   const [ocultarNoConectados, setOcultarNoConectados] = useState(true);
-  const [campos, setCampos] = useState<Campos>(CAMPOS_POR_DEFECTO);
+  const [fechas, setFechas] = useState<ModoFechas>(FECHAS_POR_DEFECTO);
   const [apellidos, setApellidos] = useState<ModoApellidos>("nuevos");
   const [panelAbierto, setPanelAbierto] = useState(false);
-  // Los dos paneles de arriba comparten el borde superior, así que se turnan: en un móvil
-  // abiertos a la vez se pisan, y el que queda debajo no se lee ni se puede cerrar.
-  const [arriba, setArriba] = useState<"recuento" | "celebraciones" | null>(null);
+  const [recuentoAbierto, setRecuentoAbierto] = useState(false);
+  /**
+   * La hoja inferior, que es una sola: la ficha de alguien o lo que se celebra. Dos a la
+   * vez se pisarían, y la de debajo no se leería ni se podría cerrar.
+   */
+  const [hoja, setHoja] = useState<{ tipo: "ficha"; id: string } | { tipo: "celebraciones" } | null>(null);
   /** Lo que se resalta del lienzo: el numerador de la fracción señalada, o nada. */
   const [resaltados, setResaltados] = useState<Set<string> | null>(null);
   const [vista, setVista] = useState<Vista>(CENTRADA);
@@ -80,6 +90,22 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
   const celebraciones = useMemo(
     () => proximasCelebraciones(grafo, puntoDeVista, hoy),
     [grafo, puntoDeVista, hoy],
+  );
+  const relaciones = useMemo(() => relacionesDesde(grafo, puntoDeVista), [grafo, puntoDeVista]);
+  // Las ramas no dependen de quién mire: se derivan del grafo y valen para todo el árbol.
+  const pertenencias = useMemo(() => calcularRamas(grafo), [grafo]);
+  /** El bloque de identidad de cualquiera, para las superficies que lo piden fila a fila. */
+  const escribir = useMemo(
+    () => (id: string, largoContexto: number) =>
+      identidadDe(grafo, id, {
+        linaje: libreta.linaje,
+        fechas,
+        apellidos,
+        hoy,
+        largos: { titulo: LARGOS_FILA.titulo, contexto: largoContexto },
+        homonimia: libreta.homonimias.get(id),
+      }),
+    [grafo, libreta, fechas, apellidos, hoy],
   );
   /** Quien cumple años hoy se lleva además una tarta en su nodo, sin abrir nada. */
   const cumplenHoy = useMemo(
@@ -126,21 +152,26 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
     setVista((v) => acotar(paso(v), encuadre.current));
   }
 
-  function elegirPuntoDeVista(id: string) {
-    if (id === puntoDeVista) {
-      // Volver a tocar al que ya lo es es la forma de replegarlo todo.
-      setAbiertas(new Set());
-      setParejas(new Set());
-      setTodoDesplegado(false);
-      return;
-    }
+  /**
+   * Tocar a alguien abre su ficha y nada más, en cualquier superficie. El centro solo se
+   * muda desde el botón de dentro, que es una decisión y no el efecto de haber tocado.
+   */
+  function abrirFicha(id: string) {
+    setRecuentoAbierto(false); // el panel de arriba y la hoja se pisan en un móvil
+    setHoja({ tipo: "ficha", id });
+  }
+
+  function centrarEn(id: string) {
+    if (id === puntoDeVista) return;
+    setAnterior(puntoDeVista);
     setPuntoDeVista(id);
+    setHoja(null);
     // La cámara no se mueve: quien has tocado se queda donde estaba en pantalla, aunque
     // el árbol entero se recoloque a su alrededor.
-    const anterior = layout.nodos.find((n) => n.esPuntoDeVista);
-    const tocado = layout.nodos.find((n) => n.id === id);
-    if (anterior && tocado) {
-      setVista((v) => ({ ...v, dx: v.dx + anterior.x - tocado.x, dy: v.dy + anterior.y - tocado.y }));
+    const saliente = layout.nodos.find((n) => n.esPuntoDeVista);
+    const entrante = layout.nodos.find((n) => n.id === id);
+    if (saliente && entrante) {
+      setVista((v) => ({ ...v, dx: v.dx + saliente.x - entrante.x, dy: v.dy + saliente.y - entrante.y }));
     }
   }
 
@@ -195,11 +226,13 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
 
   function reiniciar() {
     setPuntoDeVista(inicial);
+    setAnterior(null);
+    setHoja(null);
     setAbiertas(new Set());
     setParejas(new Set());
     setTodoDesplegado(false);
     setOcultarNoConectados(true);
-    setCampos(CAMPOS_POR_DEFECTO);
+    setFechas(FECHAS_POR_DEFECTO);
     setApellidos("nuevos");
     setVista(CENTRADA);
   }
@@ -278,6 +311,8 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
     return () => nodo.removeEventListener("wheel", alGirar);
   }, []);
 
+  // Con la hoja hecha columna, lo que flota a la derecha se corre para no quedar debajo.
+  const apartado = hoja ? "md:right-[392px]" : "";
   const brujula = brujulaDe(vista, tamano.w, tamano.h);
   const transformacion = `translate(${tamano.w / 2} ${tamano.h / 2}) scale(${vista.escala}) translate(${-centro.x} ${-centro.y})`;
   const niveles = useMemo(() => [...new Set(layout.nodos.map((n) => n.nivel))].sort((a, b) => a - b), [layout]);
@@ -291,7 +326,9 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
       <svg
         width={tamano.w}
         height={tamano.h}
-        className="block cursor-grab select-none active:cursor-grabbing"
+        // Bajo la hoja el árbol sigue viéndose: tapa, no sustituye. Con sitio ni eso —la
+        // hoja se ha apartado a su columna y el lienzo se queda entero.
+        className={`block cursor-grab select-none active:cursor-grabbing ${hoja ? "opacity-30 md:opacity-100" : ""}`}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -330,7 +367,7 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
                     }
                   />
                 ))}
-                {v.pareja && <TrazoDePareja x={v.x} extremos={v.pareja} tipo={v.tipo} roto={v.roto} />}
+                {v.pareja && <TrazoDePareja x={v.x} extremos={entreBordes(v.pareja)} tipo={v.tipo} roto={v.roto} />}
               </g>
             ))}
           </g>
@@ -351,7 +388,7 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
               nodo={n}
               identidad={identidadDe(grafo, n.id, {
                 linaje: libreta.linaje,
-                campos,
+                fechas,
                 apellidos,
                 hoy,
                 largos: LARGOS_NODO,
@@ -359,7 +396,8 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
               })}
               cumpleHoy={cumplenHoy.has(n.id)}
               atenuado={opacidadDe(n.id) !== undefined}
-              onElegir={() => arrastre.current <= ARRASTRE_MINIMO && elegirPuntoDeVista(n.id)}
+              abierta={hoja?.tipo === "ficha" && hoja.id === n.id}
+              onElegir={() => arrastre.current <= ARRASTRE_MINIMO && abrirFicha(n.id)}
             />
           ))}
 
@@ -404,27 +442,24 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
 
       <Recuento
         cuentas={cuentas}
-        abierto={arriba === "recuento"}
-        setAbierto={(v) => setArriba(v ? "recuento" : null)}
+        abierto={recuentoAbierto}
+        setAbierto={setRecuentoAbierto}
         onPulsar={pulsarFraccion}
         onResaltar={(ids) => setResaltados(ids ? new Set(ids) : null)}
       />
 
-      <Celebraciones
-        lista={celebraciones}
-        abierto={arriba === "celebraciones"}
-        setAbierto={(v) => setArriba(v ? "celebraciones" : null)}
-      />
+      <AvisoCelebraciones lista={celebraciones} onAbrir={() => setHoja({ tipo: "celebraciones" })} apartado={apartado} />
 
       <Controles
-        campos={campos}
-        setCampos={setCampos}
+        fechas={fechas}
+        setFechas={setFechas}
         apellidos={apellidos}
         setApellidos={setApellidos}
         ocultar={ocultarNoConectados}
         setOcultar={setOcultarNoConectados}
         abierto={panelAbierto}
         setAbierto={setPanelAbierto}
+        apartado={apartado}
         todoDesplegado={todoDesplegado}
         onDesplegarTodo={() => {
           setTodoDesplegado(!todoDesplegado);
@@ -433,6 +468,33 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
         }}
         onReiniciar={reiniciar}
       />
+
+      {hoja && (
+        <Hoja onCerrar={() => setHoja(null)}>
+          {hoja.tipo === "celebraciones" ? (
+            <Celebraciones lista={celebraciones} identidad={escribir} onPersona={abrirFicha} />
+          ) : (
+            <Ficha
+              datos={fichaDe(grafo, hoja.id, {
+                puntoDeVista,
+                linaje: libreta.linaje,
+                fechas,
+                hoy,
+                relacion: relaciones.get(hoja.id)!,
+                pertenencia: pertenencias.get(hoja.id),
+                homonimia: libreta.homonimias.get(hoja.id),
+              })}
+              anterior={anterior ? { id: anterior, nombre: personaPorId.get(anterior)?.nombre ?? "" } : undefined}
+              onCentrar={() => centrarEn(hoja.id)}
+              onIndice={() => {
+                setHoja(null);
+                setRecuentoAbierto(true);
+              }}
+              onDevolver={() => anterior && centrarEn(anterior)}
+            />
+          )}
+        </Hoja>
+      )}
     </div>
   );
 }
@@ -478,22 +540,26 @@ const PINTAS: Record<Pinta, { clase: string; cursiva?: boolean }> = {
 };
 
 /**
- * El nodo es el bloque de identidad y nada más: quién es arriba y de quién es debajo. Los
- * dos ejes del dibujo se dicen sin color —el sitio en el árbol, con la posición; la línea
- * directa del punto de vista, con el peso del trazo—, así que el acento se queda para lo
- * único que no se puede decir de otra forma: dónde estás tú.
+ * El nodo es el bloque de identidad y nada más: quién es arriba y de quién es debajo. Su
+ * sitio en el árbol lo dice la posición, y el resto se reparte entre el fondo y el borde:
+ * **el fondo mide la cercanía** —cuatro pisadas del acento, del papel al punto de vista— y
+ * **el borde dice dónde miras** —el trazo grueso, la línea directa; el acento, tú y la
+ * ficha que tengas abierta—. Dos preguntas, dos canales, y ninguna pisando a la otra.
  */
 function Nodo({
   nodo,
   identidad,
   cumpleHoy,
   atenuado,
+  abierta,
   onElegir,
 }: {
   nodo: NodoLayout;
   identidad: Identidad;
   cumpleHoy: boolean;
   atenuado: boolean;
+  /** Es la ficha que está abierta: el borde de acento dice desde el lienzo a quién lees. */
+  abierta: boolean;
   onElegir: () => void;
 }) {
   const izquierda = nodo.x - ANCHO_NODO / 2 + SANGRADO;
@@ -511,7 +577,10 @@ function Nodo({
         width={ANCHO_NODO}
         height={ALTO_NODO}
         rx={9}
-        className={nodo.esPuntoDeVista ? "nd-pov" : nodo.lineaDirecta ? "nd-dir" : "nd"}
+        // Fondo y borde por separado: el fondo dice cuánto es tuyo y el borde, dónde miras.
+        className={`${
+          nodo.esPuntoDeVista ? "nd-pov" : nodo.lineaDirecta ? "nd-dir" : nodo.consanguineo ? "nd-con" : "nd"
+        } ${nodo.esPuntoDeVista || abierta ? "bd-acc" : nodo.lineaDirecta ? "bd-dir" : "bd"}`}
       />
       <text x={izquierda} y={nodo.y - 3} fontSize={13} fontWeight={600}>
         {identidad.titulo.map((trozo, i) => (
@@ -535,6 +604,14 @@ function Nodo({
     </g>
   );
 }
+
+/**
+ * El layout da los centros de los dos y el trazo se queda en el hueco que hay entre ellos:
+ * los nodos llevan la opacidad de su generación, así que lo que cruzara por debajo se leería
+ * a través del recuadro como si lo atravesara.
+ */
+const entreBordes = ([a, b]: [number, number]): [number, number] =>
+  a < b ? [a + ALTO_NODO / 2, b - ALTO_NODO / 2] : [a - ALTO_NODO / 2, b + ALTO_NODO / 2];
 
 const GUION = "4 3"; // el trazo de la unión que acabó, rota como el tachón del documento
 // Un corazón de 14×11 centrado en el origen: la marca de los novios que no se casaron.
@@ -680,26 +757,29 @@ function Leyenda() {
 }
 
 function Controles({
-  campos,
-  setCampos,
+  fechas,
+  setFechas,
   apellidos,
   setApellidos,
   ocultar,
   setOcultar,
   abierto,
   setAbierto,
+  apartado,
   todoDesplegado,
   onDesplegarTodo,
   onReiniciar,
 }: {
-  campos: Campos;
-  setCampos: (c: Campos) => void;
+  fechas: ModoFechas;
+  setFechas: (f: ModoFechas) => void;
   apellidos: ModoApellidos;
   setApellidos: (a: ModoApellidos) => void;
   ocultar: boolean;
   setOcultar: (v: boolean) => void;
   abierto: boolean;
   setAbierto: (v: boolean) => void;
+  /** Lo que se corre a la izquierda cuando la hoja ocupa su columna de la derecha. */
+  apartado: string;
   todoDesplegado: boolean;
   onDesplegarTodo: () => void;
   onReiniciar: () => void;
@@ -750,7 +830,7 @@ function Controles({
   );
 
   return (
-    <div className="absolute right-3 bottom-3 flex flex-col items-end gap-2">
+    <div className={`absolute right-3 bottom-3 flex flex-col items-end gap-2 ${apartado}`}>
       {abierto && (
         <div
           style={{ boxShadow: "var(--sh)" }}
@@ -765,11 +845,7 @@ function Controles({
             {/* Los cuatro ocupan el mismo hueco detrás del nombre, así que son excluyentes.
                 La fecha entera solo la tienen los del calendario de cumpleaños; para el
                 resto, «completa» sigue enseñando el año a secas. */}
-            {eleccion("Fechas", ["ocultar", "año", "edad", "completa"] as const, campos.fechas, (f: ModoFechas) => setCampos({ ...campos, fechas: f }), (f) => (f === "ocultar" ? "no" : f))}
-            {/* Los interruptores se enuncian por lo que hacen al marcarlos, y de entrada
-                están apagados: el árbol de partida es el de siempre. */}
-            {interruptor(!campos.notas, "Ocultar notas", () => setCampos({ ...campos, notas: !campos.notas }))}
-            {interruptor(!campos.dudoso, "No resaltar dudosos", () => setCampos({ ...campos, dudoso: !campos.dudoso }))}
+            {eleccion("Fechas", ["ocultar", "año", "edad", "completa"] as const, fechas, setFechas, (f) => (f === "ocultar" ? "no" : f))}
           </div>
           <div className="flex flex-col gap-1">
             <p className="px-1 font-[family-name:var(--mono)] text-[9.5px] font-medium tracking-[0.12em] text-[var(--mut)] uppercase">

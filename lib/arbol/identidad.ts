@@ -7,8 +7,7 @@
 // peldaños, y el primer progenitor y el cónyuge no están en ninguno: quitarlos deja a esas
 // personas sin nada que las distinga de otra con su mismo nombre.
 
-import { fechasDe, type Campos } from "./etiquetas";
-import { añoDe, type Fecha } from "./fechas";
+import { añoDe, escribirVida, type Fecha, type ModoFechas } from "./fechas";
 import { parejaDirecta, type Grafo } from "./grafo";
 import { apellidosDe, etiquetaDe, ordenarPareja, type Apellidos, type ModoApellidos } from "./personas";
 import type { Persona } from "./tree";
@@ -35,7 +34,7 @@ export interface Identidad {
   contexto: string;
   /** Etiquetas que se apilan detrás del nombre donde hay sitio; el lienzo no las pinta. */
   marcas: string[];
-  /** Lo que anotó el documento, tercera línea entre comillas angulares. */
+  /** Lo que anotó el documento, tal cual. Solo lo pinta la ficha. */
   nota?: string;
 }
 
@@ -50,7 +49,7 @@ export interface Homonimia {
 export interface OpcionesIdentidad {
   /** Los apellidos ya resueltos contra el árbol (`apellidosDe`), que se calculan una vez. */
   linaje: Map<string, Apellidos>;
-  campos: Campos;
+  fechas: ModoFechas;
   apellidos: ModoApellidos;
   /** El día del servidor, del que sale la edad. Nunca el reloj del navegador. */
   hoy: Fecha;
@@ -68,7 +67,7 @@ export function identidadDe(g: Grafo, id: string, o: OpcionesIdentidad): Identid
     titulo: tituloDe(p, o),
     contexto: contextoDe(g, id, o.ramas, o.largos.contexto),
     marcas: marcasDe(p, o),
-    nota: o.campos.notas && p.nota ? `«${p.nota}»` : undefined,
+    nota: p.nota,
   };
 }
 
@@ -78,14 +77,14 @@ export function identidadDe(g: Grafo, id: string, o: OpcionesIdentidad): Identid
  * El nombre manda y el año no se recorta nunca: es el desempate más barato que hay y lo
  * llevan 309 personas. Lo que cede es el apellido, que además se lee subiendo por el árbol.
  */
-function tituloDe(p: Persona, { linaje, apellidos, campos, hoy, largos }: OpcionesIdentidad): Trozo[] {
-  const año = añoEscrito(p, campos, hoy);
+function tituloDe(p: Persona, { linaje, apellidos, fechas, hoy, largos }: OpcionesIdentidad): Trozo[] {
+  const año = añoEscrito(p, fechas, hoy);
   const etiqueta = etiquetaDe(p, apellidos, linaje.get(p.id)!);
   const nombrado = recortar(etiqueta.texto, largos.titulo - (año ? año.length + 1 : 0));
   // Tres tratamientos en una línea: el nombre, los apellidos que constan por escrito y
   // los que se deducen del árbol, que van apagados porque el documento no los decía.
   const corte = Math.min(p.nombre.length, etiqueta.heredadoDesde, nombrado.length);
-  const suyo: Pinta = p.nombre === SIN_NOMBRE ? "sinNombre" : campos.dudoso && p.incierto === "nombre" ? "dudoso" : "nombre";
+  const suyo: Pinta = p.nombre === SIN_NOMBRE ? "sinNombre" : p.incierto === "nombre" ? "dudoso" : "nombre";
   const trozos: Trozo[] = [
     { texto: nombrado.slice(0, corte), pinta: suyo },
     { texto: nombrado.slice(corte, Math.max(corte, etiqueta.heredadoDesde)), pinta: "nombre" },
@@ -101,10 +100,10 @@ function tituloDe(p: Persona, { linaje, apellidos, campos, hoy, largos }: Opcion
  * Lo que se sabe de su vida, entre paréntesis detrás del nombre, y entre interrogantes si
  * es el dato que el documento dudaba —la edad arrastra la duda de la fecha de la que sale—.
  */
-function añoEscrito(p: Persona, campos: Campos, hoy: Fecha): string {
-  const fechas = fechasDe(p, campos.fechas, hoy);
-  if (!fechas) return "";
-  return campos.dudoso && p.incierto === "fechas" ? `(¿${fechas}?)` : `(${fechas})`;
+function añoEscrito(p: Persona, modo: ModoFechas, hoy: Fecha): string {
+  const vida = escribirVida(p, modo, hoy);
+  if (!vida) return "";
+  return p.incierto === "fechas" ? `(¿${vida}?)` : `(${vida})`;
 }
 
 // --- Línea 2: de quién es ---
@@ -187,7 +186,7 @@ const escribirRamas = (ramas: string[]): string =>
  * hombre, se escribe en femenino. Sin ninguna de las dos cosas, masculino, que es como la
  * lengua resuelve lo que no sabe.
  */
-function declinado(g: Grafo, id: string, masculino: string, femenino: string): string {
+export function declinado(g: Grafo, id: string, masculino: string, femenino: string): string {
   const propio = g.personaPorId.get(id)?.sexo;
   if (propio) return propio === "m" ? femenino : masculino;
   for (const otro of parejaDirecta(g, id)) {
@@ -199,9 +198,9 @@ function declinado(g: Grafo, id: string, masculino: string, femenino: string): s
 
 // --- Las marcas ---
 
-function marcasDe(p: Persona, { campos, homonimia }: OpcionesIdentidad): string[] {
+function marcasDe(p: Persona, { homonimia }: OpcionesIdentidad): string[] {
   const marcas: string[] = [];
-  if (campos.dudoso && p.incierto) marcas.push("incierto");
+  if (p.incierto) marcas.push("incierto");
   if (homonimia && homonimia.total > 1) {
     marcas.push(`${homonimia.cual} de ${homonimia.total} con este nombre${homonimia.conAño ? " y año" : ""}`);
   }
@@ -234,6 +233,13 @@ export function homonimias(g: Grafo, linaje: Map<string, Apellidos>): Map<string
  * carácter a 13 px en la primera línea y 5,2 px a 10,5 px en la segunda.
  */
 export const LARGOS_NODO = { titulo: 32, contexto: 40 };
+
+/**
+ * Y lo que cabe en una fila de una hoja inferior, sobre sus 343 px: el título comparte
+ * ancho con la fecha y con lo que se celebra, y la segunda línea se lleva la fila entera
+ * menos la fecha.
+ */
+export const LARGOS_FILA = { titulo: 34, contexto: 51 };
 
 /** Todo lo que hace falta para escribir a cualquiera, calculado una vez por árbol. */
 export function libretaDe(g: Grafo): { linaje: Map<string, Apellidos>; homonimias: Map<string, Homonimia> } {
