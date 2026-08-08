@@ -26,13 +26,17 @@ export default function Recuento({
       <button
         type="button"
         onClick={() => setAbierto(!abierto)}
-        className="flex h-11 items-center gap-2 rounded-full border border-neutral-200 bg-white px-4 text-[13px] font-medium text-neutral-700 shadow-lg"
+        style={{ boxShadow: "var(--sh)" }}
+        className="flex h-11 items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--paper)] px-4 text-[13px] font-medium text-[var(--ink)]"
       >
         {cuentas.puestos} de {cuentas.alcanzables} familiares
-        <span className={`text-[10px] text-neutral-400 ${abierto ? "" : "rotate-180"}`}>▲</span>
+        <span className={`text-[10px] text-[var(--mut)] ${abierto ? "" : "rotate-180"}`}>▲</span>
       </button>
       {abierto && (
-        <div className="flex max-w-full flex-col gap-1 overflow-x-auto rounded-xl border border-neutral-200 bg-white p-2 shadow-lg">
+        <div
+          style={{ boxShadow: "var(--sh)" }}
+          className="flex max-w-full flex-col gap-1 overflow-x-auto rounded-xl border border-[var(--line)] bg-[var(--paper)] p-2"
+        >
           {cuentas.filas.map((fila) => (
             <div key={fila.nivel} className="flex flex-nowrap items-center gap-1">
               {fila.fracciones.map((fraccion) => (
@@ -68,10 +72,16 @@ function Boton({
       onClick={() => onPulsar(fraccion)}
       onPointerEnter={() => onResaltar(fraccion.puestos)}
       onPointerLeave={() => onResaltar(null)}
-      className="flex shrink-0 items-baseline gap-1.5 rounded-md px-1.5 py-1 text-[12px] whitespace-nowrap hover:bg-neutral-100 active:bg-neutral-100"
+      className="flex shrink-0 items-baseline gap-1.5 rounded-md px-1.5 py-1 text-[12px] whitespace-nowrap hover:bg-[var(--soft)] active:bg-[var(--soft)]"
     >
-      <span className="text-neutral-600">{fraccion.termino}</span>
-      <span className={`tabular-nums ${llena ? "text-[#00b87a]" : puestos > 0 ? "text-neutral-900" : "text-neutral-400"}`}>
+      <span className="text-[var(--mut)]">{fraccion.termino}</span>
+      {/* El acento es del punto de vista y de nadie más: una fracción llena se marca con
+          el peso, que es como el lienzo dice todo lo que no es «aquí estás tú». */}
+      <span
+        className={`font-[family-name:var(--mono)] text-[11px] tracking-[0.05em] tabular-nums ${
+          llena ? "font-semibold text-[var(--ink)]" : puestos > 0 ? "text-[var(--ink)]" : "text-[var(--mut)] opacity-60"
+        }`}
+      >
         {puestos}/{fraccion.alcanzables}
       </span>
     </button>

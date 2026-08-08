@@ -69,6 +69,8 @@ export interface Vinculo {
   tipo: Union["tipo"];
   /** La unión acabó (divorcio o ruptura): el trazo va a rayas. */
   roto: boolean;
+  /** Un eslabón de la línea directa del punto de vista: su trazo lleva el doble de peso. */
+  directo: boolean;
   /** Ancla del reparto: el punto medio de la pareja, o el contador que la sustituye. */
   x: number;
   y: number;
@@ -361,6 +363,9 @@ export function calcularLayout(g: Grafo, opciones: OpcionesLayout): Layout {
       unionId: u.id,
       tipo: u.tipo,
       roto: u.roto === true,
+      // Directa es la unión por la que pasa la línea, no la que toca a alguien de ella:
+      // la de mis tíos tiene a mi abuelo detrás, pero por ella no se sube ni se baja.
+      directo: u.partners.some((p) => lineaDirecta.has(p)) && u.children.some((c) => lineaDirecta.has(c)),
       x: ancla.x,
       y: ancla.y,
       canal: ancla.x + ANCHO_COLUMNA / 2,

@@ -53,6 +53,83 @@
 }
 
 /* ============================================================
+   Árbol genealógico (/arbol) — paleta propia
+   El árbol no hereda los colores del sitio pero sí obedece a su interruptor de tema: los
+   tokens cuelgan de .arbol y la variante oscura, del data-theme que el script anti-FOUC
+   pone en <html> antes del primer pintado.
+   El acento es morado y de un solo uso —el punto de vista y lo que lleva a cambiarlo—:
+   el verde del sitio da 2,50:1 sobre este papel, por debajo de lo legible para un borde,
+   y bajarlo hasta que contraste deja de ser el verde del sitio.
+   ============================================================ */
+.arbol {
+  --paper: #fcfbf9;   /* fondo del lienzo, fondo de nodo, hojas */
+  --soft:  #f2f0ec;   /* superficies: regla de generación, cabeceras, campo de búsqueda */
+  --soft2: #e7e4df;   /* esqueletos de carga, pista de los interruptores */
+  --line:  #cfccc6;   /* filetes, borde de nodo normal */
+  --mut:   #6b6862;   /* texto secundario, contexto relacional, mono */
+  --ink:   #17181b;   /* texto principal, borde de nodo de línea directa */
+  --acc:   oklch(0.52 0.1 300);
+  --acch:  oklch(0.95 0.022 300);
+  --accb:  oklch(0.8 0.06 300);
+  --sh: 0 1px 2px rgba(0, 0, 0, 0.06), 0 6px 18px rgba(0, 0, 0, 0.05);
+  /* El diseño no da color de error porque en el árbol no hay nada que falle; el acceso sí,
+     y el acento no puede prestarse: es del punto de vista. */
+  --err: oklch(0.52 0.19 25);
+  --sans:  var(--font-instrument-sans), ui-sans-serif, system-ui, sans-serif;
+  --serif: var(--font-instrument-serif), "Times New Roman", Georgia, serif;
+  --mono:  var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+}
+
+[data-theme="dark"] .arbol {
+  --paper: #101113;
+  --soft:  #1a1c1f;
+  --soft2: #232629;
+  --line:  #383b40;
+  --mut:   #8e9095;
+  --ink:   #eae8e5;
+  --acc:   oklch(0.76 0.09 300);
+  --acch:  oklch(0.3 0.05 300);
+  --accb:  oklch(0.45 0.07 300);
+  --err:   oklch(0.68 0.17 25);
+  --sh: 0 1px 2px rgba(0, 0, 0, 0.5), 0 8px 22px rgba(0, 0, 0, 0.45);
+}
+
+/* Los nueve niveles de generación relativa. La escala es simétrica: −2 y +2 se ven igual
+   y lo que los separa es de qué lado del horizonte caen. En oscuro se comprime, no se
+   copia: por debajo del 42 % sobre negro los nodos lejanos desaparecen. */
+.arbol .g0 { opacity: 1; }
+.arbol .g1 { opacity: 0.88; }
+.arbol .g2 { opacity: 0.72; }
+.arbol .g3 { opacity: 0.56; }
+.arbol .g4 { opacity: 0.42; }
+[data-theme="dark"] .arbol .g1 { opacity: 0.9; }
+[data-theme="dark"] .arbol .g2 { opacity: 0.78; }
+[data-theme="dark"] .arbol .g3 { opacity: 0.64; }
+[data-theme="dark"] .arbol .g4 { opacity: 0.52; }
+
+/* El lienzo va en SVG y ahí un atributo de presentación (fill="var(--paper)") no resuelve
+   la variable: los colores del dibujo tienen que entrar por clase o por `style`. */
+.arbol .nd     { fill: var(--paper); stroke: var(--line); stroke-width: 1; }
+.arbol .nd-dir { fill: var(--paper); stroke: var(--ink); stroke-width: 1.5; }
+.arbol .nd-pov { fill: var(--acch); stroke: var(--acc); stroke-width: 2; }
+/* El segundo eje se dice con el peso del trazo, nunca con color. */
+.arbol .lk     { fill: none; stroke: var(--line); stroke-width: 1; }
+.arbol .lk-dir { fill: none; stroke: var(--ink); stroke-width: 2; }
+.arbol .nm       { fill: var(--ink); }
+.arbol .nm-her   { fill: var(--mut); }   /* el apellido que se deduce del árbol y no consta */
+.arbol .nm-fecha { fill: var(--mut); }
+.arbol .ct       { fill: var(--mut); }
+.arbol .banda-a  { fill: var(--paper); }
+.arbol .banda-b  { fill: var(--soft); }
+.arbol .pieza    { fill: var(--paper); stroke: var(--line); }
+.arbol .pieza-tx { fill: var(--mut); }
+.arbol .par      { fill: none; stroke: var(--mut); }
+.arbol .par-cor  { fill: var(--paper); stroke: var(--mut); }
+
+/* ============================================================
    TerminalShell — chrome bar, navegación y animación de salida
    ============================================================ */
 

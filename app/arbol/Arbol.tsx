@@ -1,23 +1,17 @@
 "use client";
 
 // El lienzo: un solo árbol en SVG con pan y zoom, reanclado al punto de vista.
-// Toda la lógica (quién sale, en qué columna y a qué altura) vive en lib/arbol; aquí
-// solo se pinta y se recogen los gestos. El estilo es sobrio a propósito: la estructura
-// está cerrada, el diseño llega después.
+// Toda la lógica (quién sale, en qué columna, a qué altura y con qué texto) vive en
+// lib/arbol; aquí solo se pinta y se recogen los gestos. Los colores no se escriben aquí:
+// salen de los tokens de `.arbol` en globals.css, que es lo que vira con el tema.
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { acotar, brujulaDe, conZoom, type Encuadre, type Rumbo, type Vista } from "@/lib/arbol/camara";
 import { proximasCelebraciones } from "@/lib/arbol/celebraciones";
 import { construirGrafo } from "@/lib/arbol/grafo";
-import {
-  CAMPOS_POR_DEFECTO,
-  detalleDe,
-  nombreIncierto,
-  partirNombre,
-  type Campos,
-  type ModoFechas,
-} from "@/lib/arbol/etiquetas";
-import { apellidosDe, etiquetaDe, type Etiqueta, type ModoApellidos } from "@/lib/arbol/personas";
+import { CAMPOS_POR_DEFECTO, type Campos, type ModoFechas } from "@/lib/arbol/etiquetas";
+import { identidadDe, LARGOS_NODO, libretaDe, type Identidad, type Pinta } from "@/lib/arbol/identidad";
+import type { ModoApellidos } from "@/lib/arbol/personas";
 import {
   ALTO_CONTADOR,
   ALTO_NODO,
@@ -30,17 +24,16 @@ import {
   type NodoLayout,
 } from "@/lib/arbol/layout";
 import { calcularRecuento, type Fraccion } from "@/lib/arbol/recuento";
-import type { ArbolData, Persona, Union } from "@/lib/arbol/tree";
+import type { ArbolData, Union } from "@/lib/arbol/tree";
 import Celebraciones from "./Celebraciones";
 import Recuento from "./Recuento";
 
 const POR_DEFECTO = "p25";
 const ARRASTRE_MINIMO = 8; // px: por debajo de esto el gesto es un toque, no un arrastre
 // Señalar una fracción del recuento atenúa el resto del lienzo en vez de encender lo suyo:
-// el verde ya tiene tres escalones y un cuarto tono los emborronaría.
+// el acento es del punto de vista y de nada más, y encender con otro color sería inventarse
+// un tercer eje encima de los dos que el árbol ya dice.
 const ATENUADO = 0.15;
-const INCIERTO = "#c2410c"; // el dato que el documento no daba por seguro
-const HEREDADO = "#9a9a97"; // el apellido que se deduce del árbol y no consta escrito
 
 const CENTRADA: Vista = { dx: 0, dy: 0, escala: 0.85 };
 
@@ -74,7 +67,7 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
     () => (todoDesplegado ? new Set(grafo.unionPorId.keys()) : abiertas),
     [todoDesplegado, abiertas, grafo],
   );
-  const linaje = useMemo(() => apellidosDe(grafo), [grafo]);
+  const libreta = useMemo(() => libretaDe(grafo), [grafo]);
 
   const layout = useMemo(
     () => calcularLayout(grafo, { puntoDeVista, expandidas, parejas, ocultarNoConectados }),
@@ -294,7 +287,7 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
   const opacidadDe = (id?: string) => (!resaltados || (id && resaltados.has(id)) ? undefined : ATENUADO);
 
   return (
-    <div ref={contenedor} className="relative h-full w-full touch-none overflow-hidden bg-neutral-50">
+    <div ref={contenedor} className="relative h-full w-full touch-none overflow-hidden bg-[var(--paper)]">
       <svg
         width={tamano.w}
         height={tamano.h}
@@ -318,7 +311,7 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
               y={minY - 600}
               width={ANCHO_COLUMNA}
               height={maxY - minY + 1200}
-              fill={(generacionPov - nivel) % 2 === 0 ? "#ffffff" : "#f4f4f3"}
+              className={(generacionPov - nivel) % 2 === 0 ? "banda-a" : "banda-b"}
             />
           ))}
 
@@ -326,7 +319,7 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
               tramos que cruzan un nodo quedan tapados por él, y lo que se ve toca a los dos. */}
           <g opacity={opacidadDe()}>
             {layout.vinculos.map((v) => (
-              <g key={v.unionId} stroke="#c4c4c2" strokeWidth={1.5} fill="none">
+              <g key={v.unionId} className={v.directo ? "lk-dir" : "lk"}>
                 {v.hijos.map((h, i) => (
                   <path
                     key={i}
@@ -352,23 +345,23 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
             ))}
           </g>
 
-          {layout.nodos.map((n) => {
-            const persona = personaPorId.get(n.id);
-            if (!persona) return null;
-            return (
-              <Nodo
-                key={n.id}
-                nodo={n}
-                persona={persona}
-                campos={campos}
-                hoy={hoy}
-                cumpleHoy={cumplenHoy.has(n.id)}
-                etiqueta={etiquetaDe(persona, apellidos, linaje.get(n.id)!)}
-                opacidad={opacidadDe(n.id)}
-                onElegir={() => arrastre.current <= ARRASTRE_MINIMO && elegirPuntoDeVista(n.id)}
-              />
-            );
-          })}
+          {layout.nodos.map((n) => (
+            <Nodo
+              key={n.id}
+              nodo={n}
+              identidad={identidadDe(grafo, n.id, {
+                linaje: libreta.linaje,
+                campos,
+                apellidos,
+                hoy,
+                largos: LARGOS_NODO,
+                homonimia: libreta.homonimias.get(n.id),
+              })}
+              cumpleHoy={cumplenHoy.has(n.id)}
+              atenuado={opacidadDe(n.id) !== undefined}
+              onElegir={() => arrastre.current <= ARRASTRE_MINIMO && elegirPuntoDeVista(n.id)}
+            />
+          ))}
 
           <g opacity={opacidadDe()}>
             {/* Las parejas que no se pintan, asomando por su borde. Como la manija, van
@@ -454,14 +447,15 @@ function Brujula({ posicion, nombre, onVolver }: { posicion: Rumbo; nombre: stri
     <button
       type="button"
       onClick={onVolver}
-      style={{ left: posicion.x, top: posicion.y }}
-      className="absolute flex h-8 -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 rounded-full border border-neutral-200 bg-white pr-3 pl-2.5 text-[12px] font-medium whitespace-nowrap text-neutral-700 shadow-lg"
+      style={{ left: posicion.x, top: posicion.y, boxShadow: "var(--sh)" }}
+      className="absolute flex h-8 -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--paper)] pr-3 pl-2.5 text-[12px] font-medium whitespace-nowrap text-[var(--ink)]"
     >
       <svg width={13} height={13} viewBox="-6.5 -6.5 13 13" style={{ transform: `rotate(${posicion.angulo}deg)` }}>
+        {/* El color va por `style`: en SVG un atributo de presentación no resuelve var(). */}
         <path
           d="M -4.5 0 H 4 M 1 -3 L 4 0 L 1 3"
           fill="none"
-          stroke="#00b87a"
+          style={{ stroke: "var(--acc)" }}
           strokeWidth={1.7}
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -472,63 +466,64 @@ function Brujula({ posicion, nombre, onVolver }: { posicion: Rumbo; nombre: stri
   );
 }
 
-// El nodo se dimensionó para que quepan enteros el nombre más largo del árbol (28
-// caracteres) y la nota más larga (36): medido en el navegador, 6,6px por carácter a
-// 13px. El recorte de aquí es la red por si entran datos nuevos, no el caso normal.
-const CARACTERES_POR_LINEA = 30;
+const SANGRADO = 9; // el aire entre el borde del nodo y su texto
 
+/** Cada trozo de la primera línea, con la clase y la cursiva que le tocan. */
+const PINTAS: Record<Pinta, { clase: string; cursiva?: boolean }> = {
+  nombre: { clase: "nm" },
+  dudoso: { clase: "nm", cursiva: true },
+  heredado: { clase: "nm-her" },
+  año: { clase: "nm-fecha" },
+  sinNombre: { clase: "nm-her", cursiva: true },
+};
+
+/**
+ * El nodo es el bloque de identidad y nada más: quién es arriba y de quién es debajo. Los
+ * dos ejes del dibujo se dicen sin color —el sitio en el árbol, con la posición; la línea
+ * directa del punto de vista, con el peso del trazo—, así que el acento se queda para lo
+ * único que no se puede decir de otra forma: dónde estás tú.
+ */
 function Nodo({
   nodo,
-  persona,
-  campos,
-  hoy,
+  identidad,
   cumpleHoy,
-  etiqueta,
-  opacidad,
+  atenuado,
   onElegir,
 }: {
   nodo: NodoLayout;
-  persona: Persona;
-  campos: Campos;
-  hoy: string;
+  identidad: Identidad;
   cumpleHoy: boolean;
-  etiqueta: Etiqueta;
-  opacidad?: number;
+  atenuado: boolean;
   onElegir: () => void;
 }) {
-  const detalle = detalleDe(persona, campos, hoy);
-  const lineas = partirNombre(etiqueta.texto, etiqueta.heredadoDesde, CARACTERES_POR_LINEA, detalle.length > 0 ? 1 : 2);
-  const primeraY = nodo.y + (detalle.length > 0 || lineas.length > 1 ? -4 : 5);
-  const dudoso = nombreIncierto(persona, campos);
+  const izquierda = nodo.x - ANCHO_NODO / 2 + SANGRADO;
   return (
-    <g onClick={onElegir} opacity={opacidad} className="cursor-pointer">
+    <g
+      onClick={onElegir}
+      // El contraste dice a cuántas generaciones del punto de vista está, y lo dice por
+      // clase para que el tema oscuro pueda comprimir la escala sin que React lo sepa.
+      className={`cursor-pointer g${Math.min(Math.abs(nodo.nivel), 4)}`}
+      style={atenuado ? { opacity: ATENUADO } : undefined}
+    >
       <rect
         x={nodo.x - ANCHO_NODO / 2}
         y={nodo.y - ALTO_NODO / 2}
         width={ANCHO_NODO}
         height={ALTO_NODO}
-        rx={8}
-        // Tres escalones del mismo verde, del punto de vista hacia fuera: él, su línea
-        // directa y quien comparte sangre sin estar en ella. La línea directa lleva
-        // relleno y no solo borde: al alejarse, 2px de trazo desaparecen y una mancha no.
-        fill={nodo.esPuntoDeVista ? "#00b87a" : nodo.lineaDirecta ? "#e4f4ed" : nodo.consanguineo ? "#f4fbf8" : "#ffffff"}
-        stroke={nodo.esPuntoDeVista ? "#00b87a" : nodo.lineaDirecta ? "#4a4a48" : "#d4d4d2"}
-        strokeWidth={nodo.lineaDirecta ? 2 : 1}
+        rx={9}
+        className={nodo.esPuntoDeVista ? "nd-pov" : nodo.lineaDirecta ? "nd-dir" : "nd"}
       />
-      <text
-        textAnchor="middle"
-        fontSize={13}
-        fill={nodo.esPuntoDeVista ? "#ffffff" : dudoso ? INCIERTO : "#1c1c1a"}
-        fontWeight={nodo.lineaDirecta ? 600 : 400}
-        fontStyle={dudoso ? "italic" : undefined}
-      >
-        {lineas.map((linea, i) => (
-          <tspan key={i} x={nodo.x} y={primeraY + i * 15}>
-            {linea.escrito}
-            {/* El apellido deducido del árbol se pinta apagado: no lo decía el documento. */}
-            {linea.heredado && <tspan fill={nodo.esPuntoDeVista ? "#a9e6cd" : HEREDADO}>{linea.heredado}</tspan>}
+      <text x={izquierda} y={nodo.y - 3} fontSize={13} fontWeight={600}>
+        {identidad.titulo.map((trozo, i) => (
+          <tspan key={i} className={PINTAS[trozo.pinta].clase} fontStyle={PINTAS[trozo.pinta].cursiva ? "italic" : undefined}>
+            {trozo.texto}
           </tspan>
         ))}
+      </text>
+      {/* La segunda línea es lo que identifica de verdad a quien no trae ni apellido ni
+          fecha: se pinta apagada, pero no se quita nunca. */}
+      <text x={izquierda} y={nodo.y + 13} fontSize={10.5} className="ct">
+        {identidad.contexto}
       </text>
       {/* La esquina de arriba a la derecha es la única que no usa ni la manija ni el «+»
           de la pareja, así que la tarta cabe sin taparle nada a nadie. */}
@@ -537,25 +532,10 @@ function Nodo({
           🎂
         </text>
       )}
-      {detalle.length > 0 && (
-        <text x={nodo.x} y={nodo.y + 14} textAnchor="middle" fontSize={11}>
-          {detalle.map((segmento, i) => (
-            <tspan
-              key={i}
-              fill={segmento.incierto ? INCIERTO : nodo.esPuntoDeVista ? "#e6fff5" : "#8a8a87"}
-              fontStyle={segmento.incierto || segmento.nota ? "italic" : undefined}
-            >
-              {i > 0 && " · "}
-              {segmento.texto}
-            </tspan>
-          ))}
-        </text>
-      )}
     </g>
   );
 }
 
-const UNIDA = "#8a8a87";
 const GUION = "4 3"; // el trazo de la unión que acabó, rota como el tachón del documento
 // Un corazón de 14×11 centrado en el origen: la marca de los novios que no se casaron.
 // Más pequeño no cabía la grieta del roto sin volverse un borrón a tamaño de lectura.
@@ -615,13 +595,13 @@ function TrazoDePareja({
           y1={desde}
           x2={x}
           y2={hasta}
-          stroke={UNIDA}
+          className="par"
           strokeWidth={2.5}
           strokeDasharray={roto && tipo !== "pareja" ? GUION : undefined}
         />
       ))}
       {tipo === "pareja" && (
-        <g transform={`translate(${x} ${centro})`} stroke={UNIDA} fill="#ffffff">
+        <g transform={`translate(${x} ${centro})`} className="par-cor">
           <path d={CORAZON} strokeWidth={1.4} />
           {roto && <path d={GRIETA} strokeWidth={1} fill="none" />}
         </g>
@@ -634,10 +614,10 @@ function TrazoDePareja({
 function MasPareja({ x, y, onAbrir }: { x: number; y: number; onAbrir: () => void }) {
   return (
     <g onClick={onAbrir} className="cursor-pointer">
-      <circle cx={x} cy={y} r={13} fill="#ffffff" fillOpacity={0} />
-      <circle cx={x} cy={y} r={7.5} fill="#ffffff" stroke="#b6b6b3" />
-      <line x1={x - 3.5} y1={y} x2={x + 3.5} y2={y} stroke="#8a8a87" strokeWidth={1.3} />
-      <line x1={x} y1={y - 3.5} x2={x} y2={y + 3.5} stroke="#8a8a87" strokeWidth={1.3} />
+      <circle cx={x} cy={y} r={13} fillOpacity={0} />
+      <circle cx={x} cy={y} r={7.5} className="pieza" />
+      <line x1={x - 3.5} y1={y} x2={x + 3.5} y2={y} className="par" strokeWidth={1.3} />
+      <line x1={x} y1={y - 3.5} x2={x} y2={y + 3.5} className="par" strokeWidth={1.3} />
     </g>
   );
 }
@@ -646,8 +626,8 @@ function MasPareja({ x, y, onAbrir }: { x: number; y: number; onAbrir: () => voi
 function Manija({ x, y, onPulsar }: { x: number; y: number; onPulsar: () => void }) {
   return (
     <g onClick={onPulsar} className="cursor-pointer">
-      <circle cx={x} cy={y} r={11} fill="#ffffff" stroke="#b6b6b3" />
-      <line x1={x - 5} y1={y} x2={x + 5} y2={y} stroke="#5a5a57" strokeWidth={1.5} />
+      <circle cx={x} cy={y} r={11} className="pieza" />
+      <line x1={x - 5} y1={y} x2={x + 5} y2={y} className="par" strokeWidth={1.5} />
     </g>
   );
 }
@@ -661,11 +641,10 @@ function ContadorRama({ contador, onAbrir }: { contador: Contador; onAbrir: () =
         width={ANCHO_CONTADOR}
         height={ALTO_CONTADOR}
         rx={ALTO_CONTADOR / 2}
-        fill="#ffffff"
-        stroke="#b6b6b3"
+        className="pieza"
         strokeDasharray="4 3"
       />
-      <text x={contador.x} y={contador.y + 4} textAnchor="middle" fontSize={12} fill="#5a5a57">
+      <text x={contador.x} y={contador.y + 4} textAnchor="middle" fontSize={12} className="pieza-tx">
         +{contador.cantidad} {contador.sentido}
       </text>
     </g>
@@ -683,14 +662,16 @@ const UNIONES: { texto: string; tipo: Union["tipo"]; roto: boolean }[] = [
 function Leyenda() {
   return (
     <div className="flex flex-col gap-1">
-      <p className="px-1 text-[11px] font-semibold tracking-wide text-neutral-400 uppercase">Uniones</p>
+      <p className="px-1 font-[family-name:var(--mono)] text-[9.5px] font-medium tracking-[0.12em] text-[var(--mut)] uppercase">
+        Uniones
+      </p>
       <div className="grid grid-cols-2 gap-x-2">
         {UNIONES.map(({ texto, tipo, roto }) => (
           <div key={texto} className="flex items-center gap-1.5">
             <svg width={18} height={30} className="shrink-0">
               <TrazoDePareja x={9} extremos={[2, 28]} tipo={tipo} roto={roto} />
             </svg>
-            <span className="text-[11px] text-neutral-600">{texto}</span>
+            <span className="text-[11px] text-[var(--mut)]">{texto}</span>
           </div>
         ))}
       </div>
@@ -729,24 +710,26 @@ function Controles({
       type="button"
       onClick={alPulsar}
       className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-[13px] ${
-        activo ? "bg-neutral-900 text-white" : "bg-neutral-100 text-neutral-700"
+        activo ? "bg-[var(--ink)] text-[var(--paper)]" : "bg-[var(--soft)] text-[var(--ink)]"
       }`}
     >
       {texto}
-      <span className={`h-2 w-2 rounded-full ${activo ? "bg-[#00b87a]" : "bg-neutral-300"}`} />
+      <span className={`h-2 w-2 rounded-full ${activo ? "bg-[var(--acc)]" : "bg-[var(--line)]"}`} />
     </button>
   );
 
   /** Una fila de opciones excluyentes, para lo que no es un sí o un no. */
   const eleccion = <T,>(titulo: string, opciones: readonly T[], actual: T, alElegir: (v: T) => void, nombrar: (v: T) => string) => (
-    <div className="flex items-center gap-1 rounded-lg bg-neutral-100 px-3 py-1.5">
-      <span className="flex-1 text-[13px] text-neutral-700">{titulo}</span>
+    <div className="flex items-center gap-1 rounded-lg bg-[var(--soft)] px-3 py-1.5">
+      <span className="flex-1 text-[13px] text-[var(--ink)]">{titulo}</span>
       {opciones.map((opcion) => (
         <button
           key={String(opcion)}
           type="button"
           onClick={() => alElegir(opcion)}
-          className={`h-6 rounded-md px-2 text-[12px] ${actual === opcion ? "bg-neutral-900 text-white" : "text-neutral-500"}`}
+          className={`h-6 rounded-md px-2 text-[12px] ${
+            actual === opcion ? "bg-[var(--ink)] text-[var(--paper)]" : "text-[var(--mut)]"
+          }`}
         >
           {nombrar(opcion)}
         </button>
@@ -759,7 +742,8 @@ function Controles({
       key={texto}
       type="button"
       onClick={alPulsar}
-      className="h-11 rounded-full border border-neutral-200 bg-white px-4 text-[13px] font-medium text-neutral-700 shadow-lg"
+      style={{ boxShadow: "var(--sh)" }}
+      className="h-11 rounded-full border border-[var(--line)] bg-[var(--paper)] px-4 text-[13px] font-medium text-[var(--ink)]"
     >
       {texto}
     </button>
@@ -768,22 +752,29 @@ function Controles({
   return (
     <div className="absolute right-3 bottom-3 flex flex-col items-end gap-2">
       {abierto && (
-        <div className="flex w-60 flex-col gap-3 rounded-xl border border-neutral-200 bg-white p-3 shadow-lg">
+        <div
+          style={{ boxShadow: "var(--sh)" }}
+          className="flex w-72 flex-col gap-3 rounded-xl border border-[var(--line)] bg-[var(--paper)] p-3"
+        >
           <div className="flex flex-col gap-1">
-            <p className="px-1 text-[11px] font-semibold tracking-wide text-neutral-400 uppercase">En cada nodo</p>
+            <p className="px-1 font-[family-name:var(--mono)] text-[9.5px] font-medium tracking-[0.12em] text-[var(--mut)] uppercase">
+              En cada nodo
+            </p>
             {/* «Nuevos» solo los enseña quien los estrena en su línea; 1 y 2, todo el mundo. */}
             {eleccion("Apellidos", ["nuevos", 0, 1, 2] as const, apellidos, setApellidos, String)}
-            {/* La fecha entera solo la tienen los del calendario de cumpleaños; para el
+            {/* Los cuatro ocupan el mismo hueco detrás del nombre, así que son excluyentes.
+                La fecha entera solo la tienen los del calendario de cumpleaños; para el
                 resto, «completa» sigue enseñando el año a secas. */}
-            {eleccion("Fechas", ["ocultar", "año", "completa"] as const, campos.fechas, (f: ModoFechas) => setCampos({ ...campos, fechas: f }), (f) => (f === "ocultar" ? "no" : f))}
+            {eleccion("Fechas", ["ocultar", "año", "edad", "completa"] as const, campos.fechas, (f: ModoFechas) => setCampos({ ...campos, fechas: f }), (f) => (f === "ocultar" ? "no" : f))}
             {/* Los interruptores se enuncian por lo que hacen al marcarlos, y de entrada
                 están apagados: el árbol de partida es el de siempre. */}
-            {interruptor(!campos.edad, "Ocultar edad", () => setCampos({ ...campos, edad: !campos.edad }))}
             {interruptor(!campos.notas, "Ocultar notas", () => setCampos({ ...campos, notas: !campos.notas }))}
             {interruptor(!campos.dudoso, "No resaltar dudosos", () => setCampos({ ...campos, dudoso: !campos.dudoso }))}
           </div>
           <div className="flex flex-col gap-1">
-            <p className="px-1 text-[11px] font-semibold tracking-wide text-neutral-400 uppercase">Ramas</p>
+            <p className="px-1 font-[family-name:var(--mono)] text-[9.5px] font-medium tracking-[0.12em] text-[var(--mut)] uppercase">
+              Ramas
+            </p>
             {interruptor(!ocultar, "Mostrar no conectadas", () => setOcultar(!ocultar))}
           </div>
           <Leyenda />

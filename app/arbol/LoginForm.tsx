@@ -33,7 +33,7 @@ export default function LoginForm() {
 
   return (
     <form onSubmit={onSubmit} className="flex w-full max-w-[320px] flex-col gap-4">
-      <h1 className="text-center text-[28px] font-semibold tracking-[-0.015em] text-neutral-900">
+      <h1 className="text-center font-[family-name:var(--serif)] text-[34px] tracking-[-0.01em] text-[var(--ink)]">
         Árbol genealógico
       </h1>
       <input
@@ -42,16 +42,16 @@ export default function LoginForm() {
         onChange={(e) => setPassword(e.target.value)}
         placeholder="Contraseña"
         autoFocus
-        className="h-11 rounded-lg border border-neutral-300 px-3 text-[15px] outline-none focus:border-neutral-500"
+        className="h-11 rounded-lg border border-[var(--line)] bg-[var(--soft)] px-3 text-[15px] text-[var(--ink)] outline-none focus:border-[var(--ink)]"
       />
       <button
         type="submit"
         disabled={cargando || !password}
-        className="flex h-11 items-center justify-center rounded-lg bg-neutral-900 text-[15px] font-medium text-white disabled:opacity-40"
+        className="flex h-11 items-center justify-center rounded-lg bg-[var(--ink)] text-[15px] font-medium text-[var(--paper)] disabled:opacity-40"
       >
         {cargando ? "Entrando…" : "Entrar"}
       </button>
-      {error && <p className="-mt-1 text-center text-[13px] text-red-600">{error}</p>}
+      {error && <p className="-mt-1 text-center text-[13px] text-[var(--err)]">{error}</p>}
     </form>
   );
 }

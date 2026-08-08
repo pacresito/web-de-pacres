@@ -13,7 +13,7 @@ export default async function ArbolPage() {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-7 p-6">
         <LoginForm />
-        <Link href="/lab" className="text-sm text-neutral-500 hover:text-neutral-900">Volver</Link>
+        <Link href="/lab" className="text-sm text-[var(--mut)] hover:text-[var(--ink)]">Volver</Link>
       </div>
     );
   }
@@ -26,11 +26,11 @@ export default async function ArbolPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <nav className="flex items-center justify-between border-b border-neutral-200 px-4 py-2">
-        <h1 className="text-[15px] font-semibold">Árbol genealógico</h1>
+      <nav className="flex items-center justify-between border-b border-[var(--line)] px-4 py-2">
+        <h1 className="font-[family-name:var(--serif)] text-[20px]">Árbol genealógico</h1>
         <div className="flex items-center gap-4">
-          <Link href="/lab" className="text-sm text-neutral-500 hover:text-neutral-900">Volver</Link>
-          <LogoutButton />
+          <Link href="/lab" className="text-sm text-[var(--mut)] hover:text-[var(--ink)]">Volver</Link>
+          <LogoutButton className="text-sm text-[var(--mut)] hover:text-[var(--ink)]" />
         </div>
       </nav>
       <div className="min-h-0 flex-1">

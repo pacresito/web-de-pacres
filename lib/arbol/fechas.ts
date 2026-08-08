@@ -10,10 +10,6 @@ export const conDia = (f: Fecha): boolean => f.length > 4;
 
 export const añoDe = (f: Fecha): number => Number(f.slice(0, 4));
 
-/** Como se escribe en España, con los ceros: `"1986-03-01"` → `"01/03/1986"`. */
-export const escribir = (f: Fecha): string =>
-  conDia(f) ? `${f.slice(8, 10)}/${f.slice(5, 7)}/${f.slice(0, 4)}` : f;
-
 const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
 
 /** Sin el año, para una lista que ya se sabe cuál es: `"2026-03-14"` → `"14 mar"`. */
