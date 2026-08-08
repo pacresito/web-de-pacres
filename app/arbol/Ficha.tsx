@@ -5,12 +5,14 @@
 // el lienzo no puede guardar por sí solo: **tocar no muda el Centro; solo «Centrar aquí»**.
 
 import type { Ficha as Datos } from "@/lib/arbol/ficha";
-import { Titulo } from "./Bloque";
+import { Accion, Marca, Titulo } from "./Bloque";
 
 export default function Ficha({
   datos,
   anterior,
   onCentrar,
+  onCamino,
+  onHomonimos,
   onIndice,
   onDevolver,
 }: {
@@ -18,12 +20,14 @@ export default function Ficha({
   /** El Centro de antes, para poder deshacer la mudanza desde la ficha del de ahora. */
   anterior?: { id: string; nombre: string };
   onCentrar: () => void;
+  onCamino: () => void;
+  onHomonimos: (consulta: string | null) => void;
   onIndice: () => void;
   onDevolver: () => void;
 }) {
   return (
     <div className="flex flex-col">
-      <Relacion datos={datos} />
+      <Relacion datos={datos} onCamino={onCamino} />
 
       <p className="mt-4 font-[family-name:var(--serif)] text-[34px] leading-[1.05] tracking-[-0.01em]">
         <Titulo trozos={datos.titulo} />
@@ -33,12 +37,7 @@ export default function Ficha({
       {datos.marcas.length > 0 && (
         <p className="mt-1.5 flex flex-wrap gap-1.5">
           {datos.marcas.map((marca) => (
-            <span
-              key={marca}
-              className="rounded-[5px] border border-[var(--line)] px-[5px] py-[2px] font-[family-name:var(--mono)] text-[9px] font-medium tracking-[0.05em] text-[var(--mut)] uppercase"
-            >
-              {marca}
-            </span>
+            <Marca key={marca}>{marca}</Marca>
           ))}
         </p>
       )}
@@ -70,7 +69,15 @@ export default function Ficha({
             {anterior && <Accion texto={`Devolver el Centro a ${anterior.nombre}`} nota="↩" onPulsar={onDevolver} />}
           </>
         ) : (
-          <Accion texto="Centrar aquí" nota="el árbol se recoloca" primaria onPulsar={onCentrar} />
+          <>
+            <Accion texto="Centrar aquí" nota="el árbol se recoloca" primaria onPulsar={onCentrar} />
+            {/* La palabra de la relación falta en 271 de las 416, y entonces la línea de
+                arriba solo sabe dar la distancia: el camino es lo que la explica. */}
+            <Accion texto="El camino desde tu Centro" nota="↔" onPulsar={onCamino} />
+          </>
+        )}
+        {datos.homonimos && (
+          <Accion texto={datos.homonimos.texto} nota="⌕" onPulsar={() => onHomonimos(datos.homonimos!.consulta)} />
         )}
       </div>
     </div>
@@ -82,7 +89,7 @@ export default function Ficha({
  * pasos van al lado porque cuando no hay palabra son lo único que queda: la lengua se
  * agota mucho antes que el parentesco.
  */
-function Relacion({ datos }: { datos: Datos }) {
+function Relacion({ datos, onCamino }: { datos: Datos; onCamino: () => void }) {
   const { frase, pasos } = datos.relacion;
   // «Es» es la cópula y el resto es el parentesco, que es lo que se destaca. Cuando no hay
   // palabra la frase no empieza así y no se destaca nada, que es justo lo que significa.
@@ -100,10 +107,16 @@ function Relacion({ datos }: { datos: Datos }) {
         )}
         {datos.esCentro && <span className="text-[var(--mut)]"> · todo se cuenta desde aquí</span>}
       </span>
+      {/* Los pasos llevan al camino porque es donde nace la pregunta: cuando no hay palabra,
+          la línea de relación no sabe contestar nada más que el número. */}
       {!datos.esCentro && (
-        <span className="shrink-0 font-[family-name:var(--mono)] text-[11px] text-[var(--mut)]">
-          {pasos} {pasos === 1 ? "paso" : "pasos"}
-        </span>
+        <button
+          type="button"
+          onClick={onCamino}
+          className="shrink-0 self-stretch font-[family-name:var(--mono)] text-[11px] whitespace-nowrap text-[var(--mut)] hover:text-[var(--ink)]"
+        >
+          {pasos} {pasos === 1 ? "paso" : "pasos"} · camino ›
+        </button>
       )}
     </div>
   );
@@ -125,32 +138,3 @@ const Caja = ({ children }: { children: React.ReactNode }) => (
     {children}
   </p>
 );
-
-function Accion({
-  texto,
-  nota,
-  primaria,
-  onPulsar,
-}: {
-  texto: string;
-  nota: string;
-  primaria?: boolean;
-  onPulsar: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onPulsar}
-      // Sobre el acento, la tinta es el papel: en oscuro el morado se aclara y un blanco
-      // fijo se quedaría sin contraste justo en el único botón que hay que ver.
-      className={`flex min-h-12 items-center gap-2.5 rounded-[11px] border px-3.5 text-left text-[13.5px] ${
-        primaria ? "border-[var(--acc)] bg-[var(--acc)] text-[var(--paper)]" : "border-[var(--line)] bg-[var(--paper)] text-[var(--ink)]"
-      }`}
-    >
-      {texto}
-      <span className={`ml-auto font-[family-name:var(--mono)] text-[11px] ${primaria ? "opacity-70" : "text-[var(--mut)]"}`}>
-        {nota}
-      </span>
-    </button>
-  );
-}

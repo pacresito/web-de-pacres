@@ -6,12 +6,14 @@
 // salen de los tokens de `.arbol` en globals.css, que es lo que vira con el tema.
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { acortar, buscar, losSinNombre, porCercania } from "@/lib/arbol/busqueda";
 import { acotar, brujulaDe, conZoom, type Encuadre, type Rumbo, type Vista } from "@/lib/arbol/camara";
+import { caminoEntre } from "@/lib/arbol/camino";
 import { FECHAS_POR_DEFECTO, type ModoFechas } from "@/lib/arbol/fechas";
 import { proximasCelebraciones } from "@/lib/arbol/celebraciones";
-import { construirGrafo } from "@/lib/arbol/grafo";
+import { construirGrafo, pasosDesde } from "@/lib/arbol/grafo";
 import { fichaDe } from "@/lib/arbol/ficha";
-import { identidadDe, LARGOS_FILA, LARGOS_NODO, libretaDe, type Identidad, type Pinta } from "@/lib/arbol/identidad";
+import { identidadDe, LARGOS_FILA, LARGOS_LISTA, LARGOS_NODO, libretaDe, type Identidad, type Pinta } from "@/lib/arbol/identidad";
 import { relacionesDesde } from "@/lib/arbol/parentesco";
 import type { ModoApellidos } from "@/lib/arbol/personas";
 import { calcularRamas } from "@/lib/arbol/ramas";
@@ -28,6 +30,8 @@ import {
 } from "@/lib/arbol/layout";
 import { calcularRecuento, type Fraccion } from "@/lib/arbol/recuento";
 import type { ArbolData, Union } from "@/lib/arbol/tree";
+import Busqueda from "./Busqueda";
+import Camino from "./Camino";
 import Celebraciones, { AvisoCelebraciones } from "./Celebraciones";
 import Ficha from "./Ficha";
 import Hoja from "./Hoja";
@@ -58,18 +62,25 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
   const [fechas, setFechas] = useState<ModoFechas>(FECHAS_POR_DEFECTO);
   const [apellidos, setApellidos] = useState<ModoApellidos>("nuevos");
   const [panelAbierto, setPanelAbierto] = useState(false);
-  const [recuentoAbierto, setRecuentoAbierto] = useState(false);
+  const [busquedaAbierta, setBusquedaAbierta] = useState(false);
+  const [consulta, setConsulta] = useState("");
+  /** Las cuatro sin nombre no se pueden teclear: se piden por su salida del callejón. */
+  const [sinNombre, setSinNombre] = useState(false);
+  /** El cajón del índice que se está leyendo: «tus primos» son quince personas, no un número. */
+  const [cajon, setCajon] = useState<{ termino: string; ids: string[] } | null>(null);
   /**
-   * La hoja inferior, que es una sola: la ficha de alguien o lo que se celebra. Dos a la
-   * vez se pisarían, y la de debajo no se leería ni se podría cerrar.
+   * La hoja inferior, que es una sola: la ficha de alguien, el camino hasta él o lo que se
+   * celebra. Dos a la vez se pisarían, y la de debajo no se leería ni se podría cerrar.
    */
-  const [hoja, setHoja] = useState<{ tipo: "ficha"; id: string } | { tipo: "celebraciones" } | null>(null);
+  const [hoja, setHoja] = useState<{ tipo: "ficha" | "camino"; id: string } | { tipo: "celebraciones" } | null>(null);
   /** Lo que se resalta del lienzo: el numerador de la fracción señalada, o nada. */
   const [resaltados, setResaltados] = useState<Set<string> | null>(null);
   const [vista, setVista] = useState<Vista>(CENTRADA);
   const [tamano, setTamano] = useState({ w: 0, h: 0 });
 
   const contenedor = useRef<HTMLDivElement>(null);
+  /** El lienzo, aparte del contenedor: los gestos son suyos y no de lo que flota encima. */
+  const lienzo = useRef<SVGSVGElement>(null);
 
   // «Desplegar todo» es un interruptor y manda sobre lo abierto a mano; ninguno de los
   // dos se pierde al cambiar de punto de vista.
@@ -92,6 +103,10 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
     [grafo, puntoDeVista, hoy],
   );
   const relaciones = useMemo(() => relacionesDesde(grafo, puntoDeVista), [grafo, puntoDeVista]);
+  const camino = useMemo(
+    () => (hoja?.tipo === "camino" ? caminoEntre(grafo, puntoDeVista, hoja.id) : null),
+    [grafo, puntoDeVista, hoja],
+  );
   // Las ramas no dependen de quién mire: se derivan del grafo y valen para todo el árbol.
   const pertenencias = useMemo(() => calcularRamas(grafo), [grafo]);
   /** El bloque de identidad de cualquiera, para las superficies que lo piden fila a fila. */
@@ -107,6 +122,43 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
       }),
     [grafo, libreta, fechas, apellidos, hoy],
   );
+  /**
+   * Y el de una fila de lista, que **lleva siempre los dos apellidos**: «nuevos» vale en el
+   * lienzo, donde los demás se leen subiendo por el árbol, pero en una lista no hay árbol del
+   * que subir y trece filas «Pablo» son trece filas iguales.
+   */
+  const enLista = useMemo(
+    () => (id: string, largoContexto: number) =>
+      identidadDe(grafo, id, {
+        linaje: libreta.linaje,
+        fechas,
+        apellidos: 2,
+        hoy,
+        largos: { titulo: LARGOS_LISTA.titulo, contexto: largoContexto },
+        homonimia: libreta.homonimias.get(id),
+      }),
+    [grafo, libreta, fechas, hoy],
+  );
+  // La búsqueda mira el árbol entero, con filtro o sin él: es por donde se llega a quien el
+  // lienzo no está pintando, y decirle «nadie se llama así» de alguien que solo estaba
+  // escondido sería mentir.
+  const opcionesBusqueda = useMemo(
+    () => ({ linaje: libreta.linaje, pasos: pasosDesde(grafo, puntoDeVista) }),
+    [grafo, libreta, puntoDeVista],
+  );
+  const resultados = useMemo(() => {
+    if (consulta.trim() !== "") return buscar(grafo, consulta, opcionesBusqueda);
+    return sinNombre ? losSinNombre(grafo, opcionesBusqueda) : [];
+  }, [grafo, consulta, sinNombre, opcionesBusqueda]);
+  const sugerencia = useMemo(
+    () => (consulta.trim() !== "" && resultados.length === 0 ? acortar(grafo, consulta, opcionesBusqueda) : null),
+    [grafo, consulta, resultados, opcionesBusqueda],
+  );
+  /** Cómo se llama alguien en una línea, con lo que el bloque de identidad ponga arriba. */
+  const nombreDe = (id: string) =>
+    enLista(id, 0)
+      .titulo.map((t) => t.texto)
+      .join("");
   /** Quien cumple años hoy se lleva además una tarta en su nodo, sin abrir nada. */
   const cumplenHoy = useMemo(
     () => new Set(celebraciones.filter((c) => c.tipo === "cumpleaños" && c.faltan === 0).map((c) => c.id!)),
@@ -157,8 +209,31 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
    * muda desde el botón de dentro, que es una decisión y no el efecto de haber tocado.
    */
   function abrirFicha(id: string) {
-    setRecuentoAbierto(false); // el panel de arriba y la hoja se pisan en un móvil
     setHoja({ tipo: "ficha", id });
+  }
+
+  /**
+   * Teclear manda sobre las cuatro sin nombre —son una lista aparte, no un resultado— y abre
+   * el panel: escribir es pedir la lista, y con el panel recogido no se vería.
+   */
+  function teclear(texto: string) {
+    setConsulta(texto);
+    setSinNombre(false);
+    setCajon(null);
+    setBusquedaAbierta(true);
+  }
+
+  /** A las cuatro sin nombre no se llega tecleando, así que se piden y se enseñan aparte. */
+  function mostrarSinNombre() {
+    setConsulta("");
+    setSinNombre(true);
+    setCajon(null);
+    setBusquedaAbierta(true);
+  }
+
+  /** Pulsar un parentesco lista a los suyos, ordenados como cualquier lista: lo cerca antes. */
+  function abrirCajon({ termino, todos }: Fraccion) {
+    setCajon({ termino, ids: [...todos].sort(porCercania(grafo, opcionesBusqueda.pasos)) });
   }
 
   function centrarEn(id: string) {
@@ -212,10 +287,13 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
    * Pulsarla trae lo pedido y todo lo que hace falta para llegar; pulsarla ya llena quita
    * justo esas uniones y la repliega hasta el núcleo, como la manija «−» del lienzo.
    */
-  function pulsarFraccion({ puestos, alcanzables, uniones }: Fraccion) {
+  function pulsarFraccion({ puestos, todos, uniones }: Fraccion) {
     setResaltados(null); // lo que acaba de llegar se ve, no se atenúa
+    // Pedir una rama es una acción sobre el lienzo, y el lienzo hay que verlo: el índice se
+    // recoge, y lo teclado se queda para volver a él de un toque.
+    setBusquedaAbierta(false);
     if (uniones.length === 0) return;
-    if (puestos.length === alcanzables) cerrarRamas(uniones);
+    if (puestos.length === todos.length) cerrarRamas(uniones);
     else abrirRamas(uniones);
   }
 
@@ -235,6 +313,10 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
     setFechas(FECHAS_POR_DEFECTO);
     setApellidos("nuevos");
     setVista(CENTRADA);
+    setBusquedaAbierta(false);
+    setConsulta("");
+    setSinNombre(false);
+    setCajon(null);
   }
 
   // --- Gestos: un puntero arrastra, dos pellizcan (vale igual para ratón y dedo) ---
@@ -289,9 +371,11 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
     if (caja) mover((v) => conZoom(v, factor, px, py, caja));
   }
 
-  // La rueda con preventDefault necesita un listener no pasivo.
+  // La rueda con preventDefault necesita un listener no pasivo. **Va en el lienzo y no en el
+  // contenedor**: desde el contenedor se tragaba también las ruedas de lo que flota encima, y
+  // ni el índice ni la hoja podían bajar. Por lo mismo, el `touch-none` es del lienzo.
   useEffect(() => {
-    const nodo = contenedor.current;
+    const nodo = lienzo.current;
     if (!nodo) return;
     const alGirar = (e: WheelEvent) => {
       e.preventDefault();
@@ -322,13 +406,14 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
   const opacidadDe = (id?: string) => (!resaltados || (id && resaltados.has(id)) ? undefined : ATENUADO);
 
   return (
-    <div ref={contenedor} className="relative h-full w-full touch-none overflow-hidden bg-[var(--paper)]">
+    <div ref={contenedor} className="relative h-full w-full overflow-hidden bg-[var(--paper)]">
       <svg
+        ref={lienzo}
         width={tamano.w}
         height={tamano.h}
         // Bajo la hoja el árbol sigue viéndose: tapa, no sustituye. Con sitio ni eso —la
         // hoja se ha apartado a su columna y el lienzo se queda entero.
-        className={`block cursor-grab select-none active:cursor-grabbing ${hoja ? "opacity-30 md:opacity-100" : ""}`}
+        className={`block touch-none cursor-grab select-none active:cursor-grabbing ${hoja ? "opacity-30 md:opacity-100" : ""}`}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -440,12 +525,30 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
         />
       )}
 
-      <Recuento
-        cuentas={cuentas}
-        abierto={recuentoAbierto}
-        setAbierto={setRecuentoAbierto}
-        onPulsar={pulsarFraccion}
-        onResaltar={(ids) => setResaltados(ids ? new Set(ids) : null)}
+      <Busqueda
+        consulta={consulta}
+        onTeclear={teclear}
+        abierta={busquedaAbierta}
+        setAbierta={setBusquedaAbierta}
+        oculta={hoja !== null}
+        resultados={resultados}
+        sugerencia={sugerencia}
+        onSinNombre={mostrarSinNombre}
+        identidad={enLista}
+        relaciones={relaciones}
+        puntoDeVista={puntoDeVista}
+        onPersona={abrirFicha}
+        cajon={cajon}
+        onVolverAlIndice={() => setCajon(null)}
+        indice={
+          <Recuento
+            cuentas={cuentas}
+            centro={nombreDe(puntoDeVista)}
+            onAbrir={abrirCajon}
+            onPulsar={pulsarFraccion}
+            onResaltar={(ids) => setResaltados(ids ? new Set(ids) : null)}
+          />
+        }
       />
 
       <AvisoCelebraciones lista={celebraciones} onAbrir={() => setHoja({ tipo: "celebraciones" })} apartado={apartado} />
@@ -473,6 +576,14 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
         <Hoja onCerrar={() => setHoja(null)}>
           {hoja.tipo === "celebraciones" ? (
             <Celebraciones lista={celebraciones} identidad={escribir} onPersona={abrirFicha} />
+          ) : hoja.tipo === "camino" && camino ? (
+            <Camino
+              datos={camino}
+              relacion={relaciones.get(hoja.id)!}
+              identidad={enLista}
+              onPersona={abrirFicha}
+              onVolver={() => abrirFicha(hoja.id)}
+            />
           ) : (
             <Ficha
               datos={fichaDe(grafo, hoja.id, {
@@ -486,9 +597,17 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
               })}
               anterior={anterior ? { id: anterior, nombre: personaPorId.get(anterior)?.nombre ?? "" } : undefined}
               onCentrar={() => centrarEn(hoja.id)}
+              onCamino={() => setHoja({ tipo: "camino", id: hoja.id })}
+              onHomonimos={(consulta) => {
+                setHoja(null); // la lista y la ficha no caben a la vez en un móvil
+                if (consulta === null) mostrarSinNombre();
+                else teclear(consulta);
+              }}
               onIndice={() => {
                 setHoja(null);
-                setRecuentoAbierto(true);
+                setConsulta("");
+                setSinNombre(false);
+                setBusquedaAbierta(true);
               }}
               onDevolver={() => anterior && centrarEn(anterior)}
             />

@@ -92,6 +92,20 @@ function conOrdinal(base: string, n: number, tope: number): string {
   return n <= tope ? `${base} ${ORDINALES[n]}` : `otros ${base}`;
 }
 
+const CUANTAS = ["", "una", "dos", "tres", "cuatro", "cinco", "seis"];
+
+/**
+ * A qué altura del punto de vista queda alguien, contado en generaciones y no en pasos. Es
+ * lo que se dice cuando no hay término: la ficha lo pone debajo del nombre y el índice
+ * encabeza con él cada tramo de la fila.
+ */
+export function escribirNivel(nivel: number): string {
+  if (nivel === 0) return "tu generación";
+  const cuantas = Math.abs(nivel);
+  const escrita = CUANTAS[cuantas] ?? String(cuantas);
+  return `${escrita} ${cuantas === 1 ? "generación" : "generaciones"} por ${nivel > 0 ? "encima" : "debajo"}`;
+}
+
 // --- La relación con uno solo, tal como la lee la ficha ---
 
 /** Cuando la lengua no llega, lo único que queda es la distancia, y se dice así. */

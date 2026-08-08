@@ -84,6 +84,36 @@ assert.strictEqual(ficha("p5").datos, "1959 — · una generación por debajo", 
 assert.strictEqual(ficha("p6").datos, "sin fechas · una generación por debajo");
 assert.strictEqual(ficha("p3").datos, "1930 — · tu generación");
 
+// --- La salida hacia los homónimos: la ficha no los lista, los busca ---
+const conHomonimos = (cual: number, total: number): Ficha =>
+  fichaDe(g, "p1", {
+    puntoDeVista: "p3",
+    linaje: apellidosDe(g),
+    fechas: "año",
+    hoy: HOY,
+    relacion: relaciones.get("p1")!,
+    homonimia: { cual, total, conAño: true },
+  });
+assert.deepStrictEqual(
+  conHomonimos(1, 3).homonimos,
+  { texto: 'Los otros 2 «Pablo (1902)»', consulta: "Pablo Serrano" },
+  "se busca por el nombre entero, que es lo que los reúne, y se anuncian los otros",
+);
+assert.strictEqual(conHomonimos(1, 2).homonimos?.texto, 'El otro «Pablo (1902)»');
+assert.strictEqual(ficha("p1").homonimos, undefined, "quien no comparte nombre no tiene a dónde salir");
+assert.deepStrictEqual(
+  fichaDe(g, "p6", {
+    puntoDeVista: "p3",
+    linaje: apellidosDe(g),
+    fechas: "año",
+    hoy: HOY,
+    relacion: relaciones.get("p6")!,
+    homonimia: { cual: 1, total: 4, conAño: false },
+  }).homonimos,
+  { texto: "Las otras 3 personas sin nombre", consulta: null },
+  "a los que comparten no tener nombre no se llega tecleando: se sale a su lista",
+);
+
 // --- Las filas: lo que no consta se escribe, nunca se esconde ---
 assert.strictEqual(valor(ficha("p5"), "Padres"), "Genoveva (1930)", "un solo progenitor documentado no inventa al otro");
 assert.strictEqual(valor(ficha("p1"), "Padres"), "— no constan");

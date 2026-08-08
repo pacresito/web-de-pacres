@@ -131,6 +131,13 @@ function contextoDe(g: Grafo, id: string, ramas: string[] | undefined, largo: nu
   return recortar(texto, largo);
 }
 
+/**
+ * La segunda línea entera, sin degradar ni recortar. Nadie la pinta así: es lo que la
+ * búsqueda mira además del nombre, porque a quien el documento deja sin apellido y sin fecha
+ * solo se llega por su gente.
+ */
+export const contextoEntero = (g: Grafo, id: string): string => escribirContexto(g, id, undefined, PELDAÑOS[0]);
+
 function escribirContexto(g: Grafo, id: string, ramas: string[] | undefined, peldaño: Peldaño): string {
   const partes = [filiacion(g, id, peldaño), union(g, id, peldaño)].filter((t) => t !== "");
   // Los bisabuelos de arriba del todo no son hijos ni cónyuges de nadie documentado: se
@@ -202,7 +209,11 @@ function marcasDe(p: Persona, { homonimia }: OpcionesIdentidad): string[] {
   const marcas: string[] = [];
   if (p.incierto) marcas.push("incierto");
   if (homonimia && homonimia.total > 1) {
-    marcas.push(`${homonimia.cual} de ${homonimia.total} con este nombre${homonimia.conAño ? " y año" : ""}`);
+    // A los cuatro que no tienen nombre no se les puede decir que comparten el suyo: lo que
+    // comparten es no tenerlo, y es lo único que avisa de que son cuatro y no una repetida.
+    const cuantos = `${homonimia.cual} de ${homonimia.total}`;
+    const como = p.nombre === SIN_NOMBRE ? "sin nombre" : `con este nombre${homonimia.conAño ? " y año" : ""}`;
+    marcas.push(`${cuantos} ${como}`);
   }
   return marcas;
 }
@@ -240,6 +251,12 @@ export const LARGOS_NODO = { titulo: 32, contexto: 40 };
  * menos la fecha.
  */
 export const LARGOS_FILA = { titulo: 34, contexto: 51 };
+
+/**
+ * Y lo que cabe en una fila de lista, donde el título solo comparte ancho con los pasos: hay
+ * sitio para los dos apellidos, que es lo que distingue a trece filas que se llaman igual.
+ */
+export const LARGOS_LISTA = { titulo: 40, contexto: 44 };
 
 /** Todo lo que hace falta para escribir a cualquiera, calculado una vez por árbol. */
 export function libretaDe(g: Grafo): { linaje: Map<string, Apellidos>; homonimias: Map<string, Homonimia> } {

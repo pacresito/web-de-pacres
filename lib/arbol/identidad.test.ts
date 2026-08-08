@@ -145,6 +145,11 @@ assert.deepStrictEqual(
   identidadDe(g, "p3", opciones({ homonimia: { cual: 2, total: 2, conAño: true } })).marcas,
   ["2 de 2 con este nombre y año"],
 );
+assert.deepStrictEqual(
+  identidadDe(g, "p6", opciones({ homonimia: { cual: 3, total: 4, conAño: false } })).marcas,
+  ["3 de 4 sin nombre"],
+  "a quien no tiene nombre no se le dice que lo comparte: lo que comparte es no tenerlo",
+);
 
 // --- Sobre los datos de verdad ---
 const data: ArbolData = JSON.parse(readFileSync(resolve("seed/arbol.json"), "utf-8"));

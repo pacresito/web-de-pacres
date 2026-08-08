@@ -8,7 +8,7 @@ import { añoDe, escribirVida, seLeSuponeFallecido, type Fecha, type ModoFechas 
 import type { Grafo } from "./grafo";
 import { declinado, identidadDe, SIN_NOMBRE, type Homonimia, type Trozo } from "./identidad";
 import { ordenarPareja, type Apellidos } from "./personas";
-import type { Relacion } from "./parentesco";
+import { escribirNivel, type Relacion } from "./parentesco";
 import type { Pertenencia } from "./ramas";
 import type { Persona } from "./tree";
 
@@ -33,6 +33,18 @@ export interface Ficha {
   /** Lo que hay que advertir antes de leer nada más; hoy, solo el caso sin nombre ni fechas. */
   aviso?: string;
   filas: Fila[];
+  /** La salida hacia los que comparten su nombre, cuando los hay. */
+  homonimos?: Homonimos;
+}
+
+export interface Homonimos {
+  /** Cómo se lee la salida: «Los otros 2 «Pablo (1989)»». */
+  texto: string;
+  /**
+   * Lo que hay que buscar para verlos uno debajo de otro, y `null` cuando lo que comparten es
+   * no tener nombre: a esos cuatro no se llega tecleando, sino por su propia lista.
+   */
+  consulta: string | null;
 }
 
 export interface OpcionesFicha {
@@ -60,11 +72,31 @@ export function fichaDe(g: Grafo, id: string, o: OpcionesFicha): Ficha {
     relacion: o.relacion,
     titulo: identidad.titulo,
     sinNombre: p.nombre === SIN_NOMBRE,
-    datos: `${vida(p, o.fechas, o.hoy)} · ${generacion(o.relacion.nivel)}`,
+    datos: `${vida(p, o.fechas, o.hoy)} · ${escribirNivel(o.relacion.nivel)}`,
     marcas: identidad.marcas,
     nota: identidad.nota,
     aviso: p.nombre === SIN_NOMBRE && !p.birth && !p.death ? AVISO_SIN_NADA : undefined,
     filas: filasDe(g, p, o.linaje, o.pertenencia),
+    homonimos: homonimosDe(p, o),
+  };
+}
+
+/**
+ * A los que comparten nombre no los lista la ficha —serían fichas dentro de una ficha—: se
+ * sale a la búsqueda, que es la superficie que sabe ponerlos uno debajo de otro con de quién
+ * es cada uno, que es lo único que los distingue.
+ */
+function homonimosDe(p: Persona, { homonimia, linaje }: OpcionesFicha): Homonimos | undefined {
+  if (!homonimia || homonimia.total < 2) return undefined;
+  const otros = homonimia.total - 1;
+  if (p.nombre === SIN_NOMBRE) {
+    const cuantas = otros === 1 ? "La otra persona" : `Las otras ${otros} personas`;
+    return { texto: `${cuantas} sin nombre`, consulta: null };
+  }
+  const año = p.birth ? ` (${añoDe(p.birth)})` : "";
+  return {
+    texto: `${otros === 1 ? "El otro" : `Los otros ${otros}`} «${p.nombre}${año}»`,
+    consulta: [p.nombre, ...(linaje.get(p.id)?.todos ?? [])].join(" "),
   };
 }
 
@@ -81,16 +113,6 @@ function vida(p: Persona, modo: ModoFechas, hoy: Fecha): string {
   const escrita = escribirVida(p, modo === "completa" ? "completa" : "año", hoy);
   if (!escrita) return "sin fechas";
   return p.birth && !p.death && !seLeSuponeFallecido(p, hoy) ? `${escrita} —` : escrita;
-}
-
-const CUANTAS = ["", "una", "dos", "tres", "cuatro", "cinco", "seis"];
-
-/** A qué altura del centro queda, contado en generaciones y no en pasos. */
-function generacion(nivel: number): string {
-  if (nivel === 0) return "tu generación";
-  const cuantas = Math.abs(nivel);
-  const escrita = CUANTAS[cuantas] ?? String(cuantas);
-  return `${escrita} ${cuantas === 1 ? "generación" : "generaciones"} por ${nivel > 0 ? "encima" : "debajo"}`;
 }
 
 /**

@@ -29,7 +29,7 @@ function panel(opciones: ReturnType<typeof estado>): { recuento: Recuento; linea
   return {
     recuento,
     lineas: recuento.filas.map(
-      (f) => `${f.nivel} ${f.fracciones.map((x) => `${x.termino} ${x.puestos.length}/${x.alcanzables}`).join(" · ")}`,
+      (f) => `${f.nivel} ${f.fracciones.map((x) => `${x.termino} ${x.puestos.length}/${x.todos.length}`).join(" · ")}`,
     ),
   };
 }
@@ -50,6 +50,12 @@ assert.strictEqual(inicial.recuento.alcanzables, 342, "y 342 alcanzables, los co
 const fila0 = inicial.recuento.filas.find((f) => f.nivel === 0)!;
 assert.deepStrictEqual(fila0.fracciones[0].puestos, ["p25"], "el único hermano puesto es él");
 assert.deepStrictEqual(fila0.fracciones[3].puestos, ["p24"], "y en parejas está la suya");
+// El cajón trae a los suyos y no solo cuántos son: pulsar el parentesco los lista.
+assert.ok(fila0.fracciones[0].todos.includes("p25"), "el cajón lleva dentro a los que cuenta");
+assert.ok(
+  inicial.recuento.filas.every((f) => f.fracciones.every((x) => x.puestos.every((id) => x.todos.includes(id)))),
+  "y los puestos son siempre parte de los suyos",
+);
 
 // --- Sin el filtro entra la política de la política, en su propio cajón ---
 const sinFiltro = panel(estado("p25", false));
@@ -86,8 +92,8 @@ for (const pov of ["p25", "p26", "p131"]) {
         const llena = abierta.recuento.filas.find((f) => f.nivel === fila.nivel)!.fracciones.find((x) => x.termino === fraccion.termino)!;
         assert.strictEqual(
           llena.puestos.length,
-          llena.alcanzables,
-          `${pov}/${ocultar}: pulsar «${fila.nivel} ${fraccion.termino}» deja ${llena.puestos.length} de ${llena.alcanzables}`,
+          llena.todos.length,
+          `${pov}/${ocultar}: pulsar «${fila.nivel} ${fraccion.termino}» deja ${llena.puestos.length} de ${llena.todos.length}`,
         );
       }
     }
@@ -112,7 +118,7 @@ assert.strictEqual(fraccion(soloTios, -1, "sobrinos").puestos.length, 0, "…y l
 // La línea directa ya está puesta de arranque: no hay nada que abrir ni que plegar.
 for (const fila of inicial.recuento.filas) {
   const directa = fila.fracciones[0];
-  const llena = directa.puestos.length === directa.alcanzables;
+  const llena = directa.puestos.length === directa.todos.length;
   assert.strictEqual(directa.uniones.length === 0, llena, `${fila.nivel} ${directa.termino}: llena si y solo si no pide uniones`);
 }
 
@@ -121,7 +127,7 @@ const todo = panel(estado("p25", true, new Set(g.unionPorId.keys())));
 assert.strictEqual(todo.recuento.puestos, 342, "abriéndolo todo se llega a todos los conectados");
 for (const fila of todo.recuento.filas) {
   for (const fraccion of fila.fracciones) {
-    assert.strictEqual(fraccion.puestos.length, fraccion.alcanzables, `${fila.nivel} ${fraccion.termino} se queda a medias`);
+    assert.strictEqual(fraccion.puestos.length, fraccion.todos.length, `${fila.nivel} ${fraccion.termino} se queda a medias`);
   }
 }
 

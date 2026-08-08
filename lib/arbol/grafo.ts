@@ -129,7 +129,7 @@ export function pasosDesde(g: Grafo, x: string): Map<string, number> {
     const siguiente: string[] = [];
     for (const a of frente) {
       const paso = pasos.get(a)! + 1;
-      for (const b of vecinos(g, a)) {
+      for (const { id: b } of vecinos(g, a)) {
         if (pasos.has(b)) continue;
         pasos.set(b, paso);
         siguiente.push(b);
@@ -140,13 +140,31 @@ export function pasosDesde(g: Grafo, x: string): Map<string, number> {
   return pasos;
 }
 
-/** Padres y hermanos por la unión de la que X es hijo; parejas e hijos, por las suyas. */
-function* vecinos(g: Grafo, x: string): Generator<string> {
-  const nacimiento = g.unionPorId.get(g.unionDeHijo.get(x) ?? "");
-  if (nacimiento) yield* [...nacimiento.partners, ...nacimiento.children];
-  for (const uid of g.unionesDePartner.get(x) ?? []) {
-    const propia = g.unionPorId.get(uid)!;
-    yield* [...propia.partners, ...propia.children];
+/** Los cuatro eslabones que la familia cuenta como un paso, dichos desde quien los mira. */
+export type Paso = "progenitor" | "hijo" | "hermano" | "pareja";
+
+export interface Vecino {
+  id: string;
+  paso: Paso;
+  /** La unión por la que se llega: es la que sabe si la pareja fue matrimonio o noviazgo. */
+  unionId: string;
+}
+
+/**
+ * A un paso de X: padres y hermanos por la unión de la que es hijo, parejas e hijos por las
+ * suyas. La distancia y el camino salen los dos de aquí, así que nunca se contradicen.
+ */
+export function* vecinos(g: Grafo, x: string): Generator<Vecino> {
+  const nacimiento = g.unionDeHijo.get(x);
+  const cuna = nacimiento ? g.unionPorId.get(nacimiento) : undefined;
+  if (cuna && nacimiento) {
+    for (const p of cuna.partners) yield { id: p, paso: "progenitor", unionId: nacimiento };
+    for (const c of cuna.children) if (c !== x) yield { id: c, paso: "hermano", unionId: nacimiento };
+  }
+  for (const unionId of g.unionesDePartner.get(x) ?? []) {
+    const propia = g.unionPorId.get(unionId)!;
+    for (const p of propia.partners) if (p !== x) yield { id: p, paso: "pareja", unionId };
+    for (const c of propia.children) yield { id: c, paso: "hijo", unionId };
   }
 }
 

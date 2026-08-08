@@ -14,8 +14,8 @@ export interface Fraccion {
   termino: string;
   /** Los que están puestos: el numerador, y lo que se resalta al señalarla. */
   puestos: string[];
-  /** Cuántos se pueden llegar a pintar: el denominador. */
-  alcanzables: number;
+  /** Todos los del cajón: el denominador, y la lista que se abre al pulsar el parentesco. */
+  todos: string[];
   /**
    * Las uniones que hay que abrir para llenarla, contadas desde el núcleo. Abrirlas la
    * llena; quitarlas de las abiertas la repliega hasta el núcleo, como la manija «−».
@@ -49,7 +49,7 @@ export function calcularRecuento(
     termino: string;
     orden: number;
     puestos: string[];
-    alcanzables: number;
+    todos: string[];
     mujeres: number;
     uniones: Set<string>;
   }
@@ -58,9 +58,9 @@ export function calcularRecuento(
   for (const [id, { nivel, termino, orden }] of parentescos(g, puntoDeVista)) {
     if (permitidos && !permitidos.has(id)) continue;
     const clave = `${nivel}:${termino}`;
-    const celda = celdas.get(clave) ?? { nivel, termino, orden, puestos: [], alcanzables: 0, mujeres: 0, uniones: new Set() };
+    const celda = celdas.get(clave) ?? { nivel, termino, orden, puestos: [], todos: [], mujeres: 0, uniones: new Set() };
     celdas.set(clave, celda);
-    celda.alcanzables++;
+    celda.todos.push(id);
     if (g.personaPorId.get(id)!.sexo === "m") celda.mujeres++;
     if (puestos.has(id)) celda.puestos.push(id);
     for (const union of camino.get(id) ?? []) celda.uniones.add(union);
@@ -71,9 +71,9 @@ export function calcularRecuento(
     const fila = filas.get(celda.nivel) ?? { nivel: celda.nivel, fracciones: [] };
     filas.set(celda.nivel, fila);
     fila.fracciones.push({
-      termino: declinar(celda.termino, celda.alcanzables, celda.mujeres),
+      termino: declinar(celda.termino, celda.todos.length, celda.mujeres),
       puestos: celda.puestos,
-      alcanzables: celda.alcanzables,
+      todos: celda.todos,
       uniones: [...celda.uniones],
     });
   }
@@ -82,7 +82,7 @@ export function calcularRecuento(
   return {
     filas: [...filas.values()].sort((a, b) => b.nivel - a.nivel),
     puestos: todas.reduce((n, c) => n + c.puestos.length, 0),
-    alcanzables: todas.reduce((n, c) => n + c.alcanzables, 0),
+    alcanzables: todas.reduce((n, c) => n + c.todos.length, 0),
   };
 }
 
