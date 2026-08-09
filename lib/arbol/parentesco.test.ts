@@ -117,7 +117,7 @@ for (const termino of ["tatarabuelos", "tíos bisabuelos", "tíos abuelos segund
 // --- Nombrar a uno solo: lo que lee la ficha, que no es lo mismo que repartir cajones ---
 const relaciones = relacionesDesde(g, "p25");
 assert.strictEqual(relaciones.size, data.people.length, "alguien se queda sin relación que leer");
-assert.strictEqual(relaciones.get("p25")!.frase, "Es tu Centro");
+assert.strictEqual(relaciones.get("p25")!.frase, "Eres tú");
 assert.strictEqual(relaciones.get("p24")!.frase, "Es tu pareja", "la suya no es «la pareja de tu hermano»");
 assert.strictEqual(relaciones.get("p124")!.frase, "Es tu padre");
 assert.strictEqual(relaciones.get("p26")!.frase, "Es tu hijo");
@@ -132,10 +132,21 @@ assert.deepStrictEqual(
 const parejas = [...parentescos(g, "p25")].filter(([, p]) => p.termino === PAREJAS).map(([id]) => id);
 const nombradas = parejas.filter((id) => relaciones.get(id)!.frase.startsWith("Es la pareja de tu "));
 assert.ok(nombradas.length >= parejas.length * 0.9, `solo ${nombradas.length} de ${parejas.length} parejas se saben nombrar`);
+// Y a la familia de la pareja se la nombra desde ella, con su artículo: son 54 de las 74
+// que no comparten sangre con nadie, y todas se leían «no hay palabra».
+const ajenos = [...parentescos(g, "p25")].filter(([, p]) => p.termino === SIN_PARENTESCO).map(([id]) => id);
+assert.strictEqual(ajenos.length, 74);
+assert.strictEqual(relaciones.get("p3")!.frase, "Es el abuelo de tu pareja");
+assert.strictEqual(ajenos.filter((id) => relaciones.get(id)!.frase.endsWith(" de tu pareja")).length, 54);
 assert.strictEqual(
-  relaciones.get([...parentescos(g, "p25")].find(([, p]) => p.termino === SIN_PARENTESCO)![0])!.frase,
+  relaciones.get("p6")!.frase,
   SIN_PALABRA,
-  "y a quien no ata nada con la familia se le da la distancia, que es lo único cierto",
+  "a quien no ata nada, ni con la familia ni con la pareja, se le da la distancia",
+);
+// La sangre no toma prestada la palabra de la política: al sobrino sin ordinal le queda la
+// distancia aunque desde la pareja tuviera término.
+assert.ok(
+  [...parentescos(g, "p25")].every(([id, p]) => !p.termino.startsWith("otros ") || relaciones.get(id)!.frase === SIN_PALABRA),
 );
 
 console.log("parentesco.test.ts OK");

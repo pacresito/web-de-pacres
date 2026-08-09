@@ -24,7 +24,7 @@ export default function Celebraciones({
     <div className="flex flex-col">
       <h2 className="font-[family-name:var(--serif)] text-[24px] leading-[1.15]">Lo que se celebra</h2>
       <p className="mt-1 text-[12.5px] text-[var(--mut)]">
-        Los próximos {VENTANA} días, de la familia cercana. Tocar a alguien abre su ficha.
+        Los próximos {VENTANA} días, de la familia cercana.
       </p>
       <div className="mt-3.5 flex flex-col gap-1">
         {lista.length === 0 ? (

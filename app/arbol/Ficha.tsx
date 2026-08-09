@@ -2,7 +2,8 @@
 
 // La ficha: lo que se lee al tocar a alguien, venga del lienzo o del panel de lo que se
 // celebra. Solo pinta —lo que dice lo escribe lib/arbol/ficha— y guarda la única regla que
-// el lienzo no puede guardar por sí solo: **tocar no muda el Centro; solo «Centrar aquí»**.
+// el lienzo no puede guardar por sí solo: **tocar no muda el Centro; solo el botón de verlo
+// todo desde aquí**.
 
 import type { Ficha as Datos } from "@/lib/arbol/ficha";
 import { Accion, Marca, Titulo } from "./Bloque";
@@ -55,26 +56,14 @@ export default function Ficha({
         {datos.nota && <Campo clave="Nota">{datos.nota}</Campo>}
       </dl>
 
-      {datos.esCentro && (
-        <Caja>
-          Cerrar esta ficha no cambia nada. El Centro solo cambia desde la ficha{" "}
-          <b className="font-semibold text-[var(--ink)]">de otra persona</b>.
-        </Caja>
-      )}
-
       <div className="mt-[18px] flex flex-col gap-[9px]">
         {datos.esCentro ? (
           <>
             <Accion texto="Índice de parentescos desde aquí" nota="›" onPulsar={onIndice} />
-            {anterior && <Accion texto={`Devolver el Centro a ${anterior.nombre}`} nota="↩" onPulsar={onDevolver} />}
+            {anterior && <Accion texto={`Volver a ver desde ${anterior.nombre}`} nota="↩" onPulsar={onDevolver} />}
           </>
         ) : (
-          <>
-            <Accion texto="Centrar aquí" nota="el árbol se recoloca" primaria onPulsar={onCentrar} />
-            {/* La palabra de la relación falta en 271 de las 416, y entonces la línea de
-                arriba solo sabe dar la distancia: el camino es lo que la explica. */}
-            <Accion texto="El camino desde tu Centro" nota="↔" onPulsar={onCamino} />
-          </>
+          <Accion texto="Ver el árbol desde aquí" nota="se recoloca" primaria onPulsar={onCentrar} />
         )}
         {datos.homonimos && (
           <Accion texto={datos.homonimos.texto} nota="⌕" onPulsar={() => onHomonimos(datos.homonimos!.consulta)} />

@@ -36,6 +36,7 @@ import Celebraciones, { AvisoCelebraciones } from "./Celebraciones";
 import Ficha from "./Ficha";
 import Hoja from "./Hoja";
 import Recuento from "./Recuento";
+import { useAtras } from "./useAtras";
 
 const POR_DEFECTO = "p25";
 const ARRASTRE_MINIMO = 8; // px: por debajo de esto el gesto es un toque, no un arrastre
@@ -211,6 +212,18 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
   function abrirFicha(id: string) {
     setHoja({ tipo: "ficha", id });
   }
+
+  // Lo que el gesto de volver cierra: la capa de más arriba y solo esa, en el orden en que
+  // se ven —lo que tapa antes que lo que flota debajo—.
+  const capas =
+    (busquedaAbierta ? 1 : 0) + (cajon ? 1 : 0) + (panelAbierto ? 1 : 0) + (hoja ? 1 : 0) + (hoja?.tipo === "camino" ? 1 : 0);
+  useAtras(capas, () => {
+    if (hoja?.tipo === "camino") setHoja({ tipo: "ficha", id: hoja.id });
+    else if (hoja) setHoja(null);
+    else if (panelAbierto) setPanelAbierto(false);
+    else if (cajon) setCajon(null);
+    else if (busquedaAbierta) setBusquedaAbierta(false);
+  });
 
   /**
    * Teclear manda sobre las cuatro sin nombre —son una lista aparte, no un resultado— y abre

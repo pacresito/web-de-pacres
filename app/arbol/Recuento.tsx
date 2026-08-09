@@ -31,7 +31,7 @@ export default function Recuento({
   return (
     <>
       <Cabecera>
-        Desde tu Centro · {centro} · {cuentas.puestos}/{cuentas.alcanzables}
+        {centro} · {cuentas.puestos}/{cuentas.alcanzables}
       </Cabecera>
       {cuentas.filas.map((fila) => (
         <div key={fila.nivel} className="flex flex-col">
@@ -43,10 +43,6 @@ export default function Recuento({
           ))}
         </div>
       ))}
-      <p className="px-3 pt-3 pb-1 text-[11.5px] leading-[1.5] text-[var(--mut)]">
-        Pulsa un parentesco para ver quiénes son. La fracción dice cuántos hay ya en el árbol de cuántos hay, y pulsarla trae
-        los que falten.
-      </p>
     </>
   );
 }

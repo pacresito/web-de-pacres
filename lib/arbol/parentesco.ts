@@ -129,9 +129,12 @@ export interface Relacion {
 export function relacionesDesde(g: Grafo, pov: string): Map<string, Relacion> {
   const cajones = parentescos(g, pov);
   const pasos = pasosDesde(g, pov);
+  // La familia de la pareja no comparte sangre con nadie y se quedaría entera sin palabra:
+  // se la nombra desde ella, que es de donde le viene el parentesco.
+  const politica = [...parejaDirecta(g, pov)].map((id) => parentescos(g, id));
   const salida = new Map<string, Relacion>();
   for (const [id, { termino, nivel }] of cajones) {
-    salida.set(id, { frase: fraseDe(g, cajones, pov, id, termino), pasos: pasos.get(id)!, nivel });
+    salida.set(id, { frase: fraseDe(g, cajones, politica, pov, id, termino), pasos: pasos.get(id)!, nivel });
   }
   return salida;
 }
@@ -144,8 +147,15 @@ export function relacionesDesde(g: Grafo, pov: string): Map<string, Relacion> {
 const sinPalabra = (termino: string): boolean =>
   termino === PAREJAS || termino === SIN_PARENTESCO || termino.startsWith("otros ");
 
-function fraseDe(g: Grafo, cajones: Map<string, Parentesco>, pov: string, id: string, termino: string): string {
-  if (id === pov) return "Es tu Centro";
+function fraseDe(
+  g: Grafo,
+  cajones: Map<string, Parentesco>,
+  politica: Map<string, Parentesco>[],
+  pov: string,
+  id: string,
+  termino: string,
+): string {
+  if (id === pov) return "Eres tú";
   if (!sinPalabra(termino)) return `Es tu ${unaSola(g, id, termino)}`;
   if (termino === PAREJAS) {
     const suyas = parejaDirecta(g, id);
@@ -155,11 +165,26 @@ function fraseDe(g: Grafo, cajones: Map<string, Parentesco>, pov: string, id: st
       if (suyo && !sinPalabra(suyo)) return `Es la pareja de tu ${unaSola(g, otro, suyo)}`;
     }
   }
+  // La sangre no se nombra con una palabra prestada: a un sobrino al que se le ha caído el
+  // ordinal se le da la distancia, aunque además sea sobrino de la pareja.
+  if (termino === PAREJAS || termino === SIN_PARENTESCO) return deLaPareja(g, politica, id) ?? SIN_PALABRA;
   return SIN_PALABRA;
 }
 
-const unaSola = (g: Grafo, id: string, termino: string): string =>
-  declinar(termino, 1, g.personaPorId.get(id)?.sexo === "m" ? 1 : 0);
+/** Quien entra por la pareja lleva su parentesco: «Es la abuela de tu pareja». */
+function deLaPareja(g: Grafo, politica: Map<string, Parentesco>[], id: string): string | null {
+  for (const suyos of politica) {
+    const termino = suyos.get(id)?.termino;
+    if (!termino || sinPalabra(termino)) continue;
+    return `Es ${esMujer(g, id) ? "la" : "el"} ${unaSola(g, id, termino)} de tu pareja`;
+  }
+  return null;
+}
+
+/** Sin sexo en el dato manda el masculino, que es lo que la lengua hace con lo que no sabe. */
+const esMujer = (g: Grafo, id: string): boolean => g.personaPorId.get(id)?.sexo === "m";
+
+const unaSola = (g: Grafo, id: string, termino: string): string => declinar(termino, 1, esMujer(g, id) ? 1 : 0);
 
 const IRREGULARES: Record<string, string> = { padre: "madre" };
 

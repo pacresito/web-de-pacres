@@ -67,7 +67,7 @@ const ficha = (id: string): Ficha =>
 const valor = (f: Ficha, clave: string) => f.filas.find((x) => x.clave === clave)?.valor;
 
 // --- La relación, que es lo primero que se lee ---
-assert.strictEqual(ficha("p3").relacion.frase, "Es tu Centro");
+assert.strictEqual(ficha("p3").relacion.frase, "Eres tú");
 assert.strictEqual(ficha("p3").esCentro, true, "la del propio centro es una variante, no otra pantalla");
 assert.strictEqual(ficha("p5").relacion.frase, "Es tu hija");
 assert.deepStrictEqual(

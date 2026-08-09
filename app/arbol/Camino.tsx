@@ -14,7 +14,7 @@ import { Bloque } from "./Bloque";
 const FLECHAS: Record<Paso, string> = { progenitor: "↑", hijo: "↓", hermano: "→", pareja: "→" };
 
 /** Lo que el primer eslabón añade a su segunda línea, y el hueco que le quita. */
-const CENTRO = "tu Centro";
+const CENTRO = "tú";
 
 /**
  * El eslabón se lleva la fila entera, que aquí no comparte con ninguna columna de pasos: son
@@ -84,10 +84,6 @@ export default function Camino({
           </div>
         ))}
       </div>
-
-      <p className="mt-3.5 text-[11.5px] leading-[1.5] text-[var(--mut)]">
-        Cualquier eslabón se toca y abre su ficha. Ninguno cambia el Centro por sí solo.
-      </p>
     </div>
   );
 }

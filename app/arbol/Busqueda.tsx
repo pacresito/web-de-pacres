@@ -224,7 +224,7 @@ function SinNadie({
       <div className="mt-4 flex flex-col gap-[9px]">
         {sugerencia && <Accion texto={`Buscar solo «${sugerencia}»`} nota="⌕" onPulsar={onSugerencia} />}
         <Accion texto="Ver las cuatro personas sin nombre" nota="›" onPulsar={onSinNombre} />
-        <Accion texto="Índice de parentescos desde tu Centro" nota="›" onPulsar={onIndice} />
+        <Accion texto="Índice de parentescos" nota="›" onPulsar={onIndice} />
         <Accion texto="Volver al árbol" nota="↩" onPulsar={onCerrar} />
       </div>
     </div>
