@@ -71,6 +71,10 @@
   --acc:   oklch(0.52 0.1 300);
   --acch:  oklch(0.95 0.022 300);
   --accb:  oklch(0.8 0.06 300);
+  /* El mismo morado con un tercio más de croma, y solo para el fondo del punto de vista:
+     rebajado sobre el papel, el acento se lava hasta parecer un gris con intención. Se
+     sube el croma y no la cantidad, que oscurecer no es avivar. */
+  --accv:  oklch(0.52 0.13 300);
   --sh: 0 1px 2px rgba(0, 0, 0, 0.06), 0 6px 18px rgba(0, 0, 0, 0.05);
   /* El diseño no da color de error porque en el árbol no hay nada que falle; el acceso sí,
      y el acento no puede prestarse: es del punto de vista. */
@@ -96,6 +100,7 @@
   --acc:   oklch(0.76 0.09 300);
   --acch:  oklch(0.3 0.05 300);
   --accb:  oklch(0.45 0.07 300);
+  --accv:  oklch(0.76 0.12 300);
   --err:   oklch(0.68 0.17 25);
   --sh: 0 1px 2px rgba(0, 0, 0, 0.5), 0 8px 22px rgba(0, 0, 0, 0.45);
 }
@@ -123,17 +128,21 @@
 /* El lienzo va en SVG y ahí un atributo de presentación (fill="var(--paper)") no resuelve
    la variable: los colores del dibujo tienen que entrar por clase o por `style`. */
 /* El fondo mide la cercanía y el borde dice otra cosa: así las dos preguntas —«cuánto es
-   mío» y «dónde estoy yo»— no se pelean por el mismo canal. Cuatro pisadas del mismo
-   morado sobre el papel, que en oscuro salen oscuras porque el papel lo es. */
+   mío» y «dónde estoy yo»— no se pelean por el mismo canal. Cuatro pisadas del morado
+   sobre el papel, que en oscuro salen oscuras porque el papel lo es; la última es el punto
+   de vista y va con el croma subido, porque es la única que tiene que verse de un vistazo. */
 .arbol .nd     { fill: var(--paper); }
 .arbol .nd-con { fill: color-mix(in oklab, var(--acc) 7%, var(--paper)); }
 .arbol .nd-dir { fill: color-mix(in oklab, var(--acc) 15%, var(--paper)); }
-.arbol .nd-pov { fill: color-mix(in oklab, var(--acc) 30%, var(--paper)); }
+.arbol .nd-pov { fill: color-mix(in oklab, var(--accv) 42%, var(--paper)); }
 /* El borde: el trazo grueso es la línea directa y el morado, dónde estás mirando —tú o la
    ficha que tengas abierta—. */
 .arbol .bd     { stroke: var(--line); stroke-width: 1; }
 .arbol .bd-dir { stroke: var(--ink);  stroke-width: 1.5; }
 .arbol .bd-acc { stroke: var(--acc);  stroke-width: 2; }
+/* Y a quien se está leyendo, un cerco por fuera: el fondo y el borde ya dicen cada uno lo
+   suyo, así que la tercera marca se pone donde no hay nada dibujado. */
+.arbol .nd-cerco { fill: none; stroke: var(--acc); stroke-width: 2; opacity: 0.35; }
 /* El segundo eje se dice con el peso del trazo, nunca con color. */
 .arbol .lk     { fill: none; stroke: var(--line); stroke-width: 1; }
 .arbol .lk-dir { fill: none; stroke: var(--ink); stroke-width: 2; }

@@ -4,7 +4,7 @@
 // El orden es invariable porque la ficha se lee de arriba abajo buscando siempre lo mismo:
 // primero qué es esa persona de ti, luego quién es y por último de quién viene.
 
-import { añoDe, escribirVida, seLeSuponeFallecido, type Fecha, type ModoFechas } from "./fechas";
+import { añoDe, conDia, escribirDiaDeMes, escribirVida, type Fecha, type ModoFechas } from "./fechas";
 import type { Grafo } from "./grafo";
 import { declinado, identidadDe, SIN_NOMBRE, type Homonimia, type Trozo } from "./identidad";
 import { ordenarPareja, type Apellidos } from "./personas";
@@ -76,7 +76,7 @@ export function fichaDe(g: Grafo, id: string, o: OpcionesFicha): Ficha {
     marcas: identidad.marcas,
     nota: identidad.nota,
     aviso: p.nombre === SIN_NOMBRE && !p.birth && !p.death ? AVISO_SIN_NADA : undefined,
-    filas: filasDe(g, p, o.linaje, o.pertenencia),
+    filas: filasDe(g, p, o.hoy, o.linaje, o.pertenencia),
     homonimos: homonimosDe(p, o),
   };
 }
@@ -104,15 +104,13 @@ const AVISO_SIN_NADA =
   "El documento no le da nombre ni fechas. Solo se la puede identificar por su familia, y así aparece en toda la app.";
 
 /**
- * Lo que se sabe de su vida. **La raya abierta dice que sigue aquí**: a quien hoy pasaría
- * de cien años sin que conste su defunción no se le pone, porque callar no es decir que
- * vive. La ficha es el expediente, así que las fechas salen siempre —el interruptor solo
- * decide con cuánta precisión, y ni ocultarlas ni cambiarlas por la edad valen aquí—.
+ * Lo que se sabe de su vida. La ficha es el expediente, así que las fechas salen siempre
+ * —el interruptor solo decide con cuánta precisión, y ni ocultarlas ni cambiarlas por la
+ * edad valen aquí—. Sin defunción no se escribe nada en su sitio: una raya esperando el
+ * año se lee como un hueco por rellenar y no como que sigue aquí.
  */
 function vida(p: Persona, modo: ModoFechas, hoy: Fecha): string {
-  const escrita = escribirVida(p, modo === "completa" ? "completa" : "año", hoy);
-  if (!escrita) return "sin fechas";
-  return p.birth && !p.death && !seLeSuponeFallecido(p, hoy) ? `${escrita} —` : escrita;
+  return escribirVida(p, modo === "completa" ? "completa" : "año", hoy) || "sin fechas";
 }
 
 /**
@@ -122,7 +120,7 @@ function vida(p: Persona, modo: ModoFechas, hoy: Fecha): string {
  * que anunciar que no consta sería contestar a una pregunta que nadie ha hecho, y en un
  * niño suena a reproche.
  */
-function filasDe(g: Grafo, p: Persona, linaje: Map<string, Apellidos>, pertenencia?: Pertenencia): Fila[] {
+function filasDe(g: Grafo, p: Persona, hoy: Fecha, linaje: Map<string, Apellidos>, pertenencia?: Pertenencia): Fila[] {
   const filas = [fila("Padres", padres(g, p.id), "no constan"), ...ramas(pertenencia)];
   for (const [clave, valor] of [
     ["Unión", uniones(g, p.id, linaje)],
@@ -130,7 +128,23 @@ function filasDe(g: Grafo, p: Persona, linaje: Map<string, Apellidos>, pertenenc
   ]) {
     if (valor !== "") filas.push({ clave, valor, falta: false });
   }
+  const cuenta = vivencia(p, hoy);
+  if (cuenta) filas.push(cuenta);
   return filas;
+}
+
+/**
+ * Los años, al final de todo: es lo que se calcula, no lo que consta. Al que vive se le da
+ * su cumpleaños cuando se sabe el día —la fila la lee quien va a felicitar— y al que no,
+ * la edad a secas; la del fallecido la dice el verbo, sin leyenda que descifrar. Sin
+ * nacimiento no hay fila, y a quien hoy pasaría de cien sin que conste su defunción
+ * tampoco: esa edad se cuenta hasta hoy, y hoy ya no está.
+ */
+function vivencia(p: Persona, hoy: Fecha): Fila | null {
+  const años = escribirVida(p, "edad", hoy);
+  if (!años) return null;
+  if (!p.death && conDia(p.birth!)) return { clave: "Cumple", valor: `${escribirDiaDeMes(p.birth!)} · ${años}`, falta: false };
+  return { clave: "Edad", valor: años, falta: false };
 }
 
 const fila = (clave: string, valor: string, ausente: string): Fila =>

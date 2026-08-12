@@ -16,6 +16,25 @@ const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "o
 export const escribirCorto = (f: Fecha): string =>
   conDia(f) ? `${Number(f.slice(8, 10))} ${MESES[Number(f.slice(5, 7)) - 1]}` : f;
 
+const MESES_LARGOS = [
+  "enero",
+  "febrero",
+  "marzo",
+  "abril",
+  "mayo",
+  "junio",
+  "julio",
+  "agosto",
+  "septiembre",
+  "octubre",
+  "noviembre",
+  "diciembre",
+];
+
+/** El día que se celebra, escrito entero: `"2026-03-01"` → `"1 de marzo"`. Pide día. */
+export const escribirDiaDeMes = (f: Fecha): string =>
+  `${Number(f.slice(8, 10))} de ${MESES_LARGOS[Number(f.slice(5, 7)) - 1]}`;
+
 /**
  * Los años cumplidos entre dos fechas, contados con la precisión que tengan las dos:
  * exacta si a ambas les consta el día, y por años naturales si a alguna solo el año —como

@@ -699,10 +699,23 @@ function Nodo({
     <g
       onClick={onElegir}
       // El contraste dice a cuántas generaciones del punto de vista está, y lo dice por
-      // clase para que el tema oscuro pueda comprimir la escala sin que React lo sepa.
-      className={`cursor-pointer g${Math.min(Math.abs(nodo.nivel), 4)}`}
+      // clase para que el tema oscuro pueda comprimir la escala sin que React lo sepa. A
+      // quien se está leyendo se le devuelve entero: la distancia ya no es lo que cuenta.
+      className={`cursor-pointer g${abierta ? 0 : Math.min(Math.abs(nodo.nivel), 4)}`}
       style={atenuado ? { opacity: ATENUADO } : undefined}
     >
+      {/* El cerco es la tercera marca y no le quita el canal a ninguna de las dos: el fondo
+          sigue midiendo la cercanía y el borde, dónde miras. */}
+      {abierta && (
+        <rect
+          x={nodo.x - ANCHO_NODO / 2 - 4}
+          y={nodo.y - ALTO_NODO / 2 - 4}
+          width={ANCHO_NODO + 8}
+          height={ALTO_NODO + 8}
+          rx={13}
+          className="nd-cerco"
+        />
+      )}
       <rect
         x={nodo.x - ANCHO_NODO / 2}
         y={nodo.y - ALTO_NODO / 2}

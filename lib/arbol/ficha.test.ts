@@ -36,7 +36,7 @@ const juguete: ArbolData = {
     persona("p5", "Rosa", { sexo: "m", birth: "1959", nota: "de Italia" }),
     persona("p6", "Sin nombre"),
     persona("p7", "Antonio", { sexo: "h", birth: "1980" }),
-    persona("p8", "Lucía", { sexo: "m", birth: "1986" }),
+    persona("p8", "Lucía", { sexo: "m", birth: "1986-03-01" }),
   ],
   unions: [
     union("u1", ["p1", "p2"], ["p3", "p4"]),
@@ -80,9 +80,9 @@ assert.strictEqual(ficha("p2").relacion.frase, "Es tu madre");
 
 // --- La línea de datos: la vida y el sitio en el árbol ---
 assert.strictEqual(ficha("p1").datos, "1902 – 1980 · una generación por encima");
-assert.strictEqual(ficha("p5").datos, "1959 — · una generación por debajo", "la raya abierta dice que sigue aquí");
+assert.strictEqual(ficha("p5").datos, "1959 · una generación por debajo", "sin defunción no se escribe nada en su sitio");
 assert.strictEqual(ficha("p6").datos, "sin fechas · una generación por debajo");
-assert.strictEqual(ficha("p3").datos, "1930 — · tu generación");
+assert.strictEqual(ficha("p3").datos, "1930 · tu generación");
 
 // --- La salida hacia los homónimos: la ficha no los lista, los busca ---
 const conHomonimos = (cual: number, total: number): Ficha =>
@@ -120,13 +120,25 @@ assert.strictEqual(valor(ficha("p1"), "Padres"), "— no constan");
 assert.strictEqual(valor(ficha("p3"), "Hijos"), "Rosa (1959), Lucía (1986)");
 assert.deepStrictEqual(
   ficha("p3").filas.map((f) => f.clave),
-  ["Padres", "Rama", "Hijos"],
+  ["Padres", "Rama", "Hijos", "Edad"],
   "quien no se unió a nadie no lleva una fila que se lo diga",
 );
 assert.deepStrictEqual(
   ficha("p1").filas.map((f) => f.clave),
-  ["Padres", "Rama", "Unión", "Hijos"],
+  ["Padres", "Rama", "Unión", "Hijos", "Edad"],
   "de dónde viene primero, y qué hizo con su vida después",
+);
+
+// --- Los años, al final: el cumpleaños de quien vive y la edad del que no ---
+assert.strictEqual(valor(ficha("p8"), "Cumple"), "1 de marzo · 40 años", "con el día se felicita; la edad va detrás");
+assert.strictEqual(valor(ficha("p8"), "Edad"), undefined, "el cumpleaños ya lleva la edad: dos filas dirían lo mismo");
+assert.strictEqual(valor(ficha("p3"), "Edad"), "96 años", "sin día no hay a qué felicitar, solo la edad");
+assert.strictEqual(valor(ficha("p1"), "Edad"), "vivió 78 años", "la del fallecido la dice el verbo");
+assert.strictEqual(valor(ficha("p6"), "Edad"), undefined, "sin nacimiento no hay años que contar");
+assert.strictEqual(
+  valor(ficha("p2"), "Edad"),
+  undefined,
+  "y a quien hoy pasaría de cien sin que conste su defunción tampoco: nació en 1905",
 );
 assert.strictEqual(
   valor(ficha("p5"), "Unión"),
