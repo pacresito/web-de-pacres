@@ -4,7 +4,7 @@ import assert from "assert";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 import { construirGrafo } from "./grafo";
-import { declinar, parentescos, relacionesDesde, terminoDe, PAREJAS, SIN_PALABRA, SIN_PARENTESCO } from "./parentesco";
+import { declinar, parentescos, relacionesDesde, terminoDe, FAMILIA_POLITICA, PAREJAS, SIN_PARENTESCO } from "./parentesco";
 import type { ArbolData } from "./tree";
 
 // --- La regla: el ancestro común más cercano nombra el parentesco ---
@@ -140,13 +140,15 @@ assert.strictEqual(relaciones.get("p3")!.frase, "Es el abuelo de tu pareja");
 assert.strictEqual(ajenos.filter((id) => relaciones.get(id)!.frase.endsWith(" de tu pareja")).length, 54);
 assert.strictEqual(
   relaciones.get("p6")!.frase,
-  SIN_PALABRA,
-  "a quien no ata nada, ni con la familia ni con la pareja, se le da la distancia",
+  FAMILIA_POLITICA,
+  "a quien no ata nada, ni con la familia ni con la pareja, le queda haber entrado por alguien",
 );
-// La sangre no toma prestada la palabra de la política: al sobrino sin ordinal le queda la
-// distancia aunque desde la pareja tuviera término.
+// La sangre no toma prestada la palabra de la política: al sobrino sin ordinal le queda ser
+// pariente aunque desde la pareja tuviera término.
 assert.ok(
-  [...parentescos(g, "p25")].every(([id, p]) => !p.termino.startsWith("otros ") || relaciones.get(id)!.frase === SIN_PALABRA),
+  [...parentescos(g, "p25")].every(
+    ([id, p]) => !p.termino.startsWith("otros ") || relaciones.get(id)!.frase.startsWith("Es tu pariente lej"),
+  ),
 );
 
 console.log("parentesco.test.ts OK");

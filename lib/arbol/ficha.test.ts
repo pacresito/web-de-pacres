@@ -6,7 +6,7 @@ import { resolve } from "path";
 import { fichaDe, type Ficha } from "./ficha";
 import { construirGrafo } from "./grafo";
 import { libretaDe } from "./identidad";
-import { relacionesDesde, SIN_PALABRA } from "./parentesco";
+import { FAMILIA_POLITICA, relacionesDesde } from "./parentesco";
 import { apellidosDe } from "./personas";
 import { calcularRamas } from "./ramas";
 import type { ArbolData, Persona, Union } from "./tree";
@@ -140,6 +140,10 @@ assert.strictEqual(
   undefined,
   "y a quien hoy pasaría de cien sin que conste su defunción tampoco: nació en 1905",
 );
+assert.strictEqual(valor(ficha("p8"), "Onomástica"), "13 de diciembre", "el santo va detrás del cumpleaños");
+assert.strictEqual(valor(ficha("p5"), "Onomástica"), "23 de agosto", "y lo tiene también quien no trae el día de su cumpleaños");
+assert.strictEqual(valor(ficha("p3"), "Onomástica"), undefined, "Genoveva no está en el santoral: no hay día que dar");
+assert.strictEqual(valor(ficha("p1"), "Onomástica"), undefined, "al que ya no está no se le felicita nada");
 assert.strictEqual(
   valor(ficha("p5"), "Unión"),
   "casada con Sin nombre · divorciados; pareja de Antonio (1980)",
@@ -178,7 +182,7 @@ const susRamas = calcularRamas(real);
 const POV = "p25";
 const susRelaciones = relacionesDesde(real, POV);
 
-let sinPalabra = 0;
+let sinTermino = 0;
 for (const p of data.people) {
   const f = fichaDe(real, p.id, {
     puntoDeVista: POV,
@@ -194,7 +198,7 @@ for (const p of data.people) {
   // La rama es lo único que nunca falta: las 124 que entraron casándose heredan la de su
   // cónyuge, así que ninguna ficha llega a escribir «— no consta» en esa fila.
   assert.ok(f.filas.some((x) => x.clave.startsWith("Rama") && !x.falta), `${p.id}: ficha sin rama`);
-  if (f.relacion.frase === SIN_PALABRA) sinPalabra += 1;
+  if (f.relacion.frase.startsWith("Es tu pariente lej") || f.relacion.frase === FAMILIA_POLITICA) sinTermino += 1;
 }
 
-console.log(`ficha.test.ts OK (${data.people.length} fichas desde ${POV}, ${sinPalabra} sin palabra para la relación)`);
+console.log(`ficha.test.ts OK (${data.people.length} fichas desde ${POV}, ${sinTermino} sin término para la relación)`);

@@ -4,12 +4,13 @@
 // El orden es invariable porque la ficha se lee de arriba abajo buscando siempre lo mismo:
 // primero qué es esa persona de ti, luego quién es y por último de quién viene.
 
-import { añoDe, conDia, escribirDiaDeMes, escribirVida, type Fecha, type ModoFechas } from "./fechas";
+import { añoDe, conDia, escribirDiaDeMes, escribirVida, seLeSuponeFallecido, type Fecha, type ModoFechas } from "./fechas";
 import type { Grafo } from "./grafo";
 import { declinado, identidadDe, SIN_NOMBRE, type Homonimia, type Trozo } from "./identidad";
 import { ordenarPareja, type Apellidos } from "./personas";
 import { escribirNivel, type Relacion } from "./parentesco";
 import type { Pertenencia } from "./ramas";
+import { onomasticaDePersona } from "./santoral";
 import type { Persona } from "./tree";
 
 export interface Fila {
@@ -130,11 +131,13 @@ function filasDe(g: Grafo, p: Persona, hoy: Fecha, linaje: Map<string, Apellidos
   }
   const cuenta = vivencia(p, hoy);
   if (cuenta) filas.push(cuenta);
+  const santo = onomastica(p, hoy);
+  if (santo) filas.push(santo);
   return filas;
 }
 
 /**
- * Los años, al final de todo: es lo que se calcula, no lo que consta. Al que vive se le da
+ * Los años, detrás de lo que consta: es lo que se calcula. Al que vive se le da
  * su cumpleaños cuando se sabe el día —la fila la lee quien va a felicitar— y al que no,
  * la edad a secas; la del fallecido la dice el verbo, sin leyenda que descifrar. Sin
  * nacimiento no hay fila, y a quien hoy pasaría de cien sin que conste su defunción
@@ -145,6 +148,21 @@ function vivencia(p: Persona, hoy: Fecha): Fila | null {
   if (!años) return null;
   if (!p.death && conDia(p.birth!)) return { clave: "Cumple", valor: `${escribirDiaDeMes(p.birth!)} · ${años}`, falta: false };
   return { clave: "Edad", valor: años, falta: false };
+}
+
+/**
+ * El santo, detrás del cumpleaños y por lo mismo: la lee quien va a felicitar. Sale del
+ * nombre y no del documento, así que lo tiene también quien no trae ni una fecha, y por eso
+ * mismo no se escribe cuando falta: que un nombre no esté en el santoral no es un hueco del
+ * documento sino que no hay tal día. Los que cuelgan de la Semana Santa se resuelven al año
+ * en curso, que es el único del que se puede decir cuándo cae.
+ */
+function onomastica(p: Persona, hoy: Fecha): Fila | null {
+  if (p.death || seLeSuponeFallecido(p, hoy)) return null;
+  const dia = onomasticaDePersona(p);
+  if (!dia) return null;
+  const año = añoDe(hoy);
+  return { clave: "Onomástica", valor: escribirDiaDeMes(`${año}-${typeof dia === "function" ? dia(año) : dia}`), falta: false };
 }
 
 const fila = (clave: string, valor: string, ausente: string): Fila =>

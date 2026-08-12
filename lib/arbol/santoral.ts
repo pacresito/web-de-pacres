@@ -39,6 +39,7 @@ const CALENDARIO: [DiaDelAño, string[]][] = [
   ["03-09", ["francisca"]],
   ["03-14", ["flora", "matilde"]],
   ["03-17", ["patricio"]],
+  ["03-18", ["alejandro", "alessandro"]],
   ["03-19", ["jose", "josefa", "josefina"]],
   ["03-20", ["alejandra"]],
   ["03-25", ["encarnacion", "anunciacion"]],
@@ -94,7 +95,7 @@ const CALENDARIO: [DiaDelAño, string[]][] = [
   ["08-28", ["agustin", "agustina"]],
   ["09-03", ["gregorio"]],
   ["09-08", ["nuria", "sergio"]],
-  ["09-12", ["maria"]],
+  ["09-12", ["maria", "mariano"]],
   ["09-17", ["roberto", "belarmina"]],
   ["09-21", ["mateo"]],
   ["09-24", ["mercedes"]],
@@ -108,6 +109,7 @@ const CALENDARIO: [DiaDelAño, string[]][] = [
   ["10-15", ["teresa"]],
   ["10-18", ["lucas"]],
   ["10-19", ["laura"]],
+  ["10-20", ["irene"]],
   ["10-22", ["salome"]],
   ["11-04", ["carlos", "carla", "carolina"]],
   ["11-11", ["martin", "martina"]],
@@ -262,6 +264,8 @@ const buscar = (clave: string): DiaDelAño | null =>
  * cambie el día.
  */
 const POR_PERSONA: Record<string, DiaDelAño> = {
+  p14: "10-15", // en el árbol es Chiara Teresa, en casa es Teresita y celebra Santa Teresa
+  p19: "03-19", // en el árbol es María, se llama María José y celebra San José
   p23: "08-02", // en el árbol es María, se llama María Ángeles y celebra con las Ángeles
 };
 

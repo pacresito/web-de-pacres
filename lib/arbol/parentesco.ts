@@ -108,8 +108,13 @@ export function escribirNivel(nivel: number): string {
 
 // --- La relación con uno solo, tal como la lee la ficha ---
 
-/** Cuando la lengua no llega, lo único que queda es la distancia, y se dice así. */
-export const SIN_PALABRA = "No hay palabra para esta relación";
+/**
+ * Cuando la lengua no da término. **No tener palabra no es no ser familia**, y siguen siendo
+ * dos casos: quien comparte sangre es pariente por lejos que quede, y quien no la comparte
+ * está ahí por la pareja de alguien. La distancia exacta la da el nivel, que va debajo.
+ */
+export const parienteLejano = (mujer: boolean): string => `Es tu pariente ${mujer ? "lejana" : "lejano"}`;
+export const FAMILIA_POLITICA = "Es de tu familia política";
 
 export interface Relacion {
   /** Ya declinada y lista para leer: «Es tu prima», «Es la pareja de tu tío». */
@@ -165,10 +170,10 @@ function fraseDe(
       if (suyo && !sinPalabra(suyo)) return `Es la pareja de tu ${unaSola(g, otro, suyo)}`;
     }
   }
-  // La sangre no se nombra con una palabra prestada: a un sobrino al que se le ha caído el
-  // ordinal se le da la distancia, aunque además sea sobrino de la pareja.
-  if (termino === PAREJAS || termino === SIN_PARENTESCO) return deLaPareja(g, politica, id) ?? SIN_PALABRA;
-  return SIN_PALABRA;
+  // La sangre no se nombra con una palabra prestada: al sobrino al que se le ha caído el
+  // ordinal se le llama pariente, aunque además sea sobrino de la pareja.
+  if (termino === PAREJAS || termino === SIN_PARENTESCO) return deLaPareja(g, politica, id) ?? FAMILIA_POLITICA;
+  return parienteLejano(esMujer(g, id));
 }
 
 /** Quien entra por la pareja lleva su parentesco: «Es la abuela de tu pareja». */

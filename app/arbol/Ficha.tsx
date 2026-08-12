@@ -80,8 +80,8 @@ export default function Ficha({
  */
 function Relacion({ datos, onCamino }: { datos: Datos; onCamino: () => void }) {
   const { frase, pasos } = datos.relacion;
-  // «Es» es la cópula y el resto es el parentesco, que es lo que se destaca. Cuando no hay
-  // palabra la frase no empieza así y no se destaca nada, que es justo lo que significa.
+  // «Es» es la cópula y el resto es el parentesco, que es lo que se destaca. El único que no
+  // empieza así es «Eres tú», que no es un parentesco y no destaca nada.
   const parentesco = frase.startsWith("Es ") ? frase.slice(3) : null;
   return (
     <div className="flex items-center gap-[9px] rounded-[10px] border border-[var(--accb)] bg-[var(--acch)] px-3 py-[11px] text-[13px] leading-[1.4]">
