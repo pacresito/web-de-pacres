@@ -142,7 +142,7 @@
 .arbol .bd-acc { stroke: var(--acc);  stroke-width: 2; }
 /* Y a quien se está leyendo, un cerco por fuera: el fondo y el borde ya dicen cada uno lo
    suyo, así que la tercera marca se pone donde no hay nada dibujado. */
-.arbol .nd-cerco { fill: none; stroke: var(--acc); stroke-width: 2; opacity: 0.35; }
+.arbol .nd-cerco { stroke: var(--acc); stroke-width: 2; opacity: 0.35; }   /* el relleno, en el atributo */
 /* El segundo eje se dice con el peso del trazo, nunca con color. */
 .arbol .lk     { fill: none; stroke: var(--line); stroke-width: 1; }
 .arbol .lk-dir { fill: none; stroke: var(--ink); stroke-width: 2; }

@@ -713,6 +713,11 @@ function Nodo({
           width={ANCHO_NODO + 8}
           height={ALTO_NODO + 8}
           rx={13}
+          // El único hueco va por atributo, que no es un color y no necesita resolver
+          // var(): un rect sin regla de relleno se pinta negro macizo, y una hoja de
+          // estilos rancia —o la que un deploy se deje por el camino— taparía al nodo
+          // justo cuando se le señala.
+          fill="none"
           className="nd-cerco"
         />
       )}
