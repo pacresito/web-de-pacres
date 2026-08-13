@@ -57,7 +57,7 @@ const g = construirGrafo(data);
 const pertenencias = calcularRamas(g);
 
 assert.strictEqual(pertenencias.size, data.people.length, "nadie se queda sin rama");
-assert.strictEqual([...pertenencias.values()].filter((p) => p.porMatrimonio).length, 126, "las que entraron casándose");
+assert.strictEqual([...pertenencias.values()].filter((p) => p.porMatrimonio).length, 127, "las que entraron casándose");
 
 const cuantos = (nombre: string) => [...pertenencias.values()].filter((p) => p.ramas.includes(nombre)).length;
 assert.deepStrictEqual(
@@ -70,12 +70,12 @@ assert.deepStrictEqual(
     ["Maestre", 90],
     ["Cardona", 60],
     ["Martín", 18],
-    ["Sala", 15],
+    ["Sala", 22],
   ],
   "el reparto por rama; Santi deja Crespo y Velasco al estrenar la suya",
 );
 const total = [...pertenencias.values()].reduce((n, p) => n + p.ramas.length, 0);
-assert.strictEqual(total, 445, "445 pertenencias para 428 personas: el mapa de áreas suma un 4 % de más");
+assert.strictEqual(total, 452, "452 pertenencias para 435 personas: el mapa de áreas suma un 4 % de más");
 assert.strictEqual([...pertenencias.values()].filter((p) => p.ramas.length > 1).length, 12, "los que están en más de una");
 
 // El mapa de la escala más lejana: un rectángulo por rama, con lo que cada uno confiesa.
