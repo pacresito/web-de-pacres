@@ -154,7 +154,10 @@ function filiacion(g: Grafo, id: string, { años, ambosPadres }: Peldaño): stri
     .map((p) => g.personaPorId.get(p))
     .filter((p): p is Persona => p !== undefined);
   if (padres.length === 0) return "";
-  const puestos = ambosPadres ? padres : padres.slice(0, 1);
+  // Al quedarse con uno se conserva el que nombra: «hija de Sin nombre» no dice de quién es
+  // nadie, y quien sí tiene nombre está justo al lado. Solo pasa cuando el que no lo tiene
+  // es además el que sube en la pareja, que es el orden con el que se dibuja, no un rango.
+  const puestos = ambosPadres ? padres : [padres.find((p) => p.nombre !== SIN_NOMBRE) ?? padres[0]];
   return `${declinado(g, id, "hijo", "hija")} de ${puestos.map((p) => conAño(p, años)).join(" y ")}`;
 }
 

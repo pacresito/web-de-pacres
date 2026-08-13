@@ -38,12 +38,17 @@ const juguete: ArbolData = {
     persona("p8", "Tomás", { sexo: "h" }),
     persona("p9", "Lucas", { sexo: "h" }),
     persona("p10", "Marta", { sexo: "m" }),
+    // Un padre del que se sabe que lo es y no cómo se llama, con la madre al lado.
+    persona("p11", "Sin nombre", { sexo: "h" }),
+    persona("p12", "Vera", { sexo: "m", birth: "1950" }),
+    persona("p13", "Nieto", { sexo: "h" }),
   ],
   unions: [
     union("u1", ["p1", "p2"], ["p3", "p5"]),
     union("u2", ["p5", "p4"], ["p6"]),
     union("u3", ["p6", "p7"], []),
     union("u4", ["p8"], ["p9", "p10"]),
+    union("u5", ["p11", "p12"], ["p13"]),
   ],
   roots: {},
 };
@@ -70,6 +75,11 @@ assert.strictEqual(contexto("p3", 35, RAMA), "hija de Pablo · rama de Tomás", 
 assert.strictEqual(contexto("p3", 20, RAMA), "hija de Pablo", "y por último la rama");
 assert.strictEqual(contexto("p3", 10, RAMA), "hija de P…", "solo entonces, elipsis");
 assert.strictEqual(contexto("p3", 80), "hija de Pablo (1902) y Antonia (1905)", "sin ramas, la línea se queda en la familia");
+
+// Y cuando hay que quedarse con un solo progenitor, se conserva el que identifica: el que
+// sube en la pareja es «Sin nombre», y decir «hijo de Sin nombre» es no decir nada.
+assert.strictEqual(contexto("p13", 80), "hijo de Sin nombre y Vera (1950)");
+assert.strictEqual(contexto("p13", 20), "hijo de Vera", "el que nombra se queda, suba o no en la pareja");
 
 // --- El cónyuge no está en ningún peldaño: en 88 personas es lo único que las identifica ---
 assert.strictEqual(
