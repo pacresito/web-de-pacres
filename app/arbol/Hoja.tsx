@@ -10,23 +10,43 @@
 // de la hoja se sigue arrastrando: un fondo que cerrara al tocarlo dejaba el árbol quieto
 // justo mientras se lee a alguien para ver dónde cae.
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
-export default function Hoja({ onCerrar, children }: { onCerrar: () => void; children: React.ReactNode }) {
+export default function Hoja({
+  contenido,
+  onCerrar,
+  children,
+}: {
+  /** Qué se está leyendo: cambiarlo es empezar a leer otra cosa, y eso empieza por arriba. */
+  contenido: string;
+  onCerrar: () => void;
+  children: React.ReactNode;
+}) {
+  const caja = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const alTeclear = (e: KeyboardEvent) => e.key === "Escape" && onCerrar();
     window.addEventListener("keydown", alTeclear);
     return () => window.removeEventListener("keydown", alTeclear);
   }, [onCerrar]);
 
+  // La hoja es una sola y no se desmonta al cambiar de contenido: sin esto, quien llega
+  // desde el final de una lista larga abre lo siguiente por la mitad y sin nada que lo avise.
+  useEffect(() => {
+    caja.current?.scrollTo({ top: 0 });
+  }, [contenido]);
+
   return (
-    <div className="hoja absolute inset-x-0 bottom-0 max-h-[85%] overflow-y-auto rounded-t-[20px] border-t border-[var(--line)] bg-[var(--paper)] px-4 pt-2.5 pb-[18px] md:inset-y-0 md:left-auto md:max-h-none md:w-[376px] md:rounded-none md:border-t-0 md:border-l md:px-5 md:pt-4">
+    <div ref={caja} className="hoja absolute inset-x-0 bottom-0 max-h-[85%] overflow-y-auto rounded-t-[20px] border-t border-[var(--line)] bg-[var(--paper)] px-4 pb-[18px] md:inset-y-0 md:left-auto md:max-h-none md:w-[376px] md:rounded-none md:border-t-0 md:border-l md:px-5">
       {/* Cómo se cierra, en una sola fila y pegada arriba: la hoja tiene su propio scroll y
-          lo que se fuera con él dejaría un panel largo sin salida. **El aspa está también
-          en el móvil**: la manija es el gesto que la hoja espera, pero una pastilla gris no
-          dice «cerrar» a quien no lo tenga aprendido, y la que sí lo dice es barata. La
-          manija se toca en toda la banda: cuatro píxeles no son un botón en ningún dedo. */}
-      <div className="sticky top-0 z-10 -mx-4 -mt-2.5 mb-2 flex items-center bg-[var(--paper)] px-4 pt-2.5 md:-mx-5 md:px-5">
+          lo que se fuera con él dejaría un panel largo sin salida. **El relleno de arriba es
+          suyo y no de la hoja**: `sticky top-0` se ancla al borde de relleno, así que todo el
+          que le deje el contenedor es franja descubierta por la que asoma lo que sube.
+          **El aspa está también en el móvil**: la manija es el gesto que la hoja espera, pero
+          una pastilla gris no dice «cerrar» a quien no lo tenga aprendido, y la que sí lo dice
+          es barata. La manija se toca en toda la banda: cuatro píxeles no son un botón en
+          ningún dedo. */}
+      <div className="sticky top-0 z-10 -mx-4 mb-2 flex items-center bg-[var(--paper)] px-4 pt-2.5 md:-mx-5 md:px-5 md:pt-4">
         <span className="w-8 shrink-0 md:hidden" />
         <button type="button" onClick={onCerrar} aria-label="Cerrar" className="flex h-8 flex-1 items-center justify-center md:hidden">
           <span className="block h-1 w-[38px] rounded-full bg-[var(--line)]" />

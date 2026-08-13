@@ -737,7 +737,7 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
       </button>
 
       {hoja && (
-        <Hoja onCerrar={() => setHoja(null)}>
+        <Hoja contenido={"id" in hoja ? `${hoja.tipo}:${hoja.id}` : hoja.tipo} onCerrar={() => setHoja(null)}>
           {hoja.tipo === "capas" ? (
             <Capas
               fechas={fechas}
