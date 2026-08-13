@@ -3,8 +3,9 @@ import redis from "./redis";
 import { comparaSecreto } from "./secreto";
 import { sendEmail, type SendEmailOptions } from "./notify";
 
-/** Clave de escritura de los registros de partidas. La moderación del guestbook tiene
- *  la suya (GUESTBOOK_PASSWORD): esta circula entre quien juega. */
+/** Clave de escritura de los registros de partidas. **Es personal de Pablo, no circula**:
+ *  aquí solo se guardan partidas suyas. La moderación del guestbook tiene la suya
+ *  (GUESTBOOK_PASSWORD), y ninguna de las dos se teclea para probar — se prueba sin ellas. */
 export function passwordOk(input: unknown): boolean {
   return comparaSecreto(input, process.env.REGISTRO_PASSWORD);
 }

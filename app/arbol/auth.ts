@@ -12,6 +12,8 @@ import { verifySession } from "@/lib/arbol/session";
  * salta es la puerta, nunca la firma: `session.ts` no se entera de que esto existe.
  */
 const puertaAbiertaEnLocal = (): boolean =>
+  // Quitar cualquiera de las dos condiciones publica el árbol de la familia entero y sin
+  // clave, y el deploy sale verde igual. Esta línea no se «simplifica».
   process.env.NODE_ENV === "development" && process.env.ARBOL_LOCAL_SIN_CLAVE === "1";
 
 export async function tieneSesion(): Promise<boolean> {
