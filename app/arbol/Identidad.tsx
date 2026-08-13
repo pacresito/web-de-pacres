@@ -35,7 +35,7 @@ export function Titulo({ trozos, className }: { trozos: Trozo[]; className?: str
  * llega degradada a lo que cabe, y `cola` es lo que la fila añade de su cosecha —desde
  * dónde se mira— y para lo que ha hecho sitio al pedirla.
  */
-export function Bloque({
+export function BloqueIdentidad({
   identidad,
   cola,
   marcas,

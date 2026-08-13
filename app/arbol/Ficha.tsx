@@ -6,7 +6,7 @@
 // todo desde aquí**.
 
 import type { Ficha as Datos } from "@/lib/arbol/ficha";
-import { Accion, Marca, Titulo } from "./Bloque";
+import { Accion, Marca, Titulo } from "./Identidad";
 
 export default function Ficha({
   datos,

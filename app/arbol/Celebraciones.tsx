@@ -8,7 +8,7 @@
 import { anuncio, esFelicitacion, esTuDia, felicitacion, VENTANA, type Celebracion } from "@/lib/arbol/celebraciones";
 import { escribirCorto } from "@/lib/arbol/fechas";
 import { LARGOS_FILA, type Identidad } from "@/lib/arbol/identidad";
-import { Bloque } from "./Bloque";
+import { BloqueIdentidad } from "./Identidad";
 
 export default function Celebraciones({
   lista,
@@ -85,7 +85,7 @@ function Fila({
       <span className="w-11 shrink-0 pt-px text-right font-[family-name:var(--mono)] text-[11px] tabular-nums text-[var(--mut)]">
         {cuando(c)}
       </span>
-      <Bloque identidad={identidad(c.id!, largo)} cola={cola} />
+      <BloqueIdentidad identidad={identidad(c.id!, largo)} cola={cola} />
       <span className="shrink-0 pt-px text-[11px] whitespace-nowrap text-[var(--mut)]">
         {c.tipo === "cumpleaños" ? `cumple ${c.edad}` : "onomástica"}
       </span>

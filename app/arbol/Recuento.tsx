@@ -10,7 +10,7 @@
 
 import { escribirNivel } from "@/lib/arbol/parentesco";
 import type { Fraccion, Recuento as Cuentas } from "@/lib/arbol/recuento";
-import { Cabecera } from "./Bloque";
+import { Cabecera } from "./Identidad";
 
 export default function Recuento({
   cuentas,

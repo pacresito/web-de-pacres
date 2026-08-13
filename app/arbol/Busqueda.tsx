@@ -8,7 +8,7 @@
 import { VIAS, type Resultado, type Via } from "@/lib/arbol/busqueda";
 import { LARGOS_LISTA, type Identidad } from "@/lib/arbol/identidad";
 import type { Relacion } from "@/lib/arbol/parentesco";
-import { Accion, Bloque, Cabecera } from "./Bloque";
+import { Accion, BloqueIdentidad, Cabecera } from "./Identidad";
 
 /** El hueco que la fila deja a la segunda línea: a la derecha van siempre los pasos. */
 const LARGO_CONTEXTO = LARGOS_LISTA.contexto;
@@ -185,7 +185,7 @@ function Fila({
       onClick={onPulsar}
       className="flex min-h-16 items-center gap-2.5 px-3 text-left hover:bg-[var(--soft)] active:bg-[var(--soft)]"
     >
-      <Bloque identidad={identidad} marcas />
+      <BloqueIdentidad identidad={identidad} marcas />
       <span
         className={`shrink-0 font-[family-name:var(--mono)] text-[11px] ${esCentro ? "text-[var(--acc)]" : "text-[var(--mut)]"}`}
       >

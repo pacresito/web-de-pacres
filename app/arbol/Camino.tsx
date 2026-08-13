@@ -8,7 +8,7 @@ import type { Camino as Datos } from "@/lib/arbol/camino";
 import type { Paso } from "@/lib/arbol/grafo";
 import { LARGOS_LISTA, type Identidad } from "@/lib/arbol/identidad";
 import type { Relacion } from "@/lib/arbol/parentesco";
-import { Bloque } from "./Bloque";
+import { BloqueIdentidad } from "./Identidad";
 
 /** Hacia dónde va el eslabón. Los dos que no suben ni bajan se quedan en la misma fila. */
 const FLECHAS: Record<Paso, string> = { progenitor: "↑", hijo: "↓", hermano: "→", pareja: "→" };
@@ -76,7 +76,7 @@ export default function Camino({
                     : "border-[1.5px] border-[var(--ink)]"
               }`}
             >
-              <Bloque
+              <BloqueIdentidad
                 identidad={identidad(eslabon.id, LARGO_CONTEXTO - (i === 0 ? CENTRO.length + 3 : 0))}
                 cola={i === 0 ? CENTRO : null}
               />
