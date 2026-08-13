@@ -169,7 +169,7 @@ assert.strictEqual(valor(ficha("p6"), "Rama"), "entra en Serrano por matrimonio"
 
 // --- El caso feo ---
 const anonima = ficha("p6");
-assert.ok(anonima.aviso?.startsWith("El documento no le da nombre ni fechas"));
+assert.ok(anonima.aviso?.startsWith("No consta su nombre ni sus fechas"));
 assert.strictEqual(anonima.sinNombre, true);
 assert.strictEqual(ficha("p5").aviso, undefined, "quien tiene nombre no necesita que se le advierta de nada");
 

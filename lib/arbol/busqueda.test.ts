@@ -85,7 +85,7 @@ const suyo = { linaje: libretaDe(real).linaje, pasos: pasosDesde(real, POV) };
 
 const pablos = buscar(real, "Pablo", suyo);
 assert.strictEqual(pablos[0]!.id, POV, "el Centro es el más cercano a sí mismo y encabeza su propio nombre");
-assert.strictEqual(pablos.filter((r) => r.via === "nombre").length, 13, "diez Pablo y tres que lo llevan de segundo");
+assert.strictEqual(pablos.filter((r) => r.via === "nombre").length, 14, "once Pablo y tres que lo llevan de segundo");
 const cerca = pablos.filter((r) => r.via === "nombre").map((r) => suyo.pasos.get(r.id)!);
 assert.deepStrictEqual(cerca, [...cerca].sort((a, b) => a - b), "ordenados por cercanía a ti, que es el único criterio que siempre existe");
 
@@ -95,14 +95,18 @@ const mismos = data.people.filter((p) => p.nombre === "Pablo" && p.birth?.starts
 assert.strictEqual(mismos.length, 3);
 assert.strictEqual(new Set(mismos.map((id) => contextoEntero(real, id))).size, 3, "a los tres Pablo (1989) los separa de quién son");
 
-const cuatro = losSinNombre(real, suyo);
-assert.strictEqual(cuatro.length, 4, "las cuatro sin nombre");
+const sinNombre = losSinNombre(real, suyo);
+assert.strictEqual(
+  sinNombre.length,
+  data.people.filter((p) => p.nombre === "Sin nombre").length,
+  "su lista los recoge a todos: es la única forma de llegar a ellos",
+);
 assert.ok(
-  cuatro.every((r) => contextoEntero(real, r.id) !== ""),
+  sinNombre.every((r) => contextoEntero(real, r.id) !== ""),
   "y ninguna sale como un nombre suelto: todas tienen de quién ser",
 );
 assert.strictEqual(buscar(real, "Genoveva", suyo).length, 0, "nadie se llama así");
 
 console.log(
-  `busqueda.test.ts OK (${pablos.length} Pablo, ${buscar(real, "María", suyo).length} María, ${cuatro.length} sin nombre)`,
+  `busqueda.test.ts OK (${pablos.length} Pablo, ${buscar(real, "María", suyo).length} María, ${sinNombre.length} sin nombre)`,
 );

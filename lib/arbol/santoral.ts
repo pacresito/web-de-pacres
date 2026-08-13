@@ -27,6 +27,7 @@ const CALENDARIO: [DiaDelAño, string[]][] = [
   ["01-27", ["angela"]],
   ["01-28", ["tomas", "tomasa"]],
   ["02-01", ["cecilio"]],
+  ["02-02", ["candela", "candelaria"]],
   ["02-03", ["blas", "oscar"]],
   ["02-05", ["agueda"]],
   ["02-07", ["ricardo"]],
@@ -265,6 +266,7 @@ const buscar = (clave: string): DiaDelAño | null =>
  */
 const POR_PERSONA: Record<string, DiaDelAño> = {
   p14: "10-15", // en el árbol es Chiara Teresa, en casa es Teresita y celebra Santa Teresa
+  p443: "08-02", // Ángela, que celebra con las Ángeles y no el 27 de enero de las Ángelas
   p19: "03-19", // en el árbol es María, se llama María José y celebra San José
   p23: "08-02", // en el árbol es María, se llama María Ángeles y celebra con las Ángeles
 };

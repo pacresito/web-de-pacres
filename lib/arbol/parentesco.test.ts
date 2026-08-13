@@ -85,17 +85,17 @@ assert.deepStrictEqual(
     ["-1 hijos", 3],
     ["-1 otros sobrinos", 66],
     ["-1 parejas", 1],
-    ["-1 sin parentesco", 6],
+    ["-1 sin parentesco", 12],
     ["-1 sobrinos segundos", 16],
     ["-1 sobrinos", 5],
     ["0 hermanos", 3],
     ["0 parejas", 49],
     ["0 primos segundos", 69],
     ["0 primos", 15],
-    ["0 sin parentesco", 26],
+    ["0 sin parentesco", 30],
     ["1 padres", 2],
     ["1 parejas", 41],
-    ["1 sin parentesco", 26],
+    ["1 sin parentesco", 28],
     ["1 tíos segundos", 36],
     ["1 tíos", 8],
     ["2 abuelos", 4],
@@ -105,7 +105,7 @@ assert.deepStrictEqual(
     ["3 bisabuelos", 6],
     ["3 sin parentesco", 4],
   ].sort(),
-  "el reparto de las 416 desde Pablo",
+  "el reparto del árbol entero desde Pablo",
 );
 
 // Y desde su hijo, una generación más abajo, el vocabulario se estira hasta el tope.
@@ -127,17 +127,19 @@ assert.deepStrictEqual(
   "un padre, un hermano y una pareja están a un paso",
 );
 
-// De quien entró casándose se dice de quién es pareja: son 100 de las 416 desde Pablo, y
+// De quien entró casándose se dice de quién es pareja: son 100 desde Pablo, y
 // dejarlos en «no hay palabra» sería no saber nombrar a un tío político.
 const parejas = [...parentescos(g, "p25")].filter(([, p]) => p.termino === PAREJAS).map(([id]) => id);
 const nombradas = parejas.filter((id) => relaciones.get(id)!.frase.startsWith("Es la pareja de tu "));
 assert.ok(nombradas.length >= parejas.length * 0.9, `solo ${nombradas.length} de ${parejas.length} parejas se saben nombrar`);
-// Y a la familia de la pareja se la nombra desde ella, con su artículo: son 54 de las 74
-// que no comparten sangre con nadie, y todas se leían «no hay palabra».
+// Y a la familia de la pareja se la nombra desde ella, con su artículo: 54 de los 86 que no
+// comparten sangre con nadie. Al resto —los que ni por ahí se dejan nombrar, como la familia
+// del marido de una hermana— les queda ser familia política, que es lo que son.
 const ajenos = [...parentescos(g, "p25")].filter(([, p]) => p.termino === SIN_PARENTESCO).map(([id]) => id);
-assert.strictEqual(ajenos.length, 74);
+assert.strictEqual(ajenos.length, 86);
 assert.strictEqual(relaciones.get("p3")!.frase, "Es el abuelo de tu pareja");
 assert.strictEqual(ajenos.filter((id) => relaciones.get(id)!.frase.endsWith(" de tu pareja")).length, 54);
+assert.strictEqual(relaciones.get("p443")!.frase, FAMILIA_POLITICA, "la madre del marido de tu hermana");
 assert.strictEqual(
   relaciones.get("p6")!.frase,
   FAMILIA_POLITICA,

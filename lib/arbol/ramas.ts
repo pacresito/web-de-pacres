@@ -1,4 +1,4 @@
-// Las siete ramas de la familia. Puro: `npx tsx lib/arbol/ramas.test.ts`.
+// Las ramas de la familia. Puro: `npx tsx lib/arbol/ramas.test.ts`.
 //
 // La familia no se cuenta por documentos —los tres Word son tres tomos, no tres ramas—
 // sino por antepasado, y con exclusiones: los descendientes de Ambrosio son 85 hasta que
@@ -31,6 +31,10 @@ export const RAMAS: Rama[] = [
   // Juan Martín Cruzán, sin lo que salió de casar a su hija con un Cardona: esa línea la
   // cuenta la familia como Cardona y solo como Cardona.
   { nombre: "Martín", ancestro: "p62", excluye: "p3" },
+  // El padre de Santi, del que todavía no se sabe el nombre. La familia de un cónyuge no
+  // hereda la rama de su hijo político —la rama solo salta al cónyuge y nunca de segunda
+  // mano—, así que o es rama o se queda fuera del reparto.
+  { nombre: "Sala", ancestro: "p442" },
 ];
 
 export interface Pertenencia {

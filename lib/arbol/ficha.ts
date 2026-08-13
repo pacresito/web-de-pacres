@@ -102,7 +102,7 @@ function homonimosDe(p: Persona, { homonimia, linaje }: OpcionesFicha): Homonimo
 }
 
 const AVISO_SIN_NADA =
-  "El documento no le da nombre ni fechas. Solo se la puede identificar por su familia, y así aparece en toda la app.";
+  "No consta su nombre ni sus fechas. Solo se la puede identificar por su familia, y así aparece en toda la app.";
 
 /**
  * Lo que se sabe de su vida. La ficha es el expediente, así que las fechas salen siempre

@@ -235,7 +235,7 @@ assert.ok(
 // --- Abrirlo todo alcanza el árbol entero desde cualquier punto de vista ---
 for (const pid of ["p25", "p26", "p126", "p1"]) {
   const todo = layout(pid, TODAS);
-  assert.strictEqual(todo.nodos.length, 416, `${pid} alcanza las 416 personas abriéndolo todo`);
+  assert.strictEqual(todo.nodos.length, data.people.length, `${pid} no alcanza el árbol entero abriéndolo todo`);
   assert.strictEqual(todo.contadores.length, 0, `${pid} no deja contadores pendientes`);
   revisar(todo, pid, `${pid} todo abierto`);
 }
@@ -247,7 +247,9 @@ for (const pid of ["p25", "p26", "p126", "p131", "p124"]) {
   revisar(acotado, pid, `${pid} acotado`);
 }
 assert.strictEqual(layout("p126", TODAS, true).nodos.length, 342, "desde un hermano se ven 342");
-assert.strictEqual(layout("p26", TODAS, true).nodos.length, 416, "solo desde el hijo se llega a todas");
+// Ni siquiera el hijo llega a todas: las familias dadas de alta que solo atan por un
+// matrimonio lateral no comparten ancestro con nadie, y el interruptor las esconde.
+assert.ok(layout("p26", TODAS, true).nodos.length < data.people.length, "ocultar siempre esconde algo");
 
 // Y sin abrir nada, ocultar no deja ni un contador hacia una rama no conectada.
 const conectados = visibles(g, "p126");

@@ -58,10 +58,9 @@ const data: ArbolData = JSON.parse(readFileSync(resolve("seed/arbol.json"), "utf
 const porId = new Map(data.people.map((p) => [p.id, p]));
 // El sexo lo trae todo el mundo menos quien no tiene ni nombre, y así ninguna pareja
 // queda por colocar: dos del mismo sexo no sabríamos cuál subir.
-assert.deepStrictEqual(
-  data.people.filter((p) => !p.sexo).map((p) => p.nombre),
-  ["Sin nombre", "Sin nombre", "Sin nombre", "Sin nombre"],
-  "sin sexo solo los anónimos",
+assert.ok(
+  data.people.every((p) => p.sexo || p.nombre === "Sin nombre"),
+  "sin sexo solo los anónimos: a quien tiene nombre se le decide, no se le adivina",
 );
 const parejas = data.unions.filter((u) => u.partners.length === 2);
 const sinColocar = parejas.filter((u) => {
@@ -82,8 +81,11 @@ assert.deepStrictEqual(linaje.get("p63")!.nuevos, ["Forasté", "Puget"], "quien 
 // Y el que no consta se hereda: el primero del padre y el segundo de la madre.
 assert.deepStrictEqual(linaje.get("p25")!.todos, ["Crespo", "Velasco"], "el de la madre completa al escrito");
 assert.deepStrictEqual(linaje.get("p26")!, { todos: ["Crespo", "Bordallo"], escritos: 0, nuevos: [] }, "el hijo, entero deducido");
+// Cuántos son exactamente cambia con cada alta; lo que se comprueba es que la deducción
+// hace el trabajo grueso, que es a lo que se la puso: más que dobla lo que trae escrito.
 const conDos = data.people.filter((p) => linaje.get(p.id)!.todos.length === 2).length;
-assert.strictEqual(conDos, 237, `237 con los dos apellidos, de 108 que los traían escritos`);
+const escritos = data.people.filter((p) => p.apellidos.length > 0).length;
+assert.ok(conDos > escritos * 2, `solo ${conDos} llegan a dos apellidos, de ${escritos} que traen alguno escrito`);
 for (const p of data.people) {
   const { todos, escritos, nuevos } = linaje.get(p.id)!;
   assert.ok(todos.length <= 2 && escritos <= todos.length, `${p.id}: ${todos.length} apellidos`);
