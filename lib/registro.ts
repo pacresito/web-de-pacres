@@ -5,7 +5,9 @@ import { sendEmail, type SendEmailOptions } from "./notify";
 
 /** Clave de escritura de los registros de partidas. **Es personal de Pablo, no circula**:
  *  aquí solo se guardan partidas suyas. La moderación del guestbook tiene la suya
- *  (GUESTBOOK_PASSWORD), y ninguna de las dos se teclea para probar — se prueba sin ellas. */
+ *  (GUESTBOOK_PASSWORD), y ninguna de las dos se teclea para probar — se prueba sin ellas.
+ *  Por eso viven solo en Vercel y no en `.env.local`: en dev este POST responde 401 y así
+ *  debe ser; ni se copia la clave aquí ni se abre una puerta local que se la salte. */
 export function passwordOk(input: unknown): boolean {
   return comparaSecreto(input, process.env.REGISTRO_PASSWORD);
 }
