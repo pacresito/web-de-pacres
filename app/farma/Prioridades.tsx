@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Buscador from "./Buscador";
 import { contarMetrica } from "./contarMetrica";
-import { rankear, type LabDescuento } from "@/lib/farma/prioridades";
+import { abreviar, rankear, type LabDescuento } from "@/lib/farma/prioridades";
 
 // Prioridades: el usuario del mostrador busca un principio activo y ve los
 // laboratorios que se trabajan ordenados por descuento (prioridad 1 = más margen).
@@ -82,6 +82,7 @@ export default function Prioridades({ data }: { data: Record<string, LabDescuent
                 setSel(0);
                 contarMetrica("busquedas:prioridades");
               }}
+              mostrar={abreviar}
               placeholder="Ej: AMLODIPINO"
               autoFocus
               inputClassName="w-full rounded-none border border-neutral-500 bg-white px-2 py-1 text-[13px] outline-none"

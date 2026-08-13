@@ -1,6 +1,6 @@
 // Test de lógica pura: `npx tsx lib/farma/prioridades.test.ts`. Fuera del build.
 import assert from "assert";
-import { mismaEntrada, rankear, sinGenerica } from "./prioridades";
+import { abreviar, mismaEntrada, rankear, sinGenerica } from "./prioridades";
 
 // Orden por descuento desc, denominación = principio + lab.
 const r = rankear("AMLODIPINO", [
@@ -13,6 +13,15 @@ assert.deepStrictEqual(
   [["TECNIGEN", 1], ["NORMON", 2], ["CINFA", 3]],
 );
 assert.strictEqual(r[0].denominacion, "AMLODIPINO TECNIGEN");
+
+// La hidroclorotiazida se abrevia en combo y no cuando va sola.
+assert.strictEqual(abreviar("HIDROCLOROTIAZIDA"), "HIDROCLOROTIAZIDA");
+assert.strictEqual(abreviar("LOSARTAN/HIDROCLOROTIAZIDA"), "LOSARTAN/HCTZ");
+assert.strictEqual(abreviar("AMLODIPINO/OLMESARTAN/HIDROCLOROTIAZIDA"), "AMLODIPINO/OLMESARTAN/HCTZ");
+assert.strictEqual(
+  rankear("LOSARTAN/HIDROCLOROTIAZIDA", [{ lab: "CINFA", descuento: 50, inferido: false }])[0].denominacion,
+  "LOSARTAN/HCTZ CINFA",
+);
 
 // Empates comparten prioridad (dense rank: 30,30,10 → 1,1,2).
 const e = rankear("X", [

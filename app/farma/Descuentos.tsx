@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useMemo, useState } from "react";
-import { mismaEntrada, rankear, sinGenerica, type LabDescuento } from "@/lib/farma/prioridades";
+import { abreviar, mismaEntrada, rankear, sinGenerica, type LabDescuento } from "@/lib/farma/prioridades";
 import Buscador from "./Buscador";
 import { PencilIcon, CheckIcon, XIcon, ConfirmarIcon, PlusIcon, TrashIcon } from "./icons";
 import { MAX_DOSIS } from "./api/dosis";
@@ -268,6 +268,7 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
           items={sugerencias}
           onSelect={setSeleccion}
           onClear={() => setSeleccion(null)}
+          mostrar={abreviar}
           placeholder="Buscar por principio activo o laboratorio…"
           autoFocus
         />
@@ -306,6 +307,7 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
                   items={Object.keys(data)}
                   onSelect={(p) => { setNPrincipio(p); setNLab(null); }}
                   onClear={() => { setNPrincipio(null); setNLab(null); }}
+                  mostrar={abreviar}
                   placeholder="Principio activo…"
                   inputClassName="fa-input"
                   autoFocus
@@ -392,7 +394,7 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
                       <td className="fa-td">
                         {enEdicion ? (
                           <span className="inline-flex items-center gap-1.5" style={{ color: "var(--fa-ink)" }}>
-                            {f.principio}
+                            {abreviar(f.principio)}
                             <input
                               type="text"
                               value={draftDosis}
@@ -483,8 +485,8 @@ export default function Descuentos({ data: inicial }: { data: Record<string, Lab
                         <td colSpan={4} className="fa-td">
                           <div className="fa-note-amber px-3 py-2 text-[12.5px] leading-[1.5]">
                             {f.dosis
-                              ? `Al quitar la dosis, este descuento pasará a valer para TODAS las presentaciones de ${f.lab} en ${f.principio}, no solo para ${f.dosis}.`
-                              : `${f.lab} dejará de tener descuento general en ${f.principio}: solo lo tendrá en la dosis «${draftDosis.trim().toUpperCase()}». Las demás presentaciones se quedan sin descuento hasta que las añadas.`}
+                              ? `Al quitar la dosis, este descuento pasará a valer para TODAS las presentaciones de ${f.lab} en ${abreviar(f.principio)}, no solo para ${f.dosis}.`
+                              : `${f.lab} dejará de tener descuento general en ${abreviar(f.principio)}: solo lo tendrá en la dosis «${draftDosis.trim().toUpperCase()}». Las demás presentaciones se quedan sin descuento hasta que las añadas.`}
                             {" "}Pulsa ✓ otra vez para guardarlo.
                           </div>
                         </td>

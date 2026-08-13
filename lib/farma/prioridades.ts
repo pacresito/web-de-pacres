@@ -34,8 +34,17 @@ export function sinGenerica(labs: LabDescuento[], lab: string): boolean {
   return !labs.some((l) => l.lab === lab && !l.dosis);
 }
 
+/** Cómo se escribe un principio en pantalla. La clave sigue siendo el canónico entero: esto
+ *  es solo lo que se lee, y por eso lo aplica todo lo que pinta principios (las dos tablas y
+ *  los buscadores), nunca lo que guarda. En combo, la hidroclorotiazida se abrevia HCTZ —es
+ *  como la escriben los labs y lo que hace legible un nombre de tres moléculas—; sola va con
+ *  su nombre entero. Va siempre la última del combo (`ORDEN_COMBO` en canon.py), así que la
+ *  barra de delante basta para distinguir el combo de la molécula suelta. */
+export const abreviar = (principio: string): string =>
+  principio.replace("/HIDROCLOROTIAZIDA", "/HCTZ");
+
 const denominar = (principio: string, l: LabDescuento): string =>
-  l.dosis ? `${principio} ${l.dosis} ${l.lab}` : `${principio} ${l.lab}`;
+  l.dosis ? `${abreviar(principio)} ${l.dosis} ${l.lab}` : `${abreviar(principio)} ${l.lab}`;
 
 /** Junta cada entrada con dosis bajo la genérica de su mismo lab, en el orden en que
  *  vienen (por descuento desc). La dosis es una excepción a la tarifa de su lab: leerla

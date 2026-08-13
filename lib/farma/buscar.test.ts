@@ -36,6 +36,13 @@ assert.ok(!busca("Paracetamol", "aax"), "consulta corta (<4): sin tolerancia");
 assert.ok(!busca("Paracetamol", "xxxxcetamol"), "demasiadas ediciones para el umbral");
 assert.ok(!busca("Ibuprofeno", "omeprazol"), "dos palabras dispares no coinciden");
 
+// --- Sinónimos: la abreviatura que se teclea encuentra el nombre pleno ---
+assert.ok(contiene("LOSARTAN/HIDROCLOROTIAZIDA", sinAcentos("hctz")), "abreviatura → nombre pleno");
+assert.ok(contiene("LOSARTAN/HIDROCLOROTIAZIDA", sinAcentos("hct")), "abreviatura a medio teclear");
+assert.ok(contiene("LOSARTAN/HIDROCLOROTIAZIDA", sinAcentos("losartan hctz")), "sinónimo junto a otra palabra");
+assert.ok(contiene("HCTZ KERN", sinAcentos("hctz")), "el sinónimo no sustituye: la abreviatura literal sigue casando");
+assert.ok(!contiene("OMEPRAZOL CINFA", sinAcentos("hctz")), "el sinónimo no relaja lo que no lo lleva");
+
 // --- Fallback global: el fuzzy solo entra si la estricta se queda sin resultados ---
 // "amlo" case exacto con AMLODIPINO, así que ALMOTRIPTAN (transposición amlo/almo) no debe salir.
 assert.ok(contiene("AMLODIPINO CINFA", sinAcentos("amlo")), "estricta: substring");

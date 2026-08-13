@@ -36,11 +36,20 @@ function distanciaPrefijo(q: string, w: string, max: number): number {
 
 const palabras = (consulta: string) => consulta.split(/\s+/).filter(Boolean);
 
+// Abreviatura que se teclea → forma con la que aparece escrita. El nombre canónico
+// es siempre el pleno (lo que ve María), pero la farmacia teclea la abreviatura.
+const SINONIMOS: [string, string][] = [["hctz", "hidroclorotiazida"]];
+
+// Alternativas que valen por una palabra de la consulta: ella misma y la forma plena
+// de toda abreviatura que empiece por ella (así "hct" a medio teclear ya cuenta).
+const alternativas = (q: string): string[] =>
+  [q, ...SINONIMOS.filter(([abrev]) => abrev.startsWith(q)).map(([, pleno]) => pleno)];
+
 // Estricta: cada palabra de la consulta aparece como substring del texto (orden
 // indiferente, sin tolerancia a typos). La consulta debe venir normalizada (sinAcentos).
 export function contiene(texto: string, consulta: string): boolean {
   const t = sinAcentos(texto);
-  return palabras(consulta).every((q) => t.includes(q));
+  return palabras(consulta).every((q) => alternativas(q).some((v) => t.includes(v)));
 }
 
 // Tolerante: cada palabra de la consulta aparece como substring o, si no, está a pocas
@@ -49,11 +58,13 @@ export function contiene(texto: string, consulta: string): boolean {
 export function coincide(texto: string, consulta: string): boolean {
   const t = sinAcentos(texto);
   const palabrasTexto = t.split(/\s+/);
-  return palabras(consulta).every((q) => {
-    if (t.includes(q)) return true;
-    const max = umbral(q.length);
-    return max > 0 && palabrasTexto.some((w) => distanciaPrefijo(q, w, max) <= max);
-  });
+  return palabras(consulta).every((q) =>
+    alternativas(q).some((v) => {
+      if (t.includes(v)) return true;
+      const max = umbral(v.length);
+      return max > 0 && palabrasTexto.some((w) => distanciaPrefijo(v, w, max) <= max);
+    }),
+  );
 }
 
 // Filtra con la estricta y, solo si no encuentra nada, reabre con la tolerante. Así los
