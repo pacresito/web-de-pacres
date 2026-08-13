@@ -10,9 +10,10 @@ import { calcularBloques, type Bloque } from "@/lib/arbol/bloques";
 import { acortar, buscar, losSinNombre, porCercania } from "@/lib/arbol/busqueda";
 import {
   acotar,
+  alCambiarDeUnidad,
   brujulaDe,
   conZoom,
-  paradaDe,
+  reglaDe,
   ZOOM_DE,
   ZOOM_TITULO_BLOQUE,
   type Encuadre,
@@ -21,6 +22,7 @@ import {
   type Vista,
 } from "@/lib/arbol/camara";
 import { caminoEntre } from "@/lib/arbol/camino";
+import { cintaDe } from "@/lib/arbol/cinta";
 import { FECHAS_POR_DEFECTO, type ModoFechas } from "@/lib/arbol/fechas";
 import { proximasCelebraciones } from "@/lib/arbol/celebraciones";
 import { construirGrafo, pasosDesde, visibles } from "@/lib/arbol/grafo";
@@ -47,10 +49,13 @@ import Busqueda from "./Busqueda";
 import Capas from "./Capas";
 import Camino from "./Camino";
 import Celebraciones, { AvisoCelebraciones } from "./Celebraciones";
+import Cinta from "./Cinta";
 import Ficha from "./Ficha";
 import Hoja from "./Hoja";
+import { Titulo } from "./Identidad";
 import Ramas from "./Ramas";
 import Recuento from "./Recuento";
+import Regla from "./Regla";
 import { useAtras } from "./useAtras";
 
 const POR_DEFECTO = "p25";
@@ -93,6 +98,12 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
   /** Lo que se resalta del lienzo: el numerador de la fracción señalada, o nada. */
   const [resaltados, setResaltados] = useState<Set<string> | null>(null);
   const [vista, setVista] = useState<Vista>(CENTRADA);
+  /**
+   * Con qué unidad se dibuja. Es estado y no una lectura de la escala: el zoom semántico
+   * cambiaba de unidad al pellizcar y con ello se llevaba por delante el árbol abierto en
+   * pequeño, que es una vista que se quiere —la forma de lo desplegado, sin nombres—.
+   */
+  const [parada, setParada] = useState<Parada>("personas");
   const [tamano, setTamano] = useState({ w: 0, h: 0 });
   /** A quién hay que traer a pantalla en cuanto el layout lo coloque. */
   const [aEnfocar, setAEnfocar] = useState<string | null>(null);
@@ -119,6 +130,12 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
     () => calcularBloques(grafo, { puntoDeVista, ocultarNoConectados }),
     [grafo, puntoDeVista, ocultarNoConectados],
   );
+  /** De qué grupo de hermanos es cada uno, que es la unidad con la que mide la cinta. */
+  const bloqueDe = useMemo(() => {
+    const suyo = new Map<string, string>();
+    for (const bloque of mapa.bloques) for (const id of [...bloque.hermanos, ...bloque.parejas]) suyo.set(id, bloque.id);
+    return suyo;
+  }, [mapa]);
   const cuentas = useMemo(
     () => calcularRecuento(grafo, { puntoDeVista, ocultarNoConectados }, new Set(layout.nodos.map((n) => n.id))),
     [grafo, puntoDeVista, ocultarNoConectados, layout],
@@ -226,12 +243,11 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
   }, []);
 
   /**
-   * La parada del zoom manda sobre qué se dibuja, y con ello sobre el sistema de
-   * coordenadas: bloques y personas se colocan cada uno por su cuenta. La cámara se guarda
-   * relativa al punto de vista, así que cambiar de ancla al saltar de escala lo deja donde
-   * estaba en pantalla y es el árbol el que se recompone alrededor.
+   * La unidad manda sobre el sistema de coordenadas: bloques y personas se colocan cada uno
+   * por su cuenta. La cámara se guarda relativa al punto de vista, así que cambiar de ancla
+   * al cambiar de unidad lo deja donde estaba en pantalla y es el árbol el que se recompone
+   * alrededor.
    */
-  const parada = paradaDe(vista.escala);
   const anclaje =
     parada === "bloques"
       ? mapa.bloques.find((b) => b.esDelPuntoDeVista)
@@ -378,6 +394,9 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
   function abrirBloque(bloque: Bloque) {
     const gente = [...bloque.hermanos, ...bloque.parejas];
     abrirRamas(unionesHasta(grafo, puntoDeVista, gente));
+    // El salto que nadie ha pedido sí lleva a una altura cómoda: se ha tocado una familia
+    // para verla, no para elegir un tamaño.
+    setParada("personas");
     setVista((v) => ({ ...v, escala: ZOOM_DE.personas }));
     setAEnfocar(gente[0]);
   }
@@ -397,6 +416,7 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
     setOcultarNoConectados(true);
     setFechas(FECHAS_POR_DEFECTO);
     setApellidos("nuevos");
+    setParada("personas");
     setVista(CENTRADA);
     setBusquedaAbierta(false);
     setConsulta("");
@@ -487,6 +507,17 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
   const dibujados = parada === "bloques" ? mapa.bloques : layout.nodos;
   const niveles = useMemo(() => [...new Set(dibujados.map((n) => n.nivel))].sort((a, b) => a - b), [dibujados]);
   const generacionPov = grafo.generacion.get(puntoDeVista) ?? 0;
+  /**
+   * La cinta habla de bloques en las dos escalas que la pintan, así que en la de personas
+   * hay que decirle de qué grupo de hermanos es cada uno de los que se están dibujando.
+   */
+  const segmentos = cintaDe(
+    mapa.bloques,
+    parada === "bloques"
+      ? mapa.bloques.map((b) => ({ bloque: b.id, y: b.y }))
+      : layout.nodos.map((n) => ({ bloque: bloqueDe.get(n.id) ?? "", y: n.y })),
+    { x: centro.x, y: centro.y, alto: tamano.h / vista.escala },
+  );
   const { minY, maxY } = limites;
   /** Con una fracción señalada, todo lo que no es suyo se va al fondo. Sin ella, nada cambia. */
   const opacidadDe = (id?: string) => (!resaltados || (id && resaltados.has(id)) ? undefined : ATENUADO);
@@ -616,6 +647,15 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
         )}
       </svg>
 
+      {/* En la escala de ramas no se pinta: ahí no hay personas colocadas por generación,
+          y una regla que rotulase el mapa estaría midiendo otra cosa. */}
+      {tamano.w > 0 && parada !== "ramas" && (
+        <>
+          <Regla marcas={reglaDe(niveles, centro.x, vista.escala, tamano.w)} />
+          <Cinta segmentos={segmentos} />
+        </>
+      )}
+
       {parada === "ramas" && (
         <Ramas
           reparto={reparto}
@@ -626,10 +666,17 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
         />
       )}
 
-      {/* El riel: la salida para quien no descubre el pellizco. Va en el borde derecho y a
-          media altura, que es donde no le quita el sitio ni al aviso de arriba ni a los
-          botones de abajo. */}
-      <Riel parada={parada} onIr={(p) => mover((v) => ({ ...v, escala: ZOOM_DE[p] }))} apartado={apartado} />
+      {/* El riel: con qué unidad se dibuja, y **no toca la cámara** —el tamaño es del
+          pellizco—. Va en el borde derecho y a media altura, que es donde no le quita el
+          sitio ni al aviso de arriba ni a los botones de abajo. */}
+      <Riel
+        parada={parada}
+        onIr={(p) => {
+          setParada(p);
+          mover((v) => alCambiarDeUnidad(v, p));
+        }}
+        apartado={apartado}
+      />
 
       {brujula && parada === "personas" && (
         <Brujula
@@ -674,6 +721,19 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
         className={`absolute right-3 bottom-3 h-11 rounded-full border border-[var(--line)] bg-[var(--paper)] px-4 text-[13px] font-medium text-[var(--ink)] ${apartado}`}
       >
         Qué se ve
+      </button>
+
+      {/* El chip del Centro: de quién es el árbol que se está leyendo. Es lo único que lo
+          dice cuando su nodo no está en pantalla —la brújula dice hacia dónde, no quién— y
+          abre su ficha, que es de donde sale «Ver el árbol desde aquí». */}
+      <button
+        type="button"
+        onClick={() => abrirFicha(puntoDeVista)}
+        style={{ boxShadow: "var(--sh)" }}
+        className="absolute bottom-3 left-3 flex h-11 max-w-[calc(100vw-10rem)] items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--paper)] pr-4 pl-3 text-[13px] font-semibold"
+      >
+        <span className="h-2 w-2 shrink-0 rounded-full bg-[var(--acc)]" />
+        <Titulo trozos={escribir(puntoDeVista, 0).titulo} className="min-w-0 truncate" />
       </button>
 
       {hoja && (
@@ -741,9 +801,9 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
 }
 
 /**
- * Las tres paradas, de lejos a cerca. En pantalla se llaman por lo que se ve en cada una y
- * no por la unidad que las dibuja: «bloques» es una palabra del código, y «familias» se
- * entiende sin que nadie la presente.
+ * Las tres unidades, de la más gorda a la más fina. En pantalla se llaman por lo que se ve
+ * en cada una y no por la unidad que las dibuja: «bloques» es una palabra del código, y
+ * «familias» se entiende sin que nadie la presente.
  */
 const PARADAS: { parada: Parada; glifo: string; nombre: string }[] = [
   { parada: "ramas", glifo: "▣", nombre: "Ramas" },

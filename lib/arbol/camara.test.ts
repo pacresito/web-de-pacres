@@ -1,8 +1,19 @@
 // Test de lógica pura: `npx tsx lib/arbol/camara.test.ts`. Fuera del build.
 // No lee datos: la cámara solo sabe de una caja y un hueco.
 import assert from "assert";
-import { acotar, brujulaDe, conZoom, ESCALA_MAX, ESCALA_MIN, paradaDe, ZOOM_DE, type Encuadre, type Vista } from "./camara";
-import { ANCHO_NODO } from "./layout";
+import {
+  acotar,
+  alCambiarDeUnidad,
+  brujulaDe,
+  conZoom,
+  ESCALA_MAX,
+  ESCALA_MIN,
+  reglaDe,
+  ZOOM_DE,
+  type Encuadre,
+  type Vista,
+} from "./camara";
+import { ANCHO_COLUMNA, ANCHO_NODO } from "./layout";
 
 const caja = (x: number, y: number, w: number, h: number) =>
   ({ left: x, top: y, width: w, height: h }) as DOMRect;
@@ -120,14 +131,70 @@ const vista = (dx: number, dy: number, escala = 1): Vista => ({ dx, dy, escala }
   assert.strictEqual(brujulaDe(vista(9999, 9999), 0, 0), null);
 }
 
-console.log("camara: ok");
+// --- La regla de generación: una etiqueta por columna, donde se la vea ---
+{
+  const niveles = [2, 1, 0, -1, -2];
+  // Un hueco de 1200 con el punto de vista centrado: su columna cae en el medio, la de sus
+  // padres a una columna a la izquierda y la de sus hijos a la misma distancia a la derecha.
+  const centrada = reglaDe(niveles, 0, 1, 1200);
+  assert.deepStrictEqual(
+    centrada.map((m) => m.etiqueta),
+    ["−2", "−1", "tú", "+1", "+2"],
+    "los ancestros se cuentan por encima de ti, no por delante",
+  );
+  assert.strictEqual(centrada.find((m) => m.nivel === 0)!.x, 600, "tu columna se rotula en el centro del hueco");
+  assert.strictEqual(centrada.find((m) => m.nivel === -1)!.x, 600 + ANCHO_COLUMNA, "la descendencia va a la derecha");
 
-// --- Las tres paradas del zoom semántico ---
-assert.strictEqual(paradaDe(ESCALA_MAX), "personas", "acercado del todo se ven personas");
-assert.strictEqual(paradaDe(0.85), "personas", "y en la vista de entrada, también");
-assert.strictEqual(paradaDe(0.4), "bloques", "alejando, la unidad pasa a ser el grupo de hermanos");
-assert.strictEqual(paradaDe(ESCALA_MIN), "ramas", "y alejado del todo, las ramas");
-for (const parada of ["ramas", "bloques", "personas"] as const) {
-  assert.strictEqual(paradaDe(ZOOM_DE[parada]), parada, `el riel deja «${parada}» en su propia parada`);
-  assert.ok(ZOOM_DE[parada] >= ESCALA_MIN && ZOOM_DE[parada] <= ESCALA_MAX, `«${parada}» cae dentro del zoom`);
+  // En un hueco estrecho se rotula lo que asoma, ni más ni menos.
+  assert.deepStrictEqual(
+    reglaDe(niveles, 0, 1, 800).map((m) => m.nivel),
+    [1, 0, -1],
+  );
+
+  // La columna que asoma por un borde se rotula en lo que se ve de ella, no en su centro:
+  // si no, arrastrar media columna dejaría sin etiqueta justo la que se está mirando.
+  // Arrastrada hasta dejar la mitad fuera por la izquierda, se rotula en la mitad que queda.
+  const [borde] = reglaDe([0], 400, 1, 800);
+  assert.strictEqual(borde.x, ANCHO_COLUMNA / 4);
+
+  // Alejarse mete más columnas en el hueco, y todas se rotulan.
+  assert.strictEqual(reglaDe(niveles, 0, ZOOM_DE.bloques, 800).length, 5);
+  // Lo que apenas asoma no se rotula, y sin hueco medido no hay regla que pintar.
+  assert.deepStrictEqual(reglaDe([1], ANCHO_COLUMNA / 2 + 400 - 20 - ANCHO_COLUMNA, 1, 800), []);
+  assert.deepStrictEqual(reglaDe(niveles, 0, 1, 0), []);
+
+  // Alejado del todo, las columnas miden menos que su rótulo: se rotula solo la tuya, que
+  // es la que no puede faltar, y basta con que asome un píxel.
+  const lejos = reglaDe(niveles, 0, 0.06, 800);
+  assert.deepStrictEqual(
+    lejos.map((m) => m.etiqueta),
+    ["tú"],
+  );
+  assert.deepStrictEqual(reglaDe([0], ANCHO_COLUMNA / 2 + 400 - 1, 1, 800).length, 1, "un píxel de columna tuya basta");
+  assert.deepStrictEqual(reglaDe([0], ANCHO_COLUMNA / 2 + 400 + 1, 1, 800), [], "y fuera del hueco, nada");
 }
+
+// --- Las tres unidades ---
+// La altura cómoda de cada una cae dentro del zoom: es a donde lleva un salto que nadie ha
+// pedido, y llevar a un tope sería no llevar a ninguna parte.
+for (const parada of ["ramas", "bloques", "personas"] as const) {
+  assert.ok(ZOOM_DE[parada] >= ESCALA_MIN && ZOOM_DE[parada] <= ESCALA_MAX, `«${parada}» cae fuera del zoom`);
+}
+
+// El riel no toca la cámara: el tamaño es del pellizco y la unidad es suya.
+{
+  for (const parada of ["ramas", "bloques", "personas"] as const) {
+    const puesta = vista(30, 40, ZOOM_DE.bloques);
+    assert.strictEqual(alCambiarDeUnidad(puesta, parada), puesta, `«${parada}» mueve la cámara sin que nadie se lo pida`);
+  }
+  // Salvo cuando lleva a un mapa que a esa altura no se leería. El árbol de personas no:
+  // verlo entero y pequeño es justo lo que se ha ido a buscar alejándose tanto.
+  const lejos = vista(30, 40, ESCALA_MIN);
+  assert.strictEqual(alCambiarDeUnidad(lejos, "bloques").escala, ZOOM_DE.bloques);
+  assert.strictEqual(alCambiarDeUnidad(lejos, "personas"), lejos);
+  assert.strictEqual(alCambiarDeUnidad(lejos, "ramas"), lejos);
+  // Y lo que ya se lee se respeta: ni se acerca ni se aleja para «encajarlo».
+  assert.deepStrictEqual(alCambiarDeUnidad(vista(0, 0, 0.3), "bloques"), vista(0, 0, 0.3));
+}
+
+console.log("camara: ok");

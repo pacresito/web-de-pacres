@@ -9,6 +9,7 @@ import { VIAS, type Resultado, type Via } from "@/lib/arbol/busqueda";
 import { LARGOS_LISTA, type Identidad } from "@/lib/arbol/identidad";
 import type { Relacion } from "@/lib/arbol/parentesco";
 import { Accion, BloqueIdentidad, Cabecera } from "./Identidad";
+import { ALTO_REGLA } from "./Regla";
 
 /** El hueco que la fila deja a la segunda línea: a la derecha van siempre los pasos. */
 const LARGO_CONTEXTO = LARGOS_LISTA.contexto;
@@ -66,7 +67,11 @@ export default function Busqueda({
 }) {
   const buscando = consulta.trim() !== "";
   return (
-    <div className={`absolute top-3 left-3 flex-col items-start gap-2 ${oculta ? "hidden md:flex" : "flex"}`}>
+    <div
+      // Debajo de la regla, que ocupa el borde de arriba a lo ancho.
+      style={{ top: ALTO_REGLA + 12 }}
+      className={`absolute left-3 flex-col items-start gap-2 ${oculta ? "hidden md:flex" : "flex"}`}
+    >
       <div
         style={{ boxShadow: "var(--sh)" }}
         className="flex h-11 w-[min(15rem,calc(100vw-9rem))] items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--paper)] pr-2 pl-3.5"

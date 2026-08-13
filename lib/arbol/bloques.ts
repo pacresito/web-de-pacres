@@ -8,13 +8,13 @@
 //
 // Los bloques no heredan la colocación de `layout.ts`: entre dos hermanos caben sus
 // descendencias enteras, así que la caja que los envolviera mediría media columna. Se
-// colocan aquí, apilados en la columna de su generación y ordenados por el bloque de sus
-// padres, que es lo que mantiene junta a una familia.
+// colocan aquí, apilados en la columna de su generación y **ordenados por lo cerca que te
+// quedan**, con el bloque de los padres como desempate.
 //
 // **Y no llevan trazos.** Un bloque dice de quién es con el nombre de sus dos progenitores,
 // que es el mismo dato que dibujaría la línea y no cruza la pantalla para decirlo.
 
-import { ascendientes, descendientes, visibles, type Grafo } from "./grafo";
+import { ascendientes, descendientes, pasosDesde, visibles, type Grafo } from "./grafo";
 import { ANCHO_COLUMNA } from "./layout";
 import { ordenarPareja } from "./personas";
 
@@ -87,6 +87,7 @@ export function calcularBloques(g: Grafo, { puntoDeVista, ocultarNoConectados }:
   }
 
   // --- De grupo a bloque, sin colocar todavía ---
+  const pasos = pasosDesde(g, puntoDeVista);
   const sinColocar = [...grupos].map(([id, { hermanos, parejas }]) => {
     const suyos = [...hermanos, ...parejas];
     return {
@@ -97,15 +98,20 @@ export function calcularBloques(g: Grafo, { puntoDeVista, ocultarNoConectados }:
       parejas,
       sinPadres: !g.unionPorId.has(id),
       padre: padreDe(g, id, grupos),
+      // Lo cerca que te queda el bloque es lo cerca que te queda el más cercano de los suyos.
+      cerca: Math.min(...suyos.map((p) => pasos.get(p) ?? Infinity)),
       lineaDirecta: suyos.some((p) => directa.has(p)),
       esDelPuntoDeVista: suyos.includes(puntoDeVista),
     };
   });
 
   // --- Colocación: una columna por generación, apilada de arriba abajo ---
-  // Se recorre de la generación más vieja a la más joven porque cada columna se ordena por
-  // el sitio que ocupa el bloque de los padres en la anterior: sin eso, una familia sale
-  // repartida por la columna entera y el mapa deja de leerse como una familia.
+  // **Arriba lo tuyo.** Cada columna se ordena por lo cerca que te queda su bloque, que es
+  // lo mismo que hace cualquier lista de la app: el mapa está anclado a un punto de vista,
+  // así que la primera fila de todas las columnas es tu familia y lo lejano se hunde.
+  // A igual distancia manda el sitio que ocupa el bloque de los padres en la columna
+  // anterior —por eso se recorre de la generación más vieja a la más joven—: sin ese
+  // desempate, una familia sale repartida por la columna entera.
   const porNivel = new Map<number, typeof sinColocar>();
   for (const bloque of sinColocar) porNivel.set(bloque.nivel, [...(porNivel.get(bloque.nivel) ?? []), bloque]);
 
@@ -113,9 +119,11 @@ export function calcularBloques(g: Grafo, { puntoDeVista, ocultarNoConectados }:
   const bloques: Bloque[] = [];
   for (const nivel of [...porNivel.keys()].sort((a, b) => b - a)) {
     const columna = porNivel.get(nivel)!;
-    // Sin padres colocados —las raíces y quien entró de fuera— van al final, en el orden
-    // del documento: no hay nada anterior contra lo que ordenarlos.
-    columna.sort((a, b) => (orden.get(a.padre ?? "") ?? Infinity) - (orden.get(b.padre ?? "") ?? Infinity));
+    // Sin padres colocados —las raíces y quien entró de fuera— van al final de su distancia,
+    // en el orden del documento: no hay nada anterior contra lo que ordenarlos.
+    columna.sort(
+      (a, b) => antes(a.cerca, b.cerca) || antes(orden.get(a.padre ?? "") ?? Infinity, orden.get(b.padre ?? "") ?? Infinity),
+    );
     columna.forEach((bloque, i) => {
       orden.set(bloque.id, i);
       bloques.push({ ...bloque, x: -nivel * ANCHO_COLUMNA || 0, y: i * (ALTO_BLOQUE + SEP_BLOQUE) });
@@ -124,6 +132,9 @@ export function calcularBloques(g: Grafo, { puntoDeVista, ocultarNoConectados }:
 
   return { bloques, limites: limitesDe(bloques) };
 }
+
+/** Comparar restando no sirve aquí: quien no te alcanza vale Infinity, y dos dan NaN. */
+const antes = (a: number, b: number) => (a === b ? 0 : a < b ? -1 : 1);
 
 /** La unión de la que es hijo el primero de sus cónyuges que tenga padres en el documento. */
 function unionDeLaPareja(g: Grafo, id: string): string | undefined {

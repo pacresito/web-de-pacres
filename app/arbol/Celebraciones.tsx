@@ -9,6 +9,7 @@ import { anuncio, esFelicitacion, esTuDia, felicitacion, VENTANA, type Celebraci
 import { escribirCorto } from "@/lib/arbol/fechas";
 import { LARGOS_FILA, type Identidad } from "@/lib/arbol/identidad";
 import { BloqueIdentidad } from "./Identidad";
+import { ALTO_REGLA } from "./Regla";
 
 export default function Celebraciones({
   lista,
@@ -114,8 +115,9 @@ export function AvisoCelebraciones({
     <button
       type="button"
       onClick={onAbrir}
-      style={{ boxShadow: "var(--sh)" }}
-      className={`absolute top-3 right-3 flex h-11 max-w-[calc(100vw-1.5rem)] items-center rounded-full bg-[var(--paper)] px-4 text-[13px] font-medium text-[var(--ink)] ${apartado} ${
+      // Debajo de la regla, como la búsqueda: el borde de arriba es suyo a lo ancho.
+      style={{ boxShadow: "var(--sh)", top: ALTO_REGLA + 12 }}
+      className={`absolute right-3 flex h-11 max-w-[calc(100vw-1.5rem)] items-center rounded-full bg-[var(--paper)] px-4 text-[13px] font-medium text-[var(--ink)] ${apartado} ${
         tuDia ? "border-[1.5px] border-[var(--ink)]" : "border border-[var(--line)]"
       }`}
     >

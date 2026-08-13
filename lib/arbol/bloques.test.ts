@@ -4,7 +4,7 @@ import assert from "assert";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 import { ALTO_BLOQUE, calcularBloques } from "./bloques";
-import { construirGrafo } from "./grafo";
+import { construirGrafo, pasosDesde } from "./grafo";
 import { ANCHO_COLUMNA, calcularLayout } from "./layout";
 import type { ArbolData, Persona, Union } from "./tree";
 
@@ -65,6 +65,23 @@ for (const [x, ys] of porColumna) {
   for (let i = 1; i < ys.length; i++) {
     assert.ok(ys[i] - ys[i - 1] >= ALTO_BLOQUE, `dos bloques se solapan en la columna ${x}`);
   }
+}
+
+// Arriba lo tuyo: dentro de cada columna, ningún bloque queda por encima de otro que te
+// quede más cerca. Y el tuyo abre la suya, que es la primera fila que se lee al alejarse.
+{
+  const pasos = pasosDesde(g, "p25");
+  const cerca = (b: (typeof bloques)[number]) =>
+    Math.min(...[...b.hermanos, ...b.parejas].map((p) => pasos.get(p) ?? Infinity));
+  for (const [x, ys] of porColumna) {
+    const columna = bloques.filter((b) => b.x === x).sort((a, b) => a.y - b.y);
+    for (let i = 1; i < columna.length; i++) {
+      assert.ok(cerca(columna[i - 1]) <= cerca(columna[i]), `en la columna ${x} lo lejano queda por encima de lo cercano`);
+    }
+    assert.strictEqual(columna.length, ys.length);
+  }
+  const tuyo = bloques.find((b) => b.esDelPuntoDeVista)!;
+  assert.strictEqual(tuyo.y, Math.min(...bloques.filter((b) => b.x === tuyo.x).map((b) => b.y)), "el tuyo no abre tu columna");
 }
 
 // El mapa es mucho más corto que el árbol de personas desplegado del todo: no es un detalle

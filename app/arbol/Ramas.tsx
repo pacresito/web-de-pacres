@@ -10,6 +10,7 @@
 // decirlo es más honesto que elegir una rama por ellos.
 
 import type { Reparto } from "@/lib/arbol/ramas";
+import { ALTO_REGLA } from "./Regla";
 
 export default function Ramas({ reparto, onRama }: { reparto: Reparto[]; onRama: (rama: Reparto) => void }) {
   // Quien está en tres ramas suma dos pertenencias de más y sigue siendo una persona: lo
@@ -19,7 +20,12 @@ export default function Ramas({ reparto, onRama }: { reparto: Reparto[]; onRama:
   const total = [...veces.values()].reduce((n, v) => n + v, 0);
   const enVarias = [...veces.values()].filter((v) => v > 1).length;
   return (
-    <div className="absolute inset-0 flex flex-col gap-1.5 bg-[var(--paper)] pt-[68px] pr-[68px] pb-[92px] pl-3">
+    // Aquí la regla no se pinta, pero la búsqueda y el aviso siguen bajados por ella: el
+    // hueco que reserva el mapa es el que ocupan ellos, no el que ocupa la franja.
+    <div
+      style={{ paddingTop: ALTO_REGLA + 68 }}
+      className="absolute inset-0 flex flex-col gap-1.5 bg-[var(--paper)] pr-[68px] pb-[92px] pl-3"
+    >
       {reparto.map((rama) => (
         <button
           key={rama.nombre}
