@@ -6,17 +6,29 @@
 // salen de los tokens de `.arbol` en globals.css, que es lo que vira con el tema.
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { calcularBloques, type Bloque } from "@/lib/arbol/bloques";
 import { acortar, buscar, losSinNombre, porCercania } from "@/lib/arbol/busqueda";
-import { acotar, brujulaDe, conZoom, type Encuadre, type Rumbo, type Vista } from "@/lib/arbol/camara";
+import {
+  acotar,
+  brujulaDe,
+  conZoom,
+  paradaDe,
+  ZOOM_DE,
+  ZOOM_TITULO_BLOQUE,
+  type Encuadre,
+  type Parada,
+  type Rumbo,
+  type Vista,
+} from "@/lib/arbol/camara";
 import { caminoEntre } from "@/lib/arbol/camino";
 import { FECHAS_POR_DEFECTO, type ModoFechas } from "@/lib/arbol/fechas";
 import { proximasCelebraciones } from "@/lib/arbol/celebraciones";
-import { construirGrafo, pasosDesde } from "@/lib/arbol/grafo";
+import { construirGrafo, pasosDesde, visibles } from "@/lib/arbol/grafo";
 import { fichaDe } from "@/lib/arbol/ficha";
 import { identidadDe, LARGOS_FILA, LARGOS_LISTA, LARGOS_NODO, libretaDe, type Identidad, type Pinta } from "@/lib/arbol/identidad";
 import { relacionesDesde } from "@/lib/arbol/parentesco";
 import type { ModoApellidos } from "@/lib/arbol/personas";
-import { calcularRamas } from "@/lib/arbol/ramas";
+import { calcularRamas, repartoDeRamas } from "@/lib/arbol/ramas";
 import {
   ALTO_CONTADOR,
   ALTO_NODO,
@@ -28,13 +40,16 @@ import {
   type Contador,
   type NodoLayout,
 } from "@/lib/arbol/layout";
-import { calcularRecuento, type Fraccion } from "@/lib/arbol/recuento";
+import { calcularRecuento, unionesHasta, type Fraccion } from "@/lib/arbol/recuento";
 import type { ArbolData, Union } from "@/lib/arbol/tree";
+import Bloques from "./Bloques";
 import Busqueda from "./Busqueda";
+import Capas from "./Capas";
 import Camino from "./Camino";
 import Celebraciones, { AvisoCelebraciones } from "./Celebraciones";
 import Ficha from "./Ficha";
 import Hoja from "./Hoja";
+import Ramas from "./Ramas";
 import Recuento from "./Recuento";
 import { useAtras } from "./useAtras";
 
@@ -62,7 +77,6 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
   const [ocultarNoConectados, setOcultarNoConectados] = useState(true);
   const [fechas, setFechas] = useState<ModoFechas>(FECHAS_POR_DEFECTO);
   const [apellidos, setApellidos] = useState<ModoApellidos>("nuevos");
-  const [panelAbierto, setPanelAbierto] = useState(false);
   const [busquedaAbierta, setBusquedaAbierta] = useState(false);
   const [consulta, setConsulta] = useState("");
   /** Las cuatro sin nombre no se pueden teclear: se piden por su salida del callejón. */
@@ -73,11 +87,15 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
    * La hoja inferior, que es una sola: la ficha de alguien, el camino hasta él o lo que se
    * celebra. Dos a la vez se pisarían, y la de debajo no se leería ni se podría cerrar.
    */
-  const [hoja, setHoja] = useState<{ tipo: "ficha" | "camino"; id: string } | { tipo: "celebraciones" } | null>(null);
+  const [hoja, setHoja] = useState<
+    { tipo: "ficha" | "camino"; id: string } | { tipo: "celebraciones" } | { tipo: "capas" } | null
+  >(null);
   /** Lo que se resalta del lienzo: el numerador de la fracción señalada, o nada. */
   const [resaltados, setResaltados] = useState<Set<string> | null>(null);
   const [vista, setVista] = useState<Vista>(CENTRADA);
   const [tamano, setTamano] = useState({ w: 0, h: 0 });
+  /** A quién hay que traer a pantalla en cuanto el layout lo coloque. */
+  const [aEnfocar, setAEnfocar] = useState<string | null>(null);
 
   const contenedor = useRef<HTMLDivElement>(null);
   /** El lienzo, aparte del contenedor: los gestos son suyos y no de lo que flota encima. */
@@ -95,6 +113,12 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
     () => calcularLayout(grafo, { puntoDeVista, expandidas, parejas, ocultarNoConectados }),
     [grafo, puntoDeVista, expandidas, parejas, ocultarNoConectados],
   );
+  // El mapa de bloques no depende de lo desplegado: la escala media enseña la familia
+  // entera, que es a lo que se aleja quien se aleja.
+  const mapa = useMemo(
+    () => calcularBloques(grafo, { puntoDeVista, ocultarNoConectados }),
+    [grafo, puntoDeVista, ocultarNoConectados],
+  );
   const cuentas = useMemo(
     () => calcularRecuento(grafo, { puntoDeVista, ocultarNoConectados }, new Set(layout.nodos.map((n) => n.id))),
     [grafo, puntoDeVista, ocultarNoConectados, layout],
@@ -110,6 +134,21 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
   );
   // Las ramas no dependen de quién mire: se derivan del grafo y valen para todo el árbol.
   const pertenencias = useMemo(() => calcularRamas(grafo), [grafo]);
+  /** Cuánta familia deja fuera el filtro, que es lo que su interruptor tiene que decir. */
+  const escondidos = useMemo(
+    () => grafo.personaPorId.size - visibles(grafo, puntoDeVista).size,
+    [grafo, puntoDeVista],
+  );
+  /**
+   * El mapa de ramas obedece al mismo filtro que las otras dos escalas: enseñar ahí una
+   * rama entera que el lienzo esconde sería contar dos familias distintas en la misma app.
+   * La que se queda sin nadie no se pinta vacía, se cae del mapa.
+   */
+  const reparto = useMemo(() => {
+    const dentro = ocultarNoConectados ? visibles(grafo, puntoDeVista) : null;
+    const suyas = dentro ? new Map([...pertenencias].filter(([id]) => dentro.has(id))) : pertenencias;
+    return repartoDeRamas(suyas, puntoDeVista).filter((r) => r.gente.length > 0);
+  }, [grafo, pertenencias, puntoDeVista, ocultarNoConectados]);
   /** El bloque de identidad de cualquiera, para las superficies que lo piden fila a fila. */
   const escribir = useMemo(
     () => (id: string, largoContexto: number) =>
@@ -186,19 +225,42 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
     };
   }, []);
 
-  const anclaje = layout.nodos.find((n) => n.esPuntoDeVista);
+  /**
+   * La parada del zoom manda sobre qué se dibuja, y con ello sobre el sistema de
+   * coordenadas: bloques y personas se colocan cada uno por su cuenta. La cámara se guarda
+   * relativa al punto de vista, así que cambiar de ancla al saltar de escala lo deja donde
+   * estaba en pantalla y es el árbol el que se recompone alrededor.
+   */
+  const parada = paradaDe(vista.escala);
+  const anclaje =
+    parada === "bloques"
+      ? mapa.bloques.find((b) => b.esDelPuntoDeVista)
+      : layout.nodos.find((n) => n.esPuntoDeVista);
   const ancla = { x: anclaje?.x ?? 0, y: anclaje?.y ?? 0 };
+  const limites = parada === "bloques" ? mapa.limites : layout.limites;
   const centro = { x: ancla.x + vista.dx, y: ancla.y + vista.dy };
 
   // El encuadre se guarda en un ref porque lo consultan gestos que no se rehacen en cada
   // render (la rueda) y las funciones de actualización de setVista, que solo ven la vista.
   // Y se reacota al cambiar él: desplegar una rama o mudar el punto de vista mueven los
   // límites bajo una cámara que ya estaba puesta.
-  const encuadre = useRef<Encuadre>({ ancla, limites: layout.limites, w: 0, h: 0 });
+  const encuadre = useRef<Encuadre>({ ancla, limites, w: 0, h: 0 });
   useEffect(() => {
-    encuadre.current = { ancla: { x: ancla.x, y: ancla.y }, limites: layout.limites, w: tamano.w, h: tamano.h };
+    encuadre.current = { ancla: { x: ancla.x, y: ancla.y }, limites, w: tamano.w, h: tamano.h };
     setVista((v) => acotar(v, encuadre.current));
-  }, [ancla.x, ancla.y, layout.limites, tamano.w, tamano.h]);
+  }, [ancla.x, ancla.y, limites, tamano.w, tamano.h]);
+
+  /**
+   * Traer una rama al lienzo y mirarla son dos pasos: cuando se pide, el layout todavía no
+   * la ha colocado. Se apunta a quién enfocar y se centra en cuanto aparece colocado.
+   */
+  useEffect(() => {
+    if (!aEnfocar) return;
+    const destino = layout.nodos.find((n) => n.id === aEnfocar);
+    if (!destino) return;
+    setVista((v) => acotar({ ...v, dx: destino.x - ancla.x, dy: destino.y - ancla.y }, encuadre.current));
+    setAEnfocar(null);
+  }, [aEnfocar, layout, ancla.x, ancla.y]);
 
   /** Los gestos mueven la cámara por aquí: moverla sin acotar es perderse. */
   function mover(paso: (v: Vista) => Vista) {
@@ -215,12 +277,10 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
 
   // Lo que el gesto de volver cierra: la capa de más arriba y solo esa, en el orden en que
   // se ven —lo que tapa antes que lo que flota debajo—.
-  const capas =
-    (busquedaAbierta ? 1 : 0) + (cajon ? 1 : 0) + (panelAbierto ? 1 : 0) + (hoja ? 1 : 0) + (hoja?.tipo === "camino" ? 1 : 0);
-  useAtras(capas, () => {
+  const apiladas = (busquedaAbierta ? 1 : 0) + (cajon ? 1 : 0) + (hoja ? 1 : 0) + (hoja?.tipo === "camino" ? 1 : 0);
+  useAtras(apiladas, () => {
     if (hoja?.tipo === "camino") setHoja({ tipo: "ficha", id: hoja.id });
     else if (hoja) setHoja(null);
-    else if (panelAbierto) setPanelAbierto(false);
     else if (cajon) setCajon(null);
     else if (busquedaAbierta) setBusquedaAbierta(false);
   });
@@ -308,6 +368,18 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
     if (uniones.length === 0) return;
     if (puestos.length === todos.length) cerrarRamas(uniones);
     else abrirRamas(uniones);
+  }
+
+  /**
+   * Tocar un bloque es pedir a esa familia: se abre lo que haga falta para traerla, se salta
+   * a la escala de personas y se enfoca en ella. Es la única forma de cruzar el árbol de un
+   * lado a otro sin arrastrar, y por eso el mapa de bloques existe.
+   */
+  function abrirBloque(bloque: Bloque) {
+    const gente = [...bloque.hermanos, ...bloque.parejas];
+    abrirRamas(unionesHasta(grafo, puntoDeVista, gente));
+    setVista((v) => ({ ...v, escala: ZOOM_DE.personas }));
+    setAEnfocar(gente[0]);
   }
 
   /** El «+» trae a la pareja y nada más: los hijos siguen detrás de su propio contador. */
@@ -412,9 +484,10 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
   const apartado = hoja ? "md:right-[392px]" : "";
   const brujula = brujulaDe(vista, tamano.w, tamano.h);
   const transformacion = `translate(${tamano.w / 2} ${tamano.h / 2}) scale(${vista.escala}) translate(${-centro.x} ${-centro.y})`;
-  const niveles = useMemo(() => [...new Set(layout.nodos.map((n) => n.nivel))].sort((a, b) => a - b), [layout]);
+  const dibujados = parada === "bloques" ? mapa.bloques : layout.nodos;
+  const niveles = useMemo(() => [...new Set(dibujados.map((n) => n.nivel))].sort((a, b) => a - b), [dibujados]);
   const generacionPov = grafo.generacion.get(puntoDeVista) ?? 0;
-  const { minY, maxY } = layout.limites;
+  const { minY, maxY } = limites;
   /** Con una fracción señalada, todo lo que no es suyo se va al fondo. Sin ella, nada cambia. */
   const opacidadDe = (id?: string) => (!resaltados || (id && resaltados.has(id)) ? undefined : ATENUADO);
 
@@ -433,8 +506,10 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
         onPointerCancel={onPointerUp}
       >
         {/* Hasta medir el hueco no se pinta nada: el servidor no sabe ni el tamaño ni
-            el punto de vista guardado, así que la hidratación cuadra con el lienzo vacío. */}
-        {tamano.w > 0 && (
+            el punto de vista guardado, así que la hidratación cuadra con el lienzo vacío.
+            Y en la parada de ramas tampoco: ahí el lienzo no es un árbol, es un mapa, y lo
+            pinta su propia capa por encima. */}
+        {tamano.w > 0 && parada !== "ramas" && (
         <g transform={transformacion}>
           {/* Banda por generación: todos los de una columna comparten tratamiento. El
               claroscuro va por la generación absoluta, no por la relativa: si no, cambiar
@@ -450,6 +525,15 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
             />
           ))}
 
+          {parada === "bloques" ? (
+            <Bloques
+              bloques={mapa.bloques}
+              conTitulo={vista.escala >= ZOOM_TITULO_BLOQUE}
+              puntoDeVista={puntoDeVista}
+              onElegir={(b) => arrastre.current <= ARRASTRE_MINIMO && abrirBloque(b)}
+            />
+          ) : (
+          <>
           {/* El reparto arranca en la propia unión y muere en el borde de cada hijo: los
               tramos que cruzan un nodo quedan tapados por él, y lo que se ve toca a los dos. */}
           <g opacity={opacidadDe()}>
@@ -526,11 +610,28 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
                 />
               ))}
           </g>
+          </>
+          )}
         </g>
         )}
       </svg>
 
-      {brujula && (
+      {parada === "ramas" && (
+        <Ramas
+          reparto={reparto}
+          onRama={(rama) => {
+            setCajon({ termino: `rama de ${rama.nombre}`, ids: [...rama.gente].sort(porCercania(grafo, opcionesBusqueda.pasos)) });
+            setBusquedaAbierta(true);
+          }}
+        />
+      )}
+
+      {/* El riel: la salida para quien no descubre el pellizco. Va en el borde derecho y a
+          media altura, que es donde no le quita el sitio ni al aviso de arriba ni a los
+          botones de abajo. */}
+      <Riel parada={parada} onIr={(p) => mover((v) => ({ ...v, escala: ZOOM_DE[p] }))} apartado={apartado} />
+
+      {brujula && parada === "personas" && (
         <Brujula
           posicion={brujula}
           nombre={personaPorId.get(puntoDeVista)?.nombre ?? ""}
@@ -566,28 +667,36 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
 
       <AvisoCelebraciones lista={celebraciones} onAbrir={() => setHoja({ tipo: "celebraciones" })} apartado={apartado} />
 
-      <Controles
-        fechas={fechas}
-        setFechas={setFechas}
-        apellidos={apellidos}
-        setApellidos={setApellidos}
-        ocultar={ocultarNoConectados}
-        setOcultar={setOcultarNoConectados}
-        abierto={panelAbierto}
-        setAbierto={setPanelAbierto}
-        apartado={apartado}
-        todoDesplegado={todoDesplegado}
-        onDesplegarTodo={() => {
-          setTodoDesplegado(!todoDesplegado);
-          setAbiertas(new Set());
-          setParejas(new Set());
-        }}
-        onReiniciar={reiniciar}
-      />
+      <button
+        type="button"
+        onClick={() => setHoja({ tipo: "capas" })}
+        style={{ boxShadow: "var(--sh)" }}
+        className={`absolute right-3 bottom-3 h-11 rounded-full border border-[var(--line)] bg-[var(--paper)] px-4 text-[13px] font-medium text-[var(--ink)] ${apartado}`}
+      >
+        Qué se ve
+      </button>
 
       {hoja && (
         <Hoja onCerrar={() => setHoja(null)}>
-          {hoja.tipo === "celebraciones" ? (
+          {hoja.tipo === "capas" ? (
+            <Capas
+              fechas={fechas}
+              setFechas={setFechas}
+              apellidos={apellidos}
+              setApellidos={setApellidos}
+              ocultar={ocultarNoConectados}
+              setOcultar={setOcultarNoConectados}
+              escondidos={escondidos}
+              todoDesplegado={todoDesplegado}
+              onDesplegarTodo={() => {
+                setTodoDesplegado(!todoDesplegado);
+                setAbiertas(new Set());
+                setParejas(new Set());
+              }}
+              onReiniciar={reiniciar}
+              leyenda={<Leyenda />}
+            />
+          ) : hoja.tipo === "celebraciones" ? (
             <Celebraciones lista={celebraciones} identidad={escribir} onPersona={abrirFicha} />
           ) : hoja.tipo === "camino" && camino ? (
             <Camino
@@ -627,6 +736,40 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
           )}
         </Hoja>
       )}
+    </div>
+  );
+}
+
+/**
+ * Las tres paradas, de lejos a cerca. En pantalla se llaman por lo que se ve en cada una y
+ * no por la unidad que las dibuja: «bloques» es una palabra del código, y «familias» se
+ * entiende sin que nadie la presente.
+ */
+const PARADAS: { parada: Parada; glifo: string; nombre: string }[] = [
+  { parada: "ramas", glifo: "▣", nombre: "Ramas" },
+  { parada: "bloques", glifo: "▤", nombre: "Familias" },
+  { parada: "personas", glifo: "▥", nombre: "Personas" },
+];
+
+function Riel({ parada, onIr, apartado }: { parada: Parada; onIr: (p: Parada) => void; apartado: string }) {
+  return (
+    <div
+      style={{ boxShadow: "var(--sh)" }}
+      className={`absolute top-1/2 right-3 flex -translate-y-1/2 flex-col overflow-hidden rounded-full border border-[var(--line)] bg-[var(--paper)] ${apartado}`}
+    >
+      {PARADAS.map(({ parada: suya, glifo, nombre }) => (
+        <button
+          key={suya}
+          type="button"
+          onClick={() => onIr(suya)}
+          title={nombre}
+          aria-label={nombre}
+          aria-current={suya === parada}
+          className={`h-11 w-11 text-[15px] ${suya === parada ? "bg-[var(--acch)] text-[var(--acc)]" : "text-[var(--mut)]"}`}
+        >
+          {glifo}
+        </button>
+      ))}
     </div>
   );
 }
@@ -888,129 +1031,15 @@ const UNIONES: { texto: string; tipo: Union["tipo"]; roto: boolean }[] = [
 
 function Leyenda() {
   return (
-    <div className="flex flex-col gap-1">
-      <p className="px-1 font-[family-name:var(--mono)] text-[9.5px] font-medium tracking-[0.12em] text-[var(--mut)] uppercase">
-        Uniones
-      </p>
-      <div className="grid grid-cols-2 gap-x-2">
-        {UNIONES.map(({ texto, tipo, roto }) => (
-          <div key={texto} className="flex items-center gap-1.5">
-            <svg width={18} height={30} className="shrink-0">
-              <TrazoDePareja x={9} extremos={[2, 28]} tipo={tipo} roto={roto} />
-            </svg>
-            <span className="text-[11px] text-[var(--mut)]">{texto}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function Controles({
-  fechas,
-  setFechas,
-  apellidos,
-  setApellidos,
-  ocultar,
-  setOcultar,
-  abierto,
-  setAbierto,
-  apartado,
-  todoDesplegado,
-  onDesplegarTodo,
-  onReiniciar,
-}: {
-  fechas: ModoFechas;
-  setFechas: (f: ModoFechas) => void;
-  apellidos: ModoApellidos;
-  setApellidos: (a: ModoApellidos) => void;
-  ocultar: boolean;
-  setOcultar: (v: boolean) => void;
-  abierto: boolean;
-  setAbierto: (v: boolean) => void;
-  /** Lo que se corre a la izquierda cuando la hoja ocupa su columna de la derecha. */
-  apartado: string;
-  todoDesplegado: boolean;
-  onDesplegarTodo: () => void;
-  onReiniciar: () => void;
-}) {
-  const interruptor = (activo: boolean, texto: string, alPulsar: () => void) => (
-    <button
-      key={texto}
-      type="button"
-      onClick={alPulsar}
-      className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-[13px] ${
-        activo ? "bg-[var(--ink)] text-[var(--paper)]" : "bg-[var(--soft)] text-[var(--ink)]"
-      }`}
-    >
-      {texto}
-      <span className={`h-2 w-2 rounded-full ${activo ? "bg-[var(--acc)]" : "bg-[var(--line)]"}`} />
-    </button>
-  );
-
-  /** Una fila de opciones excluyentes, para lo que no es un sí o un no. */
-  const eleccion = <T,>(titulo: string, opciones: readonly T[], actual: T, alElegir: (v: T) => void, nombrar: (v: T) => string) => (
-    <div className="flex items-center gap-1 rounded-lg bg-[var(--soft)] px-3 py-1.5">
-      <span className="flex-1 text-[13px] text-[var(--ink)]">{titulo}</span>
-      {opciones.map((opcion) => (
-        <button
-          key={String(opcion)}
-          type="button"
-          onClick={() => alElegir(opcion)}
-          className={`h-6 rounded-md px-2 text-[12px] ${
-            actual === opcion ? "bg-[var(--ink)] text-[var(--paper)]" : "text-[var(--mut)]"
-          }`}
-        >
-          {nombrar(opcion)}
-        </button>
-      ))}
-    </div>
-  );
-
-  const boton = (texto: string, alPulsar: () => void) => (
-    <button
-      key={texto}
-      type="button"
-      onClick={alPulsar}
-      style={{ boxShadow: "var(--sh)" }}
-      className="h-11 rounded-full border border-[var(--line)] bg-[var(--paper)] px-4 text-[13px] font-medium text-[var(--ink)]"
-    >
-      {texto}
-    </button>
-  );
-
-  return (
-    <div className={`absolute right-3 bottom-3 flex flex-col items-end gap-2 ${apartado}`}>
-      {abierto && (
-        <div
-          style={{ boxShadow: "var(--sh)" }}
-          className="flex w-72 flex-col gap-3 rounded-xl border border-[var(--line)] bg-[var(--paper)] p-3"
-        >
-          <div className="flex flex-col gap-1">
-            <p className="px-1 font-[family-name:var(--mono)] text-[9.5px] font-medium tracking-[0.12em] text-[var(--mut)] uppercase">
-              En cada nodo
-            </p>
-            {/* «Nuevos» solo los enseña quien los estrena en su línea; 1 y 2, todo el mundo. */}
-            {eleccion("Apellidos", ["nuevos", 0, 1, 2] as const, apellidos, setApellidos, String)}
-            {/* Los cuatro ocupan el mismo hueco detrás del nombre, así que son excluyentes.
-                La fecha entera solo la tienen los del calendario de cumpleaños; para el
-                resto, «completa» sigue enseñando el año a secas. */}
-            {eleccion("Fechas", ["ocultar", "año", "edad", "completa"] as const, fechas, setFechas, (f) => (f === "ocultar" ? "no" : f))}
-          </div>
-          <div className="flex flex-col gap-1">
-            <p className="px-1 font-[family-name:var(--mono)] text-[9.5px] font-medium tracking-[0.12em] text-[var(--mut)] uppercase">
-              Ramas
-            </p>
-            {interruptor(!ocultar, "Mostrar no conectadas", () => setOcultar(!ocultar))}
-          </div>
-          <Leyenda />
+    <div className="grid grid-cols-2 gap-x-2">
+      {UNIONES.map(({ texto, tipo, roto }) => (
+        <div key={texto} className="flex items-center gap-1.5">
+          <svg width={18} height={30} className="shrink-0">
+            <TrazoDePareja x={9} extremos={[2, 28]} tipo={tipo} roto={roto} />
+          </svg>
+          <span className="text-[11px] text-[var(--mut)]">{texto}</span>
         </div>
-      )}
-      <div className="flex flex-wrap justify-end gap-2">
-        {boton(todoDesplegado ? "Plegar todo" : "Desplegar todo", onDesplegarTodo)}
-        {boton("Reiniciar", onReiniciar)}
-        {boton(abierto ? "Cerrar" : "Ver", () => setAbierto(!abierto))}
-      </div>
+      ))}
     </div>
   );
 }

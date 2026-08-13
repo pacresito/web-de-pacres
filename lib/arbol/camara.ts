@@ -6,6 +6,35 @@ import { ALTO_NODO, ANCHO_NODO, type Layout } from "./layout";
 export const ESCALA_MIN = 0.12;
 export const ESCALA_MAX = 2.2;
 
+/**
+ * Las tres paradas del zoom semántico: alejarse no encoge el árbol, cambia la unidad que
+ * dibuja. Una persona, un grupo de hermanos o una rama entera.
+ */
+export type Parada = "ramas" | "bloques" | "personas";
+
+/**
+ * Dónde salta cada una. Un nodo de persona mide 13 px de texto: por debajo de 0,62 deja de
+ * leerse y lo que se ve son recuadros, así que ahí toma el relevo el bloque. Los 130 bloques
+ * caben enteros en un móvil a 0,25, y por debajo de eso ya no hay mapa que leer: entran las
+ * ramas, que no son ocho recuadros más pequeños sino un diagrama aparte.
+ */
+const SALTOS: { desde: number; parada: Parada }[] = [
+  { desde: 0.62, parada: "personas" },
+  { desde: 0.25, parada: "bloques" },
+  { desde: 0, parada: "ramas" },
+];
+
+export const paradaDe = (escala: number): Parada => SALTOS.find((s) => escala >= s.desde)!.parada;
+
+/** A dónde lleva el riel: la altura de cada parada en la que su unidad se lee cómoda. */
+export const ZOOM_DE: Record<Parada, number> = { ramas: 0.18, bloques: 0.42, personas: 1 };
+
+/**
+ * Por debajo de esto, un bloque es una caja con sus marcas y nada más: su título acabaría
+ * en una mancha. Un mapa esconde los rótulos antes que dibujarlos ilegibles.
+ */
+export const ZOOM_TITULO_BLOQUE = 0.34;
+
 /** La cámara se guarda relativa al punto de vista: así lo persigue sin efectos ni saltos. */
 export interface Vista {
   dx: number;

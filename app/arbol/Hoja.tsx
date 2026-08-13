@@ -21,19 +21,25 @@ export default function Hoja({ onCerrar, children }: { onCerrar: () => void; chi
 
   return (
     <div className="hoja absolute inset-x-0 bottom-0 max-h-[85%] overflow-y-auto rounded-t-[20px] border-t border-[var(--line)] bg-[var(--paper)] px-4 pt-2.5 pb-[18px] md:inset-y-0 md:left-auto md:max-h-none md:w-[376px] md:rounded-none md:border-t-0 md:border-l md:px-5 md:pt-4">
-      {/* La manija se ve de 38 × 4, pero se toca en toda la banda: cuatro píxeles no son
-          un botón en ningún dedo. En columna no hay nada que arrastrar, y cierra una equis. */}
-      <button type="button" onClick={onCerrar} aria-label="Cerrar" className="mb-2 flex h-6 w-full items-center justify-center md:hidden">
-        <span className="block h-1 w-[38px] rounded-full bg-[var(--line)]" />
-      </button>
-      <button
-        type="button"
-        onClick={onCerrar}
-        aria-label="Cerrar"
-        className="mb-2 hidden h-8 w-8 items-center justify-center self-end rounded-full text-[16px] text-[var(--mut)] hover:bg-[var(--soft)] hover:text-[var(--ink)] md:ml-auto md:flex"
-      >
-        ✕
-      </button>
+      {/* Cómo se cierra, en una sola fila y pegada arriba: la hoja tiene su propio scroll y
+          lo que se fuera con él dejaría un panel largo sin salida. **El aspa está también
+          en el móvil**: la manija es el gesto que la hoja espera, pero una pastilla gris no
+          dice «cerrar» a quien no lo tenga aprendido, y la que sí lo dice es barata. La
+          manija se toca en toda la banda: cuatro píxeles no son un botón en ningún dedo. */}
+      <div className="sticky top-0 z-10 -mx-4 -mt-2.5 mb-2 flex items-center bg-[var(--paper)] px-4 pt-2.5 md:-mx-5 md:px-5">
+        <span className="w-8 shrink-0 md:hidden" />
+        <button type="button" onClick={onCerrar} aria-label="Cerrar" className="flex h-8 flex-1 items-center justify-center md:hidden">
+          <span className="block h-1 w-[38px] rounded-full bg-[var(--line)]" />
+        </button>
+        <button
+          type="button"
+          onClick={onCerrar}
+          aria-label="Cerrar"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[16px] text-[var(--mut)] hover:bg-[var(--soft)] hover:text-[var(--ink)] md:ml-auto"
+        >
+          ✕
+        </button>
+      </div>
       {children}
     </div>
   );

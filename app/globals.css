@@ -158,6 +158,9 @@
 .arbol .pieza-tx { fill: var(--mut); }
 .arbol .par      { fill: none; stroke: var(--mut); }
 .arbol .par-cor  { fill: var(--paper); stroke: var(--mut); }
+/* Las marcas de la escala de bloques: una por persona, y la del punto de vista en acento. */
+.arbol .mk       { fill: color-mix(in oklab, var(--mut) 45%, transparent); }
+.arbol .mk-pov   { fill: var(--acc); }
 
 /* ============================================================
    TerminalShell — chrome bar, navegación y animación de salida

@@ -71,14 +71,14 @@ export function edadDe(p: { birth?: Fecha; death?: Fecha }, hoy: Fecha): number 
 
 /**
  * Qué se dice de la vida de una persona en el hueco que el bloque de identidad reserva
- * detrás de su nombre. El año viene de serie porque es el desempate más barato que hay; la
- * edad ocupa su sitio para quien prefiera saber de cuándo es que cuándo nació, y la fecha
- * entera solo la tienen los que salen del calendario de cumpleaños. Es un interruptor
- * global: nunca se elige por persona.
+ * detrás de su nombre. **La edad viene de serie**: en una familia se sabe quién es mayor
+ * que quién mucho antes que en qué año nació cada uno, y el año se queda a un toque para
+ * quien vaya a comparar fechas. La fecha entera solo la tienen los que salen del
+ * calendario de cumpleaños. Es un interruptor global: nunca se elige por persona.
  */
 export type ModoFechas = "ocultar" | "año" | "edad" | "completa";
 
-export const FECHAS_POR_DEFECTO: ModoFechas = "año";
+export const FECHAS_POR_DEFECTO: ModoFechas = "edad";
 
 /**
  * Lo que consta, tal como consta: si solo se sabe el fallecimiento, se dice así, y la

@@ -4,7 +4,7 @@ import assert from "assert";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 import { construirGrafo } from "./grafo";
-import { calcularRamas, RAMAS, type Rama } from "./ramas";
+import { calcularRamas, RAMAS, repartoDeRamas, type Rama } from "./ramas";
 import type { ArbolData, Persona, Union } from "./tree";
 
 const persona = (id: string): Persona => ({ id, nombre: id, apellidos: [], fuentes: [] });
@@ -77,5 +77,25 @@ assert.deepStrictEqual(
 const total = [...pertenencias.values()].reduce((n, p) => n + p.ramas.length, 0);
 assert.strictEqual(total, 445, "445 pertenencias para 428 personas: el mapa de áreas suma un 4 % de más");
 assert.strictEqual([...pertenencias.values()].filter((p) => p.ramas.length > 1).length, 12, "los que están en más de una");
+
+// El mapa de la escala más lejana: un rectángulo por rama, con lo que cada uno confiesa.
+const reparto = repartoDeRamas(pertenencias, "p25");
+assert.deepStrictEqual(
+  reparto.map((r) => r.nombre),
+  RAMAS.map((r) => r.nombre),
+  "el mapa respeta el orden de la familia, no el de los datos",
+);
+assert.strictEqual(
+  reparto.reduce((n, r) => n + r.gente.length, 0),
+  total,
+  "el mapa reparte exactamente las pertenencias, con sus repeticiones",
+);
+assert.ok(
+  reparto.some((r) => r.tuya),
+  "el punto de vista tiene su rama señalada",
+);
+for (const r of reparto) {
+  assert.ok(r.compartidos <= r.gente.length, `${r.nombre} no puede compartir más gente de la que tiene`);
+}
 
 console.log(`ramas.test.ts OK (${RAMAS.length} ramas, ${total} pertenencias para ${pertenencias.size} personas)`);

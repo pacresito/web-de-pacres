@@ -86,6 +86,14 @@ export function calcularRecuento(
   };
 }
 
+/** Qué hay que abrir para traer a esta gente al lienzo, desde lo que ya se ve sin abrir nada. */
+export function unionesHasta(g: Grafo, puntoDeVista: string, gente: string[]): string[] {
+  const camino = caminos(g, nucleoDe(g, puntoDeVista));
+  const uniones = new Set<string>();
+  for (const id of gente) for (const union of camino.get(id) ?? []) uniones.add(union);
+  return [...uniones];
+}
+
 /**
  * Qué uniones hay que abrir para traer a cada persona. Abrir una unión pone a sus dos
  * miembros y a todos sus hijos, y solo cuenta si toca a alguien que ya esté puesto: el

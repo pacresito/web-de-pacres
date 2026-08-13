@@ -67,6 +67,37 @@ export function calcularRamas(g: Grafo, ramas = RAMAS): Map<string, Pertenencia>
   return salida;
 }
 
+/** Una rama vista desde fuera: lo que pinta el mapa de la escala más lejana. */
+export interface Reparto {
+  nombre: string;
+  /** Los suyos, ordenados como vengan del reparto: es la lista que se abre al tocarla. */
+  gente: string[];
+  /**
+   * Cuántos de ellos están además en otra rama. El mapa suma más que el árbol y no lo
+   * disimula: pertenecer a dos es un hecho de la familia, y cada rectángulo dice cuántos.
+   */
+  compartidos: number;
+  /** El punto de vista es de esta. */
+  tuya: boolean;
+}
+
+export function repartoDeRamas(
+  pertenencias: Map<string, Pertenencia>,
+  puntoDeVista: string,
+  ramas = RAMAS,
+): Reparto[] {
+  const suyas = pertenencias.get(puntoDeVista)?.ramas ?? [];
+  return ramas.map(({ nombre }) => {
+    const gente = [...pertenencias].filter(([, p]) => p.ramas.includes(nombre));
+    return {
+      nombre,
+      gente: gente.map(([id]) => id),
+      compartidos: gente.filter(([, p]) => p.ramas.length > 1).length,
+      tuya: suyas.includes(nombre),
+    };
+  });
+}
+
 /** Quién desciende de su antepasado —él incluido— menos la rama que se desgaja de ella. */
 function estirpe(g: Grafo, { nombre, ancestro, excluye }: Rama): Set<string> {
   if (!g.personaPorId.has(ancestro)) throw new Error(`La rama ${nombre} no encuentra a su antepasado (${ancestro}).`);

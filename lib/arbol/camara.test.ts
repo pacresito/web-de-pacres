@@ -1,7 +1,7 @@
 // Test de lógica pura: `npx tsx lib/arbol/camara.test.ts`. Fuera del build.
 // No lee datos: la cámara solo sabe de una caja y un hueco.
 import assert from "assert";
-import { acotar, brujulaDe, conZoom, ESCALA_MAX, ESCALA_MIN, type Encuadre, type Vista } from "./camara";
+import { acotar, brujulaDe, conZoom, ESCALA_MAX, ESCALA_MIN, paradaDe, ZOOM_DE, type Encuadre, type Vista } from "./camara";
 import { ANCHO_NODO } from "./layout";
 
 const caja = (x: number, y: number, w: number, h: number) =>
@@ -121,3 +121,13 @@ const vista = (dx: number, dy: number, escala = 1): Vista => ({ dx, dy, escala }
 }
 
 console.log("camara: ok");
+
+// --- Las tres paradas del zoom semántico ---
+assert.strictEqual(paradaDe(ESCALA_MAX), "personas", "acercado del todo se ven personas");
+assert.strictEqual(paradaDe(0.85), "personas", "y en la vista de entrada, también");
+assert.strictEqual(paradaDe(0.4), "bloques", "alejando, la unidad pasa a ser el grupo de hermanos");
+assert.strictEqual(paradaDe(ESCALA_MIN), "ramas", "y alejado del todo, las ramas");
+for (const parada of ["ramas", "bloques", "personas"] as const) {
+  assert.strictEqual(paradaDe(ZOOM_DE[parada]), parada, `el riel deja «${parada}» en su propia parada`);
+  assert.ok(ZOOM_DE[parada] >= ESCALA_MIN && ZOOM_DE[parada] <= ESCALA_MAX, `«${parada}» cae dentro del zoom`);
+}
