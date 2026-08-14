@@ -6,6 +6,7 @@ import {
   onomasticaDePersona,
   pascua,
   primerDomingoDeMayo,
+  proximaVez,
   viernesDeDolores,
 } from "./santoral";
 
@@ -78,5 +79,21 @@ for (const nombre of ["Pilar", "Lucas", "Flora", "Ricardo", "Mercedes", "Montse"
   const fijo = typeof dia === "function" ? dia(2026) : dia;
   assert.match(fijo, /^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/, `${nombre}: ${fijo}`);
 }
+
+// --- La cuenta atrás ---
+assert.deepStrictEqual(proximaVez("2026-08-06", "08-06"), { fecha: "2026-08-06", faltan: 0 }, "hoy es hoy");
+assert.deepStrictEqual(proximaVez("2026-08-06", "08-07"), { fecha: "2026-08-07", faltan: 1 });
+// El que ya pasó este año cae en el siguiente, y el cambio de año no lo despista.
+assert.deepStrictEqual(proximaVez("2026-08-06", "08-05"), { fecha: "2027-08-05", faltan: 364 });
+assert.deepStrictEqual(proximaVez("2026-12-31", "01-01"), { fecha: "2027-01-01", faltan: 1 });
+// El 29 de febrero se celebra el 1 de marzo mientras no exista, y en su día cuando existe.
+assert.deepStrictEqual(proximaVez("2026-02-27", "02-29"), { fecha: "2026-03-01", faltan: 2 });
+assert.deepStrictEqual(proximaVez("2028-02-27", "02-29"), { fecha: "2028-02-29", faltan: 2 });
+// Y el 28 de febrero de un año no bisiesto no se lo lleva por delante.
+assert.strictEqual(proximaVez("2026-02-28", "02-29").faltan, 1);
+// Lo que se mueve se resuelve en el año en que cae, no en el de hoy: el día de la madre
+// de 2026 es el 3 de mayo y el de 2027, el 2.
+assert.deepStrictEqual(proximaVez("2026-04-01", primerDomingoDeMayo), { fecha: "2026-05-03", faltan: 32 });
+assert.deepStrictEqual(proximaVez("2026-05-04", primerDomingoDeMayo), { fecha: "2027-05-02", faltan: 363 });
 
 console.log("santoral: ok");

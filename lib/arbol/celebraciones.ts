@@ -2,10 +2,10 @@
 // las onomásticas y los dos días que la familia se felicita entera, de los que viven.
 // Puro: `npx tsx lib/arbol/celebraciones.test.ts`.
 
-import { añoDe, conDia, MS_DIA, seLeSuponeFallecido, type Fecha } from "./fechas";
+import { añoDe, conDia, seLeSuponeFallecido, type Fecha } from "./fechas";
 import { type Grafo } from "./grafo";
 import { declinar, parentescos } from "./parentesco";
-import { onomasticaDePersona, primerDomingoDeMayo, type DiaDelAño } from "./santoral";
+import { onomasticaDePersona, primerDomingoDeMayo, proximaVez, type DiaDelAño } from "./santoral";
 
 /** Cuánto se mira hacia delante. Más allá deja de ser un aviso y pasa a ser un listado. */
 export const VENTANA = 30;
@@ -146,32 +146,6 @@ function familiaCercana(g: Grafo, pov: string): Map<string, string | null> {
 }
 
 const vive = (p: { birth?: Fecha; death?: Fecha }, hoy: Fecha): boolean => !p.death && !seLeSuponeFallecido(p, hoy);
-
-/** La próxima vez que caiga ese día, contando hoy como 0. Vale para los que se mueven. */
-export function proximaVez(hoy: Fecha, diaDelAño: DiaDelAño): { fecha: Fecha; faltan: number } {
-  const [año, mes, dia] = hoy.split("-").map(Number);
-  const desde = Date.UTC(año, mes - 1, dia);
-  for (const candidato of [año, año + 1]) {
-    const cuando = enElAño(diaDelAño, candidato);
-    if (cuando >= desde) return { fecha: escribirUTC(cuando), faltan: Math.round((cuando - desde) / MS_DIA) };
-  }
-  throw new Error(`Fecha imposible: ${diaDelAño}.`);
-}
-
-/**
- * Ese día del año, en ese año. **El 29 de febrero se celebra el 1 de marzo** los tres años
- * de cada cuatro en que no existe: es lo que hace el Código Civil al contar plazos por
- * meses, y adelantarlo al 28 haría cumplir años dos veces en el mismo febrero bisiesto.
- */
-function enElAño(diaDelAño: DiaDelAño, año: number): number {
-  const [mes, dia] = (typeof diaDelAño === "function" ? diaDelAño(año) : diaDelAño).split("-").map(Number);
-  if (mes === 2 && dia === 29 && !bisiesto(año)) return Date.UTC(año, 2, 1);
-  return Date.UTC(año, mes - 1, dia);
-}
-
-const bisiesto = (año: number) => (año % 4 === 0 && año % 100 !== 0) || año % 400 === 0;
-
-const escribirUTC = (ms: number) => new Date(ms).toISOString().slice(0, 10);
 
 /**
  * Lo que se lee cuando lo que se celebra es del propio punto de vista: la única línea del

@@ -9,7 +9,7 @@
 // santo —Jara, Nora, Horacio, los que no vienen del santoral— y ponerles uno inventado
 // sería peor que no ponerles ninguno.
 
-import { MS_DIA } from "./fechas";
+import { MS_DIA, type Fecha } from "./fechas";
 
 /** El día en que cae algo: el `"MM-DD"` de siempre, o la regla que lo sitúa cada año. */
 export type DiaDelAño = string | ((año: number) => string);
@@ -274,3 +274,29 @@ const POR_PERSONA: Record<string, DiaDelAño> = {
 /** La onomástica de alguien: la suya si la tiene apuntada, y si no la de su nombre. */
 export const onomasticaDePersona = (p: { id: string; nombre: string }): DiaDelAño | null =>
   POR_PERSONA[p.id] ?? onomasticaDe(p.nombre);
+
+/** La próxima vez que caiga ese día, contando hoy como 0. Vale para los que se mueven. */
+export function proximaVez(hoy: Fecha, diaDelAño: DiaDelAño): { fecha: Fecha; faltan: number } {
+  const [año, mes, dia] = hoy.split("-").map(Number);
+  const desde = Date.UTC(año, mes - 1, dia);
+  for (const candidato of [año, año + 1]) {
+    const cuando = enElAño(diaDelAño, candidato);
+    if (cuando >= desde) return { fecha: escribirUTC(cuando), faltan: Math.round((cuando - desde) / MS_DIA) };
+  }
+  throw new Error(`Fecha imposible: ${diaDelAño}.`);
+}
+
+/**
+ * Ese día del año, en ese año. **El 29 de febrero se celebra el 1 de marzo** los tres años
+ * de cada cuatro en que no existe: es lo que hace el Código Civil al contar plazos por
+ * meses, y adelantarlo al 28 haría cumplir años dos veces en el mismo febrero bisiesto.
+ */
+function enElAño(diaDelAño: DiaDelAño, año: number): number {
+  const [mes, dia] = (typeof diaDelAño === "function" ? diaDelAño(año) : diaDelAño).split("-").map(Number);
+  if (mes === 2 && dia === 29 && !bisiesto(año)) return Date.UTC(año, 2, 1);
+  return Date.UTC(año, mes - 1, dia);
+}
+
+const bisiesto = (año: number) => (año % 4 === 0 && año % 100 !== 0) || año % 400 === 0;
+
+const escribirUTC = (ms: number) => new Date(ms).toISOString().slice(0, 10);
