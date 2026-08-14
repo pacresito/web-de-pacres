@@ -1,6 +1,6 @@
 // Lo que ocupa el lienzo hasta que hay lienzo. **No es una carga fingida:** el árbol
 // necesita medir su hueco para colocar nada, y medirlo exige el navegador, así que entre el
-// HTML —que ya trae el cromo entero: el chip, el riel, la búsqueda— y el primer pintado hay
+// HTML —que ya trae el cromo entero: el riel, la búsqueda, «Qué se ve»— y el primer pintado hay
 // un hueco en blanco tan largo como tarde el bundle en llegar y arrancar. Una vez medido, el
 // árbol de entrada se pinta de golpe en 28 ms: no hay nada que escalonar, y por eso esto son
 // bloques del tamaño del nodo puestos en columnas y no el árbol de verdad a medias.

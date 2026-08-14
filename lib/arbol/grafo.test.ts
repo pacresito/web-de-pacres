@@ -44,8 +44,8 @@ assert.deepStrictEqual(
   [
     [-4, 10],
     [-3, 34],
-    [-2, 115],
-    [-1, 169],
+    [-2, 117],
+    [-1, 170],
     [0, 107],
   ],
   "reparto por generación relativa al más joven",

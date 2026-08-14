@@ -30,7 +30,7 @@ import { fichaDe } from "@/lib/arbol/ficha";
 import { identidadDe, LARGOS_FILA, LARGOS_LISTA, LARGOS_NODO, libretaDe, type Identidad, type Pinta } from "@/lib/arbol/identidad";
 import { relacionesDesde } from "@/lib/arbol/parentesco";
 import type { ModoApellidos } from "@/lib/arbol/personas";
-import { calcularRamas, repartoDeRamas } from "@/lib/arbol/ramas";
+import { calcularRamas, ramaVisible, repartoDeRamas } from "@/lib/arbol/ramas";
 import {
   ALTO_CONTADOR,
   ALTO_NODO,
@@ -54,7 +54,6 @@ import Cinta from "./Cinta";
 import Esqueleto from "./Esqueleto";
 import Ficha from "./Ficha";
 import Hoja from "./Hoja";
-import { Titulo } from "./Identidad";
 import Ramas from "./Ramas";
 import Recuento from "./Recuento";
 import Regla from "./Regla";
@@ -70,6 +69,19 @@ const ATENUADO = 0.15;
 const CENTRADA: Vista = { dx: 0, dy: 0, escala: 0.85 };
 
 /**
+ * La hoja inferior, que es una sola: la ficha de alguien, el camino hasta él, lo que se
+ * celebra o qué se ve. Dos a la vez se pisarían, y la de debajo no se leería ni se podría
+ * cerrar.
+ */
+type Hoja =
+  | { tipo: "ficha"; id: string }
+  /** Recogida es la hoja apartada para mirar el lienzo: el camino sigue abierto y pintado. */
+  | { tipo: "camino"; id: string; recogida?: boolean }
+  | { tipo: "celebraciones" }
+  | { tipo: "capas" }
+  | null;
+
+/**
  * El giro de mudar el punto de vista. El recolocado en sí es instantáneo —medido: 1 ms de
  * cálculo y menos de 110 ms hasta el último nodo puesto, con los 342 desplegados y en
  * desarrollo—, así que estos 420 ms no cubren ningún coste: **explican**. Lo que hay que
@@ -80,6 +92,11 @@ const CENTRADA: Vista = { dx: 0, dy: 0, escala: 0.85 };
 const GIRO_APAGADO = 180; // ms con los colaterales al 25 %
 const GIRO = 420; // ms de la transición entera; los 240 de la subida los pone la CSS
 const AVISO = 8000; // ms que el aviso aguanta antes de irse solo
+
+/** El `md` de Tailwind, en píxeles: por debajo la hoja tapa el lienzo en vez de apartarse. */
+const DOS_COLUMNAS = 768;
+/** Lo que le cabe al nombre en la barra de abajo, medido sobre el móvil más estrecho. */
+const LARGO_BARRA = 28;
 
 export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
   const grafo = useMemo(() => construirGrafo(data), [data]);
@@ -102,20 +119,16 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
   const [sinNombre, setSinNombre] = useState(false);
   /** El cajón del índice que se está leyendo: «tus primos» son quince personas, no un número. */
   const [cajon, setCajon] = useState<{ termino: string; ids: string[] } | null>(null);
-  /**
-   * La hoja inferior, que es una sola: la ficha de alguien, el camino hasta él o lo que se
-   * celebra. Dos a la vez se pisarían, y la de debajo no se leería ni se podría cerrar.
-   */
-  const [hoja, setHoja] = useState<
-    | { tipo: "ficha"; id: string }
-    /** Recogida es la hoja apartada para mirar el lienzo: el camino sigue abierto y pintado. */
-    | { tipo: "camino"; id: string; recogida?: boolean }
-    | { tipo: "celebraciones" }
-    | { tipo: "capas" }
-    | null
-  >(null);
-  /** Lo que se resalta del lienzo: el numerador de la fracción señalada, o nada. */
+  const [hoja, setHoja] = useState<Hoja>(null);
+  /** El vistazo de pasar por encima de una fracción: dura lo que dure el puntero encima. */
   const [resaltados, setResaltados] = useState<Set<string> | null>(null);
+  /**
+   * Y lo que queda señalado al pulsarla, que no se va solo. Traer a quince primos segundos
+   * y soltarlos entre trescientas personas es no haberlos traído: en un móvil no hay
+   * puntero que pasar por encima, y en cualquiera de los dos el vistazo se acaba antes de
+   * llegar a mirar el lienzo. Se apaga desde su barra, o al mudar el Centro.
+   */
+  const [marcados, setMarcados] = useState<{ termino: string; ids: Set<string> } | null>(null);
   const [vista, setVista] = useState<Vista>(CENTRADA);
   /**
    * Con qué unidad se dibuja. Es estado y no una lectura de la escala: el zoom semántico
@@ -196,12 +209,12 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
   /**
    * El mapa de ramas obedece al mismo filtro que las otras dos escalas: enseñar ahí una
    * rama entera que el lienzo esconde sería contar dos familias distintas en la misma app.
-   * La que se queda sin nadie no se pinta vacía, se cae del mapa.
+   * La que se cae del mapa y por qué, en `ramaVisible`.
    */
   const reparto = useMemo(() => {
     const dentro = ocultarNoConectados ? visibles(grafo, puntoDeVista) : null;
     const suyas = dentro ? new Map([...pertenencias].filter(([id]) => dentro.has(id))) : pertenencias;
-    return repartoDeRamas(suyas, puntoDeVista).filter((r) => r.gente.length > 0);
+    return repartoDeRamas(suyas, puntoDeVista).filter((r) => ramaVisible(r, dentro));
   }, [grafo, pertenencias, puntoDeVista, ocultarNoConectados]);
   /** El bloque de identidad de cualquiera, para las superficies que lo piden fila a fila. */
   const escribir = useMemo(
@@ -253,6 +266,26 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
     enLista(id, 0)
       .titulo.map((t) => t.texto)
       .join("");
+  /**
+   * Y cómo se llama en una barra de una sola línea, que se recorta con «…» y no crece. **Sin
+   * la edad** —la barra cuenta pasos, no vidas— **y con los apellidos que quepan**: el
+   * segundo cortado a la mitad no distingue a nadie de nadie, y se lleva por delante el
+   * nombre, que es lo que se ha ido a leer.
+   */
+  const enUnaLinea = (id: string, largo: number) => {
+    const escrito = (apellidos: ModoApellidos) =>
+      identidadDe(grafo, id, {
+        linaje: libreta.linaje,
+        fechas: "ocultar",
+        apellidos,
+        hoy,
+        largos: { titulo: largo, contexto: 0 },
+        homonimia: libreta.homonimias.get(id),
+      })
+        .titulo.map((t) => t.texto)
+        .join("");
+    return ([2, 1] as const).map(escrito).find((texto) => !texto.endsWith("…")) ?? escrito(0);
+  };
   /** Quien cumple años hoy se lleva además una tarta en su nodo, sin abrir nada. */
   const cumplenHoy = useMemo(
     () => new Set(celebraciones.filter((c) => c.tipo === "cumpleaños" && c.faltan === 0).map((c) => c.id!)),
@@ -335,23 +368,46 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
   }
 
   /**
+   * Abrir una hoja. **Donde no caben los dos se lleva por delante el índice**, en vez de
+   * esconderlo: escondido y abierto volvía desplegado al cerrar la hoja, tapando el árbol
+   * que se acababa de ir a mirar. Con sitio no se toca —ahí la hoja tiene su columna—, y la
+   * hoja recogida tampoco, que esa se abre justo para mirar el lienzo.
+   */
+  function abrirHoja(cual: Hoja) {
+    setHoja(cual);
+    if (tamano.w > 0 && tamano.w < DOS_COLUMNAS) setBusquedaAbierta(false);
+  }
+
+  /** Y al revés, con la misma regla: donde no caben los dos, desplegar el índice cierra la hoja. */
+  function abrirIndice() {
+    setBusquedaAbierta(true);
+    if (tamano.w > 0 && tamano.w < DOS_COLUMNAS && !recogida) setHoja(null);
+  }
+
+  /**
    * Tocar a alguien abre su ficha y nada más, en cualquier superficie. El centro solo se
    * muda desde el botón de dentro, que es una decisión y no el efecto de haber tocado.
    */
   function abrirFicha(id: string) {
-    setHoja({ tipo: "ficha", id });
+    abrirHoja({ tipo: "ficha", id });
   }
 
   // Lo que el gesto de volver cierra: la capa de más arriba y solo esa, en el orden en que
   // se ven —lo que tapa antes que lo que flota debajo—.
   const apiladas =
-    (busquedaAbierta ? 1 : 0) + (cajon ? 1 : 0) + (hoja ? 1 : 0) + (hoja?.tipo === "camino" ? 1 : 0) + (recogida ? 1 : 0);
+    (busquedaAbierta ? 1 : 0) +
+    (cajon ? 1 : 0) +
+    (hoja ? 1 : 0) +
+    (hoja?.tipo === "camino" ? 1 : 0) +
+    (recogida ? 1 : 0) +
+    (marcados ? 1 : 0);
   useAtras(apiladas, () => {
     if (recogida && hoja?.tipo === "camino") setHoja({ tipo: "camino", id: hoja.id });
     else if (hoja?.tipo === "camino") setHoja({ tipo: "ficha", id: hoja.id });
     else if (hoja) setHoja(null);
     else if (cajon) setCajon(null);
     else if (busquedaAbierta) setBusquedaAbierta(false);
+    else if (marcados) setMarcados(null);
   });
 
   /**
@@ -383,6 +439,8 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
     setAnterior(puntoDeVista);
     setPuntoDeVista(id);
     setHoja(null);
+    // Los señalados eran «tus primos segundos», y desde aquí ya no son tuyos ni segundos.
+    setMarcados(null);
     // El giro se enciende aquí, con la mudanza y no después: los colaterales tienen que
     // nacer ya apagados en la primera pintura del árbol nuevo.
     setGirando(true);
@@ -437,14 +495,21 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
    * Pulsarla trae lo pedido y todo lo que hace falta para llegar; pulsarla ya llena quita
    * justo esas uniones y la repliega hasta el núcleo, como la manija «−» del lienzo.
    */
-  function pulsarFraccion({ puestos, todos, uniones }: Fraccion) {
-    setResaltados(null); // lo que acaba de llegar se ve, no se atenúa
+  function pulsarFraccion({ termino, puestos, todos, uniones }: Fraccion) {
+    setResaltados(null); // el vistazo se acaba: manda lo que se acaba de pedir
     // Pedir una rama es una acción sobre el lienzo, y el lienzo hay que verlo: el índice se
     // recoge, y lo teclado se queda para volver a él de un toque.
     setBusquedaAbierta(false);
-    if (uniones.length === 0) return;
-    if (puestos.length === todos.length) cerrarRamas(uniones);
-    else abrirRamas(uniones);
+    // Y suelta el camino que estuviera recogido: señalar y seguir un camino son las dos
+    // formas de mirar de cerca, y el lienzo solo sabe encender una.
+    if (recogida) setHoja(null);
+    const repliega = uniones.length > 0 && puestos.length === todos.length;
+    if (repliega) cerrarRamas(uniones);
+    else if (uniones.length > 0) abrirRamas(uniones);
+    // Se señala a los del cajón entero y no a los que estaban puestos: los que vienen de
+    // llegar son justo los que hay que encontrar. Replegar no señala nada, que lo que se
+    // ha pedido es dejar de verlos.
+    setMarcados(repliega ? null : { termino, ids: new Set(todos) });
   }
 
   /**
@@ -477,6 +542,7 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
     // El panel de búsqueda se esconde —no se borra—: aquí sí es el caso de que no caben los
     // dos, que se ha pedido mirar el lienzo y él tapa media pantalla.
     setBusquedaAbierta(false);
+    setMarcados(null); // el camino es lo que se va a mirar de cerca, y solo cabe uno
     setHoja({ tipo: "camino", id, recogida: true });
     setAEnfocar(id);
   }
@@ -505,6 +571,8 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
     setConsulta("");
     setSinNombre(false);
     setCajon(null);
+    setResaltados(null);
+    setMarcados(null);
   }
 
   // --- Gestos: un puntero arrastra, dos pellizcan (vale igual para ratón y dedo) ---
@@ -603,10 +671,11 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
   );
   const { minY, maxY } = limites;
   /**
-   * A quién se está mirando de cerca: los eslabones del camino abierto o el numerador de la
-   * fracción señalada. El camino manda mientras dura, que es lo que se ha ido a leer.
+   * A quién se está mirando de cerca: los eslabones del camino abierto, la fracción por la
+   * que se está pasando o la que se dejó señalada. El camino manda mientras dura, que es lo
+   * que se ha ido a leer, y el vistazo manda sobre lo señalado: es el más reciente.
    */
-  const señalados = camino ? new Set(camino.eslabones.map((e) => e.id)) : resaltados;
+  const señalados = camino ? new Set(camino.eslabones.map((e) => e.id)) : (resaltados ?? marcados?.ids ?? null);
   /** Con algo señalado, todo lo que no es suyo se va al fondo. Sin ello, nada cambia. */
   const opacidadDe = (id?: string) => (!señalados || (id && señalados.has(id)) ? undefined : ATENUADO);
 
@@ -814,8 +883,8 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
         consulta={consulta}
         onTeclear={teclear}
         abierta={busquedaAbierta}
+        onAbrir={abrirIndice}
         setAbierta={setBusquedaAbierta}
-        oculta={hoja !== null && !recogida}
         resultados={resultados}
         sugerencia={sugerencia}
         identidad={enLista}
@@ -835,47 +904,53 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
         }
       />
 
-      <AvisoCelebraciones lista={celebraciones} onAbrir={() => setHoja({ tipo: "celebraciones" })} apartado={apartado} />
+      <AvisoCelebraciones
+        lista={celebraciones}
+        onAbrir={() => abrirHoja({ tipo: "celebraciones" })}
+        apartado={apartado}
+        oculto={busquedaAbierta}
+      />
 
       <button
         type="button"
-        onClick={() => setHoja({ tipo: "capas" })}
+        onClick={() => abrirHoja({ tipo: "capas" })}
         style={{ boxShadow: "var(--sh)" }}
         className={`absolute right-3 bottom-3 h-11 rounded-full border border-[var(--line)] bg-[var(--paper)] px-4 text-[13px] font-medium text-[var(--ink)] ${apartado}`}
       >
         Qué se ve
       </button>
 
-      {/* El chip del Centro: de quién es el árbol que se está leyendo. Es lo único que lo
-          dice cuando su nodo no está en pantalla —la brújula dice hacia dónde, no quién— y
-          abre su ficha, que es de donde sale «Ver el árbol desde aquí». */}
-      <button
-        type="button"
-        onClick={() => abrirFicha(puntoDeVista)}
-        style={{ boxShadow: "var(--sh)" }}
-        className="absolute bottom-3 left-3 flex h-11 max-w-[calc(100vw-10rem)] items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--paper)] pr-4 pl-3 text-[13px] font-semibold"
-      >
-        <span className="h-2 w-2 shrink-0 rounded-full bg-[var(--acc)]" />
-        <Titulo trozos={escribir(puntoDeVista, 0).titulo} className="min-w-0 truncate" />
-      </button>
+      {/* La esquina de abajo a la izquierda es de lo que va y viene. El chip del Centro la
+          ocupaba siempre para decir un nombre que ya dicen su nodo, en acento, y la brújula
+          cuando el nodo se ha ido de pantalla. */}
+      {recogida && hoja?.tipo === "camino" && camino ? (
+        <BarraDeAbajo
+          rotulo={`el camino · ${camino.pasos} ${camino.pasos === 1 ? "paso" : "pasos"}`}
+          titulo={enUnaLinea(hoja.id, LARGO_BARRA)}
+          onAbrir={() => abrirHoja({ tipo: "camino", id: hoja.id })}
+          onCerrar={() => setHoja(null)}
+          cerrar="Cerrar el camino"
+        />
+      ) : (
+        marcados && (
+          <BarraDeAbajo
+            rotulo={`${marcados.ids.size} señalados`}
+            titulo={marcados.termino}
+            onCerrar={() => setMarcados(null)}
+            cerrar="Dejar de señalarlos"
+          />
+        )
+      )}
 
-      {/* Va en la fila del camino recogido y no se pisan: mudar el Centro cierra la hoja, y
-          con ella la barra. */}
+      {/* Encima de esa fila y no en ella: mudar el Centro cierra la hoja y suelta lo
+          señalado, así que el aviso llega con el sitio de abajo ya vacío, pero es una caja
+          de dos líneas y no una píldora. */}
       {aviso && anterior && (
         <AvisoDeMudanza
           centro={nombreDe(puntoDeVista)}
           seEscondieron={seEscondieron}
           onDeshacer={() => centrarEn(anterior)}
           onCerrar={() => setAviso(false)}
-        />
-      )}
-
-      {recogida && hoja?.tipo === "camino" && camino && (
-        <BarraDelCamino
-          nombre={nombreDe(hoja.id)}
-          pasos={camino.pasos}
-          onAbrir={() => setHoja({ tipo: "camino", id: hoja.id })}
-          onCerrar={() => setHoja(null)}
         />
       )}
 
@@ -897,10 +972,10 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
                 setParejas(new Set());
               }}
               onReiniciar={reiniciar}
-              leyenda={<Leyenda />}
+              inicial={personaPorId.get(inicial)?.nombre ?? ""}
             />
           ) : hoja.tipo === "celebraciones" ? (
-            <Celebraciones lista={celebraciones} identidad={escribir} onPersona={abrirFicha} />
+            <Celebraciones lista={celebraciones} hoy={hoy} identidad={escribir} onPersona={abrirFicha} />
           ) : hoja.tipo === "camino" && camino ? (
             <Camino
               datos={camino}
@@ -924,7 +999,7 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
               })}
               anterior={anterior ? { id: anterior, nombre: personaPorId.get(anterior)?.nombre ?? "" } : undefined}
               onCentrar={() => centrarEn(hoja.id)}
-              onCamino={() => setHoja({ tipo: "camino", id: hoja.id })}
+              onCamino={() => abrirHoja({ tipo: "camino", id: hoja.id })}
               onHomonimos={(consulta) => {
                 setHoja(null); // la lista y la ficha no caben a la vez en un móvil
                 if (consulta === null) mostrarSinNombre();
@@ -1027,38 +1102,51 @@ function AvisoDeMudanza({
 }
 
 /**
- * El camino recogido. **Apartar la hoja no puede ser cerrarla:** en un móvil tapa el lienzo
- * entero, así que mirar por dónde va el camino exige quitarla de delante, y cerrarla se
- * llevaría el camino por delante. Va sobre la fila de abajo y no en ella: los dos de esa
- * fila están siempre y esto es de paso.
+ * La esquina de abajo a la izquierda, que es de lo que se está mirando de cerca: el camino
+ * recogido o la fracción señalada. **Los dos no se pisan porque no conviven** —encender uno
+ * apaga al otro, que es lo que el lienzo ya hacía al decidir a quién atenuar—, así que
+ * comparten sitio y forma. Dos líneas y no una: el nombre entero es justo lo que se ha
+ * venido a leer, y en una fila que además esquiva a «Qué se ve» no cabe.
  */
-function BarraDelCamino({
-  nombre,
-  pasos,
+function BarraDeAbajo({
+  rotulo,
+  titulo,
   onAbrir,
   onCerrar,
+  cerrar,
 }: {
-  nombre: string;
-  pasos: number;
-  onAbrir: () => void;
+  /** De qué va, en la línea de arriba: es lo fijo, y lo que no se recorta nunca. */
+  rotulo: string;
+  titulo: string;
+  onAbrir?: () => void;
   onCerrar: () => void;
+  cerrar: string;
 }) {
+  const texto = (
+    <>
+      <span className="block font-[family-name:var(--mono)] text-[10px] tracking-[0.08em] text-[var(--mut)] uppercase">
+        {rotulo}
+      </span>
+      <span className="block truncate text-[13px] font-semibold text-[var(--ink)]">{titulo}</span>
+    </>
+  );
   return (
     <div
       style={{ boxShadow: "var(--sh)" }}
-      className="absolute bottom-[68px] left-3 flex h-10 max-w-[calc(100%-1.5rem)] items-center rounded-full border border-[var(--line)] bg-[var(--paper)] pl-4"
+      // Lo que se reserva a la derecha es «Qué se ve», que está siempre y no se aparta.
+      className="absolute bottom-3 left-3 flex max-w-[calc(100%-7.5rem)] items-center rounded-[14px] border border-[var(--line)] bg-[var(--paper)] py-1.5 pl-4"
     >
-      <button type="button" onClick={onAbrir} className="min-w-0 truncate text-[13px] text-[var(--ink)]">
-        El camino a <b className="font-semibold">{nombre}</b>
-        <span className="text-[var(--mut)]">
-          {" "}
-          · {pasos} {pasos === 1 ? "paso" : "pasos"}
-        </span>
-      </button>
+      {onAbrir ? (
+        <button type="button" onClick={onAbrir} className="min-w-0 text-left">
+          {texto}
+        </button>
+      ) : (
+        <span className="min-w-0">{texto}</span>
+      )}
       <button
         type="button"
         onClick={onCerrar}
-        aria-label="Cerrar el camino"
+        aria-label={cerrar}
         className="ml-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[15px] text-[var(--mut)] hover:text-[var(--ink)]"
       >
         ✕
@@ -1329,25 +1417,3 @@ function ContadorRama({ contador, onAbrir }: { contador: Contador; onAbrir: () =
   );
 }
 
-/** Los cuatro trazos, tal cual salen en el lienzo: es lo único que dice qué significan. */
-const UNIONES: { texto: string; tipo: Union["tipo"]; roto: boolean }[] = [
-  { texto: "Matrimonio", tipo: "matrimonio", roto: false },
-  { texto: "Novios", tipo: "pareja", roto: false },
-  { texto: "Divorcio", tipo: "matrimonio", roto: true },
-  { texto: "Ya no novios", tipo: "pareja", roto: true },
-];
-
-function Leyenda() {
-  return (
-    <div className="grid grid-cols-2 gap-x-2">
-      {UNIONES.map(({ texto, tipo, roto }) => (
-        <div key={texto} className="flex items-center gap-1.5">
-          <svg width={18} height={30} className="shrink-0">
-            <TrazoDePareja x={9} extremos={[2, 28]} tipo={tipo} roto={roto} />
-          </svg>
-          <span className="text-[11px] text-[var(--mut)]">{texto}</span>
-        </div>
-      ))}
-    </div>
-  );
-}

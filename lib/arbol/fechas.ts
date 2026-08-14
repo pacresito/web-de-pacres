@@ -35,6 +35,14 @@ const MESES_LARGOS = [
 export const escribirDiaDeMes = (f: Fecha): string =>
   `${Number(f.slice(8, 10))} de ${MESES_LARGOS[Number(f.slice(5, 7)) - 1]}`;
 
+const DIAS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+
+/**
+ * En qué día de la semana cae. Se lee en UTC —la fecha llega ya resuelta a la zona de
+ * Madrid— porque leerla en la del navegador la correría un día en medio mundo.
+ */
+export const diaDeLaSemana = (f: Fecha): string => DIAS[new Date(`${f}T00:00:00Z`).getUTCDay()];
+
 /**
  * Los años cumplidos entre dos fechas, contados con la precisión que tengan las dos:
  * exacta si a ambas les consta el día, y por años naturales si a alguna solo el año —como

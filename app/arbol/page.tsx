@@ -1,7 +1,5 @@
 import { tieneSesion } from "./auth";
 import LoginForm from "./LoginForm";
-import LogoutButton from "./LogoutButton";
-import TemaBoton from "./TemaBoton";
 import Arbol from "./Arbol";
 import redis from "@/lib/redis";
 import { KEYS } from "@/lib/arbol/keys";
@@ -25,11 +23,11 @@ export default async function ArbolPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <nav className="flex items-center justify-between border-b border-[var(--line)] px-4 py-2">
+      {/* En un móvil la pantalla es el lienzo: el título se va con la barra y arriba manda
+          la regla de generación, que es la que dice dónde estás. Tema y salida viven en
+          «Qué se ve», que es donde se busca lo que se toca una vez. */}
+      <nav className="hidden items-center border-b border-[var(--line)] px-4 py-2 md:flex">
         <h1 className="font-[family-name:var(--serif)] text-[20px]">Árbol genealógico</h1>
-        <div className="flex items-center gap-4">
-          <TemaBoton />          <LogoutButton className="text-sm text-[var(--mut)] hover:text-[var(--ink)]" />
-        </div>
       </nav>
       <div className="min-h-0 flex-1">
         <Arbol data={data} hoy={hoy} />

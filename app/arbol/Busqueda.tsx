@@ -32,8 +32,8 @@ export default function Busqueda({
   consulta,
   onTeclear,
   abierta,
+  onAbrir,
   setAbierta,
-  oculta,
   resultados,
   sugerencia,
   identidad,
@@ -47,9 +47,9 @@ export default function Busqueda({
   consulta: string;
   onTeclear: (texto: string) => void;
   abierta: boolean;
+  /** Desplegarlo es pedir el índice, y donde no caben los dos se lleva por delante la hoja. */
+  onAbrir: () => void;
   setAbierta: (v: boolean) => void;
-  /** Con una hoja abierta el móvil no tiene sitio para las dos; con espacio conviven. */
-  oculta: boolean;
   resultados: Resultado[];
   /** La palabra de la consulta que sí encuentra a alguien, cuando la consulta entera no. */
   sugerencia: string | null;
@@ -68,97 +68,111 @@ export default function Busqueda({
     <div
       // Debajo de la regla, que ocupa el borde de arriba a lo ancho.
       style={{ top: ALTO_REGLA + 12 }}
-      className={`absolute left-3 flex-col items-start gap-2 ${oculta ? "hidden md:flex" : "flex"}`}
+      className="absolute left-3 flex flex-col items-start"
     >
-      <div
-        style={{ boxShadow: "var(--sh)" }}
-        className="flex h-11 w-[min(15rem,calc(100vw-9rem))] items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--paper)] pr-2 pl-3.5"
-      >
-        <span className="text-[15px] leading-none text-[var(--mut)]">⌕</span>
-        <input
-          value={consulta}
-          onChange={(e) => onTeclear(e.target.value)}
-          onFocus={() => setAbierta(true)}
-          onKeyDown={(e) => e.key === "Escape" && setAbierta(false)}
-          placeholder="Nombre, o «hija de…»"
-          className="min-w-0 flex-1 bg-transparent text-[13px] text-[var(--ink)] outline-none placeholder:text-[var(--mut)]"
-        />
-        {(abierta || buscando) && (
-          <button
-            type="button"
-            aria-label="Cerrar la búsqueda"
-            onClick={() => {
-              onTeclear("");
-              setAbierta(false);
-            }}
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[13px] text-[var(--mut)] hover:bg-[var(--soft)] hover:text-[var(--ink)]"
-          >
-            ✕
-          </button>
-        )}
-      </div>
-
-      {abierta && (
+      {/* **Cerrado es una lupa y nada más.** Una caja de texto en reposo pide que se
+          teclee, y aquí lo que hay debajo es un índice de parentescos: quien no sabe
+          ningún nombre no se está perdiendo un campo vacío. Y como no ocupa, se queda
+          puesta con lo que sea que haya abierto encima. */}
+      {!abierta ? (
+        <button
+          type="button"
+          onClick={onAbrir}
+          aria-label="Buscar en el árbol"
+          style={{ boxShadow: "var(--sh)" }}
+          className="flex h-11 w-11 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--paper)] text-[19px] leading-none text-[var(--mut)]"
+        >
+          ⌕
+        </button>
+      ) : (
+        /* **La caja y la lista son una sola pieza.** Eran dos, y entonces la ✕ de la caja
+           parecía de la caja: cerraba una lista que ni siquiera tocaba. */
         <div
           style={{ boxShadow: "var(--sh)" }}
-          className="flex max-h-[min(28rem,65vh)] w-[22rem] max-w-[calc(100vw-1.5rem)] flex-col overflow-y-auto rounded-xl border border-[var(--line)] bg-[var(--paper)] pb-1"
+          className="flex w-[22rem] max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden rounded-[22px] border border-[var(--line)] bg-[var(--paper)]"
         >
-          {cajon ? (
-            <>
-              <button
-                type="button"
-                onClick={onVolverAlIndice}
-                className="flex min-h-10 items-center px-3 font-[family-name:var(--mono)] text-[12px] text-[var(--mut)] hover:text-[var(--ink)]"
-              >
-                ‹ índice de parentescos
-              </button>
-              <Cabecera>
-                {cajon.termino} · {cajon.ids.length}
-              </Cabecera>
-              {cajon.ids.map((id) => (
-                <Fila
-                  key={id}
-                  identidad={identidad(id, LARGO_CONTEXTO)}
-                  relacion={relaciones.get(id)}
-                  esCentro={id === puntoDeVista}
-                  onPulsar={() => onPersona(id)}
-                />
-              ))}
-            </>
-          ) : resultados.length > 0 ? (
-            VIAS.map((via) => {
-              const suyos = resultados.filter((r) => r.via === via);
-              if (suyos.length === 0) return null;
-              return (
-                <div key={via} className="flex flex-col">
-                  <Cabecera>{CABECERAS[via](suyos.length)}</Cabecera>
-                  {suyos.slice(0, TOPE).map((r) => (
-                    <Fila
-                      key={r.id}
-                      identidad={identidad(r.id, LARGO_CONTEXTO)}
-                      relacion={relaciones.get(r.id)}
-                      esCentro={r.id === puntoDeVista}
-                      onPulsar={() => onPersona(r.id)}
-                    />
-                  ))}
-                  {suyos.length > TOPE && (
-                    <p className="px-3 py-2.5 text-[11.5px] leading-[1.5] text-[var(--mut)]">
-                      Y {suyos.length - TOPE} más. Añade un apellido o el nombre de un padre.
-                    </p>
-                  )}
-                </div>
-              );
-            })
-          ) : buscando ? (
-            <SinNadie
-              sugerencia={sugerencia}
-              onSugerencia={() => sugerencia && onTeclear(sugerencia)}
-              onIndice={() => onTeclear("")}
-              onCerrar={() => setAbierta(false)}
+          <div className="flex h-11 shrink-0 items-center gap-2 border-b border-[var(--line)] pr-2 pl-3.5">
+            <span className="text-[15px] leading-none text-[var(--mut)]">⌕</span>
+            {/* Sin foco automático: desplegado se lee el índice de parentescos, y en un
+                móvil el teclado se lo comería antes de que nadie decida teclear. */}
+            <input
+              value={consulta}
+              onChange={(e) => onTeclear(e.target.value)}
+              onKeyDown={(e) => e.key === "Escape" && setAbierta(false)}
+              placeholder="Nombre, o «hija de…»"
+              className="min-w-0 flex-1 bg-transparent text-[13px] text-[var(--ink)] outline-none placeholder:text-[var(--mut)]"
             />
-          ) : (
-            indice
-          )}
+            <button
+              type="button"
+              aria-label="Cerrar la búsqueda"
+              onClick={() => {
+                onTeclear("");
+                setAbierta(false);
+              }}
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[13px] text-[var(--mut)] hover:bg-[var(--soft)] hover:text-[var(--ink)]"
+            >
+              ✕
+            </button>
+          </div>
+
+          <div className="flex max-h-[min(28rem,65vh)] flex-col overflow-y-auto pb-1">
+            {cajon ? (
+              <>
+                <button
+                  type="button"
+                  onClick={onVolverAlIndice}
+                  className="flex min-h-10 items-center px-3 font-[family-name:var(--mono)] text-[12px] text-[var(--mut)] hover:text-[var(--ink)]"
+                >
+                  ‹ índice de parentescos
+                </button>
+                <Cabecera>
+                  {cajon.termino} · {cajon.ids.length}
+                </Cabecera>
+                {cajon.ids.map((id) => (
+                  <Fila
+                    key={id}
+                    identidad={identidad(id, LARGO_CONTEXTO)}
+                    relacion={relaciones.get(id)}
+                    esCentro={id === puntoDeVista}
+                    onPulsar={() => onPersona(id)}
+                  />
+                ))}
+              </>
+            ) : resultados.length > 0 ? (
+              VIAS.map((via) => {
+                const suyos = resultados.filter((r) => r.via === via);
+                if (suyos.length === 0) return null;
+                return (
+                  <div key={via} className="flex flex-col">
+                    <Cabecera>{CABECERAS[via](suyos.length)}</Cabecera>
+                    {suyos.slice(0, TOPE).map((r) => (
+                      <Fila
+                        key={r.id}
+                        identidad={identidad(r.id, LARGO_CONTEXTO)}
+                        relacion={relaciones.get(r.id)}
+                        esCentro={r.id === puntoDeVista}
+                        onPulsar={() => onPersona(r.id)}
+                      />
+                    ))}
+                    {suyos.length > TOPE && (
+                      <p className="px-3 py-2.5 text-[11.5px] leading-[1.5] text-[var(--mut)]">
+                        Y {suyos.length - TOPE} más. Añade un apellido o el nombre de un padre.
+                      </p>
+                    )}
+                  </div>
+                );
+              })
+            ) : buscando ? (
+              <SinNadie
+                sugerencia={sugerencia}
+                onSugerencia={() => sugerencia && onTeclear(sugerencia)}
+                onIndice={() => onTeclear("")}
+                onCerrar={() => setAbierta(false)}
+              />
+            ) : (
+              indice
+            )}
+          </div>
         </div>
       )}
     </div>

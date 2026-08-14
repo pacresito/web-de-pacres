@@ -12,6 +12,25 @@ import { ALTO_BLOQUE, ANCHO_BLOQUE, type Bloque } from "@/lib/arbol/bloques";
 const SANGRADO = 12;
 const MARCA = { ancho: 7, alto: 12, hueco: 3 };
 
+/**
+ * El título nombra a dos personas y no se recorta: **encoge**. Dos nombres compuestos
+ * —«de Miguel Ángel y María Antonia»— piden medio recuadro más del que hay, y las dos
+ * salidas de siempre son peores que esta: acortarlos en el dato le cambia el nombre a
+ * alguien en toda la app, y cortarlos con «…» tapa justo la mitad que distingue a una
+ * pareja de la de al lado. Un cuerpo más pequeño se lee; medio nombre, no.
+ */
+const TITULO = { cuerpo: 17, minimo: 12, ancho: ANCHO_BLOQUE - SANGRADO * 2 };
+/**
+ * Lo que mide un carácter por cada píxel de cuerpo, medido en el navegador sobre los 98
+ * títulos que caben en pantalla: el más apretado da 0,500 y el más suelto 0,486, así que
+ * esto lleva su pizca de sobra. El nodo mide 0,492 y no es el mismo número: allí la letra
+ * es más pequeña y el hinting la ensancha menos.
+ */
+const PASO = 0.51;
+
+const cuerpoDelTitulo = (titulo: string): number =>
+  +Math.max(TITULO.minimo, Math.min(TITULO.cuerpo, TITULO.ancho / (titulo.length * PASO))).toFixed(2);
+
 export default function Bloques({
   bloques,
   conTitulo,
@@ -60,7 +79,7 @@ function Recuadro({
       />
       {conTitulo && (
         <>
-          <text x={izquierda} y={bloque.y - 6} fontSize={17} fontWeight={600} className="nm">
+          <text x={izquierda} y={bloque.y - 6} fontSize={cuerpoDelTitulo(bloque.titulo)} fontWeight={600} className="nm">
             {bloque.titulo}
           </text>
           <text x={izquierda} y={bloque.y + 10} fontSize={12} className="ct">

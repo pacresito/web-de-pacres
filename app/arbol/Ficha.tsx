@@ -63,7 +63,7 @@ export default function Ficha({
             {anterior && <Accion texto={`Volver a ver desde ${anterior.nombre}`} nota="↩" onPulsar={onDevolver} />}
           </>
         ) : (
-          <Accion texto="Ver el árbol desde aquí" nota="se recoloca" primaria onPulsar={onCentrar} />
+          <Accion texto="Ver el árbol desde aquí" primaria onPulsar={onCentrar} />
         )}
         {datos.homonimos && (
           <Accion texto={datos.homonimos.texto} nota="⌕" onPulsar={() => onHomonimos(datos.homonimos!.consulta)} />

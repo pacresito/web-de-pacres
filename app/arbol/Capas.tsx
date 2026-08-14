@@ -7,6 +7,11 @@
 
 import type { ModoFechas } from "@/lib/arbol/fechas";
 import type { ModoApellidos } from "@/lib/arbol/personas";
+import LogoutButton from "./LogoutButton";
+import TemaBoton from "./TemaBoton";
+
+/** La fila de la hoja: todo lo que se pulsa aquí mide y se pinta igual. */
+const FILA = "flex min-h-11 items-center rounded-lg bg-[var(--soft)] px-3 text-left text-[13px] text-[var(--ink)]";
 
 export default function Capas({
   fechas,
@@ -19,7 +24,7 @@ export default function Capas({
   todoDesplegado,
   onDesplegarTodo,
   onReiniciar,
-  leyenda,
+  inicial,
 }: {
   fechas: ModoFechas;
   setFechas: (f: ModoFechas) => void;
@@ -32,8 +37,8 @@ export default function Capas({
   todoDesplegado: boolean;
   onDesplegarTodo: () => void;
   onReiniciar: () => void;
-  /** Los cuatro trazos tal cual salen en el lienzo; los dibuja quien los dibuja allí. */
-  leyenda: React.ReactNode;
+  /** Cómo se llama el punto de vista de entrada, que es al que devuelve reiniciar. */
+  inicial: string;
 }) {
   return (
     <div className="flex flex-col">
@@ -54,7 +59,7 @@ export default function Capas({
         />
       </Tramo>
 
-      <Tramo titulo="Quién sale">
+      <Tramo titulo="El árbol">
         {/* Se enuncia por lo que añade, no por lo que quita: apagado es el estado de
             entrada, y un interruptor que arranca encendido para esconder gente se lee
             como si alguien hubiera tocado algo. */}
@@ -64,26 +69,20 @@ export default function Capas({
           activo={!ocultar}
           onPulsar={() => setOcultar(!ocultar)}
         />
-      </Tramo>
-
-      <Tramo titulo="El árbol">
-        <Interruptor
-          titulo="Desplegar todo"
-          nota="trae de golpe a toda la familia alcanzable"
-          activo={todoDesplegado}
-          onPulsar={onDesplegarTodo}
-        />
-        <button
-          type="button"
-          onClick={onReiniciar}
-          className="flex min-h-11 items-center rounded-lg bg-[var(--soft)] px-3 text-left text-[13px] text-[var(--ink)]"
-        >
+        <Interruptor titulo="Desplegar todo" activo={todoDesplegado} onPulsar={onDesplegarTodo} />
+        <button type="button" onClick={onReiniciar} className={FILA}>
           Reiniciar
-          <span className="ml-auto text-[11.5px] text-[var(--mut)]">vuelve al punto de vista de entrada</span>
+          <span className="ml-auto text-[11.5px] text-[var(--mut)]">vuelve al punto de vista de {inicial}</span>
         </button>
       </Tramo>
 
-      <Tramo titulo="Uniones">{leyenda}</Tramo>
+      {/* Los dos botones que no son del árbol sino de la sesión. Viven aquí y no en una
+          barra de arriba: el borde de la pantalla es del lienzo, y esto se toca dos veces
+          al año. */}
+      <Tramo titulo="La sesión">
+        <TemaBoton className={FILA} conTexto />
+        <LogoutButton className={FILA} />
+      </Tramo>
     </div>
   );
 }
@@ -107,7 +106,8 @@ function Interruptor({
   onPulsar,
 }: {
   titulo: string;
-  nota: string;
+  /** Solo la lleva el interruptor que tiene un dato que dar; explicarse no es un dato. */
+  nota?: string;
   activo: boolean;
   onPulsar: () => void;
 }) {
@@ -116,13 +116,13 @@ function Interruptor({
       type="button"
       onClick={onPulsar}
       aria-pressed={activo}
-      className={`flex min-h-13 items-center gap-3 rounded-lg px-3 text-left ${
+      className={`flex items-center gap-3 rounded-lg px-3 text-left ${nota ? "min-h-13" : "min-h-11"} ${
         activo ? "bg-[var(--ink)] text-[var(--paper)]" : "bg-[var(--soft)] text-[var(--ink)]"
       }`}
     >
       <span className="flex flex-col gap-0.5">
         <span className="text-[13px]">{titulo}</span>
-        <span className={`text-[11.5px] ${activo ? "opacity-70" : "text-[var(--mut)]"}`}>{nota}</span>
+        {nota && <span className={`text-[11.5px] ${activo ? "opacity-70" : "text-[var(--mut)]"}`}>{nota}</span>}
       </span>
       {/* La pista y su bolita: 44 × 26, que es lo que se toca sin apuntar. */}
       <span

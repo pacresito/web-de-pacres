@@ -80,7 +80,7 @@ export const Cabecera = ({ children }: { children: React.ReactNode }) => (
   </p>
 );
 
-/** Lo que se puede hacer desde una hoja, siempre con la nota de qué pasa al pulsarlo. */
+/** Lo que se puede hacer desde una hoja. */
 export function Accion({
   texto,
   nota,
@@ -88,7 +88,8 @@ export function Accion({
   onPulsar,
 }: {
   texto: string;
-  nota: string;
+  /** El dato que la acción trae de su cosecha —«abre 3 más»—, o el glifo de a dónde lleva. */
+  nota?: string;
   primaria?: boolean;
   onPulsar: () => void;
 }) {
@@ -103,9 +104,11 @@ export function Accion({
       }`}
     >
       {texto}
-      <span className={`ml-auto font-[family-name:var(--mono)] text-[11px] ${primaria ? "opacity-70" : "text-[var(--mut)]"}`}>
-        {nota}
-      </span>
+      {nota && (
+        <span className={`ml-auto font-[family-name:var(--mono)] text-[11px] ${primaria ? "opacity-70" : "text-[var(--mut)]"}`}>
+          {nota}
+        </span>
+      )}
     </button>
   );
 }

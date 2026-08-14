@@ -35,6 +35,7 @@ export const RAMAS: Rama[] = [
   // hereda la rama de su hijo político —la rama solo salta al cónyuge y nunca de segunda
   // mano—, así que o es rama o se queda fuera del reparto.
   { nombre: "Sala", ancestro: "p442" },
+  { nombre: "Baños", ancestro: "p461" }, // Francisco Baños García, el padre de Mar
 ];
 
 export interface Pertenencia {
@@ -70,6 +71,8 @@ export function calcularRamas(g: Grafo, ramas = RAMAS): Map<string, Pertenencia>
 /** Una rama vista desde fuera: lo que pinta el mapa de la escala más lejana. */
 export interface Reparto {
   nombre: string;
+  /** De quién sale el apellido. Es lo que decide si la rama se pinta: ver `ramaVisible`. */
+  ancestro: string;
   /** Los suyos, ordenados como vengan del reparto: es la lista que se abre al tocarla. */
   gente: string[];
   /**
@@ -87,16 +90,27 @@ export function repartoDeRamas(
   ramas = RAMAS,
 ): Reparto[] {
   const suyas = pertenencias.get(puntoDeVista)?.ramas ?? [];
-  return ramas.map(({ nombre }) => {
+  return ramas.map(({ nombre, ancestro }) => {
     const gente = [...pertenencias].filter(([, p]) => p.ramas.includes(nombre));
     return {
       nombre,
+      ancestro,
       gente: gente.map(([id]) => id),
       compartidos: gente.filter(([, p]) => p.ramas.length > 1).length,
       tuya: suyas.includes(nombre),
     };
   });
 }
+
+/**
+ * Si el mapa pinta esa rama con el filtro puesto: **solo cuando se puede ver a quien
+ * estrena su apellido**. Sin la regla, la familia política levanta rama propia con los
+ * dos o tres suyos que asoman como cónyuges —los Cardona y los Sala de Pablo—, y una
+ * rama que se llama por un apellido de nadie a quien el árbol enseña no es una rama, es
+ * el rastro de un matrimonio. Sin filtro no hay nada que decidir: están todos.
+ */
+export const ramaVisible = (rama: Reparto, dentro: Set<string> | null): boolean =>
+  rama.gente.length > 0 && (!dentro || dentro.has(rama.ancestro));
 
 /** Quién desciende de su antepasado —él incluido— menos la rama que se desgaja de ella. */
 function estirpe(g: Grafo, { nombre, ancestro, excluye }: Rama): Set<string> {

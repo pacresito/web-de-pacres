@@ -6,17 +6,20 @@
 // identidad, relación— son las mismas de la ficha, que es donde acaba cada fila.
 
 import { anuncio, esFelicitacion, esTuDia, felicitacion, VENTANA, type Celebracion } from "@/lib/arbol/celebraciones";
-import { escribirCorto } from "@/lib/arbol/fechas";
+import { diaDeLaSemana, escribirCorto, escribirDiaDeMes, type Fecha } from "@/lib/arbol/fechas";
 import { LARGOS_FILA, type Identidad } from "@/lib/arbol/identidad";
 import { BloqueIdentidad } from "./Identidad";
 import { ALTO_REGLA } from "./Regla";
 
 export default function Celebraciones({
   lista,
+  hoy,
   identidad,
   onPersona,
 }: {
   lista: Celebracion[];
+  /** El día del servidor: la lista cuenta en «faltan», y para leerla hay que saber desde cuándo. */
+  hoy: Fecha;
   /** El bloque de identidad de quien celebra, con el hueco que la fila le deja abajo. */
   identidad: (id: string, largoContexto: number) => Identidad;
   onPersona: (id: string) => void;
@@ -24,8 +27,11 @@ export default function Celebraciones({
   return (
     <div className="flex flex-col">
       <h2 className="font-[family-name:var(--serif)] text-[24px] leading-[1.15]">Lo que se celebra</h2>
+      {/* Qué día es hoy y cuánto falta para lo primero. La ventana y la familia que entra
+          no se cuentan: se ven en la lista, y quien las eche de menos no las echa aquí. */}
       <p className="mt-1 text-[12.5px] text-[var(--mut)]">
-        Los próximos {VENTANA} días, de la familia cercana.
+        Hoy es {diaDeLaSemana(hoy)}, {escribirDiaDeMes(hoy)}
+        {lista.length > 0 && ` · ${loSiguiente(lista[0].faltan)}`}
       </p>
       <div className="mt-3.5 flex flex-col gap-1">
         {lista.length === 0 ? (
@@ -37,6 +43,10 @@ export default function Celebraciones({
     </div>
   );
 }
+
+/** Cuánto queda para lo primero de la lista, que es lo que se viene a mirar. */
+const loSiguiente = (faltan: number): string =>
+  faltan === 0 ? "hay un evento hoy" : faltan === 1 ? "siguiente evento mañana" : `siguiente evento en ${faltan} días`;
 
 /** Por poco que le quite la relación, la segunda línea sigue teniendo que identificar. */
 const HUECO_MINIMO = 16;
@@ -104,11 +114,14 @@ export function AvisoCelebraciones({
   lista,
   onAbrir,
   apartado,
+  oculto,
 }: {
   lista: Celebracion[];
   onAbrir: () => void;
   /** Lo que se corre a la izquierda cuando la hoja ocupa su columna de la derecha. */
   apartado: string;
+  /** El índice desplegado se come la fila de arriba entera: donde no caben, este se va. */
+  oculto: boolean;
 }) {
   const tuDia = lista.find((c) => c.faltan === 0 && esTuDia(c));
   return (
@@ -117,9 +130,9 @@ export function AvisoCelebraciones({
       onClick={onAbrir}
       // Debajo de la regla, como la búsqueda: el borde de arriba es suyo a lo ancho.
       style={{ boxShadow: "var(--sh)", top: ALTO_REGLA + 12 }}
-      className={`absolute right-3 flex h-11 max-w-[calc(100vw-1.5rem)] items-center rounded-full bg-[var(--paper)] px-4 text-[13px] font-medium text-[var(--ink)] ${apartado} ${
-        tuDia ? "border-[1.5px] border-[var(--ink)]" : "border border-[var(--line)]"
-      }`}
+      className={`absolute right-3 h-11 max-w-[calc(100vw-1.5rem)] items-center rounded-full bg-[var(--paper)] px-4 text-[13px] font-medium text-[var(--ink)] ${apartado} ${
+        oculto ? "hidden md:flex" : "flex"
+      } ${tuDia ? "border-[1.5px] border-[var(--ink)]" : "border border-[var(--line)]"}`}
     >
       {tuDia ? anuncio(tuDia) : `${lista.length} en ${VENTANA} días`}
     </button>
