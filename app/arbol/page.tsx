@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { tieneSesion } from "./auth";
 import LoginForm from "./LoginForm";
 import LogoutButton from "./LogoutButton";
@@ -12,9 +11,8 @@ export default async function ArbolPage() {
   const auth = await tieneSesion();
   if (!auth) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-7 p-6">
+      <div className="flex min-h-screen flex-col items-center justify-center p-6">
         <LoginForm />
-        <Link href="/lab" className="text-sm text-[var(--mut)] hover:text-[var(--ink)]">Volver</Link>
       </div>
     );
   }
@@ -30,9 +28,7 @@ export default async function ArbolPage() {
       <nav className="flex items-center justify-between border-b border-[var(--line)] px-4 py-2">
         <h1 className="font-[family-name:var(--serif)] text-[20px]">Árbol genealógico</h1>
         <div className="flex items-center gap-4">
-          <TemaBoton />
-          <Link href="/lab" className="text-sm text-[var(--mut)] hover:text-[var(--ink)]">Volver</Link>
-          <LogoutButton className="text-sm text-[var(--mut)] hover:text-[var(--ink)]" />
+          <TemaBoton />          <LogoutButton className="text-sm text-[var(--mut)] hover:text-[var(--ink)]" />
         </div>
       </nav>
       <div className="min-h-0 flex-1">

@@ -4,21 +4,14 @@
 // proporcional a su gente. No es el árbol encogido —a esa altura no quedaría nada legible—
 // sino un mapa aparte, y por eso se pinta en HTML sobre el lienzo y no dentro de él.
 //
-// **El mapa suma más que el árbol y lo dice.** Doce personas están en dos ramas y salen en
-// las dos, así que los rectángulos suman 445 donde la familia son 428. Cada uno escribe
-// cuántos de los suyos comparte y el pie explica por qué no cierra: contar dos veces y
-// decirlo es más honesto que elegir una rama por ellos.
+// **El mapa suma más que el árbol.** Quien desciende de dos ramas sale en las dos, y cada
+// rectángulo escribe cuántos de los suyos comparte: contar dos veces y decirlo es más
+// honesto que elegir una rama por ellos.
 
 import type { Reparto } from "@/lib/arbol/ramas";
 import { ALTO_REGLA } from "./Regla";
 
 export default function Ramas({ reparto, onRama }: { reparto: Reparto[]; onRama: (rama: Reparto) => void }) {
-  // Quien está en tres ramas suma dos pertenencias de más y sigue siendo una persona: lo
-  // que sobra en el reparto no es el número de gente que se cuenta dos veces.
-  const veces = new Map<string, number>();
-  for (const rama of reparto) for (const id of rama.gente) veces.set(id, (veces.get(id) ?? 0) + 1);
-  const total = [...veces.values()].reduce((n, v) => n + v, 0);
-  const enVarias = [...veces.values()].filter((v) => v > 1).length;
   return (
     // Aquí la regla no se pinta, pero la búsqueda y el aviso siguen bajados por ella: el
     // hueco que reserva el mapa es el que ocupan ellos, no el que ocupa la franja.
@@ -49,10 +42,6 @@ export default function Ramas({ reparto, onRama }: { reparto: Reparto[]; onRama:
           </span>
         </button>
       ))}
-      <p className="px-1 text-center text-[11px] leading-[1.4] text-[var(--mut)]">
-        Suman {total} y la familia son {veces.size}: {enVarias} personas descienden de más de una rama y salen en todas
-        las suyas.
-      </p>
     </div>
   );
 }

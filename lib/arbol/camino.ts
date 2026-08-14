@@ -14,6 +14,8 @@ export interface Eslabon {
   paso?: Paso;
   /** Ya declinada y lista para leer, del anterior a este: «hija de», «casado con». */
   frase?: string;
+  /** Por qué unión se llega, que es lo que el lienzo necesita para saber qué trazo se recorre. */
+  unionId?: string;
 }
 
 export interface Camino {
@@ -50,7 +52,7 @@ export function caminoEntre(g: Grafo, desde: string, hasta: string): Camino {
   const eslabones: Eslabon[] = [];
   for (let id = hasta; id !== desde; ) {
     const p = previo.get(id)!;
-    eslabones.unshift({ id, paso: p.paso, frase: fraseDe(g, p.de, p) });
+    eslabones.unshift({ id, paso: p.paso, frase: fraseDe(g, p.de, p), unionId: p.unionId });
     id = p.de;
   }
   eslabones.unshift({ id: desde });
@@ -60,6 +62,49 @@ export function caminoEntre(g: Grafo, desde: string, hasta: string): Camino {
   const porParte =
     eslabones.length > 2 && primero?.paso === "progenitor" ? declinado(g, primero.id, "de padre", "de madre") : undefined;
   return { eslabones, pasos: eslabones.length - 1, porParte };
+}
+
+/** Por dónde pasa el camino en el dibujo, para poder pintarlo aparte y de una pieza. */
+export interface TrazosDelCamino {
+  nodos: Set<string>;
+  /**
+   * De cada trazo de pareja, a cuáles de sus dos miembros llega el camino. Subir o bajar
+   * llega solo a uno: la bajada hacia el hijo arranca de la mitad del trazo, así que del
+   * progenitor a esa mitad hay camino y de ahí a su pareja no.
+   */
+  uniones: Map<string, Set<string>>;
+  /**
+   * Bajadas de una unión a un hijo suyo, como `unionId:hijoId`, y desde dónde son camino.
+   * **Entre hermanos, desde el canal:** el paso va de uno al otro por el hueco entre
+   * columnas, y el tramo que sale del ancla apunta a unos padres por los que no se pasa.
+   */
+  bajadas: Map<string, "entera" | "desdeElCanal">;
+}
+
+/** Qué del dibujo es camino: lo demás no se pinta distinto, se queda al fondo. */
+export function trazosDelCamino({ eslabones }: Camino): TrazosDelCamino {
+  const trazos: TrazosDelCamino = { nodos: new Set(eslabones.map((e) => e.id)), uniones: new Map(), bajadas: new Map() };
+  const tocar = (unionId: string, ...quienes: string[]) => {
+    const suyos = trazos.uniones.get(unionId) ?? new Set<string>();
+    for (const q of quienes) suyos.add(q);
+    trazos.uniones.set(unionId, suyos);
+  };
+  eslabones.forEach((e, i) => {
+    if (!e.paso || !e.unionId) return;
+    const anterior = eslabones[i - 1].id;
+    // La bajada muere en el hijo, así que la que se recorre es la del que lo sea de los dos.
+    if (e.paso === "hermano") {
+      trazos.bajadas.set(`${e.unionId}:${anterior}`, "desdeElCanal");
+      trazos.bajadas.set(`${e.unionId}:${e.id}`, "desdeElCanal");
+    } else if (e.paso === "pareja") {
+      tocar(e.unionId, anterior, e.id);
+    } else {
+      const [hijo, progenitor] = e.paso === "progenitor" ? [anterior, e.id] : [e.id, anterior];
+      trazos.bajadas.set(`${e.unionId}:${hijo}`, "entera");
+      tocar(e.unionId, progenitor);
+    }
+  });
+  return trazos;
 }
 
 /**

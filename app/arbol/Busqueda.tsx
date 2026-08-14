@@ -36,7 +36,6 @@ export default function Busqueda({
   oculta,
   resultados,
   sugerencia,
-  onSinNombre,
   identidad,
   relaciones,
   puntoDeVista,
@@ -54,7 +53,6 @@ export default function Busqueda({
   resultados: Resultado[];
   /** La palabra de la consulta que sí encuentra a alguien, cuando la consulta entera no. */
   sugerencia: string | null;
-  onSinNombre: () => void;
   identidad: (id: string, largoContexto: number) => Identidad;
   relaciones: Map<string, Relacion>;
   puntoDeVista: string;
@@ -155,7 +153,6 @@ export default function Busqueda({
             <SinNadie
               sugerencia={sugerencia}
               onSugerencia={() => sugerencia && onTeclear(sugerencia)}
-              onSinNombre={onSinNombre}
               onIndice={() => onTeclear("")}
               onCerrar={() => setAbierta(false)}
             />
@@ -201,20 +198,18 @@ function Fila({
 }
 
 /**
- * El callejón sin salida, con sus salidas. Las tres primeras son las tres formas de llegar a
- * alguien que no son teclear su nombre; la última existe porque en un móvil el panel tapa el
- * árbol y quedarse encerrado en una búsqueda vacía es la peor manera de acabar aquí.
+ * El callejón sin salida, con sus salidas: las formas de llegar a alguien que no son teclear
+ * su nombre, y volver al árbol —que existe porque en un móvil el panel lo tapa, y quedarse
+ * encerrado en una búsqueda vacía es la peor manera de acabar aquí—.
  */
 function SinNadie({
   sugerencia,
   onSugerencia,
-  onSinNombre,
   onIndice,
   onCerrar,
 }: {
   sugerencia: string | null;
   onSugerencia: () => void;
-  onSinNombre: () => void;
   onIndice: () => void;
   onCerrar: () => void;
 }) {
@@ -222,13 +217,10 @@ function SinNadie({
     <div className="px-4 pt-4 pb-3">
       <p className="font-[family-name:var(--serif)] text-[22px] leading-[1.2]">Nadie se llama así</p>
       <p className="mt-2.5 text-[13px] leading-[1.55] text-[var(--mut)]">
-        Se busca por el nombre, por los apellidos —también los que se deducen del árbol— y por de quién es cada uno. Aun
-        así, a <b className="font-semibold text-[var(--ink)]">55 personas</b> el documento no les da apellido y a{" "}
-        <b className="font-semibold text-[var(--ink)]">cuatro</b> ni nombre.
+        Se busca por el nombre, por los apellidos y por de quién es cada uno.
       </p>
       <div className="mt-4 flex flex-col gap-[9px]">
         {sugerencia && <Accion texto={`Buscar solo «${sugerencia}»`} nota="⌕" onPulsar={onSugerencia} />}
-        <Accion texto="Ver las cuatro personas sin nombre" nota="›" onPulsar={onSinNombre} />
         <Accion texto="Índice de parentescos" nota="›" onPulsar={onIndice} />
         <Accion texto="Volver al árbol" nota="↩" onPulsar={onCerrar} />
       </div>

@@ -21,7 +21,7 @@ import {
   type Rumbo,
   type Vista,
 } from "@/lib/arbol/camara";
-import { caminoEntre } from "@/lib/arbol/camino";
+import { caminoEntre, trazosDelCamino } from "@/lib/arbol/camino";
 import { cintaDe } from "@/lib/arbol/cinta";
 import { FECHAS_POR_DEFECTO, type ModoFechas } from "@/lib/arbol/fechas";
 import { proximasCelebraciones } from "@/lib/arbol/celebraciones";
@@ -41,6 +41,7 @@ import {
   RADIO_SALTO,
   type Contador,
   type NodoLayout,
+  type Vinculo,
 } from "@/lib/arbol/layout";
 import { calcularRecuento, unionesHasta, type Fraccion } from "@/lib/arbol/recuento";
 import type { ArbolData, Union } from "@/lib/arbol/tree";
@@ -93,7 +94,12 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
    * celebra. Dos a la vez se pisarían, y la de debajo no se leería ni se podría cerrar.
    */
   const [hoja, setHoja] = useState<
-    { tipo: "ficha" | "camino"; id: string } | { tipo: "celebraciones" } | { tipo: "capas" } | null
+    | { tipo: "ficha"; id: string }
+    /** Recogida es la hoja apartada para mirar el lienzo: el camino sigue abierto y pintado. */
+    | { tipo: "camino"; id: string; recogida?: boolean }
+    | { tipo: "celebraciones" }
+    | { tipo: "capas" }
+    | null
   >(null);
   /** Lo que se resalta del lienzo: el numerador de la fracción señalada, o nada. */
   const [resaltados, setResaltados] = useState<Set<string> | null>(null);
@@ -136,9 +142,11 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
     for (const bloque of mapa.bloques) for (const id of [...bloque.hermanos, ...bloque.parejas]) suyo.set(id, bloque.id);
     return suyo;
   }, [mapa]);
+  /** Quién está puesto en el lienzo ahora mismo: lo que no esté, hay que abrirlo para verlo. */
+  const dibujado = useMemo(() => new Set(layout.nodos.map((n) => n.id)), [layout]);
   const cuentas = useMemo(
-    () => calcularRecuento(grafo, { puntoDeVista, ocultarNoConectados }, new Set(layout.nodos.map((n) => n.id))),
-    [grafo, puntoDeVista, ocultarNoConectados, layout],
+    () => calcularRecuento(grafo, { puntoDeVista, ocultarNoConectados }, dibujado),
+    [grafo, puntoDeVista, ocultarNoConectados, dibujado],
   );
   const celebraciones = useMemo(
     () => proximasCelebraciones(grafo, puntoDeVista, hoy),
@@ -149,6 +157,10 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
     () => (hoja?.tipo === "camino" ? caminoEntre(grafo, puntoDeVista, hoja.id) : null),
     [grafo, puntoDeVista, hoja],
   );
+  /** Por dónde va por el lienzo, que es lo único suyo que se queda delante. */
+  const trazos = useMemo(() => (camino ? trazosDelCamino(camino) : null), [camino]);
+  /** La hoja apartada para poder mirar el lienzo: ni tapa, ni desplaza, ni deja de contar. */
+  const recogida = hoja?.tipo === "camino" && hoja.recogida === true;
   // Las ramas no dependen de quién mire: se derivan del grafo y valen para todo el árbol.
   const pertenencias = useMemo(() => calcularRamas(grafo), [grafo]);
   /** Cuánta familia deja fuera el filtro, que es lo que su interruptor tiene que decir. */
@@ -293,9 +305,11 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
 
   // Lo que el gesto de volver cierra: la capa de más arriba y solo esa, en el orden en que
   // se ven —lo que tapa antes que lo que flota debajo—.
-  const apiladas = (busquedaAbierta ? 1 : 0) + (cajon ? 1 : 0) + (hoja ? 1 : 0) + (hoja?.tipo === "camino" ? 1 : 0);
+  const apiladas =
+    (busquedaAbierta ? 1 : 0) + (cajon ? 1 : 0) + (hoja ? 1 : 0) + (hoja?.tipo === "camino" ? 1 : 0) + (recogida ? 1 : 0);
   useAtras(apiladas, () => {
-    if (hoja?.tipo === "camino") setHoja({ tipo: "ficha", id: hoja.id });
+    if (recogida && hoja?.tipo === "camino") setHoja({ tipo: "camino", id: hoja.id });
+    else if (hoja?.tipo === "camino") setHoja({ tipo: "ficha", id: hoja.id });
     else if (hoja) setHoja(null);
     else if (cajon) setCajon(null);
     else if (busquedaAbierta) setBusquedaAbierta(false);
@@ -401,6 +415,25 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
     setAEnfocar(gente[0]);
   }
 
+  /**
+   * Ir a ver un camino al lienzo: se abre lo justo para que estén sus eslabones, se recoge la
+   * hoja y se enfoca en él. Las dos cosas van juntas porque abrir lo que la hoja tapa no
+   * enseña nada, y en un móvil la tapa entera.
+   */
+  function verCaminoEnElArbol(id: string, gente: string[]) {
+    // A quien esconde el filtro no lo trae ninguna unión: hay que quitarlo, o se abrirían
+    // ramas para llegar a alguien que sigue sin poder salir.
+    const dentro = visibles(grafo, puntoDeVista);
+    if (gente.some((p) => !dentro.has(p))) setOcultarNoConectados(false);
+    abrirRamas(unionesHasta(grafo, puntoDeVista, gente));
+    setParada("personas");
+    // El panel de búsqueda se esconde —no se borra—: aquí sí es el caso de que no caben los
+    // dos, que se ha pedido mirar el lienzo y él tapa media pantalla.
+    setBusquedaAbierta(false);
+    setHoja({ tipo: "camino", id, recogida: true });
+    setAEnfocar(id);
+  }
+
   /** El «+» trae a la pareja y nada más: los hijos siguen detrás de su propio contador. */
   function mostrarPareja(unionId: string) {
     setParejas((previas) => new Set(previas).add(unionId));
@@ -501,7 +534,7 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
   }, []);
 
   // Con la hoja hecha columna, lo que flota a la derecha se corre para no quedar debajo.
-  const apartado = hoja ? "md:right-[392px]" : "";
+  const apartado = hoja && !recogida ? "md:right-[392px]" : "";
   const brujula = brujulaDe(vista, tamano.w, tamano.h);
   const transformacion = `translate(${tamano.w / 2} ${tamano.h / 2}) scale(${vista.escala}) translate(${-centro.x} ${-centro.y})`;
   const dibujados = parada === "bloques" ? mapa.bloques : layout.nodos;
@@ -519,8 +552,13 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
     { x: centro.x, y: centro.y, alto: tamano.h / vista.escala },
   );
   const { minY, maxY } = limites;
-  /** Con una fracción señalada, todo lo que no es suyo se va al fondo. Sin ella, nada cambia. */
-  const opacidadDe = (id?: string) => (!resaltados || (id && resaltados.has(id)) ? undefined : ATENUADO);
+  /**
+   * A quién se está mirando de cerca: los eslabones del camino abierto o el numerador de la
+   * fracción señalada. El camino manda mientras dura, que es lo que se ha ido a leer.
+   */
+  const señalados = camino ? new Set(camino.eslabones.map((e) => e.id)) : resaltados;
+  /** Con algo señalado, todo lo que no es suyo se va al fondo. Sin ello, nada cambia. */
+  const opacidadDe = (id?: string) => (!señalados || (id && señalados.has(id)) ? undefined : ATENUADO);
 
   return (
     <div ref={contenedor} className="relative h-full w-full overflow-hidden bg-[var(--paper)]">
@@ -530,7 +568,9 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
         height={tamano.h}
         // Bajo la hoja el árbol sigue viéndose: tapa, no sustituye. Con sitio ni eso —la
         // hoja se ha apartado a su columna y el lienzo se queda entero.
-        className={`block touch-none cursor-grab select-none active:cursor-grabbing ${hoja ? "opacity-30 md:opacity-100" : ""}`}
+        className={`block touch-none cursor-grab select-none active:cursor-grabbing ${
+          hoja && !recogida ? "opacity-30 md:opacity-100" : ""
+        }`}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -567,23 +607,51 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
           <>
           {/* El reparto arranca en la propia unión y muere en el borde de cada hijo: los
               tramos que cruzan un nodo quedan tapados por él, y lo que se ve toca a los dos. */}
-          <g opacity={opacidadDe()}>
+          <g opacity={camino ? ATENUADO : opacidadDe()}>
             {layout.vinculos.map((v) => (
               <g key={v.unionId} className={v.directo ? "lk-dir" : "lk"}>
                 {v.hijos.map((h, i) => (
-                  <path
-                    key={i}
-                    d={
-                      h.recto
-                        ? `M ${v.x} ${v.y} ${horizontal(h.x - h.ancho / 2, v.y, h.saltos)}`
-                        : `M ${v.x} ${v.y} ${horizontal(v.canal, v.y, v.saltos)} V ${h.y} ${horizontal(h.x - h.ancho / 2, h.y, h.saltos)}`
-                    }
-                  />
+                  <path key={i} d={bajada(v, h)} />
                 ))}
                 {v.pareja && <TrazoDePareja x={v.x} extremos={entreBordes(v.pareja)} tipo={v.tipo} roto={v.roto} />}
               </g>
             ))}
           </g>
+
+          {/* El camino, encima de lo demás y **de una pieza**: dibujarlo con los trazos de
+              cada unión le cambiaba el peso a media travesía según por dónde pasara, y una
+              línea que engorda y adelgaza no se lee como una sola. */}
+          {trazos && (
+            <g className="lk-cam">
+              {layout.vinculos.map((v) => (
+                <g key={v.unionId}>
+                  {v.hijos.map((h) => {
+                    const desde = trazos.bajadas.get(`${v.unionId}:${h.id}`);
+                    return desde && <path key={h.id} d={bajada(v, h, desde === "desdeElCanal")} />;
+                  })}
+                  {/* De la pareja, solo la mitad que llega a quien está en el camino: la otra
+                      va a su pareja, y hasta ella no se pasa. Muere en el ancla, que es de
+                      donde sale la bajada —o en el corazón, si fueron novios—. */}
+                  {v.pareja &&
+                    v.miembros?.map((m, i) => {
+                      if (!trazos.uniones.get(v.unionId)?.has(m)) return null;
+                      const borde = entreBordes(v.pareja!)[i];
+                      const hasta = v.tipo !== "pareja" ? v.y : borde < v.y ? v.y - ESCOTE : v.y + PICO;
+                      return (
+                        <line
+                          key={m}
+                          x1={v.x}
+                          y1={borde}
+                          x2={v.x}
+                          y2={hasta}
+                          strokeDasharray={v.roto && v.tipo !== "pareja" ? GUION : undefined}
+                        />
+                      );
+                    })}
+                </g>
+              ))}
+            </g>
+          )}
 
           <g opacity={opacidadDe()}>
             {layout.contadores.map((c) => (
@@ -609,7 +677,9 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
               })}
               cumpleHoy={cumplenHoy.has(n.id)}
               atenuado={opacidadDe(n.id) !== undefined}
-              abierta={hoja?.tipo === "ficha" && hoja.id === n.id}
+              // El camino no deja de leer a quien lo abrió: el cerco sigue puesto mientras
+              // se mira cómo se llega hasta él, que es lo que se ha ido a ver.
+              abierta={hoja !== null && "id" in hoja && hoja.id === n.id}
               onElegir={() => arrastre.current <= ARRASTRE_MINIMO && abrirFicha(n.id)}
             />
           ))}
@@ -691,10 +761,9 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
         onTeclear={teclear}
         abierta={busquedaAbierta}
         setAbierta={setBusquedaAbierta}
-        oculta={hoja !== null}
+        oculta={hoja !== null && !recogida}
         resultados={resultados}
         sugerencia={sugerencia}
-        onSinNombre={mostrarSinNombre}
         identidad={enLista}
         relaciones={relaciones}
         puntoDeVista={puntoDeVista}
@@ -736,7 +805,16 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
         <Titulo trozos={escribir(puntoDeVista, 0).titulo} className="min-w-0 truncate" />
       </button>
 
-      {hoja && (
+      {recogida && hoja?.tipo === "camino" && camino && (
+        <BarraDelCamino
+          nombre={nombreDe(hoja.id)}
+          pasos={camino.pasos}
+          onAbrir={() => setHoja({ tipo: "camino", id: hoja.id })}
+          onCerrar={() => setHoja(null)}
+        />
+      )}
+
+      {hoja && !recogida && (
         <Hoja contenido={"id" in hoja ? `${hoja.tipo}:${hoja.id}` : hoja.tipo} onCerrar={() => setHoja(null)}>
           {hoja.tipo === "capas" ? (
             <Capas
@@ -763,8 +841,10 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
               datos={camino}
               relacion={relaciones.get(hoja.id)!}
               identidad={enLista}
+              sinDibujar={camino.eslabones.filter((e) => !dibujado.has(e.id)).length}
               onPersona={abrirFicha}
               onVolver={() => abrirFicha(hoja.id)}
+              onVerEnElArbol={() => verCaminoEnElArbol(hoja.id, camino.eslabones.map((e) => e.id))}
             />
           ) : (
             <Ficha
@@ -830,6 +910,47 @@ function Riel({ parada, onIr, apartado }: { parada: Parada; onIr: (p: Parada) =>
           {glifo}
         </button>
       ))}
+    </div>
+  );
+}
+
+/**
+ * El camino recogido. **Apartar la hoja no puede ser cerrarla:** en un móvil tapa el lienzo
+ * entero, así que mirar por dónde va el camino exige quitarla de delante, y cerrarla se
+ * llevaría el camino por delante. Va sobre la fila de abajo y no en ella: los dos de esa
+ * fila están siempre y esto es de paso.
+ */
+function BarraDelCamino({
+  nombre,
+  pasos,
+  onAbrir,
+  onCerrar,
+}: {
+  nombre: string;
+  pasos: number;
+  onAbrir: () => void;
+  onCerrar: () => void;
+}) {
+  return (
+    <div
+      style={{ boxShadow: "var(--sh)" }}
+      className="absolute bottom-[68px] left-3 flex h-10 max-w-[calc(100%-1.5rem)] items-center rounded-full border border-[var(--line)] bg-[var(--paper)] pl-4"
+    >
+      <button type="button" onClick={onAbrir} className="min-w-0 truncate text-[13px] text-[var(--ink)]">
+        El camino a <b className="font-semibold">{nombre}</b>
+        <span className="text-[var(--mut)]">
+          {" "}
+          · {pasos} {pasos === 1 ? "paso" : "pasos"}
+        </span>
+      </button>
+      <button
+        type="button"
+        onClick={onCerrar}
+        aria-label="Cerrar el camino"
+        className="ml-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[15px] text-[var(--mut)] hover:text-[var(--ink)]"
+      >
+        ✕
+      </button>
     </div>
   );
 }
@@ -992,6 +1113,17 @@ const PICO = 5.5;
 function horizontal(hasta: number, y: number, saltos: number[]): string {
   const arcos = saltos.map((x) => `H ${x - RADIO_SALTO} A ${RADIO_SALTO} ${RADIO_SALTO} 0 0 1 ${x + RADIO_SALTO} ${y}`);
   return [...arcos, `H ${hasta}`].join(" ");
+}
+
+/**
+ * El trazo de una unión a uno de sus hijos: sale del ancla, baja por el canal y muere en el
+ * borde del hijo. `desdeElCanal` se salta el tramo del ancla, que es el que apunta a los
+ * padres; el recto no tiene canal que saltarse, así que va entero de todas formas.
+ */
+function bajada(v: Vinculo, h: Vinculo["hijos"][number], desdeElCanal = false): string {
+  if (h.recto) return `M ${v.x} ${v.y} ${horizontal(h.x - h.ancho / 2, v.y, h.saltos)}`;
+  const arranque = desdeElCanal ? `M ${v.canal} ${v.y}` : `M ${v.x} ${v.y} ${horizontal(v.canal, v.y, v.saltos)}`;
+  return `${arranque} V ${h.y} ${horizontal(h.x - h.ancho / 2, h.y, h.saltos)}`;
 }
 
 function TrazoDePareja({

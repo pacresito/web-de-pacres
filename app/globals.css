@@ -143,9 +143,12 @@
 /* Y a quien se está leyendo, un cerco por fuera: el fondo y el borde ya dicen cada uno lo
    suyo, así que la tercera marca se pone donde no hay nada dibujado. */
 .arbol .nd-cerco { stroke: var(--acc); stroke-width: 2; opacity: 0.35; }   /* el relleno, en el atributo */
-/* El segundo eje se dice con el peso del trazo, nunca con color. */
+/* El segundo eje se dice con el peso del trazo, nunca con color. Y el camino que se está
+   leyendo, con más peso todavía: es lo único que se pinta encima de lo atenuado, así que no
+   necesita un color propio —el cabo redondo es para que sus tramos no dejen muescas—. */
 .arbol .lk     { fill: none; stroke: var(--line); stroke-width: 1; }
 .arbol .lk-dir { fill: none; stroke: var(--ink); stroke-width: 2; }
+.arbol .lk-cam { fill: none; stroke: var(--ink); stroke-width: 3.5; stroke-linecap: round; }
 .arbol .nm       { fill: var(--ink); }
 .arbol .nm-her   { fill: var(--mut); }   /* el apellido que se deduce del árbol y no consta */
 .arbol .nm-fecha { fill: var(--mut); }

@@ -38,7 +38,6 @@ export default function Capas({
   return (
     <div className="flex flex-col">
       <h2 className="font-[family-name:var(--serif)] text-[24px] leading-[1.15]">Qué se ve</h2>
-      <p className="mt-1 text-[12.5px] text-[var(--mut)]">Cuanto más enciendes, menos gente cabe en pantalla.</p>
 
       <Tramo titulo="En cada nodo">
         {/* «Nuevos» solo los enseña quien los estrena en su línea; 1 y 2, todo el mundo. */}
@@ -85,10 +84,6 @@ export default function Capas({
       </Tramo>
 
       <Tramo titulo="Uniones">{leyenda}</Tramo>
-
-      <p className="mt-4 border-t border-[var(--line)] pt-3 text-[11.5px] text-[var(--mut)]">
-        El tema oscuro lo hereda del resto de pacr.es: se cambia una vez y vale para todo.
-      </p>
     </div>
   );
 }

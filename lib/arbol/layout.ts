@@ -78,6 +78,8 @@ export interface Vinculo {
   canal: number;
   /** Alturas de los dos miembros, para la línea que los une. */
   pareja?: [number, number];
+  /** Quiénes son, en el orden de `pareja`: hace falta para tratar distinto a cada mitad. */
+  miembros?: [string, string];
   /** Verticales ajenas que cruza el tramo de salida de la unión, para saltarlas. */
   saltos: number[];
   /**
@@ -85,7 +87,7 @@ export interface Vinculo {
    * `recto` va de la unión al hijo de un tirón: el desnivel es tan corto que el codo se
    * leería como un defecto del dibujo y no como el quiebro que reparte hacia otra altura.
    */
-  hijos: { x: number; y: number; ancho: number; saltos: number[]; recto: boolean }[];
+  hijos: { id?: string; x: number; y: number; ancho: number; saltos: number[]; recto: boolean }[];
   /** Se abrió a mano y cerrarla se llevaría gente: es la que ofrece el botón de plegar. */
   colapsable: boolean;
 }
@@ -352,10 +354,14 @@ export function calcularLayout(g: Grafo, opciones: OpcionesLayout): Layout {
 
   const vinculos: Vinculo[] = [];
   for (const u of g.unionPorId.values()) {
-    const partners = u.partners.map((p) => posicion.get(p)).filter((p): p is { x: number; y: number } => !!p);
+    const partners = u.partners
+      .map((p) => ({ id: p, ...posicion.get(p) }))
+      .filter((p): p is { id: string; x: number; y: number } => p.x !== undefined);
     const pendientes = contadores.find((c) => c.unionId === u.id && c.sentido === "hijos");
     const enLugarDeLaPareja = contadores.find((c) => c.unionId === u.id && c.sentido === "padres");
-    const hijos = u.children.map((c) => posicion.get(c)).filter((p): p is { x: number; y: number } => !!p);
+    const hijos = u.children
+      .map((c) => ({ id: c, ...posicion.get(c) }))
+      .filter((h): h is { id: string; x: number; y: number } => h.x !== undefined);
     const ancla = partners.length > 0 ? { x: partners[0].x, y: media(partners.map((p) => p.y)) } : enLugarDeLaPareja;
     if (!ancla) continue;
     if (hijos.length === 0 && partners.length < 2 && !pendientes) continue;
@@ -370,6 +376,7 @@ export function calcularLayout(g: Grafo, opciones: OpcionesLayout): Layout {
       y: ancla.y,
       canal: ancla.x + ANCHO_COLUMNA / 2,
       pareja: partners.length >= 2 ? [partners[0].y, partners[1].y] : undefined,
+      miembros: partners.length >= 2 ? [partners[0].id, partners[1].id] : undefined,
       saltos: [],
       // Cada trazo muere en el borde de lo que va a tocar, y una pastilla es más estrecha.
       hijos: [

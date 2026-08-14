@@ -8,7 +8,7 @@ import type { Camino as Datos } from "@/lib/arbol/camino";
 import type { Paso } from "@/lib/arbol/grafo";
 import { LARGOS_LISTA, type Identidad } from "@/lib/arbol/identidad";
 import type { Relacion } from "@/lib/arbol/parentesco";
-import { BloqueIdentidad } from "./Identidad";
+import { Accion, BloqueIdentidad } from "./Identidad";
 
 /** Hacia dónde va el eslabón. Los dos que no suben ni bajan se quedan en la misma fila. */
 const FLECHAS: Record<Paso, string> = { progenitor: "↑", hijo: "↓", hermano: "→", pareja: "→" };
@@ -26,14 +26,19 @@ export default function Camino({
   datos,
   relacion,
   identidad,
+  sinDibujar,
   onPersona,
   onVolver,
+  onVerEnElArbol,
 }: {
   datos: Datos;
   relacion: Relacion;
   identidad: (id: string, largoContexto: number) => Identidad;
+  /** Cuántos eslabones no están puestos en el lienzo, que es lo que hay que abrir para verlo. */
+  sinDibujar: number;
   onPersona: (id: string) => void;
   onVolver: () => void;
+  onVerEnElArbol: () => void;
 }) {
   const ultimo = datos.eslabones.length - 1;
   return (
@@ -83,6 +88,17 @@ export default function Camino({
             </button>
           </div>
         ))}
+      </div>
+
+      {/* El camino se dibuja en el lienzo, pero en un móvil la hoja lo tapa y hay eslabones
+          que pueden no estar puestos. Un solo botón para las dos cosas: abre lo que falte y
+          recoge la hoja, porque abrir lo que no se puede mirar no sirve de nada. */}
+      <div className="mt-[18px]">
+        <Accion
+          texto="Ver el camino en el árbol"
+          nota={sinDibujar > 0 ? `abre ${sinDibujar} más` : "↗"}
+          onPulsar={onVerEnElArbol}
+        />
       </div>
     </div>
   );

@@ -3,7 +3,7 @@
 import assert from "assert";
 import { readFileSync } from "fs";
 import { resolve } from "path";
-import { caminoEntre } from "./camino";
+import { caminoEntre, trazosDelCamino } from "./camino";
 import { construirGrafo, pasosDesde } from "./grafo";
 import { relacionesDesde } from "./parentesco";
 import type { ArbolData, Persona, Union } from "./tree";
@@ -57,6 +57,44 @@ assert.strictEqual(caminoEntre(g, "yo", "novia").eslabones[1]?.frase, "pareja de
 assert.strictEqual(caminoEntre(g, "yo", "padre").eslabones[1]?.frase, "hijo de");
 assert.strictEqual(caminoEntre(g, "madre", "yo").eslabones[1]?.frase, "madre de", "bajando se declina al revés");
 assert.strictEqual(caminoEntre(g, "hermana", "novia").pasos, 2, "por el hermano y su pareja");
+
+// --- Qué del dibujo se queda delante: solo lo que une un eslabón con el siguiente ---
+const trazos = (desde: string, hasta: string) => {
+  const t = trazosDelCamino(caminoEntre(g, desde, hasta));
+  return [[...t.bajadas], [...t.uniones].map(([u, quienes]) => [u, [...quienes]])];
+};
+
+assert.deepStrictEqual(
+  trazos("yo", "abuela"),
+  [
+    [
+      ["u2:yo", "entera"],
+      ["u1:madre", "entera"],
+    ],
+    [
+      ["u2", ["madre"]],
+      ["u1", ["abuela"]],
+    ],
+  ],
+  "subir toca la bajada del hijo y solo la mitad del trazo que va al progenitor, no la de su pareja",
+);
+assert.deepStrictEqual(
+  trazos("yo", "hermana"),
+  [
+    [
+      ["u2:yo", "desdeElCanal"],
+      ["u2:hermana", "desdeElCanal"],
+    ],
+    [],
+  ],
+  "entre hermanos el paso va por el canal: ni el trazo de los padres ni el ramal que sale de él son camino",
+);
+assert.deepStrictEqual(trazos("yo", "novia"), [[], [["u3", ["yo", "novia"]]]], "la pareja es su trazo entero");
+assert.deepStrictEqual(
+  trazos("madre", "yo"),
+  [[["u2:yo", "entera"]], [["u2", ["madre"]]]],
+  "y bajando se toca la misma mitad",
+);
 
 const quieto = caminoEntre(g, "yo", "yo");
 assert.deepStrictEqual([quieto.pasos, quieto.eslabones.length], [0, 1], "de uno a sí mismo, un solo eslabón y ningún paso");
