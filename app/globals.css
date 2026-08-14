@@ -143,6 +143,15 @@
 /* Y a quien se está leyendo, un cerco por fuera: el fondo y el borde ya dicen cada uno lo
    suyo, así que la tercera marca se pone donde no hay nada dibujado. */
 .arbol .nd-cerco { stroke: var(--acc); stroke-width: 2; opacity: 0.35; }   /* el relleno, en el atributo */
+/* El giro de mudar el punto de vista: el árbol nuevo nace con los colaterales al 25 % y
+   suben a su nivel en 240 ms. La bajada no se anima —cuando la clase entra, el recolocado
+   ya ha pasado, y animarla lo contaría dos veces— y **la línea directa no se apaga nunca**:
+   es lo único que el ojo puede seguir mientras todo lo demás cambia de sitio. Gana a las
+   opacidades de generación por especificidad, sin tocarlas. */
+.arbol .nodo,
+.arbol .lk { transition: opacity 240ms ease-out; }
+.arbol .gira .nodo:not(.nodo-dir),
+.arbol .gira .lk { opacity: 0.25; transition: none; }
 /* El segundo eje se dice con el peso del trazo, nunca con color. Y el camino que se está
    leyendo, con más peso todavía: es lo único que se pinta encima de lo atenuado, así que no
    necesita un color propio —el cabo redondo es para que sus tramos no dejen muescas—. */

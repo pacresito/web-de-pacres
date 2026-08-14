@@ -51,6 +51,7 @@ import Capas from "./Capas";
 import Camino from "./Camino";
 import Celebraciones, { AvisoCelebraciones } from "./Celebraciones";
 import Cinta from "./Cinta";
+import Esqueleto from "./Esqueleto";
 import Ficha from "./Ficha";
 import Hoja from "./Hoja";
 import { Titulo } from "./Identidad";
@@ -67,6 +68,18 @@ const ARRASTRE_MINIMO = 8; // px: por debajo de esto el gesto es un toque, no un
 const ATENUADO = 0.15;
 
 const CENTRADA: Vista = { dx: 0, dy: 0, escala: 0.85 };
+
+/**
+ * El giro de mudar el punto de vista. El recolocado en sí es instantáneo —medido: 1 ms de
+ * cálculo y menos de 110 ms hasta el último nodo puesto, con los 342 desplegados y en
+ * desarrollo—, así que estos 420 ms no cubren ningún coste: **explican**. Lo que hay que
+ * entender es que el mundo ha girado alrededor de otra persona, no que la app se ha roto, y
+ * eso se cuenta apagando los colaterales y dejando encendida la línea directa, que es lo
+ * único que el ojo puede seguir mientras todo lo demás cambia de sitio.
+ */
+const GIRO_APAGADO = 180; // ms con los colaterales al 25 %
+const GIRO = 420; // ms de la transición entera; los 240 de la subida los pone la CSS
+const AVISO = 8000; // ms que el aviso aguanta antes de irse solo
 
 export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
   const grafo = useMemo(() => construirGrafo(data), [data]);
@@ -113,6 +126,18 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
   const [tamano, setTamano] = useState({ w: 0, h: 0 });
   /** A quién hay que traer a pantalla en cuanto el layout lo coloque. */
   const [aEnfocar, setAEnfocar] = useState<string | null>(null);
+  /** Mientras dura el apagado del giro: los colaterales al 25 %, la línea directa encendida. */
+  const [girando, setGirando] = useState(false);
+  /** Cuántas mudanzas van. Cambiarlo es lo que rearranca los relojes del giro y del aviso. */
+  const [mudanza, setMudanza] = useState(0);
+  const [aviso, setAviso] = useState(false);
+  /**
+   * A cuántos más se ha llevado el filtro la última mudanza. Es el dato que de verdad
+   * desconcierta —mirar desde una rama de fuera vacía media pantalla— y no lo explica
+   * ninguna otra cosa de la interfaz. Se guarda hecho, no se recalcula al pintar el aviso:
+   * es lo que pasó al mudarse, no lo que pase ocho segundos después.
+   */
+  const [seEscondieron, setSeEscondieron] = useState(0);
 
   const contenedor = useRef<HTMLDivElement>(null);
   /** El lienzo, aparte del contenedor: los gestos son suyos y no de lo que flota encima. */
@@ -290,6 +315,20 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
     setAEnfocar(null);
   }, [aEnfocar, layout, ancla.x, ancla.y]);
 
+  /**
+   * Los relojes del giro, colgados de la mudanza y no de `girando`: apagarlo a los 180 ms
+   * volvería a entrar aquí y se llevaría por delante el aviso que aún no ha salido. El
+   * encendido no está aquí —lo hace `centrarEn`, en el mismo commit que muda el ancla—:
+   * desde un efecto llegaría un frame tarde y los colaterales darían un fogonazo.
+   */
+  useEffect(() => {
+    if (mudanza === 0) return;
+    const apagado = setTimeout(() => setGirando(false), GIRO_APAGADO);
+    const entra = setTimeout(() => setAviso(true), GIRO);
+    const sale = setTimeout(() => setAviso(false), GIRO + AVISO);
+    return () => [apagado, entra, sale].forEach(clearTimeout);
+  }, [mudanza]);
+
   /** Los gestos mueven la cámara por aquí: moverla sin acotar es perderse. */
   function mover(paso: (v: Vista) => Vista) {
     setVista((v) => acotar(paso(v), encuadre.current));
@@ -344,6 +383,14 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
     setAnterior(puntoDeVista);
     setPuntoDeVista(id);
     setHoja(null);
+    // El giro se enciende aquí, con la mudanza y no después: los colaterales tienen que
+    // nacer ya apagados en la primera pintura del árbol nuevo.
+    setGirando(true);
+    setAviso(false);
+    // Cuántos deja de alcanzar el filtro al cambiar de ancla, que es el total menos los
+    // suyos por los dos lados: la resta de los alcanzables dice lo mismo sin el total.
+    setSeEscondieron(ocultarNoConectados ? visibles(grafo, puntoDeVista).size - visibles(grafo, id).size : 0);
+    setMudanza((n) => n + 1);
     // La cámara no se mueve: quien has tocado se queda donde estaba en pantalla, aunque
     // el árbol entero se recoloque a su alrededor.
     const saliente = layout.nodos.find((n) => n.esPuntoDeVista);
@@ -443,6 +490,9 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
     setPuntoDeVista(inicial);
     setAnterior(null);
     setHoja(null);
+    setGirando(false);
+    setAviso(false);
+    setSeEscondieron(0);
     setAbiertas(new Set());
     setParejas(new Set());
     setTodoDesplegado(false);
@@ -568,7 +618,7 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
         height={tamano.h}
         // Bajo la hoja el árbol sigue viéndose: tapa, no sustituye. Con sitio ni eso —la
         // hoja se ha apartado a su columna y el lienzo se queda entero.
-        className={`block touch-none cursor-grab select-none active:cursor-grabbing ${
+        className={`block touch-none cursor-grab select-none active:cursor-grabbing ${girando ? "gira" : ""} ${
           hoja && !recogida ? "opacity-30 md:opacity-100" : ""
         }`}
         onPointerDown={onPointerDown}
@@ -717,6 +767,10 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
         )}
       </svg>
 
+      {/* Sin medida no hay árbol, y la medida llega mucho después que el HTML: lo que ocupa
+          ese hueco va debajo del cromo, que sí viene servido. */}
+      {tamano.w === 0 && <Esqueleto escala={CENTRADA.escala} />}
+
       {/* En la escala de ramas no se pinta: ahí no hay personas colocadas por generación,
           y una regla que rotulase el mapa estaría midiendo otra cosa. */}
       {tamano.w > 0 && parada !== "ramas" && (
@@ -804,6 +858,17 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
         <span className="h-2 w-2 shrink-0 rounded-full bg-[var(--acc)]" />
         <Titulo trozos={escribir(puntoDeVista, 0).titulo} className="min-w-0 truncate" />
       </button>
+
+      {/* Va en la fila del camino recogido y no se pisan: mudar el Centro cierra la hoja, y
+          con ella la barra. */}
+      {aviso && anterior && (
+        <AvisoDeMudanza
+          centro={nombreDe(puntoDeVista)}
+          seEscondieron={seEscondieron}
+          onDeshacer={() => centrarEn(anterior)}
+          onCerrar={() => setAviso(false)}
+        />
+      )}
 
       {recogida && hoja?.tipo === "camino" && camino && (
         <BarraDelCamino
@@ -910,6 +975,53 @@ function Riel({ parada, onIr, apartado }: { parada: Parada; onIr: (p: Parada) =>
           {glifo}
         </button>
       ))}
+    </div>
+  );
+}
+
+/**
+ * Lo que se dice al acabar el giro. **Mudar el Centro es la única acción de la app que
+ * cambia la pantalla entera**, así que es la única que necesita decir qué ha pasado y poder
+ * desandarse en el sitio: el «Volver a ver desde…» de la ficha exige abrirla y saber que
+ * está ahí. Y cuenta a los que se ha llevado el filtro, que es lo que de verdad desconcierta
+ * —desde una rama de fuera se vacía media pantalla— y no lo explica ninguna otra cosa.
+ */
+function AvisoDeMudanza({
+  centro,
+  seEscondieron,
+  onDeshacer,
+  onCerrar,
+}: {
+  centro: string;
+  seEscondieron: number;
+  onDeshacer: () => void;
+  onCerrar: () => void;
+}) {
+  return (
+    <div
+      role="status"
+      style={{ boxShadow: "var(--sh)" }}
+      className="absolute bottom-[68px] left-3 flex max-w-[calc(100%-1.5rem)] items-center gap-3 rounded-[10px] border border-[var(--line)] bg-[var(--paper)] py-2 pr-2 pl-4 md:max-w-[480px]"
+    >
+      <p className="min-w-0 text-[12.5px] leading-[1.35] text-[var(--ink)]">
+        El árbol se ha recolocado alrededor de <b className="font-semibold">{centro}</b>.
+        {seEscondieron > 0 && <span className="text-[var(--mut)]"> Desde aquí el filtro esconde a {seEscondieron} más.</span>}
+      </p>
+      <button
+        type="button"
+        onClick={onDeshacer}
+        className="shrink-0 rounded-full border border-[var(--accb)] bg-[var(--acch)] px-3 py-1.5 text-[12px] font-medium text-[var(--acc)]"
+      >
+        Deshacer
+      </button>
+      <button
+        type="button"
+        onClick={onCerrar}
+        aria-label="Cerrar el aviso"
+        className="-mr-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[13px] text-[var(--mut)] hover:text-[var(--ink)]"
+      >
+        ✕
+      </button>
     </div>
   );
 }
@@ -1025,7 +1137,11 @@ function Nodo({
       // El contraste dice a cuántas generaciones del punto de vista está, y lo dice por
       // clase para que el tema oscuro pueda comprimir la escala sin que React lo sepa. A
       // quien se está leyendo se le devuelve entero: la distancia ya no es lo que cuenta.
-      className={`cursor-pointer g${abierta ? 0 : Math.min(Math.abs(nodo.nivel), 4)}`}
+      // `nodo-dir` es quien no se apaga en el giro, y va por clase por lo mismo: el giro se
+      // conduce encendiendo una sola clase arriba, sin que React vuelva a pintar 342 nodos.
+      className={`nodo cursor-pointer g${abierta ? 0 : Math.min(Math.abs(nodo.nivel), 4)}${
+        nodo.lineaDirecta || nodo.esPuntoDeVista ? " nodo-dir" : ""
+      }`}
       style={atenuado ? { opacity: ATENUADO } : undefined}
     >
       {/* El cerco es la tercera marca y no le quita el canal a ninguna de las dos: el fondo
