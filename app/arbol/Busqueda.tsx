@@ -24,7 +24,8 @@ const TOPE = 25;
 const CABECERAS: Record<Via, (n: number) => string> = {
   // El orden es el único criterio que existe para todo el mundo, así que se dice: cuatro de
   // cada diez personas no traen ningún año con el que ordenarlas.
-  nombre: (n) => `${n === 1 ? "Una persona se llama" : `${n} personas se llaman`} así · por cercanía a ti`,
+  nombre: (n) =>
+    `${n === 1 ? "Una persona se llama" : `${n} personas se llaman`} así · por cercanía a ti`,
   familia: (n) => `${n} más, por su familia`,
   "sin nombre": (n) => `Las ${n} personas a las que el documento no da nombre`,
 };
@@ -34,7 +35,7 @@ export default function Busqueda({
   onTeclear,
   abierta,
   onAbrir,
-  setAbierta,
+  onCerrar,
   resultados,
   sugerencia,
   identidad,
@@ -48,9 +49,13 @@ export default function Busqueda({
   consulta: string;
   onTeclear: (texto: string) => void;
   abierta: boolean;
-  /** Desplegarlo es pedir el índice, y donde no caben los dos se lleva por delante la hoja. */
+  /**
+   * Abrir y cerrar, y no un interruptor: **desplegar el índice es pedirlo**, y donde no caben
+   * los dos se lleva por delante la hoja. Con un `setAbierta` en la mano, cualquier sitio de
+   * aquí dentro podía encenderlo por su cuenta y saltarse esa regla sin enterarse.
+   */
   onAbrir: () => void;
-  setAbierta: (v: boolean) => void;
+  onCerrar: () => void;
   resultados: Resultado[];
   /** La palabra de la consulta que sí encuentra a alguien, cuando la consulta entera no. */
   sugerencia: string | null;
@@ -76,7 +81,11 @@ export default function Busqueda({
           ningún nombre no se está perdiendo un campo vacío. Y como no ocupa, se queda
           puesta con lo que sea que haya abierto encima. */}
       {!abierta ? (
-        <Redondo etiqueta="Buscar en el árbol" onPulsar={onAbrir} className="text-[24px]">
+        <Redondo
+          etiqueta="Buscar en el árbol"
+          onPulsar={onAbrir}
+          className="text-[24px]"
+        >
           ⌕
         </Redondo>
       ) : (
@@ -87,13 +96,15 @@ export default function Busqueda({
           className="flex w-[22rem] max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden rounded-[22px] border border-[var(--line)] bg-[var(--paper)]"
         >
           <div className="flex h-11 shrink-0 items-center gap-2 border-b border-[var(--line)] pr-2 pl-3.5">
-            <span className="text-[15px] leading-none text-[var(--mut)]">⌕</span>
+            <span className="text-[15px] leading-none text-[var(--mut)]">
+              ⌕
+            </span>
             {/* Sin foco automático: desplegado se lee el índice de parentescos, y en un
                 móvil el teclado se lo comería antes de que nadie decida teclear. */}
             <input
               value={consulta}
               onChange={(e) => onTeclear(e.target.value)}
-              onKeyDown={(e) => e.key === "Escape" && setAbierta(false)}
+              onKeyDown={(e) => e.key === "Escape" && onCerrar()}
               placeholder="Nombre, o «hija de…»"
               className="min-w-0 flex-1 bg-transparent text-[13px] text-[var(--ink)] outline-none placeholder:text-[var(--mut)]"
             />
@@ -102,7 +113,7 @@ export default function Busqueda({
               aria-label="Cerrar la búsqueda"
               onClick={() => {
                 onTeclear("");
-                setAbierta(false);
+                onCerrar();
               }}
               className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[13px] text-[var(--mut)] hover:bg-[var(--soft)] hover:text-[var(--ink)]"
             >
@@ -151,7 +162,8 @@ export default function Busqueda({
                     ))}
                     {suyos.length > TOPE && (
                       <p className="px-3 py-2.5 text-[11.5px] leading-[1.5] text-[var(--mut)]">
-                        Y {suyos.length - TOPE} más. Añade un apellido o el nombre de un padre.
+                        Y {suyos.length - TOPE} más. Añade un apellido o el
+                        nombre de un padre.
                       </p>
                     )}
                   </div>
@@ -162,7 +174,7 @@ export default function Busqueda({
                 sugerencia={sugerencia}
                 onSugerencia={() => sugerencia && onTeclear(sugerencia)}
                 onIndice={() => onTeclear("")}
-                onCerrar={() => setAbierta(false)}
+                onCerrar={onCerrar}
               />
             ) : (
               indice
@@ -200,7 +212,9 @@ function Fila({
       <span
         className={`shrink-0 font-[family-name:var(--mono)] text-[11px] ${esCentro ? "text-[var(--acc)]" : "text-[var(--mut)]"}`}
       >
-        {esCentro ? "tú" : `${relacion?.pasos ?? "—"} ${relacion?.pasos === 1 ? "paso" : "pasos"}`}
+        {esCentro
+          ? "tú"
+          : `${relacion?.pasos ?? "—"} ${relacion?.pasos === 1 ? "paso" : "pasos"}`}
       </span>
     </button>
   );
@@ -224,12 +238,20 @@ function SinNadie({
 }) {
   return (
     <div className="px-4 pt-4 pb-3">
-      <p className="font-[family-name:var(--serif)] text-[22px] leading-[1.2]">Nadie se llama así</p>
+      <p className="font-[family-name:var(--serif)] text-[22px] leading-[1.2]">
+        Nadie se llama así
+      </p>
       <p className="mt-2.5 text-[13px] leading-[1.55] text-[var(--mut)]">
         Se busca por el nombre, por los apellidos y por de quién es cada uno.
       </p>
       <div className="mt-4 flex flex-col gap-[9px]">
-        {sugerencia && <Accion texto={`Buscar solo «${sugerencia}»`} nota="⌕" onPulsar={onSugerencia} />}
+        {sugerencia && (
+          <Accion
+            texto={`Buscar solo «${sugerencia}»`}
+            nota="⌕"
+            onPulsar={onSugerencia}
+          />
+        )}
         <Accion texto="Índice de parentescos" nota="›" onPulsar={onIndice} />
         <Accion texto="Volver al árbol" nota="↩" onPulsar={onCerrar} />
       </div>

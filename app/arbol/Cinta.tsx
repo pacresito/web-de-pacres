@@ -8,13 +8,13 @@
 import type { Segmento } from "@/lib/arbol/cinta";
 import { ALTO_REGLA } from "./Regla";
 
-/** Lo que le deja libre abajo el chip del Centro, que ocupa esa esquina. */
-const HUECO_CHIP = 64;
+/** Lo que le deja libre abajo la barra de lo que se mira de cerca, que ocupa esa esquina. */
+const HUECO_BARRA = 64;
 
 export default function Cinta({ segmentos }: { segmentos: Segmento[] }) {
   return (
     <div
-      style={{ top: ALTO_REGLA, bottom: HUECO_CHIP }}
+      style={{ top: ALTO_REGLA, bottom: HUECO_BARRA }}
       // Los gestos son del lienzo, que sigue debajo: la cinta no se toca, se lee.
       className="pointer-events-none absolute left-0 flex w-2.5 flex-col items-center justify-center gap-px"
     >

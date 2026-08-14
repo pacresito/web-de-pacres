@@ -27,7 +27,16 @@ import { FECHAS_POR_DEFECTO, type ModoFechas } from "@/lib/arbol/fechas";
 import { proximasCelebraciones } from "@/lib/arbol/celebraciones";
 import { construirGrafo, pasosDesde, visibles } from "@/lib/arbol/grafo";
 import { fichaDe } from "@/lib/arbol/ficha";
-import { identidadDe, LARGOS_FILA, LARGOS_LISTA, LARGOS_NODO, libretaDe, type Identidad, type Pinta } from "@/lib/arbol/identidad";
+import {
+  identidadDe,
+  LARGOS_FILA,
+  LARGOS_LISTA,
+  LARGOS_NODO,
+  libretaDe,
+  type Identidad,
+  type OpcionesIdentidad,
+  type Pinta,
+} from "@/lib/arbol/identidad";
 import { relacionesDesde } from "@/lib/arbol/parentesco";
 import type { ModoApellidos } from "@/lib/arbol/personas";
 import { calcularRamas, ramaVisible, repartoDeRamas } from "@/lib/arbol/ramas";
@@ -38,12 +47,11 @@ import {
   ANCHO_CONTADOR,
   ANCHO_NODO,
   calcularLayout,
-  RADIO_SALTO,
   type Contador,
   type NodoLayout,
-  type Vinculo,
 } from "@/lib/arbol/layout";
 import { calcularRecuento, unionesHasta, type Fraccion } from "@/lib/arbol/recuento";
+import { bajada, entreBordes, hastaElAncla, tramosDePareja } from "@/lib/arbol/trazos";
 import type { ArbolData, Union } from "@/lib/arbol/tree";
 import Bloques from "./Bloques";
 import Busqueda from "./Busqueda";
@@ -217,36 +225,27 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
     const suyas = dentro ? new Map([...pertenencias].filter(([id]) => dentro.has(id))) : pertenencias;
     return repartoDeRamas(suyas, puntoDeVista).filter((r) => ramaVisible(r, dentro));
   }, [grafo, pertenencias, puntoDeVista, ocultarNoConectados]);
-  /** El bloque de identidad de cualquiera, para las superficies que lo piden fila a fila. */
-  const escribir = useMemo(
-    () => (id: string, largoContexto: number) =>
-      identidadDe(grafo, id, {
-        linaje: libreta.linaje,
-        fechas,
-        apellidos,
-        hoy,
-        largos: { titulo: LARGOS_FILA.titulo, contexto: largoContexto },
-        homonimia: libreta.homonimias.get(id),
-      }),
-    [grafo, libreta, fechas, apellidos, hoy],
+  /**
+   * Escribir a alguien. Lo que no cambia de una superficie a otra —el linaje y las
+   * homonimias, que se calculan una vez por árbol, y el día del servidor— se pone aquí; lo
+   * que sí, lo pide cada una. Cuatro copias de esta llamada eran cuatro sitios que tocar
+   * cada vez que el bloque de identidad aprende algo nuevo.
+   */
+  const escribirlo = useMemo(
+    () => (id: string, suyo: Pick<OpcionesIdentidad, "fechas" | "apellidos" | "largos">) =>
+      identidadDe(grafo, id, { linaje: libreta.linaje, hoy, homonimia: libreta.homonimias.get(id), ...suyo }),
+    [grafo, libreta, hoy],
   );
+  /** El bloque de identidad de cualquiera, para las superficies que lo piden fila a fila. */
+  const escribir = (id: string, contexto: number) =>
+    escribirlo(id, { fechas, apellidos, largos: { ...LARGOS_FILA, contexto } });
   /**
    * Y el de una fila de lista, que **lleva siempre los dos apellidos**: «nuevos» vale en el
    * lienzo, donde los demás se leen subiendo por el árbol, pero en una lista no hay árbol del
    * que subir y trece filas «Pablo» son trece filas iguales.
    */
-  const enLista = useMemo(
-    () => (id: string, largoContexto: number) =>
-      identidadDe(grafo, id, {
-        linaje: libreta.linaje,
-        fechas,
-        apellidos: 2,
-        hoy,
-        largos: { titulo: LARGOS_LISTA.titulo, contexto: largoContexto },
-        homonimia: libreta.homonimias.get(id),
-      }),
-    [grafo, libreta, fechas, hoy],
-  );
+  const enLista = (id: string, contexto: number) =>
+    escribirlo(id, { fechas, apellidos: 2, largos: { ...LARGOS_LISTA, contexto } });
   // La búsqueda mira el árbol entero, con filtro o sin él: es por donde se llega a quien el
   // lienzo no está pintando, y decirle «nadie se llama así» de alguien que solo estaba
   // escondido sería mentir.
@@ -275,14 +274,7 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
    */
   const enUnaLinea = (id: string, largo: number) => {
     const escrito = (apellidos: ModoApellidos) =>
-      identidadDe(grafo, id, {
-        linaje: libreta.linaje,
-        fechas: "ocultar",
-        apellidos,
-        hoy,
-        largos: { titulo: largo, contexto: 0 },
-        homonimia: libreta.homonimias.get(id),
-      })
+      escribirlo(id, { fechas: "ocultar", apellidos, largos: { titulo: largo, contexto: 0 } })
         .titulo.map((t) => t.texto)
         .join("");
     return ([2, 1] as const).map(escrito).find((texto) => !texto.endsWith("…")) ?? escrito(0);
@@ -756,14 +748,13 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
                     v.miembros?.map((m, i) => {
                       if (!trazos.uniones.get(v.unionId)?.has(m)) return null;
                       const borde = entreBordes(v.pareja!)[i];
-                      const hasta = v.tipo !== "pareja" ? v.y : borde < v.y ? v.y - ESCOTE : v.y + PICO;
                       return (
                         <line
                           key={m}
                           x1={v.x}
                           y1={borde}
                           x2={v.x}
-                          y2={hasta}
+                          y2={hastaElAncla(borde, v.y, v.tipo === "pareja")}
                           strokeDasharray={v.roto && v.tipo !== "pareja" ? GUION : undefined}
                         />
                       );
@@ -787,14 +778,7 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
             <Nodo
               key={n.id}
               nodo={n}
-              identidad={identidadDe(grafo, n.id, {
-                linaje: libreta.linaje,
-                fechas,
-                apellidos,
-                hoy,
-                largos: LARGOS_NODO,
-                homonimia: libreta.homonimias.get(n.id),
-              })}
+              identidad={escribirlo(n.id, { fechas, apellidos, largos: LARGOS_NODO })}
               cumpleHoy={cumplenHoy.has(n.id)}
               atenuado={opacidadDe(n.id) !== undefined}
               // El camino no deja de leer a quien lo abrió: el cerco sigue puesto mientras
@@ -885,7 +869,7 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
         onTeclear={teclear}
         abierta={busquedaAbierta}
         onAbrir={abrirIndice}
-        setAbierta={setBusquedaAbierta}
+        onCerrar={() => setBusquedaAbierta(false)}
         resultados={resultados}
         sugerencia={sugerencia}
         identidad={enLista}
@@ -1283,23 +1267,12 @@ function Nodo({
   );
 }
 
-/**
- * El layout da los centros de los dos y el trazo se queda en el hueco que hay entre ellos:
- * los nodos llevan la opacidad de su generación, así que lo que cruzara por debajo se leería
- * a través del recuadro como si lo atravesara.
- */
-const entreBordes = ([a, b]: [number, number]): [number, number] =>
-  a < b ? [a + ALTO_NODO / 2, b - ALTO_NODO / 2] : [a - ALTO_NODO / 2, b + ALTO_NODO / 2];
-
 const GUION = "4 3"; // el trazo de la unión que acabó, rota como el tachón del documento
 // Un corazón de 14×11 centrado en el origen: la marca de los novios que no se casaron.
 // Más pequeño no cabía la grieta del roto sin volverse un borrón a tamaño de lectura.
 const CORAZON = "M 0 5.5 C -7.4 0.3 -7.3 -5.6 -3.8 -5.6 C -1.4 -5.6 0 -3.9 0 -2.7 C 0 -3.9 1.4 -5.6 3.8 -5.6 C 7.3 -5.6 7.4 0.3 0 5.5 Z";
 // La grieta del que se rompió, del escote al pico y en zigzag para que no parezca el trazo.
 const GRIETA = "M 0 -2.7 L 1.7 -0.8 L -1.4 1.2 L 1.2 3.2 L 0 5.5";
-// El trazo muere justo en el corazón, que por arriba es el escote y por abajo el pico.
-const ESCOTE = 2.7;
-const PICO = 5.5;
 
 /**
  * El trazo que une a los dos miembros de una pareja, más marcado que el resto: en una
@@ -1310,36 +1283,6 @@ const PICO = 5.5;
  * no se leían como un trazo discontinuo—. El corazón va relleno para comerse el trazo por
  * dentro y se pinta el último, tapando también el arranque de los hijos.
  */
-/**
- * Un tramo horizontal hacia la derecha que salta por encima de los trazos que se cruza:
- * sin el saltito, un cruce y una bifurcación hacia dos hijos se dibujan igual.
- */
-function horizontal(hasta: number, y: number, saltos: number[]): string {
-  const arcos = saltos.map((x) => `H ${x - RADIO_SALTO} A ${RADIO_SALTO} ${RADIO_SALTO} 0 0 1 ${x + RADIO_SALTO} ${y}`);
-  return [...arcos, `H ${hasta}`].join(" ");
-}
-
-/**
- * El trazo de una unión a uno de sus hijos: sale del ancla, baja por el canal y muere en el
- * borde del hijo. `desdeElCanal` se salta el tramo del ancla, que es el que apunta a los
- * padres —de hermano a hermano se pasa por el canal y no por ellos—. **El hijo recto
- * también lo tiene**, escondido dentro de su horizontal en vez de en un tramo propio: sin
- * cortarlo ahí, bastaba con desplegar a un hermano —que lo pone a la altura de la unión y
- * lo vuelve recto— para que el camino se pintase saliendo de unos padres por los que no
- * pasa.
- */
-function bajada(v: Vinculo, h: Vinculo["hijos"][number], desdeElCanal = false): string {
-  const borde = h.x - h.ancho / 2;
-  if (h.recto) {
-    // Los saltos de antes del canal se van con el tramo que los traía: pintarlos desde
-    // aquí haría retroceder al trazo hasta buscarlos.
-    if (!desdeElCanal) return `M ${v.x} ${v.y} ${horizontal(borde, v.y, h.saltos)}`;
-    return `M ${v.canal} ${v.y} ${horizontal(borde, v.y, h.saltos.filter((x) => x > v.canal))}`;
-  }
-  const arranque = desdeElCanal ? `M ${v.canal} ${v.y}` : `M ${v.x} ${v.y} ${horizontal(v.canal, v.y, v.saltos)}`;
-  return `${arranque} V ${h.y} ${horizontal(borde, h.y, h.saltos)}`;
-}
-
 function TrazoDePareja({
   x,
   extremos,
@@ -1351,17 +1294,7 @@ function TrazoDePareja({
   tipo: Union["tipo"];
   roto: boolean;
 }) {
-  const [arriba, abajo] = [...extremos].sort((a, b) => a - b);
-  const centro = (arriba + abajo) / 2;
-  // El corazón se lleva su trozo de trazo: por arriba hasta el escote y por abajo hasta
-  // el pico, que es donde el dibujo lo espera. A la misma distancia quedaba despegado.
-  const tramos: [number, number][] =
-    tipo === "pareja"
-      ? [
-          [arriba, centro - ESCOTE],
-          [centro + PICO, abajo],
-        ]
-      : [[arriba, abajo]];
+  const { tramos, centro } = tramosDePareja(extremos, tipo === "pareja");
   return (
     <>
       {tramos.map(([desde, hasta], i) => (
