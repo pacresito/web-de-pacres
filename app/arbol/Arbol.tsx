@@ -1322,12 +1322,22 @@ function horizontal(hasta: number, y: number, saltos: number[]): string {
 /**
  * El trazo de una unión a uno de sus hijos: sale del ancla, baja por el canal y muere en el
  * borde del hijo. `desdeElCanal` se salta el tramo del ancla, que es el que apunta a los
- * padres; el recto no tiene canal que saltarse, así que va entero de todas formas.
+ * padres —de hermano a hermano se pasa por el canal y no por ellos—. **El hijo recto
+ * también lo tiene**, escondido dentro de su horizontal en vez de en un tramo propio: sin
+ * cortarlo ahí, bastaba con desplegar a un hermano —que lo pone a la altura de la unión y
+ * lo vuelve recto— para que el camino se pintase saliendo de unos padres por los que no
+ * pasa.
  */
 function bajada(v: Vinculo, h: Vinculo["hijos"][number], desdeElCanal = false): string {
-  if (h.recto) return `M ${v.x} ${v.y} ${horizontal(h.x - h.ancho / 2, v.y, h.saltos)}`;
+  const borde = h.x - h.ancho / 2;
+  if (h.recto) {
+    // Los saltos de antes del canal se van con el tramo que los traía: pintarlos desde
+    // aquí haría retroceder al trazo hasta buscarlos.
+    if (!desdeElCanal) return `M ${v.x} ${v.y} ${horizontal(borde, v.y, h.saltos)}`;
+    return `M ${v.canal} ${v.y} ${horizontal(borde, v.y, h.saltos.filter((x) => x > v.canal))}`;
+  }
   const arranque = desdeElCanal ? `M ${v.canal} ${v.y}` : `M ${v.x} ${v.y} ${horizontal(v.canal, v.y, v.saltos)}`;
-  return `${arranque} V ${h.y} ${horizontal(h.x - h.ancho / 2, h.y, h.saltos)}`;
+  return `${arranque} V ${h.y} ${horizontal(borde, h.y, h.saltos)}`;
 }
 
 function TrazoDePareja({
