@@ -66,7 +66,7 @@ export function calcularBloques(g: Grafo, { puntoDeVista, ocultarNoConectados }:
   const dentro = (id: string) => !permitidos || permitidos.has(id);
   const directa = new Set([puntoDeVista, ...ascendientes(g, puntoDeVista), ...descendientes(g, puntoDeVista)]);
 
-  // --- Reparto: cada uno a la unión de la que es hijo, y el que se casó con la de su pareja ---
+  // Reparto: cada uno a la unión de la que es hijo, y el que se casó con la de su pareja
   const grupos = new Map<string, { hermanos: string[]; parejas: string[] }>();
   const cajon = (id: string) => {
     const previo = grupos.get(id);
@@ -86,7 +86,7 @@ export function calcularBloques(g: Grafo, { puntoDeVista, ocultarNoConectados }:
     }
   }
 
-  // --- De grupo a bloque, sin colocar todavía ---
+  // De grupo a bloque, sin colocar todavía
   const pasos = pasosDesde(g, puntoDeVista);
   const sinColocar = [...grupos].map(([id, { hermanos, parejas }]) => {
     const suyos = [...hermanos, ...parejas];
@@ -105,7 +105,7 @@ export function calcularBloques(g: Grafo, { puntoDeVista, ocultarNoConectados }:
     };
   });
 
-  // --- Colocación: una columna por generación, apilada de arriba abajo ---
+  // Colocación: una columna por generación, apilada de arriba abajo
   // **Arriba lo tuyo.** Cada columna se ordena por lo cerca que te queda su bloque, que es
   // lo mismo que hace cualquier lista de la app: el mapa está anclado a un punto de vista,
   // así que la primera fila de todas las columnas es tu familia y lo lejano se hunde.

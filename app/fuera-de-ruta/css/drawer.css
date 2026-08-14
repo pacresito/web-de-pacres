@@ -1,5 +1,5 @@
-/* ── Drawer «Ver más» (Fase D): vista breve de la ficha sin navegar. Hoja inferior en
-   móvil, modal centrado en escritorio. ────────────────────────────────────────────── */
+/* Drawer «Ver más»: vista breve de la ficha sin navegar. Hoja inferior en
+   móvil, modal centrado en escritorio. */
 .fr-fd-scrim {
   position: fixed;
   inset: 0;
@@ -73,7 +73,7 @@
 .fr-fd-anadir { flex: 1; text-align: center; }
 .fr-fd-completa { flex: none; white-space: nowrap; }
 
-/* Comparador (§4.8): tabla de campos + frases condicionales, sobre el overlay del drawer. */
+/* Comparador: tabla de campos + frases condicionales, sobre el overlay del drawer. */
 .fr-cmp { padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 14px; }
 .fr-cmp-t { font-size: 22px; }
 /* flex-shrink: 0 — sin él, dentro del modal (flex column de altura fija) la tabla se

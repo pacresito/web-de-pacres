@@ -1,39 +1,32 @@
 // Cálculo de pedidos a partir del snapshot de inventario y la referencia de Ventas.
 // Lógica pura, testeable con `npx tsx lib/farma/pedidos.test.ts`. Fuera del build.
 //
-// El eje de agrupación es el PEDIDO, no el laboratorio del producto: la lista de
-// pedidos es la carpeta `farma/Datos iniciales/Pedidos - …` (un mismo lab
-// puede partirse en varios pedidos). El mapa `pedidosDeCodigo` (codigo → [pedidos],
-// clave Redis `farma:ref:pedido-codigos`) dice a qué pedido(s) va cada artículo; un
-// código puede ir en varios (colisión almacén ↔ marca, decisión jun-26). El `lab` del
-// `RefArticulo` es otro eje (el del producto en Ventas) y aquí ya no agrupa.
+// El eje de agrupación es el PEDIDO, no el laboratorio del producto: un mismo lab puede
+// partirse en varios pedidos. `pedidosDeCodigo` (codigo → [pedidos], clave Redis
+// `farma:ref:pedido-codigos`) dice a qué pedido(s) va cada artículo; un código puede ir
+// en varios por colisión almacén ↔ marca. El `lab` del `RefArticulo` es otro eje (el del
+// producto en Ventas) y aquí no agrupa.
 //
-// Reglas (del plan, cambios jun-26 #1/#2/#3; universo = Ventas, jun-27):
-// - Universo: todo artículo de Ventas (ref) es reponible por su consumo, tenga o no
-//   StMín. El StMín es opcional: sin él, el objetivo es solo el consumo.
-// - Línea para pedir: cantidad > 0, i.e. existencias < max(StMín, ceil(consumo)).
-//   Incluye artículos sin rotura pero por debajo del consumo (no solo los rotos).
-// - Cantidad (#2): max(0, max(StMín, ceil(consumo_mensual)) − stock). El objetivo
-//   es el máximo entre stock mínimo y consumo (ya no solo el consumo).
-// - Rotura: stock < StMín. Solo cuenta para la condición #1a de pedido pendiente.
-//   Un artículo sin StMín nunca rompe: añade su línea por consumo pero no dispara el
-//   pedido por sí solo (sí es pedible siempre por el pedido manual).
-// - Pedido pendiente (#1): un pedido entra en la lista solo si cumple LAS DOS:
-//   (a) ≥1 artículo en rotura  y  (b) ≥6 líneas para pedir (≥6 artículos con
-//   cantidad > 0). El umbral de 6 evita disparar pedidos minúsculos.
-// - Sin pedido en la carpeta: un artículo de Ventas que no esté en ningún pedido se
-//   IGNORA (decisión jun-26): no se puede reponer por la herramienta.
-// - Stock mínimo > consumo (#3): ya no es un error (con el objetivo = max, pides
-//   hasta el StMín). Aviso informativo: se cuenta sobre TODO el universo de stock
-//   mínimo, haya rotura o no (lo revisa María en la pantalla Inventario); aquí solo
-//   va el total para la línea-resumen sutil.
-// - Ciclo de vida por PEDIDO (el disparador es la DESCARGA del .xls, que marca el
-//   pedido como descargado; ya no hay check manual). Para cada pedido con líneas:
-//     · descargado: descargado hace < 5 días → va a "descargados" tenga o no rotura
-//       ni las 6 líneas. Así entran también los pedidos manuales que María descarga.
-//     · pendiente: cumple #1 (rotura + ≥6 líneas) y no está descargado hace < 5 días.
-//     · resuelto: si un inventario nuevo repone el pedido del todo (ninguna línea con
-//       cantidad > 0), no se construye y desaparece de ambas listas.
+// Reglas:
+// - Universo: todo artículo de Ventas es reponible por su consumo, tenga o no StMín.
+//   El StMín es opcional: sin él, el objetivo es solo el consumo.
+// - Cantidad: max(0, max(StMín, ceil(consumo_mensual)) − stock). Hay línea que pedir
+//   cuando sale > 0, esté el artículo en rotura o solo por debajo de su consumo.
+// - Rotura: stock < StMín. Un artículo sin StMín nunca rompe: aporta su línea por
+//   consumo pero no dispara el pedido por sí solo (por el manual sí es pedible).
+// - Pedido pendiente: entra en la lista solo si cumple LAS DOS: ≥1 artículo en rotura
+//   y ≥6 líneas que pedir. El umbral de 6 evita disparar pedidos minúsculos.
+// - Un artículo de Ventas que no esté en ningún pedido se IGNORA: no se puede reponer
+//   por la herramienta.
+// - Stock mínimo > consumo no es un error (con el objetivo = max, pides hasta el
+//   StMín). Solo un aviso informativo, contado sobre TODO el universo de stock mínimo
+//   haya rotura o no; aquí va únicamente el total para la línea-resumen.
+// - Ciclo de vida por PEDIDO, disparado por la DESCARGA del .xls:
+//     · descargado: hace < 5 días → va a "descargados" aunque no cumpla lo de arriba.
+//       Así entran también los pedidos manuales que María descarga.
+//     · pendiente: cumple las dos condiciones y no se descargó hace < 5 días.
+//     · resuelto: si un inventario nuevo lo repone del todo (ninguna línea con cantidad
+//       > 0), no se construye y desaparece de ambas listas.
 
 import { tamanoCaja } from "./cajas-lacer";
 

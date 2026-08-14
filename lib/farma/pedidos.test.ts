@@ -19,7 +19,7 @@ const todos = (v: number): Stocks => Object.fromEntries(C.map((c) => [c, v]));
 // Los 6 códigos pertenecen al pedido "CINFA" (eje de agrupación de Pedidos).
 const pedCinfa: PedidosDeCodigo = Object.fromEntries(C.map((c) => [c, ["CINFA"]]));
 
-// --- #1+#2: 6 roturas → pendiente; cantidad = max(StMín, consumo) − stock ---
+// #1+#2: 6 roturas → pendiente; cantidad = max(StMín, consumo) − stock
 {
   const r = calcularPedidos(todos(2), seisCinfa(10), todos(5), pedCinfa, {}, AHORA);
   assert.strictEqual(r.pendientes.length, 1, "un pedido pendiente");
@@ -30,20 +30,20 @@ const pedCinfa: PedidosDeCodigo = Object.fromEntries(C.map((c) => [c, ["CINFA"]]
   assert.ok(cinfa.lineas.every((l) => l.existencias === 2 && l.consumo === 10 && l.min === 5), "cada línea lleva su contexto (existencias, consumo, StMín)");
 }
 
-// --- Contexto de línea: StMín sin definir viaja como null (no 0) ---
+// Contexto de línea: StMín sin definir viaja como null (no 0)
 {
   const r = calcularPedidos(todos(2), seisCinfa(10), {}, pedCinfa, { CINFA: haceDias(1) }, AHORA);
   assert.ok(r.hechos[0].lineas.every((l) => l.min === null), "sin StMín → min null en la línea");
 }
 
-// --- #2: con StMín > consumo el objetivo es el StMín; #3 cuenta la alerta ---
+// #2: con StMín > consumo el objetivo es el StMín; #3 cuenta la alerta
 {
   const r = calcularPedidos(todos(2), seisCinfa(4), todos(8), pedCinfa, {}, AHORA);
   assert.ok(r.pendientes[0].lineas.every((l) => l.cantidad === 6), "max(8,4)−2 = 6 (manda el StMín)");
   assert.strictEqual(r.alertasStockMinimo, 6, "los 6 tienen StMín 8 > consumo 4");
 }
 
-// --- #1: una línea para pedir no necesita rotura (existencias bajo el consumo) ---
+// #1: una línea para pedir no necesita rotura (existencias bajo el consumo)
 {
   // 000001 roto (2<5) → cantidad 8 ; 000002..006 sin rotura (7≥5) pero bajo consumo → cantidad 3
   const stock: Stocks = { ...todos(7), "000001": 2 };
@@ -54,7 +54,7 @@ const pedCinfa: PedidosDeCodigo = Object.fromEntries(C.map((c) => [c, ["CINFA"]]
   assert.strictEqual(lineas["000002"], 3, "sin rotura pero bajo consumo: max(5,10)−7");
 }
 
-// --- #1b: con < 6 líneas no es pendiente aunque haya roturas ---
+// #1b: con < 6 líneas no es pendiente aunque haya roturas
 {
   // 5 roturas (000001..005) + 1 cubierto (000006 sin línea) = 5 líneas < 6
   const stock: Stocks = { ...todos(2), "000006": 99 };
@@ -62,14 +62,14 @@ const pedCinfa: PedidosDeCodigo = Object.fromEntries(C.map((c) => [c, ["CINFA"]]
   assert.strictEqual(r.pendientes.length, 0, "5 líneas: por debajo del umbral");
 }
 
-// --- #1a: con 6 líneas pero 0 roturas tampoco es pendiente ---
+// #1a: con 6 líneas pero 0 roturas tampoco es pendiente
 {
   // todos a 7: 7≥5 (sin rotura) y 7<10 → 6 líneas de cantidad 3, pero ninguna rotura
   const r = calcularPedidos(todos(7), seisCinfa(10), todos(5), pedCinfa, {}, AHORA);
   assert.strictEqual(r.pendientes.length, 0, "sin rotura: no se dispara el pedido");
 }
 
-// --- #3: alertasStockMinimo cuenta todo el universo, sin rotura ---
+// #3: alertasStockMinimo cuenta todo el universo, sin rotura
 {
   const stMin: StMins = { ...todos(5), "000001": 25 }; // solo 000001 con StMín > consumo (25>10)
   const r = calcularPedidos(todos(99), seisCinfa(10), stMin, pedCinfa, {}, AHORA);
@@ -77,7 +77,7 @@ const pedCinfa: PedidosDeCodigo = Object.fromEntries(C.map((c) => [c, ["CINFA"]]
   assert.strictEqual(r.alertasStockMinimo, 1, "solo 000001 (25 > 10)");
 }
 
-// --- Ciclo de vida: descargado < 5 días → en descargados; ≥ 5 días → reabre ---
+// Ciclo de vida: descargado < 5 días → en descargados; ≥ 5 días → reabre
 {
   const ref = seisCinfa(10);
   const reciente = calcularPedidos(todos(2), ref, todos(5), pedCinfa, { CINFA: haceDias(2) }, AHORA);
@@ -89,7 +89,7 @@ const pedCinfa: PedidosDeCodigo = Object.fromEntries(C.map((c) => [c, ["CINFA"]]
   assert.strictEqual(viejo.hechos.length, 0);
 }
 
-// --- Descargado se mantiene mientras tenga líneas; desaparece al reponerse del todo ---
+// Descargado se mantiene mientras tenga líneas; desaparece al reponerse del todo
 {
   // Reposición total (todos a 99 ≥ objetivo): sin líneas → desaparece de ambas listas.
   const repuesto = calcularPedidos(todos(99), seisCinfa(10), todos(5), pedCinfa, { CINFA: haceDias(1) }, AHORA);
@@ -102,7 +102,7 @@ const pedCinfa: PedidosDeCodigo = Object.fromEntries(C.map((c) => [c, ["CINFA"]]
   assert.strictEqual(parcial.hechos.length, 1, "descargado con líneas: se mantiene aunque no cumpla #1");
 }
 
-// --- Descargado manual: un pedido sin rotura descargado aparece en descargados ---
+// Descargado manual: un pedido sin rotura descargado aparece en descargados
 {
   // Sin StMín → sin rotura, no cumple #1; pero descargado hace 1 día y con líneas por consumo.
   const r = calcularPedidos(todos(2), seisCinfa(10), {}, pedCinfa, { CINFA: haceDias(1) }, AHORA);
@@ -110,21 +110,21 @@ const pedCinfa: PedidosDeCodigo = Object.fromEntries(C.map((c) => [c, ["CINFA"]]
   assert.strictEqual(r.hechos.length, 1, "descargado manual: en descargados");
 }
 
-// --- Huérfano: hay que pedir (rotura) pero el código no está en la referencia ---
+// Huérfano: hay que pedir (rotura) pero el código no está en la referencia
 {
   const r = calcularPedidos({ "999999": 0 }, seisCinfa(10), { "999999": 3 }, {}, {}, AHORA);
   assert.deepStrictEqual(r.huerfanos, ["999999"]);
   assert.strictEqual(r.pendientes.length, 0);
 }
 
-// --- Stock ausente del inventario = 0 unidades → rotura, pide el objetivo entero ---
+// Stock ausente del inventario = 0 unidades → rotura, pide el objetivo entero
 {
   const r = calcularPedidos({}, seisCinfa(10), todos(5), pedCinfa, {}, AHORA);
   assert.strictEqual(r.pendientes.length, 1, "ausentes = 0 → 6 roturas");
   assert.ok(r.pendientes[0].lineas.every((l) => l.cantidad === 10), "max(5,10)−0 = 10");
 }
 
-// --- jun-26: artículo gestionado sin pedido en la carpeta → se ignora ---
+// artículo gestionado sin pedido en la carpeta → se ignora
 {
   // Los 6 cumplen rotura pero ninguno tiene pedido asignado → no se construye nada.
   const r = calcularPedidos(todos(2), seisCinfa(10), todos(5), {}, {}, AHORA);
@@ -132,7 +132,7 @@ const pedCinfa: PedidosDeCodigo = Object.fromEntries(C.map((c) => [c, ["CINFA"]]
   assert.strictEqual(r.huerfanos.length, 0, "no es huérfano (sí está en Ventas), solo sin pedido");
 }
 
-// --- jun-27: artículo de Ventas SIN StMín se pide por consumo ---
+// artículo de Ventas SIN StMín se pide por consumo
 {
   // 000001 con StMín 5 y roto (2<5) dispara; 000002..006 SIN StMín, stock 2 < consumo 10.
   const r = calcularPedidos(todos(2), seisCinfa(10), { "000001": 5 }, pedCinfa, {}, AHORA);
@@ -143,13 +143,13 @@ const pedCinfa: PedidosDeCodigo = Object.fromEntries(C.map((c) => [c, ["CINFA"]]
   assert.strictEqual(lineas["000002"], 8, "sin StMín: objetivo = consumo, max(0,10)−2");
 }
 
-// --- jun-27: un pedido sin ninguna rotura (nadie tiene StMín) no se auto-dispara ---
+// un pedido sin ninguna rotura (nadie tiene StMín) no se auto-dispara
 {
   const r = calcularPedidos(todos(2), seisCinfa(10), {}, pedCinfa, {}, AHORA);
   assert.strictEqual(r.pendientes.length, 0, "sin StMín no hay rotura: solo pedible en manual");
 }
 
-// --- jun-26: un código en varios pedidos suma su línea a cada uno (colisión) ---
+// un código en varios pedidos suma su línea a cada uno (colisión)
 {
   // 000001 pertenece a CINFA y a ALMACEN; el resto solo a CINFA. Ambos pedidos llegan a 6
   // líneas (CINFA con sus 6; ALMACEN solo tendría 1 → no alcanza el umbral). Para probar el
@@ -161,7 +161,7 @@ const pedCinfa: PedidosDeCodigo = Object.fromEntries(C.map((c) => [c, ["CINFA"]]
   assert.ok(r.pendientes.every((b) => b.lineas.length === 6), "cada pedido con sus 6 líneas");
 }
 
-// --- pedido manual (jun-27): incluye artículos por consumo aunque ninguno tenga StMín ---
+// pedido manual: incluye artículos por consumo aunque ninguno tenga StMín
 {
   // Sin StMín en nadie y sin rotura: calcularPedidos no lo dispara, pero el manual sí lo arma.
   const bolsa = bolsaDePedido("CINFA", todos(2), seisCinfa(10), {}, pedCinfa);
@@ -170,12 +170,12 @@ const pedCinfa: PedidosDeCodigo = Object.fromEntries(C.map((c) => [c, ["CINFA"]]
   assert.ok(bolsa!.lineas.every((l) => l.cantidad === 8), "objetivo = consumo: max(0,10)−2");
 }
 
-// --- listarPedidos (jun-27): parte de Ventas, no de StMín ---
+// listarPedidos: parte de Ventas, no de StMín
 {
   assert.deepStrictEqual(listarPedidos(pedCinfa, seisCinfa(10)), ["CINFA"], "pedido listado sin StMín");
 }
 
-// --- Caja Lacer: la cantidad se redondea al alza al múltiplo de caja (default 6) ---
+// Caja Lacer: la cantidad se redondea al alza al múltiplo de caja (default 6)
 {
   // objetivo 14, stock 1 → bruto 13 → múltiplo de 6 superior = 18 (3 cajas).
   const ref: RefPedidos = { "000123": { denominacion: "LACER-X", lab: "LACER", consumoMensual: 14 } };
@@ -183,7 +183,7 @@ const pedCinfa: PedidosDeCodigo = Object.fromEntries(C.map((c) => [c, ["CINFA"]]
   assert.strictEqual(bolsa!.lineas[0].cantidad, 18, "no listado en LACER → caja 6: ceil(13/6)·6 = 18");
 }
 
-// --- Caja Lacer 12 (excepción): un cepillo de expositor 12 redondea a múltiplo de 12 ---
+// Caja Lacer 12 (excepción): un cepillo de expositor 12 redondea a múltiplo de 12
 {
   // mismo bruto 13, pero 162974 tiene caja 12 → ceil(13/12)·12 = 24 (2 expositores).
   const ref: RefPedidos = { "162974": { denominacion: "CEPILLO MEDIO", lab: "LACER", consumoMensual: 14 } };
@@ -191,14 +191,14 @@ const pedCinfa: PedidosDeCodigo = Object.fromEntries(C.map((c) => [c, ["CINFA"]]
   assert.strictEqual(bolsa!.lineas[0].cantidad, 24, "excepción caja 12: ceil(13/12)·12 = 24");
 }
 
-// --- Fuera de Lacer no se redondea: la cantidad es exacta (caja 1) ---
+// Fuera de Lacer no se redondea: la cantidad es exacta (caja 1)
 {
   const ref: RefPedidos = { "000001": { denominacion: "CINFA-A", lab: "CINFA", consumoMensual: 14 } };
   const bolsa = bolsaDePedido("CINFA", { "000001": 1 }, ref, {}, { "000001": ["CINFA"] });
   assert.strictEqual(bolsa!.lineas[0].cantidad, 13, "no-Lacer: cantidad exacta 14−1 = 13");
 }
 
-// --- lineasDePedido (el .xls): catálogo entero del pedido, lo cubierto con cantidad 0 ---
+// lineasDePedido (el .xls): catálogo entero del pedido, lo cubierto con cantidad 0
 {
   // 3 artículos servidos de sobra (stock 20 > consumo 10) y 3 por reponer (stock 2).
   const stock: Stocks = Object.fromEntries(C.map((c, i) => [c, i < 3 ? 20 : 2]));

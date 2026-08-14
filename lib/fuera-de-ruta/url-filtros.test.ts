@@ -5,7 +5,7 @@ import type { Filtros } from "./filtrar";
 
 const ida = (f: Filtros) => queryAFiltros(new URLSearchParams(filtrosAQuery(f)));
 
-// --- Round-trip: lo que sale del explorador vuelve igual ---
+// Round-trip: lo que sale del explorador vuelve igual
 const completo: Filtros = {
   zona: ["baztan-otsondo", "ribera"],
   tipo: ["cascada"],
@@ -23,18 +23,18 @@ const completo: Filtros = {
 };
 assert.deepStrictEqual(ida(completo), completo, "round-trip conserva todos los filtros");
 
-// --- Sin filtros = query vacía (URL limpia, no "?") ---
+// Sin filtros = query vacía (URL limpia, no "?")
 assert.strictEqual(filtrosAQuery({}), "", "sin filtros → query vacía");
 assert.deepStrictEqual(queryAFiltros(new URLSearchParams("")), {}, "query vacía → sin filtros");
 
-// --- Solo se escribe lo que filtra: un booleano en false no ensucia la URL ---
+// Solo se escribe lo que filtra: un booleano en false no ensucia la URL
 assert.strictEqual(filtrosAQuery({ ninos: false, bano: true }), "bano=1", "booleano false no se escribe");
 assert.strictEqual(filtrosAQuery({ zona: [] }), "", "dimensión vacía no se escribe");
 
-// --- Multi-selección: repite clave, conserva el orden ---
+// Multi-selección: repite clave, conserva el orden
 assert.strictEqual(filtrosAQuery({ tipo: ["cascada", "ibon"] }), "tipo=cascada&tipo=ibon", "multi repite clave");
 
-// --- Parseo defensivo: el valor raro se cae, el resto de filtros sigue en pie ---
+// Parseo defensivo: el valor raro se cae, el resto de filtros sigue en pie
 assert.deepStrictEqual(
   queryAFiltros(new URLSearchParams("desnivel=everest&tipo=cascada")),
   { tipo: ["cascada"] },

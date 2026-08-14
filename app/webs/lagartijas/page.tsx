@@ -5,7 +5,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { calcularEdad } from "@/lib/utils";
 
-// ─── Datos ──────────────────────────────────────────────────────────────────
 // La favorita (rosa, "Sapo") va en la portada; estas 5 son la galería.
 // `sample-*` son lagartijas de muestra; el resto son fotos reales de Lucas.
 
@@ -29,7 +28,7 @@ const LAGARTIJAS: Lagartija[] = [
 
 const PALETA = ["#ff5ca8", "#29c2c9", "#a4e44b", "#ffd23f", "#ff8a3d", "#9b5de5", "#4cc3ff", "#ff4d4d"];
 
-// ─── Lagartija dibujada (SVG) ───────────────────────────────────────────────
+// Lagartija dibujada (SVG)
 // Reutilizada en 3 sitios: mascota de portada (con lengua al tocar) y dos bichos
 // decorativos que trepan. El color del cuerpo viaja por `currentColor`.
 
@@ -73,8 +72,6 @@ function BeadRow() {
     </div>
   );
 }
-
-// ─── Página ─────────────────────────────────────────────────────────────────
 
 export default function Lagartijas() {
   const edad = calcularEdad(new Date(2020, 2, 30));
@@ -191,7 +188,7 @@ export default function Lagartijas() {
           {Array.from({ length: 16 }, (_, i) => <span key={i} className="lg-ring" />)}
         </div>
 
-        {/* ── PORTADA ── */}
+        {/* PORTADA */}
         <section className="lg-section" style={{ maxWidth: 920, padding: "clamp(22px,6vw,56px) clamp(20px,5vw,44px) clamp(8px,3vw,24px)" }}>
           {/* sol decorativo */}
           <div className="lg-anim-spin" style={{ position: "absolute", top: "6%", right: "6%", width: "clamp(54px,12vw,86px)", pointerEvents: "none" }}>
@@ -260,7 +257,7 @@ export default function Lagartijas() {
 
         <BeadRow />
 
-        {/* ── EL GÉNERO (galería) ── */}
+        {/* EL GÉNERO (galería) */}
         <section className="lg-section" style={{ maxWidth: 1040, padding: "clamp(14px,3vw,26px) clamp(16px,4vw,40px) clamp(20px,5vw,40px)" }}>
           <div className="lg-anim-crawl" style={{ position: "absolute", top: -6, right: "2%", width: "clamp(58px,13vw,92px)", ["--r" as string]: "24deg", pointerEvents: "none", zIndex: 2 }}>
             <Lizard color="#ff5ca8" width="100%" />
@@ -286,7 +283,7 @@ export default function Lagartijas() {
 
         <BeadRow />
 
-        {/* ── QUÉ PUEDES PEDIR ── */}
+        {/* QUÉ PUEDES PEDIR */}
         <section className="lg-section" style={{ maxWidth: 960, padding: "clamp(14px,3vw,26px) clamp(20px,5vw,44px) clamp(20px,5vw,40px)" }}>
           <div className="lg-anim-twinkle" style={{ position: "absolute", top: "8%", right: "2%", width: "clamp(26px,6vw,40px)", animationDelay: ".4s", pointerEvents: "none" }}>
             <svg viewBox="0 0 24 24" style={{ width: "100%" }}>
@@ -343,7 +340,7 @@ export default function Lagartijas() {
 
         <BeadRow />
 
-        {/* ── CÓMO SE PIDE ── */}
+        {/* CÓMO SE PIDE */}
         <section className="lg-section" style={{ maxWidth: 880, padding: "clamp(14px,3vw,26px) clamp(20px,5vw,44px) clamp(40px,8vw,70px)" }}>
           <div className="lg-anim-crawl" style={{ position: "absolute", bottom: 18, left: "3%", width: "clamp(56px,13vw,88px)", ["--r" as string]: "-18deg", animationDelay: ".5s", pointerEvents: "none" }}>
             <Lizard color="#29c2c9" width="100%" />

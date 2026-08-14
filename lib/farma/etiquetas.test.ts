@@ -2,13 +2,13 @@
 import assert from "assert";
 import { formatoPrecio, expandir, empaquetar, A4, DIAMETROS, POR_HOJA, type Etiqueta, type Tamano } from "./etiquetas";
 
-// --- formatoPrecio: entero grande + decimales pegados con € ---
+// formatoPrecio: entero grande + decimales pegados con €
 assert.deepStrictEqual(formatoPrecio(21.95), { entero: "21", decimales: ",95€" });
 assert.deepStrictEqual(formatoPrecio(7), { entero: "7", decimales: ",00€" });
 assert.deepStrictEqual(formatoPrecio(16.5), { entero: "16", decimales: ",50€" });
 assert.deepStrictEqual(formatoPrecio(120.05), { entero: "120", decimales: ",05€" });
 
-// --- expandir: una etiqueta por copia; precio, promo, título ---
+// expandir: una etiqueta por copia; precio, promo, título
 const exp = expandir([
   { diametro: DIAMETROS.S, cantidad: 3, precio: 21.95 },
   { diametro: DIAMETROS.L, cantidad: 1, texto: "3x2" },
@@ -26,7 +26,7 @@ const tp = exp.find((e) => e.titulo === "Sacaleches eléctrico")!;
 assert.strictEqual(tp.entero, "99", "texto + precio conserva el precio");
 assert.strictEqual(tp.decimales, ",95€", "texto + precio conserva los decimales");
 
-// --- empaquetar: nada se solapa y todo cae dentro de los márgenes ---
+// empaquetar: nada se solapa y todo cae dentro de los márgenes
 const muchas: Etiqueta[] = [
   ...Array(4).fill({ diametro: DIAMETROS.L, entero: "62", decimales: ",95€" }),
   ...Array(12).fill({ diametro: DIAMETROS.M, entero: "21", decimales: ",95€" }),
@@ -51,11 +51,11 @@ for (const hoja of hojas) {
   }
 }
 
-// --- paginación: si no caben en una hoja, se abre otra ---
+// paginación: si no caben en una hoja, se abre otra
 const desborde = empaquetar(Array(60).fill({ diametro: DIAMETROS.L, entero: "9", decimales: ",95€" }), A4);
 assert.ok(desborde.length > 1, "60 grandes no caben en una sola hoja");
 
-// --- POR_HOJA: la capacidad publicada es la que sale de empaquetar de verdad ---
+// POR_HOJA: la capacidad publicada es la que sale de empaquetar de verdad
 // El contador de la pantalla PVP estima con ella; si el packing cambia, cambia aquí.
 for (const t of Object.keys(DIAMETROS) as Tamano[]) {
   const cap = POR_HOJA[t];

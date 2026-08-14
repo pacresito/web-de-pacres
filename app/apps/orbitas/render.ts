@@ -6,7 +6,7 @@ import type { Body, View } from "./engine";
 const TAU = Math.PI * 2;
 
 // Rampa de "temperatura estelar" por masa: poca masa → azul/blanco, mucha → naranja/rojo.
-// (Elección estética del plan; no es la astrofísica real.) El rojo pleno llega a masa 3000.
+// (Elección estética; no es la astrofísica real.) El rojo pleno llega a masa 3000.
 // Sin colores fuera de esta rampa.
 const MASS_STOPS: [number, number, number, number][] = [
   [   4, 180, 214, 255], // azul claro (cuerpo ligero)

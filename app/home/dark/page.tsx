@@ -705,7 +705,6 @@ body {
   98%, 100% { left: 150%; opacity: 0; }
 }
 
-
 /* ── LANG ── */
 .lang-row {
   display: flex;

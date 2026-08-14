@@ -10,7 +10,7 @@ import {
   viernesDeDolores,
 } from "./santoral";
 
-// --- La excepción por persona: el nodo lleva el nombre corto y el día no se resiente ---
+// La excepción por persona: el nodo lleva el nombre corto y el día no se resiente
 // p23 se llama María Ángeles, en el árbol va como María, y celebra con las Ángeles.
 assert.strictEqual(onomasticaDe("María"), "09-12");
 assert.strictEqual(onomasticaDePersona({ id: "p23", nombre: "María" }), "08-02");
@@ -19,7 +19,7 @@ assert.strictEqual(onomasticaDePersona({ id: "p318", nombre: "María" }), onomas
 // Y a Pepe no le hizo falta excepción: su nombre ya lo lleva al 19 de marzo.
 assert.strictEqual(onomasticaDePersona({ id: "p29", nombre: "Pepe" }), "03-19");
 
-// --- El calendario móvil, contra años conocidos: el algoritmo no se lee, se comprueba ---
+// El calendario móvil, contra años conocidos: el algoritmo no se lee, se comprueba
 const escribir = (ms: number) => new Date(ms).toISOString().slice(0, 10);
 assert.strictEqual(escribir(pascua(2026)), "2026-04-05");
 assert.strictEqual(escribir(pascua(2027)), "2027-03-28");
@@ -80,7 +80,7 @@ for (const nombre of ["Pilar", "Lucas", "Flora", "Ricardo", "Mercedes", "Montse"
   assert.match(fijo, /^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/, `${nombre}: ${fijo}`);
 }
 
-// --- La cuenta atrás ---
+// La cuenta atrás
 assert.deepStrictEqual(proximaVez("2026-08-06", "08-06"), { fecha: "2026-08-06", faltan: 0 }, "hoy es hoy");
 assert.deepStrictEqual(proximaVez("2026-08-06", "08-07"), { fecha: "2026-08-07", faltan: 1 });
 // El que ya pasó este año cae en el siguiente, y el cambio de año no lo despista.

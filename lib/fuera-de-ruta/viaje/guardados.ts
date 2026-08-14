@@ -62,7 +62,7 @@ export function borrarGuardado(id: string): void {
   escribir(leerGuardados().filter((g) => g.id !== id));
 }
 
-// --- Reabrir un viaje: handoff por localStorage (no por URL) ---
+// Reabrir un viaje: handoff por localStorage (no por URL)
 // «Mis viajes» es local; reabrir es una acción local, no un enlace compartible. Dejamos
 // el perfil + selección en una clave y crear-viaje los recoge (y borra) al montar.
 export function marcarParaAbrir(v: ViajeGuardado): void {

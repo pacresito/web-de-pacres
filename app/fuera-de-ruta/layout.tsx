@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-// Identidad «Río pop» (F1): tres fuentes vía next/font expuestas como variables
+// Identidad «Río pop»: tres fuentes vía next/font expuestas como variables
 // CSS que consume fuera-de-ruta.css. Baloo 2 títulos/cifras/botones, DM Sans cuerpo,
 // IBM Plex Mono micro-etiquetas.
 const baloo = Baloo_2({ subsets: ["latin"], weight: ["700", "800"], variable: "--fr-font-baloo", display: "swap" });

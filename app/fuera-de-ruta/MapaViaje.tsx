@@ -6,7 +6,7 @@ import "leaflet/dist/leaflet.css";
 import { mapsHref } from "@/lib/fuera-de-ruta/formato";
 import { escapar } from "./escapar";
 
-// Mapa del viaje (Fase G, §5.6): las mismas paradas que la guía, **en el mismo orden de la
+// Mapa del viaje: las mismas paradas que la guía, **en el mismo orden de la
 // planificación** (el pin N es la parada N), unidas día a día por una línea, con el
 // alojamiento y los restaurantes del plan y un enlace a Google Maps en cada punto.
 //

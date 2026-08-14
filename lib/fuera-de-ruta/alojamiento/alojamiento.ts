@@ -1,9 +1,9 @@
-// Zonas de alojamiento (Fase F4, §4.15): sobre el viaje ya repartido en días, propone
+// Zonas de alojamiento: sobre el viaje ya repartido en días, propone
 // DÓNDE dormir —localidades base, nunca un establecimiento ni Booking—. El reparto por
 // días de `mi-viaje` ya es un clustering geográfico (cadena por cercanía); aquí se agrupan
 // días consecutivos en una misma base y se corta donde mudarse ahorra más coche del que
 // cuesta la mudanza. La localidad sale de `pueblosAlojamiento` —dato ya curado y ordenado
-// por cercanía (F4.0, decisión de Pablo)—, nunca de un GPS inventado. Puro. Test al lado.
+// por cercanía—, nunca de un GPS inventado. Puro. Test al lado.
 import type { Destino } from "../tipos";
 import type { ResumenViaje } from "../viaje/mi-viaje";
 import { tiempoCoche, seg2min, SALTO_ZONA_MIN, type MatrizViajes } from "../geo";
@@ -35,7 +35,6 @@ export type OpcionesAlojamiento = {
 // número que sustituye al viejo tope de 3 bases: el tope cortaba justo antes de la mudanza
 // más rentable en viajes que cruzan la provincia, y no cortaba nada en los cortos.
 const AHORRO_MUDANZA_MIN = 90;
-
 
 // Viaje repartido en días → zonas de alojamiento. Vacío si no hay nada rutable que dormir
 // cerca. Se corta donde mudarse compensa; con `max`, nunca más de esas zonas.

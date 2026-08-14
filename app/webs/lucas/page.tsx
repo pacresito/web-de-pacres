@@ -385,7 +385,7 @@ export default function Lucas() {
       <StarField />
       <div className="lc-page" style={{ position: 'relative', zIndex: 1 }}>
 
-        {/* ── HERO ── */}
+        {/* HERO */}
         <section className="lc-hero">
           <p className="lc-eyebrow">Ingeniero Senior · SpaceX Starship Program</p>
           <h1 className="lc-name">Dr. Lucas Crespo</h1>
@@ -398,7 +398,7 @@ export default function Lucas() {
           <p className="lc-scroll-hint">↓ ver perfil completo</p>
         </section>
 
-        {/* ── FOTO ── */}
+        {/* FOTO */}
         <div style={{ maxWidth: 780, margin: "0 auto", padding: "0 2rem" }}>
           <div className="lc-photo-wrap">
             <Image
@@ -412,7 +412,7 @@ export default function Lucas() {
           </div>
         </div>
 
-        {/* ── BIO ── */}
+        {/* BIO */}
         <section className="lc-section">
           <p className="lc-section-label">Sobre mí</p>
           <div className="lc-bio">
@@ -431,7 +431,7 @@ export default function Lucas() {
           </div>
         </section>
 
-        {/* ── EDUCACIÓN ── */}
+        {/* EDUCACIÓN */}
         <section className="lc-section">
           <p className="lc-section-label">Formación académica</p>
           <div className="lc-edu-list">
@@ -456,7 +456,7 @@ export default function Lucas() {
           </div>
         </section>
 
-        {/* ── SKILLS ── */}
+        {/* SKILLS */}
         <section className="lc-section">
           <p className="lc-section-label">Competencias técnicas</p>
           <div className="lc-skills-grid">
@@ -482,7 +482,7 @@ export default function Lucas() {
           </div>
         </section>
 
-        {/* ── PUBLICACIONES ── */}
+        {/* PUBLICACIONES */}
         <section className="lc-section">
           <p className="lc-section-label">Publicaciones seleccionadas</p>
           <div className="lc-pub-list">
@@ -519,7 +519,7 @@ export default function Lucas() {
           </div>
         </section>
 
-        {/* ── PREMIOS ── */}
+        {/* PREMIOS */}
         <section className="lc-section">
           <p className="lc-section-label">Reconocimientos y premios</p>
           <div className="lc-awards-grid">
@@ -540,7 +540,7 @@ export default function Lucas() {
           </div>
         </section>
 
-        {/* ── CONTACTO ── */}
+        {/* CONTACTO */}
         <section className="lc-contact">
           <p className="lc-contact-name">Dr. Lucas Crespo</p>
           <p className="lc-contact-sub">Disponible para proyectos, misiones espaciales y partidas de Castle Combo</p>

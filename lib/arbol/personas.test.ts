@@ -14,7 +14,7 @@ const persona = (nombre: string, apellidos: string[] = [], sexo?: "h" | "m"): Pe
   fuentes: [],
 });
 
-// --- La pareja: el hombre arriba, y si nadie trae sexo manda el documento ---
+// La pareja: el hombre arriba, y si nadie trae sexo manda el documento
 const gente = new Map([
   ["h", persona("Ricardo", [], "h")],
   ["m", persona("Lola", [], "m")],
@@ -30,7 +30,7 @@ assert.deepStrictEqual(ordenarPareja(["mujer", "nadie"], buscar), ["nadie", "muj
 assert.deepStrictEqual(ordenarPareja(["x", "z"], buscar), ["x", "z"], "sin sexo ninguno: manda el documento");
 assert.deepStrictEqual(ordenarPareja(["m"], buscar), ["m"], "una sola persona no es pareja");
 
-// --- La etiqueta, y dónde empieza lo que no consta escrito ---
+// La etiqueta, y dónde empieza lo que no consta escrito
 const conApellidos = persona("José", ["Cardona", "Torres"]);
 const suyos = { todos: ["Cardona", "Torres"], escritos: 2, nuevos: ["Torres"] };
 assert.deepStrictEqual(etiquetaDe(conApellidos, 2, suyos), { texto: "José Cardona Torres", heredadoDesde: 19 });
@@ -53,7 +53,7 @@ assert.strictEqual(
   "con uno escrito, el corte cae después de él",
 );
 
-// --- Sobre los datos de verdad ---
+// Sobre los datos de verdad
 const data: ArbolData = JSON.parse(readFileSync(resolve("seed/arbol.json"), "utf-8"));
 const porId = new Map(data.people.map((p) => [p.id, p]));
 // El sexo lo trae todo el mundo menos quien no tiene ni nombre, y así ninguna pareja

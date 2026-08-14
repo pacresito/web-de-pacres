@@ -14,9 +14,9 @@ import { CarruselMovil, Tarjeta, TarjetaCompacta } from "./_explorador/Tarjetas"
 // Leaflet toca `window`: solo en cliente, sin SSR.
 const Mapa = dynamic(() => import("./Mapa"), { ssr: false });
 
-// Explorador de /fuera-de-ruta/<provincia>/sitios (S3, Río pop). Escritorio (F3):
+// Explorador de /fuera-de-ruta/<provincia>/sitios (S3, Río pop). Escritorio:
 // filtros en dos filas (dropdowns-chip + toggles), grid de tarjetas y mapa sticky.
-// Móvil (F4): overlay a pantalla completa con dos modos —lista y mapa— y los filtros
+// Móvil: overlay a pantalla completa con dos modos —lista y mapa— y los filtros
 // en hoja inferior. El componente elige árbol según el ancho (`useEsMovil`); ambos
 // comparten TODA la lógica de filtros y recuentos, que re-ejecuta filtrar.ts (lógica
 // pura ya testada). La página lo monta sin SSR: elegir árbol por ancho y leer los
@@ -127,7 +127,7 @@ export default function Explorador({ datos, provincia }: {
 
   const nBano = (filtros.bano ? 1 : 0) + (filtros.agua?.length ?? 0);
 
-  // ---------------------------------------------------------------- MÓVIL (F4)
+  // MÓVIL
   if (esMovil) {
     // Con 0 resultados no se puede ir al mapa: se muestra el estado 0 en la lista.
     const modoEfectivo = destinos.length === 0 ? "lista" : modoMovil;
@@ -285,7 +285,7 @@ export default function Explorador({ datos, provincia }: {
     );
   }
 
-  // ----------------------------------------------------------- ESCRITORIO (F3)
+  // ESCRITORIO
   return (
     <>
       <div className="fr-s3-crumbs">

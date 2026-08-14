@@ -16,7 +16,7 @@ import {
   baseDelMarco, bordesDelMarco, diaYMes, etiquetaDia, minutosEnMarco, partesLocales,
 } from "./marco";
 
-// ─── Criterios de visibilidad ─────────────────────────────────────────────────
+// Criterios de visibilidad
 
 export const ALTITUD_MINIMA = 15;      // grados sobre el horizonte
 export const MAGNITUD_MAXIMA = -1;     // solo satélites más brillantes que esto
@@ -29,7 +29,7 @@ const PASO_SEGUNDOS = 30;              // muestreo de la órbita
 // ocurren de noche, basta con exigir que la hora local sea de tarde/noche.
 const PRIMERA_HORA_DE_LA_NOCHE = 12;
 
-// ─── Sedes ────────────────────────────────────────────────────────────────────
+// Sedes
 
 export type Sede = { nombre: string; lat: number; lon: number };
 
@@ -50,7 +50,7 @@ function esDeLaNoche(fecha: Date): boolean {
   return partesLocales(fecha).hora >= PRIMERA_HORA_DE_LA_NOCHE;
 }
 
-// ─── Geometría de andar por casa ──────────────────────────────────────────────
+// Geometría de andar por casa
 
 type Vec3 = { x: number; y: number; z: number };
 
@@ -74,7 +74,7 @@ function resta(a: Vec3, b: Vec3): Vec3 {
   return { x: a.x - b.x, y: a.y - b.y, z: a.z - b.z };
 }
 
-// ─── Brillo de un satélite ────────────────────────────────────────────────────
+// Brillo de un satélite
 
 /**
  * Magnitud aparente de un satélite, con el modelo clásico de esfera difusa:
@@ -88,7 +88,7 @@ export function magnitudSatelite(magEstandar: number, rangoKm: number, faseRad: 
   return magEstandar + 5 * Math.log10(rangoKm / 1000) - 2.5 * Math.log10(p(faseRad) / p(Math.PI / 2));
 }
 
-// ─── Eventos ──────────────────────────────────────────────────────────────────
+// Eventos
 
 export type EventoBase = {
   dia: string;          // "sáb 26", para la lista de próximos pasos
@@ -147,7 +147,7 @@ function marca(fecha: Date): EventoBase {
   };
 }
 
-// ─── Satélites ────────────────────────────────────────────────────────────────
+// Satélites
 
 export type Satelite = { nombre: string; magEstandar: number; tle1: string; tle2: string };
 
@@ -332,16 +332,15 @@ function reaparicionSatelite(sat: Satelite, desde: Date): string | null {
   return primero ? diaYMes(new Date(primero.instante)) : null;
 }
 
-// ─── Luna ─────────────────────────────────────────────────────────────────────
+// Luna
 
 // Lo que dura el espectáculo: la Luna sube un cuarto de grado por minuto, así que en
 // diez ya se ha despegado del horizonte y deja de ser lo que salías a ver.
 const SALIDA_LUNA_MINUTOS = 10;
 
 /**
- * Con el Sol por encima del horizonte no se ve salir la Luna; con el Sol puesto, sí. Sale de lo
- * observado desde La Manga el 28 jul 2026: salió a las 20:53 con el Sol a +3,1° y no se vio; a
- * las 21:00, con el Sol casi puesto, ya estaba despegada del horizonte.
+ * Con el Sol por encima del horizonte no se ve salir la Luna; con el Sol puesto, sí. Calibrado
+ * a ojo: con el Sol a +3° no se vio, y con el Sol casi puesto ya estaba despegada.
  *
  * Un único listón, sin corregir por fase, porque dentro del marco de la noche la Luna que asoma
  * es casi siempre la llena o poco menos —las salidas de las fases finas caen de madrugada o de
@@ -384,7 +383,7 @@ export function salidasDeLuna(desde: Date, hasta: Date): EventoLuna[] {
   return eventos;
 }
 
-// ─── Planetas ─────────────────────────────────────────────────────────────────
+// Planetas
 
 const PLANETAS: { nombre: string; body: Astro.Body }[] = [
   { nombre: "Mercurio", body: Astro.Body.Mercury },
@@ -533,7 +532,7 @@ export function tablaPlanetas(ahora: Date): FilaPlaneta[] {
   });
 }
 
-// ─── El cielo de esta noche ───────────────────────────────────────────────────
+// El cielo de esta noche
 
 // Cuántos pasos futuros caben en el pie de la tarjeta: los dos siguientes de la semana.
 const PROXIMOS_PASOS = 2;

@@ -1,8 +1,6 @@
-/* ============================================================
-   S6 · Mis viajes — los viajes guardados en este navegador
+/* S6 · Mis viajes — los viajes guardados en este navegador
    (perfil + selección). Una tarjeta por viaje; el CTA lo reabre
-   en crear-viaje. Lista de una columna: son pocos, se leen en fila.
-   ============================================================ */
+   en crear-viaje. Lista de una columna: son pocos, se leen en fila. */
 .fr-guardados { padding: 22px 18px 40px; max-width: 720px; margin: 0 auto; }
 .fr-guardados-titulo {
   font-family: var(--fr-font-baloo), sans-serif;

@@ -17,7 +17,7 @@ function test(name: string, ok: boolean, detail = "") {
 }
 const casi = (a: number, b: number, eps = 1e-9) => Math.abs(a - b) < eps;
 
-// ── Trazado ───────────────────────────────────────────────────────────────────
+// Trazado
 
 test("buildPath arranca en el origen", PATH_CELLS[0].x === 0 && PATH_CELLS[0].y === 0);
 test("buildPath es determinista", JSON.stringify(buildPath()) === JSON.stringify(PATH_CELLS));
@@ -31,7 +31,7 @@ test(
   new Set(PATH_CELLS.map((p) => `${p.x},${p.y}`)).size === PATH_CELLS.length,
 );
 
-// ── Simetría de los dos tableros ──────────────────────────────────────────────
+// Simetría de los dos tableros
 
 test("los dos trazados tienen la misma longitud", PATH_RIGHT.length === PATH_CELLS.length);
 test(
@@ -61,7 +61,7 @@ test(
   alineada(LEFT_INITIAL_VEL, PATH_CELLS) && alineada(RIGHT_INITIAL_VEL, PATH_RIGHT),
 );
 
-// ── Velocidades ───────────────────────────────────────────────────────────────
+// Velocidades
 
 test(
   "SPEED_ORDER cubre las mismas velocidades que SPEED_MULTIPLIERS",
@@ -74,7 +74,7 @@ test(
     .every((k, i, arr) => i === 0 || SPEED_MULTIPLIERS[k] > SPEED_MULTIPLIERS[arr[i - 1]]),
 );
 
-// ── Geometría ─────────────────────────────────────────────────────────────────
+// Geometría
 
 test("calcCell y calcTolerance crecen con el tamaño", calcCell(420) > calcCell(210) && calcTolerance(35) > calcTolerance(17));
 test("la tolerancia siempre cabe dentro de la celda", [120, 240, 420].every((s) => calcTolerance(calcCell(s)) < calcCell(s)));
@@ -94,15 +94,13 @@ test(
   }),
 );
 
-// ── Distancia punto-segmento (es lo que decide si te has salido) ──────────────
+// Distancia punto-segmento (es lo que decide si te has salido)
 
 const a = { x: 0, y: 0 }, b = { x: 10, y: 0 };
 test("sobre el segmento la distancia es 0", pointToSegmentDist({ x: 5, y: 0 }, a, b) === 0);
 test("en perpendicular mide la separación", pointToSegmentDist({ x: 5, y: 3 }, a, b) === 3);
 test("más allá del extremo mide al extremo", pointToSegmentDist({ x: 14, y: 3 }, a, b) === 5);
 test("un segmento degenerado mide al punto", pointToSegmentDist({ x: 3, y: 4 }, a, a) === 5);
-
-// ── Estado inicial ────────────────────────────────────────────────────────────
 
 const tablero = initBoard(PATH_CELLS, origen, LEFT_INITIAL_VEL, calcCell(420));
 test("initBoard empieza en la primera celda del trazado",

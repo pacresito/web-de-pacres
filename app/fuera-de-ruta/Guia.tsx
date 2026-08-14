@@ -18,9 +18,9 @@ const VISTAS: { id: Vista; texto: string }[] = [
   { id: "mapa", texto: "Mapa" },
 ];
 
-// La guía del viaje (Fase G, §5.4-5.9 + briefing §10): **cuatro vistas de los mismos datos**,
-// no cuatro documentos que haya que mantener sincronizados. Todas leen el itinerario de la
-// Fase E: la guía A lo pinta entero con sus consejos, la de bolsillo lo resume a una
+// La guía del viaje: **cuatro vistas de los mismos datos**,
+// no cuatro documentos que haya que mantener sincronizados. Todas leen el mismo itinerario:
+// la guía A lo pinta entero con sus consejos, la de bolsillo lo resume a una
 // pantalla, el mapa lo recorre en el mismo orden y la alternativa de lluvia (guía B) cuelga
 // de cada parada, ya calculada. El PDF es la guía A impresa (ver `@media print`).
 
@@ -39,7 +39,7 @@ export default function Guia({ itinerario, datos, porSlug, matriz, ritmo, provin
   // abre por la mitad (o por el final en móvil, donde el botón vive abajo del todo).
   useEffect(() => { window.scrollTo(0, 0); }, []);
   const totales = useMemo(() => totalesViaje(itinerario), [itinerario]);
-  // Guía B: precalculada al abrir la guía, no al pulsar el botón (§5.5: es un plan ya hecho).
+  // Guía B: precalculada al abrir la guía, no al pulsar el botón (es un plan ya hecho).
   const alternativas = useMemo(
     () => alternativasLluvia(itinerario, porSlug, datos.destinos, matriz, ritmo),
     [itinerario, porSlug, datos.destinos, matriz, ritmo],
@@ -55,7 +55,7 @@ export default function Guia({ itinerario, datos, porSlug, matriz, ritmo, provin
       </div>
 
       {/* Los totales son del viaje, no del día: en la guía de bolsillo estorban y le roban
-          la pantalla que necesita (§5.7). Se ocultan por clase, para que el PDF los lleve. */}
+          la pantalla que necesita. Se ocultan por clase, para que el PDF los lleve. */}
       <ul className={`fr-g-totales${vista === "bolsillo" ? " fr-g-oculto" : ""}`}>
         <li>🗓️ <b>{totales.diasConPlan}</b> {totales.diasConPlan === 1 ? "día" : "días"} con plan{totales.dias > totales.diasConPlan ? ` de ${totales.dias}` : ""}</li>
         <li>📷 <b>{totales.actividades}</b> actividades</li>

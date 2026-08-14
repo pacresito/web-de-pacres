@@ -150,7 +150,7 @@ export function pruneEscaped(world: World, view: View) {
   });
 }
 
-// ── Métricas (línea de estado + tests) ───────────────────────────────────────
+// Métricas (línea de estado + tests)
 
 export function totalMass(world: World): number {
   return world.bodies.reduce((sum, b) => sum + b.mass, 0);
@@ -161,8 +161,6 @@ export function totalMomentum(world: World): { px: number; py: number } {
   for (const b of world.bodies) { px += b.mass * b.vx; py += b.mass * b.vy; }
   return { px, py };
 }
-
-// ── Presets ──────────────────────────────────────────────────────────────────
 
 // Sistema solar: un sol central masivo + 3–5 planetas. El sol arranca libre (no fijo): al
 // ser ~200× más pesado que los planetas casi no recula, pero puede tocarse para congelarlo.

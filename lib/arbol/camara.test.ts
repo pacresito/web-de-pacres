@@ -27,7 +27,7 @@ const encuadre: Encuadre = {
 };
 const vista = (dx: number, dy: number, escala = 1): Vista => ({ dx, dy, escala });
 
-// --- El tope: el centro de la pantalla no sale de la caja ---
+// El tope: el centro de la pantalla no sale de la caja
 {
   assert.deepStrictEqual(acotar(vista(9999, 9999), encuadre), vista(1000, 600));
   assert.deepStrictEqual(acotar(vista(-9999, -9999), encuadre), vista(0, 0));
@@ -49,7 +49,7 @@ const vista = (dx: number, dy: number, escala = 1): Vista => ({ dx, dy, escala }
   assert.deepStrictEqual(acotar(vista(9999, 9999, 4), encuadre), vista(1000, 600, 4));
 }
 
-// --- Un árbol más pequeño que el hueco no se sale por ningún borde ---
+// Un árbol más pequeño que el hueco no se sale por ningún borde
 {
   const menudo: Encuadre = { ...encuadre, limites: { minX: 0, maxX: 100, minY: 0, maxY: 60 } };
   // Hueco de 400×300 y caja de 100×60: el centro llega hasta pegar la caja al borde
@@ -72,7 +72,7 @@ const vista = (dx: number, dy: number, escala = 1): Vista => ({ dx, dy, escala }
   assert.strictEqual(acotar(suelta, sinMedir), suelta);
 }
 
-// --- El zoom deja quieto el punto que hay bajo el cursor ---
+// El zoom deja quieto el punto que hay bajo el cursor
 {
   const rect = caja(0, 0, 400, 300);
   // En el centro exacto del hueco, acercarse no mueve la vista.
@@ -87,7 +87,7 @@ const vista = (dx: number, dy: number, escala = 1): Vista => ({ dx, dy, escala }
   assert.strictEqual(conZoom(tope, 2, 300, 150, rect), tope);
 }
 
-// --- La brújula: solo cuando el punto de vista ya no se ve, y apuntándole ---
+// La brújula: solo cuando el punto de vista ya no se ve, y apuntándole
 {
   const hueco = { w: 800, h: 600 };
   const brujula = (dx: number, dy: number, escala = 1) => brujulaDe(vista(dx, dy, escala), hueco.w, hueco.h);
@@ -131,7 +131,7 @@ const vista = (dx: number, dy: number, escala = 1): Vista => ({ dx, dy, escala }
   assert.strictEqual(brujulaDe(vista(9999, 9999), 0, 0), null);
 }
 
-// --- La regla de generación: una etiqueta por columna, donde se la vea ---
+// La regla de generación: una etiqueta por columna, donde se la vea
 {
   const niveles = [2, 1, 0, -1, -2];
   // Un hueco de 1200 con el punto de vista centrado: su columna cae en el medio, la de sus
@@ -174,7 +174,7 @@ const vista = (dx: number, dy: number, escala = 1): Vista => ({ dx, dy, escala }
   assert.deepStrictEqual(reglaDe([0], ANCHO_COLUMNA / 2 + 400 + 1, 1, 800), [], "y fuera del hueco, nada");
 }
 
-// --- Las tres unidades ---
+// Las tres unidades
 // La altura cómoda de cada una cae dentro del zoom: es a donde lleva un salto que nadie ha
 // pedido, y llevar a un tope sería no llevar a ninguna parte.
 for (const parada of ["ramas", "bloques", "personas"] as const) {

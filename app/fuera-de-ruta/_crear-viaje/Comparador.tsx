@@ -5,7 +5,7 @@ import type { Destino } from "@/lib/fuera-de-ruta/tipos";
 import type { Comparativa } from "@/lib/fuera-de-ruta/comparador/comparador";
 import Overlay from "./Overlay";
 
-// Comparador Inteligente (§4.8): los campos de las actividades de «Mi viaje» lado a lado
+// Comparador Inteligente: los campos de las actividades de «Mi viaje» lado a lado
 // + frases condicionales del motor (nunca «esta es mejor»: la restricción vive en la
 // plantilla, ver comparador.ts). Es la respuesta al aviso de tiempo de la auditoría y se
 // abre también a mano.

@@ -6,8 +6,6 @@ import ChromeWindow from "../components/ChromeWindow";
 import { useTypewriter } from "../components/useTypewriter";
 import { calcularEdad } from "@/lib/utils";
 
-// ─── Data ─────────────────────────────────────────────────────────────────────
-
 type LabStatus = "available" | "hidden" | "soon" | "private";
 
 type LabItem = {
@@ -60,8 +58,6 @@ const CMD = "ls ~/lab --group --fold";
 // acordeón). El caso peor es el móvil, a una columna: el grupo más grande son 6 items
 // (719px medidos). Al añadir uno, medir y subir esto — de lo que sobre no se ve nada.
 const OPEN_MAXH = 820;
-
-// ─── Subcomponents ────────────────────────────────────────────────────────────
 
 function PromptRow({ cmd }: { cmd: string }) {
   const { typed: displayed, execMs } = useTypewriter(cmd);
@@ -146,8 +142,6 @@ function Group({ label, items, open, onToggle }: {
     </div>
   );
 }
-
-// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function Laboratorio() {
   const router = useRouter();

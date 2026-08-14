@@ -4,8 +4,6 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import Image from "next/image";
 import { RECOMENDACIONES, CERTIFICACIONES, PREMIOS } from "@/lib/perfil";
 
-// ─── DATA ────────────────────────────────────────────────────────────────────
-
 const JOBS = [
   {
     title: "Partner",
@@ -114,7 +112,7 @@ const SKILLS = [
   "Para empresas (B2B)","Negociación","Trabajo en equipo","Resolución de problemas",
 ];
 
-// ─── STARFIELD ────────────────────────────────────────────────────────────────
+// STARFIELD
 
 function Starfield() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -150,7 +148,6 @@ function Starfield() {
     const draw = () => {
       ctx.fillStyle = "rgba(10, 10, 15, 0.18)";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-
 
       // Shooting stars
       shootTimer++;
@@ -223,7 +220,7 @@ function Starfield() {
   );
 }
 
-// ─── CUSTOM CURSOR ────────────────────────────────────────────────────────────
+// CUSTOM CURSOR
 
 function NeonCursor() {
   const cursorRef = useRef<HTMLDivElement>(null);
@@ -264,7 +261,7 @@ function NeonCursor() {
   );
 }
 
-// ─── JOB ITEM ─────────────────────────────────────────────────────────────────
+// JOB ITEM
 
 function JobItem({ job, index }: { job: typeof JOBS[0]; index: number }) {
   const [open, setOpen] = useState(false);
@@ -321,7 +318,7 @@ function JobItem({ job, index }: { job: typeof JOBS[0]; index: number }) {
   );
 }
 
-// ─── RECS SLIDER ──────────────────────────────────────────────────────────────
+// RECS SLIDER
 
 function RecsSlider() {
   const [current, setCurrent] = useState(0);
@@ -443,7 +440,7 @@ function RecsSlider() {
   );
 }
 
-// ─── SECTION LABEL ────────────────────────────────────────────────────────────
+// SECTION LABEL
 
 function SLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -470,7 +467,7 @@ function SLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-// ─── DIVIDER ──────────────────────────────────────────────────────────────────
+// DIVIDER
 
 function NDivider({ colors }: { colors: string[] }) {
   const grad = colors.join(", ") + ", transparent";
@@ -484,7 +481,7 @@ function NDivider({ colors }: { colors: string[] }) {
   );
 }
 
-// ─── MAIN PAGE ────────────────────────────────────────────────────────────────
+// MAIN PAGE
 
 export default function HomeTempPage() {
 
@@ -656,7 +653,7 @@ export default function HomeTempPage() {
         @media (hover: none) { .nt-cursor { display: none; } }
 
         /* ── Elementos antes con hover por JS (ahora base en clase: :hover ratón, :active tacto) ── */
-        /* JobItem es expandible al tocar (la excepción del plan): solo :hover, sin :active. */
+        /* JobItem trae su propio «tap para expandir»: solo :hover, sin :active. */
         .nt-job { border-bottom: 1px solid rgba(255,0,110,0.2); padding: 1.5rem 0 1.5rem 1rem; cursor: pointer; border-left: 2px solid transparent; background: transparent; transition: border-color 0.3s, background 0.3s; }
         .nt-job.nt-open { border-left-color: #ff006e; background: rgba(255,0,110,0.03); }
         @media (hover: hover) { .nt-job:hover { border-left-color: #ff006e; background: rgba(255,0,110,0.04); } }
@@ -747,7 +744,7 @@ export default function HomeTempPage() {
         width: "100%", maxWidth: "960px", margin: "0 auto", padding: "0 2rem",
       }}>
 
-        {/* ── HERO ─────────────────────────────────────────────────────── */}
+        {/* HERO */}
         <section style={{ paddingTop: "clamp(5rem,12vh,9rem)", paddingBottom: "clamp(4rem,10vh,7rem)" }}>
 
           {/* boot label */}
@@ -820,7 +817,7 @@ export default function HomeTempPage() {
 
         <NDivider colors={["#ff006e", "#ff006e60"]} />
 
-        {/* ── EXPERIENCIA ──────────────────────────────────────────────── */}
+        {/* EXPERIENCIA */}
         <section style={{ paddingBottom: "5rem" }}>
           <SLabel>Experiencia</SLabel>
           {JOBS.map((job, i) => <JobItem key={job.title} job={job} index={i} />)}
@@ -828,7 +825,7 @@ export default function HomeTempPage() {
 
         <NDivider colors={["#00ffff", "#00ffff60"]} />
 
-        {/* ── EDUCACIÓN ────────────────────────────────────────────────── */}
+        {/* EDUCACIÓN */}
         <section style={{ paddingBottom: "5rem" }}>
           <SLabel>Educación</SLabel>
           <div style={{
@@ -861,7 +858,7 @@ export default function HomeTempPage() {
 
         <NDivider colors={["#bf5af2", "#bf5af260"]} />
 
-        {/* ── RECOMENDACIONES ──────────────────────────────────────────── */}
+        {/* RECOMENDACIONES */}
         <section style={{ paddingBottom: "5rem" }}>
           <SLabel>Recomendaciones</SLabel>
           <RecsSlider />
@@ -869,7 +866,7 @@ export default function HomeTempPage() {
 
         <NDivider colors={["#c8ff00", "#c8ff0060"]} />
 
-        {/* ── CERTIFICACIONES ──────────────────────────────────────────── */}
+        {/* CERTIFICACIONES */}
         <section style={{ paddingBottom: "5rem" }}>
           <SLabel>Certificaciones</SLabel>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "0.55rem" }}>
@@ -883,7 +880,7 @@ export default function HomeTempPage() {
 
         <NDivider colors={["#ff006e", "#00ffff"]} />
 
-        {/* ── IDIOMAS ──────────────────────────────────────────────────── */}
+        {/* IDIOMAS */}
         <section style={{ paddingBottom: "5rem" }}>
           <SLabel>Idiomas</SLabel>
           <div>
@@ -914,7 +911,7 @@ export default function HomeTempPage() {
 
         <NDivider colors={["#00ffff", "#c8ff00"]} />
 
-        {/* ── RECONOCIMIENTOS ──────────────────────────────────────────── */}
+        {/* RECONOCIMIENTOS */}
         <section style={{ paddingBottom: "5rem" }}>
           <SLabel>Reconocimientos</SLabel>
           <div>
@@ -938,7 +935,7 @@ export default function HomeTempPage() {
 
         <NDivider colors={["#bf5af2", "#ff006e"]} />
 
-        {/* ── APTITUDES ────────────────────────────────────────────────── */}
+        {/* APTITUDES */}
         <section style={{ paddingBottom: "5rem" }}>
           <SLabel>Aptitudes</SLabel>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "0.45rem" }}>
@@ -968,7 +965,7 @@ export default function HomeTempPage() {
           boxShadow: "0 0 10px rgba(255,0,110,0.3)",
         }} />
 
-        {/* ── FOOTER ───────────────────────────────────────────────────── */}
+        {/* FOOTER */}
         <footer style={{
           padding: "2.5rem 0 4rem",
           display: "flex", flexDirection: "column", gap: "0.6rem",

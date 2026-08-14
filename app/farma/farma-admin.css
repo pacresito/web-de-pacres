@@ -1,10 +1,8 @@
-/* ============================================================
-   Farma · panel de administración (María)
+/* Farma · panel de administración (María)
    Sistema de diseño propio (IBM Plex + acento azul), aislado del
    estilo terminal (.ts-*) y del skin UnycopWin de la vista de
    usuario. Se activa envolviendo la superficie en .fa-admin; las
-   clases .fa-* son inertes en el resto del sitio.
-   ============================================================ */
+   clases .fa-* son inertes en el resto del sitio. */
 
 .fa-admin {
   --fa-bg: #f6f7f9;

@@ -1,9 +1,7 @@
-/* ============================================================
-   S3 · Explorador — modos móviles (F4). Overlay fijo estilo app:
+/* S3 · Explorador — modos móviles. Overlay fijo estilo app:
    el componente solo monta este árbol <900px. Dos capas
    superpuestas: la lista (z2) tapa el mapa (z1), que se queda
-   siempre montado para no reinicializar Leaflet al cambiar de modo.
-   ============================================================ */
+   siempre montado para no reinicializar Leaflet al cambiar de modo. */
 .fr-m3 {
   position: fixed;
   inset: 0;

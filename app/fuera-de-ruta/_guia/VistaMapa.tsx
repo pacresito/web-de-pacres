@@ -9,8 +9,8 @@ import type { PuntoViaje } from "../MapaViaje";
 
 const MapaViaje = dynamic(() => import("../MapaViaje"), { ssr: false });
 
-// ------------------------------------------------------------ Mapa del viaje
-// §5.6: las paradas en el orden de la planificación, con el alojamiento y los restaurantes
+// Mapa del viaje
+// las paradas en el orden de la planificación, con el alojamiento y los restaurantes
 // del plan, y Google Maps a un clic desde cada punto. La lista de al lado repite el orden
 // para quien prefiera leerlo (y para que el mapa no sea la única forma de llegar al enlace).
 export default function VistaMapa({ itinerario, datos, porSlug }: {

@@ -67,7 +67,7 @@ const opciones = (o: Partial<OpcionesIdentidad> = {}): OpcionesIdentidad => ({
 const contexto = (id: string, largo: number, ramas?: string[]) =>
   identidadDe(g, id, opciones({ largos: { titulo: 80, contexto: largo }, ramas })).contexto;
 
-// --- La escalera de degradación, peldaño a peldaño ---
+// La escalera de degradación, peldaño a peldaño
 const RAMA = ["Tomás"];
 assert.strictEqual(contexto("p3", 80, RAMA), "hija de Pablo (1902) y Antonia (1905) · rama de Tomás");
 assert.strictEqual(contexto("p3", 45, RAMA), "hija de Pablo y Antonia · rama de Tomás", "primero se van los años");
@@ -81,7 +81,7 @@ assert.strictEqual(contexto("p3", 80), "hija de Pablo (1902) y Antonia (1905)", 
 assert.strictEqual(contexto("p13", 80), "hijo de Sin nombre y Vera (1950)");
 assert.strictEqual(contexto("p13", 20), "hijo de Vera", "el que nombra se queda, suba o no en la pareja");
 
-// --- El cónyuge no está en ningún peldaño: en 88 personas es lo único que las identifica ---
+// El cónyuge no está en ningún peldaño: en 88 personas es lo único que las identifica
 assert.strictEqual(
   contexto("p5", 80, RAMA),
   "hija de Pablo (1902) y Antonia (1905) · casada con Julián (1934) · rama de Tomás",
@@ -91,12 +91,12 @@ assert.strictEqual(contexto("p1", 80), "casado con Antonia (1905)", "quien no es
 assert.strictEqual(contexto("p8", 80), "padre de Lucas y 1 más", "y quien no tiene ni cónyuge, por su descendencia");
 assert.strictEqual(contexto("p9", 80), "hijo de Tomás", "un solo progenitor documentado no inventa al otro");
 
-// --- A los «Sin nombre» los declina su cónyuge, que es lo único que dice de qué sexo son ---
+// A los «Sin nombre» los declina su cónyuge, que es lo único que dice de qué sexo son
 const anonima = identidadDe(g, "p6", opciones({ apellidos: 0 }));
 assert.strictEqual(anonima.contexto, "hija de Julián (1934) y Rosa (1959) · casada con Antonio (1980)");
 assert.deepStrictEqual(anonima.titulo, [{ texto: "Sin nombre", pinta: "sinNombre" }], "y se pintan aparte");
 
-// --- La primera línea: el nombre manda, el año no se recorta nunca ---
+// La primera línea: el nombre manda, el año no se recorta nunca
 assert.deepStrictEqual(identidadDe(g, "p1", opciones()).titulo, [
   { texto: "Pablo", pinta: "nombre" },
   { texto: " Serrano", pinta: "nombre" },
@@ -125,7 +125,7 @@ assert.deepStrictEqual(
   "sin fechas no hay paréntesis vacío",
 );
 
-// --- Las marcas se apilan sobre cualquier variante ---
+// Las marcas se apilan sobre cualquier variante
 const incierto = identidadDe(g, "p7", opciones());
 assert.deepStrictEqual(incierto.titulo.at(-1), { texto: " (¿1980?)", pinta: "año" }, "el dato dudoso, entre interrogantes");
 assert.deepStrictEqual(incierto.marcas, ["incierto"]);
@@ -161,7 +161,7 @@ assert.deepStrictEqual(
   "a quien no tiene nombre no se le dice que lo comparte: lo que comparte es no tenerlo",
 );
 
-// --- Sobre los datos de verdad ---
+// Sobre los datos de verdad
 const data: ArbolData = JSON.parse(readFileSync(resolve("seed/arbol.json"), "utf-8"));
 const real = construirGrafo(data);
 const libreta = libretaDe(real);

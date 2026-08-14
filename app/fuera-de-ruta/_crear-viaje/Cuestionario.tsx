@@ -4,7 +4,7 @@ import type { Bloque, Campo, Pregunta, Respuestas } from "@/lib/fuera-de-ruta/cu
 import { uno, varios } from "@/lib/fuera-de-ruta/cuestionario/preguntas";
 import { resumen as resumenPerfil } from "@/lib/fuera-de-ruta/cuestionario/resumen";
 
-// Los tres pasos del cuestionario de Cris (Fase C): el viajero, el viaje y el resumen
+// Los tres pasos del cuestionario de Cris: el viajero, el viaje y el resumen
 // editable. Solo pintan y avisan del cambio — quién guarda las respuestas y qué paso toca
 // lo decide CrearViaje.
 
@@ -13,7 +13,7 @@ const legibleFecha = (iso?: string) => (iso ? fechaFmt.format(new Date(`${iso}T0
 
 export type AlCambiar = (campo: Campo, valor: string | string[] | undefined) => void;
 
-// ------------------------------------------------------------ Un paso = un bloque
+// Un paso = un bloque
 export function PasoBloque({ bloque, numero, respuestas, onCambiar, atras, onSiguiente, textoSiguiente }: {
   bloque: Bloque;
   numero: number;
@@ -107,7 +107,7 @@ function ChipsOpciones({ pregunta: p, respuestas: r, onCambiar }: {
   );
 }
 
-// ------------------------------------------------------------ Resumen editable
+// Resumen editable
 export function Resumen({ respuestas, onEditar, onEmpezar, onAtras }: {
   respuestas: Respuestas;
   onEditar: () => void;

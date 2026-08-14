@@ -5,8 +5,6 @@ import { useRouter } from "next/navigation";
 import ChromeWindow from "../components/ChromeWindow";
 import { useTypewriter } from "../components/useTypewriter";
 
-// ─── Data ─────────────────────────────────────────────────────────────────────
-
 type DesignItem = {
   id: string;
   num: string;
@@ -28,9 +26,6 @@ const ITEMS: DesignItem[] = [
 ];
 
 const CMD = "ls ~/designs --format=grid";
-
-// ─── Subcomponents ────────────────────────────────────────────────────────────
-
 
 function PromptRow({ cmd }: { cmd: string }) {
   const { typed: displayed, execMs } = useTypewriter(cmd);
@@ -146,8 +141,6 @@ function DesignsCards({ items, visible }: { items: DesignItem[]; visible: number
   );
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
-
 export default function Designs() {
   const router = useRouter();
   const [visible, setVisible] = useState(0);
@@ -171,7 +164,6 @@ export default function Designs() {
   return (
     <>
       <style>{`
-
 
         .t-lab-desktop { display: block; }
         .t-lab-mobile  { display: none; }

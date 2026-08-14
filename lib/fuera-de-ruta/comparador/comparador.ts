@@ -1,8 +1,8 @@
-// Comparador Inteligente (Fase F, §4.8): ayuda a elegir entre 2+ actividades similares
+// Comparador Inteligente: ayuda a elegir entre 2+ actividades similares
 // enseñando sus campos lado a lado. NUNCA dice «esta es mejor» —esa es la regla del
 // briefing—: las frases son condicionales por plantilla («si buscas X, esta encaja
 // mejor»), y la restricción vive en la plantilla por construcción, no en un juicio que
-// se pueda colar. Puro; los datos son los de la Fase A. Test al lado.
+// se pueda colar. Puro; los datos son los del catálogo de destinos. Test al lado.
 import type { Destino } from "../tipos";
 import { rango } from "../formato";
 import { nivelesDificultad } from "../filtrar";
@@ -12,7 +12,7 @@ export type Comparativa = { nombres: string[]; filas: Fila[]; frases: string[] }
 
 const boolTxt = (b?: boolean): string | null => (b === true ? "Sí" : b === false ? "No" : null);
 
-// Una fila por campo de §4.8. El valor de cada destino se formatea o queda null si no
+// Una fila por campo El valor de cada destino se formatea o queda null si no
 // consta (dato ausente = "no consta", nunca "no"); una fila que nadie tiene no se pinta.
 const CAMPOS: { etiqueta: string; valor: (d: Destino) => string | null }[] = [
   { etiqueta: "Distancia", valor: (d) => (d.distanciaKm ? rango(d.distanciaKm, "km") : null) },

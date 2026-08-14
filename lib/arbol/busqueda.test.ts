@@ -77,7 +77,7 @@ assert.ok(contextoEntero(g, "nadie") !== "", "a la que solo se la identifica por
 assert.strictEqual(acortar(g, "Ramón Genoveva", o), "Ramón", "de la consulta que no encuentra nada, la palabra que sí");
 assert.strictEqual(acortar(g, "Genoveva", o), null, "con una sola palabra no hay nada que quitar");
 
-// --- Sobre los datos de verdad ---
+// Sobre los datos de verdad
 const data: ArbolData = JSON.parse(readFileSync(resolve("seed/arbol.json"), "utf-8"));
 const real = construirGrafo(data);
 const POV = "p25";

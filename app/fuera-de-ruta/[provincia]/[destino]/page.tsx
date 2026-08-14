@@ -11,7 +11,7 @@ import Portada from "./Portada";
 
 // Ficha de destino (Server Component): URL propia y compartible, colgando de su
 // provincia. Todas las rutas salen del JSON en build; un slug desconocido da 404.
-// Río pop (F5): toda sección sin dato no se renderiza, sin huecos.
+// Río pop: toda sección sin dato no se renderiza, sin huecos.
 
 // Restaurantes: uno por categoría, en este orden, máx. 3 (spec de Cris).
 const CATEGORIAS = ["economico", "calidad-precio", "especial"] as const;
@@ -21,7 +21,7 @@ const ETIQUETA_CAT: Record<string, string> = {
   especial: "Especial",
 };
 
-// Etiquetas de cara al usuario de los valores estructurados (spec §4.11).
+// Etiquetas de cara al usuario de los valores estructurados.
 const RECORRIDO_TEXTO: Record<string, string> = {
   circular: "circular",
   "ida-vuelta": "ida y vuelta",

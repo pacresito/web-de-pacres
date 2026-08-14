@@ -1,4 +1,4 @@
-// Test de las guías finales (Fase G). `npx tsx lib/fuera-de-ruta/guia/guia.test.ts`.
+// Test de las guías finales. `npx tsx lib/fuera-de-ruta/guia/guia.test.ts`.
 // Sobre los datos reales de Navarra: totales coherentes con el itinerario, consejos
 // derivados del dato (y solo los útiles) y alternativas de lluvia precalculadas.
 import assert from "assert";
@@ -26,7 +26,7 @@ const itinerarioDe = (slugs: string[], o: OpcionesItinerario, dias = 2) => {
 
 const it = itinerarioDe(["cascada-de-xorroxin", "elizondo", "infernuko-errota"], opts, 2);
 
-// --- Totales: suma de los días, sin contar los libres como días con plan ---
+// Totales: suma de los días, sin contar los libres como días con plan
 const t = totalesViaje(it);
 assert.strictEqual(t.dias, it.dias.length, "los días del viaje son los del itinerario");
 assert.strictEqual(t.actividades, 3, "las 3 actividades seleccionadas");
@@ -35,7 +35,7 @@ assert.strictEqual(t.conduccionMin, it.dias.reduce((s, d) => s + d.conduccionMin
 assert.ok(t.zonas.length >= 1 && t.zonas.every((z) => datos.zonas.some((x) => x.id === z)), "zonas reales, sin repetir");
 assert.strictEqual(new Set(t.zonas).size, t.zonas.length, "las zonas no se repiten");
 
-// --- Consejos: derivados del dato; un día libre no genera ninguno ---
+// Consejos: derivados del dato; un día libre no genera ninguno
 const diaConPlan = it.dias.find((d) => d.paradas.length > 0)!;
 const consejos = consejosDelDia(diaConPlan, porSlug);
 assert.ok(consejos.length > 0 && consejos.length <= 5, "entre 1 y 5 consejos");
@@ -63,12 +63,12 @@ assert.ok(
   "con parada en restaurante no se avisa de comprar comida",
 );
 
-// --- Refugios: pueblo sí; ruta de montaña no; cueva con caminata larga tampoco ---
+// Refugios: pueblo sí; ruta de montaña no; cueva con caminata larga tampoco
 assert.ok(esRefugio(bySlug("elizondo")), "un pueblo es refugio de lluvia");
 assert.ok(!esRefugio(bySlug("cascada-de-xorroxin")), "una cascada no lo es");
 assert.ok(!esRefugio(bySlug("cueva-de-arpea")), "una cueva a 3 km de sendero no es alternativa de lluvia");
 
-// --- Alternativas: precalculadas, cercanas y nunca ya en el viaje ---
+// Alternativas: precalculadas, cercanas y nunca ya en el viaje
 const alt = alternativasLluvia(it, porSlug, datos.destinos, m, "medio");
 const enViaje = new Set(it.dias.flatMap((d) => d.paradas.map((p) => p.slug)));
 for (const [origen, a] of alt) {
@@ -92,7 +92,7 @@ const altLejos = alternativasLluvia(
 );
 assert.strictEqual(altLejos.size, 0, "sin refugio cerca, sin alternativa");
 
-// --- Cierre obligatorio (§1.9) ---
+// Cierre obligatorio
 assert.ok(CIERRE.includes("horarios, reservas o condiciones de acceso"), "la frase de cierre es la de la spec");
 
 console.log("OK guia.test.ts");

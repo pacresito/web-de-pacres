@@ -1,5 +1,5 @@
-// Config del cuestionario "Crear mi viaje" (Fase C, spec de Cris cap. 2-3). Solo las
-// preguntas que el motor puntúa hoy (decisión de Pablo): cada respuesta cambia el
+// Config del cuestionario "Crear mi viaje". Solo las preguntas que el motor
+// puntúa hoy: cada respuesta cambia el
 // resultado. Dos bloques —el viajero (reutilizable, va a localStorage) y el viaje
 // concreto (va a la URL)—. Ninguna pregunta es obligatoria; las condicionales
 // (`visible`) aparecen solo cuando tienen sentido. Sin React: es dato, lo pinta la UI.
@@ -27,7 +27,7 @@ export type Pregunta = {
 
 export type Bloque = { id: "viajero" | "viaje"; titulo: string; intro: string; preguntas: Pregunta[] };
 
-// --- Helpers de lectura tipada (la UI y el mapeo no tocan r[campo] a pelo) ---
+// Helpers de lectura tipada (la UI y el mapeo no tocan r[campo] a pelo)
 export const uno = (r: Respuestas, c: Campo): string | undefined =>
   typeof r[c] === "string" ? (r[c] as string) : undefined;
 export const varios = (r: Respuestas, c: Campo): string[] =>

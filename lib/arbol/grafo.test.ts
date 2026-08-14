@@ -21,7 +21,7 @@ for (const u of g.unionPorId.values()) {
 // las altas traen el suyo escrito.
 assert.strictEqual([...g.unionPorId.values()].filter((u) => u.roto).length, 11, "11 uniones acabadas");
 
-// --- Nadie es hijo de dos uniones, y todos tienen generación ---
+// Nadie es hijo de dos uniones, y todos tienen generación
 assert.strictEqual(g.generacion.size, data.people.length, "todas las personas colocadas (una sola componente conexa)");
 const hijosVistos = new Set<string>();
 for (const u of g.unionPorId.values()) {
@@ -31,7 +31,7 @@ for (const u of g.unionPorId.values()) {
   }
 }
 
-// --- La generación es consistente: 0 conflictos, 5 niveles con este reparto ---
+// La generación es consistente: 0 conflictos, 5 niveles con este reparto
 // (construirGrafo lanza si hay conflicto; llegar aquí ya lo prueba)
 const ancla = g.generacion.get("p26")!; // el más joven de la línea directa
 const porNivel = new Map<number, number>();
@@ -51,7 +51,7 @@ assert.deepStrictEqual(
   "reparto por generación relativa al más joven",
 );
 
-// --- Parentesco básico ---
+// Parentesco básico
 const padres = [...ascendientes(g, "p25")];
 assert.ok(padres.includes("p124") && padres.includes("p125"), "p25 desciende de p124 y p125");
 assert.ok(descendientes(g, "p124").has("p26"), "el nieto está en la descendencia");
@@ -60,7 +60,7 @@ assert.ok(consanguineos(g, "p25").has("p25"), "uno sí es consanguíneo de sí m
 assert.ok([...parejaDirecta(g, "p25")].length === 1, "p25 tiene una sola pareja");
 assert.ok(!consanguineos(g, "p126").has([...parejaDirecta(g, "p25")][0]), "una cuñada no es consanguínea");
 
-// --- La fórmula de "conectado": la tabla que prueba que es la de Pablo ---
+// La fórmula de "conectado": la tabla que prueba que es la de Pablo
 // Conectado es "compartimos un ancestro". El hijo, con sangre de las tres ramas de los
 // docx, las ve enteras; su padre y sus tíos pierden la familia de quien entró por
 // matrimonio, y los abuelos, todo lo que no cuelga de ellos.
@@ -89,14 +89,14 @@ for (const pid of ["p25", "p126"]) {
   }
 }
 
-// --- Simetría: verse a uno mismo y a su pareja siempre ---
+// Simetría: verse a uno mismo y a su pareja siempre
 for (const p of data.people) {
   const v = visibles(g, p.id);
   assert.ok(v.has(p.id), `${p.id} debe verse a sí mismo`);
   for (const c of parejaDirecta(g, p.id)) assert.ok(v.has(c), `${p.id} debe ver a su pareja`);
 }
 
-// --- Los pasos: el árbol es una sola pieza y todos se alcanzan desde cualquiera ---
+// Los pasos: el árbol es una sola pieza y todos se alcanzan desde cualquiera
 for (const pov of ["p25", "p1", "p289"]) {
   assert.strictEqual(pasosDesde(g, pov).size, data.people.length, `desde ${pov} no se llega a todos`);
 }

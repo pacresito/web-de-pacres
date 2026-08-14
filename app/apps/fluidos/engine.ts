@@ -24,8 +24,6 @@ const SAND_COOL_RATE = 5;             // K de exceso perdidos por tick al enfria
 
 const DIRS4 = [[1, 0], [-1, 0], [0, 1], [0, -1]] as const;
 
-// ── Estado ───────────────────────────────────────────────────────────────────
-
 export type Sim = {
   W: number;
   H: number;
@@ -86,7 +84,7 @@ function countNeighbors(sim: Sim, x: number, y: number, mat: Mat): number {
   return n;
 }
 
-// ── Pincel (pintar / borrar) ─────────────────────────────────────────────────
+// Pincel (pintar / borrar)
 
 // Union-find sencillo: asigna id de componente a una celda nueva de madera,
 // fusionando los componentes adyacentes si toca varios
@@ -166,7 +164,7 @@ export function paintAt(sim: Sim, px: number, py: number, tool: Tool, r: number)
   }
 }
 
-// ── Herramienta Mover ────────────────────────────────────────────────────────
+// Herramienta Mover
 
 // Orden: las celdas más alejadas en la dirección de empuje primero
 const byFurthest = (dirX: number, dirY: number) => (a: Cell, b: Cell) =>
@@ -440,7 +438,7 @@ export function drop(sim: Sim, carried: Carried[], cx: number, cy: number) {
   }
 }
 
-// ── Física (un tick) ─────────────────────────────────────────────────────────
+// Física (un tick)
 
 // Suma un tick de condensación; devuelve true si el vapor se convirtió en agua
 function condenseVapor(sim: Sim, i: number): boolean {

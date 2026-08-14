@@ -1,10 +1,8 @@
 @import "tailwindcss";
 
-/* ============================================================
-   Sistema de diseño · estilo terminal (única fuente)
+/* Sistema de diseño · estilo terminal (única fuente)
    Paleta y animaciones que antes estaban duplicadas en
-   TerminalShell.tsx y triplicadas en cv/lab/designs.
-   ============================================================ */
+   TerminalShell.tsx y triplicadas en cv/lab/designs. */
 
 :root {
   /* Paleta terminal (papel cálido + acento verde) */
@@ -52,15 +50,13 @@
   --font-mono: var(--font-geist-mono);
 }
 
-/* ============================================================
-   Árbol genealógico (/arbol) — paleta propia
+/* Árbol genealógico (/arbol) — paleta propia
    El árbol no hereda los colores del sitio pero sí obedece a su interruptor de tema: los
    tokens cuelgan de .arbol y la variante oscura, del data-theme que el script anti-FOUC
    pone en <html> antes del primer pintado.
    El acento es morado y de un solo uso —el punto de vista y lo que lleva a cambiarlo—:
    el verde del sitio da 2,50:1 sobre este papel, por debajo de lo legible para un borde,
-   y bajarlo hasta que contraste deja de ser el verde del sitio.
-   ============================================================ */
+   y bajarlo hasta que contraste deja de ser el verde del sitio. */
 .arbol {
   --paper: #fcfbf9;   /* fondo del lienzo, fondo de nodo, hojas */
   --soft:  #f2f0ec;   /* superficies: regla de generación, cabeceras, campo de búsqueda */
@@ -174,9 +170,7 @@
 .arbol .mk       { fill: color-mix(in oklab, var(--mut) 45%, transparent); }
 .arbol .mk-pov   { fill: var(--acc); }
 
-/* ============================================================
-   TerminalShell — chrome bar, navegación y animación de salida
-   ============================================================ */
+/* TerminalShell — chrome bar, navegación y animación de salida */
 
 .ts-nav-btn {
   background: none; border: none; cursor: pointer;
@@ -263,9 +257,7 @@
   display: flex; flex-direction: column; gap: 0.65rem;
 }
 
-/* ============================================================
-   cv / lab / designs — ventana con chrome (maximizar, dock, etc.)
-   ============================================================ */
+/* cv / lab / designs — ventana con chrome (maximizar, dock, etc.) */
 
 .t-bg { background: var(--t-canvas) !important; }
 
@@ -365,15 +357,13 @@
   transition: background 0.12s, border-color 0.12s, color 0.12s;
   font-family: var(--t-mono); padding: 0; line-height: 1;
 }
-/* ============================================================
-   Hover sin "sticky" en táctil
+/* Hover sin "sticky" en táctil
    En pantallas táctiles, un tap dispara un mouseenter sintético
    pero nunca el mouseleave → el estado :hover se queda pegado
    (p. ej. un icono que se queda en verde tras tocarlo).
    Aplicando el hover solo donde hay puntero real se evita.
    `.hover-accent` / `.hover-fade`: utilidades para botones-icono
-   que antes resolvían el hover con onMouseEnter/onMouseLeave.
-   ============================================================ */
+   que antes resolvían el hover con onMouseEnter/onMouseLeave. */
 .win-icon { opacity: 0; transition: opacity 0.12s; display: flex; }
 /* Fila de índice (lab/designs): el fondo va por clase, no inline, para que
    el :hover pueda ganarle (un background inline tendría más prioridad). */

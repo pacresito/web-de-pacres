@@ -31,7 +31,7 @@ const get = (sim: Sim, x: number, y: number) => sim.grid[y * sim.W + x];
 const pintar = (sim: Sim, cx: number, cy: number, tool: Tool, r: number) =>
   paintAt(sim, cx * CELL, cy * CELL, tool, r);
 
-// ── Creación y borrado ────────────────────────────────────────────────────────
+// Creación y borrado
 
 const s0 = nuevo();
 test("createSim arranca vacío", contar(s0, EMPTY) === W * H);
@@ -49,7 +49,7 @@ pintar(s3, 10, 10, WATER, 5);
 clearSim(s3);
 test("clearSim deja la rejilla vacía", contar(s3, EMPTY) === W * H);
 
-// ── Pintado ───────────────────────────────────────────────────────────────────
+// Pintado
 
 const s4 = nuevo();
 pintar(s4, 20, 15, WATER, 3);
@@ -71,7 +71,7 @@ test("woodInBrush no la ve donde no la hay", !woodInBrush(s6, 30 * CELL, 25 * CE
 pintar(s6, 10, 10, ERASE, 4);
 test("ERASE borra lo que hay bajo el pincel", contar(s6, WALL) === 0);
 
-// ── Física: la arena cae ──────────────────────────────────────────────────────
+// Física: la arena cae
 
 const s7 = nuevo();
 set(s7, 20, 2, SAND);
@@ -88,7 +88,7 @@ for (let i = 0; i < 60; i++) step(s8);
 test("la arena se queda encima de la madera",
   [...Array(H).keys()].every((y) => y > 10 ? get(s8, 20, y) !== SAND : true));
 
-// ── Física: el agua se extiende ───────────────────────────────────────────────
+// Física: el agua se extiende
 
 const s9 = nuevo();
 for (let i = 0; i < 20; i++) set(s9, 20, 5 + i, WATER);
@@ -101,7 +101,7 @@ const anchoFinal = new Set(
 ).size;
 test("el agua se extiende a los lados al caer", anchoFinal > 1, `columnas=${anchoFinal}`);
 
-// ── Física: el fuego se apaga ─────────────────────────────────────────────────
+// Física: el fuego se apaga
 
 const s10 = nuevo();
 pintar(s10, 20, 15, FIRE, 3);
@@ -109,7 +109,7 @@ test("el fuego se pinta", contar(s10, FIRE) > 0);
 for (let i = 0; i < 400; i++) step(s10);
 test("el fuego acaba apagándose sin combustible", contar(s10, FIRE) === 0, `quedan=${contar(s10, FIRE)}`);
 
-// ── Coger y soltar ────────────────────────────────────────────────────────────
+// Coger y soltar
 
 const s12 = nuevo();
 pintar(s12, 20, 15, SAND, 3);
@@ -126,7 +126,7 @@ pintar(s13, 20, 15, SAND, 2);
 drop(s13, pickUp(s13, 20 * CELL, 15 * CELL, 2), W + 50, H + 50);
 test("drop fuera de la rejilla no desborda", s13.grid.length === W * H);
 
-// ── Estabilidad general ───────────────────────────────────────────────────────
+// Estabilidad general
 
 const s14 = nuevo();
 pintar(s14, 10, 5, WATER, 4);

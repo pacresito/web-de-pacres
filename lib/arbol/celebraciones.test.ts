@@ -17,7 +17,7 @@ import { construirGrafo } from "./grafo";
 import { onomasticaDePersona } from "./santoral";
 import type { ArbolData } from "./tree";
 
-// --- Sobre los datos de verdad ---
+// Sobre los datos de verdad
 const data: ArbolData = JSON.parse(readFileSync(resolve("seed/arbol.json"), "utf-8"));
 const g = construirGrafo(data);
 const persona = (id: string) => g.personaPorId.get(id)!;
@@ -88,7 +88,7 @@ assert.notDeepStrictEqual(
 );
 assert.strictEqual(desdeSuHijo.find((c) => c.id === "p25")!.parentesco, "padre");
 
-// --- Los dos días que son de todos: una fila, sin nombres, y siempre ---
+// Los dos días que son de todos: una fila, sin nombres, y siempre
 // El del padre no se mueve (San José) y el de la madre sí. Salen una vez y una sola, mire
 // quien mire y tenga o no a quien felicitar.
 for (const [pov, hoy, fecha, tipo] of [
@@ -121,7 +121,7 @@ for (const tipo of ["día del padre", "día de la madre"] as const) {
   assert.strictEqual(dirigidaDe("p16", tipo === "día del padre" ? "2026-03-15" : "2026-04-20", tipo), "generico");
 }
 
-// --- La felicitación: siempre dice algo, y lo mismo en el servidor que en el navegador ---
+// La felicitación: siempre dice algo, y lo mismo en el servidor que en el navegador
 const suya = (tipo: Celebracion["tipo"], edad: number | null, faltan: number, dirigida?: Dirigida) =>
   ({ tipo, edad, faltan, dirigida, id: "p25", nombre: "Pablo", fecha: "2026-03-01", parentesco: null, esPuntoDeVista: true }) as Celebracion;
 

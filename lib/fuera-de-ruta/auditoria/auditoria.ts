@@ -1,10 +1,10 @@
-// Auditoría Inteligente del Viaje (Fase F, §4.16): última revisión antes de generar la
+// Auditoría Inteligente del Viaje: última revisión antes de generar la
 // guía. NO modifica el viaje —esa es la regla del flujo, como en el motor y el panel—:
 // solo agrega las señales que ya calcula el panel «Mi viaje» (`desbordado`/`apretado`) y
-// las reservas de la selección en una lista de hallazgos ✅/⚠️/💡 (§4.16.5). Puro; el
-// panel de la Fase D no vuelve a calcular el tiempo, lee de aquí. La detección de
+// las reservas de la selección en una lista de hallazgos ✅/⚠️/💡. Puro; el
+// panel no vuelve a calcular el tiempo, lee de aquí. La detección de
 // oportunidades y las zonas de alojamiento son piezas aparte (F3, F4) que añaden sus
-// propios hallazgos; las optimizaciones finas (§4.16.4) llegan más tarde.
+// propios hallazgos; las optimizaciones finas llegan más tarde.
 import type { Destino } from "../tipos";
 import type { ResumenViaje } from "../viaje/mi-viaje";
 import type { ZonaAlojamiento } from "../alojamiento/alojamiento";
@@ -30,8 +30,8 @@ const listaNatural = (xs: string[]) =>
   xs.length <= 1 ? (xs[0] ?? "") : `${xs.slice(0, -1).join(", ")} y ${xs[xs.length - 1]}`;
 
 // Selección + reparto ya calculado → hallazgos de la auditoría. Sin selección, nada que
-// auditar (lista vacía: el panel no muestra el bloque). El orden es el de §4.16.5:
-// compatibilidad, tiempo, reservas, alojamiento. Las `zonas` (F4) son opcionales: si
+// auditar (lista vacía: el panel no muestra el bloque). El orden es:
+// compatibilidad, tiempo, reservas, alojamiento. Las `zonas` son opcionales: si
 // llegan, añaden la línea 💡 de dónde dormir; el bloque detallado lo pinta el panel.
 export function auditar(resumen: ResumenViaje, seleccion: Destino[], zonas: ZonaAlojamiento[] = []): Hallazgo[] {
   if (seleccion.length === 0) return [];
@@ -45,7 +45,7 @@ export function auditar(resumen: ResumenViaje, seleccion: Destino[], zonas: Zona
     texto: "Todas las actividades son compatibles con vuestro perfil.",
   });
 
-  // Tiempo (§4.16.1): avisa solo cuando el reparto no cabe con el ritmo —global
+  // Tiempo: avisa solo cuando el reparto no cabe con el ritmo —global
   // (`desbordado`) o algún día justo (`apretado`)—; nunca por tener muchas actividades
   // similares. El aviso ofrece el comparador; nunca elimina.
   const apretados = resumen.dias.filter((d) => d.apretado).length;
@@ -65,7 +65,7 @@ export function auditar(resumen: ResumenViaje, seleccion: Destino[], zonas: Zona
     });
   }
 
-  // Reservas (§4.16.3): cuenta las seleccionadas que requieren reserva previa. Sin
+  // Reservas: cuenta las seleccionadas que requieren reserva previa. Sin
   // ninguna, no se añade línea (no meter ruido); el detalle por actividad y sus enlaces
   // viven en la ficha.
   const conReserva = seleccion.filter(requiereReserva).length;
@@ -80,7 +80,7 @@ export function auditar(resumen: ResumenViaje, seleccion: Destino[], zonas: Zona
     });
   }
 
-  // Alojamiento (§4.15, F4): dónde conviene dormir. Una línea 💡 con las localidades base;
+  // Alojamiento: dónde conviene dormir. Una línea 💡 con las localidades base;
   // el detalle (días, paradas, ahorro) lo pinta el bloque «Zonas recomendadas» del panel.
   if (zonas.length > 0) {
     const pueblos = zonas.map((z) => z.pueblo);

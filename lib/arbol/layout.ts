@@ -160,7 +160,7 @@ export function calcularLayout(g: Grafo, opciones: OpcionesLayout): Layout {
   const pedido = expandidas.size > 0 || parejas.size > 0;
   const nucleo = pedido ? nucleoDe(g, puntoDeVista, permitidos) : mostrados;
 
-  // --- Unidades: una por unión mostrada, más las personas sueltas y los contadores ---
+  // Unidades: una por unión mostrada, más las personas sueltas y los contadores
   const unidades = new Map<string, Unidad>();
   const unidadDePersona = new Map<string, string>();
   const unidadDeUnion = new Map<string, string>();
@@ -218,7 +218,7 @@ export function calcularLayout(g: Grafo, opciones: OpcionesLayout): Layout {
     contadorDePadres.set(ancla, [...(contadorDePadres.get(ancla) ?? []), unidad]);
   }
 
-  // --- Colocación: DFS desde el punto de vista, empujando por contornos ---
+  // Colocación: DFS desde el punto de vista, empujando por contornos
   const visitados = new Set<string>();
   // La sangre del punto de vista es la espina del recorrido: por ahí no se sube apartando
   // a los padres, se les entrega lo ya colocado para que le hagan sitio entre sus hermanos.
@@ -317,7 +317,7 @@ export function calcularLayout(g: Grafo, opciones: OpcionesLayout): Layout {
     bloque = fusionar(bloque, rama);
   }
 
-  // --- De unidades a coordenadas ---
+  // De unidades a coordenadas
   const lineaDirecta = new Set<string>([puntoDeVista, ...ascendientes(g, puntoDeVista), ...descendientes(g, puntoDeVista)]);
   const sangre = consanguineos(g, puntoDeVista);
   const posicion = new Map<string, { x: number; y: number }>();

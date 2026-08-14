@@ -19,12 +19,12 @@ import PanelViaje from "./PanelViaje";
 import FichaDrawer from "./FichaDrawer";
 import Comparador from "./Comparador";
 
-// Listado + panel «Mi viaje» (Fase D, §4.9-4.13): el cuestionario alimenta al motor; sus
+// Listado + panel «Mi viaje»: el cuestionario alimenta al motor; sus
 // candidatas se pintan como tarjetas puntuadas (listado reducido por días) y el usuario las
 // añade a un panel que recalcula en vivo tiempo, km y reparto por días. El motor es
 // instantáneo: la pantalla de transición cuenta —con números reales— lo que de verdad hizo.
 
-// Tope de tarjetas según duración del viaje (§4.9: nunca cientos).
+// Tope de tarjetas según duración del viaje (nunca cientos).
 const topePorDias = (dias: number) => (dias <= 2 ? 20 : dias <= 5 ? 35 : 50);
 
 export default function Resultado({ datos, matriz, provincia, filtros, respuestas, seleccion, setSeleccion, onEditar }: {
@@ -57,9 +57,9 @@ export default function Resultado({ datos, matriz, provincia, filtros, respuesta
 
   const [listo, setListo] = useState(false);
   const [verItinerario, setVerItinerario] = useState(false);
-  const [comparando, setComparando] = useState(false); // modal comparador abierto (§4.8)
+  const [comparando, setComparando] = useState(false); // modal comparador abierto
   const [fichaAbierta, setFichaAbierta] = useState<string | null>(null); // slug del destino en el drawer
-  // Hora de salida por día (Fase E), configurable; sin valor, el generador usa la del ritmo.
+  // Hora de salida por día, configurable; sin valor, el generador usa la del ritmo.
   const [horaSalida, setHoraSalida] = useState<Record<number, number>>({});
 
   const alternar = (slug: string) =>
@@ -78,20 +78,20 @@ export default function Resultado({ datos, matriz, provincia, filtros, respuesta
     [seleccion, porSlug],
   );
   const resumen = useMemo(() => resumenMiViaje(destinosSel, matriz, opts), [destinosSel, matriz, opts]);
-  // Zonas de alojamiento (Fase F4, §4.15): dónde dormir, sobre el reparto en días.
+  // Zonas de alojamiento: dónde dormir, sobre el reparto en días.
   const zonasViaje = useMemo(() => zonasAlojamiento(resumen, porSlug, matriz), [resumen, porSlug, matriz]);
-  // Auditoría (Fase F, §4.16): revisión viva del viaje sobre el reparto ya calculado.
+  // Auditoría: revisión viva del viaje sobre el reparto ya calculado.
   const auditoria = useMemo(() => auditar(resumen, destinosSel, zonasViaje), [resumen, destinosSel, zonasViaje]);
-  // Comparador (Fase F, §4.8): compara las actividades ya en «Mi viaje».
+  // Comparador: compara las actividades ya en «Mi viaje».
   const comparativa = useMemo(() => comparar(destinosSel), [destinosSel]);
-  // Oportunidades (Fase F3, §4.6): compatibles no elegidas que pasan cerca de la ruta y
+  // Oportunidades: compatibles no elegidas que pasan cerca de la ruta y
   // aportan algo distinto. Sugerencia, nunca cambio automático del plan.
   const oportunidadesViaje = useMemo(
     () => oportunidades(destinosSel, candidatas.map((c) => c.destino), matriz),
     [destinosSel, candidatas, matriz],
   );
 
-  // Itinerario cronológico (Fase E): sobre el mismo reparto del panel, para no contradecirlo.
+  // Itinerario cronológico: sobre el mismo reparto del panel, para no contradecirlo.
   // Perezoso: solo se calcula al abrirlo, no en cada añadido de la selección (el panel ya
   // recalcula su reparto en vivo; generar el itinerario cronológico entero cada vez era
   // trabajo tirado y en móvil, con muchos destinos, podía tumbar el render).
@@ -189,7 +189,7 @@ export default function Resultado({ datos, matriz, provincia, filtros, respuesta
   );
 }
 
-// Pantalla de transición (§4.3): honesta —el motor ya corrió— con los números reales
+// Pantalla de transición: honesta —el motor ya corrió— con los números reales
 // del análisis. Los pasos aparecen encadenados y al terminar revela el listado.
 function Transicion({ candidatas, eliminadas, onListo }: {
   candidatas: number;
@@ -227,7 +227,7 @@ function Transicion({ candidatas, eliminadas, onListo }: {
   );
 }
 
-// Tarjeta de actividad (§4.10): foto, nombre, tipo, duración, dificultad, iconos que
+// Tarjeta de actividad: foto, nombre, tipo, duración, dificultad, iconos que
 // distinguen (baño, y los "no" de niños/perros), «Ver más» y «Añadir a mi viaje».
 // «Ver más» abre un drawer superpuesto en vez de navegar: preserva la selección en curso
 // (que vive en estado de React y se perdería al salir de la página) y no confunde con una

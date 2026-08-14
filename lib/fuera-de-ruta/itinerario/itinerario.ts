@@ -1,4 +1,4 @@
-// Generador de itinerario cronológico (Fase E, §5.3 + briefing §5). De «lista repartida
+// Generador de itinerario cronológico. De «lista repartida
 // en días» (lo que decide el panel «Mi viaje») a «plan cronológico»: para cada parada
 // calcula hora de llegada, de inicio, estancia (modulada por el ritmo, no fija), hora de
 // salida y conducción a la siguiente; ancla el día en la base donde se duerme (salida y
@@ -63,7 +63,6 @@ export type DiaItin = {
 };
 
 export type Itinerario = { dias: DiaItin[] };
-
 
 // Estancia recomendada modulada por el ritmo: activo tira al mínimo (ver más sitios),
 // relajado al ideal (disfrutar), medio al punto medio. Sin datos de estancia, cae a la
@@ -234,7 +233,7 @@ function construirDia(dia: DiaViaje, ctx: Ctx, bases: Bases): DiaItin {
   const km = Math.round(kms.reduce((s, k) => s + k, 0) + (regreso?.km ?? 0));
   const estanciaTotalMin = estancias.reduce((s, e) => s + e, 0);
 
-  // Aviso solo si el plan no cabe en la luz (la auditoría fina es Fase F): la última
+  // Aviso solo si el plan no cabe en la luz (la revisión fina la hace `auditoria.ts`): la última
   // actividad acaba después del anochecer. La hora que se muestra es la del fin real del
   // día —la vuelta al alojamiento, que es la última fila de la cronología—, no la salida de
   // la última parada; así el aviso coincide con lo que se ve arriba. Si cruza medianoche, se

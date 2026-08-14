@@ -1,4 +1,4 @@
-/* --- Itinerario cronológico día a día (Fase E, §5.3) --- */
+/* Itinerario cronológico día a día */
 .fr-it-nota { margin: -4px 0 20px; }
 .fr-d-itinerario { width: 100%; }
 
@@ -52,8 +52,8 @@
   .fr-it-dia { padding: 22px 24px 24px; }
 }
 
-/* ── La guía del viaje (Fase G): la envoltura común a las cuatro vistas, la cabecera con
-   los totales, las pestañas y lo propio de cada vista (bolsillo y mapa). ──────────── */
+/* La guía del viaje: la envoltura común a las cuatro vistas, la cabecera con
+   los totales, las pestañas y lo propio de cada vista (bolsillo y mapa). */
 .fr-g-wrap { max-width: 760px; margin: 0 auto; padding: 20px 16px 64px; }
 .fr-g-head { align-items: center; }
 
@@ -127,7 +127,7 @@
   .fr-g-mapa { height: 460px; }
 }
 
-/* El PDF (§5.9) es la guía A impresa: sin botones ni pestañas, con las alternativas de
+/* El PDF es la guía A impresa: sin botones ni pestañas, con las alternativas de
    lluvia ya desplegadas —en papel no hay nada que pulsar— y sin cortar un día por la mitad. */
 @media print {
   .fr-g-no-print, .fr-it-salida, .fr-cabecera,

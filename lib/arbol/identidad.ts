@@ -71,7 +71,7 @@ export function identidadDe(g: Grafo, id: string, o: OpcionesIdentidad): Identid
   };
 }
 
-// --- Línea 1: el nombre, sus apellidos y el año ---
+// Línea 1: el nombre, sus apellidos y el año
 
 /**
  * El nombre manda y el año no se recorta nunca: es el desempate más barato que hay y lo
@@ -106,7 +106,7 @@ function añoEscrito(p: Persona, modo: ModoFechas, hoy: Fecha): string {
   return p.incierto === "fechas" ? `(¿${vida}?)` : `(${vida})`;
 }
 
-// --- Línea 2: de quién es ---
+// Línea 2: de quién es
 
 /**
  * Los peldaños, del texto entero al mínimo que identifica. Se bajan en este orden: primero
@@ -206,7 +206,7 @@ export function declinado(g: Grafo, id: string, masculino: string, femenino: str
   return masculino;
 }
 
-// --- Las marcas ---
+// Las marcas
 
 function marcasDe(p: Persona, { homonimia }: OpcionesIdentidad): string[] {
   const marcas: string[] = [];

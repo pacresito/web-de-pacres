@@ -1,4 +1,4 @@
-// Detección de oportunidades (Fase F3, §4.6 y §1.11): sobre la ruta ya montada, busca
+// Detección de oportunidades: sobre la ruta ya montada, busca
 // destinos compatibles que NO están en el viaje pero pasan muy cerca —desvío de coche
 // pequeño— y aportan algo distinto («un mirador a pocos minutos», «un pueblo con encanto
 // próximo»). Priorizar, no descartar: son sugerencias «Ya que pasáis cerca de X…»; nunca
@@ -25,7 +25,6 @@ export type OpcionesOportunidad = {
 const DESVIO_MAX_MIN = 15; // «a pocos minutos» de la ruta; el resto ya es otro viaje
 const MAX_OPORTUNIDADES = 3;
 
-
 // Selección + candidatas compatibles no elegidas → oportunidades ordenadas por desvío
 // creciente. Vacío si no hay ruta que medir (nada seleccionado con GPS) o nada cerca y
 // diferenciado. Solo entran destinos rutables (con GPS y en la matriz): sin coordenada no
@@ -43,9 +42,9 @@ export function oportunidades(
   const cadena = cadenaVecinos(seleccion.filter(enRuta).map((d) => d.slug), matriz);
   if (cadena.length === 0) return [];
 
-  // «Diferenciada»: aporta un tipo que el viaje aún no tiene (§1.11: surge lo que el
-  // usuario no pidió pero enriquece). Evita proponer «otra cascada más» sobre un viaje ya
-  // lleno de cascadas —que no sería problema (§4.7), pero tampoco una oportunidad—.
+  // «Diferenciada»: aporta un tipo que el viaje aún no tiene —surge lo que el usuario
+  // no pidió pero enriquece—. Evita proponer «otra cascada más» sobre un viaje ya
+  // lleno de cascadas —que no sería problema, pero tampoco una oportunidad—.
   const tiposElegidos = new Set(seleccion.map((d) => d.tipo));
   const yaElegido = new Set(seleccion.map((d) => d.slug));
 

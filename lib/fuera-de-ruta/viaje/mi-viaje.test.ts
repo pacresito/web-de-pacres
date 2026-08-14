@@ -12,14 +12,14 @@ const m = matriz as MatrizViajes;
 const bySlug = (s: string) => datos.destinos.find((d) => d.slug === s)!;
 const opts = { dias: 2, ritmo: "medio" as const, comida: "picnic" as const, fecha: new Date("2026-07-18") };
 
-// --- Selección vacía: días vacíos, totales a cero, nunca peta ---
+// Selección vacía: días vacíos, totales a cero, nunca peta
 let r = resumenMiViaje([], m, opts);
 assert.strictEqual(r.dias.length, 2, "siempre `dias` días, aun sin selección");
 assert.strictEqual(r.totalParadas, 0, "0 paradas");
 assert.strictEqual(r.totalMin, 0, "0 minutos sin selección");
 assert.ok(r.dias.every((d) => d.slugs.length === 0 && !d.apretado), "días libres, ninguno apretado");
 
-// --- La matriz trae km reales (Fase D): el total de km es > 0 con paradas repartidas ---
+// La matriz trae km reales: el total de km es > 0 con paradas repartidas
 const tres: Destino[] = ["nacedero-del-urederra", "ubagua", "ojo-de-iturmendi"].map(bySlug);
 r = resumenMiViaje(tres, m, opts);
 assert.strictEqual(r.totalParadas, 3, "3 paradas");
@@ -32,14 +32,14 @@ assert.ok(r.dias.every((d) => !d.apretado), "3 sitios en 2 días entran de sobra
 // Una selección holgada no desborda: cabe de sobra en los días.
 assert.strictEqual(r.desbordado, false, "3 sitios en 2 días no desbordan");
 
-// --- Regla del flujo: MUCHA selección en 1 día no descarta nada, solo aprieta ---
+// Regla del flujo: MUCHA selección en 1 día no descarta nada, solo aprieta
 const todos = datos.destinos.filter((d) => d.tipo !== "alojamiento");
 r = resumenMiViaje(todos, m, { ...opts, dias: 1 });
 assert.strictEqual(r.dias.flatMap((d) => d.slugs).length, todos.length, "todas colocadas en 1 día");
 assert.ok(r.dias[0].apretado, "un día con todo va apretado");
 assert.strictEqual(r.desbordado, true, "todos los destinos en 1 día desbordan (aviso global)");
 
-// --- Reparto equilibrado: mucha selección NO se apila en el último día ---
+// Reparto equilibrado: mucha selección NO se apila en el último día
 // Con todo repartido en varios días, ninguno debe llevar más de la mitad de las paradas
 // (antes el último día era el sumidero: absorbía casi todo y salían días de 30 h).
 r = resumenMiViaje(todos, m, { ...opts, dias: 4 });
@@ -49,7 +49,7 @@ assert.ok(conParadas.length >= 2, "el reparto usa varios días, no uno solo");
 const maxEnUnDia = Math.max(...r.dias.map((d) => d.slugs.length));
 assert.ok(maxEnUnDia <= Math.ceil(todos.length / 2), "ningún día se queda con casi todo");
 
-// --- Corte por zonas: el día no parte en mitad de un salto de coche largo ---
+// Corte por zonas: el día no parte en mitad de un salto de coche largo
 // Baztán (norte) + Urbasa (sur), 4 paradas en 2 días: la cadena es Otsondo → Xorroxin →
 // (85 min) → Ojo de Iturmendi → Urederra. Repartiendo solo por horas caían 3+1 y el día 1
 // se comía el salto; cortando por el salto salen 2+2.
@@ -66,7 +66,7 @@ assert.ok(
   "cada día se queda en su zona",
 );
 
-// --- Los días se reparten por carga, no por número de zonas ---
+// Los días se reparten por carga, no por número de zonas
 // 13 paradas de 4 zonas en 4 días: dar un día fijo a cada zona dejaba un día con 7 paradas
 // (17 h) y dos con una sola (4 h). Repartiendo por carga, ningún día dobla la media.
 const cuatroZonas: Destino[] = [
@@ -82,13 +82,13 @@ assert.ok(
 );
 assert.ok(r.dias.every((d) => d.slugs.length > 0), "ningún día vacío mientras otros aprietan");
 
-// --- Presupuesto: más ritmo = más minutos por día ---
+// Presupuesto: más ritmo = más minutos por día
 assert.ok(
   presupuestoDia(tres, { ...opts, ritmo: "activo" }) > presupuestoDia(tres, { ...opts, ritmo: "relajado" }),
   "ritmo activo da más presupuesto que relajado",
 );
 
-// --- «IA decide»: subconjunto no vacío, sin repetir, que cabe en el presupuesto total ---
+// «IA decide»: subconjunto no vacío, sin repetir, que cabe en el presupuesto total
 const candidatas = todos; // ya en orden de puntos daría igual: aquí basta un orden estable
 const elegidas = elegirEquilibrado(candidatas, m, opts);
 assert.ok(elegidas.length > 0 && elegidas.length <= candidatas.length, "elige un subconjunto no vacío");

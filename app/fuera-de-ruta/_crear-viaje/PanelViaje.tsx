@@ -10,7 +10,7 @@ import type { ZonaAlojamiento } from "@/lib/fuera-de-ruta/alojamiento/alojamient
 import { guardarViaje } from "@/lib/fuera-de-ruta/viaje/guardados";
 import { duracion } from "@/lib/fuera-de-ruta/formato";
 
-// Panel «Mi viaje» (§4.12-4.13): lo seleccionado, tiempo total, km y reparto por días,
+// Panel «Mi viaje»: lo seleccionado, tiempo total, km y reparto por días,
 // recalculado en vivo. Nunca descarta: si un día no cabe en el ritmo, lo marca y avisa.
 // Guarda perfil + selección (el viaje se replanifica al abrir, no se congela).
 

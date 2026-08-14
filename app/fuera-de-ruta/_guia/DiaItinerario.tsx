@@ -7,8 +7,8 @@ import { duracion, mapsHref } from "@/lib/fuera-de-ruta/formato";
 import { fmtHora, type ComidaItin, type DiaItin } from "@/lib/fuera-de-ruta/itinerario/itinerario";
 import { consejosDelDia, type Alternativa } from "@/lib/fuera-de-ruta/guia/guia";
 
-// ------------------------------------------------------------ Guía A: el día a día
-// §5.4: cada día con su resumen (luz, coche, estancia, alojamiento) y su cronología —hora de
+// Guía A: el día a día
+// cada día con su resumen (luz, coche, estancia, alojamiento) y su cronología —hora de
 // llegada, inicio, estancia, salida y conducción a la siguiente, con la comida intercalada y
 // el regreso—, más los consejos del día y la alternativa de lluvia por actividad. La hora de
 // salida es editable y todo se recalcula. Enlace a Maps por parada (el parking).
@@ -162,8 +162,8 @@ function BloqueComida({ comida }: { comida: ComidaItin }) {
   );
 }
 
-// ------------------------------------------------------------ Guía B: la lluvia
-// §5.5: la alternativa ya está calculada; el botón solo la enseña. No reorganiza el viaje ni
+// Guía B: la lluvia
+// la alternativa ya está calculada; el botón solo la enseña. No reorganiza el viaje ni
 // consulta la previsión —decide el usuario, y solo si llueve—. En el PDF sale desplegada
 // (`@media print`): en papel no hay botón que pulsar.
 function BloqueLluvia({ alternativa: a, porSlug, provincia }: {

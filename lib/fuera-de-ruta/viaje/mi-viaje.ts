@@ -1,8 +1,8 @@
-// Panel «Mi viaje» (Fase D, §4.12-4.13): a partir de la selección del usuario calcula el
+// Panel «Mi viaje»: a partir de la selección del usuario calcula el
 // reparto en días, el tiempo total, los km y qué días van justos. NUNCA descarta una
 // actividad —esa es la regla del flujo—: si no caben, el día se marca `apretado` y el
 // panel avisa, pero todas se colocan. Estimación honesta para el panel; la cronología
-// real (horas, pivote de comida) la construye la Fase E. Puro. Test al lado.
+// real (horas, pivote de comida) la construye `itinerario.ts`. Puro. Test al lado.
 import type { Comida, Destino, Ritmo } from "../tipos";
 import { tiempoCoche, kmCoche, seg2min, centroDe, SALTO_ZONA_MIN, type MatrizViajes } from "../geo";
 import { horasDeLuz } from "../sol";
@@ -25,7 +25,6 @@ export type ResumenViaje = {
   totalParadas: number;
   desbordado: boolean; // el trabajo total no cabe en los días con este ritmo (aviso global)
 };
-
 
 // Minutos activos que caben en un día: el menor entre el ritmo elegido y la luz de la
 // fecha menos la comida. La luz se calcula en el centro de la selección (apenas varía
@@ -180,7 +179,7 @@ function diasPorCarga(cargas: number[], dias: number): number[] {
   return reparto;
 }
 
-// «Prefiero que la IA decida» (§4.12): pre-selecciona un conjunto equilibrado —las mejor
+// «Prefiero que la IA decida»: pre-selecciona un conjunto equilibrado —las mejor
 // puntuadas que llenan los días sin desbordarlos, encadenadas por cercanía— como borrador
 // editable. Único heredero de las 3 propuestas. Reusa el mismo cálculo que el panel para
 // que "lo que la IA propone" y "lo que el panel dice que cabe" no se contradigan.
@@ -199,7 +198,7 @@ export function elegirEquilibrado(
 
 // Cadena por vecino más cercano (coche): arranca en el primero de la selección y salta
 // siempre al más próximo sin visitar. Da días con paradas geográficamente contiguas sin
-// el coste del TSP exacto (el panel es una estimación; el orden fino es de la Fase E).
+// el coste del TSP exacto (el panel es una estimación; el orden fino lo pone `itinerario.ts`).
 // La exporta también F3 (oportunidades) para medir desvíos contra la misma ruta.
 export function cadenaVecinos(slugs: string[], matriz: MatrizViajes): string[] {
   if (slugs.length <= 1) return [...slugs];

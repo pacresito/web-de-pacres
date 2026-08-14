@@ -7,7 +7,7 @@ import type { Destino } from "../tipos";
 export type Acceso = "asfalto" | "pista buena" | "pista";
 
 export type Perfil = {
-  // --- Compatibilidad → fase de eliminación (solo estos campos eliminan) ---
+  // Compatibilidad → fase de eliminación (solo estos campos eliminan)
   zonas?: string[];                 // zonas elegidas en el mapa; fuera de ellas se elimina
   carritoImprescindible?: boolean;  // elimina destinos marcados NO aptos para carrito
   conPerro?: boolean;               // elimina destinos marcados NO aptos para perros
@@ -17,7 +17,7 @@ export type Perfil = {
   // Movilidad reducida (briefing §4A) no entra aún: no hay campo en los datos que la
   // sostenga sin inventar. Cuando exista, se añade aquí como otra incompatibilidad.
 
-  // --- Preferencias → fase de puntuación (nunca eliminan, solo ordenan) ---
+  // Preferencias → fase de puntuación (nunca eliminan, solo ordenan)
   paisajes?: string[];              // paisajes que gustan
   experiencias?: string[];          // tipos de experiencia buscados (prioridades, máx 5)
   tipos?: string[];                 // tipos de destino preferidos (cascada, pueblo…)

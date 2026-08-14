@@ -7,8 +7,6 @@ import ChromeWindow from "../components/ChromeWindow";
 import { useTypewriter } from "../components/useTypewriter";
 import { RECOMENDACIONES, CERTIFICACIONES, PREMIOS, premioOrg } from "@/lib/perfil";
 
-// ─── Data ─────────────────────────────────────────────────────────────────────
-
 const TIMELINE = [
   {
     id: "carpa", lineId: "L.0100", tPlus: "+19y",
@@ -143,8 +141,6 @@ const SKILLS = [
   "comportamiento del usuario", "requisitos de productos", "lanzamiento de productos",
   "b2b", "negociación", "trabajo en equipo", "resolución de problemas",
 ];
-
-// ─── Subcomponents ────────────────────────────────────────────────────────────
 
 function useInView(delay = 180) {
   const ref = useRef<HTMLDivElement>(null);
@@ -903,8 +899,6 @@ function Section({ n, cmd, highlight = false, children, contentStyle, noBorder =
   );
 }
 
-// ─── Page ────────────────────────────────────────────────────────────────────
-
 export default function TerminalHome() {
   const router = useRouter();
   const pathname = usePathname();
@@ -935,7 +929,6 @@ export default function TerminalHome() {
   return (
     <>
       <style>{`
-
 
         /* Desktop: show table, hide cards + mobile avatar */
         .t-tl-desktop { display: block; }

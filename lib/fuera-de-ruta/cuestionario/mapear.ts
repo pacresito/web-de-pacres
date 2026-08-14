@@ -7,7 +7,7 @@ import { uno, varios, type Respuestas } from "./preguntas";
 
 export type Viaje = { dias: number; fecha: string; ritmo: Ritmo; comida: Comida };
 
-// --- Tablas de traducción (valor del cuestionario → dato del motor) ---
+// Tablas de traducción (valor del cuestionario → dato del motor)
 const ACCESO: Record<string, Acceso> = {
   asfalto: "asfalto",
   "pista-buena": "pista buena",
@@ -72,7 +72,7 @@ export function aPerfil(r: Respuestas, zonas: string[] | undefined): Perfil {
   const perfil: Perfil = {};
   if (zonas?.length) perfil.zonas = zonas;
 
-  // --- Eliminación (solo incompatibilidad explícita) ---
+  // Eliminación (solo incompatibilidad explícita)
   if (uno(r, "carrito") === "imprescindible") perfil.carritoImprescindible = true;
   if (uno(r, "perro") === "si") perfil.conPerro = true;
   if (uno(r, "vertigo") === "evitar") perfil.conVertigo = true;
@@ -81,7 +81,7 @@ export function aPerfil(r: Respuestas, zonas: string[] | undefined): Perfil {
   const acceso = ACCESO[uno(r, "carreteras") ?? ""];
   if (acceso) perfil.accesoMax = acceso;
 
-  // --- Puntuación (nunca elimina, solo ordena) ---
+  // Puntuación (nunca elimina, solo ordena)
   const dificultades = unir(varios(r, "tiposRuta").flatMap((v) => DIFICULTAD[v] ?? []));
   if (dificultades.length) perfil.dificultades = dificultades;
 

@@ -1,9 +1,7 @@
-/* ============================================================
-   S4 · Ficha de destino (F5). Móvil = hero full-bleed con badges
+/* S4 · Ficha de destino. Móvil = hero full-bleed con badges
    solapando + caja única de datos + barra fija; escritorio = grid
    1fr|400px con cabecera antes de la galería y columna sticky.
-   Toda sección sin dato no se renderiza (sin huecos).
-   ============================================================ */
+   Toda sección sin dato no se renderiza (sin huecos). */
 .fr-s4 { max-width: 1180px; margin: 0 auto; padding-bottom: 96px; }
 .fr-s4-crumbs { display: none; gap: 6px; padding: 16px 20px 0; }
 .fr-s4-grid { display: flex; flex-direction: column; gap: 28px; padding: 0 20px 40px; }

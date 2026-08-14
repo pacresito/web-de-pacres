@@ -8,7 +8,7 @@ import type { Cielo, Evento, EventoSatelite, FilaPlaneta, PuntoArco } from "./en
 
 const redondo = (n: number) => +n.toFixed(2);
 
-// ─── Los cuerpos ──────────────────────────────────────────────────────────────
+// Los cuerpos
 // Color y rasgo de cada cuerpo. Son su identidad: no viran con el tema (ver PROJECT.md).
 // La textura es un apunte, no un mapa: dos manchas y una banda bastan para que un disco de
 // 22 px se reconozca; más detalle a ese tamaño solo ensucia.
@@ -121,7 +121,7 @@ function Disco({ nombre, iluminacion, sombraDerecha = false, ringTilt = null }: 
   );
 }
 
-// ─── La carta del cielo ───────────────────────────────────────────────────────
+// La carta del cielo
 // Círculo = el cielo entero, con el N arriba y el E a la derecha, como un mapa visto desde
 // arriba —y no como el cielo visto desde abajo, que pondría el E a la izquierda—. El centro
 // es el cenit y el borde, el horizonte. El trazo va continuo mientras el satélite se ve y
@@ -246,7 +246,7 @@ function CartaCielo({ paso, detallada = false, giro = 0, ahora = null }: {
   );
 }
 
-// ─── Formatos ─────────────────────────────────────────────────────────────────
+// Formatos
 
 /** "-3,4": la magnitud como se escribe en español, con una decimal. */
 const mag = (m: number) => m.toFixed(1).replace(".", ",");
@@ -278,7 +278,7 @@ function useAhora(cada: number): number | null {
   return ahora;
 }
 
-// ─── La línea de tiempo ───────────────────────────────────────────────────────
+// La línea de tiempo
 
 // Las horas rotuladas, de dos en dos y sin las de los extremos: el marco entero es la noche y
 // sus bordes se leen en el propio borde de la pista. 24 = medianoche. La rejilla usa las mismas.
@@ -416,7 +416,7 @@ function LineaDeTiempo({ cielo }: { cielo: Cielo }) {
   );
 }
 
-// ─── La tarjeta de satélites ──────────────────────────────────────────────────
+// La tarjeta de satélites
 
 function FilaPaso({ paso, onAbrir }: { paso: EventoSatelite; onAbrir: () => void }) {
   return (
@@ -474,7 +474,7 @@ function Satelites({ cielo, onAbrir }: { cielo: Cielo; onAbrir: (p: EventoSateli
   );
 }
 
-// ─── La carta a pantalla completa ─────────────────────────────────────────────
+// La carta a pantalla completa
 
 /** Rumbo en grados desde el norte · "sin-norte" si el móvil no lo da · null si está apagada. */
 type Brujula = number | "sin-norte" | null;
@@ -557,7 +557,7 @@ function PantallaCompleta({ paso, onCerrar }: { paso: EventoSatelite; onCerrar: 
   );
 }
 
-// ─── Línea de estado ──────────────────────────────────────────────────────────
+// Línea de estado
 
 /**
  * El resumen de arriba: dónde se mira, cuántos planetas se ven y cuánto falta para lo próximo
@@ -589,8 +589,6 @@ function LineaEstado({ cielo }: { cielo: Cielo }) {
     </p>
   );
 }
-
-// ─── Página ───────────────────────────────────────────────────────────────────
 
 export default function Vista({ cielo, comando }: { cielo: Cielo; comando: string }) {
   const [abierto, setAbierto] = useState<EventoSatelite | null>(null);

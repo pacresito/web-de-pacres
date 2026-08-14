@@ -1,7 +1,5 @@
-/* ============================================================
-   pacr.es · CV Editorial protagonista — styles
-   Scoped under .editorial to avoid conflicts
-   ============================================================ */
+/* pacr.es · CV Editorial protagonista — styles
+   Scoped under .editorial to avoid conflicts */
 
 .editorial {
   --paper: #f3eee7;
@@ -35,7 +33,7 @@
 }
 
 
-/* ── Type primitives ── */
+/* Type primitives ── */
 .editorial .display {
   font-family: var(--serif);
   font-weight: 500;
@@ -69,7 +67,7 @@
   color: var(--ink-2);
 }
 
-/* ── Rules ── */
+/* Rules ── */
 .editorial .rule-strong {
   border: 0;
   border-top: 1px solid var(--ink);
@@ -88,7 +86,7 @@
   margin: 0;
 }
 
-/* ── Chips ── */
+/* Chips ── */
 .editorial .chip {
   display: inline-flex;
   align-items: center;
@@ -158,7 +156,7 @@
   98%, 100%{ left: 150%; opacity: 0; }
 }
 
-/* ── Buttons ── */
+/* Buttons ── */
 .editorial .btn {
   display: inline-flex;
   align-items: center;
@@ -202,7 +200,7 @@
   }
 }
 
-/* ── Links ── */
+/* Links ── */
 .editorial a {
   color: inherit;
   text-decoration: none;
@@ -223,7 +221,7 @@
   }
 }
 
-/* ── Photo duotone ── */
+/* Photo duotone ── */
 .editorial .photo-tint {
   position: relative;
   background: var(--paper);
@@ -256,7 +254,7 @@
   z-index: 1;
 }
 
-/* ── Timeline rail ── */
+/* Timeline rail ── */
 .editorial .rail-year {
   font-family: var(--serif);
   font-weight: 400;
@@ -267,7 +265,7 @@
   font-variation-settings: "SOFT" 0;
 }
 
-/* ── Language dots ── */
+/* Language dots ── */
 .editorial .lang-dots {
   display: inline-flex;
   gap: 3px;
@@ -284,7 +282,7 @@
   background: var(--ink);
 }
 
-/* ── Sections layout ── */
+/* Sections layout ── */
 
 /* Hero */
 .editorial .hero {
@@ -537,7 +535,7 @@
   border-top: 3px double var(--ink);
 }
 
-/* ── Desktop layout (≥1024px) ── */
+/* Desktop layout (≥1024px) ── */
 @media (min-width: 1024px) {
   .editorial {
     --pad-x: 72px;

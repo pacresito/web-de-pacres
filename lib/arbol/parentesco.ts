@@ -106,7 +106,7 @@ export function escribirNivel(nivel: number): string {
   return `${escrita} ${cuantas === 1 ? "generación" : "generaciones"} por ${nivel > 0 ? "encima" : "debajo"}`;
 }
 
-// --- La relación con uno solo, tal como la lee la ficha ---
+// La relación con uno solo, tal como la lee la ficha
 
 /**
  * Cuando la lengua no da término. **No tener palabra no es no ser familia**, y siguen siendo

@@ -5,8 +5,6 @@ import { useRouter } from "next/navigation";
 import TerminalShell from "../../components/TerminalShell";
 import WhyFooter from "../../components/WhyFooter";
 
-// ─── Game logic ───────────────────────────────────────────────────────────────
-
 function calcSize() {
   const isLandscape = window.innerWidth > window.innerHeight;
   if (isLandscape) {
@@ -198,8 +196,6 @@ function useBoard(
 
   return { gameState, press, start, reset, cheat, winSpeedRef };
 }
-
-// ─── Page ─────────────────────────────────────────────────────────────────────
 
 const MONO = "var(--t-mono)";
 

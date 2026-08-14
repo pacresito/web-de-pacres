@@ -16,7 +16,7 @@ const SANS = "var(--t-sans)";
 type PublicEntry = { name: string; message: string; date: string };
 type Entry = PublicEntry & { id: string; ts: number; hidden: boolean };
 
-// ─── Lista de firmas ───────────────────────────────────────────────────────────
+// Lista de firmas
 
 function Firmas({ entries }: { entries: PublicEntry[] }) {
   if (entries.length === 0) {
@@ -42,7 +42,7 @@ function Firmas({ entries }: { entries: PublicEntry[] }) {
   );
 }
 
-// ─── Formulario de firma ─────────────────────────────────────────────────────────
+// Formulario de firma
 
 function Formulario({ onSigned }: { onSigned: () => void }) {
   const [name, setName] = useState("");
@@ -129,7 +129,7 @@ function Formulario({ onSigned }: { onSigned: () => void }) {
   );
 }
 
-// ─── Confirmación de ocultar (enlace del email) ─────────────────────────────────
+// Confirmación de ocultar (enlace del email)
 
 function Ocultar({ id }: { id: string }) {
   const [status, setStatus] = useState<"idle" | "sending" | "done" | "fail">("idle");
@@ -166,7 +166,7 @@ function Ocultar({ id }: { id: string }) {
   );
 }
 
-// ─── Panel de moderación (?moderar + contraseña) ────────────────────────────────
+// Panel de moderación (?moderar + contraseña)
 
 function Moderar() {
   const [password, setPassword] = useState("");
@@ -246,8 +246,6 @@ function Moderar() {
     </div>
   );
 }
-
-// ─── Página ─────────────────────────────────────────────────────────────────────
 
 function GuestbookInner() {
   // El modo se deriva del query en render (sin setState en efecto). useSearchParams

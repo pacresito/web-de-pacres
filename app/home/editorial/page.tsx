@@ -5,8 +5,6 @@ import Image from "next/image";
 import "./editorial.css";
 import { RECOMENDACIONES, CERTIFICACIONES, PREMIOS, premioOrg } from "@/lib/perfil";
 
-// ─── Data ──────────────────────────────────────────────────────────────────
-
 const DATA = {
   roles: ["Director de Operaciones", "Senior Product Manager", "Troubleshooter"],
   bio: "Ingeniero Industrial con curiosidad por el funcionamiento de todo y gran capacidad para comprender y resolver cualquier problema que se presente.",
@@ -220,8 +218,6 @@ const DATA = {
     title: "shhh",
   },
 };
-
-// ─── Section components ────────────────────────────────────────────────────
 
 function Hero() {
   return (
@@ -756,8 +752,6 @@ function Footer() {
     </footer>
   );
 }
-
-// ─── Page ──────────────────────────────────────────────────────────────────
 
 export default function EditorialPage() {
   return (

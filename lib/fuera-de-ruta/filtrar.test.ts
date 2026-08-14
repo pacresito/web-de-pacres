@@ -9,11 +9,11 @@ const mk = (over: Partial<Destino>): Destino => ({
 });
 const slugs = (ds: Destino[]) => ds.map((d) => d.slug).sort();
 
-// --- Sin filtros: pasan todos ---
+// Sin filtros: pasan todos
 const tres = [mk({ slug: "a" }), mk({ slug: "b" }), mk({ slug: "c" })];
 assert.deepStrictEqual(slugs(filtrarDestinos(tres, {})), ["a", "b", "c"], "sin filtros no descarta nada");
 
-// --- Zona y tipo: multi-selección (OR dentro, AND entre dimensiones) ---
+// Zona y tipo: multi-selección (OR dentro, AND entre dimensiones)
 const mix = [
   mk({ slug: "r1", zona: "z1", tipo: "ruta" }),
   mk({ slug: "c1", zona: "z2", tipo: "cascada" }),
@@ -25,7 +25,7 @@ assert.deepStrictEqual(slugs(filtrarDestinos(mix, { tipo: ["cascada"] })), ["c1"
 assert.deepStrictEqual(slugs(filtrarDestinos(mix, { zona: ["z1"], tipo: ["cascada"] })), [], "zona+tipo se acumulan (AND)");
 assert.deepStrictEqual(slugs(filtrarDestinos(mix, { zona: [] })), ["c1", "m1", "r1"], "array vacío = dimensión inactiva");
 
-// --- Dificultad: niveles normalizados; "fácil media" abarca ambos ---
+// Dificultad: niveles normalizados; "fácil media" abarca ambos
 assert.deepStrictEqual(nivelesDificultad("fácil media"), ["fácil", "media"], "fácil media = dos niveles");
 assert.deepStrictEqual(nivelesDificultad("muy fácil"), ["fácil"], "muy fácil = fácil");
 assert.deepStrictEqual(nivelesDificultad(undefined), [], "sin dato = sin niveles");
@@ -39,7 +39,7 @@ assert.deepStrictEqual(slugs(filtrarDestinos(difs, { dificultad: ["fácil"] })),
 assert.deepStrictEqual(slugs(filtrarDestinos(difs, { dificultad: ["media"] })), ["fm", "media"], "media incluye 'fácil media'");
 assert.deepStrictEqual(slugs(filtrarDestinos(difs, { dificultad: ["difícil"] })), [], "sin difíciles");
 
-// --- Época y agua: solapamiento de arrays; dato ausente queda fuera ---
+// Época y agua: solapamiento de arrays; dato ausente queda fuera
 const est = [
   mk({ slug: "prim", epoca: ["primavera", "otono"] }),
   mk({ slug: "inv", epoca: ["invierno"] }),
@@ -56,7 +56,7 @@ const aguas = [
 assert.deepStrictEqual(slugs(filtrarDestinos(aguas, { agua: ["poza"] })), ["pozaRio"], "agua: solapa 'poza'");
 assert.deepStrictEqual(slugs(filtrarDestinos(aguas, { agua: ["poza", "cascada"] })), ["casc", "pozaRio"], "agua: varios subtipos suman");
 
-// --- Distancia: regla del mínimo del rango; el tope es inclusivo ---
+// Distancia: regla del mínimo del rango; el tope es inclusivo
 const dist = [
   mk({ slug: "d56", distanciaKm: [5, 6] }),
   mk({ slug: "d1015", distanciaKm: [10, 15] }),
@@ -67,7 +67,7 @@ assert.deepStrictEqual(slugs(filtrarDestinos(dist, { distanciaMax: 4 })), [], "m
 assert.deepStrictEqual(slugs(filtrarDestinos(dist, { distanciaMax: 12 })), ["d1015", "d56"], "10-15 entra por su mínimo 10");
 assert.deepStrictEqual(slugs(filtrarDestinos(dist, { distanciaMax: 25 })), ["d1015", "d56"], "sin distancia queda fuera si hay filtro de distancia");
 
-// --- Duración: mismo criterio de umbral que la distancia ---
+// Duración: mismo criterio de umbral que la distancia
 const dur = [
   mk({ slug: "corta", duracionHoras: [1, 2] }),
   mk({ slug: "larga", duracionHoras: [4, 6] }),
@@ -77,7 +77,7 @@ assert.deepStrictEqual(slugs(filtrarDestinos(dur, { duracionMax: 2 })), ["corta"
 assert.deepStrictEqual(slugs(filtrarDestinos(dur, { duracionMax: 4 })), ["corta", "larga"], "duración: 4-6 entra por su mínimo 4");
 assert.deepStrictEqual(slugs(filtrarDestinos(dur, { duracionMax: 3 })), ["corta"], "sin duración queda fuera con filtro activo");
 
-// --- Desnivel: tramos, contra el mínimo ---
+// Desnivel: tramos, contra el mínimo
 const desn = [
   mk({ slug: "d110", desnivelM: [110, 110] }),
   mk({ slug: "d385", desnivelM: [385, 385] }),
@@ -90,7 +90,7 @@ assert.deepStrictEqual(slugs(filtrarDestinos(desn, { desnivel: "<300" })), ["d11
 assert.deepStrictEqual(slugs(filtrarDestinos(desn, { desnivel: "<500" })), ["d110", "d200_300", "d385"], "<500 hasta 385");
 assert.deepStrictEqual(slugs(filtrarDestinos(desn, { desnivel: "+500" })), ["d700"], "+500 solo el duro (>500)");
 
-// --- Toggles booleanos: exigen true; null/ausente no cuela ---
+// Toggles booleanos: exigen true; null/ausente no cuela
 const apto = [
   mk({ slug: "siTodo", ninos: true, perros: true, bano: true, parkingGratuito: true }),
   mk({ slug: "noNinos", ninos: false }),
@@ -101,14 +101,14 @@ assert.deepStrictEqual(slugs(filtrarDestinos(apto, { perros: true })), ["siTodo"
 assert.deepStrictEqual(slugs(filtrarDestinos(apto, { bano: true })), ["siTodo"], "baño: solo true");
 assert.deepStrictEqual(slugs(filtrarDestinos(apto, { parkingGratuito: true })), ["siTodo"], "parking: solo true");
 
-// --- Sin reserva: invierte la regla; reserva presente queda fuera ---
+// Sin reserva: invierte la regla; reserva presente queda fuera
 const res = [
   mk({ slug: "libre" }),
   mk({ slug: "conReserva", reserva: "gratuita online obligatoria" }),
 ];
 assert.deepStrictEqual(slugs(filtrarDestinos(res, { sinReserva: true })), ["libre"], "sin reserva: reserva presente fuera, ausente pasa");
 
-// --- Datos reales de Navarra ---
+// Datos reales de Navarra
 // El JSON **está hecho para crecer** (Cris añade destinos y provincias), así que aquí no se
 // asertan recuentos: un test que solo sabe decir «hay más destinos que ayer» falla cuando el
 // dato crece —que es lo correcto— y entrena a subir el número sin mirar. Se aserta la

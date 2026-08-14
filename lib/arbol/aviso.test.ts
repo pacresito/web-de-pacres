@@ -7,7 +7,7 @@ import { aLasDiez, avisoDeVispera, HORA } from "./aviso";
 import { construirGrafo } from "./grafo";
 import type { ArbolData } from "./tree";
 
-// --- La hora de salida ---
+// La hora de salida
 // Las diez de la noche de Madrid, que en verano son las 20:00Z y en invierno las 21:00Z.
 assert.strictEqual(new Date(aLasDiez("2026-08-14")).toISOString(), "2026-08-14T20:00:00.000Z");
 assert.strictEqual(new Date(aLasDiez("2026-12-14")).toISOString(), "2026-12-14T21:00:00.000Z");
@@ -17,7 +17,7 @@ assert.strictEqual(new Date(aLasDiez("2026-10-25")).toISOString(), "2026-10-25T2
 // Siempre por delante del cron que lo programa, que corre por la mañana.
 assert.ok(aLasDiez("2026-08-14") > Date.parse("2026-08-14T12:00:00Z"), `las ${HORA} no pueden caer antes de mediodía`);
 
-// --- Qué dice ---
+// Qué dice
 const data: ArbolData = JSON.parse(readFileSync(resolve("seed/arbol.json"), "utf-8"));
 const g = construirGrafo(data);
 const laNoche = (hoy: string) => avisoDeVispera(g, hoy);

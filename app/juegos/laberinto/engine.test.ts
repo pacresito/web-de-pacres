@@ -16,7 +16,7 @@ function test(name: string, ok: boolean, detail = "") {
   console.log(`${ok ? "✓" : "✗"} ${name}${detail ? "  " + detail : ""}`);
 }
 
-// ── Camino de Warnsdorff ──────────────────────────────────────────────────────
+// Camino de Warnsdorff
 
 const camino = warnsdorffPath(new Set());
 test("warnsdorffPath arranca en (0,0)", camino?.[0].r === 0 && camino?.[0].c === 0);
@@ -31,7 +31,7 @@ test(
 );
 test("warnsdorffPath devuelve null si (0,0) está prohibida", warnsdorffPath(new Set(["0,0"])) === null);
 
-// ── Conectividad del laberinto ────────────────────────────────────────────────
+// Conectividad del laberinto
 
 const MN = 1, MS = 2, ME = 4, MW = 8;
 
@@ -69,7 +69,7 @@ test(
   circuito.goalRow >= 0 && circuito.goalRow < ROWS && circuito.goalCol >= 0 && circuito.goalCol < COLS,
 );
 
-// ── Modo desafío ──────────────────────────────────────────────────────────────
+// Modo desafío
 
 const TIRADAS = 20;
 let sinSalida = 0, agujerosPegados = 0, agujerosEnBorde = 0, metaEnAgujero = 0;
@@ -98,7 +98,7 @@ const conAgujeros = tryDesafio(4, 2000);
 test("tryDesafio(4) da exactamente 4 agujeros", conAgujeros === null || conAgujeros.holes.length === 4);
 test("tryDesafio devuelve null si pide demasiados agujeros", tryDesafio(30, 20) === null);
 
-// ── Geometría de muros ────────────────────────────────────────────────────────
+// Geometría de muros
 
 const todoCerrado: MazeCell[][] = Array.from({ length: ROWS }, () =>
   Array.from({ length: COLS }, () => ({ walls: MN | MS | ME | MW })),
@@ -124,7 +124,7 @@ test(
   gx === (COLS - 1) * CELL + CELL / 2 + WALL_W / 2 && gy === (ROWS - 1) * CELL + CELL / 2 + WALL_W / 2,
 );
 
-// ── Colisiones ────────────────────────────────────────────────────────────────
+// Colisiones
 
 /** Distancia de un punto al segmento más cercano: si es menor que el radio de la bola
  *  más medio muro, la bola está incrustada. */
@@ -155,7 +155,7 @@ test("resolveCollisions no toca una bola que no roza nada",
 const rebote = resolveCollisions(START_X, WALL_W / 2 + BALL_R + 0.5, 0, -200, segsCerrado);
 test("resolveCollisions invierte la velocidad contra el muro", rebote[3] > 0, `vy=${rebote[3].toFixed(1)}`);
 
-// ── Integración ───────────────────────────────────────────────────────────────
+// Integración
 
 const quieta = { bx: START_X, by: START_Y, vx: 0, vy: 0 };
 test("pasoBola con el tablero plano no mueve la bola",

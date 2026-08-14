@@ -1,19 +1,18 @@
-// Guías finales (Fase G, §5.4-5.9 + briefing §10). Cuatro vistas de los MISMOS datos —el
-// itinerario de la Fase E—, no cuatro procesos: aquí solo vive lo que hay que derivar para
+// Guías finales. Cuatro vistas de los MISMOS datos —el itinerario cronológico—,
+// no cuatro procesos: aquí solo vive lo que hay que derivar para
 // ellas —totales del viaje, consejos del día y las alternativas de lluvia precalculadas—.
 // Determinista, IA cero. Puro. Test: `npx tsx lib/fuera-de-ruta/guia/guia.test.ts`.
 import type { Destino, Ritmo } from "../tipos";
 import { tiempoCoche, kmCoche, seg2min, type MatrizViajes } from "../geo";
 import { estanciaPorRitmo, type DiaItin, type Itinerario } from "../itinerario/itinerario";
 
-// Frase de cierre obligatoria de las guías (§1.9): no garantizamos datos de terceros.
+// Frase de cierre obligatoria de las guías: no garantizamos datos de terceros.
 export const CIERRE =
   "La guía se genera con la información disponible en el momento de su creación. Por este motivo, " +
   "antes de realizar el viaje se recomienda comprobar posibles cambios que dependan de terceros, " +
   "como horarios, reservas o condiciones de acceso.";
 
-
-// --------------------------------------------------------------- Totales del viaje
+// Totales del viaje
 export type TotalesViaje = {
   dias: number;
   diasConPlan: number;
@@ -39,8 +38,8 @@ export function totalesViaje(it: Itinerario): TotalesViaje {
   };
 }
 
-// --------------------------------------------------------------- Consejos del día
-// «Solo consejos realmente útiles» (§5.4): los que cambian algo que haces ANTES de salir
+// Consejos del día
+// «Solo consejos realmente útiles»: los que cambian algo que haces ANTES de salir
 // —qué metes en la mochila, qué reservas, con qué coche vas—. Todos se derivan del dato de
 // las paradas del día; nada genérico ("lleva agua" no depende del día, así que no entra).
 // Orden = prioridad: si hay más de MAX_CONSEJOS, se quedan los primeros.
@@ -86,8 +85,8 @@ export function consejosDelDia(dia: DiaItin, porSlug: Map<string, Destino>): str
   return consejos.slice(0, MAX_CONSEJOS);
 }
 
-// --------------------------------------------------------------- Guía B: lluvia
-// Alternativa precalculada por actividad (§5.5): NO se reorganiza el viaje ni se consulta
+// Guía B: lluvia
+// Alternativa precalculada por actividad: NO se reorganiza el viaje ni se consulta
 // meteorología — a cada parada que la lluvia estropea se le busca de antemano el refugio
 // más cercano que no está ya en el viaje. Decide el usuario, y solo si llueve.
 //

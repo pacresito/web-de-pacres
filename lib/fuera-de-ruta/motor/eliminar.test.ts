@@ -11,13 +11,13 @@ const mk = (over: Partial<Destino>): Destino => ({
 });
 const slugs = (ds: Destino[]) => ds.map((d) => d.slug).sort();
 
-// --- Perfil vacío: no elimina a nadie ---
+// Perfil vacío: no elimina a nadie
 const tres = [mk({ slug: "a" }), mk({ slug: "b" }), mk({ slug: "c" })];
 let r = eliminar(tres, {});
 assert.deepStrictEqual(slugs(r.candidatas), ["a", "b", "c"], "perfil vacío no elimina");
 assert.strictEqual(r.eliminadas.length, 0, "perfil vacío: sin eliminadas");
 
-// --- "Ausente = no consta", no "no": el dato que falta NUNCA se elimina ---
+// "Ausente = no consta", no "no": el dato que falta NUNCA se elimina
 const carritos = [
   mk({ slug: "apta", carrito: true }),
   mk({ slug: "noApta", carrito: false }),
@@ -27,22 +27,22 @@ r = eliminar(carritos, { carritoImprescindible: true });
 assert.deepStrictEqual(slugs(r.candidatas), ["apta", "sinDato"], "carrito: solo elimina el explícito false; el ausente pasa");
 assert.deepStrictEqual(r.eliminadas.map((e) => e.destino.slug), ["noApta"], "carrito: eliminado el false");
 
-// --- Perro: mismo criterio (solo false explícito) ---
+// Perro: mismo criterio (solo false explícito)
 const perros = [mk({ slug: "si", perros: true }), mk({ slug: "no", perros: false }), mk({ slug: "nd" })];
 r = eliminar(perros, { conPerro: true });
 assert.deepStrictEqual(slugs(r.candidatas), ["nd", "si"], "perro: ausente pasa, solo elimina el false");
 
-// --- Zona: fuera de las elegidas se elimina ---
+// Zona: fuera de las elegidas se elimina
 const zonas = [mk({ slug: "z1a", zona: "z1" }), mk({ slug: "z2a", zona: "z2" })];
 r = eliminar(zonas, { zonas: ["z1"] });
 assert.deepStrictEqual(slugs(r.candidatas), ["z1a"], "zona: solo la elegida");
 
-// --- Edad mínima: elimina si supera la edad del menor; empate no elimina ---
+// Edad mínima: elimina si supera la edad del menor; empate no elimina
 const edades = [mk({ slug: "e10", edadMinima: 10 }), mk({ slug: "libre" })];
 assert.deepStrictEqual(slugs(eliminar(edades, { edadMinNino: 8 }).candidatas), ["libre"], "menor 8 < edadMínima 10: fuera");
 assert.deepStrictEqual(slugs(eliminar(edades, { edadMinNino: 10 }).candidatas), ["e10", "libre"], "menor 10 = edadMínima 10: pasa");
 
-// --- Acceso: elimina los peores que el máximo aceptado; ausente pasa ---
+// Acceso: elimina los peores que el máximo aceptado; ausente pasa
 const accesos = [
   mk({ slug: "asf", accesoCarretera: "asfalto" }),
   mk({ slug: "buena", accesoCarretera: "pista buena" }),
@@ -53,7 +53,7 @@ assert.deepStrictEqual(slugs(eliminar(accesos, { accesoMax: "asfalto" }).candida
 assert.deepStrictEqual(slugs(eliminar(accesos, { accesoMax: "pista buena" }).candidatas), ["asf", "buena", "nd"], "hasta pista buena: pista fuera");
 assert.deepStrictEqual(slugs(eliminar(accesos, { accesoMax: "pista" }).candidatas), ["asf", "buena", "nd", "pista"], "hasta pista: no elimina ninguno");
 
-// --- Regla de oro: NINGUNA preferencia de puntuación elimina ---
+// Regla de oro: NINGUNA preferencia de puntuación elimina
 const soloPreferencias: Perfil = {
   paisajes: ["bosque", "cascada"], experiencias: ["senderismo"], tipos: ["cascada"],
   dificultades: ["fácil"], epoca: ["verano"], quiereBano: true, imprescindibles: ["a"],
@@ -62,7 +62,7 @@ r = eliminar(tres, soloPreferencias);
 assert.strictEqual(r.eliminadas.length, 0, "regla de oro: las preferencias no eliminan");
 assert.strictEqual(r.candidatas.length, 3, "regla de oro: el conjunto se mantiene entero");
 
-// --- Datos reales de Navarra ---
+// Datos reales de Navarra
 // Sin recuentos: el JSON crece con cada destino que añade Cris. Lo que se aserta es **quién**
 // se elimina —exactamente los que declaran la incompatibilidad, nunca los que no dicen nada—,
 // que es la regla de oro y lo único que puede romperse.

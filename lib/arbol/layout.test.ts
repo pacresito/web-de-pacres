@@ -39,7 +39,7 @@ function revisar(l: Layout, pov: string, etiqueta: string): void {
   }
 }
 
-// --- Entrada por defecto: la línea directa desplegada y lo demás en contadores ---
+// Entrada por defecto: la línea directa desplegada y lo demás en contadores
 const inicial = layout("p25");
 revisar(inicial, "p25", "p25 sin expandir");
 assert.ok(inicial.nodos.some((n) => n.esPuntoDeVista && n.id === "p25"), "el punto de vista está en el lienzo");
@@ -60,7 +60,7 @@ const pareja = inicial.nodos.filter((n) => n.nivel === 0 && [...g.unionesDePartn
 assert.strictEqual(pareja.length, 2, "el punto de vista y su pareja, en la misma columna");
 assert.notStrictEqual(pareja[0].y, pareja[1].y, "…a distinta altura");
 
-// --- Los hermanos salen en el orden en que vinieron, mire quien mire ---
+// Los hermanos salen en el orden en que vinieron, mire quien mire
 // Quien mira es uno de ellos y no por eso se pone el primero de la fila. Y el que sube con
 // pareja se va al extremo del lado que ocupa en ella, para que la familia de ella quepa
 // debajo sin cruzar a sus hermanos. Vale para toda la línea de subida, que es por la que
@@ -82,7 +82,7 @@ for (const pid of ["p25", "p26", "p126"]) {
   }
 }
 
-// --- Cada rama se acomoda junto a la suya ---
+// Cada rama se acomoda junto a la suya
 // Un reparto que cruza media pantalla delata una rama entera desterrada al fondo de otra:
 // es lo que pasaba cuando los abuelos paternos y los maternos acababan en el mismo sitio.
 const reparto = (l: Layout) => Math.max(...l.vinculos.flatMap((v) => v.hijos.map((h) => Math.abs(h.y - v.y))));
@@ -96,7 +96,7 @@ for (const pid of ["p25", "p26", "p126", "p131"]) {
   assert.ok(salto < 500, `${pid}: el reparto más largo del arranque mide ${salto.toFixed(0)}px`);
 }
 
-// --- Un desnivel de tres píxeles no es un quiebro, es un defecto ---
+// Un desnivel de tres píxeles no es un quiebro, es un defecto
 // Nadie cae exactamente enfrente de sus padres, porque lo que se centra ante ellos es el
 // paquete entero de hermanos: ese resto se dibujaba como dos esquinas seguidas.
 const desdeLosPadres = inicial.vinculos.find((v) => v.unionId === g.unionDeHijo.get("p25"))!;
@@ -116,10 +116,10 @@ assert.strictEqual(
   "el arranque se dibuja sin saltos",
 );
 
-// --- Determinista: mismo estado, mismo dibujo ---
+// Determinista: mismo estado, mismo dibujo
 assert.deepStrictEqual(layout("p25"), inicial, "dos cálculos idénticos dan el mismo layout");
 
-// --- Los hermanos llegan colapsados y el contador los trae ---
+// Los hermanos llegan colapsados y el contador los trae
 const unionPadres = g.unionDeHijo.get("p25")!;
 const contadorHermanos = inicial.contadores.find((c) => c.unionId === unionPadres && c.sentido === "hijos");
 assert.ok(contadorHermanos, "los hermanos del punto de vista están tras un contador");
@@ -143,7 +143,7 @@ assert.ok(
   "y aparece al abrir la unión del hermano",
 );
 
-// --- La pareja que falta se anuncia en el nodo del que sí está, y no ocupa sitio ---
+// La pareja que falta se anuncia en el nodo del que sí está, y no ocupa sitio
 const hermano = conHermanos.nodos.find((n) => n.id === "p131")!;
 assert.deepStrictEqual(
   hermano.pendientes.map((p) => p.unionId),
@@ -232,7 +232,7 @@ assert.ok(
   "abrir una unión que ya salía sola no ofrece plegarla",
 );
 
-// --- Abrirlo todo alcanza el árbol entero desde cualquier punto de vista ---
+// Abrirlo todo alcanza el árbol entero desde cualquier punto de vista
 for (const pid of ["p25", "p26", "p126", "p1"]) {
   const todo = layout(pid, TODAS);
   assert.strictEqual(todo.nodos.length, data.people.length, `${pid} no alcanza el árbol entero abriéndolo todo`);
@@ -240,7 +240,7 @@ for (const pid of ["p25", "p26", "p126", "p1"]) {
   revisar(todo, pid, `${pid} todo abierto`);
 }
 
-// --- Con el interruptor de ocultar, el alcance es justo la fórmula de "conectado" ---
+// Con el interruptor de ocultar, el alcance es justo la fórmula de "conectado"
 for (const pid of ["p25", "p26", "p126", "p131", "p124"]) {
   const acotado = layout(pid, TODAS, true);
   assert.strictEqual(acotado.nodos.length, visibles(g, pid).size, `${pid} acotado a sus conectados`);
@@ -259,13 +259,13 @@ for (const c of layout("p126", new Set(), true).contadores) {
   assert.ok(gente.some((p) => conectados.has(p)), `el contador de ${c.unionId} lleva a gente no conectada`);
 }
 
-// --- El contador de padres es lo que permite salir de la propia sangre ---
+// El contador de padres es lo que permite salir de la propia sangre
 assert.ok(
   layout("p126", TODAS).nodos.length > visibles(g, "p126").size,
   "sin el interruptor se llega más allá de los conectados",
 );
 
-// --- Quien se casó dos veces sale una vez, entre sus dos parejas ---
+// Quien se casó dos veces sale una vez, entre sus dos parejas
 const todoAbierto = layout("p25", TODAS);
 const pepeYSusMujeres = ["p441", "p16", "p17"].map((id) => todoAbierto.nodos.find((n) => n.id === id)!);
 assert.ok(pepeYSusMujeres.every((n) => n?.x === pepeYSusMujeres[1].x), "los tres comparten columna");
@@ -275,14 +275,14 @@ assert.deepStrictEqual(
   "y él queda en medio, para que cada trazo una a dos vecinos",
 );
 
-// --- La sangre llega más lejos que la línea directa: los tíos sí, sus parejas no ---
+// La sangre llega más lejos que la línea directa: los tíos sí, sus parejas no
 const desdeElHijo = layout("p26", TODAS);
 const nodo = (id: string) => desdeElHijo.nodos.find((n) => n.id === id)!;
 assert.ok(nodo("p126").consanguineo && !nodo("p126").lineaDirecta, "un tío comparte sangre y no está en la línea directa");
 for (const suya of parejaDirecta(g, "p126")) assert.ok(!nodo(suya).consanguineo, "…y su pareja no la comparte");
 assert.ok(desdeElHijo.nodos.every((n) => !n.lineaDirecta || n.consanguineo), "la línea directa siempre es sangre");
 
-// --- Vínculos: cada uno cuelga de algo pintado, y reparte hacia la derecha ---
+// Vínculos: cada uno cuelga de algo pintado, y reparte hacia la derecha
 for (const l of [inicial, conHermanos, layout("p126", TODAS)]) {
   for (const v of l.vinculos) {
     assert.ok(Number.isFinite(v.x) && Number.isFinite(v.y), `vínculo ${v.unionId} sin ancla`);

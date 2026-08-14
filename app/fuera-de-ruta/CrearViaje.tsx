@@ -12,7 +12,7 @@ import { tomarParaAbrir } from "@/lib/fuera-de-ruta/viaje/guardados";
 import { PasoBloque, Resumen } from "./_crear-viaje/Cuestionario";
 import Resultado from "./_crear-viaje/Resultado";
 
-// S5 «Crear mi viaje» (Fase C): el cuestionario de Cris sustituye al formulario plano.
+// S5 «Crear mi viaje»: el cuestionario de Cris sustituye al formulario plano.
 // Tres pasos —el viajero, el viaje y el resumen editable— y al confirmar lanza el motor
 // de dos fases. El viajero se guarda en localStorage (reutilizable); el viaje viaja en la
 // URL. Aquí se decide qué pantalla toca y quién guarda las respuestas; pintarlas es cosa

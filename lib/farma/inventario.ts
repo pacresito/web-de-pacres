@@ -9,9 +9,6 @@
 //   col0 = número (código)     col1 = texto (denominación)     col2 = número (stock)
 //   col4 = número (Valor PVP)
 //
-// Validado con los tres ejemplos: el nº de filas que cumplen la firma coincide
-// exactamente con el "Nº Items" total del preámbulo (3664 / 3659 / 1768).
-//
 // Gotcha PVP: "Valor PVP" (col4) NO es el precio de un artículo, es el valor del stock a
 // PVP = precio unitario × existencias. El PVP unitario se recupera dividiendo por las
 // unidades (col2) y redondeando a céntimos. Sin stock no es derivable (0 = desconocido).

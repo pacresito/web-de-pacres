@@ -6,7 +6,7 @@ import assert from "assert";
 import { readFileSync, existsSync } from "fs";
 import { parseInventario, evaluarCarga, esEspecialidad } from "./inventario";
 
-// --- Guarda de carga (#7): veredicto por rangos. No necesita fixtures. ---
+// Guarda de carga (#7): veredicto por rangos. No necesita fixtures.
 assert.strictEqual(evaluarCarga(3500, 25000), "ok", "centro del rango normal");
 assert.strictEqual(evaluarCarga(2000, 15000), "ok", "límite inferior del rango normal (inclusive)");
 assert.strictEqual(evaluarCarga(5000, 35000), "ok", "límite superior del rango normal (inclusive)");

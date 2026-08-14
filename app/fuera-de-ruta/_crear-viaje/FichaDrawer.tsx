@@ -5,7 +5,7 @@ import Image from "next/image";
 import type { Destino } from "@/lib/fuera-de-ruta/tipos";
 import Overlay from "./Overlay";
 
-// Drawer superpuesto de «Ver más» (§4.10): una vista breve de la ficha sobre la propia
+// Drawer superpuesto de «Ver más»: una vista breve de la ficha sobre la propia
 // pantalla, sin navegar. Muestra lo esencial —foto, qué es, datos, lo mejor y avisos— y
 // deja añadir/quitar sin cerrar; el enlace a la ficha completa sí abre pestaña (acción
 // deliberada de profundizar). Pinta solo lo que hay: todos los campos son opcionales.

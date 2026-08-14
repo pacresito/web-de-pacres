@@ -14,8 +14,8 @@ const ICONO_TIPO: Record<string, string> = {
 };
 const icono = (tipo: string) => ICONO_TIPO[tipo] ?? "📍";
 
-// ------------------------------------------------------------ Guía de bolsillo
-// §5.7: el día en una pantalla de móvil, para consultarlo en menos de un minuto durante el
+// Guía de bolsillo
+// el día en una pantalla de móvil, para consultarlo en menos de un minuto durante el
 // viaje. Un día cada vez —si hubiera que hacer scroll entre días ya no cabe en la pantalla—.
 export default function VistaBolsillo({ itinerario, porSlug }: { itinerario: Itinerario; porSlug: Map<string, Destino> }) {
   const conPlan = itinerario.dias.filter((d) => d.paradas.length > 0);

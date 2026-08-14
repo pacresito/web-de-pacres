@@ -39,7 +39,7 @@ assert.ok(
   "en un árbol de una sola línea, todos los bloques son directos",
 );
 
-// --- La familia de verdad ---
+// La familia de verdad
 const data: ArbolData = JSON.parse(readFileSync(resolve("seed/arbol.json"), "utf-8"));
 const g = construirGrafo(data);
 const { bloques, limites } = calcularBloques(g, { puntoDeVista: "p25", ocultarNoConectados: false });

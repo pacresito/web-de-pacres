@@ -24,9 +24,7 @@
 /* :where() deja este reset a especificidad 0: cualquier clase con color propio le gana. */
 .fuera-de-ruta :where(a) { color: inherit; text-decoration: none; }
 
-/* ============================================================
-   Río pop · sistema visual base
-   ============================================================ */
+/* Río pop · sistema visual base */
 
 /* Cabecera (todas las pantallas) */
 .fr-cabecera {

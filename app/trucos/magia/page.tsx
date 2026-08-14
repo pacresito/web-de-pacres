@@ -5,8 +5,6 @@ import TerminalShell from "../../components/TerminalShell";
 import WhyFooter from "../../components/WhyFooter";
 import { anchoDeCarta, reparte, RITMO, type Reparto, type Spot } from "./reparto";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
 interface Beast {
   suit: string;
   value: string;
@@ -14,8 +12,6 @@ interface Beast {
 }
 
 type SpellPhase = "intro" | "dealing" | "spinner" | "reveal";
-
-// ─── Constants ────────────────────────────────────────────────────────────────
 
 const RUNES = [
   "A","B","C","D","E","F","G","H","I","J","K","L","M","N","Ñ",
@@ -58,8 +54,6 @@ const PIP_LAYOUT: Record<string, [number, number][]> = {
 const WHEEL_R = 120;
 const LETTER_R = 96;
 const ANIMAL_SIZE = 184;
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function weave<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -111,7 +105,7 @@ function deckSpot(rep: Reparto, cardW: number, i: number): Spot {
   };
 }
 
-// ─── CardFace ─────────────────────────────────────────────────────────────────
+// CardFace
 
 // Símbolos SVG de los palos (handoff editorial). Se renderiza una vez por página;
 // `<use href="#sym-X">` los referencia desde cada carta.
@@ -201,7 +195,7 @@ function CardFace({ beast, w }: { beast: Beast; w: number }) {
   );
 }
 
-// ─── SpellWheel ───────────────────────────────────────────────────────────────
+// SpellWheel
 
 function SpellWheel({
   targetRune,
@@ -405,8 +399,6 @@ function SpellWheel({
     </div>
   );
 }
-
-// ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function MagiaPage() {
   const [phase, setPhase] = useState<SpellPhase>("intro");

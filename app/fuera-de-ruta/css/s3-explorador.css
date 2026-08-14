@@ -1,7 +1,5 @@
-/* ============================================================
-   S3 · Explorador — filtros + tarjetas + mapa (F3, escritorio;
-   los modos móviles lista/mapa/hoja llegan en F4)
-   ============================================================ */
+/* S3 · Explorador — filtros + tarjetas + mapa (F3, escritorio;
+   los modos móviles lista/mapa/hoja viven en s3-explorador-movil.css. */
 .fr-s3-crumbs {
   max-width: 1180px;
   margin: 0 auto;
