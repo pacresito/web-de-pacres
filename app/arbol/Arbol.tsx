@@ -18,7 +18,6 @@ import {
   ZOOM_TITULO_BLOQUE,
   type Encuadre,
   type Parada,
-  type Rumbo,
   type Vista,
 } from "@/lib/arbol/camara";
 import { caminoEntre, trazosDelCamino } from "@/lib/arbol/camino";
@@ -33,27 +32,24 @@ import {
   LARGOS_LISTA,
   LARGOS_NODO,
   libretaDe,
-  type Identidad,
   type OpcionesIdentidad,
-  type Pinta,
 } from "@/lib/arbol/identidad";
 import { relacionesDesde } from "@/lib/arbol/parentesco";
 import type { ModoApellidos } from "@/lib/arbol/personas";
 import { calcularRamas, ramaVisible, repartoDeRamas } from "@/lib/arbol/ramas";
 import {
-  ALTO_CONTADOR,
   ALTO_NODO,
   ANCHO_COLUMNA,
-  ANCHO_CONTADOR,
   ANCHO_NODO,
   calcularLayout,
-  type Contador,
-  type NodoLayout,
 } from "@/lib/arbol/layout";
 import { calcularRecuento, unionesHasta, type Fraccion } from "@/lib/arbol/recuento";
-import { alturaDe, bajada, entreBordes, hastaElAncla, tramosDePareja } from "@/lib/arbol/trazos";
-import type { ArbolData, Union } from "@/lib/arbol/tree";
+import { alturaDe, bajada, entreBordes, hastaElAncla } from "@/lib/arbol/trazos";
+import type { ArbolData } from "@/lib/arbol/tree";
+import AvisoDeMudanza from "./AvisoDeMudanza";
+import BarraDeAbajo from "./BarraDeAbajo";
 import Bloques from "./Bloques";
+import Brujula from "./Brujula";
 import Busqueda from "./Busqueda";
 import Capas from "./Capas";
 import Camino from "./Camino";
@@ -62,19 +58,17 @@ import Cinta from "./Cinta";
 import Esqueleto from "./Esqueleto";
 import Ficha from "./Ficha";
 import Hoja from "./Hoja";
+import Nodo, { ATENUADO } from "./Nodo";
+import { ContadorRama, GUION, Manija, MasPareja, TrazoDePareja } from "./Piezas";
 import Ramas from "./Ramas";
 import Recuento from "./Recuento";
 import Redondo, { IconoFiltros } from "./Redondo";
 import Regla from "./Regla";
+import Riel from "./Riel";
 import { useAtras } from "./useAtras";
 
 const POR_DEFECTO = "p25";
 const ARRASTRE_MINIMO = 8; // px: por debajo de esto el gesto es un toque, no un arrastre
-// Señalar una fracción del recuento atenúa el resto del lienzo en vez de encender lo suyo:
-// el acento es del punto de vista y de nada más, y encender con otro color sería inventarse
-// un tercer eje encima de los dos que el árbol ya dice.
-const ATENUADO = 0.15;
-
 const CENTRADA: Vista = { dx: 0, dy: 0, escala: 0.85 };
 
 /**
@@ -1030,353 +1024,3 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
  * en cada una y no por la unidad que las dibuja: «bloques» es una palabra del código, y
  * «familias» se entiende sin que nadie la presente.
  */
-const PARADAS: { parada: Parada; glifo: string; nombre: string }[] = [
-  { parada: "ramas", glifo: "▣", nombre: "Ramas" },
-  { parada: "bloques", glifo: "▤", nombre: "Familias" },
-  { parada: "personas", glifo: "▥", nombre: "Personas" },
-];
-
-function Riel({ parada, onIr, apartado }: { parada: Parada; onIr: (p: Parada) => void; apartado: string }) {
-  return (
-    <div
-      style={{ boxShadow: "var(--sh)" }}
-      className={`absolute top-1/2 right-3 flex -translate-y-1/2 flex-col overflow-hidden rounded-full border border-[var(--line)] bg-[var(--paper)] ${apartado}`}
-    >
-      {PARADAS.map(({ parada: suya, glifo, nombre }) => (
-        <button
-          key={suya}
-          type="button"
-          onClick={() => onIr(suya)}
-          title={nombre}
-          aria-label={nombre}
-          aria-current={suya === parada}
-          className={`h-11 w-11 text-[15px] ${suya === parada ? "bg-[var(--acch)] text-[var(--acc)]" : "text-[var(--mut)]"}`}
-        >
-          {glifo}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-/**
- * Lo que se dice al acabar el giro. **Mudar el Centro es la única acción de la app que
- * cambia la pantalla entera**, así que es la única que necesita decir qué ha pasado y poder
- * desandarse en el sitio: el «Volver a ver desde…» de la ficha exige abrirla y saber que
- * está ahí. Y cuenta a los que se ha llevado el filtro, que es lo que de verdad desconcierta
- * —desde una rama de fuera se vacía media pantalla— y no lo explica ninguna otra cosa.
- */
-function AvisoDeMudanza({
-  centro,
-  seEscondieron,
-  onDeshacer,
-  onCerrar,
-}: {
-  centro: string;
-  seEscondieron: number;
-  onDeshacer: () => void;
-  onCerrar: () => void;
-}) {
-  return (
-    <div
-      role="status"
-      style={{ boxShadow: "var(--sh)" }}
-      className="absolute bottom-[68px] left-3 flex max-w-[calc(100%-1.5rem)] items-center gap-3 rounded-[10px] border border-[var(--line)] bg-[var(--paper)] py-2 pr-2 pl-4 md:max-w-[480px]"
-    >
-      <p className="min-w-0 text-[12.5px] leading-[1.35] text-[var(--ink)]">
-        El árbol se ha recolocado alrededor de <b className="font-semibold">{centro}</b>.
-        {seEscondieron > 0 && <span className="text-[var(--mut)]"> Desde aquí el filtro esconde a {seEscondieron} más.</span>}
-      </p>
-      <button
-        type="button"
-        onClick={onDeshacer}
-        className="shrink-0 rounded-full border border-[var(--accb)] bg-[var(--acch)] px-3 py-1.5 text-[12px] font-medium text-[var(--acc)]"
-      >
-        Deshacer
-      </button>
-      <button
-        type="button"
-        onClick={onCerrar}
-        aria-label="Cerrar el aviso"
-        className="-mr-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[13px] text-[var(--mut)] hover:text-[var(--ink)]"
-      >
-        ✕
-      </button>
-    </div>
-  );
-}
-
-/**
- * La esquina de abajo a la izquierda, que es de lo que se está mirando de cerca: el camino
- * recogido o la fracción señalada. **Los dos no se pisan porque no conviven** —encender uno
- * apaga al otro, que es lo que el lienzo ya hacía al decidir a quién atenuar—, así que
- * comparten sitio y forma. Dos líneas y no una: el nombre entero es justo lo que se ha
- * venido a leer, y en una fila que además esquiva a «Qué se ve» no cabe.
- */
-function BarraDeAbajo({
-  rotulo,
-  titulo,
-  onAbrir,
-  onCerrar,
-  cerrar,
-}: {
-  /** De qué va, en la línea de arriba: es lo fijo, y lo que no se recorta nunca. */
-  rotulo: string;
-  titulo: string;
-  onAbrir?: () => void;
-  onCerrar: () => void;
-  cerrar: string;
-}) {
-  const texto = (
-    <>
-      <span className="block font-[family-name:var(--mono)] text-[10px] tracking-[0.08em] text-[var(--mut)] uppercase">
-        {rotulo}
-      </span>
-      <span className="block truncate text-[13px] font-semibold text-[var(--ink)]">{titulo}</span>
-    </>
-  );
-  return (
-    <div
-      style={{ boxShadow: "var(--sh)" }}
-      // Lo que se reserva a la derecha es «Qué se ve», que está siempre y no se aparta.
-      className="absolute bottom-3 left-3 flex max-w-[calc(100%-4.5rem)] items-center rounded-[14px] border border-[var(--line)] bg-[var(--paper)] py-1.5 pl-4"
-    >
-      {onAbrir ? (
-        <button type="button" onClick={onAbrir} className="min-w-0 text-left">
-          {texto}
-        </button>
-      ) : (
-        <span className="min-w-0">{texto}</span>
-      )}
-      <button
-        type="button"
-        onClick={onCerrar}
-        aria-label={cerrar}
-        className="ml-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[15px] text-[var(--mut)] hover:text-[var(--ink)]"
-      >
-        ✕
-      </button>
-    </div>
-  );
-}
-
-/**
- * La brújula: cuando el punto de vista se va de la pantalla asoma por el borde en su
- * dirección, con su nombre, y devuelve a él. Sustituye al botón de centrar, que estaba
- * siempre y no decía nada; esta solo aparece cuando hace falta y dice hacia dónde.
- */
-function Brujula({ posicion, nombre, onVolver }: { posicion: Rumbo; nombre: string; onVolver: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onVolver}
-      style={{ left: posicion.x, top: posicion.y, boxShadow: "var(--sh)" }}
-      className="absolute flex h-8 -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--paper)] pr-3 pl-2.5 text-[12px] font-medium whitespace-nowrap text-[var(--ink)]"
-    >
-      <svg width={13} height={13} viewBox="-6.5 -6.5 13 13" style={{ transform: `rotate(${posicion.angulo}deg)` }}>
-        {/* El color va por `style`: en SVG un atributo de presentación no resuelve var(). */}
-        <path
-          d="M -4.5 0 H 4 M 1 -3 L 4 0 L 1 3"
-          fill="none"
-          style={{ stroke: "var(--acc)" }}
-          strokeWidth={1.7}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-      {nombre}
-    </button>
-  );
-}
-
-const SANGRADO = 9; // el aire entre el borde del nodo y su texto
-
-/** Cada trozo de la primera línea, con la clase y la cursiva que le tocan. */
-const PINTAS: Record<Pinta, { clase: string; cursiva?: boolean }> = {
-  nombre: { clase: "nm" },
-  dudoso: { clase: "nm", cursiva: true },
-  heredado: { clase: "nm-her" },
-  año: { clase: "nm-fecha" },
-  sinNombre: { clase: "nm-her", cursiva: true },
-};
-
-/**
- * El nodo es el bloque de identidad y nada más: quién es arriba y de quién es debajo. Su
- * sitio en el árbol lo dice la posición, y el resto se reparte entre el fondo y el borde:
- * **el fondo mide la cercanía** —cuatro pisadas del acento, del papel al punto de vista— y
- * **el borde dice dónde miras** —el trazo grueso, la línea directa; el acento, tú y la
- * ficha que tengas abierta—. Dos preguntas, dos canales, y ninguna pisando a la otra.
- */
-function Nodo({
-  nodo,
-  identidad,
-  cumpleHoy,
-  atenuado,
-  abierta,
-  onElegir,
-}: {
-  nodo: NodoLayout;
-  identidad: Identidad;
-  cumpleHoy: boolean;
-  atenuado: boolean;
-  /** Es la ficha que está abierta: el borde de acento dice desde el lienzo a quién lees. */
-  abierta: boolean;
-  onElegir: () => void;
-}) {
-  const izquierda = nodo.x - ANCHO_NODO / 2 + SANGRADO;
-  return (
-    <g
-      onClick={onElegir}
-      // El contraste dice a cuántas generaciones del punto de vista está, y lo dice por
-      // clase para que el tema oscuro pueda comprimir la escala sin que React lo sepa. A
-      // quien se está leyendo se le devuelve entero: la distancia ya no es lo que cuenta.
-      // `nodo-dir` es quien no se apaga en el giro, y va por clase por lo mismo: el giro se
-      // conduce encendiendo una sola clase arriba, sin que React vuelva a pintar 342 nodos.
-      className={`nodo cursor-pointer g${abierta ? 0 : Math.min(Math.abs(nodo.nivel), 4)}${
-        nodo.lineaDirecta || nodo.esPuntoDeVista ? " nodo-dir" : ""
-      }`}
-      style={atenuado ? { opacity: ATENUADO } : undefined}
-    >
-      {/* El cerco es la tercera marca y no le quita el canal a ninguna de las dos: el fondo
-          sigue midiendo la cercanía y el borde, dónde miras. */}
-      {abierta && (
-        <rect
-          x={nodo.x - ANCHO_NODO / 2 - 4}
-          y={nodo.y - ALTO_NODO / 2 - 4}
-          width={ANCHO_NODO + 8}
-          height={ALTO_NODO + 8}
-          rx={13}
-          // El único hueco va por atributo, que no es un color y no necesita resolver
-          // var(): un rect sin regla de relleno se pinta negro macizo, y una hoja de
-          // estilos rancia —o la que un deploy se deje por el camino— taparía al nodo
-          // justo cuando se le señala.
-          fill="none"
-          className="nd-cerco"
-        />
-      )}
-      <rect
-        x={nodo.x - ANCHO_NODO / 2}
-        y={nodo.y - ALTO_NODO / 2}
-        width={ANCHO_NODO}
-        height={ALTO_NODO}
-        rx={9}
-        // Fondo y borde por separado: el fondo dice cuánto es tuyo y el borde, dónde miras.
-        className={`${
-          nodo.esPuntoDeVista ? "nd-pov" : nodo.lineaDirecta ? "nd-dir" : nodo.consanguineo ? "nd-con" : "nd"
-        } ${nodo.esPuntoDeVista || abierta ? "bd-acc" : nodo.lineaDirecta ? "bd-dir" : "bd"}`}
-      />
-      <text x={izquierda} y={nodo.y - 3} fontSize={13} fontWeight={600}>
-        {identidad.titulo.map((trozo, i) => (
-          <tspan key={i} className={PINTAS[trozo.pinta].clase} fontStyle={PINTAS[trozo.pinta].cursiva ? "italic" : undefined}>
-            {trozo.texto}
-          </tspan>
-        ))}
-      </text>
-      {/* La segunda línea es lo que identifica de verdad a quien no trae ni apellido ni
-          fecha: se pinta apagada, pero no se quita nunca. */}
-      <text x={izquierda} y={nodo.y + 13} fontSize={10.5} className="ct">
-        {identidad.contexto}
-      </text>
-      {/* La esquina de arriba a la derecha es la única que no usa ni la manija ni el «+»
-          de la pareja, así que la tarta cabe sin taparle nada a nadie. */}
-      {cumpleHoy && (
-        <text x={nodo.x + ANCHO_NODO / 2 - 13} y={nodo.y - ALTO_NODO / 2 + 5} textAnchor="middle" fontSize={15}>
-          🎂
-        </text>
-      )}
-    </g>
-  );
-}
-
-const GUION = "4 3"; // el trazo de la unión que acabó, rota como el tachón del documento
-// Un corazón de 14×11 centrado en el origen: la marca de los novios que no se casaron.
-// Más pequeño no cabía la grieta del roto sin volverse un borrón a tamaño de lectura.
-const CORAZON = "M 0 5.5 C -7.4 0.3 -7.3 -5.6 -3.8 -5.6 C -1.4 -5.6 0 -3.9 0 -2.7 C 0 -3.9 1.4 -5.6 3.8 -5.6 C 7.3 -5.6 7.4 0.3 0 5.5 Z";
-// La grieta del que se rompió, del escote al pico y en zigzag para que no parezca el trazo.
-const GRIETA = "M 0 -2.7 L 1.7 -0.8 L -1.4 1.2 L 1.2 3.2 L 0 5.5";
-
-/**
- * El trazo que une a los dos miembros de una pareja, más marcado que el resto: en una
- * columna apretada es lo único que distingue a un matrimonio de dos vecinos cualesquiera.
- * Y dice qué unión es: **a rayas si se rompió** y **con un corazón si fueron novios y no
- * matrimonio** —partido si además se rompió, y entonces el trazo se queda entero: la
- * rotura ya la cuenta el corazón, y las dos rayas sueltas que quedaban a los lados de él
- * no se leían como un trazo discontinuo—. El corazón va relleno para comerse el trazo por
- * dentro y se pinta el último, tapando también el arranque de los hijos.
- */
-function TrazoDePareja({
-  x,
-  extremos,
-  tipo,
-  roto,
-}: {
-  x: number;
-  extremos: [number, number];
-  tipo: Union["tipo"];
-  roto: boolean;
-}) {
-  const { tramos, centro } = tramosDePareja(extremos, tipo === "pareja");
-  return (
-    <>
-      {tramos.map(([desde, hasta], i) => (
-        <line
-          key={i}
-          x1={x}
-          y1={desde}
-          x2={x}
-          y2={hasta}
-          className="par"
-          strokeWidth={2.5}
-          strokeDasharray={roto && tipo !== "pareja" ? GUION : undefined}
-        />
-      ))}
-      {tipo === "pareja" && (
-        <g transform={`translate(${x} ${centro})`} className="par-cor">
-          <path d={CORAZON} strokeWidth={1.4} />
-          {roto && <path d={GRIETA} strokeWidth={1} fill="none" />}
-        </g>
-      )}
-    </>
-  );
-}
-
-/** La pareja que no se pinta: un «+» discreto asomando por el borde en que ella iría. */
-function MasPareja({ x, y, onAbrir }: { x: number; y: number; onAbrir: () => void }) {
-  return (
-    <g onClick={onAbrir} className="cursor-pointer">
-      <circle cx={x} cy={y} r={13} fillOpacity={0} />
-      <circle cx={x} cy={y} r={7.5} className="pieza" />
-      <line x1={x - 3.5} y1={y} x2={x + 3.5} y2={y} className="par" strokeWidth={1.3} />
-      <line x1={x} y1={y - 3.5} x2={x} y2={y + 3.5} className="par" strokeWidth={1.3} />
-    </g>
-  );
-}
-
-/** El botón de cerrar una rama, justo donde se abrió: sobre la unión. */
-function Manija({ x, y, onPulsar }: { x: number; y: number; onPulsar: () => void }) {
-  return (
-    <g onClick={onPulsar} className="cursor-pointer">
-      <circle cx={x} cy={y} r={11} className="pieza" />
-      <line x1={x - 5} y1={y} x2={x + 5} y2={y} className="par" strokeWidth={1.5} />
-    </g>
-  );
-}
-
-function ContadorRama({ contador, onAbrir }: { contador: Contador; onAbrir: () => void }) {
-  return (
-    <g onClick={onAbrir} className="cursor-pointer">
-      <rect
-        x={contador.x - ANCHO_CONTADOR / 2}
-        y={contador.y - ALTO_CONTADOR / 2}
-        width={ANCHO_CONTADOR}
-        height={ALTO_CONTADOR}
-        rx={ALTO_CONTADOR / 2}
-        className="pieza"
-        strokeDasharray="4 3"
-      />
-      <text x={contador.x} y={contador.y + 4} textAnchor="middle" fontSize={12} className="pieza-tx">
-        +{contador.cantidad} {contador.sentido}
-      </text>
-    </g>
-  );
-}
