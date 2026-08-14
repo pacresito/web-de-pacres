@@ -51,7 +51,7 @@ import {
   type NodoLayout,
 } from "@/lib/arbol/layout";
 import { calcularRecuento, unionesHasta, type Fraccion } from "@/lib/arbol/recuento";
-import { bajada, entreBordes, hastaElAncla, tramosDePareja } from "@/lib/arbol/trazos";
+import { alturaDe, bajada, entreBordes, hastaElAncla, tramosDePareja } from "@/lib/arbol/trazos";
 import type { ArbolData, Union } from "@/lib/arbol/tree";
 import Bloques from "./Bloques";
 import Busqueda from "./Busqueda";
@@ -520,12 +520,8 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
     setAEnfocar(gente[0]);
   }
 
-  /**
-   * Ir a ver un camino al lienzo: se abre lo justo para que estén sus eslabones, se recoge la
-   * hoja y se enfoca en él. Las dos cosas van juntas porque abrir lo que la hoja tapa no
-   * enseña nada, y en un móvil la tapa entera.
-   */
-  function verCaminoEnElArbol(id: string, gente: string[]) {
+  /** Abrir lo justo para que esa gente esté puesta, y dejar el lienzo a la vista. */
+  function traerAlLienzo(gente: string[]) {
     // A quien esconde el filtro no lo trae ninguna unión: hay que quitarlo, o se abrirían
     // ramas para llegar a alguien que sigue sin poder salir.
     const dentro = visibles(grafo, puntoDeVista);
@@ -535,8 +531,28 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
     // El panel de búsqueda se esconde —no se borra—: aquí sí es el caso de que no caben los
     // dos, que se ha pedido mirar el lienzo y él tapa media pantalla.
     setBusquedaAbierta(false);
+  }
+
+  /**
+   * Ir a ver un camino al lienzo: se abre lo justo para que estén sus eslabones, se recoge la
+   * hoja y se enfoca en él. Las dos cosas van juntas porque abrir lo que la hoja tapa no
+   * enseña nada, y en un móvil la tapa entera.
+   */
+  function verCaminoEnElArbol(id: string, gente: string[]) {
+    traerAlLienzo(gente);
     setMarcados(null); // el camino es lo que se va a mirar de cerca, y solo cabe uno
     setHoja({ tipo: "camino", id, recogida: true });
+    setAEnfocar(id);
+  }
+
+  /**
+   * Y traer al lienzo a una sola persona, que es como se sale de una ficha a la que se llegó
+   * sin pasar por él. La hoja se queda abierta: es lo que le pone el cerco al nodo, y sin él
+   * la persona aterriza en medio de un lienzo lleno de nodos iguales. Nada más se apaga —el
+   * camino sí atenúa lo demás, pero eso es una travesía y esto es un sitio—.
+   */
+  function verEnElArbol(id: string) {
+    traerAlLienzo([id]);
     setAEnfocar(id);
   }
 
@@ -568,7 +584,7 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
     setMarcados(null);
   }
 
-  // --- Gestos: un puntero arrastra, dos pellizcan (vale igual para ratón y dedo) ---
+  // Gestos: un puntero arrastra, dos pellizcan (vale igual para ratón y dedo)
   const punteros = useRef(new Map<number, { x: number; y: number }>());
   const pellizco = useRef<{ distancia: number; centro: { x: number; y: number } } | null>(null);
   const arrastre = useRef(0);
@@ -739,7 +755,11 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
                 <g key={v.unionId}>
                   {v.hijos.map((h) => {
                     const desde = trazos.bajadas.get(`${v.unionId}:${h.id}`);
-                    return desde && <path key={h.id} d={bajada(v, h, desde === "desdeElCanal")} />;
+                    if (!desde) return null;
+                    // Al hermano por el que se llega hay que buscarlo aquí: el camino sabe
+                    // por dónde va, pero a qué altura queda cada uno lo dice el layout.
+                    const hermano = desde === "entera" ? undefined : v.hijos.find((o) => o.id === desde.desdeElHermano);
+                    return <path key={h.id} d={bajada(v, h, hermano && alturaDe(v, hermano))} />;
                   })}
                   {/* De la pareja, solo la mitad que llega a quien está en el camino: la otra
                       va a su pareja, y hasta ella no se pasa. Muere en el ancla, que es de
@@ -918,7 +938,7 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
       ) : (
         marcados && (
           <BarraDeAbajo
-            rotulo={`${marcados.ids.size} señalados`}
+            rotulo={`${marcados.ids.size} señalado${marcados.ids.size === 1 ? "" : "s"}`}
             titulo={marcados.termino}
             onCerrar={() => setMarcados(null)}
             cerrar="Dejar de señalarlos"
@@ -984,6 +1004,7 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
               anterior={anterior ? { id: anterior, nombre: personaPorId.get(anterior)?.nombre ?? "" } : undefined}
               onCentrar={() => centrarEn(hoja.id)}
               onCamino={() => abrirHoja({ tipo: "camino", id: hoja.id })}
+              onVerEnElArbol={() => verEnElArbol(hoja.id)}
               onHomonimos={(consulta) => {
                 setHoja(null); // la lista y la ficha no caben a la vez en un móvil
                 if (consulta === null) mostrarSinNombre();
@@ -1359,4 +1380,3 @@ function ContadorRama({ contador, onAbrir }: { contador: Contador; onAbrir: () =
     </g>
   );
 }
-

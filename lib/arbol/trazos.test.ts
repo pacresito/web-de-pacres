@@ -27,7 +27,7 @@ const hijo = (extra: Partial<Vinculo["hijos"][number]> = {}) => ({
   ...extra,
 });
 
-// --- El tramo horizontal ---
+// El tramo horizontal
 
 assert.strictEqual(horizontal(50, 10, []), "H 50", "sin nada que cruzar es una recta");
 assert.strictEqual(
@@ -36,7 +36,7 @@ assert.strictEqual(
   "el saltito rodea la vertical que cruza y vuelve a su altura",
 );
 
-// --- La bajada de una unión a un hijo ---
+// La bajada de una unión a un hijo
 
 assert.strictEqual(bajada(union(), hijo()), "M 0 100 H 200", "el hijo recto va del ancla a su borde de un tirón");
 assert.strictEqual(
@@ -46,24 +46,31 @@ assert.strictEqual(
 );
 
 /**
- * **El caso que se escapó.** De hermano a hermano se pasa por el canal, no por los padres,
- * así que `desdeElCanal` corta el tramo del ancla. En el hijo recto ese tramo no va aparte:
- * lo lleva dentro de su horizontal, y no cortarlo pintaba el camino saliendo de unos padres
- * por los que no pasa —bastaba con desplegar a un hermano para ponerlo recto—.
+ * **El caso que se escapó dos veces.** De hermano a hermano se pasa por el canal, no por los
+ * padres, así que el trazo arranca a la altura del otro hermano: ni sale del ancla ni pasa de
+ * largo por el canal hasta ella. En el hijo recto el tramo del ancla no va aparte —lo lleva
+ * dentro de su horizontal—, y no cortarlo pintaba el camino saliendo de unos padres por los
+ * que no pasa; y arrancarlo en el ancla en vez de en el hermano dejaba la raya asomando por
+ * encima de los dos cuando los dos caían del mismo lado de sus padres.
  */
-assert.strictEqual(bajada(union(), hijo(), true), "M 60 100 H 200", "el hijo recto también arranca en el canal");
+assert.strictEqual(bajada(union(), hijo(), 100), "M 60 100 H 200", "dos hermanos rectos comparten altura y no hay canal que subir");
 assert.strictEqual(
-  bajada(union(), hijo({ y: 400, recto: false }), true),
-  "M 60 100 V 400 H 200",
-  "y el que baja por el canal se salta el tramo del ancla",
+  bajada(union(), hijo({ y: 400, recto: false }), 250),
+  "M 60 250 V 400 H 200",
+  "el canal va del hermano a él, y no del ancla",
 );
 assert.strictEqual(
-  bajada(union(), hijo({ saltos: [30, 120] }), true),
+  bajada(union(), hijo(), 250),
+  "M 60 250 V 100 H 200",
+  "también al recto, que sin esto arrancaba en el ancla y se comía el trozo de canal de en medio",
+);
+assert.strictEqual(
+  bajada(union(), hijo({ saltos: [30, 120] }), 100),
   `M 60 100 ${horizontal(200, 100, [120])}`,
   "los saltos de antes del canal se van con el tramo que los traía —el trazo retrocedería a buscarlos— y los de después se quedan",
 );
 
-// --- El trazo de la pareja ---
+// El trazo de la pareja
 
 assert.deepStrictEqual(entreBordes([0, 300]), [ALTO_NODO / 2, 300 - ALTO_NODO / 2], "el trazo muere en los bordes, no en los centros");
 assert.deepStrictEqual(entreBordes([300, 0]), [300 - ALTO_NODO / 2, ALTO_NODO / 2], "y da igual quién de los dos vaya arriba");

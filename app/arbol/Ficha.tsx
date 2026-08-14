@@ -13,6 +13,7 @@ export default function Ficha({
   anterior,
   onCentrar,
   onCamino,
+  onVerEnElArbol,
   onHomonimos,
   onIndice,
   onDevolver,
@@ -22,6 +23,7 @@ export default function Ficha({
   anterior?: { id: string; nombre: string };
   onCentrar: () => void;
   onCamino: () => void;
+  onVerEnElArbol: () => void;
   onHomonimos: (consulta: string | null) => void;
   onIndice: () => void;
   onDevolver: () => void;
@@ -63,7 +65,13 @@ export default function Ficha({
             {anterior && <Accion texto={`Volver a ver desde ${anterior.nombre}`} nota="↩" onPulsar={onDevolver} />}
           </>
         ) : (
-          <Accion texto="Ver el árbol desde aquí" primaria onPulsar={onCentrar} />
+          <>
+            <Accion texto="Ver el árbol desde aquí" primaria onPulsar={onCentrar} />
+            {/* A la ficha se llega también desde el buscador y desde el panel, y entonces no
+                hay nodo del que se haya venido: sin esto, a quien el lienzo no está pintando
+                no había forma de ir a verlo sin mudar el Centro. */}
+            <Accion texto="Centrar en el árbol" nota="↗" onPulsar={onVerEnElArbol} />
+          </>
         )}
         {datos.homonimos && (
           <Accion texto={datos.homonimos.texto} nota="⌕" onPulsar={() => onHomonimos(datos.homonimos!.consulta)} />

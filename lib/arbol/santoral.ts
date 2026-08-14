@@ -216,6 +216,7 @@ const APODOS: Record<string, string> = {
   toni: "antonio",
   chiara: "clara",
   paola: "paula",
+  aina: "ana",
   carmina: "carmen",
 };
 

@@ -66,7 +66,7 @@ const ficha = (id: string): Ficha =>
 
 const valor = (f: Ficha, clave: string) => f.filas.find((x) => x.clave === clave)?.valor;
 
-// --- La relación, que es lo primero que se lee ---
+// La relación, que es lo primero que se lee
 assert.strictEqual(ficha("p3").relacion.frase, "Eres tú");
 assert.strictEqual(ficha("p3").esCentro, true, "la del propio centro es una variante, no otra pantalla");
 assert.strictEqual(ficha("p5").relacion.frase, "Es tu hija");
@@ -78,13 +78,13 @@ assert.deepStrictEqual(
 assert.strictEqual(ficha("p7").relacion.frase, "Es la pareja de tu hija", "de quien entra casándose se dice a quién");
 assert.strictEqual(ficha("p2").relacion.frase, "Es tu madre");
 
-// --- La línea de datos: la vida y el sitio en el árbol ---
+// La línea de datos: la vida y el sitio en el árbol
 assert.strictEqual(ficha("p1").datos, "1902 – 1980 · una generación por encima");
 assert.strictEqual(ficha("p5").datos, "1959 · una generación por debajo", "sin defunción no se escribe nada en su sitio");
 assert.strictEqual(ficha("p6").datos, "sin fechas · una generación por debajo");
 assert.strictEqual(ficha("p3").datos, "1930 · tu generación");
 
-// --- La salida hacia los homónimos: la ficha no los lista, los busca ---
+// La salida hacia los homónimos: la ficha no los lista, los busca
 const conHomonimos = (cual: number, total: number): Ficha =>
   fichaDe(g, "p1", {
     puntoDeVista: "p3",
@@ -114,7 +114,7 @@ assert.deepStrictEqual(
   "a los que comparten no tener nombre no se llega tecleando: se sale a su lista",
 );
 
-// --- Las filas: lo que no consta se escribe, nunca se esconde ---
+// Las filas: lo que no consta se escribe, nunca se esconde
 assert.strictEqual(valor(ficha("p5"), "Padres"), "Genoveva (1930)", "un solo progenitor documentado no inventa al otro");
 assert.strictEqual(valor(ficha("p1"), "Padres"), "— no constan");
 assert.strictEqual(valor(ficha("p3"), "Hijos"), "Rosa (1959), Lucía (1986)");
@@ -129,7 +129,7 @@ assert.deepStrictEqual(
   "de dónde viene primero, y qué hizo con su vida después",
 );
 
-// --- Los años, al final: el cumpleaños de quien vive y la edad del que no ---
+// Los años, al final: el cumpleaños de quien vive y la edad del que no
 assert.strictEqual(valor(ficha("p8"), "Cumple"), "1 de marzo · 40 años", "con el día se felicita; la edad va detrás");
 assert.strictEqual(valor(ficha("p8"), "Edad"), undefined, "el cumpleaños ya lleva la edad: dos filas dirían lo mismo");
 assert.strictEqual(valor(ficha("p3"), "Edad"), "96 años", "sin día no hay a qué felicitar, solo la edad");
@@ -157,23 +157,23 @@ assert.strictEqual(
 assert.strictEqual(valor(ficha("p2"), "Hijos"), "Genoveva (1930), Julián (1934)", "y los hijos no, que llevan el de casa");
 assert.strictEqual(
   valor(ficha("p6"), "Unión"),
-  "casado con Rosa (1959) · divorciados",
+  "casado con Rosa Serrano (1959) · divorciados",
   "y a los «Sin nombre», que no traen sexo, los declina su cónyuge",
 );
 assert.strictEqual(ficha("p5").nota, "de Italia", "la nota va tal cual y cierra la lista");
 assert.strictEqual(ficha("p1").nota, undefined, "y quien no la tiene no lleva una fila que lo anuncie");
 
-// --- Las ramas ---
+// Las ramas
 assert.strictEqual(valor(ficha("p5"), "Rama"), "Serrano");
 assert.strictEqual(valor(ficha("p6"), "Rama"), "entra en Serrano por matrimonio");
 
-// --- El caso feo ---
+// El caso feo
 const anonima = ficha("p6");
 assert.ok(anonima.aviso?.startsWith("No consta su nombre ni sus fechas"));
 assert.strictEqual(anonima.sinNombre, true);
 assert.strictEqual(ficha("p5").aviso, undefined, "quien tiene nombre no necesita que se le advierta de nada");
 
-// --- Sobre los datos de verdad: las 416 fichas se escriben enteras ---
+// Sobre los datos de verdad: las 416 fichas se escriben enteras
 const data: ArbolData = JSON.parse(readFileSync(resolve("seed/arbol.json"), "utf-8"));
 const real = construirGrafo(data);
 const suLibreta = libretaDe(real);
@@ -195,9 +195,10 @@ for (const p of data.people) {
   });
   assert.ok(f.titulo.length > 0, `${p.id}: la ficha se abre sin nombre`);
   assert.ok(f.relacion.pasos > 0 || p.id === POV, `${p.id}: no hay camino hasta el centro`);
-  // La rama es lo único que nunca falta: las 124 que entraron casándose heredan la de su
-  // cónyuge, así que ninguna ficha llega a escribir «— no consta» en esa fila.
-  assert.ok(f.filas.some((x) => x.clave.startsWith("Rama") && !x.falta), `${p.id}: ficha sin rama`);
+  // La rama solo falta en una ficha de las 438: las que entraron casándose heredan la de su
+  // cónyuge, y quien no desciende de nadie ni está casado con quien lo haga es Aina y nadie
+  // más — su padre no está en el árbol y su madre entró casándose.
+  assert.ok(f.filas.some((x) => x.clave.startsWith("Rama") && !x.falta) === (p.id !== "p425"), `${p.id}: la rama no cuadra`);
   if (f.relacion.frase.startsWith("Es tu pariente lej") || f.relacion.frase === FAMILIA_POLITICA) sinTermino += 1;
 }
 

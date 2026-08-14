@@ -38,8 +38,14 @@ const RAMAS: [Quien, Quien][] = [
   [{ id: "p395", nombre: "José" }, { id: "p396", nombre: "Catalina" }],
 ];
 
-/** Los que no entran por ninguna regla y quiero igual. */
-const SUELTOS: Quien[] = [];
+/**
+ * Los que no entran por ninguna regla y quiero igual. Llevan escrito quién es cada uno:
+ * entran por no ser nada mío, así que no hay parentesco del que sacarlo.
+ */
+const SUELTOS: (Quien & { como: string })[] = [
+  // Aina no es hija de Javi, así que no le es sangre a nadie de la familia; pero es de casa.
+  { id: "p425", nombre: "Aina", como: "la hija de Ana" },
+];
 
 /** Y los que entran por una regla y prefiero no saber. Gana esta lista. */
 const FUERA: Quien[] = [];
@@ -74,11 +80,17 @@ export function laLista(g: Grafo): Map<string, string | null> {
 
 /**
  * Cómo lo llamo: por lo que me es, y si no me es nada, por lo que le es a ella —«la prima de
- * Carmen»—, que es por donde lo conozco. A mí no me llamo de ninguna manera.
+ * Carmen»—, que es por donde lo conozco. Y si tampoco, por lo que diga su línea de la lista.
+ * A mí no me llamo de ninguna manera.
  */
 function comoLoLlamo(g: Grafo, id: string, desdeMi: Mapa, desdeElla: Mapa): string | null {
   if (id === YO.id) return null;
-  return porLoQueEs(g, id, desdeMi, "") ?? porLoQueEs(g, id, desdeElla, ` de ${PAREJA.nombre}`);
+  return (
+    porLoQueEs(g, id, desdeMi, "") ??
+    porLoQueEs(g, id, desdeElla, ` de ${PAREJA.nombre}`) ??
+    SUELTOS.find((s) => s.id === id)?.como ??
+    null
+  );
 }
 
 type Mapa = Map<string, Parentesco>;

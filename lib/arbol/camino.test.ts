@@ -58,7 +58,7 @@ assert.strictEqual(caminoEntre(g, "yo", "padre").eslabones[1]?.frase, "hijo de")
 assert.strictEqual(caminoEntre(g, "madre", "yo").eslabones[1]?.frase, "madre de", "bajando se declina al revés");
 assert.strictEqual(caminoEntre(g, "hermana", "novia").pasos, 2, "por el hermano y su pareja");
 
-// --- Qué del dibujo se queda delante: solo lo que une un eslabón con el siguiente ---
+// Qué del dibujo se queda delante: solo lo que une un eslabón con el siguiente
 const trazos = (desde: string, hasta: string) => {
   const t = trazosDelCamino(caminoEntre(g, desde, hasta));
   return [[...t.bajadas], [...t.uniones].map(([u, quienes]) => [u, [...quienes]])];
@@ -82,12 +82,12 @@ assert.deepStrictEqual(
   trazos("yo", "hermana"),
   [
     [
-      ["u2:yo", "desdeElCanal"],
-      ["u2:hermana", "desdeElCanal"],
+      ["u2:yo", { desdeElHermano: "hermana" }],
+      ["u2:hermana", { desdeElHermano: "yo" }],
     ],
     [],
   ],
-  "entre hermanos el paso va por el canal: ni el trazo de los padres ni el ramal que sale de él son camino",
+  "entre hermanos el paso va por el canal y de uno a otro: ni el trazo de los padres ni el ramal que sale de él son camino",
 );
 assert.deepStrictEqual(trazos("yo", "novia"), [[], [["u3", ["yo", "novia"]]]], "la pareja es su trazo entero");
 assert.deepStrictEqual(
@@ -100,7 +100,7 @@ const quieto = caminoEntre(g, "yo", "yo");
 assert.deepStrictEqual([quieto.pasos, quieto.eslabones.length], [0, 1], "de uno a sí mismo, un solo eslabón y ningún paso");
 assert.throws(() => caminoEntre(g, "yo", "fantasma"), /fantasma/, "una persona que no está falla a la cara");
 
-// --- Sobre los datos de verdad: el camino y la distancia no pueden discrepar ---
+// Sobre los datos de verdad: el camino y la distancia no pueden discrepar
 const data: ArbolData = JSON.parse(readFileSync(resolve("seed/arbol.json"), "utf-8"));
 const real = construirGrafo(data);
 const POV = "p25";

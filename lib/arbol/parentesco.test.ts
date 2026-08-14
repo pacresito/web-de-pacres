@@ -7,7 +7,7 @@ import { construirGrafo } from "./grafo";
 import { declinar, parentescos, relacionesDesde, terminoDe, FAMILIA_POLITICA, PAREJAS, SIN_PARENTESCO } from "./parentesco";
 import type { ArbolData } from "./tree";
 
-// --- La regla: el ancestro común más cercano nombra el parentesco ---
+// La regla: el ancestro común más cercano nombra el parentesco
 // k = a qué altura queda de ti; j = a qué altura de él.
 assert.strictEqual(terminoDe(1, 0), "padres");
 assert.strictEqual(terminoDe(3, 0), "bisabuelos");
@@ -32,7 +32,7 @@ assert.strictEqual(terminoDe(5, 5), "otros primos");
 assert.strictEqual(terminoDe(4, 3), "otros tíos");
 assert.strictEqual(terminoDe(3, 4), "otros sobrinos");
 
-// --- Declinar: singular si es uno, femenino solo si todas lo son ---
+// Declinar: singular si es uno, femenino solo si todas lo son
 assert.strictEqual(declinar("primos", 15, 4), "primos", "un grupo mixto va en masculino");
 assert.strictEqual(declinar("primos", 3, 3), "primas");
 assert.strictEqual(declinar("primos", 1, 1), "prima");
@@ -46,7 +46,7 @@ assert.strictEqual(declinar(PAREJAS, 49, 20), "parejas");
 assert.strictEqual(declinar(PAREJAS, 1, 1), "pareja");
 assert.strictEqual(declinar(SIN_PARENTESCO, 12, 12), "sin parentesco", "la falta de parentesco no se declina");
 
-// --- Sobre los datos de verdad ---
+// Sobre los datos de verdad
 const data: ArbolData = JSON.parse(readFileSync(resolve("seed/arbol.json"), "utf-8"));
 const g = construirGrafo(data);
 
@@ -85,8 +85,8 @@ assert.deepStrictEqual(
     ["-1 hijos", 3],
     ["-1 otros sobrinos", 66],
     ["-1 parejas", 1],
-    ["-1 sin parentesco", 16],
-    ["-1 sobrinos segundos", 16],
+    ["-1 sin parentesco", 17],
+    ["-1 sobrinos segundos", 15],
     ["-1 sobrinos", 5],
     ["0 hermanos", 3],
     ["0 parejas", 49],
@@ -114,7 +114,7 @@ for (const termino of ["tatarabuelos", "tíos bisabuelos", "tíos abuelos segund
   assert.ok(desdeElHijo.has(termino), `desde p26 tendría que salir «${termino}»`);
 }
 
-// --- Nombrar a uno solo: lo que lee la ficha, que no es lo mismo que repartir cajones ---
+// Nombrar a uno solo: lo que lee la ficha, que no es lo mismo que repartir cajones
 const relaciones = relacionesDesde(g, "p25");
 assert.strictEqual(relaciones.size, data.people.length, "alguien se queda sin relación que leer");
 assert.strictEqual(relaciones.get("p25")!.frase, "Eres tú");
@@ -132,11 +132,11 @@ assert.deepStrictEqual(
 const parejas = [...parentescos(g, "p25")].filter(([, p]) => p.termino === PAREJAS).map(([id]) => id);
 const nombradas = parejas.filter((id) => relaciones.get(id)!.frase.startsWith("Es la pareja de tu "));
 assert.ok(nombradas.length >= parejas.length * 0.9, `solo ${nombradas.length} de ${parejas.length} parejas se saben nombrar`);
-// Y a la familia de la pareja se la nombra desde ella, con su artículo: 54 de los 96 que no
+// Y a la familia de la pareja se la nombra desde ella, con su artículo: 54 de los 97 que no
 // comparten sangre con nadie. Al resto —los que ni por ahí se dejan nombrar, como la familia
 // del marido de una hermana— les queda ser familia política, que es lo que son.
 const ajenos = [...parentescos(g, "p25")].filter(([, p]) => p.termino === SIN_PARENTESCO).map(([id]) => id);
-assert.strictEqual(ajenos.length, 96);
+assert.strictEqual(ajenos.length, 97);
 assert.strictEqual(relaciones.get("p3")!.frase, "Es el abuelo de tu pareja");
 assert.strictEqual(ajenos.filter((id) => relaciones.get(id)!.frase.endsWith(" de tu pareja")).length, 54);
 assert.strictEqual(relaciones.get("p443")!.frase, FAMILIA_POLITICA, "la madre del marido de tu hermana");

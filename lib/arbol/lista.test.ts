@@ -11,7 +11,7 @@ const data: ArbolData = JSON.parse(readFileSync(resolve("seed/arbol.json"), "utf
 const g = construirGrafo(data);
 const persona = (id: string) => g.personaPorId.get(id)!;
 
-// --- Los ids de la lista siguen siendo de quien dicen ---
+// Los ids de la lista siguen siendo de quien dicen
 // Es lo único que la protege: el JSON se regenera, y un id que cambiara de dueño en silencio
 // pondría a felicitar a un desconocido sin que fallara nada.
 for (const { id, nombre } of CITADOS) {
@@ -22,7 +22,7 @@ for (const { id, nombre } of CITADOS) {
 const lista = laLista(g);
 const comoLoLlamo = (id: string) => lista.get(id);
 
-// --- Quién entra ---
+// Quién entra
 assert.ok(lista.has(YO.id), "el primero de la lista soy yo: mi cumpleaños también se avisa");
 assert.strictEqual(comoLoLlamo(YO.id), null, "y a mí no me llamo de ninguna manera");
 assert.strictEqual(comoLoLlamo("p125"), "madre");
@@ -44,12 +44,14 @@ for (const id of ["p461", "p462"]) assert.strictEqual(lista.has(id), false, `${p
 // La rama entera de los abuelos maternos, sin tope de grado: por parentesco, una sobrina
 // segunda no entraría —no está entre los términos de la lista—, y por rama sí.
 assert.strictEqual(comoLoLlamo("p416"), "sobrina segunda", "Elena, la hija de Marta");
-assert.strictEqual(comoLoLlamo("p425"), "sobrina segunda", "Aina");
-// Y solo las de esa rama: las dos que hay son las dos que descienden de José y Catalina.
+// Y solo la de esa rama: la única que hay es la que desciende de José y Catalina.
 const sobrinasSegundas = [...lista].filter(([, como]) => como === "sobrina segunda" || como === "sobrino segundo");
-assert.strictEqual(sobrinasSegundas.length, 2, `sobrinos segundos míos en la lista: ${sobrinasSegundas.map(([id]) => persona(id).nombre)}`);
+assert.strictEqual(sobrinasSegundas.length, 1, `sobrinos segundos míos en la lista: ${sobrinasSegundas.map(([id]) => persona(id).nombre)}`);
 
-// --- Quién no ---
+// Un suelto entra sin parentesco que lo nombre, y lo nombra su propia línea de la lista.
+assert.strictEqual(comoLoLlamo("p425"), "la hija de Ana", "Aina, que no es hija de Javi");
+
+// Quién no
 // Los primos segundos de la rama de arriba, que no descienden de mis abuelos: p331 es hija de
 // Magda, que viene de mi bisabuelo.
 assert.strictEqual(lista.has("p331"), false);

@@ -75,10 +75,11 @@ export interface TrazosDelCamino {
   uniones: Map<string, Set<string>>;
   /**
    * Bajadas de una unión a un hijo suyo, como `unionId:hijoId`, y desde dónde son camino.
-   * **Entre hermanos, desde el canal:** el paso va de uno al otro por el hueco entre
-   * columnas, y el tramo que sale del ancla apunta a unos padres por los que no se pasa.
+   * **Entre hermanos, desde el otro hermano:** el paso va de uno al otro por el hueco entre
+   * columnas, así que ni el tramo que sale del ancla es camino —apunta a unos padres por los
+   * que no se pasa— ni el trozo de canal que quede al otro lado de los dos.
    */
-  bajadas: Map<string, "entera" | "desdeElCanal">;
+  bajadas: Map<string, "entera" | { desdeElHermano: string }>;
 }
 
 /** Qué del dibujo es camino: lo demás no se pinta distinto, se queda al fondo. */
@@ -94,8 +95,8 @@ export function trazosDelCamino({ eslabones }: Camino): TrazosDelCamino {
     const anterior = eslabones[i - 1].id;
     // La bajada muere en el hijo, así que la que se recorre es la del que lo sea de los dos.
     if (e.paso === "hermano") {
-      trazos.bajadas.set(`${e.unionId}:${anterior}`, "desdeElCanal");
-      trazos.bajadas.set(`${e.unionId}:${e.id}`, "desdeElCanal");
+      trazos.bajadas.set(`${e.unionId}:${anterior}`, { desdeElHermano: e.id });
+      trazos.bajadas.set(`${e.unionId}:${e.id}`, { desdeElHermano: anterior });
     } else if (e.paso === "pareja") {
       tocar(e.unionId, anterior, e.id);
     } else {

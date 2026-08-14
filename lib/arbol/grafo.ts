@@ -185,18 +185,27 @@ export function consanguineos(g: Grafo, x: string): Set<string> {
   return out;
 }
 
-function conConyuges(g: Grafo, personas: Set<string>): Set<string> {
+/**
+ * Cada uno con su cónyuge y con los hijos que ese cónyuge trajera de antes: el hijastro no
+ * comparte sangre con nadie de la casa, pero vive en ella y sale en las fotos. Sin él, el
+ * filtro esconde a un niño del árbol de todos menos del de su madre.
+ */
+function conSuCasa(g: Grafo, personas: Set<string>): Set<string> {
   const out = new Set(personas);
-  for (const p of personas) for (const c of parejaDirecta(g, p)) out.add(c);
+  for (const p of personas) {
+    for (const c of parejaDirecta(g, p)) {
+      out.add(c);
+      for (const union of g.unionesDePartner.get(c) ?? []) for (const h of g.unionPorId.get(union)!.children) out.add(h);
+    }
+  }
   return out;
 }
 
 /**
- * Quién está "conectado" con X: sus consanguíneos y los cónyuges de todos ellos, como
- * nodo suelto y sin arrastrar la familia de cada uno. Es "quien comparte un ancestro
- * conmigo", así que la familia política queda fuera — también la de mi propia pareja,
- * que es de mis hijos y no mía.
+ * Quién está "conectado" con X: sus consanguíneos y la casa de cada uno, sin arrastrar la
+ * familia de nadie. Es "quien comparte un ancestro conmigo", así que la familia política
+ * queda fuera — también la de mi propia pareja, que es de mis hijos y no mía.
  */
 export function visibles(g: Grafo, x: string): Set<string> {
-  return conConyuges(g, consanguineos(g, x));
+  return conSuCasa(g, consanguineos(g, x));
 }
