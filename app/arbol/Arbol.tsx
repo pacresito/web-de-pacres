@@ -56,6 +56,7 @@ import Ficha from "./Ficha";
 import Hoja from "./Hoja";
 import Ramas from "./Ramas";
 import Recuento from "./Recuento";
+import Redondo, { IconoFiltros } from "./Redondo";
 import Regla from "./Regla";
 import { useAtras } from "./useAtras";
 
@@ -96,7 +97,7 @@ const AVISO = 8000; // ms que el aviso aguanta antes de irse solo
 /** El `md` de Tailwind, en píxeles: por debajo la hoja tapa el lienzo en vez de apartarse. */
 const DOS_COLUMNAS = 768;
 /** Lo que le cabe al nombre en la barra de abajo, medido sobre el móvil más estrecho. */
-const LARGO_BARRA = 28;
+const LARGO_BARRA = 34;
 
 export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
   const grafo = useMemo(() => construirGrafo(data), [data]);
@@ -911,14 +912,13 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
         oculto={busquedaAbierta}
       />
 
-      <button
-        type="button"
-        onClick={() => abrirHoja({ tipo: "capas" })}
-        style={{ boxShadow: "var(--sh)" }}
-        className={`absolute right-3 bottom-3 h-11 rounded-full border border-[var(--line)] bg-[var(--paper)] px-4 text-[13px] font-medium text-[var(--ink)] ${apartado}`}
+      <Redondo
+        etiqueta="Qué se ve"
+        onPulsar={() => abrirHoja({ tipo: "capas" })}
+        className={`absolute right-3 bottom-3 ${apartado}`}
       >
-        Qué se ve
-      </button>
+        <IconoFiltros />
+      </Redondo>
 
       {/* La esquina de abajo a la izquierda es de lo que va y viene. El chip del Centro la
           ocupaba siempre para decir un nombre que ya dicen su nodo, en acento, y la brújula
@@ -1134,7 +1134,7 @@ function BarraDeAbajo({
     <div
       style={{ boxShadow: "var(--sh)" }}
       // Lo que se reserva a la derecha es «Qué se ve», que está siempre y no se aparta.
-      className="absolute bottom-3 left-3 flex max-w-[calc(100%-7.5rem)] items-center rounded-[14px] border border-[var(--line)] bg-[var(--paper)] py-1.5 pl-4"
+      className="absolute bottom-3 left-3 flex max-w-[calc(100%-4.5rem)] items-center rounded-[14px] border border-[var(--line)] bg-[var(--paper)] py-1.5 pl-4"
     >
       {onAbrir ? (
         <button type="button" onClick={onAbrir} className="min-w-0 text-left">

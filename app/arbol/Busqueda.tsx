@@ -9,6 +9,7 @@ import { VIAS, type Resultado, type Via } from "@/lib/arbol/busqueda";
 import { LARGOS_LISTA, type Identidad } from "@/lib/arbol/identidad";
 import type { Relacion } from "@/lib/arbol/parentesco";
 import { Accion, BloqueIdentidad, Cabecera } from "./Identidad";
+import Redondo from "./Redondo";
 import { ALTO_REGLA } from "./Regla";
 
 /** El hueco que la fila deja a la segunda línea: a la derecha van siempre los pasos. */
@@ -75,15 +76,9 @@ export default function Busqueda({
           ningún nombre no se está perdiendo un campo vacío. Y como no ocupa, se queda
           puesta con lo que sea que haya abierto encima. */}
       {!abierta ? (
-        <button
-          type="button"
-          onClick={onAbrir}
-          aria-label="Buscar en el árbol"
-          style={{ boxShadow: "var(--sh)" }}
-          className="flex h-11 w-11 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--paper)] text-[19px] leading-none text-[var(--mut)]"
-        >
+        <Redondo etiqueta="Buscar en el árbol" onPulsar={onAbrir} className="text-[24px]">
           ⌕
-        </button>
+        </Redondo>
       ) : (
         /* **La caja y la lista son una sola pieza.** Eran dos, y entonces la ✕ de la caja
            parecía de la caja: cerraba una lista que ni siquiera tocaba. */

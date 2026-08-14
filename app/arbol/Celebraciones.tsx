@@ -9,6 +9,7 @@ import { anuncio, esFelicitacion, esTuDia, felicitacion, VENTANA, type Celebraci
 import { diaDeLaSemana, escribirCorto, escribirDiaDeMes, type Fecha } from "@/lib/arbol/fechas";
 import { LARGOS_FILA, type Identidad } from "@/lib/arbol/identidad";
 import { BloqueIdentidad } from "./Identidad";
+import Redondo from "./Redondo";
 import { ALTO_REGLA } from "./Regla";
 
 export default function Celebraciones({
@@ -107,8 +108,9 @@ function Fila({
 const cuando = (c: Celebracion) => (c.faltan === 0 ? "hoy" : c.faltan === 1 ? "mañana" : escribirCorto(c.fecha));
 
 /**
- * El aviso flotante: lo único del panel que se lee sin abrirlo. Anuncia el día propio, que
- * es lo único que no admite enterarse mañana; el resto, cuántos hay.
+ * El aviso flotante. **Solo se estira el día propio**, que es lo único que no admite
+ * enterarse mañana: cuántas celebraciones caen en un mes no es una noticia y no gana un
+ * rótulo fijo en el borde, así que el resto del año es la tarta y nada más.
  */
 export function AvisoCelebraciones({
   lista,
@@ -124,17 +126,23 @@ export function AvisoCelebraciones({
   oculto: boolean;
 }) {
   const tuDia = lista.find((c) => c.faltan === 0 && esTuDia(c));
+  // Debajo de la regla, como la búsqueda: el borde de arriba es suyo a lo ancho.
+  const sitio = `absolute right-3 ${apartado} ${oculto ? "hidden md:flex" : "flex"}`;
+  if (!tuDia) {
+    return (
+      <Redondo etiqueta="Lo que se celebra" onPulsar={onAbrir} className={`${sitio} text-[17px]`} style={{ top: ALTO_REGLA + 12 }}>
+        🎂
+      </Redondo>
+    );
+  }
   return (
     <button
       type="button"
       onClick={onAbrir}
-      // Debajo de la regla, como la búsqueda: el borde de arriba es suyo a lo ancho.
       style={{ boxShadow: "var(--sh)", top: ALTO_REGLA + 12 }}
-      className={`absolute right-3 h-11 max-w-[calc(100vw-1.5rem)] items-center rounded-full bg-[var(--paper)] px-4 text-[13px] font-medium text-[var(--ink)] ${apartado} ${
-        oculto ? "hidden md:flex" : "flex"
-      } ${tuDia ? "border-[1.5px] border-[var(--ink)]" : "border border-[var(--line)]"}`}
+      className={`${sitio} h-11 max-w-[calc(100vw-1.5rem)] items-center rounded-full border-[1.5px] border-[var(--ink)] bg-[var(--paper)] px-4 text-[13px] font-medium text-[var(--ink)]`}
     >
-      {tuDia ? anuncio(tuDia) : `${lista.length} en ${VENTANA} días`}
+      {anuncio(tuDia)}
     </button>
   );
 }
