@@ -2,10 +2,15 @@ import { tieneSesion } from "./auth";
 import LoginForm from "./LoginForm";
 import Arbol from "./Arbol";
 import redis from "@/lib/redis";
+import { centroDeEnlace } from "@/lib/arbol/enlaces";
 import { KEYS } from "@/lib/arbol/keys";
 import type { ArbolData } from "@/lib/arbol/tree";
 
-export default async function ArbolPage() {
+export default async function ArbolPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ centro?: string | string[] }>;
+}) {
   const auth = await tieneSesion();
   if (!auth) {
     return (
@@ -17,6 +22,10 @@ export default async function ArbolPage() {
 
   const raw = await redis.get(KEYS.datos());
   const data: ArbolData = raw ? JSON.parse(raw) : { people: [], unions: [], roots: {} };
+  // Con quién se ha repartido este enlace. Se lee aquí y no se vuelve a tocar: la URL no se
+  // reescribe al navegar, así que recargar devuelve siempre al centro con el que se entró.
+  const pedido = (await searchParams).centro;
+  const centroDelEnlace = centroDeEnlace(Array.isArray(pedido) ? pedido[0] : pedido);
   // El día del que se cuentan las edades, fijado aquí y no en el cliente: si cada uno
   // mirara su reloj, el nodo de quien cumple hoy se pintaría con dos edades distintas.
   const hoy = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Madrid" });
@@ -30,7 +39,7 @@ export default async function ArbolPage() {
         <h1 className="font-[family-name:var(--serif)] text-[20px]">Árbol genealógico</h1>
       </nav>
       <div className="min-h-0 flex-1">
-        <Arbol data={data} hoy={hoy} />
+        <Arbol data={data} hoy={hoy} centroDelEnlace={centroDelEnlace} />
       </div>
     </div>
   );

@@ -22,6 +22,7 @@ import {
 } from "@/lib/arbol/camara";
 import { caminoEntre, trazosDelCamino } from "@/lib/arbol/camino";
 import { cintaDe } from "@/lib/arbol/cinta";
+import { centroRecordado, recordarCentro } from "@/lib/arbol/enlaces";
 import { FECHAS_POR_DEFECTO, type ModoFechas } from "@/lib/arbol/fechas";
 import { proximasCelebraciones } from "@/lib/arbol/celebraciones";
 import { construirGrafo, pasosDesde, visibles } from "@/lib/arbol/grafo";
@@ -67,6 +68,7 @@ import Regla from "./Regla";
 import Riel from "./Riel";
 import { useAtras } from "./useAtras";
 
+/** Sin enlace ni memoria: quien nunca ha visto el árbol entra por su dueño. */
 const POR_DEFECTO = "p25";
 const ARRASTRE_MINIMO = 8; // px: por debajo de esto el gesto es un toque, no un arrastre
 const CENTRADA: Vista = { dx: 0, dy: 0, escala: 0.85 };
@@ -101,11 +103,30 @@ const DOS_COLUMNAS = 768;
 /** Lo que le cabe al nombre en la barra de abajo, medido sobre el móvil más estrecho. */
 const LARGO_BARRA = 34;
 
-export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
+export default function Arbol({
+  data,
+  hoy,
+  centroDelEnlace,
+}: {
+  data: ArbolData;
+  hoy: string;
+  centroDelEnlace: string | null;
+}) {
   const grafo = useMemo(() => construirGrafo(data), [data]);
   const personaPorId = grafo.personaPorId;
 
-  const inicial = grafo.personaPorId.has(POR_DEFECTO) ? POR_DEFECTO : (data.people[0]?.id ?? POR_DEFECTO);
+  const esDelArbol = (id: string | null | undefined): id is string => !!id && personaPorId.has(id);
+  const delEnlace = esDelArbol(centroDelEnlace) ? centroDelEnlace : null;
+  /**
+   * El punto de vista de entrada: manda el enlace, y a falta de él lo que recuerde el dispositivo
+   * del último que se abrió aquí. Es al que devuelve reiniciar, así que **no se muda al mudar el
+   * Centro**: se entra desde donde te mandaron y se vuelve ahí, se haya paseado por donde se haya
+   * paseado. Lo recordado no puede leerse en el render —el servidor no lo conoce— y llega en el
+   * efecto de abajo, un frame después de un lienzo que todavía está midiéndose.
+   */
+  const [inicial, setInicial] = useState(
+    delEnlace ?? (esDelArbol(POR_DEFECTO) ? POR_DEFECTO : (data.people[0]?.id ?? POR_DEFECTO)),
+  );
   const [puntoDeVista, setPuntoDeVista] = useState(inicial);
   /** De dónde se vino: la ficha del centro de ahora es la que ofrece deshacer la mudanza. */
   const [anterior, setAnterior] = useState<string | null>(null);
@@ -272,6 +293,21 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
     [celebraciones],
   );
 
+  /**
+   * El arranque, que ocurre una vez: el enlace con el que se ha entrado se recuerda para la
+   * próxima visita, y quien llega sin enlace entra por donde le mandaron la última vez. Mudar el
+   * Centro después no vuelve a pasar por aquí — eso es mirar desde otro sitio, no entrar.
+   */
+  useEffect(() => {
+    if (delEnlace) return recordarCentro(delEnlace);
+    const recordado = centroRecordado();
+    if (!esDelArbol(recordado)) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- init en mount, como el tema: el servidor no puede saber lo que recuerda este navegador
+    setInicial(recordado);
+    setPuntoDeVista(recordado);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- se entra una vez; lo que cambie después no es una entrada
+  }, []);
+
   // El hueco disponible manda el tamaño del lienzo. La primera medida se toma a mano
   // en el siguiente frame: el observador no siempre entrega la de la carga inicial.
   useEffect(() => {
@@ -333,13 +369,18 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
    * volvería a entrar aquí y se llevaría por delante el aviso que aún no ha salido. El
    * encendido no está aquí —lo hace `centrarEn`, en el mismo commit que muda el ancla—:
    * desde un efecto llegaría un frame tarde y los colaterales darían un fogonazo.
+   *
+   * **Al entrar el aviso también sale**, y ahí no hay giro que apagar ni transición que esperar:
+   * con los enlaces repartidos por ramas, el Centro casi nunca es quien mira, y esto es lo único
+   * que lo dice. La segunda persona de toda la app cuelga de que se haya leído.
    */
   useEffect(() => {
-    if (mudanza === 0) return;
-    const apagado = setTimeout(() => setGirando(false), GIRO_APAGADO);
-    const entra = setTimeout(() => setAviso(true), GIRO);
-    const sale = setTimeout(() => setAviso(false), GIRO + AVISO);
-    return () => [apagado, entra, sale].forEach(clearTimeout);
+    const entrada = mudanza === 0;
+    const espera = entrada ? 0 : GIRO;
+    const apagado = entrada ? undefined : setTimeout(() => setGirando(false), GIRO_APAGADO);
+    const entra = setTimeout(() => setAviso(true), espera);
+    const sale = setTimeout(() => setAviso(false), espera + AVISO);
+    return () => [apagado, entra, sale].forEach((reloj) => reloj !== undefined && clearTimeout(reloj));
   }, [mudanza]);
 
   /** Los gestos mueven la cámara por aquí: moverla sin acotar es perderse. */
@@ -931,13 +972,14 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
 
       {/* Encima de esa fila y no en ella: mudar el Centro cierra la hoja y suelta lo
           señalado, así que el aviso llega con el sitio de abajo ya vacío, pero es una caja
-          de dos líneas y no una píldora. */}
-      {aviso && anterior && (
+          de dos líneas y no una píldora. Al entrar sale sin «Deshacer»: no se viene de ningún
+          sitio, y el enlace con el que se ha llegado no es una acción de quien lo abre. */}
+      {aviso && (
         <AvisoDeMudanza
           centro={nombreDe(puntoDeVista)}
           // Con el filtro quitado están en pantalla: contarlos aquí los daría por ausentes.
           escondidos={ocultarNoConectados ? escondidos : 0}
-          onDeshacer={() => centrarEn(anterior)}
+          onDeshacer={anterior ? () => centrarEn(anterior) : undefined}
           onCerrar={() => setAviso(false)}
         />
       )}
@@ -960,7 +1002,9 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
                 setParejas(new Set());
               }}
               onReiniciar={reiniciar}
-              inicial={personaPorId.get(inicial)?.nombre ?? ""}
+              // Con el nombre entero: el de entrada lo puso un enlace y puede ser cualquiera de
+              // los trece que se llaman igual, así que el nombre de pila no dice a dónde vuelve.
+              inicial={enUnaLinea(inicial, LARGO_BARRA)}
             />
           ) : hoja.tipo === "celebraciones" ? (
             <Celebraciones lista={celebraciones} hoy={hoy} identidad={escribir} onPersona={abrirFicha} />

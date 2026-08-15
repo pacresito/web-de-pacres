@@ -1,7 +1,9 @@
 "use client";
 
 /**
- * Lo que se dice al acabar el giro. **Mudar el Centro es la única acción de la app que
+ * Lo que se dice al acabar el giro, y también al entrar —el enlace con el que se reparte el árbol
+ * pone de Centro a quien casi nunca es quien mira, y toda la app le habla de tú—. **Mudar el
+ * Centro es la única acción de la app que
  * cambia la pantalla entera**, así que es la única que necesita decir qué ha pasado y poder
  * desandarse en el sitio: el «Volver a ver desde…» de la ficha exige abrirla y saber que
  * está ahí. Y cuenta a los que deja fuera el filtro, que es lo que de verdad desconcierta
@@ -18,7 +20,8 @@ export default function AvisoDeMudanza({
 }: {
   centro: string;
   escondidos: number;
-  onDeshacer: () => void;
+  /** Sin él no se pinta el botón: al entrar no se viene de ningún sitio al que volver. */
+  onDeshacer?: () => void;
   onCerrar: () => void;
 }) {
   return (
@@ -37,13 +40,15 @@ export default function AvisoDeMudanza({
           </span>
         )}
       </p>
-      <button
-        type="button"
-        onClick={onDeshacer}
-        className="shrink-0 rounded-full border border-[var(--accb)] bg-[var(--acch)] px-3 py-1.5 text-[12px] font-medium text-[var(--acc)]"
-      >
-        Deshacer
-      </button>
+      {onDeshacer && (
+        <button
+          type="button"
+          onClick={onDeshacer}
+          className="shrink-0 rounded-full border border-[var(--accb)] bg-[var(--acch)] px-3 py-1.5 text-[12px] font-medium text-[var(--acc)]"
+        >
+          Deshacer
+        </button>
+      )}
       <button
         type="button"
         onClick={onCerrar}
