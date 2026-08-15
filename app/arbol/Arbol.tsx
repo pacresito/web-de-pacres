@@ -102,12 +102,6 @@ const AVISO = 8000; // ms que el aviso aguanta antes de irse solo
 const DOS_COLUMNAS = 768;
 /** Lo que le cabe al nombre en la barra de abajo, medido sobre el móvil más estrecho. */
 const LARGO_BARRA = 34;
-/**
- * Y en el aviso, que es prosa que envuelve: aquí el nombre no compite por una línea con
- * nada, así que el largo solo está para que uno absurdo no empuje la caja media pantalla
- * arriba. Cabe el más largo del árbol con su edad.
- */
-const LARGO_AVISO = 56;
 
 export default function Arbol({
   data,
@@ -275,13 +269,9 @@ export default function Arbol({
     () => (consulta.trim() !== "" && resultados.length === 0 ? acortar(grafo, consulta, opcionesBusqueda) : null),
     [grafo, consulta, resultados, opcionesBusqueda],
   );
-  /**
-   * Cómo se llama alguien en una línea, con lo que el bloque de identidad ponga arriba.
-   * **El largo lo pone quien lo escribe**: el de la lista lo mide una fila de la hoja, y
-   * usarlo fuera recorta un nombre que allí donde se lee cabía entero.
-   */
-  const nombreDe = (id: string, largo: number) =>
-    escribirlo(id, { fechas, apellidos: 2, largos: { titulo: largo, contexto: 0 } })
+  /** Cómo se llama alguien en una línea, con lo que el bloque de identidad ponga arriba. */
+  const nombreDe = (id: string) =>
+    enLista(id, 0)
       .titulo.map((t) => t.texto)
       .join("");
   /**
@@ -944,7 +934,7 @@ export default function Arbol({
         indice={
           <Recuento
             cuentas={cuentas}
-            centro={nombreDe(puntoDeVista, LARGOS_LISTA.titulo)}
+            centro={nombreDe(puntoDeVista)}
             onAbrir={abrirCajon}
             onPulsar={pulsarFraccion}
             onResaltar={(ids) => setResaltados(ids ? new Set(ids) : null)}
@@ -995,7 +985,7 @@ export default function Arbol({
           sitio, y el enlace con el que se ha llegado no es una acción de quien lo abre. */}
       {aviso && (
         <AvisoDeMudanza
-          centro={nombreDe(puntoDeVista, LARGO_AVISO)}
+          centro={conApellido(puntoDeVista)}
           // Con el filtro quitado están en pantalla: contarlos aquí los daría por ausentes.
           escondidos={ocultarNoConectados ? escondidos : 0}
           onDeshacer={anterior ? () => centrarEn(anterior) : undefined}
@@ -1046,7 +1036,7 @@ export default function Arbol({
                 pertenencia: pertenencias.get(hoja.id),
                 homonimia: libreta.homonimias.get(hoja.id),
               })}
-              anterior={anterior ? { id: anterior, nombre: personaPorId.get(anterior)?.nombre ?? "" } : undefined}
+              anterior={anterior ? { id: anterior, nombre: conApellido(anterior) } : undefined}
               onCentrar={() => centrarEn(hoja.id)}
               onCamino={() => abrirHoja({ tipo: "camino", id: hoja.id })}
               onVerEnElArbol={() => verEnElArbol(hoja.id)}

@@ -61,8 +61,8 @@ export default function Ficha({
       <div className="mt-[18px] flex flex-col gap-[9px]">
         {datos.esCentro ? (
           <>
-            <Accion texto="Índice de parentescos desde aquí" nota="›" onPulsar={onIndice} />
-            {anterior && <Accion texto={`Volver a ver desde ${anterior.nombre}`} nota="↩" onPulsar={onDevolver} />}
+            <Accion texto="Índice de parentescos" nota="›" onPulsar={onIndice} />
+            {anterior && <Accion texto={`Volver a ver como ${anterior.nombre}`} nota="↩" onPulsar={onDevolver} />}
           </>
         ) : (
           <>

@@ -18,6 +18,11 @@ export default function AvisoDeMudanza({
   onDeshacer,
   onCerrar,
 }: {
+  /**
+   * Nombre y un apellido, sin la edad: aquí no se identifica a nadie, se dice desde qué
+   * ojos se mira. La edad de otro delante de un «como…» desmiente justo lo que la frase
+   * dice, y desempatar homónimos es trabajo de la ficha, no del aviso.
+   */
   centro: string;
   escondidos: number;
   /** Sin él no se pinta el botón: al entrar no se viene de ningún sitio al que volver. */
@@ -31,7 +36,7 @@ export default function AvisoDeMudanza({
       className="absolute bottom-[68px] left-3 flex max-w-[calc(100%-1.5rem)] items-center gap-3 rounded-[10px] border border-[var(--line)] bg-[var(--paper)] py-2 pr-2 pl-4 md:max-w-[480px]"
     >
       <p className="min-w-0 text-[12.5px] leading-[1.35] text-[var(--ink)]">
-        Viendo el árbol desde <b className="font-semibold">{centro}</b>.
+        Viendo el árbol como <b className="font-semibold">{centro}</b>.
         {escondidos > 0 && (
           <span className="text-[var(--mut)]">
             {" "}
