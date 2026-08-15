@@ -65,7 +65,7 @@ export default function Capas({
             como si alguien hubiera tocado algo. */}
         <Interruptor
           titulo="Mostrar no conectadas"
-          nota={`${escondidos} personas de la familia política`}
+          nota={`${escondidos} persona${escondidos === 1 ? "" : "s"} de la familia política`}
           activo={!ocultar}
           onPulsar={() => setOcultar(!ocultar)}
         />

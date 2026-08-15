@@ -4,17 +4,20 @@
  * Lo que se dice al acabar el giro. **Mudar el Centro es la única acción de la app que
  * cambia la pantalla entera**, así que es la única que necesita decir qué ha pasado y poder
  * desandarse en el sitio: el «Volver a ver desde…» de la ficha exige abrirla y saber que
- * está ahí. Y cuenta a los que se ha llevado el filtro, que es lo que de verdad desconcierta
+ * está ahí. Y cuenta a los que deja fuera el filtro, que es lo que de verdad desconcierta
  * —desde una rama de fuera se vacía media pantalla— y no lo explica ninguna otra cosa.
+ * **Es el mismo número que el del filtro**, no lo que ha cambiado al mudarse: quien lo lee
+ * aquí lo vuelve a encontrar al abrir la hoja, y dos cuentas distintas de lo mismo no se
+ * reconcilian solas.
  */
 export default function AvisoDeMudanza({
   centro,
-  seEscondieron,
+  escondidos,
   onDeshacer,
   onCerrar,
 }: {
   centro: string;
-  seEscondieron: number;
+  escondidos: number;
   onDeshacer: () => void;
   onCerrar: () => void;
 }) {
@@ -25,8 +28,14 @@ export default function AvisoDeMudanza({
       className="absolute bottom-[68px] left-3 flex max-w-[calc(100%-1.5rem)] items-center gap-3 rounded-[10px] border border-[var(--line)] bg-[var(--paper)] py-2 pr-2 pl-4 md:max-w-[480px]"
     >
       <p className="min-w-0 text-[12.5px] leading-[1.35] text-[var(--ink)]">
-        El árbol se ha recolocado alrededor de <b className="font-semibold">{centro}</b>.
-        {seEscondieron > 0 && <span className="text-[var(--mut)]"> Desde aquí el filtro esconde a {seEscondieron} más.</span>}
+        Viendo el árbol desde <b className="font-semibold">{centro}</b>.
+        {escondidos > 0 && (
+          <span className="text-[var(--mut)]">
+            {" "}
+            Hay {escondidos} persona{escondidos === 1 ? "" : "s"} no conectada{escondidos === 1 ? "" : "s"} (de tu
+            familia política).
+          </span>
+        )}
       </p>
       <button
         type="button"

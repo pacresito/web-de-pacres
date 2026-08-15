@@ -7,7 +7,7 @@
 // segundo —los primos, hasta el tercero—; pasado el tope el cajón conserva el término
 // base y suelta el ordinal: «otros sobrinos».
 
-import { ascendientes, descendientes, parejaDirecta, pasosDesde, type Grafo } from "./grafo";
+import { ascendientes, descendientes, parejaDirecta, pasosDesde, vecinos, type Grafo } from "./grafo";
 
 /** Los dos cajones de quien no tiene término propio, al final de su fila y en este orden. */
 export const PAREJAS = "parejas";
@@ -111,10 +111,11 @@ export function escribirNivel(nivel: number): string {
 /**
  * Cuando la lengua no da término. **No tener palabra no es no ser familia**, y siguen siendo
  * dos casos: quien comparte sangre es pariente por lejos que quede, y quien no la comparte
- * está ahí por la pareja de alguien. La distancia exacta la da el nivel, que va debajo.
+ * está ahí por alguien, que es lo que se dice de él. La distancia exacta la da el nivel,
+ * que va debajo.
  */
 export const parienteLejano = (mujer: boolean): string => `Es tu pariente ${mujer ? "lejana" : "lejano"}`;
-export const FAMILIA_POLITICA = "Es de tu familia política";
+export const familiaPolitica = (dequien: string): string => `Es de la familia política de ${dequien}`;
 
 export interface Relacion {
   /** Ya declinada y lista para leer: «Es tu prima», «Es la pareja de tu tío». */
@@ -137,11 +138,49 @@ export function relacionesDesde(g: Grafo, pov: string): Map<string, Relacion> {
   // La familia de la pareja no comparte sangre con nadie y se quedaría entera sin palabra:
   // se la nombra desde ella, que es de donde le viene el parentesco.
   const politica = [...parejaDirecta(g, pov)].map((id) => parentescos(g, id));
+  const porQuien = porQuienEntra(g, cajones, pov);
   const salida = new Map<string, Relacion>();
   for (const [id, { termino, nivel }] of cajones) {
-    salida.set(id, { frase: fraseDe(g, cajones, politica, pov, id, termino), pasos: pasos.get(id)!, nivel });
+    salida.set(id, { frase: fraseDe(g, cajones, politica, porQuien, pov, id, termino), pasos: pasos.get(id)!, nivel });
   }
   return salida;
+}
+
+/**
+ * Por quién entra en la familia cada uno, ya dicho en segunda persona: «tu hermana», «tu
+ * pareja». **La familia política no cuelga del árbol sino de alguien** —la madre del marido
+ * de tu hermana está ahí por tu hermana—, y decir por quién es lo único que la sitúa; sin
+ * eso, un centenar de personas comparten una misma frase que no distingue a ninguna. Se
+ * anda a pasos de familia, los mismos que mide `pasosDesde`, así que el que ata es el más
+ * cercano por el camino por el que la ficha ya ordena.
+ */
+function porQuienEntra(g: Grafo, cajones: Map<string, Parentesco>, pov: string): Map<string, string> {
+  const suyas = parejaDirecta(g, pov);
+  /** Quien se sabe nombrar solo, que es el único que puede prestarle el nombre a otro. */
+  const comoTuyo = (id: string): string | null => {
+    const termino = cajones.get(id)!.termino;
+    if (!sinPalabra(termino)) return `tu ${unaSola(g, id, termino)}`;
+    return suyas.has(id) ? "tu pareja" : null;
+  };
+
+  // Nadie a un paso se queda sin nombre —padre, hermano, hijo o pareja lo tienen todos—,
+  // así que la primera vuelta ata a las demás y la cadena nunca arranca vacía.
+  const porQuien = new Map<string, string>();
+  const vistos = new Set([pov]);
+  let frente = [pov];
+  while (frente.length > 0) {
+    const siguiente: string[] = [];
+    for (const a of frente) {
+      for (const { id: b } of vecinos(g, a)) {
+        if (vistos.has(b)) continue;
+        vistos.add(b);
+        porQuien.set(b, comoTuyo(b) ?? porQuien.get(a)!);
+        siguiente.push(b);
+      }
+    }
+    frente = siguiente;
+  }
+  return porQuien;
 }
 
 /**
@@ -156,6 +195,7 @@ function fraseDe(
   g: Grafo,
   cajones: Map<string, Parentesco>,
   politica: Map<string, Parentesco>[],
+  porQuien: Map<string, string>,
   pov: string,
   id: string,
   termino: string,
@@ -172,7 +212,7 @@ function fraseDe(
   }
   // La sangre no se nombra con una palabra prestada: al sobrino al que se le ha caído el
   // ordinal se le llama pariente, aunque además sea sobrino de la pareja.
-  if (termino === PAREJAS || termino === SIN_PARENTESCO) return deLaPareja(g, politica, id) ?? FAMILIA_POLITICA;
+  if (termino === PAREJAS || termino === SIN_PARENTESCO) return deLaPareja(g, politica, id) ?? familiaPolitica(porQuien.get(id)!);
   return parienteLejano(esMujer(g, id));
 }
 

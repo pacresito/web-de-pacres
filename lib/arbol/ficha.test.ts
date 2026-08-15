@@ -6,7 +6,7 @@ import { resolve } from "path";
 import { fichaDe, type Ficha } from "./ficha";
 import { construirGrafo } from "./grafo";
 import { libretaDe } from "./identidad";
-import { FAMILIA_POLITICA, relacionesDesde } from "./parentesco";
+import { relacionesDesde } from "./parentesco";
 import { apellidosDe } from "./personas";
 import { calcularRamas } from "./ramas";
 import type { ArbolData, Persona, Union } from "./tree";
@@ -199,7 +199,7 @@ for (const p of data.people) {
   // cónyuge, y quien no desciende de nadie ni está casado con quien lo haga es Aina y nadie
   // más — su padre no está en el árbol y su madre entró casándose.
   assert.ok(f.filas.some((x) => x.clave.startsWith("Rama") && !x.falta) === (p.id !== "p425"), `${p.id}: la rama no cuadra`);
-  if (f.relacion.frase.startsWith("Es tu pariente lej") || f.relacion.frase === FAMILIA_POLITICA) sinTermino += 1;
+  if (/^Es (tu pariente lej|de la familia política)/.test(f.relacion.frase)) sinTermino += 1;
 }
 
 console.log(`ficha.test.ts OK (${data.people.length} fichas desde ${POV}, ${sinTermino} sin término para la relación)`);

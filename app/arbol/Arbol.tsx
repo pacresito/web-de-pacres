@@ -147,13 +147,6 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
   /** Cuántas mudanzas van. Cambiarlo es lo que rearranca los relojes del giro y del aviso. */
   const [mudanza, setMudanza] = useState(0);
   const [aviso, setAviso] = useState(false);
-  /**
-   * A cuántos más se ha llevado el filtro la última mudanza. Es el dato que de verdad
-   * desconcierta —mirar desde una rama de fuera vacía media pantalla— y no lo explica
-   * ninguna otra cosa de la interfaz. Se guarda hecho, no se recalcula al pintar el aviso:
-   * es lo que pasó al mudarse, no lo que pase ocho segundos después.
-   */
-  const [seEscondieron, setSeEscondieron] = useState(0);
 
   const contenedor = useRef<HTMLDivElement>(null);
   /** El lienzo, aparte del contenedor: los gestos son suyos y no de lo que flota encima. */
@@ -432,9 +425,6 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
     // nacer ya apagados en la primera pintura del árbol nuevo.
     setGirando(true);
     setAviso(false);
-    // Cuántos deja de alcanzar el filtro al cambiar de ancla, que es el total menos los
-    // suyos por los dos lados: la resta de los alcanzables dice lo mismo sin el total.
-    setSeEscondieron(ocultarNoConectados ? visibles(grafo, puntoDeVista).size - visibles(grafo, id).size : 0);
     setMudanza((n) => n + 1);
     // La cámara no se mueve: quien has tocado se queda donde estaba en pantalla, aunque
     // el árbol entero se recoloque a su alrededor.
@@ -561,7 +551,6 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
     setHoja(null);
     setGirando(false);
     setAviso(false);
-    setSeEscondieron(0);
     setAbiertas(new Set());
     setParejas(new Set());
     setTodoDesplegado(false);
@@ -946,7 +935,8 @@ export default function Arbol({ data, hoy }: { data: ArbolData; hoy: string }) {
       {aviso && anterior && (
         <AvisoDeMudanza
           centro={nombreDe(puntoDeVista)}
-          seEscondieron={seEscondieron}
+          // Con el filtro quitado están en pantalla: contarlos aquí los daría por ausentes.
+          escondidos={ocultarNoConectados ? escondidos : 0}
           onDeshacer={() => centrarEn(anterior)}
           onCerrar={() => setAviso(false)}
         />

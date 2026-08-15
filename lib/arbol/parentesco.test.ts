@@ -4,7 +4,7 @@ import assert from "assert";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 import { construirGrafo } from "./grafo";
-import { declinar, parentescos, relacionesDesde, terminoDe, FAMILIA_POLITICA, PAREJAS, SIN_PARENTESCO } from "./parentesco";
+import { declinar, parentescos, relacionesDesde, terminoDe, PAREJAS, SIN_PARENTESCO } from "./parentesco";
 import type { ArbolData } from "./tree";
 
 // La regla: el ancestro común más cercano nombra el parentesco
@@ -133,18 +133,27 @@ const parejas = [...parentescos(g, "p25")].filter(([, p]) => p.termino === PAREJ
 const nombradas = parejas.filter((id) => relaciones.get(id)!.frase.startsWith("Es la pareja de tu "));
 assert.ok(nombradas.length >= parejas.length * 0.9, `solo ${nombradas.length} de ${parejas.length} parejas se saben nombrar`);
 // Y a la familia de la pareja se la nombra desde ella, con su artículo: 54 de los 97 que no
-// comparten sangre con nadie. Al resto —los que ni por ahí se dejan nombrar, como la familia
-// del marido de una hermana— les queda ser familia política, que es lo que son.
+// comparten sangre con nadie. Al resto —los que ni por ahí se dejan nombrar— les queda
+// entrar por alguien, y ese alguien es lo que se dice de ellos.
 const ajenos = [...parentescos(g, "p25")].filter(([, p]) => p.termino === SIN_PARENTESCO).map(([id]) => id);
 assert.strictEqual(ajenos.length, 97);
 assert.strictEqual(relaciones.get("p3")!.frase, "Es el abuelo de tu pareja");
-assert.strictEqual(ajenos.filter((id) => relaciones.get(id)!.frase.endsWith(" de tu pareja")).length, 54);
-assert.strictEqual(relaciones.get("p443")!.frase, FAMILIA_POLITICA, "la madre del marido de tu hermana");
+// «El abuelo de tu pareja», no «de la familia política de tu pareja»: la de ella tiene
+// término propio y los otros veinte solo tienen por dónde entraron.
+assert.strictEqual(ajenos.filter((id) => /^Es (el|la) .+ de tu pareja$/.test(relaciones.get(id)!.frase)).length, 54);
 assert.strictEqual(
-  relaciones.get("p6")!.frase,
-  FAMILIA_POLITICA,
-  "a quien no ata nada, ni con la familia ni con la pareja, le queda haber entrado por alguien",
+  relaciones.get("p443")!.frase,
+  "Es de la familia política de tu hermana",
+  "la madre del marido de tu hermana está ahí por tu hermana",
 );
+assert.strictEqual(relaciones.get("p6")!.frase, "Es de la familia política de tu pareja");
+// Nadie se queda sin quien lo ate, mire quien mire: la frase la termina siempre alguien con
+// nombre, y a un paso del punto de vista no hay nadie que no lo tenga.
+for (const pov of data.people.map((p) => p.id)) {
+  for (const [id, { frase }] of relacionesDesde(g, pov)) {
+    assert.ok(!/\bundefined\b/.test(frase), `desde ${pov}, ${id} entra por nadie: «${frase}»`);
+  }
+}
 // La sangre no toma prestada la palabra de la política: al sobrino sin ordinal le queda ser
 // pariente aunque desde la pareja tuviera término.
 assert.ok(
