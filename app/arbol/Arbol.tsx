@@ -287,6 +287,15 @@ export default function Arbol({
         .join("");
     return ([2, 1] as const).map(escrito).find((texto) => !texto.endsWith("…")) ?? escrito(0);
   };
+  /**
+   * Nombre y primer apellido, sin años: como se nombra de lejos a quien no está en pantalla.
+   * Los dos apellidos aprietan la línea donde esto se lee, y el primero ya dice de qué rama es,
+   * que es lo que hace falta cuando a quien se nombra lo puso un enlace.
+   */
+  const conApellido = (id: string) =>
+    escribirlo(id, { fechas: "ocultar", apellidos: 1, largos: { titulo: LARGO_BARRA, contexto: 0 } })
+      .titulo.map((t) => t.texto)
+      .join("");
   /** Quien cumple años hoy se lleva además una tarta en su nodo, sin abrir nada. */
   const cumplenHoy = useMemo(
     () => new Set(celebraciones.filter((c) => c.tipo === "cumpleaños" && c.faltan === 0).map((c) => c.id!)),
@@ -1002,9 +1011,7 @@ export default function Arbol({
                 setParejas(new Set());
               }}
               onReiniciar={reiniciar}
-              // Con el nombre entero: el de entrada lo puso un enlace y puede ser cualquiera de
-              // los trece que se llaman igual, así que el nombre de pila no dice a dónde vuelve.
-              inicial={enUnaLinea(inicial, LARGO_BARRA)}
+              inicial={conApellido(inicial)}
             />
           ) : hoja.tipo === "celebraciones" ? (
             <Celebraciones lista={celebraciones} hoy={hoy} identidad={escribir} onPersona={abrirFicha} />
