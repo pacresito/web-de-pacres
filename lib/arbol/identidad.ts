@@ -7,7 +7,7 @@
 // peldaños, y el primer progenitor y el cónyuge no están en ninguno: quitarlos deja a esas
 // personas sin nada que las distinga de otra con su mismo nombre.
 
-import { añoDe, escribirVida, type Fecha, type ModoFechas } from "./fechas";
+import { añoDe, conDuda, escribirVida, type Fecha, type ModoFechas } from "./fechas";
 import { parejaDirecta, type Grafo } from "./grafo";
 import { apellidosDe, etiquetaDe, ordenarPareja, type Apellidos, type ModoApellidos } from "./personas";
 import type { Persona } from "./tree";
@@ -103,7 +103,7 @@ function tituloDe(p: Persona, { linaje, apellidos, fechas, hoy, largos }: Opcion
 function añoEscrito(p: Persona, modo: ModoFechas, hoy: Fecha): string {
   const vida = escribirVida(p, modo, hoy);
   if (!vida) return "";
-  return p.incierto === "fechas" ? `(¿${vida}?)` : `(${vida})`;
+  return `(${p.incierto === "fechas" ? conDuda(vida) : vida})`;
 }
 
 // Línea 2: de quién es

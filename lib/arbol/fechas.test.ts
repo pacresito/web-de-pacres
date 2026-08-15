@@ -3,6 +3,7 @@ import assert from "assert";
 import {
   añoDe,
   conDia,
+  conDuda,
   edadDe,
   edadEntre,
   escribirCorto,
@@ -70,5 +71,11 @@ assert.strictEqual(escrito({ birth: "1945-05-31", death: "2018" }, "edad"), "viv
 assert.strictEqual(escrito({ death: "1992" }, "edad"), "", "sin nacimiento no se inventa una edad");
 assert.strictEqual(escrito({ birth: "1917" }, "edad"), "", "ni al que pasaría de 100 sin que conste su defunción");
 assert.strictEqual(escrito({ birth: "1917" }, "año"), "1917", "…pero su nacimiento consta y se enseña");
+
+// La duda abraza la cifra y no la frase: se duda de los años que vivió, no de que viviera.
+assert.strictEqual(conDuda("vivió 80 años"), "vivió ¿80 años?");
+assert.strictEqual(conDuda("† 2016"), "† ¿2016?", "ni de que muriera");
+assert.strictEqual(conDuda("1890 – 1954"), "¿1890 – 1954?", "donde todo es cifra, todo se duda");
+assert.strictEqual(conDuda("46 años"), "¿46 años?");
 
 console.log("fechas.test.ts OK");

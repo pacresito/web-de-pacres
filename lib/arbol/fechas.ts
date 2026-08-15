@@ -109,3 +109,16 @@ export function escribirVida(p: { birth?: Fecha; death?: Fecha }, modo: ModoFech
   if (p.death) return `† ${fecha(p.death)}`;
   return "";
 }
+
+/** Lo que en una vida escrita no es cifra: el verbo del fallecido y la cruz del que solo consta muerto. */
+const ROTULOS = ["vivió ", "† "];
+
+/**
+ * La misma vida, dicha como se dice lo que no se sabe seguro. **Los interrogantes abrazan el
+ * número y no la frase**: de quien murió con ochenta años y no se recuerda cuándo se duda de la
+ * cifra, no de que viviera — «vivió ¿80 años?», nunca «¿vivió 80 años?».
+ */
+export function conDuda(vida: string): string {
+  const rotulo = ROTULOS.find((r) => vida.startsWith(r)) ?? "";
+  return `${rotulo}¿${vida.slice(rotulo.length)}?`;
+}
