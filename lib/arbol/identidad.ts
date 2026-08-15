@@ -10,7 +10,7 @@
 import { añoDe, conDuda, escribirVida, type Fecha, type ModoFechas } from "./fechas";
 import { parejaDirecta, type Grafo } from "./grafo";
 import { apellidosDe, etiquetaDe, ordenarPareja, type Apellidos, type ModoApellidos } from "./personas";
-import type { Persona } from "./tree";
+import type { Persona, Union } from "./tree";
 
 /** Como los registró el documento cuando no dio ninguno: se pinta en cursiva y apagado. */
 export const SIN_NOMBRE = "Sin nombre";
@@ -57,6 +57,13 @@ export interface OpcionesIdentidad {
   largos: { titulo: number; contexto: number };
   /** Sus ramas, cuando quien pinta las sabe; sin ellas la línea se queda en la familia. */
   ramas?: string[];
+  /**
+   * Si los padres y el cónyuge van con su año. Vienen de serie porque son el desempate de
+   * trece filas que dicen «hijo de José»; una lista que ya sabe de quién habla —la de
+   * celebraciones, con una fila por persona y un día al lado— gasta ahí sitio que le hace
+   * falta para el segundo progenitor, que distingue más que dos fechas.
+   */
+  añosDeLosSuyos?: boolean;
   homonimia?: Homonimia;
 }
 
@@ -65,7 +72,7 @@ export function identidadDe(g: Grafo, id: string, o: OpcionesIdentidad): Identid
   if (!p) throw new Error(`Persona desconocida: ${id}.`);
   return {
     titulo: tituloDe(p, o),
-    contexto: contextoDe(g, id, o.ramas, o.largos.contexto),
+    contexto: contextoDe(g, id, o.ramas, o.largos.contexto, o.añosDeLosSuyos ?? true),
     marcas: marcasDe(p, o),
     nota: p.nota,
   };
@@ -122,9 +129,15 @@ const PELDAÑOS = [
 
 type Peldaño = (typeof PELDAÑOS)[number];
 
-function contextoDe(g: Grafo, id: string, ramas: string[] | undefined, largo: number): string {
+function contextoDe(g: Grafo, id: string, ramas: string[] | undefined, largo: number, años: boolean): string {
+  // Cero es que quien pinta no tiene segunda línea, no que le quepan cero caracteres:
+  // degradar por los cuatro peldaños para acabar en «…» es trabajo que nadie lee.
+  if (largo === 0) return "";
   let texto = "";
   for (const peldaño of PELDAÑOS) {
+    // Quien no los quiere entra por el peldaño de abajo, y así el sitio que ahorra se lo
+    // queda el segundo progenitor en vez de gastarse en volver a subir el escalón.
+    if (!años && peldaño.años) continue;
     texto = escribirContexto(g, id, ramas, peldaño);
     if (texto.length <= largo) return texto;
   }
@@ -162,8 +175,10 @@ function filiacion(g: Grafo, id: string, { años, ambosPadres }: Peldaño): stri
 }
 
 /**
- * Su unión, la primera si hubo varias. Que acabara no se dice aquí: la línea contesta a
- * «quién es esta persona» y con quién se casó la identifica igual, siga o no casada.
+ * Su unión, la primera si hubo varias. **La que acabó se dice en pasado:** identificar por
+ * el cónyuge sale igual de bien con el verbo cambiado, y en presente la línea afirma de
+ * once parejas algo que no es cierto. El lienzo ya lo dibuja —trazo roto— y la ficha ya lo
+ * escribe; callarlo solo aquí dejaba a la app diciendo dos cosas distintas de lo mismo.
  */
 function union(g: Grafo, id: string, { años }: Peldaño): string {
   for (const uid of g.unionesDePartner.get(id) ?? []) {
@@ -171,10 +186,18 @@ function union(g: Grafo, id: string, { años }: Peldaño): string {
     const otro = u?.partners.find((p) => p !== id);
     const pareja = otro === undefined ? undefined : g.personaPorId.get(otro);
     if (!u || !pareja) continue;
-    const verbo = u.tipo === "pareja" ? "pareja de" : `${declinado(g, id, "casado", "casada")} con`;
-    return `${verbo} ${conAño(pareja, años)}`;
+    return `${verbo(g, id, u)} ${conAño(pareja, años)}`;
   }
   return "";
+}
+
+/**
+ * Cómo se nombra el vínculo. La pareja rota es «expareja» y no «exnovio», que pide un sexo
+ * que a cuatro personas les falta y una palabra que ni el dato ni la ficha usan.
+ */
+function verbo(g: Grafo, id: string, u: Union): string {
+  if (u.tipo === "pareja") return u.roto ? "expareja de" : "pareja de";
+  return u.roto ? `${declinado(g, id, "divorciado", "divorciada")} de` : `${declinado(g, id, "casado", "casada")} con`;
 }
 
 function prole(g: Grafo, id: string): string {

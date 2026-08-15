@@ -7,7 +7,7 @@
 
 import { anuncio, esFelicitacion, esTuDia, felicitacion, VENTANA, type Celebracion } from "@/lib/arbol/celebraciones";
 import { diaDeLaSemana, escribirCorto, escribirDiaDeMes, type Fecha } from "@/lib/arbol/fechas";
-import { LARGOS_FILA, type Identidad } from "@/lib/arbol/identidad";
+import type { Identidad } from "@/lib/arbol/identidad";
 import { BloqueIdentidad } from "./Identidad";
 import Redondo from "./Redondo";
 import { ALTO_REGLA } from "./Regla";
@@ -21,8 +21,8 @@ export default function Celebraciones({
   lista: Celebracion[];
   /** El día del servidor: la lista cuenta en «faltan», y para leerla hay que saber desde cuándo. */
   hoy: Fecha;
-  /** El bloque de identidad de quien celebra, con el hueco que la fila le deja abajo. */
-  identidad: (id: string, largoContexto: number) => Identidad;
+  /** El bloque de identidad de quien celebra, ya escrito para esta lista. */
+  identidad: (id: string) => Identidad;
   onPersona: (id: string) => void;
 }) {
   return (
@@ -49,13 +49,15 @@ export default function Celebraciones({
 const loSiguiente = (faltan: number): string =>
   faltan === 0 ? "hay un evento hoy" : faltan === 1 ? "siguiente evento mañana" : `siguiente evento en ${faltan} días`;
 
-/** Por poco que le quite la relación, la segunda línea sigue teniendo que identificar. */
-const HUECO_MINIMO = 16;
-
 /**
- * La fila normal dice cuándo, quién es —bloque de identidad, con la relación desde el
- * Centro pegada detrás— y qué celebra. Lo del propio Centro y los dos días que son de
- * todos no: eso va dirigido a quien mira, y se lleva la frase en lugar de una casilla.
+ * La fila normal dice cuándo, quién es y qué celebra. Lo del propio Centro y los dos días
+ * que son de todos no: eso va dirigido a quien mira, y se lleva la frase en lugar de una
+ * casilla.
+ *
+ * **El parentesco desde el Centro no entra**, aunque `celebracion` lo traiga: esta lista se
+ * abre para saber a quién felicitar, y saber que es tu sobrino no cambia la respuesta. La
+ * línea entera se la queda entonces de quién es, que es lo que distingue a los que se
+ * llaman igual.
  */
 function Fila({
   celebracion: c,
@@ -63,7 +65,7 @@ function Fila({
   onPersona,
 }: {
   celebracion: Celebracion;
-  identidad: (id: string, largoContexto: number) => Identidad;
+  identidad: (id: string) => Identidad;
   onPersona: (id: string) => void;
 }) {
   const hoy = c.faltan === 0;
@@ -84,10 +86,6 @@ function Fila({
       </div>
     );
   }
-  // «pareja de Ana» ya lo dice la segunda línea del bloque, que es lo último que suelta al
-  // cónyuge: repetirlo gastaba media fila en decir dos veces lo mismo.
-  const cola = c.parentesco?.startsWith("pareja de ") ? null : c.parentesco;
-  const largo = Math.max(HUECO_MINIMO, LARGOS_FILA.contexto - (cola ? cola.length + 3 : 0));
   return (
     <button
       type="button"
@@ -97,7 +95,7 @@ function Fila({
       <span className="w-11 shrink-0 pt-px text-right font-[family-name:var(--mono)] text-[11px] tabular-nums text-[var(--mut)]">
         {cuando(c)}
       </span>
-      <BloqueIdentidad identidad={identidad(c.id!, largo)} cola={cola} />
+      <BloqueIdentidad identidad={identidad(c.id!)} />
       <span className="shrink-0 pt-px text-[11px] whitespace-nowrap text-[var(--mut)]">
         {c.tipo === "cumpleaños" ? `cumple ${c.edad}` : "onomástica"}
       </span>

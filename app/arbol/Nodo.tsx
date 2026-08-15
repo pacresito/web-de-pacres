@@ -10,6 +10,14 @@ export const ATENUADO = 0.15;
 
 const SANGRADO = 9; // el aire entre el borde del nodo y su texto
 
+/**
+ * Dónde va la línea base del nombre: arriba cuando debajo lleva los años, y al medio
+ * cuando no —113 personas no traen ninguna fecha, así que no es el caso raro—. **No es la
+ * mitad del nodo:** una línea base centrada deja el texto colgando, y lo que se centra es
+ * la altura de las mayúsculas.
+ */
+const BASE = { conAños: -3, solo: 4 };
+
 /** Cada trozo de la primera línea, con la clase y la cursiva que le tocan. */
 const PINTAS: Record<Pinta, { clase: string; cursiva?: boolean }> = {
   nombre: { clase: "nm" },
@@ -29,6 +37,7 @@ const PINTAS: Record<Pinta, { clase: string; cursiva?: boolean }> = {
 export default function Nodo({
   nodo,
   identidad,
+  vida,
   cumpleHoy,
   atenuado,
   abierta,
@@ -36,6 +45,8 @@ export default function Nodo({
 }: {
   nodo: NodoLayout;
   identidad: Identidad;
+  /** Sus años, ya escritos. Sin paréntesis: abajo no tiene nada de lo que separarse. */
+  vida: string;
   cumpleHoy: boolean;
   atenuado: boolean;
   /** Es la ficha que está abierta: el borde de acento dice desde el lienzo a quién lees. */
@@ -84,18 +95,21 @@ export default function Nodo({
           nodo.esPuntoDeVista ? "nd-pov" : nodo.lineaDirecta ? "nd-dir" : nodo.consanguineo ? "nd-con" : "nd"
         } ${nodo.esPuntoDeVista || abierta ? "bd-acc" : nodo.lineaDirecta ? "bd-dir" : "bd"}`}
       />
-      <text x={izquierda} y={nodo.y - 3} fontSize={13} fontWeight={600}>
+      <text x={izquierda} y={nodo.y + (vida ? BASE.conAños : BASE.solo)} fontSize={13} fontWeight={600}>
         {identidad.titulo.map((trozo, i) => (
           <tspan key={i} className={PINTAS[trozo.pinta].clase} fontStyle={PINTAS[trozo.pinta].cursiva ? "italic" : undefined}>
             {trozo.texto}
           </tspan>
         ))}
       </text>
-      {/* La segunda línea es lo que identifica de verdad a quien no trae ni apellido ni
-          fecha: se pinta apagada, pero no se quita nunca. */}
-      <text x={izquierda} y={nodo.y + 13} fontSize={10.5} className="ct">
-        {identidad.contexto}
-      </text>
+      {/* Abajo, los años. De quién es hijo y con quién se casó lo dicen los trazos que salen
+          del nodo, así que escribirlo era decir con letra lo que el lienzo ya dibuja; los
+          años no los dibuja nada. Quien no los trae se queda sin línea, y no con una vacía. */}
+      {vida && (
+        <text x={izquierda} y={nodo.y + 13} fontSize={10.5} className="ct">
+          {vida}
+        </text>
+      )}
       {/* La esquina de arriba a la derecha es la única que no usa ni la manija ni el «+»
           de la pareja, así que la tarta cabe sin taparle nada a nadie. */}
       {cumpleHoy && (

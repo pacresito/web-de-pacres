@@ -42,6 +42,11 @@ const juguete: ArbolData = {
     persona("p11", "Sin nombre", { sexo: "h" }),
     persona("p12", "Vera", { sexo: "m", birth: "1950" }),
     persona("p13", "Nieto", { sexo: "h" }),
+    // Las dos maneras de que una unión acabe: el matrimonio y la pareja.
+    persona("p14", "Elvira", { sexo: "m" }),
+    persona("p15", "Gerardo", { sexo: "h" }),
+    persona("p16", "Nuria", { sexo: "m" }),
+    persona("p17", "Iván", { sexo: "h" }),
   ],
   unions: [
     union("u1", ["p1", "p2"], ["p3", "p5"]),
@@ -49,6 +54,8 @@ const juguete: ArbolData = {
     union("u3", ["p6", "p7"], []),
     union("u4", ["p8"], ["p9", "p10"]),
     union("u5", ["p11", "p12"], ["p13"]),
+    union("u6", ["p14", "p15"], [], { roto: true }),
+    union("u7", ["p16", "p17"], [], { tipo: "pareja", roto: true }),
   ],
   roots: {},
 };
@@ -89,6 +96,11 @@ assert.strictEqual(
 assert.strictEqual(contexto("p5", 40, RAMA), "hija de Pablo · casada con Julián", "el cónyuge aguanta hasta el final");
 assert.strictEqual(contexto("p1", 80), "casado con Antonia (1905)", "quien no es hijo de nadie se dice por su cónyuge");
 assert.strictEqual(contexto("p8", 80), "padre de Lucas y 1 más", "y quien no tiene ni cónyuge, por su descendencia");
+
+// La que acabó identifica igual, pero en pasado: en presente la línea afirmaría lo que no es
+assert.strictEqual(contexto("p14", 80), "divorciada de Gerardo");
+assert.strictEqual(contexto("p15", 80), "divorciado de Elvira", "y se declina como el resto");
+assert.strictEqual(contexto("p16", 80), "expareja de Iván", "la pareja rota no se divorcia");
 assert.strictEqual(contexto("p9", 80), "hijo de Tomás", "un solo progenitor documentado no inventa al otro");
 
 // A los «Sin nombre» los declina su cónyuge, que es lo único que dice de qué sexo son

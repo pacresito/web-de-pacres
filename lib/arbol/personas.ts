@@ -4,10 +4,17 @@ import { ascendientes, type Grafo } from "./grafo";
 import type { Persona } from "./tree";
 
 /**
- * Cuántos apellidos se pintan, para todo el mundo. `"nuevos"` es la opción por defecto:
- * solo los enseña quien los estrena en su línea, porque el resto se leen subiendo.
+ * Cuántos apellidos se pintan, para todo el mundo. `"nuevos"` los enseña solo a quien los
+ * estrena en su línea, porque el resto se leen subiendo.
  */
 export type ModoApellidos = "nuevos" | 0 | 1 | 2;
+
+/**
+ * Uno para todos. Es de lo poco que llena el nodo sin pedirle nada a quien mira: el primer
+ * apellido dice de qué rama es cada uno, y leerlo subiendo por el árbol —que es lo que
+ * ahorra `"nuevos"`— es trabajo que solo hace quien ya sabe cómo está montado esto.
+ */
+export const APELLIDOS_POR_DEFECTO: ModoApellidos = 1;
 
 /**
  * El hombre arriba y la mujer abajo. Si ninguno de los dos trae sexo, se respeta el

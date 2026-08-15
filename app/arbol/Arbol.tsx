@@ -23,7 +23,7 @@ import {
 import { caminoEntre, trazosDelCamino } from "@/lib/arbol/camino";
 import { cintaDe } from "@/lib/arbol/cinta";
 import { centroRecordado, recordarCentro } from "@/lib/arbol/enlaces";
-import { FECHAS_POR_DEFECTO, type ModoFechas } from "@/lib/arbol/fechas";
+import { conDuda, escribirVida, FECHAS_POR_DEFECTO, type ModoFechas } from "@/lib/arbol/fechas";
 import { proximasCelebraciones } from "@/lib/arbol/celebraciones";
 import { construirGrafo, pasosDesde, visibles } from "@/lib/arbol/grafo";
 import { fichaDe } from "@/lib/arbol/ficha";
@@ -36,7 +36,7 @@ import {
   type OpcionesIdentidad,
 } from "@/lib/arbol/identidad";
 import { relacionesDesde } from "@/lib/arbol/parentesco";
-import type { ModoApellidos } from "@/lib/arbol/personas";
+import { APELLIDOS_POR_DEFECTO, type ModoApellidos } from "@/lib/arbol/personas";
 import { calcularRamas, ramaVisible, repartoDeRamas } from "@/lib/arbol/ramas";
 import {
   ALTO_NODO,
@@ -107,10 +107,13 @@ export default function Arbol({
   data,
   hoy,
   centroDelEnlace,
+  conVistas,
 }: {
   data: ArbolData;
   hoy: string;
   centroDelEnlace: string | null;
+  /** Si sale el riel de unidades. Sin él el árbol se queda en personas, que es su parada. */
+  conVistas: boolean;
 }) {
   const grafo = useMemo(() => construirGrafo(data), [data]);
   const personaPorId = grafo.personaPorId;
@@ -136,7 +139,7 @@ export default function Arbol({
   const [todoDesplegado, setTodoDesplegado] = useState(false);
   const [ocultarNoConectados, setOcultarNoConectados] = useState(true);
   const [fechas, setFechas] = useState<ModoFechas>(FECHAS_POR_DEFECTO);
-  const [apellidos, setApellidos] = useState<ModoApellidos>("nuevos");
+  const [apellidos, setApellidos] = useState<ModoApellidos>(APELLIDOS_POR_DEFECTO);
   const [busquedaAbierta, setBusquedaAbierta] = useState(false);
   const [consulta, setConsulta] = useState("");
   /** Las cuatro sin nombre no se pueden teclear: se piden por su salida del callejón. */
@@ -240,13 +243,16 @@ export default function Arbol({
    * cada vez que el bloque de identidad aprende algo nuevo.
    */
   const escribirlo = useMemo(
-    () => (id: string, suyo: Pick<OpcionesIdentidad, "fechas" | "apellidos" | "largos">) =>
+    () => (id: string, suyo: Pick<OpcionesIdentidad, "fechas" | "apellidos" | "largos" | "añosDeLosSuyos">) =>
       identidadDe(grafo, id, { linaje: libreta.linaje, hoy, homonimia: libreta.homonimias.get(id), ...suyo }),
     [grafo, libreta, hoy],
   );
-  /** El bloque de identidad de cualquiera, para las superficies que lo piden fila a fila. */
-  const escribir = (id: string, contexto: number) =>
-    escribirlo(id, { fechas, apellidos, largos: { ...LARGOS_FILA, contexto } });
+  /**
+   * El de una fila de «Lo que se celebra», la única superficie que nombra a los padres y al
+   * cónyuge sin su año: aquí la fila ya viene con un día al lado y no hay que desempatar a
+   * nadie, así que la línea se gasta entera en de quién es.
+   */
+  const paraCelebrar = (id: string) => escribirlo(id, { fechas, apellidos, largos: LARGOS_FILA, añosDeLosSuyos: false });
   /**
    * Y el de una fila de lista, que **lleva siempre los dos apellidos**: «nuevos» vale en el
    * lienzo, donde los demás se leen subiendo por el árbol, pero en una lista no hay árbol del
@@ -269,6 +275,16 @@ export default function Arbol({
     () => (consulta.trim() !== "" && resultados.length === 0 ? acortar(grafo, consulta, opcionesBusqueda) : null),
     [grafo, consulta, resultados, opcionesBusqueda],
   );
+  /**
+   * Sus años, como los escribe el lienzo: en la línea de abajo del nodo y no detrás del
+   * nombre, así que van sin los paréntesis que los separaban de él. **El nombre se queda
+   * arriba con los 32 caracteres enteros**, que es lo que se gana bajándolos.
+   */
+  const vidaDe = (id: string) => {
+    const p = personaPorId.get(id)!;
+    const vida = escribirVida(p, fechas, hoy);
+    return vida && p.incierto === "fechas" ? conDuda(vida) : vida;
+  };
   /** Cómo se llama alguien en una línea, con lo que el bloque de identidad ponga arriba. */
   const nombreDe = (id: string) =>
     enLista(id, 0)
@@ -831,7 +847,8 @@ export default function Arbol({
             <Nodo
               key={n.id}
               nodo={n}
-              identidad={escribirlo(n.id, { fechas, apellidos, largos: LARGOS_NODO })}
+              identidad={escribirlo(n.id, { fechas: "ocultar", apellidos, largos: { titulo: LARGOS_NODO.titulo, contexto: 0 } })}
+              vida={vidaDe(n.id)}
               cumpleHoy={cumplenHoy.has(n.id)}
               atenuado={opacidadDe(n.id) !== undefined}
               // El camino no deja de leer a quien lo abrió: el cerco sigue puesto mientras
@@ -899,15 +916,18 @@ export default function Arbol({
 
       {/* El riel: con qué unidad se dibuja, y **no toca la cámara** —el tamaño es del
           pellizco—. Va en el borde derecho y a media altura, que es donde no le quita el
-          sitio ni al aviso de arriba ni a los botones de abajo. */}
-      <Riel
-        parada={parada}
-        onIr={(p) => {
-          setParada(p);
-          mover((v) => alCambiarDeUnidad(v, p));
-        }}
-        apartado={apartado}
-      />
+          sitio ni al aviso de arriba ni a los botones de abajo. Solo con `?vistas`: las
+          otras dos escalas se enseñan, y el árbol al que se entra es el de personas. */}
+      {conVistas && (
+        <Riel
+          parada={parada}
+          onIr={(p) => {
+            setParada(p);
+            mover((v) => alCambiarDeUnidad(v, p));
+          }}
+          apartado={apartado}
+        />
+      )}
 
       {brujula && parada === "personas" && (
         <Brujula
@@ -1014,7 +1034,7 @@ export default function Arbol({
               inicial={conApellido(inicial)}
             />
           ) : hoja.tipo === "celebraciones" ? (
-            <Celebraciones lista={celebraciones} hoy={hoy} identidad={escribir} onPersona={abrirFicha} />
+            <Celebraciones lista={celebraciones} hoy={hoy} identidad={paraCelebrar} onPersona={abrirFicha} />
           ) : hoja.tipo === "camino" && camino ? (
             <Camino
               datos={camino}

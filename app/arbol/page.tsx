@@ -9,7 +9,7 @@ import type { ArbolData } from "@/lib/arbol/tree";
 export default async function ArbolPage({
   searchParams,
 }: {
-  searchParams: Promise<{ centro?: string | string[] }>;
+  searchParams: Promise<{ centro?: string | string[]; vistas?: string | string[] }>;
 }) {
   const auth = await tieneSesion();
   if (!auth) {
@@ -24,8 +24,13 @@ export default async function ArbolPage({
   const data: ArbolData = raw ? JSON.parse(raw) : { people: [], unions: [], roots: {} };
   // Con quién se ha repartido este enlace. Se lee aquí y no se vuelve a tocar: la URL no se
   // reescribe al navegar, así que recargar devuelve siempre al centro con el que se entró.
-  const pedido = (await searchParams).centro;
+  const params = await searchParams;
+  const pedido = params.centro;
   const centroDelEnlace = centroDeEnlace(Array.isArray(pedido) ? pedido[0] : pedido);
+  // El riel de unidades solo aparece con `?vistas` en la URL: el árbol de personas es a lo
+  // que se entra, y las otras dos escalas se enseñan, no se usan. Basta que el parámetro
+  // esté —`/arbol?vistas`—, porque esa URL se teclea a mano y no la reparte nadie.
+  const conVistas = params.vistas !== undefined;
   // El día del que se cuentan las edades, fijado aquí y no en el cliente: si cada uno
   // mirara su reloj, el nodo de quien cumple hoy se pintaría con dos edades distintas.
   const hoy = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Madrid" });
@@ -39,7 +44,7 @@ export default async function ArbolPage({
         <h1 className="font-[family-name:var(--serif)] text-[20px]">Árbol genealógico</h1>
       </nav>
       <div className="min-h-0 flex-1">
-        <Arbol data={data} hoy={hoy} centroDelEnlace={centroDelEnlace} />
+        <Arbol data={data} hoy={hoy} centroDelEnlace={centroDelEnlace} conVistas={conVistas} />
       </div>
     </div>
   );
