@@ -1,4 +1,5 @@
 import { Client } from "@upstash/qstash";
+import { urlDeEntrega } from "@/lib/avisar";
 import { avisoDeVispera } from "@/lib/arbol/aviso";
 import { construirGrafo } from "@/lib/arbol/grafo";
 import { KEYS } from "@/lib/arbol/keys";
@@ -38,9 +39,7 @@ export async function GET(request: Request) {
   if (!aviso) return Response.json({ programados: [] });
 
   await new Client({ token }).publishJSON({
-    // Al origen que programa, no a una URL fija: así el despliegue que calcula la víspera es
-    // el mismo que la entrega, y un preview se prueba entero sin tocar producción.
-    url: `${new URL(request.url).origin}/api/avisar`,
+    url: urlDeEntrega(request),
     body: { texto: aviso.texto },
     notBefore: Math.floor(aviso.sale / 1000),
     deduplicationId: aviso.id,
