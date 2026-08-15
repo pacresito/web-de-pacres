@@ -7,6 +7,12 @@
 // familia crece a lo alto —que es por donde se hace scroll— y no a lo ancho, que es lo
 // que no sobra en un móvil; además un nombre ocupa mucho más ancho que alto.
 //
+// Pintarlo en bandas ya contestó que no: el recorrido se cuadruplica —el árbol de entrada
+// pasa de 590 a 2.413 px— y estrechar el nodo para recuperarlo recorta la segunda línea en
+// 124 de las 438 personas, que es justo lo que identifica a quien no trae ni apellido ni
+// fecha. El eje no se toca; lo que se empaqueta por un eje y se reparte por el otro, sí:
+// este módulo no sabe cuál de los dos se pinta a lo alto.
+//
 // Las reglas son demasiado peculiares para una librería de grafos —parejas adyacentes,
 // ramas colapsadas en un contador, todo reanclado al punto de vista— así que el
 // algoritmo es el clásico de contornos: cada subárbol se coloca por su cuenta y se
