@@ -36,8 +36,8 @@ export function bajada(v: Vinculo, h: Hijo, desdeY?: number): string {
   const borde = h.x - h.ancho / 2;
   const y = alturaDe(v, h);
   if (desdeY === undefined) {
-    if (h.recto) return `M ${v.x} ${v.y} ${horizontal(borde, y, h.saltos)}`;
-    return `M ${v.x} ${v.y} ${horizontal(v.canal, v.y, v.saltos)} V ${y} ${horizontal(borde, y, h.saltos)}`;
+    if (h.recto) return `M ${v.salida} ${v.y} ${horizontal(borde, y, h.saltos)}`;
+    return `M ${v.salida} ${v.y} ${horizontal(v.canal, v.y, v.saltos)} V ${y} ${horizontal(borde, y, h.saltos)}`;
   }
   // Los saltos de antes del canal se van con el tramo que los traía: pintarlos desde aquí
   // haría retroceder al trazo hasta buscarlos.

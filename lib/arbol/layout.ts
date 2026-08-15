@@ -74,6 +74,13 @@ export interface Vinculo {
   /** Ancla del reparto: el punto medio de la pareja, o el contador que la sustituye. */
   x: number;
   y: number;
+  /**
+   * Y de dónde arranca, que solo es el ancla cuando ahí hay un hueco: el de la pareja cae
+   * entre sus dos recuadros, pero el de quien tuvo hijos sin pareja cae dentro del suyo, y
+   * los nodos llevan la opacidad de su generación —el tramo se leería a través del recuadro
+   * como si lo atravesara, en vez de quedar tapado por él—.
+   */
+  salida: number;
   /** Por dónde baja el reparto hacia los hijos: el hueco entre columnas, con su carril. */
   canal: number;
   /** Alturas de los dos miembros, para la línea que los une. */
@@ -374,6 +381,8 @@ export function calcularLayout(g: Grafo, opciones: OpcionesLayout): Layout {
       directo: u.partners.some((p) => lineaDirecta.has(p)) && u.children.some((c) => lineaDirecta.has(c)),
       x: ancla.x,
       y: ancla.y,
+      // Media pareja no deja hueco del que salir: se sale por el borde de lo que ancle.
+      salida: ancla.x + (partners.length >= 2 ? 0 : (partners.length === 1 ? ANCHO_NODO : ANCHO_CONTADOR) / 2),
       canal: ancla.x + ANCHO_COLUMNA / 2,
       pareja: partners.length >= 2 ? [partners[0].y, partners[1].y] : undefined,
       miembros: partners.length >= 2 ? [partners[0].id, partners[1].id] : undefined,
@@ -423,10 +432,10 @@ function marcarSaltos(vinculos: Vinculo[]): void {
       .sort((a, b) => a - b);
 
   for (const v of vinculos) {
-    v.saltos = cortes(v, v.y, v.x, v.canal);
+    v.saltos = cortes(v, v.y, v.salida, v.canal);
     // El tramo recto va a la altura de la unión y no a la del hijo: así lo comparte con la
     // salida hacia los demás en vez de dibujar un raíl paralelo a tres píxeles.
-    for (const h of v.hijos) h.saltos = cortes(v, h.recto ? v.y : h.y, h.recto ? v.x : v.canal, h.x - h.ancho / 2);
+    for (const h of v.hijos) h.saltos = cortes(v, h.recto ? v.y : h.y, h.recto ? v.salida : v.canal, h.x - h.ancho / 2);
   }
 }
 

@@ -11,6 +11,7 @@ const union = (extra: Partial<Vinculo> = {}): Vinculo => ({
   directo: false,
   x: 0,
   y: 100,
+  salida: 0,
   canal: 60,
   saltos: [],
   hijos: [],
@@ -43,6 +44,14 @@ assert.strictEqual(
   bajada(union(), hijo({ y: 400, recto: false })),
   "M 0 100 H 60 V 400 H 200",
   "y el que no, por el canal: ancla, canal, altura del hijo y borde",
+);
+
+// Quien tuvo hijos sin pareja ancla dentro de su propio recuadro, así que el reparto sale
+// por el borde: el nodo es traslúcido y el tramo se leía cruzándole la caja de lado a lado.
+assert.strictEqual(
+  bajada(union({ salida: 114, canal: 144 }), hijo({ y: 400, recto: false })),
+  "M 114 100 H 144 V 400 H 200",
+  "sin hueco entre dos donde arrancar, se arranca en el borde de quien ancla",
 );
 
 /**

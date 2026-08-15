@@ -5,7 +5,7 @@ import { readFileSync } from "fs";
 import { resolve } from "path";
 import { construirGrafo, parejaDirecta, visibles } from "./grafo";
 import { ordenarPareja } from "./personas";
-import { ALTO_CONTADOR, ALTO_NODO, ANCHO_COLUMNA, calcularLayout, type Layout } from "./layout";
+import { ALTO_CONTADOR, ALTO_NODO, ANCHO_COLUMNA, ANCHO_NODO, calcularLayout, type Layout } from "./layout";
 import type { ArbolData } from "./tree";
 
 const data: ArbolData = JSON.parse(readFileSync(resolve("seed/arbol.json"), "utf-8"));
@@ -23,6 +23,16 @@ function revisar(l: Layout, pov: string, etiqueta: string): void {
     const esperado = g.generacion.get(pov)! - g.generacion.get(n.id)!;
     assert.strictEqual(n.nivel, esperado, `${etiqueta}: ${n.id} en la columna equivocada`);
     assert.strictEqual(n.x, -n.nivel * ANCHO_COLUMNA || 0, `${etiqueta}: ${n.id} con x fuera de su columna`);
+  }
+
+  // El reparto arranca fuera de todo recuadro. El de una pareja sale del hueco entre los
+  // dos, pero el de quien tuvo hijos sin ella ancla en su propio centro, y como el nodo es
+  // traslúcido el tramo se leía cruzándole la caja de lado a lado en vez de quedar tapado.
+  for (const v of l.vinculos) {
+    for (const n of l.nodos) {
+      const dentro = Math.abs(v.y - n.y) < ALTO_NODO / 2 && Math.abs(v.salida - n.x) < ANCHO_NODO / 2;
+      assert.ok(!dentro, `${etiqueta}: el reparto de ${v.unionId} arranca dentro de ${n.id}`);
+    }
   }
 
   const porColumna = new Map<number, { y: number; alto: number; id: string }[]>();
@@ -192,11 +202,11 @@ for (const pov of ["p25", "p26"]) {
     for (const v of l.vinculos) {
       const dentro = (x: number, a: number, b: number) => x > Math.min(a, b) && x < Math.max(a, b);
       for (const x of v.saltos) {
-        assert.ok(canales.has(x) && dentro(x, v.x, v.canal), `${pov} con ${abierta}: salto suelto en ${v.unionId}`);
+        assert.ok(canales.has(x) && dentro(x, v.salida, v.canal), `${pov} con ${abierta}: salto suelto en ${v.unionId}`);
       }
       for (const h of v.hijos) {
         for (const x of h.saltos) {
-          const arranca = h.recto ? v.x : v.canal;
+          const arranca = h.recto ? v.salida : v.canal;
           assert.ok(canales.has(x) && dentro(x, arranca, h.x), `${pov} con ${abierta}: salto suelto en ${v.unionId}`);
         }
       }
