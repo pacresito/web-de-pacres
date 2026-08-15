@@ -1,5 +1,5 @@
 import { Client } from "@upstash/qstash";
-import { urlDeEntrega } from "@/lib/avisar";
+import { urlDeEntrega, urlDeFallo } from "@/lib/avisar";
 import { avisoDeVispera } from "@/lib/arbol/aviso";
 import { construirGrafo } from "@/lib/arbol/grafo";
 import { KEYS } from "@/lib/arbol/keys";
@@ -40,6 +40,7 @@ export async function GET(request: Request) {
 
   await new Client({ token }).publishJSON({
     url: urlDeEntrega(request),
+    failureCallback: urlDeFallo(request),
     body: { texto: aviso.texto },
     notBefore: Math.floor(aviso.sale / 1000),
     deduplicationId: aviso.id,

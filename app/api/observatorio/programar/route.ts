@@ -2,7 +2,7 @@ import { Client } from "@upstash/qstash";
 import { avisosDeLaNoche } from "@/app/apps/observatorio/avisos";
 import { cielo } from "@/app/apps/observatorio/engine";
 import { cargarSatelites } from "@/app/apps/observatorio/tle";
-import { urlDeEntrega } from "@/lib/avisar";
+import { urlDeEntrega, urlDeFallo } from "@/lib/avisar";
 import { comparaSecreto } from "@/lib/secreto";
 
 // El cron diario del observatorio: a mediodía calcula la noche que viene y deja programado en
@@ -35,6 +35,7 @@ export async function GET(request: Request) {
     avisos.map((aviso) =>
       qstash.publishJSON({
         url: urlDeEntrega(request),
+        failureCallback: urlDeFallo(request),
         body: { texto: aviso.texto },
         notBefore: Math.floor(aviso.sale / 1000),
         // Con el id fijado por el evento, una segunda invocación del cron no duplica avisos.
