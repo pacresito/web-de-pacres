@@ -14,7 +14,8 @@
 // El nodo, el trazo de pareja y el contador se dibujan aquí otra vez: `Nodo.tsx` y
 // `Piezas.tsx` los pintan en coordenadas del árbol y esto en las de pantalla. Son ochenta
 // líneas que **no se enteran de lo que cambie allí**, y ese es el precio de que `/arbol` no
-// tenga que saber que existe otro eje. Si un día divergen, se borra esta ruta: ya contestó.
+// tenga que saber que existe otro eje. **No se persiguen:** esto se queda donde está para
+// poder volver a ver el árbol en vertical, y que se le note la exploración es lo aceptado.
 
 import { useMemo, useState } from "react";
 import { construirGrafo } from "@/lib/arbol/grafo";
