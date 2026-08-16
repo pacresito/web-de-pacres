@@ -152,6 +152,10 @@
   stroke: var(--fiesta); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 1 8;
   animation: arbol-guirnalda 5s linear infinite;
 }
+/* Y la chapa que dice cuántos cumple, montada en el borde de arriba: opaca a propósito, que
+   la guirnalda le pase por detrás es lo que la deja puesta encima y no flotando al lado. */
+.arbol .nd-chapa    { fill: var(--paper); stroke: var(--fiesta); stroke-width: 1.5; }
+.arbol .nd-chapa-tx { fill: var(--fiesta); font-family: var(--mono); font-weight: 600; }
 @keyframes arbol-guirnalda { to { stroke-dashoffset: -9; } }
 @media (prefers-reduced-motion: reduce) {
   .arbol .nd-fiesta { animation: none; }

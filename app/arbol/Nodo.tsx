@@ -38,7 +38,7 @@ export default function Nodo({
   nodo,
   identidad,
   vida,
-  cumpleHoy,
+  cumple,
   atenuado,
   abierta,
   onElegir,
@@ -47,8 +47,8 @@ export default function Nodo({
   identidad: Identidad;
   /** Sus años, ya escritos. Sin paréntesis: abajo no tiene nada de lo que separarse. */
   vida: string;
-  /** Se le rodea entero: es lo único del lienzo que habla de un día y no del árbol. */
-  cumpleHoy: boolean;
+  /** Los que cumple hoy, o nada si hoy no es su día: es lo que enciende la guirnalda. */
+  cumple: number | null;
   atenuado: boolean;
   /** Es la ficha que está abierta: el borde de acento dice desde el lienzo a quién lees. */
   abierta: boolean;
@@ -68,21 +68,7 @@ export default function Nodo({
       }`}
       style={atenuado ? { opacity: ATENUADO } : undefined}
     >
-      {/* La guirnalda del cumpleaños, **por fuera del cerco**: los dos caben a la vez, que
-          leer la ficha de quien cumple hoy es justo lo que se va a hacer. Rodear entero es
-          la única forma de que se encuentre sin buscarlo — una tarta en una esquina tiene
-          el tamaño de un detalle, y el día de alguien no lo es. */}
-      {cumpleHoy && (
-        <rect
-          x={nodo.x - ANCHO_NODO / 2 - 9}
-          y={nodo.y - ALTO_NODO / 2 - 9}
-          width={ANCHO_NODO + 18}
-          height={ALTO_NODO + 18}
-          rx={18}
-          fill="none"
-          className="nd-fiesta"
-        />
-      )}
+      {cumple !== null && <Guirnalda nodo={nodo} cumple={cumple} />}
       {/* El cerco es la tercera marca y no le quita el canal a ninguna de las dos: el fondo
           sigue midiendo la cercanía y el borde, dónde miras. */}
       {abierta && (
@@ -127,5 +113,49 @@ export default function Nodo({
         </text>
       )}
     </g>
+  );
+}
+
+/** El aire entre el nodo y su guirnalda, el alto de la chapa y el paso de su letra mono. */
+const FIESTA = { aire: 9, chapa: 16, letra: 11, paso: 6.6 };
+
+/**
+ * Quien cumple hoy, rodeado entero y con una chapa que dice cuántos: rodear es lo que se
+ * encuentra sin buscarlo, y la chapa es lo que dice por qué —un marco dorado sin palabras
+ * destaca a alguien y no cuenta nada—. **Los años no se los deja a la línea de abajo**, que
+ * la apaga el interruptor de fechas. Va montada en el borde de arriba y arrimada a la
+ * derecha, la única esquina libre: por el centro sube el vínculo de la pareja y por la
+ * izquierda empieza el nombre.
+ */
+function Guirnalda({ nodo, cumple }: { nodo: NodoLayout; cumple: number }) {
+  // Cumplir cero años es haber nacido, y así se dice también aquí.
+  const texto = cumple > 0 ? `hoy cumple ${cumple}` : "nace hoy";
+  const ancho = Math.round(texto.length * FIESTA.paso) + 16;
+  const arriba = nodo.y - ALTO_NODO / 2 - FIESTA.aire;
+  const derecha = nodo.x + ANCHO_NODO / 2;
+  return (
+    <>
+      <rect
+        x={nodo.x - ANCHO_NODO / 2 - FIESTA.aire}
+        y={arriba}
+        width={ANCHO_NODO + FIESTA.aire * 2}
+        height={ALTO_NODO + FIESTA.aire * 2}
+        rx={18}
+        // El único hueco va por atributo y no por clase, por lo mismo que el del cerco.
+        fill="none"
+        className="nd-fiesta"
+      />
+      <rect
+        x={derecha - ancho}
+        y={arriba - FIESTA.chapa / 2}
+        width={ancho}
+        height={FIESTA.chapa}
+        rx={FIESTA.chapa / 2}
+        className="nd-chapa"
+      />
+      <text x={derecha - ancho / 2} y={arriba + 4} textAnchor="middle" fontSize={FIESTA.letra} className="nd-chapa-tx">
+        {texto}
+      </text>
+    </>
   );
 }

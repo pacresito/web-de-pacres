@@ -312,9 +312,9 @@ export default function Arbol({
     escribirlo(id, { fechas: "ocultar", apellidos: 1, largos: { titulo: LARGO_BARRA, contexto: 0 } })
       .titulo.map((t) => t.texto)
       .join("");
-  /** Quien cumple años hoy se lleva además una tarta en su nodo, sin abrir nada. */
+  /** Quien cumple años hoy se lleva la guirnalda en su nodo, con los que cumple escritos. */
   const cumplenHoy = useMemo(
-    () => new Set(celebraciones.filter((c) => c.tipo === "cumpleaños" && c.faltan === 0).map((c) => c.id!)),
+    () => new Map(celebraciones.filter((c) => c.tipo === "cumpleaños" && c.faltan === 0).map((c) => [c.id!, c.edad!])),
     [celebraciones],
   );
 
@@ -852,7 +852,7 @@ export default function Arbol({
               nodo={n}
               identidad={escribirlo(n.id, { fechas: "ocultar", apellidos, largos: { titulo: LARGOS_NODO.titulo, contexto: 0 } })}
               vida={vidaDe(n.id)}
-              cumpleHoy={cumplenHoy.has(n.id)}
+              cumple={cumplenHoy.get(n.id) ?? null}
               atenuado={opacidadDe(n.id) !== undefined}
               // El camino no deja de leer a quien lo abrió: el cerco sigue puesto mientras
               // se mira cómo se llega hasta él, que es lo que se ha ido a ver.
