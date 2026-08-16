@@ -98,9 +98,8 @@ assert.strictEqual(contexto("p1", 80), "casado con Antonia (1905)", "quien no es
 assert.strictEqual(contexto("p8", 80), "padre de Lucas y 1 más", "y quien no tiene ni cónyuge, por su descendencia");
 
 // La que acabó identifica igual, pero en pasado: en presente la línea afirmaría lo que no es
-assert.strictEqual(contexto("p14", 80), "divorciada de Gerardo");
-assert.strictEqual(contexto("p15", 80), "divorciado de Elvira", "y se declina como el resto");
-assert.strictEqual(contexto("p16", 80), "expareja de Iván", "la pareja rota no se divorcia");
+assert.strictEqual(contexto("p14", 80), "expareja de Gerardo");
+assert.strictEqual(contexto("p16", 80), "expareja de Iván", "el matrimonio roto y la pareja rota se dicen igual");
 assert.strictEqual(contexto("p9", 80), "hijo de Tomás", "un solo progenitor documentado no inventa al otro");
 
 // A los «Sin nombre» los declina su cónyuge, que es lo único que dice de qué sexo son

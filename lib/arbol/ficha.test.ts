@@ -168,7 +168,7 @@ assert.strictEqual(valor(ficha("j3"), "Onomástica"), undefined, "Genoveva no es
 assert.strictEqual(valor(ficha("j1"), "Onomástica"), undefined, "al que ya no está no se le felicita nada");
 assert.strictEqual(
   valor(ficha("j5"), "Unión"),
-  "divorciada de Sin nombre; pareja de Antonio (1980)",
+  "expareja de Sin nombre; pareja de Antonio (1980)",
   "las dos uniones, en su orden, y lo que fue de cada una en su propio verbo",
 );
 assert.strictEqual(
@@ -179,8 +179,8 @@ assert.strictEqual(
 assert.strictEqual(valor(ficha("j2"), "Hijos"), "Genoveva (1930), Julián (1934)", "y los hijos no, que llevan el de casa");
 assert.strictEqual(
   valor(ficha("j6"), "Unión"),
-  "divorciado de Rosa Serrano (1959)",
-  "y a los «Sin nombre», que no traen sexo, los declina su cónyuge",
+  "expareja de Rosa Serrano (1959)",
+  "el cónyuge lleva apellido también cuando la unión acabó",
 );
 assert.strictEqual(ficha("j5").nota, "de Italia", "la nota va tal cual y cierra la lista");
 assert.strictEqual(ficha("j1").nota, undefined, "y quien no la tiene no lleva una fila que lo anuncie");
