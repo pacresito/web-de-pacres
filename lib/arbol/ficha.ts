@@ -6,7 +6,7 @@
 
 import { añoDe, conDia, escribirDiaDeMes, escribirVida, seLeSuponeFallecido, type Fecha, type ModoFechas } from "./fechas";
 import type { Grafo } from "./grafo";
-import { declinado, identidadDe, SIN_NOMBRE, type Homonimia, type Trozo } from "./identidad";
+import { declinado, identidadDe, SIN_NOMBRE, verboDeUnion, type Homonimia, type Trozo } from "./identidad";
 import { ordenarPareja, type Apellidos } from "./personas";
 import { escribirNivel, type Relacion } from "./parentesco";
 import type { Pertenencia } from "./ramas";
@@ -178,9 +178,8 @@ function padres(g: Grafo, id: string): string {
 }
 
 /**
- * Con quién se unió y qué fue de aquello. Aquí sí se dice que acabó —la ficha es el sitio
- * donde consta lo que consta—, al revés que la segunda línea del bloque de identidad, que
- * solo contesta a quién es esta persona.
+ * Con quién se unió, **todas** y no solo la primera: la ficha es el sitio donde consta lo
+ * que consta, y la segunda línea del bloque de identidad solo tiene sitio para una.
  */
 function uniones(g: Grafo, id: string, linaje: Map<string, Apellidos>): string {
   const escritas: string[] = [];
@@ -188,9 +187,7 @@ function uniones(g: Grafo, id: string, linaje: Map<string, Apellidos>): string {
     const u = g.unionPorId.get(uid)!;
     const otro = u.partners.find((x) => x !== id);
     if (otro === undefined) continue; // progenitor sin pareja documentada: la unión no es con nadie
-    const verbo = u.tipo === "pareja" ? "pareja de" : `${declinado(g, id, "casado", "casada")} con`;
-    const final = u.roto ? (u.tipo === "pareja" ? " · ya no" : " · divorciados") : "";
-    escritas.push(`${verbo} ${nombrar(g, otro, linaje.get(otro)?.todos[0])}${final}`);
+    escritas.push(`${verboDeUnion(g, id, u)} ${nombrar(g, otro, linaje.get(otro)?.todos[0])}`);
   }
   return escritas.join("; ");
 }

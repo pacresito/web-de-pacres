@@ -186,16 +186,18 @@ function union(g: Grafo, id: string, { años }: Peldaño): string {
     const otro = u?.partners.find((p) => p !== id);
     const pareja = otro === undefined ? undefined : g.personaPorId.get(otro);
     if (!u || !pareja) continue;
-    return `${verbo(g, id, u)} ${conAño(pareja, años)}`;
+    return `${verboDeUnion(g, id, u)} ${conAño(pareja, años)}`;
   }
   return "";
 }
 
 /**
- * Cómo se nombra el vínculo. La pareja rota es «expareja» y no «exnovio», que pide un sexo
- * que a cuatro personas les falta y una palabra que ni el dato ni la ficha usan.
+ * Cómo se nombra el vínculo, aquí y en la ficha. La pareja rota es «expareja» y no
+ * «exnovio», que pide un sexo que a cuatro personas les falta y una palabra que no usa el
+ * dato. **Que acabó lo lleva el propio verbo** y no una coletilla detrás: «divorciada de»
+ * dice lo mismo que «casada con · divorciados» sin afirmar antes lo contrario.
  */
-function verbo(g: Grafo, id: string, u: Union): string {
+export function verboDeUnion(g: Grafo, id: string, u: Union): string {
   if (u.tipo === "pareja") return u.roto ? "expareja de" : "pareja de";
   return u.roto ? `${declinado(g, id, "divorciado", "divorciada")} de` : `${declinado(g, id, "casado", "casada")} con`;
 }
