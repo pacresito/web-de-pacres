@@ -76,7 +76,7 @@ export function fichaDe(g: Grafo, id: string, o: OpcionesFicha): Ficha {
     marcas: identidad.marcas,
     nota: identidad.nota,
     aviso: p.nombre === SIN_NOMBRE && !p.birth && !p.death ? AVISO_SIN_NADA : undefined,
-    filas: filasDe(g, p, o.hoy, o.linaje, o.pertenencia),
+    filas: filasDe(g, p, o, id === o.puntoDeVista),
     homonimos: homonimosDe(p, o),
   };
 }
@@ -110,15 +110,16 @@ const AVISO_SIN_NADA =
  * que anunciar que no consta sería contestar a una pregunta que nadie ha hecho, y en un
  * niño suena a reproche.
  */
-function filasDe(g: Grafo, p: Persona, hoy: Fecha, linaje: Map<string, Apellidos>, pertenencia?: Pertenencia): Fila[] {
-  const filas = [fila("Padres", padres(g, p.id), "no constan"), ...ramas(pertenencia)];
+function filasDe(g: Grafo, p: Persona, o: OpcionesFicha, esCentro: boolean): Fila[] {
+  const { hoy } = o;
+  const filas = [fila("Padres", padres(g, p.id), "no constan"), ...ramas(o.pertenencia)];
   for (const [clave, valor] of [
-    ["Unión", uniones(g, p.id, linaje)],
+    ["Unión", uniones(g, p.id, o.linaje)],
     ["Hijos", hijos(g, p.id)],
   ]) {
     if (valor !== "") filas.push({ clave, valor, falta: false });
   }
-  const cuenta = vivencia(p, hoy);
+  const cuenta = vivencia(p, hoy, esCentro);
   if (cuenta) filas.push(cuenta);
   const santo = onomastica(p, hoy);
   if (santo) filas.push(santo);
@@ -132,11 +133,11 @@ function filasDe(g: Grafo, p: Persona, hoy: Fecha, linaje: Map<string, Apellidos
  * nacimiento no hay fila, y a quien hoy pasaría de cien sin que conste su defunción
  * tampoco: esa edad se cuenta hasta hoy, y hoy ya no está.
  */
-function vivencia(p: Persona, hoy: Fecha): Fila | null {
+function vivencia(p: Persona, hoy: Fecha, esCentro: boolean): Fila | null {
   const años = escribirVida(p, "edad", hoy);
   if (!años) return null;
   if (p.death || !conDia(p.birth!)) return { clave: "Edad", valor: años, falta: false };
-  return { clave: "Cumple", valor: cumpleaños(p.birth!, hoy), falta: false };
+  return { clave: "Cumple", valor: cumpleaños(p.birth!, hoy, esCentro), falta: false };
 }
 
 /**
@@ -144,18 +145,24 @@ function vivencia(p: Persona, hoy: Fecha): Fila | null {
  * año en curso** y lo que cambia es el tiempo del verbo: así se deshace la única duda que
  * daba esta fila —si los años son los que tiene o los que va a cumplir—, que en un crío de
  * tres a punto de cumplir cuatro es la diferencia entera. Los tres días de alrededor se
- * llaman por su nombre: ahí la fecha no dice nada que no diga «hoy».
+ * llaman por su nombre: ahí la fecha no dice nada que no diga «hoy». Y **en la ficha de
+ * quien mira, el verbo se tutea**, como todo lo que la app le dice a él.
  */
-function cumpleaños(birth: Fecha, hoy: Fecha): string {
+function cumpleaños(birth: Fecha, hoy: Fecha, tuya: boolean): string {
   const edad = añoDe(hoy) - añoDe(birth);
   const dias = Math.round((enElAño(birth.slice(5), añoDe(hoy)) - enMs(hoy)) / MS_DIA);
   // Cumplir cero años es haber nacido, y así se dice mientras dura el año en que pasó.
-  if (edad === 0) return dias === 0 ? "¡Nació hoy!" : dias === -1 ? "¡Nació ayer!" : `Nació el ${escribirDiaDeMes(birth)}`;
+  if (edad === 0) {
+    const nacio = tuya ? "Naciste" : "Nació";
+    return dias === 0 ? `¡${nacio} hoy!` : dias === -1 ? `¡${nacio} ayer!` : `${nacio} el ${escribirDiaDeMes(birth)}`;
+  }
   const años = `${edad} ${edad === 1 ? "año" : "años"}`;
-  if (dias === 1) return `¡Mañana cumple ${años}!`;
-  if (dias === 0) return `¡Hoy cumple ${años}!`;
-  if (dias === -1) return `¡Ayer cumplió ${años}!`;
-  return `El ${escribirDiaDeMes(birth)} ${dias > 0 ? "cumple" : "cumplió"} ${años}`;
+  const cumple = tuya ? "cumples" : "cumple";
+  const cumplio = tuya ? "cumpliste" : "cumplió";
+  if (dias === 1) return `¡Mañana ${cumple} ${años}!`;
+  if (dias === 0) return `¡Hoy ${cumple} ${años}!`;
+  if (dias === -1) return `¡Ayer ${cumplio} ${años}!`;
+  return `El ${escribirDiaDeMes(birth)} ${dias > 0 ? cumple : cumplio} ${años}`;
 }
 
 /**

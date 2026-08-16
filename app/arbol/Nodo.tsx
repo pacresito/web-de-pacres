@@ -128,8 +128,11 @@ const FIESTA = { aire: 9, chapa: 16, letra: 11, paso: 6.6 };
  * izquierda empieza el nombre.
  */
 function Guirnalda({ nodo, cumple }: { nodo: NodoLayout; cumple: number }) {
-  // Cumplir cero años es haber nacido, y así se dice también aquí.
-  const texto = cumple > 0 ? `hoy cumple ${cumple}` : "nace hoy";
+  // A quien mira se le habla de tú, como en el resto de la app: en su propio nodo pone
+  // «cumples». Y cumplir cero años es haber nacido, así que eso es lo que se dice.
+  const tuyo = nodo.esPuntoDeVista;
+  const texto =
+    cumple > 0 ? `hoy ${tuyo ? "cumples" : "cumple"} ${cumple}` : `${tuyo ? "naciste" : "nace"} hoy`;
   const ancho = Math.round(texto.length * FIESTA.paso) + 16;
   const arriba = nodo.y - ALTO_NODO / 2 - FIESTA.aire;
   const derecha = nodo.x + ANCHO_NODO / 2;
@@ -151,6 +154,11 @@ function Guirnalda({ nodo, cumple }: { nodo: NodoLayout; cumple: number }) {
         width={ancho}
         height={FIESTA.chapa}
         rx={FIESTA.chapa / 2}
+        // El papel que la hace opaca lo pone la clase, pero el atributo va igualmente: un
+        // rect sin regla de relleno se pinta negro macizo, y una hoja de estilos que un
+        // deploy se deje por el camino le clavaría una lápida al nodo. Con esto, lo peor que
+        // puede pasar es que la guirnalda se le vea por detrás.
+        fill="none"
         className="nd-chapa"
       />
       <text x={derecha - ancho / 2} y={arriba + 4} textAnchor="middle" fontSize={FIESTA.letra} className="nd-chapa-tx">

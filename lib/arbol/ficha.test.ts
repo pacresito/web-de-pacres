@@ -142,6 +142,17 @@ assert.strictEqual(valor(ficha("j8", "2026-03-02"), "Cumple"), "¡Ayer cumplió 
 // Y al del año en curso no se le cuentan años: cumplir cero es haber nacido.
 assert.strictEqual(valor(ficha("j8", "1986-06-01"), "Cumple"), "Nació el 1 de marzo");
 assert.strictEqual(valor(ficha("j8", "1986-03-01"), "Cumple"), "¡Nació hoy!");
+// En la ficha de quien mira el verbo se tutea, como todo lo que la app le dice a él.
+const suPropiaFicha = (hoy: string): Ficha =>
+  fichaDe(g, "j8", {
+    puntoDeVista: "j8",
+    linaje: apellidosDe(g),
+    hoy,
+    relacion: relacionesDesde(g, "j8").get("j8")!,
+    homonimia: libreta.homonimias.get("j8"),
+  });
+assert.strictEqual(valor(suPropiaFicha("2026-03-01"), "Cumple"), "¡Hoy cumples 40 años!");
+assert.strictEqual(valor(suPropiaFicha("2026-08-08"), "Cumple"), "El 1 de marzo cumpliste 40 años");
 assert.strictEqual(valor(ficha("j8"), "Edad"), undefined, "el cumpleaños ya lleva la edad: dos filas dirían lo mismo");
 assert.strictEqual(valor(ficha("j3"), "Edad"), "96 años", "sin día no hay a qué felicitar, solo la edad");
 assert.strictEqual(valor(ficha("j1"), "Edad"), "vivió 78 años", "la del fallecido la dice el verbo");

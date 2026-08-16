@@ -189,8 +189,8 @@ function elDia({ tipo, faltan, dirigida }: Celebracion): string {
 }
 
 const CUMPLES: ((edad: number) => string)[] = [
-  (edad) => `¡Felicidades! Hoy cumples ${edad} y el árbol se ha enterado antes que tú.`,
-  (edad) => `${edad} años. Toda esta gente ahí detrás, y hoy la pantalla va de ti.`,
+  (edad) => `¡Felicidades! Hoy cumples ${edad} y el árbol lo sabe.`,
+  (edad) => `${edad} años. Toda esta gente aquí, y hoy la pantalla va de ti.`,
   (edad) => `Hoy cumples ${edad}. Sopla rápido, que la tarta no se pinta sola.`,
   (edad) => `${edad}. Hoy eres la raíz de todo esto — hasta que toques a otro, claro.`,
   (edad) => `¡Felicidades! Hoy cumples ${edad}: el resto del árbol que espere su turno.`,
