@@ -270,6 +270,7 @@ const POR_PERSONA: Record<string, DiaDelAño> = {
   p443: "08-02", // Ángela, que celebra con las Ángeles y no el 27 de enero de las Ángelas
   p19: "03-19", // en el árbol es María, se llama María José y celebra San José
   p23: "08-02", // en el árbol es María, se llama María Ángeles y celebra con las Ángeles
+  p446: "12-19", // la Eva de los Sala celebra el 19 y no el 24, que es el de las otras tres
 };
 
 /** La onomástica de alguien: la suya si la tiene apuntada, y si no la de su nombre. */
