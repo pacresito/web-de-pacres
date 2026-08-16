@@ -625,7 +625,7 @@ export default function Arbol({
     setTodoDesplegado(false);
     setOcultarNoConectados(true);
     setFechas(FECHAS_POR_DEFECTO);
-    setApellidos("nuevos");
+    setApellidos(APELLIDOS_POR_DEFECTO);
     setParada("personas");
     setVista(CENTRADA);
     setBusquedaAbierta(false);
