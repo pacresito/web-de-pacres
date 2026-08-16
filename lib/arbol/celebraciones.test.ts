@@ -8,6 +8,7 @@ import {
   esFelicitacion,
   esTuDia,
   felicitacion,
+  loQueViene,
   proximasCelebraciones,
   VENTANA,
   type Celebracion,
@@ -145,6 +146,14 @@ for (const tipo of ["día del padre", "día de la madre"] as const) {
   const generica = felicitacion(suya(tipo, null, 0, "generico"));
   assert.ok(!/ti\b|tuy|tu (padre|madre)/.test(generica), `la genérica de ${tipo} se dirige a alguien: ${generica}`);
 }
+// Lo que se lee detrás de la fecha: cuántos caen ese día, y sin repetir el «hoy» de la línea.
+const enDias = (...faltan: number[]) => faltan.map((f) => suya("cumpleaños", 40, f));
+assert.strictEqual(loQueViene(enDias(0)), "¡hay un evento!", "el «hoy» ya lo dice la línea entera");
+assert.strictEqual(loQueViene(enDias(0, 0, 1)), "¡hay 2 eventos!", "los de mañana no se suman a los de hoy");
+assert.strictEqual(loQueViene(enDias(1)), "¡hay un evento mañana!", "y mañana sí se nombra, que no está dicho antes");
+assert.strictEqual(loQueViene(enDias(1, 1)), "¡hay 2 eventos mañana!");
+assert.strictEqual(loQueViene(enDias(27, 30)), "siguiente evento en 27 días");
+
 assert.strictEqual(anuncio(suya("cumpleaños", 40, 0)), "🎂 Es tu cumpleaños");
 assert.strictEqual(anuncio(suya("día de la madre", null, 0)), "🎉 Es el día de la madre");
 

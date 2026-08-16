@@ -5,7 +5,15 @@
 // cómo se le llama lo decide lib/arbol/celebraciones, y las piezas —hoja, bloque de
 // identidad, relación— son las mismas de la ficha, que es donde acaba cada fila.
 
-import { anuncio, esFelicitacion, esTuDia, felicitacion, VENTANA, type Celebracion } from "@/lib/arbol/celebraciones";
+import {
+  anuncio,
+  esFelicitacion,
+  esTuDia,
+  felicitacion,
+  loQueViene,
+  VENTANA,
+  type Celebracion,
+} from "@/lib/arbol/celebraciones";
 import { diaDeLaSemana, escribirCorto, escribirDiaDeMes, type Fecha } from "@/lib/arbol/fechas";
 import type { Identidad } from "@/lib/arbol/identidad";
 import { BloqueIdentidad } from "./Identidad";
@@ -33,7 +41,7 @@ export default function Celebraciones({
           no se cuentan: se ven en la lista, y quien las eche de menos no las echa aquí. */}
       <p className="mt-1 text-[12.5px] text-[var(--mut)]">
         Hoy es {diaDeLaSemana(hoy)}, {escribirDiaDeMes(hoy)}
-        {lista.length > 0 && ` · ${loSiguiente(lista[0].faltan)}`}
+        {lista.length > 0 && ` · ${loQueViene(lista)}`}
       </p>
       <div className="mt-3.5 flex flex-col gap-1">
         {lista.length === 0 ? (
@@ -62,9 +70,6 @@ export default function Celebraciones({
 const inminente = (lista: Celebracion[]): number | null =>
   lista.length > 0 && lista[0].faltan <= 1 ? lista[0].faltan : null;
 
-/** Cuánto queda para lo primero de la lista, que es lo que se viene a mirar. */
-const loSiguiente = (faltan: number): string =>
-  faltan === 0 ? "¡hay un evento hoy!" : faltan === 1 ? "¡hay un evento mañana!" : `siguiente evento en ${faltan} días`;
 
 /**
  * Lo que lleva el día que está encima: el marco y el gris, que en esta lista no los lleva

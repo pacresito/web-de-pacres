@@ -196,6 +196,21 @@ const CUMPLES: ((edad: number) => string)[] = [
   (edad) => `¡Felicidades! Hoy cumples ${edad}: el resto del árbol que espere su turno.`,
 ];
 
+/**
+ * Lo que se lee detrás de la fecha de hoy: cuándo cae lo primero y **cuántos caen ese día**
+ * —en treinta días lo normal es que sea uno, pero no siempre, y decir «un evento» cuando son
+ * tres es decirlo mal—. **El de hoy va sin decir «hoy»**: la línea empieza por «Hoy es
+ * domingo», así que repetirlo dejaba cuatro deícticos seguidos contando el de la primera
+ * fila. El de mañana sí lo lleva, que ese no está dicho antes.
+ */
+export function loQueViene(lista: Celebracion[]): string {
+  const { faltan } = lista[0];
+  if (faltan > 1) return `siguiente evento en ${faltan} días`;
+  const cuantos = lista.filter((c) => c.faltan === faltan).length;
+  const hay = cuantos === 1 ? "hay un evento" : `hay ${cuantos} eventos`;
+  return faltan === 0 ? `¡${hay}!` : `¡${hay} mañana!`;
+}
+
 /** Lo que anuncia el botón cerrado cuando hoy es el día del punto de vista. */
 export const anuncio = ({ tipo }: Celebracion): string =>
   tipo === "cumpleaños"
