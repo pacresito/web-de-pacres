@@ -7,7 +7,7 @@
 // apellidos con los que se nombra a esta gente están deducidos del árbol, no escritos en el dato.
 //
 // **Alias de rama, no de persona.** El repo es público: un alias lleva apellido de familia, que no
-// dice quién es nadie. Los dos personales van con el nombre de pila y nada más.
+// dice quién es nadie. Los personales van con el nombre de pila y nada más.
 //
 // **Cada id lleva al lado con quién tiene que seguir cuadrando**, y el test lo comprueba. Los ids
 // salen de un JSON que se regenera, y un enlace que cambiara de dueño en silencio no se descubre:
@@ -30,6 +30,8 @@ export const ENLACES: Enlace[] = [
   { alias: "Sala", id: "p442", nombre: "José Juan", nace: "1942" },
   { alias: "Pablo", id: "p25", nombre: "Pablo", nace: "1986" },
   { alias: "Carmen", id: "p24", nombre: "Carmen", nace: "1989" },
+  { alias: "Jara", id: "p134", nombre: "Jara", nace: "2012" },
+  { alias: "Nora", id: "p130", nombre: "Nora", nace: "2023" },
 ];
 
 /**
