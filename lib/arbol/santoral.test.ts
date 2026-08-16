@@ -18,6 +18,9 @@ assert.strictEqual(onomasticaDePersona({ id: "p23", nombre: "María" }), "08-02"
 assert.strictEqual(onomasticaDePersona({ id: "p318", nombre: "María" }), onomasticaDe("María"));
 // Y a Pepe no le hizo falta excepción: su nombre ya lo lleva al 19 de marzo.
 assert.strictEqual(onomasticaDePersona({ id: "p29", nombre: "Pepe" }), "03-19");
+// Las Eva son del 19 de diciembre, y la de los Sola es la que va apuntada aparte.
+assert.strictEqual(onomasticaDe("Eva"), "12-19");
+assert.strictEqual(onomasticaDePersona({ id: "p8", nombre: "Eva" }), "06-25");
 
 // El calendario móvil, contra años conocidos: el algoritmo no se lee, se comprueba
 const escribir = (ms: number) => new Date(ms).toISOString().slice(0, 10);

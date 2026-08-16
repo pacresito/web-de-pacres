@@ -79,8 +79,8 @@ const CENTRADA: Vista = { dx: 0, dy: 0, escala: 0.85 };
  * cerrar.
  */
 type Hoja =
-  | { tipo: "ficha"; id: string }
-  /** Recogida es la hoja apartada para mirar el lienzo: el camino sigue abierto y pintado. */
+  /** Recogida es la hoja apartada para mirar el lienzo: sigue abierta, y en su barra de abajo. */
+  | { tipo: "ficha"; id: string; recogida?: boolean }
   | { tipo: "camino"; id: string; recogida?: boolean }
   | { tipo: "celebraciones" }
   | { tipo: "capas" }
@@ -218,7 +218,7 @@ export default function Arbol({
   /** Por dónde va por el lienzo, que es lo único suyo que se queda delante. */
   const trazos = useMemo(() => (camino ? trazosDelCamino(camino) : null), [camino]);
   /** La hoja apartada para poder mirar el lienzo: ni tapa, ni desplaza, ni deja de contar. */
-  const recogida = hoja?.tipo === "camino" && hoja.recogida === true;
+  const recogida = (hoja?.tipo === "ficha" || hoja?.tipo === "camino") && hoja.recogida === true;
   // Las ramas no dependen de quién mire: se derivan del grafo y valen para todo el árbol.
   const pertenencias = useMemo(() => calcularRamas(grafo), [grafo]);
   /** Cuánta familia deja fuera el filtro, que es lo que su interruptor tiene que decir. */
@@ -448,7 +448,7 @@ export default function Arbol({
     (recogida ? 1 : 0) +
     (marcados ? 1 : 0);
   useAtras(apiladas, () => {
-    if (recogida && hoja?.tipo === "camino") setHoja({ tipo: "camino", id: hoja.id });
+    if (recogida && (hoja?.tipo === "ficha" || hoja?.tipo === "camino")) setHoja({ ...hoja, recogida: false });
     else if (hoja?.tipo === "camino") setHoja({ tipo: "ficha", id: hoja.id });
     else if (hoja) setHoja(null);
     else if (cajon) setCajon(null);
@@ -597,12 +597,15 @@ export default function Arbol({
 
   /**
    * Y traer al lienzo a una sola persona, que es como se sale de una ficha a la que se llegó
-   * sin pasar por él. La hoja se queda abierta: es lo que le pone el cerco al nodo, y sin él
-   * la persona aterriza en medio de un lienzo lleno de nodos iguales. Nada más se apaga —el
-   * camino sí atenúa lo demás, pero eso es una travesía y esto es un sitio—.
+   * sin pasar por él. **La hoja se recoge, como la del camino**: se ha pedido mirar el árbol,
+   * y una hoja que lo tapa —entera en un móvil— deja el gesto sin respuesta que se vea. Sigue
+   * abierta, que es lo que le pone el cerco al nodo: sin él la persona aterriza en medio de un
+   * lienzo lleno de nodos iguales. Nada más se apaga —el camino sí atenúa lo demás, pero eso
+   * es una travesía y esto es un sitio—.
    */
   function verEnElArbol(id: string) {
     traerAlLienzo([id]);
+    setHoja({ tipo: "ficha", id, recogida: true });
     setAEnfocar(id);
   }
 
@@ -980,13 +983,17 @@ export default function Arbol({
       {/* La esquina de abajo a la izquierda es de lo que va y viene. El chip del Centro la
           ocupaba siempre para decir un nombre que ya dicen su nodo, en acento, y la brújula
           cuando el nodo se ha ido de pantalla. */}
-      {recogida && hoja?.tipo === "camino" && camino ? (
+      {recogida && (hoja?.tipo === "ficha" || hoja?.tipo === "camino") ? (
         <BarraDeAbajo
-          rotulo={`el camino · ${camino.pasos} ${camino.pasos === 1 ? "paso" : "pasos"}`}
+          rotulo={
+            hoja.tipo === "camino" && camino
+              ? `el camino · ${camino.pasos} ${camino.pasos === 1 ? "paso" : "pasos"}`
+              : "en el árbol"
+          }
           titulo={enUnaLinea(hoja.id, LARGO_BARRA)}
-          onAbrir={() => abrirHoja({ tipo: "camino", id: hoja.id })}
+          onAbrir={() => abrirHoja({ ...hoja, recogida: false })}
           onCerrar={() => setHoja(null)}
-          cerrar="Cerrar el camino"
+          cerrar={hoja.tipo === "camino" ? "Cerrar el camino" : "Cerrar la ficha"}
         />
       ) : (
         marcados && (
@@ -1050,7 +1057,6 @@ export default function Arbol({
               datos={fichaDe(grafo, hoja.id, {
                 puntoDeVista,
                 linaje: libreta.linaje,
-                fechas,
                 hoy,
                 relacion: relaciones.get(hoja.id)!,
                 pertenencia: pertenencias.get(hoja.id),

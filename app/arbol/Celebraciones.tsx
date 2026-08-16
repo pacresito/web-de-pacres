@@ -25,6 +25,7 @@ export default function Celebraciones({
   identidad: (id: string) => Identidad;
   onPersona: (id: string) => void;
 }) {
+  const destacado = inminente(lista);
   return (
     <div className="flex flex-col">
       <h2 className="font-[family-name:var(--serif)] text-[24px] leading-[1.15]">Lo que se celebra</h2>
@@ -38,16 +39,40 @@ export default function Celebraciones({
         {lista.length === 0 ? (
           <p className="py-1 text-[12.5px] text-[var(--mut)]">Nadie celebra nada en {VENTANA} días. Aprovecha la calma.</p>
         ) : (
-          lista.map((c) => <Fila key={`${c.tipo}:${c.id ?? ""}`} celebracion={c} identidad={identidad} onPersona={onPersona} />)
+          lista.map((c) => (
+            <Fila
+              key={`${c.tipo}:${c.id ?? ""}`}
+              celebracion={c}
+              destacada={c.faltan === destacado}
+              identidad={identidad}
+              onPersona={onPersona}
+            />
+          ))
         )}
       </div>
     </div>
   );
 }
 
+/**
+ * Qué día se remarca, o nada si no hay ninguno encima. **Se remarca un solo día y es el
+ * primero**: con hoy y mañana encendidos a la vez, media lista sale en negrita y dejan de
+ * destacar los dos. Mañana solo se lleva el marco cuando hoy no hay nada que celebrar.
+ */
+const inminente = (lista: Celebracion[]): number | null =>
+  lista.length > 0 && lista[0].faltan <= 1 ? lista[0].faltan : null;
+
 /** Cuánto queda para lo primero de la lista, que es lo que se viene a mirar. */
 const loSiguiente = (faltan: number): string =>
-  faltan === 0 ? "hay un evento hoy" : faltan === 1 ? "siguiente evento mañana" : `siguiente evento en ${faltan} días`;
+  faltan === 0 ? "¡hay un evento hoy!" : faltan === 1 ? "¡hay un evento mañana!" : `siguiente evento en ${faltan} días`;
+
+/**
+ * Lo que lleva el día que está encima: el marco y el gris, que en esta lista no los lleva
+ * nadie más. **El acento queda fuera** —es del Centro— y el marco va siempre puesto, en
+ * transparente cuando no toca: entrar y salir del borde corría la fila píxeles arriba.
+ */
+const MARCO = "rounded-[10px] border-[1.5px]";
+const REMARCADA = "border-[var(--ink)] bg-[var(--soft)]";
 
 /**
  * La fila normal dice cuándo, quién es y qué celebra. Lo del propio Centro y los dos días
@@ -61,26 +86,30 @@ const loSiguiente = (faltan: number): string =>
  */
 function Fila({
   celebracion: c,
+  destacada,
   identidad,
   onPersona,
 }: {
   celebracion: Celebracion;
+  /** Es del día que está encima, sea de quien sea: eso es lo que se remarca. */
+  destacada: boolean;
   identidad: (id: string) => Identidad;
   onPersona: (id: string) => void;
 }) {
-  const hoy = c.faltan === 0;
   if (esFelicitacion(c)) {
     return (
       <div
-        className={`flex items-baseline gap-2.5 rounded-[10px] px-2.5 py-2 text-[12.5px] ${
-          hoy && esTuDia(c) ? "border-[1.5px] border-[var(--ink)] font-medium text-[var(--ink)]" : "bg-[var(--soft)] text-[var(--ink)]"
+        className={`${MARCO} flex items-baseline gap-2.5 px-2.5 py-2 text-[12.5px] text-[var(--ink)] ${
+          destacada ? `${REMARCADA} font-medium` : "border-transparent bg-[var(--soft)]"
         }`}
       >
-        {/* El día propio no puede ir en acento —el acento es del Centro—, así que se marca
-            con el peso del borde y con la fecha en Serif, que aquí no la lleva nadie más. */}
-        <span className="w-11 shrink-0 text-right font-[family-name:var(--serif)] text-[13px] text-[var(--mut)]">{cuando(c)}</span>
+        {/* El día va en la misma mono que en las demás filas: la lista se lee por su columna
+            de la izquierda, y una fila con otra letra ahí se lee como si dijera otra cosa. */}
+        <span className="w-11 shrink-0 text-right font-[family-name:var(--mono)] text-[11px] tabular-nums text-[var(--mut)]">
+          {cuando(c)}
+        </span>
         <span className="flex-1">
-          {hoy && (c.tipo === "cumpleaños" ? "🎂 " : "🎉 ")}
+          {c.faltan === 0 && (c.tipo === "cumpleaños" ? "🎂 " : "🎉 ")}
           {felicitacion(c)}
         </span>
       </div>
@@ -90,7 +119,9 @@ function Fila({
     <button
       type="button"
       onClick={() => onPersona(c.id!)}
-      className="flex items-start gap-2.5 rounded-[10px] px-1.5 py-1.5 text-left hover:bg-[var(--soft)] active:bg-[var(--soft)]"
+      className={`${MARCO} flex items-start gap-2.5 px-1.5 py-1.5 text-left ${
+        destacada ? REMARCADA : "border-transparent hover:bg-[var(--soft)] active:bg-[var(--soft)]"
+      }`}
     >
       <span className="w-11 shrink-0 pt-px text-right font-[family-name:var(--mono)] text-[11px] tabular-nums text-[var(--mut)]">
         {cuando(c)}

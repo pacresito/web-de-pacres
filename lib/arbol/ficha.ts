@@ -4,13 +4,13 @@
 // El orden es invariable porque la ficha se lee de arriba abajo buscando siempre lo mismo:
 // primero qué es esa persona de ti, luego quién es y por último de quién viene.
 
-import { añoDe, conDia, escribirDiaDeMes, escribirVida, seLeSuponeFallecido, type Fecha, type ModoFechas } from "./fechas";
+import { añoDe, conDia, enMs, escribirDiaDeMes, escribirVida, MS_DIA, seLeSuponeFallecido, type Fecha } from "./fechas";
 import type { Grafo } from "./grafo";
-import { declinado, identidadDe, SIN_NOMBRE, verboDeUnion, type Homonimia, type Trozo } from "./identidad";
+import { identidadDe, SIN_NOMBRE, verboDeUnion, type Homonimia, type Trozo } from "./identidad";
 import { ordenarPareja, type Apellidos } from "./personas";
-import { escribirNivel, type Relacion } from "./parentesco";
+import type { Relacion } from "./parentesco";
 import type { Pertenencia } from "./ramas";
-import { onomasticaDePersona } from "./santoral";
+import { enElAño, onomasticaDePersona } from "./santoral";
 import type { Persona } from "./tree";
 
 export interface Fila {
@@ -27,7 +27,7 @@ export interface Ficha {
   /** El nombre grande, con los dos apellidos: es la superficie donde se identifica del todo. */
   titulo: Trozo[];
   sinNombre: boolean;
-  /** La vida y el sitio en el árbol, en una línea: «1989 — · una generación por debajo». */
+  /** Lo que consta de su vida, debajo del nombre: «1945-05-31 – 2018». */
   datos: string;
   marcas: string[];
   nota?: string;
@@ -51,7 +51,6 @@ export interface Homonimos {
 export interface OpcionesFicha {
   puntoDeVista: string;
   linaje: Map<string, Apellidos>;
-  fechas: ModoFechas;
   hoy: Fecha;
   relacion: Relacion;
   pertenencia?: Pertenencia;
@@ -73,7 +72,7 @@ export function fichaDe(g: Grafo, id: string, o: OpcionesFicha): Ficha {
     relacion: o.relacion,
     titulo: identidad.titulo,
     sinNombre: p.nombre === SIN_NOMBRE,
-    datos: `${vida(p, o.fechas, o.hoy)} · ${escribirNivel(o.relacion.nivel)}`,
+    datos: escribirVida(p, "completa", o.hoy) || "sin fechas",
     marcas: identidad.marcas,
     nota: identidad.nota,
     aviso: p.nombre === SIN_NOMBRE && !p.birth && !p.death ? AVISO_SIN_NADA : undefined,
@@ -103,16 +102,6 @@ function homonimosDe(p: Persona, { homonimia, linaje }: OpcionesFicha): Homonimo
 
 const AVISO_SIN_NADA =
   "No consta su nombre ni sus fechas. Solo se la puede identificar por su familia, y así aparece en toda la app.";
-
-/**
- * Lo que se sabe de su vida. La ficha es el expediente, así que las fechas salen siempre
- * —el interruptor solo decide con cuánta precisión, y ni ocultarlas ni cambiarlas por la
- * edad valen aquí—. Sin defunción no se escribe nada en su sitio: una raya esperando el
- * año se lee como un hueco por rellenar y no como que sigue aquí.
- */
-function vida(p: Persona, modo: ModoFechas, hoy: Fecha): string {
-  return escribirVida(p, modo === "completa" ? "completa" : "año", hoy) || "sin fechas";
-}
 
 /**
  * De dónde viene y qué hizo con su vida, en ese orden. **Solo las dos primeras se escriben
@@ -146,8 +135,27 @@ function filasDe(g: Grafo, p: Persona, hoy: Fecha, linaje: Map<string, Apellidos
 function vivencia(p: Persona, hoy: Fecha): Fila | null {
   const años = escribirVida(p, "edad", hoy);
   if (!años) return null;
-  if (!p.death && conDia(p.birth!)) return { clave: "Cumple", valor: `${escribirDiaDeMes(p.birth!)} · ${años}`, falta: false };
-  return { clave: "Edad", valor: años, falta: false };
+  if (p.death || !conDia(p.birth!)) return { clave: "Edad", valor: años, falta: false };
+  return { clave: "Cumple", valor: cumpleaños(p.birth!, hoy), falta: false };
+}
+
+/**
+ * El cumpleaños, dicho con el verbo en el tiempo que le toca. **La cifra es siempre la del
+ * año en curso** y lo que cambia es el tiempo del verbo: así se deshace la única duda que
+ * daba esta fila —si los años son los que tiene o los que va a cumplir—, que en un crío de
+ * tres a punto de cumplir cuatro es la diferencia entera. Los tres días de alrededor se
+ * llaman por su nombre: ahí la fecha no dice nada que no diga «hoy».
+ */
+function cumpleaños(birth: Fecha, hoy: Fecha): string {
+  const edad = añoDe(hoy) - añoDe(birth);
+  const dias = Math.round((enElAño(birth.slice(5), añoDe(hoy)) - enMs(hoy)) / MS_DIA);
+  // Cumplir cero años es haber nacido, y así se dice mientras dura el año en que pasó.
+  if (edad === 0) return dias === 0 ? "¡Nació hoy!" : dias === -1 ? "¡Nació ayer!" : `Nació el ${escribirDiaDeMes(birth)}`;
+  const años = `${edad} ${edad === 1 ? "año" : "años"}`;
+  if (dias === 1) return `¡Mañana cumple ${años}!`;
+  if (dias === 0) return `¡Hoy cumple ${años}!`;
+  if (dias === -1) return `¡Ayer cumplió ${años}!`;
+  return `El ${escribirDiaDeMes(birth)} ${dias > 0 ? "cumple" : "cumplió"} ${años}`;
 }
 
 /**

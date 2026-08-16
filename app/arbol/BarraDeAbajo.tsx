@@ -1,11 +1,11 @@
 "use client";
 
 /**
- * La esquina de abajo a la izquierda, que es de lo que se está mirando de cerca: el camino
- * recogido o la fracción señalada. **Los dos no se pisan porque no conviven** —encender uno
- * apaga al otro, que es lo que el lienzo ya hacía al decidir a quién atenuar—, así que
- * comparten sitio y forma. Dos líneas y no una: el nombre entero es justo lo que se ha
- * venido a leer, y en una fila que además esquiva a «Qué se ve» no cabe.
+ * La esquina de abajo a la izquierda, que es de lo que se está mirando de cerca: la hoja
+ * recogida —una ficha o un camino— o la fracción señalada. **No se pisan porque no
+ * conviven** —encender uno apaga al otro, que es lo que el lienzo ya hacía al decidir a
+ * quién atenuar—, así que comparten sitio y forma. Dos líneas y no una: el nombre entero es
+ * justo lo que se ha venido a leer, y en una fila que además esquiva a «Qué se ve» no cabe.
  */
 export default function BarraDeAbajo({
   rotulo,

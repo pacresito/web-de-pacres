@@ -47,6 +47,7 @@ export default function Nodo({
   identidad: Identidad;
   /** Sus años, ya escritos. Sin paréntesis: abajo no tiene nada de lo que separarse. */
   vida: string;
+  /** Se le rodea entero: es lo único del lienzo que habla de un día y no del árbol. */
   cumpleHoy: boolean;
   atenuado: boolean;
   /** Es la ficha que está abierta: el borde de acento dice desde el lienzo a quién lees. */
@@ -67,6 +68,21 @@ export default function Nodo({
       }`}
       style={atenuado ? { opacity: ATENUADO } : undefined}
     >
+      {/* La guirnalda del cumpleaños, **por fuera del cerco**: los dos caben a la vez, que
+          leer la ficha de quien cumple hoy es justo lo que se va a hacer. Rodear entero es
+          la única forma de que se encuentre sin buscarlo — una tarta en una esquina tiene
+          el tamaño de un detalle, y el día de alguien no lo es. */}
+      {cumpleHoy && (
+        <rect
+          x={nodo.x - ANCHO_NODO / 2 - 9}
+          y={nodo.y - ALTO_NODO / 2 - 9}
+          width={ANCHO_NODO + 18}
+          height={ALTO_NODO + 18}
+          rx={18}
+          fill="none"
+          className="nd-fiesta"
+        />
+      )}
       {/* El cerco es la tercera marca y no le quita el canal a ninguna de las dos: el fondo
           sigue midiendo la cercanía y el borde, dónde miras. */}
       {abierta && (
@@ -108,13 +124,6 @@ export default function Nodo({
       {vida && (
         <text x={izquierda} y={nodo.y + 13} fontSize={10.5} className="ct">
           {vida}
-        </text>
-      )}
-      {/* La esquina de arriba a la derecha es la única que no usa ni la manija ni el «+»
-          de la pareja, así que la tarta cabe sin taparle nada a nadie. */}
-      {cumpleHoy && (
-        <text x={nodo.x + ANCHO_NODO / 2 - 13} y={nodo.y - ALTO_NODO / 2 + 5} textAnchor="middle" fontSize={15}>
-          🎂
         </text>
       )}
     </g>

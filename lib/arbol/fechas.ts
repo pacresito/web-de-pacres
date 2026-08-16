@@ -10,6 +10,9 @@ export const conDia = (f: Fecha): boolean => f.length > 4;
 
 export const añoDe = (f: Fecha): number => Number(f.slice(0, 4));
 
+/** Esa fecha en milisegundos UTC, que es como se restan días entre dos. Pide día. */
+export const enMs = (f: Fecha): number => Date.UTC(añoDe(f), Number(f.slice(5, 7)) - 1, Number(f.slice(8, 10)));
+
 const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
 
 /** Sin el año, para una lista que ya se sabe cuál es: `"2026-03-14"` → `"14 mar"`. */

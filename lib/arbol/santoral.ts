@@ -9,7 +9,7 @@
 // santo —Jara, Nora, Horacio, los que no vienen del santoral— y ponerles uno inventado
 // sería peor que no ponerles ninguno.
 
-import { MS_DIA, type Fecha } from "./fechas";
+import { añoDe, enMs, MS_DIA, type Fecha } from "./fechas";
 
 /** El día en que cae algo: el `"MM-DD"` de siempre, o la regla que lo sitúa cada año. */
 export type DiaDelAño = string | ((año: number) => string);
@@ -127,8 +127,9 @@ const CALENDARIO: [DiaDelAño, string[]][] = [
   ["12-11", ["maravillas"]],
   ["12-13", ["lucia"]],
   ["12-17", ["yolanda"]],
+  ["12-19", ["eva"]],
   ["12-23", ["victoria"]],
-  ["12-24", ["eva", "adan"]],
+  ["12-24", ["adan"]],
   ["12-26", ["esteban"]],
   ["12-27", ["fabiola", "eugenia"]],
   ["12-29", ["david"]],
@@ -270,7 +271,7 @@ const POR_PERSONA: Record<string, DiaDelAño> = {
   p443: "08-02", // Ángela, que celebra con las Ángeles y no el 27 de enero de las Ángelas
   p19: "03-19", // en el árbol es María, se llama María José y celebra San José
   p23: "08-02", // en el árbol es María, se llama María Ángeles y celebra con las Ángeles
-  p446: "12-19", // la Eva de los Sala celebra el 19 y no el 24, que es el de las otras tres
+  p8: "06-25", // Eva Sola celebra en junio y no el 19 de diciembre de las otras tres
   p445: "12-03", // Fran celebra San Francisco Javier, no el Asís que le da su nombre
 };
 
@@ -280,8 +281,8 @@ export const onomasticaDePersona = (p: { id: string; nombre: string }): DiaDelA�
 
 /** La próxima vez que caiga ese día, contando hoy como 0. Vale para los que se mueven. */
 export function proximaVez(hoy: Fecha, diaDelAño: DiaDelAño): { fecha: Fecha; faltan: number } {
-  const [año, mes, dia] = hoy.split("-").map(Number);
-  const desde = Date.UTC(año, mes - 1, dia);
+  const año = añoDe(hoy);
+  const desde = enMs(hoy);
   for (const candidato of [año, año + 1]) {
     const cuando = enElAño(diaDelAño, candidato);
     if (cuando >= desde) return { fecha: escribirUTC(cuando), faltan: Math.round((cuando - desde) / MS_DIA) };
@@ -294,7 +295,7 @@ export function proximaVez(hoy: Fecha, diaDelAño: DiaDelAño): { fecha: Fecha; 
  * de cada cuatro en que no existe: es lo que hace el Código Civil al contar plazos por
  * meses, y adelantarlo al 28 haría cumplir años dos veces en el mismo febrero bisiesto.
  */
-function enElAño(diaDelAño: DiaDelAño, año: number): number {
+export function enElAño(diaDelAño: DiaDelAño, año: number): number {
   const [mes, dia] = (typeof diaDelAño === "function" ? diaDelAño(año) : diaDelAño).split("-").map(Number);
   if (mes === 2 && dia === 29 && !bisiesto(año)) return Date.UTC(año, 2, 1);
   return Date.UTC(año, mes - 1, dia);

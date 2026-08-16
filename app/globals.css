@@ -75,6 +75,10 @@
   /* El diseño no da color de error porque en el árbol no hay nada que falle; el acceso sí,
      y el acento no puede prestarse: es del punto de vista. */
   --err: oklch(0.52 0.19 25);
+  /* Y el día de alguien tampoco puede ir en acento, por lo mismo. Dorado: es el único
+     color que en una pantalla de morados y grises se lee como una fiesta y no como un
+     aviso —para eso está el rojo— ni como un tercer eje del árbol. */
+  --fiesta: oklch(0.66 0.15 70);
   --sans:  var(--font-instrument-sans), ui-sans-serif, system-ui, sans-serif;
   --serif: var(--font-instrument-serif), "Times New Roman", Georgia, serif;
   --mono:  var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -98,6 +102,7 @@
   --accb:  oklch(0.45 0.07 300);
   --accv:  oklch(0.76 0.12 300);
   --err:   oklch(0.68 0.17 25);
+  --fiesta: oklch(0.82 0.14 75);
   --sh: 0 1px 2px rgba(0, 0, 0, 0.5), 0 8px 22px rgba(0, 0, 0, 0.45);
 }
 
@@ -139,6 +144,18 @@
 /* Y a quien se está leyendo, un cerco por fuera: el fondo y el borde ya dicen cada uno lo
    suyo, así que la tercera marca se pone donde no hay nada dibujado. */
 .arbol .nd-cerco { stroke: var(--acc); stroke-width: 2; opacity: 0.35; }   /* el relleno, en el atributo */
+/* Y a quien cumple hoy, una guirnalda de bombillas que da la vuelta despacio: es la cuarta
+   marca del nodo y la única que se mueve, que es lo que la encuentra en un lienzo de 342.
+   Va por fuera del cerco, así que los dos conviven. Quieta sigue siendo un cerco punteado,
+   y por eso quien no quiera movimiento no pierde nada. */
+.arbol .nd-fiesta {
+  stroke: var(--fiesta); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 1 8;
+  animation: arbol-guirnalda 5s linear infinite;
+}
+@keyframes arbol-guirnalda { to { stroke-dashoffset: -9; } }
+@media (prefers-reduced-motion: reduce) {
+  .arbol .nd-fiesta { animation: none; }
+}
 /* El giro de mudar el punto de vista: el árbol nuevo nace con los colaterales al 25 % y
    suben a su nivel en 240 ms. La bajada no se anima —cuando la clase entra, el recolocado
    ya ha pasado, y animarla lo contaría dos veces— y **la línea directa no se apaga nunca**:
