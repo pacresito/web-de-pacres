@@ -91,7 +91,7 @@ function casan(buscadas: string[], texto: string): boolean {
  */
 export const IGUALES: string[][] = [
   ["javier", "javi"],
-  ["santiago", "santi", "yago"],
+  ["santiago", "santi"],
   ["daniel", "dani"],
   ["francisco", "paco", "fran"],
   ["francisca", "paqui", "paquita", "pacita"],

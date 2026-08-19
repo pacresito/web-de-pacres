@@ -109,7 +109,7 @@ export default function Capas({
         >
           Resaltar incompletos
           <span className={`ml-auto text-[11.5px] tabular-nums ${repaso ? "opacity-70" : "text-[var(--mut)]"}`}>
-            {incompletos} a la vista
+            {incompletos} visibles
           </span>
         </button>
         <button type="button" onClick={onReiniciar} className={APAGADA}>
