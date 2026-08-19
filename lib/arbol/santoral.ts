@@ -163,6 +163,9 @@ const diaDelAñoDe = (ms: number) => new Date(ms).toISOString().slice(5, 10);
 /** El viernes anterior al Domingo de Ramos, que va nueve días antes que la Pascua. */
 export const viernesDeDolores = (año: number): string => diaDelAñoDe(pascua(año) - 9 * MS_DIA);
 
+/** Pentecostés: el día cincuenta contando la Pascua, o siete domingos después de ella. */
+export const domingoDePentecostes = (año: number): string => diaDelAñoDe(pascua(año) + 49 * MS_DIA);
+
 /** El día de la madre en España: el primer domingo de mayo, caiga el 1 o caiga el 7. */
 export const primerDomingoDeMayo = (año: number): string =>
   `05-${String(1 + ((7 - new Date(Date.UTC(año, 4, 1)).getUTCDay()) % 7)).padStart(2, "0")}`;
@@ -170,11 +173,15 @@ export const primerDomingoDeMayo = (año: number): string =>
 /**
  * Las onomásticas que no caen el mismo día cada año porque cuelgan de la Semana Santa.
  * Son las que la familia celebra de verdad: **Lola es del Viernes de Dolores**, no del 15
- * de septiembre en que la liturgia pone a la Virgen de los Dolores. Cambiar de una a otra
- * es cambiar esta línea. Fuera se quedan las que ni con esto tienen fecha: el Rocío, la
- * Macarena y los Desamparados dependen de la romería o de la ciudad, no del calendario.
+ * de septiembre en que la liturgia pone a la Virgen de los Dolores, y **el Rocío es del
+ * domingo de Pentecostés**, no del lunes de la romería. Cambiar de una a otra es cambiar
+ * esta línea. Fuera se quedan las que ni con esto tienen fecha: la Macarena y los
+ * Desamparados dependen de la ciudad, no del calendario.
  */
-const MOVILES: [DiaDelAño, string[]][] = [[viernesDeDolores, ["dolores"]]];
+const MOVILES: [DiaDelAño, string[]][] = [
+  [viernesDeDolores, ["dolores"]],
+  [domingoDePentecostes, ["rocio"]],
+];
 
 /**
  * Cómo llama la familia a quien no usa su nombre de pila. Solo los que en España
@@ -273,6 +280,7 @@ const POR_PERSONA: Record<string, DiaDelAño> = {
   p23: "08-02", // en el árbol es María, se llama María Ángeles y celebra con las Ángeles
   p8: "06-25", // Eva Sola celebra en junio y no el 19 de diciembre de las otras tres
   p445: "12-03", // Fran celebra San Francisco Javier, no el Asís que le da su nombre
+  p323: "07-16", // en el árbol es María, se llama María Casas y celebra con las Carmen
 };
 
 /** La onomástica de alguien: la suya si la tiene apuntada, y si no la de su nombre. */

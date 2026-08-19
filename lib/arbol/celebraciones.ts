@@ -4,6 +4,7 @@
 
 import { añoDe, conDia, seLeSuponeFallecido, type Fecha } from "./fechas";
 import { type Grafo } from "./grafo";
+import { laLista, YO, type Entrada } from "./lista";
 import { declinar, parentescos } from "./parentesco";
 import { onomasticaDePersona, primerDomingoDeMayo, proximaVez, type DiaDelAño } from "./santoral";
 
@@ -14,7 +15,8 @@ export const VENTANA = 30;
  * La familia cercana: los parentescos de primer grado en las dos direcciones, más las
  * parejas de todos ellos —el cuñado y la tía política son familia aunque no compartan
  * sangre—. Los segundos (primos segundos, tíos abuelos) quedan fuera: con ellos habría
- * alguien celebrando algo cada semana y el aviso dejaría de avisar.
+ * alguien celebrando algo cada semana y el aviso dejaría de avisar. Es la regla que se le
+ * da a quien mira desde su sitio; la mía la escribe `lista.ts` a mano.
  */
 const CERCANA = new Set(["bisabuelos", "abuelos", "padres", "tíos", "hermanos", "primos", "hijos", "sobrinos", "nietos"]);
 
@@ -71,10 +73,10 @@ export const esTuDia = (c: Celebracion): boolean => c.esPuntoDeVista || c.dirigi
 export function proximasCelebraciones(g: Grafo, pov: string, hoy: Fecha, ventana = VENTANA): Celebracion[] {
   const salida: Celebracion[] = [];
 
-  for (const [id, parentesco] of familiaCercana(g, pov)) {
+  for (const [id, { como, santo }] of quienCelebra(g, pov)) {
     const persona = g.personaPorId.get(id)!;
     if (!vive(persona, hoy)) continue;
-    const comun = { id, nombre: persona.nombre, parentesco, esPuntoDeVista: id === pov };
+    const comun = { id, nombre: persona.nombre, parentesco: como, esPuntoDeVista: id === pov };
     // La edad se calcula sobre la fecha ya resuelta y no sobre hoy: el que cumple la
     // semana que viene cumple los del año que viene, aunque hoy tenga uno menos.
     const cabe = (tipo: TipoCelebracion, dia: DiaDelAño, edadEn?: (fecha: Fecha) => number) => {
@@ -86,7 +88,7 @@ export function proximasCelebraciones(g: Grafo, pov: string, hoy: Fecha, ventana
     if (nacimiento && conDia(nacimiento)) {
       cabe("cumpleaños", nacimiento.slice(5), (fecha) => añoDe(fecha) - añoDe(nacimiento));
     }
-    const suNombre = onomasticaDePersona(persona);
+    const suNombre = santo ? onomasticaDePersona(persona) : null;
     if (suNombre) cabe("onomástica", suNombre);
   }
 
@@ -119,15 +121,31 @@ function aQuienApunta(g: Grafo, pov: string, sexo: "h" | "m", hoy: Fecha): Dirig
   return progenitor && vive(progenitor, hoy) ? "progenitor" : "generico";
 }
 
-/** A cada uno de la familia cercana, cómo se le llama desde el punto de vista. */
-function familiaCercana(g: Grafo, pov: string): Map<string, string | null> {
-  const salida = new Map<string, string | null>();
+/**
+ * De quién se avisa, y cómo se le llama desde el punto de vista.
+ *
+ * **La mía es la lista de `lista.ts`, la misma que sale por Telegram**: a quién felicita uno
+ * no se deduce de un pedigrí, y tener dos respuestas distintas a la misma pregunta —una en
+ * el móvil y otra en la pantalla— era la forma más barata de que ninguna de las dos fuera de
+ * fiar. Del resto de la familia no sé a quién felicita cada uno, así que se les da la regla:
+ * la familia cercana, que es lo más parecido a acertar sin saber nada de ellos.
+ */
+const quienCelebra = (g: Grafo, pov: string): Map<string, Entrada> =>
+  pov === YO.id ? laLista(g) : familiaCercana(g, pov);
+
+/**
+ * A cada uno de la familia cercana, cómo se le llama desde el punto de vista. Aquí el santo
+ * lo lleva todo el mundo: de quien mira no se sabe a quién felicita, así que se le da la
+ * costumbre entera y que se quede con lo que le sirva.
+ */
+function familiaCercana(g: Grafo, pov: string): Map<string, Entrada> {
+  const salida = new Map<string, Entrada>();
   for (const [id, { termino }] of parentescos(g, pov)) {
     if (!CERCANA.has(termino)) continue;
     // El punto de vista se cuenta entre sus propios hermanos: es familia suya, pero no
     // se llama a sí mismo hermano de nadie.
-    if (id === pov) salida.set(id, null);
-    else salida.set(id, declinar(termino, 1, g.personaPorId.get(id)!.sexo === "m" ? 1 : 0));
+    if (id === pov) salida.set(id, { como: null, santo: true });
+    else salida.set(id, { como: declinar(termino, 1, g.personaPorId.get(id)!.sexo === "m" ? 1 : 0), santo: true });
   }
 
   // Las parejas van después y sobre una foto fija de la sangre: si no, la pareja de un
@@ -138,7 +156,7 @@ function familiaCercana(g: Grafo, pov: string): Map<string, string | null> {
       if (union.roto) continue; // el divorcio saca de la familia, y del panel
       for (const otro of union.partners) {
         if (otro === id || salida.has(otro)) continue;
-        salida.set(otro, id === pov ? "tu pareja" : `pareja de ${g.personaPorId.get(id)!.nombre}`);
+        salida.set(otro, { como: id === pov ? "tu pareja" : `pareja de ${g.personaPorId.get(id)!.nombre}`, santo: true });
       }
     }
   }

@@ -17,7 +17,7 @@ for (const { alias, id, nombre, nace } of ENLACES) {
   const p = g.personaPorId.get(id);
   assert.ok(p, `el enlace ${alias} apunta a ${id}, que ya no está en el árbol`);
   assert.strictEqual(p.nombre, nombre, `${alias} (${id}) ya no es ${nombre}`);
-  assert.strictEqual(p.birth?.slice(0, 4), nace, `${alias} (${id}) ya no nace en ${nace}`);
+  assert.strictEqual(p.birth?.slice(0, 4) ?? "", nace, `${alias} (${id}) ya no nace en ${nace}`);
 }
 
 // Ningún alias repetido: el primero ganaría y el segundo no se abriría nunca.

@@ -11,15 +11,13 @@
 // La víspera y no el día: un cumpleaños del que uno se entera por la mañana ya llega tarde
 // para comprar nada. Y a las diez, que es la hora en que todavía se puede escribir a alguien.
 
-import { añoDe, conDia, diaDeLaSemana, escribirDiaDeMes, MS_DIA, seLeSuponeFallecido, type Fecha } from "./fechas";
+import { añoDe, conDia, MS_DIA, seLeSuponeFallecido, type Fecha } from "./fechas";
 import { type Grafo } from "./grafo";
 import { laLista, PAREJA, YO } from "./lista";
 import { onomasticaDePersona, primerDomingoDeMayo, proximaVez, type DiaDelAño } from "./santoral";
 
 /** La hora a la que sale, en Madrid. */
 export const HORA = 22;
-
-const SITIO = "https://pacr.es/arbol";
 
 /** Un mensaje ya redactado y el instante en que debe salir, como los del observatorio. */
 export type Aviso = { sale: number; id: string; texto: string };
@@ -35,11 +33,12 @@ export function avisoDeVispera(g: Grafo, hoy: Fecha): Aviso | null {
   );
   if (lineas.length === 0) return null;
 
-  const cabecera = `<b>Mañana, ${diaDeLaSemana(mañana)} ${escribirDiaDeMes(mañana)}</b>`;
+  // «Mañana» y nada más: la fecha de un mensaje que llega la víspera y solo habla de la
+  // víspera no añade nada, y el enlace al árbol tampoco —quien quiera mirarlo lo tiene.
   return {
     sale: aLasDiez(hoy),
     id: `arbol-${mañana}`,
-    texto: [cabecera, "", ...lineas.map((l) => l.texto), "", SITIO].join("\n"),
+    texto: ["<b>Mañana</b>", "", ...lineas.map((l) => l.texto)].join("\n"),
   };
 }
 
@@ -52,32 +51,101 @@ type Linea = { grupo: number; nombre: string; texto: string };
 
 /** Lo que celebra mañana la gente de la lista. Los muertos no celebran nada. */
 function* deLaGente(g: Grafo, hoy: Fecha, mañana: Fecha): Generator<Linea> {
-  for (const [id, comoLoLlamo] of laLista(g)) {
+  for (const [id, { como: comoLoLlamo, santo }] of laLista(g)) {
     const persona = g.personaPorId.get(id)!;
     if (persona.death || seLeSuponeFallecido(persona, hoy)) continue;
 
     const cae = (dia: DiaDelAño) => proximaVez(hoy, dia).faltan === 1;
     const mio = id === YO.id;
     const quien = `<b>${escapar(persona.nombre)}</b>${comoLoLlamo ? `, ${escapar(comoLoLlamo)}` : ""}`;
+    const suerte = (cuantos: number) => pizca(`${id}:${mañana}`, cuantos);
 
     if (persona.birth && conDia(persona.birth) && cae(persona.birth.slice(5))) {
       // La edad se cuenta sobre mañana y no sobre hoy: el que cumple mañana cumple los de
       // mañana, aunque hoy todavía tenga uno menos.
       const edad = añoDe(mañana) - añoDe(persona.birth);
+      // A los de Carmen se les puede decir algo que a los míos no: que son de los suyos.
+      const suyos = comoLoLlamo?.endsWith(`de ${PAREJA.nombre}`) ?? false;
+      const cuales = suyos ? [...CUMPLES, ...CUMPLES_DE_ELLA] : CUMPLES;
       const texto = mio
-        ? `🎂 Mañana cumples ${edad}: hoy es el último día que puedes decir que tienes ${edad - 1}.`
-        : `🎂 ${quien} — cumple ${edad}`;
+        ? `${TARTAS[suerte(TARTAS.length)]} ${MIO_CUMPLE[edad % MIO_CUMPLE.length](edad)}`
+        : `${TARTAS[suerte(TARTAS.length)]} ${cuales[suerte(cuales.length)](quien, edad)}`;
       yield { grupo: 0, nombre: mio ? "" : persona.nombre, texto };
     }
 
-    const suSanto = onomasticaDePersona(persona);
+    const suSanto = santo ? onomasticaDePersona(persona) : null;
     if (suSanto && cae(suSanto)) {
       const texto = mio
-        ? "🎉 Mañana es el día de tu nombre, que es un cumpleaños de los que no suman."
-        : `🎉 ${quien} — onomástica`;
+        ? `${FIESTAS[suerte(FIESTAS.length)]} ${MIO_SANTO[añoDe(mañana) % MIO_SANTO.length]}`
+        : `${FIESTAS[suerte(FIESTAS.length)]} ${quien} — ${SANTOS[suerte(SANTOS.length)]}`;
       yield { grupo: 2, nombre: mio ? "" : persona.nombre, texto };
     }
   }
+}
+
+/**
+ * Con qué cara y con qué palabras sale cada línea. **Se elige por la persona y por el día**,
+ * no al azar: así el mensaje sale igual las dos veces que se programe la misma noche —el
+ * programador puede repetir— y a la vez ni dos líneas del mismo aviso ni dos años seguidos de
+ * la misma persona se leen iguales. Un mensaje que llega con la misma cara y las mismas cuatro
+ * palabras cien noches al año deja de leerse a la tercera.
+ */
+export const TARTAS = ["🎂", "🍰", "🧁", "🥳", "🎈", "🎁", "🎀"];
+export const FIESTAS = ["🎉", "🎊", "✨", "🥂", "🌟", "🔔"];
+
+/**
+ * Las frases del cumpleaños ajeno. **Todas dicen quién y cuántos** —es el dato, y no se pierde
+ * en la broma— y lo que cambia es lo de después, que es lo que hace que el mensaje se lea. El
+ * empujón va siempre hacia escribir o llamar, que es para lo que sirve enterarse la víspera.
+ */
+type Frase = (quien: string, edad: number) => string;
+
+const CUMPLES: Frase[] = [
+  (q, e) => `Mañana cumple ${e} ${q}. Hoy todavía llegas a comprar algo; mañana ya es cariño improvisado.`,
+  (q, e) => `${q}, cumple ${e} mañana. Un mensaje a las 00:01 y quedas de rey todo el año.`,
+  (q, e) => `Mañana sopla ${e} velas ${q}. Tú pon el mensaje, que la tarta la ponen otros.`,
+  (q, e) => `${q}, cumple ${e} mañana. Si no sabes qué decir, «felicidades» lleva siglos funcionando.`,
+  (q, e) => `Mañana cumple ${e} ${q}. El árbol se ha acordado; ahora te toca a ti.`,
+  (q, e) => `${q}, cumple ${e} mañana. Que se entere por ti y no por una notificación.`,
+  (q, e) => `Mañana estrena ${e} ${q}. Buen día para una llamada de las de antes.`,
+  (q, e) => `${q}, llega a ${e} mañana. Un audio de treinta segundos gana a cualquier regalo caro.`,
+  (q, e) => `Mañana cumple ${e} ${q}. Tienes toda la noche para pensar la frase.`,
+  (q, e) => `${q}, cumple ${e} mañana. Nadie se ha quejado nunca de que le felicitaran de más.`,
+  (q, e) => `Mañana son ${e} para ${q}. Escríbele pronto, antes de que se le llene el móvil.`,
+  (q, e) => `${q}, cumple ${e} mañana. Ya sabes lo que toca.`,
+];
+
+/** Y las que solo valen para los suyos: ahí hay alguien más a quien avisar. */
+const CUMPLES_DE_ELLA: Frase[] = [
+  (q, e) => `Mañana cumple ${e} ${q}. Te pilla lejos, pero avísala a ella y quedas bien los dos.`,
+  (q, e) => `${q}, cumple ${e} mañana. Si dudas, pregunta en casa antes de escribir.`,
+];
+
+const SANTOS = ["su santo", "onomástica", "el día de su nombre", "santo"];
+
+/** Y lo mío, que va en segunda persona y rota con la edad, no con la suerte. */
+const MIO_CUMPLE: ((edad: number) => string)[] = [
+  (edad) => `Mañana cumples ${edad}: hoy es el último día que puedes decir que tienes ${edad - 1}.`,
+  (edad) => `Mañana cumples ${edad}. Ve ensayando la cara de sorpresa.`,
+  (edad) => `${edad} mañana. Hoy todavía puedes hacerte el joven.`,
+  (edad) => `Mañana son ${edad}. Toda esa gente del árbol y mañana la pantalla va de ti.`,
+];
+
+const MIO_SANTO = [
+  "Mañana es el día de tu nombre, que es un cumpleaños de los que no suman.",
+  "Mañana es tu santo: medio cumpleaños, sin la parte de envejecer.",
+  "Mañana te toca santo. Se felicita igual y no cuesta vela.",
+];
+
+/**
+ * Un número estable a partir de un texto, para repartir caras y frases. No hace falta que
+ * disperse bien: hace falta que el mismo texto dé siempre el mismo número, y que dos textos
+ * parecidos no den el mismo.
+ */
+function pizca(semilla: string, cuantos: number): number {
+  let n = 0;
+  for (const letra of semilla) n = (n * 31 + letra.codePointAt(0)!) % 1_000_003;
+  return n % cuantos;
 }
 
 /**

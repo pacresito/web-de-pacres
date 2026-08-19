@@ -3,7 +3,7 @@
 import assert from "assert";
 import { readFileSync } from "fs";
 import { resolve } from "path";
-import { acortar, buscar, losSinNombre, type Resultado } from "./busqueda";
+import { acortar, buscar, losSinNombre, OTROS_NOMBRES, type Resultado } from "./busqueda";
 import { construirGrafo, pasosDesde } from "./grafo";
 import { contextoEntero, libretaDe, SIN_NOMBRE } from "./identidad";
 import type { ArbolData, Persona, Union } from "./tree";
@@ -85,7 +85,31 @@ const suyo = { linaje: libretaDe(real).linaje, pasos: pasosDesde(real, POV) };
 
 const pablos = buscar(real, "Pablo", suyo);
 assert.strictEqual(pablos[0]!.id, POV, "el Centro es el más cercano a sí mismo y encabeza su propio nombre");
-assert.strictEqual(pablos.filter((r) => r.via === "nombre").length, 14, "once Pablo y tres que lo llevan de segundo");
+assert.strictEqual(pablos.filter((r) => r.via === "nombre").length, 15, "doce Pablo y tres que lo llevan de segundo");
+
+// Los otros nombres: quien busca uno busca a la persona, no a esa grafía, y vale al derecho
+// y al revés. Sin esto, «Pilar» no encontraba a Piluca ni «Javier» a los cinco Javi.
+for (const [buscado, esperado] of [
+  ["Pilar", "p301"], // Piluquita
+  ["Piluca", "p102"], // Pilar
+  ["Javier", "p128"], // Javi
+  ["Javi", "p191"], // Javier
+  ["José", "p29"], // Pepe
+  ["Mavi", "p357"], // Maravillas
+  ["Chon", "p290"], // Ascensión
+] as const) {
+  assert.ok(
+    buscar(real, buscado, suyo).some((r) => r.id === esperado && r.via === "nombre"),
+    `buscando «${buscado}» tendría que salir ${esperado}, y entre los que se llaman así`,
+  );
+}
+// Y ningún grupo de más: uno cuyos nombres no lleve nadie no ayuda a encontrar a nadie.
+for (const grupo of OTROS_NOMBRES) {
+  assert.ok(
+    grupo.some((n) => buscar(real, n, suyo).some((r) => r.via === "nombre")),
+    `nadie del árbol se llama de ninguna de estas maneras: ${grupo.join(", ")}`,
+  );
+}
 const cerca = pablos.filter((r) => r.via === "nombre").map((r) => suyo.pasos.get(r.id)!);
 assert.deepStrictEqual(cerca, [...cerca].sort((a, b) => a - b), "ordenados por cercanía a ti, que es el único criterio que siempre existe");
 

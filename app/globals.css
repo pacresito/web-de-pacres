@@ -79,6 +79,10 @@
      color que en una pantalla de morados y grises se lee como una fiesta y no como un
      aviso —para eso está el rojo— ni como un tercer eje del árbol. */
   --fiesta: oklch(0.66 0.15 70);
+  /* Y el hueco que queda por preguntar, en el repaso: ni acento (es del punto de vista), ni
+     dorado (eso es una fiesta), ni rojo (nadie ha hecho nada mal porque un documento de 1950
+     no diera el día). Azul, que en una pantalla de morados y grises se lee como una marca. */
+  --hueco: oklch(0.55 0.14 215);
   --sans:  var(--font-instrument-sans), ui-sans-serif, system-ui, sans-serif;
   --serif: var(--font-instrument-serif), "Times New Roman", Georgia, serif;
   --mono:  var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -103,6 +107,7 @@
   --accv:  oklch(0.76 0.12 300);
   --err:   oklch(0.68 0.17 25);
   --fiesta: oklch(0.82 0.14 75);
+  --hueco: oklch(0.76 0.13 215);
   --sh: 0 1px 2px rgba(0, 0, 0, 0.5), 0 8px 22px rgba(0, 0, 0, 0.45);
 }
 
@@ -179,6 +184,10 @@
 .arbol .nm-her   { fill: var(--mut); }   /* el apellido que se deduce del árbol y no consta */
 .arbol .nm-fecha { fill: var(--mut); }
 .arbol .ct       { fill: var(--mut); }
+/* La segunda línea durante el repaso: la fecha en mono, para que el hueco tenga el ancho de
+   la respuesta, y en el color del hueco solo lo que falta. */
+.arbol .ct-mono  { fill: var(--mut); font-family: var(--mono); }
+.arbol .hueco    { fill: var(--hueco); }
 .arbol .banda-a  { fill: var(--paper); }
 /* Media pisada de --soft: la banda es gris y los nodos son morados, pero si pesa tanto
    como el fondo del nodo más flojo, en las columnas pares deja de verse quién es familia. */

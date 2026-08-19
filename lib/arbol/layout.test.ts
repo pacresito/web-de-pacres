@@ -103,7 +103,9 @@ const tramo = (v: Layout["vinculos"][number]): [number, number] => [
 ];
 for (const pid of ["p25", "p26", "p126", "p131"]) {
   const salto = reparto(layout(pid));
-  assert.ok(salto < 500, `${pid}: el reparto más largo del arranque mide ${salto.toFixed(0)}px`);
+  // El tope sube con la familia: el reparto más largo del arranque es el que va de Carmen a
+  // sus padres, y se estira cada vez que engorda la columna en la que se empaqueta su bloque.
+  assert.ok(salto < 600, `${pid}: el reparto más largo del arranque mide ${salto.toFixed(0)}px`);
 }
 
 // Un desnivel de tres píxeles no es un quiebro, es un defecto
@@ -256,7 +258,7 @@ for (const pid of ["p25", "p26", "p126", "p131", "p124"]) {
   assert.strictEqual(acotado.nodos.length, visibles(g, pid).size, `${pid} acotado a sus conectados`);
   revisar(acotado, pid, `${pid} acotado`);
 }
-assert.strictEqual(layout("p126", TODAS, true).nodos.length, 342, "desde un hermano se ven 342");
+assert.strictEqual(layout("p126", TODAS, true).nodos.length, 369, "desde un hermano se ven 369");
 // Ni siquiera el hijo llega a todas: las familias dadas de alta que solo atan por un
 // matrimonio lateral no comparten ancestro con nadie, y el interruptor las esconde.
 assert.ok(layout("p26", TODAS, true).nodos.length < data.people.length, "ocultar siempre esconde algo");
@@ -275,14 +277,34 @@ assert.ok(
   "sin el interruptor se llega más allá de los conectados",
 );
 
+// El «+» saca a la pareja por el borde en el que está puesto. Con la regla del sexo, pulsar
+// el de arriba sacaba a la mujer por abajo, y un mando que contesta por el lado contrario al
+// que se pulsa no se aprende: se sufre.
+let pulsadas = 0;
+for (const pov of g.personaPorId.keys()) {
+  const antes = layout(pov);
+  for (const n of antes.nodos) {
+    for (const marca of n.pendientes) {
+      const otro = g.unionPorId.get(marca.unionId)!.partners.find((p) => p !== n.id)!;
+      const despues = layout(pov, new Set(), false, new Set([marca.unionId]));
+      const ella = despues.nodos.find((x) => x.id === otro);
+      if (!ella) continue;
+      pulsadas++;
+      const yo = despues.nodos.find((x) => x.id === n.id)!;
+      assert.strictEqual(ella.y < yo.y, marca.arriba, `desde ${pov}: el + de ${n.id} saca a ${otro} por el otro borde`);
+    }
+  }
+}
+assert.ok(pulsadas > 0, "ninguna marca de pareja pendiente que pulsar");
+
 // Quien se casó dos veces sale una vez, entre sus dos parejas
 const todoAbierto = layout("p25", TODAS);
 const pepeYSusMujeres = ["p441", "p16", "p17"].map((id) => todoAbierto.nodos.find((n) => n.id === id)!);
 assert.ok(pepeYSusMujeres.every((n) => n?.x === pepeYSusMujeres[1].x), "los tres comparten columna");
 assert.deepStrictEqual(
   [...pepeYSusMujeres].sort((a, b) => a.y - b.y).map((n) => n.id),
-  ["p441", "p16", "p17"],
-  "y él queda en medio, para que cada trazo una a dos vecinos",
+  ["p17", "p16", "p441"],
+  "él queda en medio y sus mujeres en el orden en que están escritas: Federica fue la primera",
 );
 
 // La sangre llega más lejos que la línea directa: los tíos sí, sus parejas no

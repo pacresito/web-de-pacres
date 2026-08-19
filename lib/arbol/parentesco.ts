@@ -59,8 +59,32 @@ export function parentescos(g: Grafo, pov: string): Map<string, Parentesco> {
   return salida;
 }
 
-const ASCENDENCIA = ["padres", "abuelos", "bisabuelos", "tatarabuelos"];
-const DESCENDENCIA = ["hijos", "nietos", "bisnietos", "tataranietos"];
+// Hasta donde llega la lengua. Del tatarabuelo para arriba ya no hay costumbre sino sistema
+// —el prefijo griego sobre «abuelo»—, y por eso se escriben en vez de dejar que el último
+// grado se coma lo que venga detrás: el árbol solo llega hoy al tatarabuelo, pero cada niño
+// que nace baja un peldaño a todo el mundo.
+const ASCENDENCIA = [
+  "padres",
+  "abuelos",
+  "bisabuelos",
+  "tatarabuelos",
+  "trastatarabuelos",
+  "pentabuelos",
+  "hexabuelos",
+  "heptabuelos",
+  "octabuelos",
+];
+const DESCENDENCIA = [
+  "hijos",
+  "nietos",
+  "bisnietos",
+  "tataranietos",
+  "trastataranietos",
+  "pentanietos",
+  "hexanietos",
+  "heptanietos",
+  "octanietos",
+];
 const ORDINALES = ["", "", "segundos", "terceros"];
 
 /**

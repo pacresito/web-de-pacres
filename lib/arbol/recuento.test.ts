@@ -37,14 +37,16 @@ function panel(opciones: ReturnType<typeof estado>): { recuento: Recuento; linea
 // La vista de arranque desde Pablo
 const inicial = panel(estado("p25"));
 assert.deepStrictEqual(inicial.lineas, [
-  "3 bisabuelos 6/6",
-  "2 abuelos 4/4 · tíos abuelos 0/9 · parejas 0/9",
-  "1 padres 2/2 · tíos 0/8 · tíos segundos 0/36 · parejas 0/41",
-  "0 hermanos 1/3 · primos 0/15 · primos segundos 0/69 · parejas 1/49",
-  "-1 hijos 3/3 · sobrinos 0/5 · sobrinos segundos 0/15 · otros sobrinos 0/66 · pareja 0/1 · sin parentesco 0/1",
+  "3 bisabuelos 8/8",
+  "2 abuelos 4/4 · tíos abuelos 0/10 · parejas 0/10",
+  "1 padres 2/2 · tíos 0/8 · tíos segundos 0/39 · parejas 0/45",
+  "0 hermanos 1/3 · primos 0/15 · primos segundos 0/75 · parejas 1/53",
+  "-1 hijos 3/3 · sobrinos 0/5 · sobrinos segundos 0/15 · otros sobrinos 0/70 · parejas 0/2 · sin parentesco 0/1",
+  // Manuela estrena generación, y con ella la fila que no existía.
+  "-2 otra sobrina nieta 0/1",
 ]);
-assert.strictEqual(inicial.recuento.puestos, 17, "de arranque hay 17 puestos");
-assert.strictEqual(inicial.recuento.alcanzables, 342, "y 342 alcanzables, los conectados con él");
+assert.strictEqual(inicial.recuento.puestos, 19, "de arranque hay 19 puestos");
+assert.strictEqual(inicial.recuento.alcanzables, 369, "y 369 alcanzables, los conectados con él");
 
 // El punto de vista se cuenta entre sus hermanos y su pareja en el cajón de la fila.
 const fila0 = inicial.recuento.filas.find((f) => f.nivel === 0)!;
@@ -62,23 +64,24 @@ const sinFiltro = panel(estado("p25", false));
 assert.strictEqual(sinFiltro.recuento.alcanzables, data.people.length, "sin filtro se alcanza el árbol entero");
 assert.deepStrictEqual(
   sinFiltro.recuento.filas.map((f) => f.fracciones[f.fracciones.length - 1].termino),
-  Array(5).fill("sin parentesco"),
-  "y «sin parentesco» cierra todas las filas",
+  [...Array(5).fill("sin parentesco"), "otra sobrina nieta"],
+  "«sin parentesco» cierra la fila en cuanto entra alguien de fuera; en la de Manuela no hay nadie de fuera",
 );
 assert.strictEqual(
   sinFiltro.recuento.puestos,
-  25,
+  27,
   "el arranque trae 8 más: la ascendencia de su mujer, que no es familia de nadie más",
 );
 
 // Hay fila mientras quede alguien alcanzable, aunque no haya nadie puesto
 // Desde el hijo, el vocabulario se estira hasta el tope por los dos extremos.
 assert.deepStrictEqual(panel(estado("p26")).lineas, [
-  "4 tatarabuelos 10/10",
-  "3 bisabuelos 6/6 · tíos bisabuelos 0/16 · parejas 0/12",
-  "2 abuelos 4/4 · tíos abuelos 0/12 · tíos abuelos segundos 0/45 · parejas 0/52",
-  "1 padres 2/2 · tíos 0/4 · tíos segundos 0/20 · otros tíos 0/83 · parejas 0/53",
-  "0 hermanos 1/3 · primos 0/5 · primos segundos 0/20 · primos terceros 0/67 · pareja 0/1 · sin parentesco 0/1",
+  "4 tatarabuelos 12/12",
+  "3 bisabuelos 6/6 · tíos bisabuelos 0/17 · parejas 0/13",
+  "2 abuelos 4/4 · tíos abuelos 0/12 · tíos abuelos segundos 0/48 · parejas 0/57",
+  "1 padres 2/2 · tíos 0/4 · tíos segundos 0/20 · otros tíos 0/89 · parejas 0/57",
+  "0 hermanos 1/3 · primos 0/5 · primos segundos 0/20 · primos terceros 0/71 · parejas 0/2 · sin parentesco 0/1",
+  "-1 otra sobrina 0/1",
 ]);
 
 // Cada fracción es un botón: lo que promete es lo que el layout acaba pintando
@@ -124,7 +127,7 @@ for (const fila of inicial.recuento.filas) {
 
 // Desplegarlo todo llena el panel entero
 const todo = panel(estado("p25", true, new Set(g.unionPorId.keys())));
-assert.strictEqual(todo.recuento.puestos, 342, "abriéndolo todo se llega a todos los conectados");
+assert.strictEqual(todo.recuento.puestos, 369, "abriéndolo todo se llega a todos los conectados");
 for (const fila of todo.recuento.filas) {
   for (const fraccion of fila.fracciones) {
     assert.strictEqual(fraccion.puestos.length, fraccion.todos.length, `${fila.nivel} ${fraccion.termino} se queda a medias`);

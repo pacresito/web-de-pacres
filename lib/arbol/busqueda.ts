@@ -68,12 +68,56 @@ export function acortar(g: Grafo, consulta: string, o: OpcionesBusqueda): string
   return mejor?.palabra ?? null;
 }
 
-/** Cada palabra buscada tiene que empezar alguna del texto, que es como se teclea un nombre. */
+/**
+ * Cada palabra buscada tiene que empezar alguna del texto —que es como se teclea un nombre—
+ * o alguno de sus otros nombres: a la misma persona la familia la llama Javi y Javier, y
+ * quien teclea uno la busca a ella, no a esa grafía.
+ */
 function casan(buscadas: string[], texto: string): boolean {
   if (texto === "") return false;
-  const suyas = palabras(texto);
+  const suyas = palabras(texto).flatMap(otrosNombres);
   return buscadas.every((b) => suyas.some((s) => s.startsWith(b)));
 }
+
+/**
+ * Los nombres que en esta familia son el mismo nombre. **Se escriben por grupos y valen en
+ * los dos sentidos**: quien busca «Pilar» quiere a Piluca y a Piluquita, y quien busca
+ * «Piluca» quiere a las Pilar. Solo entran los que el castellano da por equivalentes —el
+ * hipocorístico de siempre—; un apodo de una persona no es otro nombre suyo, es una nota, y
+ * adivinar de dónde sale acaba llevando a alguien a la ficha de otro. Un grupo cuyos nombres
+ * no lleve nadie del árbol sobra, y su test lo dice.
+ */
+export const OTROS_NOMBRES: string[][] = [
+  ["javier", "javi"],
+  ["santiago", "santi", "yago"],
+  ["daniel", "dani"],
+  ["francisco", "paco", "fran"],
+  ["francisca", "paqui", "paquita", "pacita"],
+  ["dolores", "lola"],
+  ["pilar", "piluca", "piluquita"],
+  ["jose", "pepe"],
+  ["montserrat", "montse"],
+  ["magdalena", "magda"],
+  ["manuel", "manolo"],
+  ["concepcion", "concha", "conchita"],
+  ["ignacio", "nacho"],
+  ["gregorio", "goyo"],
+  ["juana", "juani"],
+  ["yolanda", "yoli"],
+  ["mercedes", "merche"],
+  ["antonia", "toni"], // «Toñi» pierde la eñe al normalizar y cae aquí sola
+  ["roberto", "rober"],
+  ["gabriel", "gabi"],
+  ["clara", "chiara"],
+  ["maravillas", "mavi"],
+  ["ascension", "chon"],
+  ["carmen", "carmina", "mamen"],
+];
+
+/** El grupo de cada nombre, o él solo. Se arma una vez: son 24 grupos y 400 personas. */
+const GRUPOS = new Map<string, string[]>(OTROS_NOMBRES.flatMap((grupo) => grupo.map((n) => [n, grupo] as const)));
+
+export const otrosNombres = (nombre: string): string[] => GRUPOS.get(nombre) ?? [nombre];
 
 /** Todo lo que no es letra ni número separa: así «(1902)» es una palabra y el año se busca. */
 const SEPARADOR = /[^\p{L}\p{N}]+/u;

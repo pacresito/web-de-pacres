@@ -112,7 +112,7 @@ const AVISO_SIN_NADA =
  */
 function filasDe(g: Grafo, p: Persona, o: OpcionesFicha, esCentro: boolean): Fila[] {
   const { hoy } = o;
-  const filas = [fila("Padres", padres(g, p.id), "no constan"), ...ramas(o.pertenencia)];
+  const filas = [fila("Padres", padres(g, p.id), "no constan"), ...ramas(g, o.pertenencia)];
   for (const [clave, valor] of [
     ["Unión", uniones(g, p.id, o.linaje)],
     ["Hijos", hijos(g, p.id)],
@@ -215,15 +215,18 @@ const hijos = (g: Grafo, id: string): string =>
 
 /**
  * Estar en dos ramas no es una ambigüedad que resolver, así que la fila las dice todas. Y
- * de quien entró casándose se dice con esas palabras: la rama es suya, pero no de sangre.
+ * **de quien entró por su pareja se dice por quién**: la rama es suya, pero no de sangre, y
+ * el nombre de quien lo trajo es lo que sitúa a las 137 personas que están en ese caso. Se
+ * decía «por matrimonio», que a los que nunca se casaron los casaba de oficio.
  */
-function ramas(pertenencia?: Pertenencia): Fila[] {
+function ramas(g: Grafo, pertenencia?: Pertenencia): Fila[] {
   if (!pertenencia) return [fila("Rama", "", "no consta")];
   const lista = enumerar(pertenencia.ramas);
+  const quien = pertenencia.porMatrimonio && g.personaPorId.get(pertenencia.porMatrimonio)?.nombre;
   return [
     {
       clave: pertenencia.ramas.length > 1 ? "Ramas" : "Rama",
-      valor: pertenencia.porMatrimonio ? `entra en ${lista} por matrimonio` : lista,
+      valor: quien ? `entra en ${lista} por ${quien}` : lista,
       falta: false,
     },
   ];

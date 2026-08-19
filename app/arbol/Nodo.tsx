@@ -1,6 +1,7 @@
 "use client";
 
 import type { Identidad, Pinta } from "@/lib/arbol/identidad";
+import type { Huecos } from "@/lib/arbol/incompletos";
 import { ALTO_NODO, ANCHO_NODO, type NodoLayout } from "@/lib/arbol/layout";
 
 // Señalar una fracción del recuento atenúa el resto del lienzo en vez de encender lo suyo:
@@ -38,6 +39,7 @@ export default function Nodo({
   nodo,
   identidad,
   vida,
+  huecos,
   cumple,
   atenuado,
   abierta,
@@ -47,6 +49,8 @@ export default function Nodo({
   identidad: Identidad;
   /** Sus años, ya escritos. Sin paréntesis: abajo no tiene nada de lo que separarse. */
   vida: string;
+  /** Durante el repaso, lo que le falta: sustituye a los años y añade un aviso al nombre. */
+  huecos: Huecos | null;
   /** Los que cumple hoy, o nada si hoy no es su día: es lo que enciende la guirnalda. */
   cumple: number | null;
   atenuado: boolean;
@@ -97,20 +101,32 @@ export default function Nodo({
           nodo.esPuntoDeVista ? "nd-pov" : nodo.lineaDirecta ? "nd-dir" : nodo.consanguineo ? "nd-con" : "nd"
         } ${nodo.esPuntoDeVista || abierta ? "bd-acc" : nodo.lineaDirecta ? "bd-dir" : "bd"}`}
       />
-      <text x={izquierda} y={nodo.y + (vida ? BASE.conAños : BASE.solo)} fontSize={13} fontWeight={600}>
+      <text x={izquierda} y={nodo.y + (vida || huecos ? BASE.conAños : BASE.solo)} fontSize={13} fontWeight={600}>
         {identidad.titulo.map((trozo, i) => (
           <tspan key={i} className={PINTAS[trozo.pinta].clase} fontStyle={PINTAS[trozo.pinta].cursiva ? "italic" : undefined}>
             {trozo.texto}
           </tspan>
         ))}
+        {/* El apellido que falta se pide donde iría, que es aquí y no en la línea de abajo. */}
+        {huecos?.apellido && <tspan className="hueco"> · Falta apellido</tspan>}
       </text>
       {/* Abajo, los años. De quién es hijo y con quién se casó lo dicen los trazos que salen
           del nodo, así que escribirlo era decir con letra lo que el lienzo ya dibuja; los
           años no los dibuja nada. Quien no los trae se queda sin línea, y no con una vacía. */}
-      {vida && (
-        <text x={izquierda} y={nodo.y + 13} fontSize={10.5} className="ct">
-          {vida}
+      {huecos ? (
+        <text x={izquierda} y={nodo.y + 13} fontSize={10.5} className="ct-mono">
+          {huecos.vida.map((trozo, i) => (
+            <tspan key={i} className={trozo.falta ? "hueco" : undefined}>
+              {trozo.texto}
+            </tspan>
+          ))}
         </text>
+      ) : (
+        vida && (
+          <text x={izquierda} y={nodo.y + 13} fontSize={10.5} className="ct">
+            {vida}
+          </text>
+        )
       )}
     </g>
   );

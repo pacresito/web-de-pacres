@@ -27,6 +27,9 @@ export const RAMAS: Rama[] = [
   { nombre: "Crespo-León", ancestro: "p211", excluye: "p84" }, // Miguel Crespo
   { nombre: "Velasco", ancestro: "p271", excluye: "p289" }, // José Velasco Martínez
   { nombre: "Maestre", ancestro: "p289" }, // José Maestre
+  // Los Pérez de Catalina, sin lo que salió de casarla con un Velasco: esa línea la cuenta
+  // la familia como Velasco y solo como Velasco, igual que la de los Martín con los Cardona.
+  { nombre: "Pérez", ancestro: "p466", excluye: "p395" },
   { nombre: "Cardona", ancestro: "p1" }, // José Cardona Torres
   // Juan Martín Cruzán, sin lo que salió de casar a su hija con un Cardona: esa línea la
   // cuenta la familia como Cardona y solo como Cardona.
@@ -41,8 +44,13 @@ export const RAMAS: Rama[] = [
 export interface Pertenencia {
   /** En el orden de `RAMAS`, que es el de la familia y no el de los datos. */
   ramas: string[];
-  /** No desciende de ningún antepasado: las suyas son las de su cónyuge. */
-  porMatrimonio: boolean;
+  /**
+   * No desciende de ningún antepasado y las suyas son las de su pareja: aquí va quién es
+   * esa pareja, porque decir la rama sin decir por quién se entra no sitúa a nadie. Nulo en
+   * quien la tiene de sangre. **Es una sola persona**: nadie del árbol hereda ramas de dos
+   * parejas distintas, y el día que pase habrá que decidir cómo se lee eso, no taparlo.
+   */
+  porMatrimonio: string | null;
 }
 
 export function calcularRamas(g: Grafo, ramas = RAMAS): Map<string, Pertenencia> {
@@ -52,7 +60,7 @@ export function calcularRamas(g: Grafo, ramas = RAMAS): Map<string, Pertenencia>
   const suyas = (id: string) => ramas.filter((_, i) => porRama[i].has(id)).map((r) => r.nombre);
   for (const id of g.personaPorId.keys()) {
     const propias = suyas(id);
-    if (propias.length > 0) salida.set(id, { ramas: propias, porMatrimonio: false });
+    if (propias.length > 0) salida.set(id, { ramas: propias, porMatrimonio: null });
   }
 
   // El matrimonio se resuelve sobre la sangre ya repartida, nunca sobre lo que otro haya
@@ -60,9 +68,15 @@ export function calcularRamas(g: Grafo, ramas = RAMAS): Map<string, Pertenencia>
   for (const id of g.personaPorId.keys()) {
     if (salida.has(id)) continue;
     const heredadas = new Set<string>();
-    for (const otro of parejaDirecta(g, id)) for (const rama of suyas(otro)) heredadas.add(rama);
-    if (heredadas.size > 0) {
-      salida.set(id, { ramas: ramas.map((r) => r.nombre).filter((n) => heredadas.has(n)), porMatrimonio: true });
+    let deQuien: string | null = null;
+    for (const otro of parejaDirecta(g, id)) {
+      for (const rama of suyas(otro)) {
+        heredadas.add(rama);
+        deQuien ??= otro;
+      }
+    }
+    if (deQuien !== null) {
+      salida.set(id, { ramas: ramas.map((r) => r.nombre).filter((n) => heredadas.has(n)), porMatrimonio: deQuien });
     }
   }
   return salida;

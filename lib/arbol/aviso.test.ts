@@ -3,7 +3,7 @@
 import assert from "assert";
 import { readFileSync } from "fs";
 import { resolve } from "path";
-import { aLasDiez, avisoDeVispera, HORA } from "./aviso";
+import { aLasDiez, avisoDeVispera, FIESTAS, HORA, TARTAS } from "./aviso";
 import { construirGrafo } from "./grafo";
 import type { ArbolData } from "./tree";
 
@@ -32,18 +32,19 @@ assert.strictEqual(laNoche("2026-08-25"), null);
 const mio = laNoche("2026-02-28")!;
 assert.strictEqual(mio.id, "arbol-2026-03-01", "el id es el día que se anuncia, para no avisar dos veces de lo mismo");
 assert.strictEqual(new Date(mio.sale).toISOString(), "2026-02-28T21:00:00.000Z");
-assert.ok(mio.texto.startsWith("<b>Mañana, domingo 1 de marzo</b>"), mio.texto);
-assert.ok(mio.texto.includes("Mañana cumples 40: hoy es el último día que puedes decir que tienes 39."), mio.texto);
+assert.ok(mio.texto.startsWith("<b>Mañana</b>"), mio.texto);
+assert.ok(/Mañana son 40|Mañana cumples 40|^40 mañana/m.test(mio.texto), mio.texto);
 assert.ok(!mio.texto.includes("<b>Pablo</b>"), "a mí no se me nombra en tercera persona");
-assert.ok(mio.texto.endsWith("https://pacr.es/arbol"));
+assert.ok(!mio.texto.includes("pacr.es"), "ni fecha ni enlace: el mensaje es de mañana y ya está");
 
 // El 19 de marzo, que es el día que más junta: mi día del padre delante de las onomásticas, y
 // cada una diciendo quién es y de qué la conozco.
 const marzo = laNoche("2026-03-18")!;
 const lineas = marzo.texto.split("\n").filter((l) => l.startsWith("🎂") || l.startsWith("🎉"));
 assert.strictEqual(lineas[0], "🎉 Mañana es el día del padre, y va por ti. Ve dejando pistas.");
-assert.ok(lineas.includes("🎉 <b>Jose Alberto</b>, padre de Carmen — onomástica"), marzo.texto);
-assert.ok(lineas.includes("🎉 <b>Pepe</b>, tío — onomástica"), marzo.texto);
+assert.ok(/^\S+ <b>Pepe<\/b>, tío — /m.test(marzo.texto), marzo.texto);
+// El santo es de los míos: el padre de Carmen cumple San José y no se anuncia.
+assert.ok(!marzo.texto.includes("Jose Alberto"), "de la familia política, el cumpleaños y nada más");
 
 // El día de la madre no va por mí aunque sea padre: va por Carmen, y por la mía mientras viva.
 const mayo = laNoche("2026-05-02")!;
@@ -56,18 +57,19 @@ for (const dia of ["día del padre", "día de la madre"]) {
     assert.strictEqual(veces, 1, `el ${dia} sale ${veces} veces al año`);
 }
 
-// Un cumpleaños ajeno dice los que cumple, y el mío no se cuela entre ellos.
-const conCumple = delAño.find((a) => a?.texto.includes("— cumple "))!;
-assert.ok(/🎂 <b>[^<]+<\/b>, [^\n—]+ — cumple \d+/.test(conCumple.texto), conCumple.texto);
+// Un cumpleaños ajeno dice quién es y los que cumple, y nunca cae en la línea de otro.
+const conCumple = delAño.find((a) => /^\S+ [^\n]*<b>Mar<\/b>/m.test(a?.texto ?? ""))!;
+assert.ok(/<b>Mar<\/b>, pareja de Ricardo[.,] /.test(conCumple.texto), conCumple.texto);
+assert.ok(/\b45\b/.test(conCumple.texto.split("\n").find((l) => l.includes("<b>Mar</b>"))!), conCumple.texto);
 
 // Todo el año: cada línea con su emoji, nadie sin decir quién es y nada a medio redactar.
 for (const aviso of delAño) {
   if (!aviso) continue;
-  for (const linea of aviso.texto.split("\n").slice(2, -2)) {
-    assert.ok(/^(🎂|🎉) \S/.test(linea), `línea sin emoji o vacía: «${linea}»`);
+  for (const linea of aviso.texto.split("\n").slice(2)) {
+    assert.ok(new RegExp(`^(${[...TARTAS, ...FIESTAS].join("|")}) \\S`, "u").test(linea), `línea sin emoji o vacía: «${linea}»`);
     assert.ok(!/undefined|null|NaN/.test(linea), `línea a medio redactar: «${linea}»`);
     // Quien no soy yo va nombrado en negrita y con lo que me es detrás.
-    assert.ok(!linea.includes("<b>") || /<\/b>, [^—]+ — /.test(linea), `línea sin decir quién es: «${linea}»`);
+    assert.ok(!linea.includes("<b>") || /<\/b>, \S/.test(linea), `línea sin decir quién es: «${linea}»`);
   }
 }
 

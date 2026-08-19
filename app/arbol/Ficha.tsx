@@ -10,23 +10,30 @@ import { Accion, Marca, Titulo } from "./Identidad";
 
 export default function Ficha({
   datos,
-  anterior,
+  reinicio,
   onCentrar,
   onCamino,
   onVerEnElArbol,
   onHomonimos,
   onIndice,
-  onDevolver,
+  onReiniciar,
 }: {
   datos: Datos;
-  /** El Centro de antes, para poder deshacer la mudanza desde la ficha del de ahora. */
-  anterior?: { id: string; nombre: string };
+  /**
+   * Cómo se llama quien es hoy el Centro, **y solo cuando el árbol se ha movido de como se
+   * entró**: sin nada desplegado ni ningún filtro tocado, reiniciar no hace nada y un botón
+   * que no hace nada enseña a no leer los botones. **Deja el Centro donde está** —de la ficha
+   * de Joaquín se sale reiniciando como Joaquín— y por eso no dice el nombre de quien abrió el
+   * enlace: eso es volver al principio, y vive en «Qué se ve». Antes aquí se ofrecía deshacer
+   * la última mudanza, que es lo que ya hace el aviso que sale al mudarla.
+   */
+  reinicio?: string;
   onCentrar: () => void;
   onCamino: () => void;
   onVerEnElArbol: () => void;
   onHomonimos: (consulta: string | null) => void;
   onIndice: () => void;
-  onDevolver: () => void;
+  onReiniciar: () => void;
 }) {
   return (
     <div className="flex flex-col">
@@ -62,7 +69,7 @@ export default function Ficha({
         {datos.esCentro ? (
           <>
             <Accion texto="Índice de parentescos" nota="›" onPulsar={onIndice} />
-            {anterior && <Accion texto={`Volver a ver como ${anterior.nombre}`} nota="↩" onPulsar={onDevolver} />}
+            {reinicio && <Accion texto={`Reiniciar como ${reinicio}`} nota="↺" onPulsar={onReiniciar} />}
           </>
         ) : (
           <>

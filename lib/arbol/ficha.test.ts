@@ -187,7 +187,7 @@ assert.strictEqual(ficha("j1").nota, undefined, "y quien no la tiene no lleva un
 
 // Las ramas
 assert.strictEqual(valor(ficha("j5"), "Rama"), "Serrano");
-assert.strictEqual(valor(ficha("j6"), "Rama"), "entra en Serrano por matrimonio");
+assert.strictEqual(valor(ficha("j6"), "Rama"), "entra en Serrano por Rosa", "y quien no la tiene de sangre, por quién entra");
 
 // El caso feo
 const anonima = ficha("j6");

@@ -19,7 +19,7 @@ for (const u of g.unionPorId.values()) {
 
 // El tachón del símbolo era el divorcio, y se recuperó de los docx a mano (marcar-rupturas.py);
 // las altas traen el suyo escrito.
-assert.strictEqual([...g.unionPorId.values()].filter((u) => u.roto).length, 11, "11 uniones acabadas");
+assert.strictEqual([...g.unionPorId.values()].filter((u) => u.roto).length, 15, "15 uniones acabadas");
 
 // Nadie es hijo de dos uniones, y todos tienen generación
 assert.strictEqual(g.generacion.size, data.people.length, "todas las personas colocadas (una sola componente conexa)");
@@ -42,11 +42,13 @@ for (const gen of g.generacion.values()) {
 assert.deepStrictEqual(
   [...porNivel.entries()].sort((a, b) => a[0] - b[0]),
   [
-    [-4, 10],
-    [-3, 34],
-    [-2, 117],
-    [-1, 170],
-    [0, 107],
+    [-4, 12],
+    [-3, 36],
+    [-2, 125],
+    [-1, 180],
+    [0, 112],
+    // Manuela, la primera de la generación que viene detrás de la de Lucas.
+    [1, 1],
   ],
   "reparto por generación relativa al más joven",
 );
@@ -71,10 +73,10 @@ assert.strictEqual(
   "el hijo ve los tres documentos enteros",
 );
 for (const pid of ["p25", "p126", "p131"]) {
-  assert.strictEqual(visibles(g, pid).size, 342, `${pid} ve 342`);
+  assert.strictEqual(visibles(g, pid).size, 369, `${pid} ve 369`);
 }
 assert.strictEqual(visibles(g, "p124").size, 188, "un abuelo ve solo lo suyo");
-assert.strictEqual(visibles(g, "p125").size, 170, "…y la abuela, lo suyo");
+assert.strictEqual(visibles(g, "p125").size, 197, "…y la abuela, lo suyo");
 
 // **Ya no hay quien vea el árbol entero.** Una familia dada de alta que solo se ata por un
 // matrimonio lateral —los Sala, por el marido de una hermana— no comparte ancestro con

@@ -26,7 +26,7 @@ export const PAREJA: Quien = { id: "p24", nombre: "Carmen" };
 const MIOS = ["bisabuelos", "abuelos", "padres", "tíos", "hermanos", "primos", "hijos", "sobrinos", "nietos"];
 
 /** De los suyos, los que le son esto a ella. */
-const SUYOS = ["padres", "hermanos", "primos", "sobrinos", "sobrinos segundos"];
+const SUYOS = ["abuelos", "padres", "tíos", "hermanos", "primos", "sobrinos", "sobrinos segundos"];
 
 /**
  * Ramas enteras: toda la descendencia de un matrimonio, hasta el último nieto y sin tope de
@@ -39,12 +39,16 @@ const RAMAS: [Quien, Quien][] = [
 ];
 
 /**
- * Los que no entran por ninguna regla y quiero igual. Llevan escrito quién es cada uno:
- * entran por no ser nada mío, así que no hay parentesco del que sacarlo.
+ * Los que no entran por ninguna regla y quiero igual. `como` solo lo lleva quien además no
+ * me es nada: sin parentesco del que sacarlo, o se escribe aquí o la lista no sabe nombrarlo.
  */
-const SUELTOS: (Quien & { como: string })[] = [
+const SUELTOS: (Quien & { como?: string })[] = [
   // Aina no es hija de Javi, así que no le es sangre a nadie de la familia; pero es de casa.
   { id: "p425", nombre: "Aina", como: "la hija de Ana" },
+  // Los de Vicente. Sobrinos segundos tengo catorce y no quiero saber de los otros doce:
+  // por eso entran por su id y no abriendo la regla, que es de lo que va esta lista.
+  { id: "p144", nombre: "Ricardo" },
+  { id: "p145", nombre: "Guillermo" },
 ];
 
 /** Y los que entran por una regla y prefiero no saber. Gana esta lista. */
@@ -53,12 +57,24 @@ const FUERA: Quien[] = [];
 /** Todos los que la lista nombra por id: lo que el test tiene que vigilar. */
 export const CITADOS: Quien[] = [YO, PAREJA, ...RAMAS.flat(), ...SUELTOS, ...FUERA];
 
+/** Lo que la lista sabe de cada uno: cómo lo llamo y de qué se le avisa. */
+export interface Entrada {
+  /** Lo que me es, para poder nombrarlo. Nulo solo en mí. */
+  como: string | null;
+  /**
+   * Si además del cumpleaños se avisa de su onomástica. **Solo de los míos de sangre y de mi
+   * pareja**: el santo es una costumbre de casa, y felicitárselo a la familia política era
+   * doblar el mensaje con lo que ni ellos esperan ni yo felicito.
+   */
+  santo: boolean;
+}
+
 /**
  * La lista, con el nombre que le doy a cada uno. **Entran también los muertos** —un abuelo es
  * de los míos aunque ya no cumpla años—: quitarlos es cosa de quien mire el calendario, no de
  * quien decida a quién quiere.
  */
-export function laLista(g: Grafo): Map<string, string | null> {
+export function laLista(g: Grafo): Map<string, Entrada> {
   const desdeMi = parentescos(g, YO.id);
   const desdeElla = parentescos(g, PAREJA.id);
 
@@ -75,7 +91,16 @@ export function laLista(g: Grafo): Map<string, string | null> {
 
   for (const { id } of FUERA) dentro.delete(id);
 
-  return new Map([...dentro].map((id) => [id, comoLoLlamo(g, id, desdeMi, desdeElla)]));
+  const deSangre = (id: string) => {
+    const suyo = desdeMi.get(id)!.termino;
+    return suyo !== PAREJAS && suyo !== SIN_PARENTESCO;
+  };
+  return new Map(
+    [...dentro].map((id) => [
+      id,
+      { como: comoLoLlamo(g, id, desdeMi, desdeElla), santo: deSangre(id) || id === PAREJA.id },
+    ]),
+  );
 }
 
 /**

@@ -20,7 +20,7 @@ for (const { id, nombre } of CITADOS) {
 }
 
 const lista = laLista(g);
-const comoLoLlamo = (id: string) => lista.get(id);
+const comoLoLlamo = (id: string) => lista.get(id)?.como;
 
 // Quién entra
 assert.ok(lista.has(YO.id), "el primero de la lista soy yo: mi cumpleaños también se avisa");
@@ -44,9 +44,18 @@ for (const id of ["p461", "p462"]) assert.strictEqual(lista.has(id), false, `${p
 // La rama entera de los abuelos maternos, sin tope de grado: por parentesco, una sobrina
 // segunda no entraría —no está entre los términos de la lista—, y por rama sí.
 assert.strictEqual(comoLoLlamo("p416"), "sobrina segunda", "Elena, la hija de Marta");
-// Y solo la de esa rama: la única que hay es la que desciende de José y Catalina.
-const sobrinasSegundas = [...lista].filter(([, como]) => como === "sobrina segunda" || como === "sobrino segundo");
-assert.strictEqual(sobrinasSegundas.length, 1, `sobrinos segundos míos en la lista: ${sobrinasSegundas.map(([id]) => persona(id).nombre)}`);
+// De los catorce sobrinos segundos que tengo entran tres, y ninguno por ser sobrino segundo:
+// Elena por la rama Velasco, y los dos de Vicente porque están escritos uno a uno.
+const sobrinasSegundas = [...lista].filter(([, e]) => e.como === "sobrina segunda" || e.como === "sobrino segundo");
+assert.deepStrictEqual(
+  sobrinasSegundas.map(([id]) => id).sort(),
+  ["p144", "p145", "p416"],
+  `sobrinos segundos míos en la lista: ${sobrinasSegundas.map(([id]) => persona(id).nombre)}`,
+);
+
+// Los tíos de Carmen entran como los míos: es la regla que se dejaba fuera a Teresa.
+assert.strictEqual(comoLoLlamo("p5"), "tía de Carmen");
+assert.strictEqual(comoLoLlamo("p3"), "abuelo de Carmen");
 
 // Un suelto entra sin parentesco que lo nombre, y lo nombra su propia línea de la lista.
 assert.strictEqual(comoLoLlamo("p425"), "la hija de Ana", "Aina, que no es hija de Javi");
@@ -60,9 +69,17 @@ assert.strictEqual(lista.has("p444"), false);
 
 // Nadie se queda sin nombre salvo yo: una línea que solo dijera «Elena» no vale de nada
 // cuando hay cuatro en el árbol.
-for (const [id, como] of lista) {
+for (const [id, { como }] of lista) {
   assert.ok(como !== null || id === YO.id, `${persona(id).nombre} (${id}) entra sin decir quién es`);
 }
+
+// El santo es de los míos de sangre y de mi pareja: a la familia política se la felicita el
+// cumpleaños y nada más.
+assert.strictEqual(lista.get("p125")!.santo, true, "mi madre");
+assert.strictEqual(lista.get("p24")!.santo, true, "y Carmen, que es mi pareja");
+assert.strictEqual(lista.get("p5")!.santo, false, "una tía de Carmen, no");
+assert.strictEqual(lista.get("p127")!.santo, false, "ni la pareja de mi hermano");
+assert.strictEqual(lista.get("p425")!.santo, false, "ni Aina, que no le es sangre a nadie");
 
 // Y nadie sale por partida doble ni se cuela un id que no exista.
 for (const id of lista.keys()) assert.ok(g.personaPorId.has(id), `${id} no está en el árbol`);

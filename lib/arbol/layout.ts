@@ -207,7 +207,8 @@ export function calcularLayout(g: Grafo, opciones: OpcionesLayout): Layout {
       const falta = u.partners.find((p) => !mostrados.has(p) && permitido(p));
       if (falta) {
         const junto = u.partners.find((p) => mostrados.has(p))!;
-        const [primero] = ordenarPareja(u.partners, (p) => g.personaPorId.get(p));
+        // Por el mismo borde por el que va a salir, que lo decide `enSuOrden` y no el sexo.
+        const [primero] = enSuOrden(g, u.id, ordenarPareja(u.partners, (p) => g.personaPorId.get(p)));
         const pendiente = { unionId: u.id, arriba: primero === falta };
         pendienteDePersona.set(junto, [...(pendienteDePersona.get(junto) ?? []), pendiente]);
       }
@@ -585,27 +586,52 @@ const crearContador = (id: string, nivel: number, contador: Omit<Contador, "x" |
  */
 function agruparUniones(g: Grafo, mostrados: Set<string>): { uniones: string[]; miembros: string[] }[] {
   const grupos: { uniones: string[]; miembros: string[] }[] = [];
-  const grupoDePersona = new Map<string, { uniones: string[]; miembros: string[] }>();
+  const grupoDePersona = new Map<string, (typeof grupos)[number]>();
 
   for (const u of g.unionPorId.values()) {
-    const suyos = ordenarPareja(
-      u.partners.filter((p) => mostrados.has(p)),
-      (id) => g.personaPorId.get(id),
-    );
+    const suyos = u.partners.filter((p) => mostrados.has(p));
     if (suyos.length === 0) continue;
-    const grupo = suyos.map((p) => grupoDePersona.get(p)).find((x) => x);
-    if (!grupo) {
-      grupos.push({ uniones: [u.id], miembros: suyos });
-      for (const p of suyos) grupoDePersona.set(p, grupos[grupos.length - 1]);
+    const dentro = suyos.find((p) => grupoDePersona.has(p));
+    if (dentro === undefined) {
+      const miembros = enSuOrden(g, u.id, ordenarPareja(suyos, (id) => g.personaPorId.get(id)));
+      grupos.push({ uniones: [u.id], miembros });
+      for (const p of miembros) grupoDePersona.set(p, grupos[grupos.length - 1]);
       continue;
     }
+    // **El nuevo se cuela pegado al que ya está y por el lado que le toca**, no por el extremo
+    // del grupo: quien ya estaba puede haber entrado por su otra unión, y entonces el extremo
+    // es el lado contrario. Es lo que ponía a la primera mujer debajo cuando el grupo lo había
+    // abierto la segunda.
+    const grupo = grupoDePersona.get(dentro)!;
     grupo.uniones.push(u.id);
-    const pendientes = suyos.filter((p) => !grupoDePersona.has(p));
-    if (u.partners.includes(grupo.miembros[0])) grupo.miembros.unshift(...pendientes);
-    else grupo.miembros.push(...pendientes);
-    for (const p of pendientes) grupoDePersona.set(p, grupo);
+    const nuevos = suyos.filter((p) => !grupoDePersona.has(p));
+    if (nuevos.length === 0) continue;
+    grupo.miembros.splice(grupo.miembros.indexOf(dentro) + (encimaDe(g, u, dentro) ? 0 : 1), 0, ...nuevos);
+    for (const p of nuevos) grupoDePersona.set(p, grupo);
   }
   return grupos;
+}
+
+/** Si la pareja que trae esa unión va encima de quien ya está puesto. */
+const encimaDe = (g: Grafo, u: Union, quien: string): boolean =>
+  enSuOrden(g, u.id, ordenarPareja(u.partners, (p) => g.personaPorId.get(p)))[0] !== quien;
+
+/**
+ * El orden dentro de una pareja. Manda el sexo —el hombre arriba— **salvo que uno de los dos
+ * tenga más de una unión: entonces manda el orden en que están escritas**, la primera pareja
+ * encima y la segunda debajo, y él queda en medio. Es lo que dice ya el otro borde: con la
+ * regla del sexo, pulsar el «+» de arriba sacaba a la mujer por abajo, y un mando que
+ * contesta por el lado contrario al que se pulsa no se aprende, se sufre.
+ */
+function enSuOrden(g: Grafo, unionId: string, suyos: string[]): string[] {
+  if (suyos.length !== 2) return suyos;
+  for (const eje of suyos) {
+    const suyas = g.unionesDePartner.get(eje) ?? [];
+    if (suyas.length < 2) continue;
+    const otro = suyos.find((p) => p !== eje)!;
+    return suyas[0] === unionId ? [otro, eje] : [eje, otro];
+  }
+  return suyos;
 }
 
 function bloqueDeUnidad(u: Unidad): Bloque {

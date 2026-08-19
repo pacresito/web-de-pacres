@@ -18,7 +18,11 @@ export interface Enlace {
   alias: string;
   id: string;
   nombre: string;
-  /** Año de nacimiento, que es lo que distingue a un homónimo de otro. */
+  /**
+   * Año de nacimiento, que es lo que distingue a un homónimo de otro. Vacío en quien no
+   * trae ninguno: entonces el enlace se apoya solo en el nombre, que sigue delatando al id
+   * que cambiara de dueño hacia alguien con año.
+   */
   nace: string;
 }
 
@@ -26,6 +30,7 @@ export const ENLACES: Enlace[] = [
   { alias: "Velasco", id: "p395", nombre: "José", nace: "1921" },
   { alias: "Crespo", id: "p84", nombre: "Vicente", nace: "1900" },
   { alias: "Maestre", id: "p289", nombre: "José", nace: "1914" },
+  { alias: "Perez", id: "p466", nombre: "Francisco", nace: "" },
   { alias: "Cardona", id: "p21", nombre: "Ángeles", nace: "1955" },
   { alias: "Sala", id: "p442", nombre: "José Juan", nace: "1942" },
   { alias: "Castrillo", id: "p81", nombre: "Ambrosio", nace: "1883" },

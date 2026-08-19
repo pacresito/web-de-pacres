@@ -21,12 +21,12 @@ import {
   type Vista,
 } from "@/lib/arbol/camara";
 import { caminoEntre, trazosDelCamino } from "@/lib/arbol/camino";
-import { cintaDe } from "@/lib/arbol/cinta";
 import { centroRecordado, recordarCentro } from "@/lib/arbol/enlaces";
 import { conDuda, escribirVida, FECHAS_POR_DEFECTO, type ModoFechas } from "@/lib/arbol/fechas";
 import { proximasCelebraciones } from "@/lib/arbol/celebraciones";
 import { construirGrafo, pasosDesde, visibles } from "@/lib/arbol/grafo";
 import { fichaDe } from "@/lib/arbol/ficha";
+import { huecosDe, losIncompletos } from "@/lib/arbol/incompletos";
 import {
   identidadDe,
   LARGOS_FILA,
@@ -55,7 +55,6 @@ import Busqueda from "./Busqueda";
 import Capas from "./Capas";
 import Camino from "./Camino";
 import Celebraciones, { AvisoCelebraciones } from "./Celebraciones";
-import Cinta from "./Cinta";
 import Esqueleto from "./Esqueleto";
 import Ficha from "./Ficha";
 import Hoja from "./Hoja";
@@ -131,7 +130,7 @@ export default function Arbol({
     delEnlace ?? (esDelArbol(POR_DEFECTO) ? POR_DEFECTO : (data.people[0]?.id ?? POR_DEFECTO)),
   );
   const [puntoDeVista, setPuntoDeVista] = useState(inicial);
-  /** De dónde se vino: la ficha del centro de ahora es la que ofrece deshacer la mudanza. */
+  /** De dónde se vino: el aviso que sale al mudar el Centro es el que ofrece deshacerlo. */
   const [anterior, setAnterior] = useState<string | null>(null);
   const [abiertas, setAbiertas] = useState<Set<string>>(() => new Set());
   // Aparte de las abiertas: de estas se ha pedido solo la pareja, no sus hijos.
@@ -140,6 +139,12 @@ export default function Arbol({
   const [ocultarNoConectados, setOcultarNoConectados] = useState(true);
   const [fechas, setFechas] = useState<ModoFechas>(FECHAS_POR_DEFECTO);
   const [apellidos, setApellidos] = useState<ModoApellidos>(APELLIDOS_POR_DEFECTO);
+  /**
+   * El repaso: cada nodo enseña lo que le falta y se apaga quien ya está entero. Manda sobre
+   * los dos interruptores de arriba —enseñarlo todo es de lo que va— y por eso los fija en vez
+   * de leerlos: con «fechas: no» puesto no habría hueco que enseñar.
+   */
+  const [repaso, setRepaso] = useState(false);
   const [busquedaAbierta, setBusquedaAbierta] = useState(false);
   const [consulta, setConsulta] = useState("");
   /** Las cuatro sin nombre no se pueden teclear: se piden por su salida del callejón. */
@@ -183,6 +188,16 @@ export default function Arbol({
     [todoDesplegado, abiertas, grafo],
   );
   const libreta = useMemo(() => libretaDe(grafo), [grafo]);
+  /** A quién le queda algo por preguntar: lo enciende el repaso y lo cuenta «Qué se ve». */
+  const conHuecos = useMemo(() => losIncompletos(grafo, libreta.linaje), [grafo, libreta]);
+  // Un solo apellido: el repaso ya avisa del que falta, y con dos el nodo se llenaba de
+  // apellidos deducidos justo cuando lo que hay que leer es lo que no consta.
+  const comoSePinta = {
+    apellidos: repaso ? (1 as const) : apellidos,
+    fechas: repaso ? ("completa" as const) : fechas,
+  };
+  const huecosDelNodo = (id: string) =>
+    repaso ? huecosDe(personaPorId.get(id)!, libreta.linaje.get(id)!) : null;
 
   const layout = useMemo(
     () => calcularLayout(grafo, { puntoDeVista, expandidas, parejas, ocultarNoConectados }),
@@ -194,12 +209,6 @@ export default function Arbol({
     () => calcularBloques(grafo, { puntoDeVista, ocultarNoConectados }),
     [grafo, puntoDeVista, ocultarNoConectados],
   );
-  /** De qué grupo de hermanos es cada uno, que es la unidad con la que mide la cinta. */
-  const bloqueDe = useMemo(() => {
-    const suyo = new Map<string, string>();
-    for (const bloque of mapa.bloques) for (const id of [...bloque.hermanos, ...bloque.parejas]) suyo.set(id, bloque.id);
-    return suyo;
-  }, [mapa]);
   /** Quién está puesto en el lienzo ahora mismo: lo que no esté, hay que abrirlo para verlo. */
   const dibujado = useMemo(() => new Set(layout.nodos.map((n) => n.id)), [layout]);
   const cuentas = useMemo(
@@ -282,7 +291,7 @@ export default function Arbol({
    */
   const vidaDe = (id: string) => {
     const p = personaPorId.get(id)!;
-    const vida = escribirVida(p, fechas, hoy);
+    const vida = escribirVida(p, comoSePinta.fechas, hoy);
     return vida && p.incierto === "fechas" ? conDuda(vida) : vida;
   };
   /** Cómo se llama alguien en una línea, con lo que el bloque de identidad ponga arriba. */
@@ -614,8 +623,14 @@ export default function Arbol({
     setParejas((previas) => new Set(previas).add(unionId));
   }
 
-  function reiniciar() {
-    setPuntoDeVista(inicial);
+  /**
+   * Devolver el árbol a como se entró. **`donde` decide si además se vuelve al punto de vista
+   * de entrada**: desde «Qué se ve» sí —es volver al principio— y desde la ficha del Centro
+   * no, que ahí lo que se pide es plegar lo que uno ha desplegado sin perder desde dónde lo
+   * estaba mirando.
+   */
+  function reiniciar(donde: "entrada" | "aqui" = "entrada") {
+    if (donde === "entrada") setPuntoDeVista(inicial);
     setAnterior(null);
     setHoja(null);
     setGirando(false);
@@ -626,6 +641,7 @@ export default function Arbol({
     setOcultarNoConectados(true);
     setFechas(FECHAS_POR_DEFECTO);
     setApellidos(APELLIDOS_POR_DEFECTO);
+    setRepaso(false);
     setParada("personas");
     setVista(CENTRADA);
     setBusquedaAbierta(false);
@@ -719,26 +735,33 @@ export default function Arbol({
   const dibujados = parada === "bloques" ? mapa.bloques : layout.nodos;
   const niveles = useMemo(() => [...new Set(dibujados.map((n) => n.nivel))].sort((a, b) => a - b), [dibujados]);
   const generacionPov = grafo.generacion.get(puntoDeVista) ?? 0;
-  /**
-   * La cinta habla de bloques en las dos escalas que la pintan, así que en la de personas
-   * hay que decirle de qué grupo de hermanos es cada uno de los que se están dibujando.
-   */
-  const segmentos = cintaDe(
-    mapa.bloques,
-    parada === "bloques"
-      ? mapa.bloques.map((b) => ({ bloque: b.id, y: b.y }))
-      : layout.nodos.map((n) => ({ bloque: bloqueDe.get(n.id) ?? "", y: n.y })),
-    { x: centro.x, y: centro.y, alto: tamano.h / vista.escala },
-  );
   const { minY, maxY } = limites;
   /**
    * A quién se está mirando de cerca: los eslabones del camino abierto, la fracción por la
    * que se está pasando o la que se dejó señalada. El camino manda mientras dura, que es lo
    * que se ha ido a leer, y el vistazo manda sobre lo señalado: es el más reciente.
    */
-  const señalados = camino ? new Set(camino.eslabones.map((e) => e.id)) : (resaltados ?? marcados?.ids ?? null);
+  // El repaso va el último porque es el más flojo: si además se está mirando un camino o una
+  // fracción, eso es lo que se ha ido a ver, y apagar dos cosas a la vez no apaga ninguna.
+  const señalados = camino
+    ? new Set(camino.eslabones.map((e) => e.id))
+    : (resaltados ?? marcados?.ids ?? (repaso ? conHuecos : null));
   /** Con algo señalado, todo lo que no es suyo se va al fondo. Sin ello, nada cambia. */
   const opacidadDe = (id?: string) => (!señalados || (id && señalados.has(id)) ? undefined : ATENUADO);
+  /**
+   * Si el árbol se ha movido de como se entró. Es lo único que hace que reiniciar signifique
+   * algo, y por eso decide si la ficha del Centro lo ofrece.
+   */
+  const tocado =
+    puntoDeVista !== inicial ||
+    abiertas.size > 0 ||
+    parejas.size > 0 ||
+    todoDesplegado ||
+    !ocultarNoConectados ||
+    repaso ||
+    marcados !== null ||
+    fechas !== FECHAS_POR_DEFECTO ||
+    apellidos !== APELLIDOS_POR_DEFECTO;
 
   return (
     <div ref={contenedor} className="relative h-full w-full overflow-hidden bg-[var(--paper)]">
@@ -850,8 +873,13 @@ export default function Arbol({
             <Nodo
               key={n.id}
               nodo={n}
-              identidad={escribirlo(n.id, { fechas: "ocultar", apellidos, largos: { titulo: LARGOS_NODO.titulo, contexto: 0 } })}
+              identidad={escribirlo(n.id, {
+                fechas: "ocultar",
+                apellidos: comoSePinta.apellidos,
+                largos: { titulo: LARGOS_NODO.titulo, contexto: 0 },
+              })}
               vida={vidaDe(n.id)}
+              huecos={huecosDelNodo(n.id)}
               cumple={cumplenHoy.get(n.id) ?? null}
               atenuado={opacidadDe(n.id) !== undefined}
               // El camino no deja de leer a quien lo abrió: el cerco sigue puesto mientras
@@ -900,12 +928,7 @@ export default function Arbol({
 
       {/* En la escala de ramas no se pinta: ahí no hay personas colocadas por generación,
           y una regla que rotulase el mapa estaría midiendo otra cosa. */}
-      {tamano.w > 0 && parada !== "ramas" && (
-        <>
-          <Regla marcas={reglaDe(niveles, centro.x, vista.escala, tamano.w)} />
-          <Cinta segmentos={segmentos} />
-        </>
-      )}
+      {tamano.w > 0 && parada !== "ramas" && <Regla marcas={reglaDe(niveles, centro.x, vista.escala, tamano.w)} />}
 
       {parada === "ramas" && (
         <Ramas
@@ -1031,13 +1054,16 @@ export default function Arbol({
               ocultar={ocultarNoConectados}
               setOcultar={setOcultarNoConectados}
               escondidos={escondidos}
+              repaso={repaso}
+              setRepaso={setRepaso}
+              incompletos={conHuecos.size}
               todoDesplegado={todoDesplegado}
               onDesplegarTodo={() => {
                 setTodoDesplegado(!todoDesplegado);
                 setAbiertas(new Set());
                 setParejas(new Set());
               }}
-              onReiniciar={reiniciar}
+              onReiniciar={() => reiniciar("entrada")}
               inicial={conApellido(inicial)}
             />
           ) : hoja.tipo === "celebraciones" ? (
@@ -1062,7 +1088,7 @@ export default function Arbol({
                 pertenencia: pertenencias.get(hoja.id),
                 homonimia: libreta.homonimias.get(hoja.id),
               })}
-              anterior={anterior ? { id: anterior, nombre: conApellido(anterior) } : undefined}
+              reinicio={tocado ? personaPorId.get(puntoDeVista)!.nombre : undefined}
               onCentrar={() => centrarEn(hoja.id)}
               onCamino={() => abrirHoja({ tipo: "camino", id: hoja.id })}
               onVerEnElArbol={() => verEnElArbol(hoja.id)}
@@ -1077,7 +1103,7 @@ export default function Arbol({
                 setSinNombre(false);
                 setBusquedaAbierta(true);
               }}
-              onDevolver={() => anterior && centrarEn(anterior)}
+              onReiniciar={() => reiniciar("aqui")}
             />
           )}
         </Hoja>

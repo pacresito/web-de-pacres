@@ -83,26 +83,27 @@ assert.deepStrictEqual(
   [...reparto("p25", g.personaPorId.keys())].sort(),
   [
     ["-1 hijos", 3],
-    ["-1 otros sobrinos", 66],
-    ["-1 parejas", 1],
+    ["-1 otros sobrinos", 70],
+    ["-1 parejas", 2],
     ["-1 sin parentesco", 17],
     ["-1 sobrinos segundos", 15],
     ["-1 sobrinos", 5],
+    ["-2 otros sobrinos nietos", 1],
     ["0 hermanos", 3],
-    ["0 parejas", 49],
-    ["0 primos segundos", 69],
+    ["0 parejas", 53],
+    ["0 primos segundos", 75],
     ["0 primos", 15],
     ["0 sin parentesco", 34],
     ["1 padres", 2],
-    ["1 parejas", 41],
-    ["1 sin parentesco", 30],
-    ["1 tíos segundos", 36],
+    ["1 parejas", 45],
+    ["1 sin parentesco", 31],
+    ["1 tíos segundos", 39],
     ["1 tíos", 8],
     ["2 abuelos", 4],
-    ["2 parejas", 9],
+    ["2 parejas", 10],
     ["2 sin parentesco", 12],
-    ["2 tíos abuelos", 9],
-    ["3 bisabuelos", 6],
+    ["2 tíos abuelos", 10],
+    ["3 bisabuelos", 8],
     ["3 sin parentesco", 4],
   ].sort(),
   "el reparto del árbol entero desde Pablo",
@@ -136,7 +137,7 @@ assert.ok(nombradas.length >= parejas.length * 0.9, `solo ${nombradas.length} de
 // comparten sangre con nadie. Al resto —los que ni por ahí se dejan nombrar— les queda
 // entrar por alguien, y ese alguien es lo que se dice de ellos.
 const ajenos = [...parentescos(g, "p25")].filter(([, p]) => p.termino === SIN_PARENTESCO).map(([id]) => id);
-assert.strictEqual(ajenos.length, 97);
+assert.strictEqual(ajenos.length, 98);
 assert.strictEqual(relaciones.get("p3")!.frase, "Es el abuelo de tu pareja");
 // «El abuelo de tu pareja», no «de la familia política de tu pareja»: la de ella tiene
 // término propio y los otros veinte solo tienen por dónde entraron.

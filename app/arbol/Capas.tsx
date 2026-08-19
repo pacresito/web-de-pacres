@@ -10,8 +10,14 @@ import type { ModoApellidos } from "@/lib/arbol/personas";
 import LogoutButton from "./LogoutButton";
 import TemaBoton from "./TemaBoton";
 
-/** La fila de la hoja: todo lo que se pulsa aquí mide y se pinta igual. */
-const FILA = "flex min-h-11 items-center rounded-lg bg-[var(--soft)] px-3 text-left text-[13px] text-[var(--ink)]";
+/**
+ * La fila de la hoja: todo lo que se pulsa aquí mide y se pinta igual. El color va aparte
+ * porque la que se queda pulsada lo invierte, y **dos fondos en la misma clase no se pisan por
+ * orden de escritura sino por el de la hoja de estilos**: el que gana no es el que se añade.
+ */
+const FILA = "flex min-h-11 items-center rounded-lg px-3 text-left text-[13px]";
+const APAGADA = `${FILA} bg-[var(--soft)] text-[var(--ink)]`;
+const PULSADA = `${FILA} bg-[var(--ink)] text-[var(--paper)]`;
 
 export default function Capas({
   fechas,
@@ -21,6 +27,9 @@ export default function Capas({
   ocultar,
   setOcultar,
   escondidos,
+  repaso,
+  setRepaso,
+  incompletos,
   todoDesplegado,
   onDesplegarTodo,
   onReiniciar,
@@ -34,6 +43,10 @@ export default function Capas({
   setOcultar: (v: boolean) => void;
   /** Cuánta gente esconde el filtro de consanguinidad: el precio de tenerlo puesto. */
   escondidos: number;
+  repaso: boolean;
+  setRepaso: (v: boolean) => void;
+  /** A cuántos les queda algún dato por preguntar: lo que el repaso deja encendido. */
+  incompletos: number;
   todoDesplegado: boolean;
   onDesplegarTodo: () => void;
   onReiniciar: () => void;
@@ -44,18 +57,29 @@ export default function Capas({
     <div className="flex flex-col">
       <h2 className="font-[family-name:var(--serif)] text-[24px] leading-[1.15]">Qué se ve</h2>
 
+      {/* Durante el repaso las dos preguntas de aquí ya están contestadas —enseñarlo todo es
+          de lo que va— así que se quedan puestas y sin tocar, en vez de desaparecer: lo que
+          hay que entender es que el interruptor de abajo manda, no que se han perdido. */}
       <Tramo titulo="En cada nodo">
         {/* «Nuevos» solo los enseña quien los estrena en su línea; 1 y 2, todo el mundo. */}
-        <Eleccion titulo="Apellidos" opciones={["nuevos", 0, 1, 2] as const} actual={apellidos} onElegir={setApellidos} nombrar={String} />
+        <Eleccion
+          titulo="Apellidos"
+          opciones={["nuevos", 0, 1, 2] as const}
+          actual={repaso ? 1 : apellidos}
+          onElegir={setApellidos}
+          nombrar={String}
+          bloqueada={repaso}
+        />
         {/* Los cuatro ocupan el mismo hueco detrás del nombre, así que son excluyentes. La
             fecha entera solo la tienen los del calendario de cumpleaños; para el resto,
             «completa» sigue enseñando el año a secas. */}
         <Eleccion
           titulo="Fechas"
           opciones={["ocultar", "año", "edad", "completa"] as const}
-          actual={fechas}
+          actual={repaso ? "completa" : fechas}
           onElegir={setFechas}
           nombrar={(f) => (f === "ocultar" ? "no" : f)}
+          bloqueada={repaso}
         />
       </Tramo>
 
@@ -70,7 +94,23 @@ export default function Capas({
           onPulsar={() => setOcultar(!ocultar)}
         />
         <Interruptor titulo="Desplegar todo" activo={todoDesplegado} onPulsar={onDesplegarTodo} />
-        <button type="button" onClick={onReiniciar} className={FILA}>
+        {/* El repaso: se enseña todo lo que consta y se apaga a quien ya está entero, que es
+            al revés que los otros señalamientos —son 382 de 466 y encenderlos era encender el
+            árbol—. Cada nodo escribe entonces el hueco con la forma que tendría la respuesta.
+            **Va en fila de una línea y no en interruptor**: se toca una vez cada mucho, y una
+            pista con su bolita lo hacía el mando más gordo de la hoja sin ser el más usado. */}
+        <button
+          type="button"
+          onClick={() => setRepaso(!repaso)}
+          aria-pressed={repaso}
+          className={repaso ? PULSADA : APAGADA}
+        >
+          Resaltar incompletos
+          <span className={`ml-auto font-[family-name:var(--mono)] text-[11.5px] tabular-nums ${repaso ? "opacity-70" : "text-[var(--mut)]"}`}>
+            {incompletos}
+          </span>
+        </button>
+        <button type="button" onClick={onReiniciar} className={APAGADA}>
           Reiniciar
           <span className="ml-auto text-[11.5px] text-[var(--mut)]">vuelve al punto de vista de {inicial}</span>
         </button>
@@ -80,8 +120,8 @@ export default function Capas({
           barra de arriba: el borde de la pantalla es del lienzo, y esto se toca dos veces
           al año. */}
       <Tramo titulo="La sesión">
-        <TemaBoton className={FILA} conTexto />
-        <LogoutButton className={FILA} />
+        <TemaBoton className={APAGADA} conTexto />
+        <LogoutButton className={APAGADA} />
       </Tramo>
     </div>
   );
@@ -143,21 +183,25 @@ function Eleccion<T extends string | number>({
   actual,
   onElegir,
   nombrar,
+  bloqueada,
 }: {
   titulo: string;
   opciones: readonly T[];
   actual: T;
   onElegir: (v: T) => void;
   nombrar: (v: T) => string;
+  /** La contesta otro interruptor: se lee, no se toca. */
+  bloqueada?: boolean;
 }) {
   return (
-    <div className="flex min-h-11 items-center gap-1 rounded-lg bg-[var(--soft)] px-3">
+    <div className={`flex min-h-11 items-center gap-1 rounded-lg bg-[var(--soft)] px-3 ${bloqueada ? "opacity-50" : ""}`}>
       <span className="flex-1 text-[13px] text-[var(--ink)]">{titulo}</span>
       {opciones.map((opcion) => (
         <button
           key={String(opcion)}
           type="button"
           onClick={() => onElegir(opcion)}
+          disabled={bloqueada}
           className={`h-8 rounded-md px-2.5 text-[12px] ${
             actual === opcion ? "bg-[var(--ink)] text-[var(--paper)]" : "text-[var(--mut)]"
           }`}
