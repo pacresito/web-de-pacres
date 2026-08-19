@@ -37,6 +37,7 @@ export interface Etiqueta {
   entero?: string; // parte entera del precio ("21") — parte principal si es precio
   decimales?: string; // resto pegado (",95€")
   texto?: string; // texto principal en negrita en vez de precio ("3x2", "-50%")
+  ref?: string; // de qué línea salió; opaco aquí, lo interpreta el resumen
 }
 
 // Una fila de la pantalla PVP lista para imprimir: un diámetro, cuántas copias y su
@@ -49,6 +50,7 @@ export interface FuenteEtiqueta {
   titulo?: string; // se imprime encima; ausente = círculo solo con la parte principal
   precio?: number; // euros
   texto?: string; // texto principal ("3x2", "-50%")
+  ref?: string; // clave de la línea de la pantalla, para que el resumen sepa qué es cada círculo
 }
 
 // "21,95€" → { entero: "21", decimales: ",95€" }. El símbolo va pegado a los decimales
@@ -67,6 +69,7 @@ export function expandir(fuentes: FuenteEtiqueta[]): Etiqueta[] {
     if (f.precio != null) Object.assign(base, formatoPrecio(f.precio));
     else base.texto = f.texto ?? "";
     if (f.titulo) base.titulo = f.titulo;
+    if (f.ref) base.ref = f.ref;
     for (let i = 0; i < f.cantidad; i++) etiquetas.push({ ...base });
   }
   return etiquetas;

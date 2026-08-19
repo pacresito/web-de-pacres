@@ -5,7 +5,7 @@
 // etiqueta lleva título (denominación o "2ª unidad"), va fino y en gris encima.
 import { PDFDocument, PDFFont, PDFPage, rgb } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
-import { empaquetar, Colocada, Etiqueta, A4 } from "./etiquetas";
+import { Colocada, Etiqueta, A4 } from "./etiquetas";
 
 const MM = 72 / 25.4; // puntos PDF por mm
 const BORDE = rgb(0.8, 0.8, 0.8);
@@ -106,14 +106,16 @@ function dibujar(page: PDFPage, c: Colocada, bold: PDFFont, regular: PDFFont, al
   dibujarPrincipal(cy - total / 2);
 }
 
-// Genera el PDF (una página por hoja empaquetada). Las fuentes (Planer bold y regular)
-// las carga el cliente desde /public.
-export async function generarPdfEtiquetas(etiquetas: Etiqueta[], fuentes: FuentesEtiqueta): Promise<Uint8Array> {
+// Genera el PDF (una página por hoja). Recibe las hojas ya empaquetadas porque el resumen
+// tiene que describir ESTAS hojas: empaquetar dos veces sería pagarlo dos veces y confiar
+// en que las dos salidas coinciden. Las fuentes (Planer bold y regular) las carga el
+// cliente desde /public.
+export async function generarPdfEtiquetas(hojas: Colocada[][], fuentes: FuentesEtiqueta): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   doc.registerFontkit(fontkit);
   const bold = await doc.embedFont(fuentes.bold);
   const regular = await doc.embedFont(fuentes.regular);
-  for (const hoja of empaquetar(etiquetas)) {
+  for (const hoja of hojas) {
     const page = doc.addPage([A4.ancho * MM, A4.alto * MM]);
     for (const c of hoja) dibujar(page, c, bold, regular, A4.alto);
   }

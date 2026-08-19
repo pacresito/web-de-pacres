@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { fraseHoja, resumenEtiquetas, type BorradorEtiquetas, type FilaExtra, type LineaPvp, type Tamano } from "@/lib/farma/pvp";
-import { DIAMETROS, expandir, type FuenteEtiqueta } from "@/lib/farma/etiquetas";
+import { DIAMETROS, empaquetar, expandir, type FuenteEtiqueta } from "@/lib/farma/etiquetas";
+import type { DatosLinea } from "@/lib/farma/resumen";
 import type { FuentesEtiqueta } from "@/lib/farma/etiquetas-pdf";
 import { contarMetrica } from "./contarMetrica";
 import { TrashIcon, PlusIcon } from "./icons";
@@ -18,10 +19,11 @@ import { TrashIcon, PlusIcon } from "./icons";
 // + precio, o una promo fija) para generar etiquetas que no vienen de un cambio de PVP.
 // El tamaño de etiqueta, la cantidad de copias y estas líneas manuales se persisten en
 // Redis (blob farma:pvp-etiquetas) por autosave, así que sobreviven a las recargas; la
-// carga inicial llega como prop `borrador` desde el server component. "Descargar
-// etiquetas" genera el PDF (círculos con el precio, mosaico apretado en A4) en el
-// cliente con pdf-lib; la geometría vive en lib/farma/etiquetas.ts y el dibujo en
-// etiquetas-pdf.ts.
+// carga inicial llega como prop `borrador` desde el server component. El botón de
+// descarga genera en el cliente con pdf-lib dos PDF de un solo clic: las pegatinas
+// (círculos con el precio, mosaico apretado en A4) y el resumen en papel normal que dice
+// a qué producto va cada círculo. La geometría vive en lib/farma/etiquetas.ts, el dibujo
+// en etiquetas-pdf.ts y el resumen en resumen.ts / resumen-pdf.ts.
 
 const TODAS = "__todas__";
 // El radio del botón es una escala comprimida (ordena los tamaños de un vistazo sin que
@@ -124,24 +126,40 @@ export default function Pvp({ pendientes, borrador }: { pendientes: LineaPvp[]; 
   }, [tamanos, cantidades, extras, pendientes]);
 
   // Cada fila con contenido imprimible (precio real, precio libre con número, o promo)
-  // aporta una etiqueta; el precio libre aún sin número no cuenta.
-  function fuentesEtiquetas(): FuenteEtiqueta[] {
-    const fuentes: FuenteEtiqueta[] = pendientes.map((a) => ({
-      diametro: DIAMETROS[tamanoDe(a.codigo)],
-      cantidad: cantidadDe(a.codigo),
-      precio: a.newPrice,
-    }));
+  // aporta una etiqueta; el precio libre aún sin número no cuenta. Cada fuente lleva su
+  // `ref` (código del pendiente o id de la línea manual) y `datos` guarda lo que el
+  // círculo no puede decir —qué producto es y de qué precio viene— para el resumen.
+  function lineasEtiquetas(): { fuentes: FuenteEtiqueta[]; datos: Record<string, DatosLinea> } {
+    const fuentes: FuenteEtiqueta[] = [];
+    const datos: Record<string, DatosLinea> = {};
+
+    for (const a of pendientes) {
+      fuentes.push({ ref: a.codigo, diametro: DIAMETROS[tamanoDe(a.codigo)], cantidad: cantidadDe(a.codigo), precio: a.newPrice });
+      datos[a.codigo] = { producto: a.denominacion, tamano: tamanoDe(a.codigo), precio: a.newPrice, antes: a.oldPrice };
+    }
+
     for (const x of extras) {
-      const comun = { diametro: DIAMETROS[tamanoDe(x.id)], cantidad: cantidadDe(x.id) };
+      const comun = { ref: x.id, diametro: DIAMETROS[tamanoDe(x.id)], cantidad: cantidadDe(x.id) };
+      const tamano = tamanoDe(x.id);
       if (x.tipo === "promo") {
         const promo = PROMOS[x.denominacion];
-        if (promo) fuentes.push({ ...comun, ...promo });
+        if (!promo) continue;
+        fuentes.push({ ...comun, ...promo });
+        datos[x.id] = {
+          producto: promo.titulo ? `Promoción · ${promo.titulo}` : "Promoción",
+          tamano,
+          precio: null,
+          texto: promo.texto,
+          antes: null,
+        };
         continue;
       }
       if (x.precio == null) continue; // mismo criterio que `extraImprimible`, con el tipo estrechado
       fuentes.push({ ...comun, precio: x.precio, ...(x.tipo === "texto-precio" ? { titulo: x.denominacion } : {}) });
+      datos[x.id] = { producto: x.denominacion || "Línea sin nombre", tamano, precio: x.precio, antes: null };
     }
-    return fuentes;
+
+    return { fuentes, datos };
   }
 
   async function cargarFuentes(): Promise<FuentesEtiqueta> {
@@ -156,23 +174,41 @@ export default function Pvp({ pendientes, borrador }: { pendientes: LineaPvp[]; 
     return fuentes;
   }
 
+  // cast: pdf-lib devuelve Uint8Array<ArrayBufferLike>, que TS no acepta como BlobPart.
+  function descargarPdf(bytes: Uint8Array, nombre: string) {
+    const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: "application/pdf" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = nombre;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // Los dos PDF de un clic: las pegatinas y el resumen que las describe. Se empaqueta una
+  // sola vez y las dos salidas hablan de las mismas hojas. La segunda descarga va con un
+  // respiro: encadenadas sin pausa, algunos navegadores se comen la segunda (y Chrome pide
+  // permiso la primera vez para bajar varios archivos de una web).
   async function descargar() {
     setGenerando(true);
     setError("");
     try {
-      const etiquetas = expandir(fuentesEtiquetas());
+      const { fuentes: lineas, datos } = lineasEtiquetas();
+      const etiquetas = expandir(lineas);
       if (etiquetas.length === 0) return;
+      const hojas = empaquetar(etiquetas);
       const fuentes = await cargarFuentes();
-      const { generarPdfEtiquetas } = await import("@/lib/farma/etiquetas-pdf");
-      const bytes = await generarPdfEtiquetas(etiquetas, fuentes);
-      // cast: pdf-lib devuelve Uint8Array<ArrayBufferLike>, que TS no acepta como BlobPart.
-      const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: "application/pdf" }));
-      const a = document.createElement("a");
-      a.href = url;
-      const fecha = new Date().toLocaleDateString("sv-SE"); // AAAA-MM-DD
-      a.download = `${fecha} Etiquetas (${etiquetas.length}).pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
+      const [{ generarPdfEtiquetas }, { generarPdfResumen }, { filasPorHoja }] = await Promise.all([
+        import("@/lib/farma/etiquetas-pdf"),
+        import("@/lib/farma/resumen-pdf"),
+        import("@/lib/farma/resumen"),
+      ]);
+      const ahora = new Date();
+      const fecha = ahora.toLocaleDateString("sv-SE"); // AAAA-MM-DD
+      const cuenta = `(${etiquetas.length})`;
+
+      descargarPdf(await generarPdfEtiquetas(hojas, fuentes), `${fecha} Etiquetas ${cuenta}.pdf`);
+      const resumenPdf = await generarPdfResumen(filasPorHoja(hojas, datos), fuentes, ahora.toLocaleDateString("es-ES"));
+      setTimeout(() => descargarPdf(resumenPdf, `${fecha} Etiquetas resumen ${cuenta}.pdf`), 400);
       contarMetrica("pvp:etiquetas");
     } catch {
       setError("No se pudo generar el PDF.");
@@ -303,10 +339,10 @@ export default function Pvp({ pendientes, borrador }: { pendientes: LineaPvp[]; 
           <button
             type="button"
             onClick={descargar}
-            disabled={generando || fuentesEtiquetas().length === 0}
+            disabled={generando || lineasEtiquetas().fuentes.length === 0}
             className="fa-btn fa-btn-outline px-[15px] py-[9px]"
           >
-            {generando ? "Generando…" : "Descargar etiquetas"}
+            {generando ? "Generando…" : "Descargar etiquetas y resumen"}
           </button>
           {pendientes.length > 0 && (
             <button type="button" onClick={() => marcar()} disabled={ocupado !== null} className="fa-btn fa-btn-primary px-[15px] py-[9px]">
