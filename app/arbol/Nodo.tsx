@@ -1,7 +1,7 @@
 "use client";
 
 import type { Identidad, Pinta } from "@/lib/arbol/identidad";
-import type { Huecos } from "@/lib/arbol/incompletos";
+import { loQueFalta, type Huecos } from "@/lib/arbol/incompletos";
 import { ALTO_NODO, ANCHO_NODO, type NodoLayout } from "@/lib/arbol/layout";
 
 // Señalar una fracción del recuento atenúa el resto del lienzo en vez de encender lo suyo:
@@ -103,12 +103,19 @@ export default function Nodo({
       />
       <text x={izquierda} y={nodo.y + (vida || huecos ? BASE.conAños : BASE.solo)} fontSize={13} fontWeight={600}>
         {identidad.titulo.map((trozo, i) => (
-          <tspan key={i} className={PINTAS[trozo.pinta].clase} fontStyle={PINTAS[trozo.pinta].cursiva ? "italic" : undefined}>
+          <tspan
+            key={i}
+            // Durante el repaso, el nombre que el documento no daba por seguro se marca como
+            // se marca todo lo dudoso: en color y sin decirlo. Los apellidos no, que ahí lo
+            // dudoso es del nombre y no de lo que se hereda subiendo.
+            className={huecos?.nombre === "dudoso" && trozo.pinta !== "heredado" ? "hueco" : PINTAS[trozo.pinta].clase}
+            fontStyle={PINTAS[trozo.pinta].cursiva ? "italic" : undefined}
+          >
             {trozo.texto}
           </tspan>
         ))}
-        {/* El apellido que falta se pide donde iría, que es aquí y no en la línea de abajo. */}
-        {huecos?.apellido && <tspan className="hueco"> · Falta apellido</tspan>}
+        {/* Lo que falta del nombre se pide donde iría, que es aquí y no en la línea de abajo. */}
+        {huecos && loQueFalta(huecos) && <tspan className="hueco"> · {loQueFalta(huecos)}</tspan>}
       </text>
       {/* Abajo, los años. De quién es hijo y con quién se casó lo dicen los trazos que salen
           del nodo, así que escribirlo era decir con letra lo que el lienzo ya dibuja; los

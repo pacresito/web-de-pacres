@@ -29,6 +29,13 @@ const MIOS = ["bisabuelos", "abuelos", "padres", "tíos", "hermanos", "primos", 
 const SUYOS = ["abuelos", "padres", "tíos", "hermanos", "primos", "sobrinos", "sobrinos segundos"];
 
 /**
+ * Y de esos, a quiénes felicito además el santo. **De los suyos son los de su casa**: sus
+ * padres, sus abuelos, sus hermanos y sus sobrinos; los tíos, los primos y los sobrinos
+ * segundos entran a la lista por el cumpleaños y no por una costumbre que no compartimos.
+ */
+const SANTO_DE_LOS_SUYOS = ["abuelos", "padres", "hermanos", "sobrinos"];
+
+/**
  * Ramas enteras: toda la descendencia de un matrimonio, hasta el último nieto y sin tope de
  * grado. Es la forma de meter a una familia con la que uno se sigue viendo cuando el
  * parentesco ya se ha quedado corto para nombrarla.
@@ -62,9 +69,9 @@ export interface Entrada {
   /** Lo que me es, para poder nombrarlo. Nulo solo en mí. */
   como: string | null;
   /**
-   * Si además del cumpleaños se avisa de su onomástica. **Solo de los míos de sangre y de mi
-   * pareja**: el santo es una costumbre de casa, y felicitárselo a la familia política era
-   * doblar el mensaje con lo que ni ellos esperan ni yo felicito.
+   * Si además del cumpleaños se avisa de su onomástica. **De los míos de sangre, de mi pareja
+   * y de los de su casa**: el santo es una costumbre de familia, y felicitárselo a la política
+   * entera —tíos, primos, sobrinos segundos— doblaba el mensaje con lo que nadie espera.
    */
   santo: boolean;
 }
@@ -91,15 +98,14 @@ export function laLista(g: Grafo): Map<string, Entrada> {
 
   for (const { id } of FUERA) dentro.delete(id);
 
-  const deSangre = (id: string) => {
-    const suyo = desdeMi.get(id)!.termino;
-    return suyo !== PAREJAS && suyo !== SIN_PARENTESCO;
+  const conSanto = (id: string) => {
+    if (id === PAREJA.id) return true;
+    const mio = desdeMi.get(id)!.termino;
+    if (mio !== PAREJAS && mio !== SIN_PARENTESCO) return true; // los míos de sangre
+    return SANTO_DE_LOS_SUYOS.includes(desdeElla.get(id)!.termino);
   };
   return new Map(
-    [...dentro].map((id) => [
-      id,
-      { como: comoLoLlamo(g, id, desdeMi, desdeElla), santo: deSangre(id) || id === PAREJA.id },
-    ]),
+    [...dentro].map((id) => [id, { como: comoLoLlamo(g, id, desdeMi, desdeElla), santo: conSanto(id) }]),
   );
 }
 

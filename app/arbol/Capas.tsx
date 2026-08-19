@@ -45,7 +45,7 @@ export default function Capas({
   escondidos: number;
   repaso: boolean;
   setRepaso: (v: boolean) => void;
-  /** A cuántos les queda algún dato por preguntar: lo que el repaso deja encendido. */
+  /** A cuántos de los que están puestos les queda algún dato por preguntar. */
   incompletos: number;
   todoDesplegado: boolean;
   onDesplegarTodo: () => void;
@@ -95,8 +95,10 @@ export default function Capas({
         />
         <Interruptor titulo="Desplegar todo" activo={todoDesplegado} onPulsar={onDesplegarTodo} />
         {/* El repaso: se enseña todo lo que consta y se apaga a quien ya está entero, que es
-            al revés que los otros señalamientos —son 382 de 466 y encenderlos era encender el
+            al revés que los otros señalamientos —son 381 de 466 y encenderlos era encender el
             árbol—. Cada nodo escribe entonces el hueco con la forma que tendría la respuesta.
+            **La cuenta es de los que hay puestos**, no la del árbol entero: el total no cabe en
+            ninguna pantalla y leer «381» antes de empezar es para cerrar la hoja.
             **Va en fila de una línea y no en interruptor**: se toca una vez cada mucho, y una
             pista con su bolita lo hacía el mando más gordo de la hoja sin ser el más usado. */}
         <button
@@ -106,8 +108,8 @@ export default function Capas({
           className={repaso ? PULSADA : APAGADA}
         >
           Resaltar incompletos
-          <span className={`ml-auto font-[family-name:var(--mono)] text-[11.5px] tabular-nums ${repaso ? "opacity-70" : "text-[var(--mut)]"}`}>
-            {incompletos}
+          <span className={`ml-auto text-[11.5px] tabular-nums ${repaso ? "opacity-70" : "text-[var(--mut)]"}`}>
+            {incompletos} a la vista
           </span>
         </button>
         <button type="button" onClick={onReiniciar} className={APAGADA}>

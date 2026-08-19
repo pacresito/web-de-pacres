@@ -43,8 +43,9 @@ const marzo = laNoche("2026-03-18")!;
 const lineas = marzo.texto.split("\n").filter((l) => l.startsWith("🎂") || l.startsWith("🎉"));
 assert.strictEqual(lineas[0], "🎉 Mañana es el día del padre, y va por ti. Ve dejando pistas.");
 assert.ok(/^\S+ <b>Pepe<\/b>, tío — /m.test(marzo.texto), marzo.texto);
-// El santo es de los míos: el padre de Carmen cumple San José y no se anuncia.
-assert.ok(!marzo.texto.includes("Jose Alberto"), "de la familia política, el cumpleaños y nada más");
+// El santo llega hasta la casa de Carmen —su padre sí— y no más allá: su tío, no.
+assert.ok(/^\S+ <b>Jose Alberto<\/b>, padre de Carmen — /m.test(marzo.texto), marzo.texto);
+assert.ok(!marzo.texto.includes("tío de Carmen"), "de sus tíos, el cumpleaños y nada más");
 
 // El día de la madre no va por mí aunque sea padre: va por Carmen, y por la mía mientras viva.
 const mayo = laNoche("2026-05-02")!;

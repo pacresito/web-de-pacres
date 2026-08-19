@@ -37,7 +37,8 @@ export function buscar(g: Grafo, consulta: string, { linaje, pasos }: OpcionesBu
     // «Sin nombre» no es un nombre sino la forma de escribir que el documento no lo daba, así
     // que no se busca ni en el propio ni en el de la familia: teclearlo devolvía a cuatro
     // personas que no se llaman así y a todo el que se casó con una de ellas.
-    const suyo = p.nombre === SIN_NOMBRE ? "" : [p.nombre, ...(linaje.get(id)?.todos ?? [])].join(" ");
+    const suyo =
+      p.nombre === SIN_NOMBRE ? "" : [p.nombre, ...otrosNombres(p.nombre), ...(linaje.get(id)?.todos ?? [])].join(" ");
     if (casan(buscadas, suyo)) salida.push({ id, via: "nombre" });
     else if (casan(buscadas, contextoEntero(g, id).replaceAll(SIN_NOMBRE, ""))) salida.push({ id, via: "familia" });
   }
@@ -68,34 +69,39 @@ export function acortar(g: Grafo, consulta: string, o: OpcionesBusqueda): string
   return mejor?.palabra ?? null;
 }
 
-/**
- * Cada palabra buscada tiene que empezar alguna del texto —que es como se teclea un nombre—
- * o alguno de sus otros nombres: a la misma persona la familia la llama Javi y Javier, y
- * quien teclea uno la busca a ella, no a esa grafía.
- */
+/** Cada palabra buscada tiene que empezar alguna del texto, que es como se teclea un nombre. */
 function casan(buscadas: string[], texto: string): boolean {
   if (texto === "") return false;
-  const suyas = palabras(texto).flatMap(otrosNombres);
+  const suyas = palabras(texto);
   return buscadas.every((b) => suyas.some((s) => s.startsWith(b)));
 }
 
 /**
- * Los nombres que en esta familia son el mismo nombre. **Se escriben por grupos y valen en
- * los dos sentidos**: quien busca «Pilar» quiere a Piluca y a Piluquita, y quien busca
- * «Piluca» quiere a las Pilar. Solo entran los que el castellano da por equivalentes —el
- * hipocorístico de siempre—; un apodo de una persona no es otro nombre suyo, es una nota, y
- * adivinar de dónde sale acaba llevando a alguien a la ficha de otro. Un grupo cuyos nombres
- * no lleve nadie del árbol sobra, y su test lo dice.
+ * Los nombres que en esta familia son el mismo nombre, **y valen en los dos sentidos**: quien
+ * busca «Pilar» quiere a Piluca y a Piluquita, y quien busca «Piluca» quiere a las Pilar.
+ *
+ * **Van por el nombre entero y no por palabras sueltas.** Con «josé» valiendo como palabra,
+ * teclear «Pepe» sacaba también a las tres María José, que de Pepe no tienen nada; y el
+ * compuesto se escribe entero —«maría josé»— cuando es él el que tiene otro nombre.
+ *
+ * Solo entran los que el castellano da por equivalentes, el hipocorístico de siempre: el apodo
+ * de una persona no es otro nombre suyo, es una nota, y adivinar de dónde sale acaba llevando
+ * a alguien a la ficha de otro. Un grupo cuyos nombres no lleve nadie del árbol sobra, y su
+ * test lo dice.
  */
-export const OTROS_NOMBRES: string[][] = [
+export const IGUALES: string[][] = [
   ["javier", "javi"],
   ["santiago", "santi", "yago"],
   ["daniel", "dani"],
   ["francisco", "paco", "fran"],
   ["francisca", "paqui", "paquita", "pacita"],
   ["dolores", "lola"],
+  ["maria dolores", "marilo"],
   ["pilar", "piluca", "piluquita"],
   ["jose", "pepe"],
+  ["maria jose", "marijose"],
+  ["maria luisa", "marilu"],
+  ["maria del carmen", "mamen"],
   ["montserrat", "montse"],
   ["magdalena", "magda"],
   ["manuel", "manolo"],
@@ -108,16 +114,29 @@ export const OTROS_NOMBRES: string[][] = [
   ["antonia", "toni"], // «Toñi» pierde la eñe al normalizar y cae aquí sola
   ["roberto", "rober"],
   ["gabriel", "gabi"],
-  ["clara", "chiara"],
   ["maravillas", "mavi"],
   ["ascension", "chon"],
-  ["carmen", "carmina", "mamen"],
 ];
 
-/** El grupo de cada nombre, o él solo. Se arma una vez: son 24 grupos y 400 personas. */
-const GRUPOS = new Map<string, string[]>(OTROS_NOMBRES.flatMap((grupo) => grupo.map((n) => [n, grupo] as const)));
+/**
+ * Y los que solo valen hacia un lado: **quien teclea el primero encuentra también al segundo,
+ * y no al revés**. Carmiña es una Carmen y quien busca «Carmen» la quiere; quien escribe
+ * «Carmiña» está buscando a una persona, no a las otras cuatro.
+ */
+export const TAMBIEN_ENCUENTRA: [string, string][] = [["carmen", "carmina"]];
 
-export const otrosNombres = (nombre: string): string[] => GRUPOS.get(nombre) ?? [nombre];
+/** Por qué otros nombres se llega a quien se llama así. Se arma una vez, al cargar el módulo. */
+const POR_NOMBRE = new Map<string, string[]>();
+for (const grupo of IGUALES) for (const suyo of grupo) POR_NOMBRE.set(suyo, grupo.filter((n) => n !== suyo));
+for (const [buscado, encontrado] of TAMBIEN_ENCUENTRA) {
+  POR_NOMBRE.set(encontrado, [...(POR_NOMBRE.get(encontrado) ?? []), buscado]);
+}
+
+/** Los otros nombres de quien se llama así, ya normalizados: se buscan como si fueran suyos. */
+export const otrosNombres = (nombre: string): string[] => POR_NOMBRE.get(normalizar(nombre)) ?? [];
+
+/** Sin tildes, sin mayúsculas y con un solo espacio: la forma en que se escriben las tablas. */
+const normalizar = (nombre: string): string => palabras(nombre).join(" ");
 
 /** Todo lo que no es letra ni número separa: así «(1902)» es una palabra y el año se busca. */
 const SEPARADOR = /[^\p{L}\p{N}]+/u;

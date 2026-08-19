@@ -77,7 +77,10 @@ for (const [id, { como }] of lista) {
 // cumpleaños y nada más.
 assert.strictEqual(lista.get("p125")!.santo, true, "mi madre");
 assert.strictEqual(lista.get("p24")!.santo, true, "y Carmen, que es mi pareja");
+assert.strictEqual(lista.get("p22")!.santo, true, "y su padre, que es de su casa");
+assert.strictEqual(lista.get("p29")!.santo, true, "y su hermano");
 assert.strictEqual(lista.get("p5")!.santo, false, "una tía de Carmen, no");
+assert.strictEqual(lista.get("p32")!.santo, false, "ni un primo suyo");
 assert.strictEqual(lista.get("p127")!.santo, false, "ni la pareja de mi hermano");
 assert.strictEqual(lista.get("p425")!.santo, false, "ni Aina, que no le es sangre a nadie");
 

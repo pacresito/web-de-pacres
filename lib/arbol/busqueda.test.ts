@@ -3,7 +3,7 @@
 import assert from "assert";
 import { readFileSync } from "fs";
 import { resolve } from "path";
-import { acortar, buscar, losSinNombre, OTROS_NOMBRES, type Resultado } from "./busqueda";
+import { acortar, buscar, IGUALES, losSinNombre, TAMBIEN_ENCUENTRA, type Resultado } from "./busqueda";
 import { construirGrafo, pasosDesde } from "./grafo";
 import { contextoEntero, libretaDe, SIN_NOMBRE } from "./identidad";
 import type { ArbolData, Persona, Union } from "./tree";
@@ -89,6 +89,7 @@ assert.strictEqual(pablos.filter((r) => r.via === "nombre").length, 15, "doce Pa
 
 // Los otros nombres: quien busca uno busca a la persona, no a esa grafía, y vale al derecho
 // y al revés. Sin esto, «Pilar» no encontraba a Piluca ni «Javier» a los cinco Javi.
+const porNombre = (consulta: string) => buscar(real, consulta, suyo).filter((r) => r.via === "nombre").map((r) => r.id);
 for (const [buscado, esperado] of [
   ["Pilar", "p301"], // Piluquita
   ["Piluca", "p102"], // Pilar
@@ -97,16 +98,28 @@ for (const [buscado, esperado] of [
   ["José", "p29"], // Pepe
   ["Mavi", "p357"], // Maravillas
   ["Chon", "p290"], // Ascensión
+  ["Marijose", "p350"], // María José
+  ["María José", "p286"], // Marijose
+  ["Mamen", "p47"], // María del Carmen
+  ["Mariló", "p390"], // María Dolores
+  ["Marilu", "p488"], // María Luisa
 ] as const) {
-  assert.ok(
-    buscar(real, buscado, suyo).some((r) => r.id === esperado && r.via === "nombre"),
-    `buscando «${buscado}» tendría que salir ${esperado}, y entre los que se llaman así`,
-  );
+  assert.ok(porNombre(buscado).includes(esperado), `buscando «${buscado}» tendría que salir ${esperado}`);
 }
-// Y ningún grupo de más: uno cuyos nombres no lleve nadie no ayuda a encontrar a nadie.
-for (const grupo of OTROS_NOMBRES) {
+
+// Los otros nombres van por el nombre entero: «Pepe» no saca a las María José, que de Pepe no
+// tienen nada, aunque compartan la palabra.
+assert.ok(!porNombre("Pepe").includes("p350"), "«Pepe» no es «María José»");
+
+// Y hay uno que solo va hacia un lado: Carmiña es una Carmen y quien busca «Carmen» la quiere;
+// quien escribe «Carmiña» busca a una persona, no a las cuatro.
+assert.ok(porNombre("Carmen").includes("p277"), "Carmiña sale al buscar «Carmen»");
+assert.deepStrictEqual(porNombre("Carmiña"), ["p277"], "y «Carmiña» no saca a nadie más");
+
+// Ningún grupo de más: uno cuyos nombres no lleve nadie no ayuda a encontrar a nadie.
+for (const grupo of [...IGUALES, ...TAMBIEN_ENCUENTRA]) {
   assert.ok(
-    grupo.some((n) => buscar(real, n, suyo).some((r) => r.via === "nombre")),
+    grupo.some((n: string) => porNombre(n).length > 0),
     `nadie del árbol se llama de ninguna de estas maneras: ${grupo.join(", ")}`,
   );
 }

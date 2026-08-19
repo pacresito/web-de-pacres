@@ -4,7 +4,7 @@ import assert from "assert";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 import { construirGrafo } from "./grafo";
-import { huecosDe, losIncompletos } from "./incompletos";
+import { huecosDe, loQueFalta, losIncompletos } from "./incompletos";
 import { apellidosDe } from "./personas";
 import type { Apellidos } from "./personas";
 import type { ArbolData, Persona } from "./tree";
@@ -26,10 +26,19 @@ assert.strictEqual(
   "1921-10-01 – 1990-[MM-DD]",
   "la fecha que sí consta se lee entera y no se resalta",
 );
-assert.strictEqual(linea(quien({ birth: "1975-05-18", incierto: "fechas" }), apellidos(["A"])), "1975-05-18[ · fechas dudosas]");
+// Lo dudoso se marca en color y sin decirlo: tiñe la fecha entera, que la duda es de la vida
+// y no de una cifra.
+assert.strictEqual(linea(quien({ birth: "1975-05-18", incierto: "fechas" }), apellidos(["A"])), "[1975-05-18]");
+assert.strictEqual(linea(quien({ birth: "1937", incierto: "fechas" }), apellidos(["A"])), "[1937-][MM-DD]");
 
-// El apellido no va en esta línea: lo dice la del nombre, que es donde iría.
-assert.strictEqual(huecosDe(quien({ birth: "1986-03-01" }), apellidos([]))?.apellido, true);
+// Lo que se pide del nombre va en su línea, no en la de los años. «Marido» no es un nombre:
+// es el papel que esa persona hacía en la frase de otro.
+const falta = (p: Persona, a: Apellidos) => loQueFalta(huecosDe(p, a)!);
+assert.strictEqual(falta(quien({ birth: "1986-03-01" }), apellidos([])), "Falta apellido");
+assert.strictEqual(falta(quien({ nombre: "Marido", birth: "1986-03-01" }), apellidos(["A"])), "Falta nombre");
+assert.strictEqual(falta(quien({ nombre: "Sin nombre", birth: "1986-03-01" }), apellidos([])), "Falta nombre y apellido");
+assert.strictEqual(loQueFalta(huecosDe(quien({ nombre: "X", incierto: "nombre" }), apellidos(["A", "B"]))!), null, "lo dudoso no se dice");
+assert.strictEqual(huecosDe(quien({ nombre: "X", incierto: "nombre" }), apellidos(["A", "B"]))?.nombre, "dudoso");
 assert.strictEqual(linea(quien({ birth: "1986-03-01" }), apellidos([])), "1986-03-01");
 
 // La onomástica no cuenta: no es un hueco del documento, y no se le pregunta a nadie.
@@ -44,5 +53,6 @@ assert.ok(conHuecos.size > data.people.length / 2, `solo ${conHuecos.size} de ${
 assert.ok(conHuecos.size < data.people.length, "y alguien está completo, o el repaso no distingue nada");
 assert.strictEqual(conHuecos.has("p25"), false, "Pablo se sabe entero");
 assert.strictEqual(conHuecos.has("p396"), false, "y Catalina, desde que se le sabe el día");
+assert.strictEqual(conHuecos.has("p71"), true, "y el «Marido» de Olga no está entero: le falta el nombre");
 
 console.log(`incompletos.test.ts OK (${conHuecos.size} de ${data.people.length} con algo que preguntar)`);
