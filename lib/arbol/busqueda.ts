@@ -124,7 +124,12 @@ export const IGUALES: string[][] = [
  * y no al revés**. Carmiña es una Carmen y quien busca «Carmen» la quiere; quien escribe
  * «Carmiña» está buscando a una persona, no a las otras cuatro.
  */
-export const TAMBIEN_ENCUENTRA: [string, string][] = [["carmen", "carmina"]];
+export const TAMBIEN_ENCUENTRA: [string, string][] = [
+  ["carmen", "carmina"],
+  // A Chiara Teresa la llaman Teresita, y va aquí y no arriba porque el diminutivo no es de
+  // «Teresa»: en el grupo de iguales, teclearlo sacaría a las once que sí se llaman así.
+  ["teresita", "chiara teresa"],
+];
 
 /** Por qué otros nombres se llega a quien se llama así. Se arma una vez, al cargar el módulo. */
 const POR_NOMBRE = new Map<string, string[]>();
