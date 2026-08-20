@@ -222,7 +222,7 @@ const hijos = (g: Grafo, id: string): string =>
 /**
  * Estar en dos ramas no es una ambigüedad que resolver, así que la fila las dice todas. Y
  * **de quien entró por su pareja se dice por quién**: la rama es suya, pero no de sangre, y
- * el nombre de quien lo trajo es lo que sitúa a las 137 personas que están en ese caso. Se
+ * el nombre de quien lo trajo es lo que sitúa a las 139 personas que están en ese caso. Se
  * decía «por matrimonio», que a los que nunca se casaron los casaba de oficio.
  */
 function ramas(g: Grafo, pertenencia?: Pertenencia): Fila[] {

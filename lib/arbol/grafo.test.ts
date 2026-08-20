@@ -45,8 +45,8 @@ assert.deepStrictEqual(
     [-4, 12],
     [-3, 36],
     [-2, 125],
-    [-1, 180],
-    [0, 112],
+    [-1, 181],
+    [0, 113],
     // Manuela, la primera de la generación que viene detrás de la de Lucas.
     [1, 1],
   ],

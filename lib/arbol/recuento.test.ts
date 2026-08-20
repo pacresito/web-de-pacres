@@ -79,8 +79,8 @@ assert.deepStrictEqual(panel(estado("p26")).lineas, [
   "4 tatarabuelos 12/12",
   "3 bisabuelos 6/6 · tíos bisabuelos 0/17 · parejas 0/13",
   "2 abuelos 4/4 · tíos abuelos 0/12 · tíos abuelos segundos 0/48 · parejas 0/57",
-  "1 padres 2/2 · tíos 0/4 · tíos segundos 0/20 · otros tíos 0/89 · parejas 0/57",
-  "0 hermanos 1/3 · primos 0/5 · primos segundos 0/20 · primos terceros 0/71 · parejas 0/2 · sin parentesco 0/1",
+  "1 padres 2/2 · tíos 0/4 · tíos segundos 0/20 · otros tíos 0/89 · parejas 0/58",
+  "0 hermanos 1/3 · primos 0/5 · primos segundos 0/21 · primos terceros 0/71 · parejas 0/2 · sin parentesco 0/1",
   "-1 otra sobrina 0/1",
 ]);
 
