@@ -66,6 +66,7 @@ import Redondo, { IconoFiltros } from "./Redondo";
 import Regla from "./Regla";
 import Riel from "./Riel";
 import { useAtras } from "./useAtras";
+import Visor from "./Visor";
 
 /** Sin enlace ni memoria: quien nunca ha visto el árbol entra por su dueño. */
 const POR_DEFECTO = "p25";
@@ -81,6 +82,8 @@ type Hoja =
   /** Recogida es la hoja apartada para mirar el lienzo: sigue abierta, y en su barra de abajo. */
   | { tipo: "ficha"; id: string; recogida?: boolean }
   | { tipo: "camino"; id: string; recogida?: boolean }
+  /** El visor de una foto suya, que es la ficha con la foto puesta encima de lo que decía. */
+  | { tipo: "foto"; id: string; clave: string }
   | { tipo: "celebraciones" }
   | { tipo: "capas" }
   | null;
@@ -447,18 +450,29 @@ export default function Arbol({
     abrirHoja({ tipo: "ficha", id });
   }
 
+  /** Lo que se dice de alguien, que leen los dos: la ficha entera y el visor, que toma su cabecera. */
+  const datosDeFicha = (id: string) =>
+    fichaDe(grafo, id, {
+      puntoDeVista,
+      linaje: libreta.linaje,
+      hoy,
+      relacion: relaciones.get(id)!,
+      pertenencia: pertenencias.get(id),
+      homonimia: libreta.homonimias.get(id),
+    });
+
   // Lo que el gesto de volver cierra: la capa de más arriba y solo esa, en el orden en que
   // se ven —lo que tapa antes que lo que flota debajo—.
   const apiladas =
     (busquedaAbierta ? 1 : 0) +
     (cajon ? 1 : 0) +
     (hoja ? 1 : 0) +
-    (hoja?.tipo === "camino" ? 1 : 0) +
+    (hoja?.tipo === "camino" || hoja?.tipo === "foto" ? 1 : 0) +
     (recogida ? 1 : 0) +
     (marcados ? 1 : 0);
   useAtras(apiladas, () => {
     if (recogida && (hoja?.tipo === "ficha" || hoja?.tipo === "camino")) setHoja({ ...hoja, recogida: false });
-    else if (hoja?.tipo === "camino") setHoja({ tipo: "ficha", id: hoja.id });
+    else if (hoja?.tipo === "camino" || hoja?.tipo === "foto") setHoja({ tipo: "ficha", id: hoja.id });
     else if (hoja) setHoja(null);
     else if (cajon) setCajon(null);
     else if (busquedaAbierta) setBusquedaAbierta(false);
@@ -1044,7 +1058,13 @@ export default function Arbol({
       )}
 
       {hoja && !recogida && (
-        <Hoja contenido={"id" in hoja ? `${hoja.tipo}:${hoja.id}` : hoja.tipo} onCerrar={() => setHoja(null)}>
+        <Hoja
+          contenido={"id" in hoja ? `${hoja.tipo}:${hoja.id}` : hoja.tipo}
+          // Con una foto puesta, el aspa la quita y deja la ficha debajo: es la capa de
+          // arriba, y lo mismo hacen Escape y el gesto de volver. Así el visor no necesita
+          // un cerrar propio, que en un marco de tres líneas sería el cuarto mando.
+          onCerrar={() => (hoja.tipo === "foto" ? abrirFicha(hoja.id) : setHoja(null))}
+        >
           {hoja.tipo === "capas" ? (
             <Capas
               fechas={fechas}
@@ -1080,20 +1100,20 @@ export default function Arbol({
               onVolver={() => abrirFicha(hoja.id)}
               onVerEnElArbol={() => verCaminoEnElArbol(hoja.id, camino.eslabones.map((e) => e.id))}
             />
+          ) : hoja.tipo === "foto" ? (
+            <Visor
+              datos={datosDeFicha(hoja.id)}
+              clave={hoja.clave}
+              onFoto={(clave) => setHoja({ tipo: "foto", id: hoja.id, clave })}
+            />
           ) : (
             <Ficha
-              datos={fichaDe(grafo, hoja.id, {
-                puntoDeVista,
-                linaje: libreta.linaje,
-                hoy,
-                relacion: relaciones.get(hoja.id)!,
-                pertenencia: pertenencias.get(hoja.id),
-                homonimia: libreta.homonimias.get(hoja.id),
-              })}
+              datos={datosDeFicha(hoja.id)}
               reinicio={tocado ? personaPorId.get(puntoDeVista)!.nombre : undefined}
               onCentrar={() => centrarEn(hoja.id)}
               onCamino={() => abrirHoja({ tipo: "camino", id: hoja.id })}
               onVerEnElArbol={() => verEnElArbol(hoja.id)}
+              onFoto={(clave) => setHoja({ tipo: "foto", id: hoja.id, clave })}
               onHomonimos={(consulta) => {
                 setHoja(null); // la lista y la ficha no caben a la vez en un móvil
                 if (consulta === null) mostrarSinNombre();

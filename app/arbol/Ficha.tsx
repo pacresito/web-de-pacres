@@ -6,6 +6,7 @@
 // todo desde aquí**.
 
 import type { Ficha as Datos } from "@/lib/arbol/ficha";
+import Fotos from "./Fotos";
 import { Accion, Marca, Titulo } from "./Identidad";
 
 export default function Ficha({
@@ -14,6 +15,7 @@ export default function Ficha({
   onCentrar,
   onCamino,
   onVerEnElArbol,
+  onFoto,
   onHomonimos,
   onIndice,
   onReiniciar,
@@ -31,12 +33,15 @@ export default function Ficha({
   onCentrar: () => void;
   onCamino: () => void;
   onVerEnElArbol: () => void;
+  onFoto: (clave: string) => void;
   onHomonimos: (consulta: string | null) => void;
   onIndice: () => void;
   onReiniciar: () => void;
 }) {
   return (
-    <div className="flex flex-col">
+    // `entra` la funde al montarse, que es cuando se vuelve de una foto; tocar a otra
+    // persona no la remonta, así que ahí no pasa nada. La regla, en globals.css.
+    <div className="entra flex flex-col">
       <Relacion datos={datos} onCamino={onCamino} />
 
       <p className="mt-4 font-[family-name:var(--serif)] text-[34px] leading-[1.05] tracking-[-0.01em]">
@@ -63,6 +68,14 @@ export default function Ficha({
           </Campo>
         ))}
         {datos.nota && <Campo clave="Nota">{datos.nota}</Campo>}
+        {/* Al final del todo y solo si las hay: no se anuncian desde ninguna otra parte —ni
+            el lienzo las marca ni hay forma de listarlas—, así que este campo es la única
+            manera de saber que existen, y encontrarlas es la gracia. */}
+        {datos.fotos.length > 0 && (
+          <Campo clave={datos.fotos.length === 1 ? "Foto" : "Fotos"}>
+            <Fotos fotos={datos.fotos} onFoto={onFoto} />
+          </Campo>
+        )}
       </dl>
 
       <div className="mt-[18px] flex flex-col gap-[9px]">

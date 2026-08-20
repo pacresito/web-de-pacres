@@ -5,6 +5,7 @@
 // primero qué es esa persona de ti, luego quién es y por último de quién viene.
 
 import { añoDe, conDia, enMs, escribirDiaDeMes, escribirVida, MS_DIA, seLeSuponeFallecido, type Fecha } from "./fechas";
+import { fotosDe, type FotoEnFicha } from "./fotos";
 import type { Grafo } from "./grafo";
 import { identidadDe, SIN_NOMBRE, verboDeUnion, type Homonimia, type Trozo } from "./identidad";
 import { ordenarPareja, type Apellidos } from "./personas";
@@ -34,6 +35,8 @@ export interface Ficha {
   /** Lo que hay que advertir antes de leer nada más; hoy, solo el caso sin nombre ni fechas. */
   aviso?: string;
   filas: Fila[];
+  /** Las suyas, en orden cronológico. Vacío en casi todo el árbol: no se anuncian, se encuentran. */
+  fotos: FotoEnFicha[];
   /** La salida hacia los que comparten su nombre, cuando los hay. */
   homonimos?: Homonimos;
 }
@@ -77,6 +80,9 @@ export function fichaDe(g: Grafo, id: string, o: OpcionesFicha): Ficha {
     nota: identidad.nota,
     aviso: p.nombre === SIN_NOMBRE && !p.birth && !p.death ? AVISO_SIN_NADA : undefined,
     filas: filasDe(g, p, o, id === o.puntoDeVista),
+    // El nombre entero sale del título, que aquí viene con los dos apellidos y sin año: es
+    // el mismo que se lee en grande, y con el que se guarda la foto al descargarla.
+    fotos: fotosDe(id, { nombreCompleto: identidad.titulo.map((t) => t.texto).join(""), birth: p.birth }),
     homonimos: homonimosDe(p, o),
   };
 }

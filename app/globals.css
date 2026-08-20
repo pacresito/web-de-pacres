@@ -165,6 +165,18 @@
 @media (prefers-reduced-motion: reduce) {
   .arbol .nd-fiesta { animation: none; }
 }
+/* La ficha y el visor son las dos caras de la misma hoja, y pasar de una a otra se cuenta
+   con un fundido: la foto no aparece de golpe donde había texto. Se dispara al montarse, así
+   que **tocar a otra persona no lo repite** —ahí React reusa la ficha— y solo se ve en el
+   cambio, que es lo que hay que explicar. La escala es mínima a propósito: lo que se abre
+   ocupa el sitio de lo que había, no viene de otro sitio. */
+.arbol .entra { animation: arbol-entra 220ms ease-out both; }
+@keyframes arbol-entra { from { opacity: 0; transform: scale(0.98); } }
+@media (prefers-reduced-motion: reduce) {
+  /* Se conserva el fundido y se quita el crecimiento: cortarlo entero deja un salto seco,
+     que es peor que el movimiento que se quería evitar. */
+  @keyframes arbol-entra { from { opacity: 0; } }
+}
 /* El giro de mudar el punto de vista: el árbol nuevo nace con los colaterales al 25 % y
    suben a su nivel en 240 ms. La bajada no se anima —cuando la clase entra, el recolocado
    ya ha pasado, y animarla lo contaría dos veces— y **la línea directa no se apaga nunca**:
