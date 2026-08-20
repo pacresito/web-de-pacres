@@ -6,6 +6,7 @@
 // aviso fuera. Al final, lo que devuelve el árbol a un estado conocido.
 
 import type { ModoFechas } from "@/lib/arbol/fechas";
+import { rotuloDeIncompletos } from "@/lib/arbol/incompletos";
 import type { ModoApellidos } from "@/lib/arbol/personas";
 import LogoutButton from "./LogoutButton";
 import TemaBoton from "./TemaBoton";
@@ -109,7 +110,7 @@ export default function Capas({
         >
           Resaltar incompletos
           <span className={`ml-auto text-[11.5px] tabular-nums ${repaso ? "opacity-70" : "text-[var(--mut)]"}`}>
-            {incompletos} visibles
+            {rotuloDeIncompletos(incompletos)}
           </span>
         </button>
         <button type="button" onClick={onReiniciar} className={APAGADA}>

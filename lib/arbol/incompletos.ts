@@ -16,7 +16,7 @@
 // hueco del documento y cuando lo tiene y no es el que celebra esa persona se arregla en
 // `santoral.ts`, no preguntándoselo a nadie.
 
-import { conDia, type Fecha } from "./fechas";
+import { conDia, seLeSuponeFallecido, type Fecha } from "./fechas";
 import type { Grafo } from "./grafo";
 import { SIN_NOMBRE } from "./identidad";
 import type { Apellidos } from "./personas";
@@ -46,13 +46,21 @@ export interface Huecos {
   vida: Trozo[];
 }
 
-export function huecosDe(p: Persona, apellidos: Apellidos): Huecos | null {
+export function huecosDe(p: Persona, apellidos: Apellidos, hoy: Fecha): Huecos | null {
   const nombre = NO_ES_NOMBRE.has(p.nombre) ? "falta" : p.incierto === "nombre" ? "dudoso" : null;
   const apellido = apellidos.todos.length === 0;
-  const vida = escribirVida(p);
+  const vida = escribirVida(p, hoy);
   if (!nombre && !apellido && !vida.some((t) => t.falta)) return null;
   return { nombre, apellido, vida };
 }
+
+/**
+ * Lo que dice el interruptor a su derecha. **Con ninguno, una frase y no un cero**: «0 visibles»
+ * obliga a leer el número para entender que no hay nada que hacer, que es justo lo que este
+ * mando viene a decir.
+ */
+export const rotuloDeIncompletos = (cuantos: number): string =>
+  cuantos === 0 ? "todos completos" : `${cuantos} visible${cuantos === 1 ? "" : "s"}`;
 
 /** Lo que se pide en la línea del nombre, o nada: lo dudoso se marca en color y no en letra. */
 export function loQueFalta({ nombre, apellido }: Huecos): string | null {
@@ -62,9 +70,9 @@ export function loQueFalta({ nombre, apellido }: Huecos): string | null {
 }
 
 /** Quiénes son: los enciende el repaso y los cuenta el interruptor de «Qué se ve». */
-export function losIncompletos(g: Grafo, linaje: Map<string, Apellidos>): Set<string> {
+export function losIncompletos(g: Grafo, linaje: Map<string, Apellidos>, hoy: Fecha): Set<string> {
   const salida = new Set<string>();
-  for (const p of g.personaPorId.values()) if (huecosDe(p, linaje.get(p.id)!)) salida.add(p.id);
+  for (const p of g.personaPorId.values()) if (huecosDe(p, linaje.get(p.id)!, hoy)) salida.add(p.id);
   return salida;
 }
 
@@ -72,11 +80,14 @@ export function losIncompletos(g: Grafo, linaje: Map<string, Apellidos>): Set<st
  * Lo que consta de su vida, con lo que falta escrito donde iría. **La duda del documento tiñe
  * la fecha entera** y no una parte: `incierto` no señala qué cifra baila, dice que de esa vida
  * no se responde.
+ *
+ * **A quien hoy pasaría de cien años se le pide la defunción entera.** El árbol ya no lo da
+ * por vivo —eso lo decide `seLeSuponeFallecido`— así que el hueco no es una suposición: es la
+ * fecha que el documento se dejó y que alguien de la familia sabrá.
  */
-function escribirVida(p: Persona): Trozo[] {
-  const trozos = p.death
-    ? [...deFecha(p.birth), { texto: " – ", falta: false }, ...deFecha(p.death)]
-    : deFecha(p.birth);
+function escribirVida(p: Persona, hoy: Fecha): Trozo[] {
+  const muere = p.death ? deFecha(p.death) : seLeSuponeFallecido(p, hoy) ? deFecha(undefined) : null;
+  const trozos = muere ? [...deFecha(p.birth), { texto: " – ", falta: false }, ...muere] : deFecha(p.birth);
   return p.incierto === "fechas" ? trozos.map((t) => ({ ...t, falta: true })) : trozos;
 }
 

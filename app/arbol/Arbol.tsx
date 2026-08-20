@@ -189,7 +189,7 @@ export default function Arbol({
   );
   const libreta = useMemo(() => libretaDe(grafo), [grafo]);
   /** A quién le queda algo por preguntar: lo enciende el repaso y lo cuenta «Qué se ve». */
-  const conHuecos = useMemo(() => losIncompletos(grafo, libreta.linaje), [grafo, libreta]);
+  const conHuecos = useMemo(() => losIncompletos(grafo, libreta.linaje, hoy), [grafo, libreta]);
   // Un solo apellido: el repaso ya avisa del que falta, y con dos el nodo se llenaba de
   // apellidos deducidos justo cuando lo que hay que leer es lo que no consta.
   const comoSePinta = {
@@ -197,7 +197,7 @@ export default function Arbol({
     fechas: repaso ? ("completa" as const) : fechas,
   };
   const huecosDelNodo = (id: string) =>
-    repaso ? huecosDe(personaPorId.get(id)!, libreta.linaje.get(id)!) : null;
+    repaso ? huecosDe(personaPorId.get(id)!, libreta.linaje.get(id)!, hoy) : null;
 
   const layout = useMemo(
     () => calcularLayout(grafo, { puntoDeVista, expandidas, parejas, ocultarNoConectados }),
