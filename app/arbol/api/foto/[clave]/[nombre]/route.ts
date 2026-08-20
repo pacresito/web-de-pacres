@@ -27,9 +27,11 @@ export async function GET(
   return new Response(foto.stream, {
     headers: {
       "Content-Type": "image/jpeg",
-      // Una foto no cambia nunca: la clave lleva el año y una foto nueva estrena la suya.
-      // Privada, porque entre el navegador y esto hay CDN y esto no es de todos.
-      "Cache-Control": "private, max-age=31536000, immutable",
+      // Una semana, y **nunca `immutable`**: la clave sale del dueño y del año, así que
+      // resubir una foto mejor escaneada reutiliza la suya y el navegador seguiría
+      // enseñando la vieja sin que nada lo delate. Privada, porque en medio hay CDN y esto
+      // no es de todos.
+      "Cache-Control": "private, max-age=604800",
       "Content-Disposition": `inline; filename*=UTF-8''${encodeURIComponent(saneado(nombre))}`,
     },
   });
