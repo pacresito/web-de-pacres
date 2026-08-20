@@ -116,6 +116,7 @@ export const IGUALES: string[][] = [
   ["gabriel", "gabi"],
   ["maravillas", "mavi"],
   ["ascension", "chon"],
+  ["catalina", "catina"],
 ];
 
 /**

@@ -116,6 +116,8 @@ assert.ok(!porNombre("Pepe").includes("p350"), "«Pepe» no es «María José»"
 assert.ok(porNombre("Carmen").includes("p277"), "Carmiña sale al buscar «Carmen»");
 assert.deepStrictEqual(porNombre("Carmiña"), ["p277"], "y «Carmiña» no saca a nadie más");
 
+assert.deepStrictEqual(porNombre("Catina"), porNombre("Catalina"), "a Catina se la busca por los dos");
+
 // Ningún grupo de más: uno cuyos nombres no lleve nadie no ayuda a encontrar a nadie.
 for (const grupo of [...IGUALES, ...TAMBIEN_ENCUENTRA]) {
   assert.ok(
