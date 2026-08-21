@@ -129,6 +129,15 @@ export const TAMBIEN_ENCUENTRA: [string, string][] = [
   // A Chiara Teresa la llaman Teresita, y va aquí y no arriba porque el diminutivo no es de
   // «Teresa»: en el grupo de iguales, teclearlo sacaría a las once que sí se llaman así.
   ["teresita", "chiara teresa"],
+  // Pepe es el apodo de un José Juan concreto, no de cualquier José: va aquí y no en IGUALES
+  // porque «jose» ya tiene su propio grupo con el Pepe de siempre, y una segunda entrada con
+  // la misma clave lo pisaría.
+  ["pepe", "jose juan"],
+  // Y Josele el de otro José, con el mismo motivo: no se funde con el grupo de «jose».
+  ["jose", "josele"],
+  // María de los Ángeles, de nombre reconocido Ángela: el hipocorístico corre solo hacia
+  // ella, no hacia cualquier Ángela del árbol.
+  ["maria de los angeles", "angela"],
 ];
 
 /** Por qué otros nombres se llega a quien se llama así. Se arma una vez, al cargar el módulo. */
