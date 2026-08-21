@@ -212,6 +212,19 @@
 .arbol .mk       { fill: color-mix(in oklab, var(--mut) 45%, transparent); }
 .arbol .mk-pov   { fill: var(--acc); }
 
+/* Atlas — el paso de tarjeta */
+
+/* La calificada se va hacia arriba y la siguiente sube detrás, como quien pasa la hoja de un
+   taco. Cortísima a propósito: se ve cuarenta veces seguidas, y lo que a la primera es un
+   detalle a la cuadragésima es una espera. Y el cambio de tarjeta lo dispara el final de la
+   salida, así que acortarla aquí acorta la espera de verdad — no hay milisegundos escritos
+   también en el JS que se queden atrás. */
+.atlas-sale  { animation: atlas-sale 110ms ease-in both; pointer-events: none; }
+.atlas-entra { animation: atlas-entra 170ms ease-out both; }
+@keyframes atlas-sale  { to   { opacity: 0; transform: translateY(-10px); } }
+@keyframes atlas-entra { from { opacity: 0; transform: translateY(10px); } }
+/* Sin prefers-reduced-motion: es laboratorio, se ve como se diseñó. */
+
 /* TerminalShell — chrome bar, navegación y animación de salida */
 
 .ts-nav-btn {
