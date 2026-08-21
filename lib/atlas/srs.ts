@@ -63,6 +63,15 @@ export function sospecha(estado: Estado | undefined, ahora: number): number {
 const asentado = (e: Estado | undefined) => !!e && e.vida > VIDA_ASENTADO;
 
 /**
+ * Cómo de agarrado está un dato, para la ficha de explorar. Mira el reloj sin tocarlo: explorar
+ * no es repasar, y pasearse por los países no puede alterar cuándo vuelven.
+ *
+ * Los tres nombres son los que se enseñan: no hay traducción que mantener en dos sitios.
+ */
+export type Dominio = "sin ver" | "en marcha" | "asentado";
+export const dominio = (e: Estado | undefined): Dominio => (!e ? "sin ver" : asentado(e) ? "asentado" : "en marcha");
+
+/**
  * Cuántos huecos lleva la tarjeta de un país. Va con la madurez, no con la sospecha: cuanto
  * menos se sabe un país, más datos se ven. Examinar de algo que aún no está codificado no
  * enseña, solo frustra; y lo visible es el material de estudio.

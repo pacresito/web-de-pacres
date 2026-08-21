@@ -225,6 +225,13 @@
 @keyframes atlas-entra { from { opacity: 0; transform: translateY(10px); } }
 /* Sin prefers-reduced-motion: es laboratorio, se ve como se diseñó. */
 
+/* Las dos pestañas y la tira de continentes: la misma marca de «estás aquí» en las dos, que es
+   la misma idea. El color base va en la clase, no en el style, para que el :hover pueda ganarle. */
+.atlas-tab    { color: var(--t-ink4); border-bottom: 1px solid transparent; }
+.atlas-tab-on { color: var(--t-accent); border-bottom-color: var(--t-accent); }
+.atlas-tab:active { color: var(--t-accent); }
+@media (hover: hover) { .atlas-tab:hover { color: var(--t-accent); } }
+
 /* TerminalShell — chrome bar, navegación y animación de salida */
 
 .ts-nav-btn {

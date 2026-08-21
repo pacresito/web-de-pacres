@@ -8,14 +8,10 @@
 // impuro: dos renders del mismo estado darían tarjetas distintas. Aquí el reloj se mira una
 // vez, al avanzar, y `useSyncExternalStore` lee el resultado sin efectos ni cascadas.
 import { esPerfil, sembrar } from "./sembrar";
-import { PAISES } from "./paises";
+import { RECORRIDO } from "@/data/atlas/orden";
 import { calificar, montar, siguiente, type Dato, type Mazo, type Nota, type Tarjeta } from "./srs";
 
 const CLAVE = "atlas:mazo";
-
-// El orden de entrada de países nuevos. En la fase 2 lo sustituye el barrido en S retocado a
-// mano; hasta entonces, el del fichero de datos.
-const ORDEN = PAISES.map((p) => p.id);
 
 export type Vista = {
   tarjeta: Tarjeta | null;
@@ -43,7 +39,7 @@ function leerDeDisco(): Mazo {
 
 function avanzar(m: Mazo): Vista {
   const ahora = Date.now();
-  const pais = siguiente(m, ORDEN, ahora);
+  const pais = siguiente(m, RECORRIDO, ahora);
   return { tarjeta: pais ? montar(m, pais, ahora) : null, estrenando: Object.keys(m).length === 0 };
 }
 
@@ -60,6 +56,16 @@ export function vistaActual(): Vista {
 // En el server no hay mazo. Pintar una tarjeta con el mazo vacío y otra distinta al hidratar
 // sería un desajuste de hidratación, que se manifiesta como un error ilegible.
 export const sinVista = (): Vista | null => null;
+
+// El mazo tal cual, para explorar, que solo lo mira. Devuelve la misma referencia mientras no
+// cambie —`useSyncExternalStore` compara por identidad y una copia nueva por lectura sería un
+// bucle de renders—; y en el server, uno vacío y siempre el mismo, por lo mismo.
+const VACIO: Mazo = {};
+export function mazoActual(): Mazo {
+  if (!mazo) vistaActual();
+  return mazo!;
+}
+export const sinMazo = (): Mazo => VACIO;
 
 /** Aplica las notas de la tarjeta actual, guarda y pasa a la siguiente. */
 export function calificarTarjeta(paisId: string, notas: Partial<Record<Dato, Nota>>) {
