@@ -7,12 +7,13 @@
 // navegador— y, sobre todo, decidir qué tarjeta toca exige mirar el reloj, que en un render es
 // impuro: dos renders del mismo estado darían tarjetas distintas. Aquí el reloj se mira una
 // vez, al avanzar, y `useSyncExternalStore` lee el resultado sin efectos ni cascadas.
-import { esPerfil, sembrar } from "./sembrar";
+import { esPerfil, sembrar, type Perfil } from "./sembrar";
 import { RECORRIDO } from "@/data/atlas/orden";
 import { calificar, montar, siguiente, type Dato, type Mazo, type Nota, type Tarjeta } from "./srs";
 
 const CLAVE = "atlas:mazo";
 const CLAVE_COLA = "atlas:cola";
+const CLAVE_NIVEL = "atlas:nivel";
 const RUTA_MAZO = "/juegos/atlas/api/mazo";
 const RUTA_LOGIN = "/juegos/atlas/api/login";
 
@@ -29,9 +30,12 @@ let mazo: Mazo | null = null;
 let vista: Vista | null = null;
 let cola: Calificacion[] = [];
 let identificado = false;
-// Un mazo de mentira no se sincroniza jamás: `?sembrar` fabrica cuarenta calificaciones falsas
-// y con sesión abierta se irían derechas al mazo de verdad, sin manera de deshacerlo.
+// Un mazo sembrado no se sincroniza jamás: son cuarenta calificaciones falsas y con sesión
+// abierta se irían derechas al mazo de verdad, sin manera de deshacerlo. **La garantía vive
+// aquí y no en la interfaz**, para que ningún botón puesto en el sitio equivocado pueda saltársela.
 let sembrado = false;
+/** El nivel de salida que se eligió, para poder enseñarlo. Sin elegir, se empieza de cero. */
+let nivel: Perfil = "vacio";
 const oyentes = new Set<() => void>();
 const notificar = () => oyentes.forEach((a) => a());
 
@@ -45,6 +49,8 @@ function leerDeDisco(): Mazo {
   }
   try {
     cola = JSON.parse(localStorage.getItem(CLAVE_COLA) ?? "[]") as Calificacion[];
+    const n = localStorage.getItem(CLAVE_NIVEL);
+    if (esPerfil(n)) nivel = n;
     const s = localStorage.getItem(CLAVE);
     return s ? (JSON.parse(s) as Mazo) : {};
   } catch {
@@ -57,6 +63,7 @@ function guardar() {
   try {
     localStorage.setItem(CLAVE, JSON.stringify(mazo));
     localStorage.setItem(CLAVE_COLA, JSON.stringify(cola));
+    localStorage.setItem(CLAVE_NIVEL, nivel);
   } catch {}
 }
 
@@ -151,6 +158,26 @@ async function volcar(): Promise<Mazo | null> {
  * Al cargar: se vuelca lo pendiente y **gana Redis**. En ese orden — al revés, lo calificado sin
  * cobertura lo pisaría el mazo del servidor y se perdería sin que nadie se enterase.
  */
+export const nivelActual = (): Perfil => nivel;
+
+/**
+ * Cambiar de nivel es **empezar otra vez desde otro sitio**: el mazo de este navegador se
+ * sustituye entero por uno inventado y lo anterior no vuelve. Es la contrapartida de que exista
+ * —quien vuelve sin su localStorage no tiene nada que perder— y por eso solo se ofrece sin
+ * sesión: con cuenta, el mazo bueno está en Redis y no se toca desde aquí.
+ */
+export function elegirNivel(perfil: Perfil) {
+  nivel = perfil;
+  sembrado = true;
+  cola = [];
+  // Semilla nueva en cada elección: cincuenta países distintos, que es lo que hace que repetir
+  // nivel sea un reto nuevo y no la misma partida otra vez.
+  mazo = sembrar(perfil, Date.now(), String(Date.now()));
+  guardar();
+  vista = avanzar(mazo);
+  notificar();
+}
+
 export async function sincronizar() {
   if (sembrado) return;
   const remoto = await volcar();
@@ -175,8 +202,10 @@ export async function entrar(password: string): Promise<string | null> {
   }
   if (!r.ok) return ((await r.json().catch(() => ({}))) as { error?: string }).error ?? "No se pudo entrar";
   // El mazo local se juega sin cuenta y no sube: lo de esta sesión es de este navegador, y
-  // quien manda a partir de ahora es Redis.
+  // quien manda a partir de ahora es Redis. Eso incluye lo sembrado: entrar deshace la siembra,
+  // que si no la sesión se quedaría mirando un mazo de mentira con la cuenta abierta.
   cola = [];
+  sembrado = false;
   await sincronizar();
   return null;
 }
