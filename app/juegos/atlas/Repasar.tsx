@@ -191,12 +191,11 @@ function Tarjeta({ vista, pantallaCompleta }: { vista: Vista; pantallaCompleta: 
               {pais.nombre}
             </div>, 44)}
 
-          {/* La capital lleva su etiqueta también destapada: en Mónaco, Yibuti o Panamá el
-              país y la capital son la misma palabra, y sin ella la tarjeta la repite sin decir
-              cuál es cuál. */}
+          {/* Sin etiqueta: el sitio y el tamaño ya la dicen —la capital va siempre bajo el país y
+              más pequeña—, y en Mónaco, Yibuti o Panamá, donde las dos palabras son la misma, es
+              justo eso lo que las distingue. Tapada se llama sola. */}
           {bloque("capital",
-            <div style={{ height: 36, display: "flex", alignItems: "baseline", justifyContent: "center", gap: "0.5rem" }}>
-              <span style={{ fontFamily: "var(--t-mono)", fontSize: "0.65rem", color: "var(--t-ink4)", letterSpacing: "0.08em" }}>capital</span>
+            <div style={{ height: 36, display: "flex", alignItems: "center", justifyContent: "center" }}>
               <span style={{ fontFamily: "var(--t-mono)", fontSize: "1rem", color: "var(--t-ink2)" }}>{pais.capital}</span>
             </div>, 36)}
 

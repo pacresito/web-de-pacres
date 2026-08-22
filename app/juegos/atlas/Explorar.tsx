@@ -57,8 +57,6 @@ export default function Explorar() {
   const forma = FORMAS[id];
   const mover = (n: number) => setPi((i) => (i + n + grupo.paises.length) % grupo.paises.length);
 
-  // La marca va pegada al dato, no alineada al borde: en una columna al margen se lee como una
-  // puntuación de la ficha entera, que es lo contrario de lo que dice.
   // Las flechas del teclado hacen lo que los dos botones: en escritorio recorrer el continente
   // pulsando a un lado y a otro de la pantalla no es recorrerlo.
   useEffect(() => {
@@ -71,10 +69,12 @@ export default function Explorar() {
     return () => window.removeEventListener("keydown", tecla);
   });
 
-  const fila = (dato: Dato, contenido: React.ReactNode, ancho = false) => (
-    <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-      <div style={{ minWidth: 0, ...(ancho && { flex: 1 }) }}>{contenido}</div>
+  // La marca abre cada fila, no la cierra: a la izquierda las cuatro forman una columna recta y
+  // se leen de un vistazo; al final de cada dato caen donde acabe el texto, cada una en su sitio.
+  const fila = (dato: Dato, contenido: React.ReactNode) => (
+    <div style={{ display: "flex", alignItems: "center", gap: "0.7rem" }}>
       <Marca estado={dominio(mazo[id]?.[dato])} />
+      <div style={{ flex: 1, minWidth: 0 }}>{contenido}</div>
     </div>
   );
 
@@ -128,15 +128,16 @@ export default function Explorar() {
             <path d={forma.d} fill="var(--t-accent)" fillRule="evenodd" />
             {forma.linea && <path d={forma.linea} fill="none" stroke="var(--t-paper)" strokeWidth={6} strokeDasharray="18 14" strokeLinecap="round" opacity={0.75} />}
           </svg>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <Minimapa id={id} marco={grupo.marco} lon={forma.lon} lat={forma.lat} />
-            <div style={{ fontFamily: MONO, fontSize: "0.62rem", color: "var(--t-ink4)", marginTop: "0.35rem" }}>
-              {km2(pais.km2)} km² · {forma.ladoKm} km de largo
-            </div>
-          </div>
-        </div>, true)}
+          <Minimapa id={id} marco={grupo.marco} lon={forma.lon} lat={forma.lat} />
+        </div>)}
 
-      <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.85rem" }}>
+      {/* El tamaño es del país, no del minimapa: va al margen de la ficha, con todo lo demás, y
+          no colgando del borde de un mapa que cambia de ancho en cada continente. */}
+      <div style={{ fontFamily: MONO, fontSize: "0.62rem", color: "var(--t-ink4)", marginLeft: "1.26rem" }}>
+        {km2(pais.km2)} km² · {forma.ladoKm} km de largo
+      </div>
+
+      <div style={{ display: "flex", gap: "0.85rem" }}>
         {(Object.keys(TINTA) as Dominio[]).map((e) => (
           <span key={e} style={{ display: "flex", alignItems: "center", gap: "0.3rem", fontFamily: MONO, fontSize: "0.6rem", color: "var(--t-ink4)" }}>
             <Marca estado={e} />{e}

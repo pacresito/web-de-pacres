@@ -57,11 +57,12 @@ export default function Atlas() {
           {modo === "repasar" ? <Repasar pantallaCompleta={pantallaCompleta} /> : <Explorar />}
         </div>
 
-        {!pantallaCompleta && <WhyFooter question="¿por qué un repasador de países sin contadores?" date="21 de agosto de 2026">
+        {!pantallaCompleta && <WhyFooter question="¿por qué un test de países?" date="21 de agosto de 2026">
           Llevo años queriendo aprenderme todos los países del mundo y no lo he conseguido nunca. Lo más
-          cerca que estuve fue con Anki, y siempre acabé abandonando por lo mismo: vuelves después de diez
-          días, te dice que tienes cuatrocientas tarjetas pendientes, y cierras. Así que esto no lleva
-          contadores. Abres, hay un país, y das los que te apetezcan.
+          cerca que estuve fue con Anki, que va enseñándote cada tarjeta justo antes de que se te olvide y
+          espaciándolas cuando aciertas. Funciona, pero no terminó de engancharme: vuelves después de diez
+          días, te recibe con cuatrocientas pendientes, y cierras. Esta es mi versión, a ver si por fin lo
+          consigo.
         </WhyFooter>}
       </main>
     </TerminalShell>
