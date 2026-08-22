@@ -12,8 +12,8 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       { source: "/l", destination: "/webs/lagartijas", permanent: false },
-      { source: "/a", destination: "/apps/AgricolaCalc", permanent: false },
-      { source: "/c", destination: "/apps/CastleComboCalc", permanent: false },
+      { source: "/a", destination: "/juegos/atlas", permanent: false },
+      { source: "/c", destination: "/apps/RPNcalc", permanent: false },
       { source: "/farmacia", destination: "/farma", permanent: false },
       { source: "/f", destination: "/fuera-de-ruta", permanent: false },
       { source: "/o", destination: "/apps/observatorio", permanent: false },
