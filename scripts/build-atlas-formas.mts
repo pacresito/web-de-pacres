@@ -42,6 +42,33 @@ const PASO_GLOBO = 0.35; // grados: paso mínimo de la costa del globo (subpíxe
 // en el paralelo 27°40′N, así que la línea es ese paralelo.
 const FRONTERAS: Record<string, number> = { ma: 27 + 40 / 60 };
 
+// Los archipiélagos del Pacífico y del Índico no los resuelve ninguna regla general: son puñados
+// de atolones repartidos por miles de kilómetros, y dibujados enteros dan una constelación de
+// motas donde debería haber una silueta. Peor aún, en las fuentes de alta resolución un arrecife
+// deshabitado encierra más grados² que la isla de la capital, así que "el polígono mayor" ni
+// siquiera apunta al sitio correcto. Aquí se dice a mano en torno a qué punto se recorta y con
+// cuánto radio en km: lo que queda es la isla que se reconoce, casi siempre la de la capital.
+//
+// `tol` sube la simplificación de los diminutos: a 6 km de ancho, el contorno de geoBoundaries
+// dibuja los puertos, y un puerto no es lo que hay que reconocer de Nauru.
+//
+// `paneles` es para los dos que ni recortados dan una silueta: sus dos islas de verdad están a
+// miles de kilómetros y a escala real cada una sería una mota. Se dibujan una al lado de la otra
+// **con la misma escala** —el tamaño entre ellas sigue siendo verdad— y la línea discontinua del
+// medio dice que lo que no está a escala es la distancia. Los paneles van de oeste a este, como
+// un mapa; el globo y el punto del minimapa se plantan en el mayor de los dos.
+const AJUSTES: Record<string, { cerca?: Cerca; paneles?: [Cerca, Cerca]; tol?: number }> = {
+  bs: { cerca: [-77.5, 25.5, 260] },  // el racimo del noroeste: Andros, Gran Bahama, Ábaco
+  fm: { paneles: [[151.8, 7.4, 60], [158.2, 6.9, 60]] },   // la laguna de Chuuk y Pohnpei
+  ki: { paneles: [[172.98, 1.35, 30], [-157.4, 1.9, 60]] }, // Tarawa y Kiritimati
+  mh: { cerca: [171.2, 7.1, 60] },    // Majuro y Arno
+  nr: { tol: 6 },
+  pw: { cerca: [134.5, 7.5, 60] },    // Babeldaob y Koror, no los arrecifes del suroeste
+  sc: { cerca: [55.5, -4.6, 60] },    // Mahé, Praslin y La Digue
+  to: { cerca: [-175.2, -21.2, 60] }, // Tongatapu
+  tv: { cerca: [179.1, -8.5, 30] },   // Funafuti
+};
+
 // Se conserva lo que pesa algo Y cae cerca: Gozo, Baleares, Córcega, Sicilia, Cerdeña. Se
 // sueltan Canarias, Svalbard, Azores, Madeira, Guayana, Pascua y Hawái.
 //
@@ -55,7 +82,9 @@ const rad = Math.PI / 180;
 type Anillo = [number, number][];
 type Poly = Anillo[];
 type Geometria = { type: "Polygon"; coordinates: Poly } | { type: "MultiPolygon"; coordinates: Poly[] };
-type Salida = { id: string; nombre: string; d: string; linea: string; ladoKm: number; lon: number; lat: number; puntos: number };
+/** En torno a qué punto se recorta una silueta y con cuánto radio, en km. */
+type Cerca = [number, number, number];
+type Salida = { id: string; nombre: string; d: string; linea: string; separador: string; ladoKm: number; lon: number; lat: number; puntos: number };
 type Pieza = { properties: Record<string, string | number | null>; geometry: Geometria };
 
 // El contorno de alta resolución de un país suelto. Se usa poco —una veintena de los 195— así
@@ -105,6 +134,14 @@ function kmEntre(a: ReturnType<typeof caja>, b: ReturnType<typeof caja>): number
   const lat = (a.y0 + a.y1 + b.y0 + b.y1) / 4;
   const dLon = Math.max(0, a.x0 - b.x1, b.x0 - a.x1) * 111 * Math.cos(lat * rad);
   return Math.hypot(dLat, dLon);
+}
+
+/** Los polígonos que caen dentro del radio de un punto: el recorte de los archipiélagos. */
+function recortar(polys: Poly[], [lon, lat, km]: Cerca, nombre: string): Poly[] {
+  const punto = { x0: lon, x1: lon, y0: lat, y1: lat };
+  const cerca = polys.filter((poly) => kmEntre(punto, caja([poly[0]])) <= km);
+  if (!cerca.length) throw new Error(`el recorte de ${nombre} no deja ninguna isla`);
+  return cerca;
 }
 
 function polysQueSeQuedan(polys: Poly[]): Poly[] {
@@ -205,31 +242,63 @@ for (const p of PAISES) {
       tol = TOL_ALTA;
     }
   }
-  const polys = polysQueSeQuedan(crudo);
+  const ajuste = AJUSTES[p.id];
+  if (ajuste?.tol) tol = ajuste.tol;
+  if (ajuste?.cerca) crudo = recortar(crudo, ajuste.cerca, p.nombre);
 
-  // Solo el anillo exterior de cada polígono. Los agujeros de una fuente de alta resolución son
-  // dársenas y puertos, y en una silueta que se memoriza son manchas blancas sin significado.
-  const anillos = polys.map((poly) => poly[0]);
-  const c = caja(anillos);
-  const lon0 = (c.x0 + c.x1) / 2, lat0 = (c.y0 + c.y1) / 2;
-  const proy = anillos.map((a) => a.map(([lon, lat]) => laea(lon, lat, lon0, lat0)) as Anillo);
-  const b = caja(proy);
-  const ancho = b.x1 - b.x0, alto = b.y1 - b.y0, lado = Math.max(ancho, alto);
+  // Un grupo por panel, o uno solo con todo el país. Solo el anillo exterior de cada polígono:
+  // los agujeros de una fuente de alta resolución son dársenas y puertos, y en una silueta que
+  // se memoriza son manchas blancas sin significado.
+  const grupos = (ajuste?.paneles ?? [null]).map((cerca) => {
+    const polys = polysQueSeQuedan(cerca ? recortar(crudo, cerca, p.nombre) : crudo);
+    const anillos = polys.map((poly) => poly[0]);
+    const c = caja(anillos);
+    const lon0 = (c.x0 + c.x1) / 2, lat0 = (c.y0 + c.y1) / 2;
+    const proy = anillos.map((a) => a.map(([lon, lat]) => laea(lon, lat, lon0, lat0)) as Anillo);
+    return { polys, c, lon0, lat0, proy, b: caja(proy), area: anillos.reduce((n, a) => n + areaRel(a), 0) };
+  });
 
-  // Normalizada: el lado mayor llena la caja menos el margen. La proporción se conserva.
-  const escala = (BOX * (1 - 2 * PAD)) / lado;
-  const px = (x: number) => BOX / 2 + (x - (b.x0 + b.x1) / 2) * escala;
-  const py = (y: number) => BOX / 2 - (y - (b.y0 + b.y1) / 2) * escala;
+  // Los paneles comparten escala: la que hace caber al que peor lo tiene. El tamaño de uno frente
+  // al otro sigue siendo verdad — lo único que se falsea es la distancia, y de eso avisa la línea.
+  const HUECO = 90; // lo que se aparta cada panel de la línea del medio
+  const cajas = grupos.map((_, i) => grupos.length === 1
+    ? [PAD * BOX, BOX * (1 - PAD)]
+    : i === 0 ? [PAD * BOX, BOX / 2 - HUECO / 2] : [BOX / 2 + HUECO / 2, BOX * (1 - PAD)]);
+  const escala = Math.min(...grupos.map(({ b }, i) =>
+    Math.min((cajas[i][1] - cajas[i][0]) / (b.x1 - b.x0), (BOX * (1 - 2 * PAD)) / (b.y1 - b.y0))));
 
   let d = "", puntos = 0;
-  for (const anillo of proy) {
-    const out = simplificar(anillo.map(([x, y]) => [px(x), py(y)] as [number, number]), tol);
-    if (out.length < 3) continue;
-    // Redondear al pintar: Math.cos/sin no están fijados por IEEE y Node y el navegador
-    // discrepan en el último bit, lo que rompe la hidratación con un error ilegible.
-    d += "M" + out.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join("L") + "Z";
-    puntos += out.length;
-  }
+  const pinta = grupos.map(({ b }, i) => {
+    const cx = (cajas[i][0] + cajas[i][1]) / 2;
+    return {
+      px: (x: number) => cx + (x - (b.x0 + b.x1) / 2) * escala,
+      py: (y: number) => BOX / 2 - (y - (b.y0 + b.y1) / 2) * escala,
+    };
+  });
+  grupos.forEach(({ proy }, i) => {
+    const { px, py } = pinta[i];
+    for (const anillo of proy) {
+      const out = simplificar(anillo.map(([x, y]) => [px(x), py(y)] as [number, number]), tol);
+      if (out.length < 3) continue;
+      // Redondear al pintar: Math.cos/sin no están fijados por IEEE y Node y el navegador
+      // discrepan en el último bit, lo que rompe la hidratación con un error ilegible.
+      d += "M" + out.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join("L") + "Z";
+      puntos += out.length;
+    }
+  });
+
+  // El país entero, sin paneles ni escala: de aquí sale el largo de la ficha, que es el del país
+  // de verdad —los 4.000 km de Kiribati— y no el de lo que se dibuja.
+  const mayor = grupos.reduce((a, b) => (b.area > a.area ? b : a));
+  const { lon0, lat0, c, polys } = mayor;
+  const { px, py } = pinta[grupos.indexOf(mayor)];
+  const entero = caja(grupos.flatMap((g) => g.polys.map((poly) => poly[0]))
+    .map((a) => a.map(([lon, lat]) => laea(lon, lat, lon0, lat0)) as Anillo));
+  const lado = Math.max(entero.x1 - entero.x0, entero.y1 - entero.y0);
+
+  // La línea del medio: solo cuando hay dos paneles, y dice que la distancia entre ellos no está
+  // a escala.
+  const separador = grupos.length === 1 ? "" : `M${BOX / 2},${PAD * BOX}L${BOX / 2},${BOX * (1 - PAD)}`;
 
   // La frontera interior, si la hay: se recorre el paralelo en pasos finos, se conserva lo que
   // pisa el país y se proyecta igual que el resto. Sale ligeramente curva, como debe.
@@ -247,7 +316,7 @@ for (const p of PAISES) {
     suelta();
   }
 
-  salida.push({ id: p.id, nombre: p.nombre, d, linea, ladoKm: Math.round(lado), lon: lon0, lat: lat0, puntos });
+  salida.push({ id: p.id, nombre: p.nombre, d, linea, separador, ladoKm: Math.round(lado), lon: lon0, lat: lat0, puntos });
 }
 
 const ts = `// GENERADO por scripts/build-atlas-formas.mts — no editar a mano.
@@ -256,13 +325,14 @@ const ts = `// GENERADO por scripts/build-atlas-formas.mts — no editar a mano.
 export type Forma = {
   d: string;      // path SVG en un viewBox 0 0 ${BOX} ${BOX}, normalizado
   linea: string;  // frontera interior a marcar dentro de la silueta ("" si no hay)
+  separador: string; // la línea entre los dos paneles de un país partido ("" si va de una pieza)
   ladoKm: number; // lado mayor real, para la ficha
   lon: number;    // centro: dónde se planta el globo y por dónde va el barrido en S
   lat: number;
 };
 
 export const FORMAS: Record<string, Forma> = {
-${salida.map((s) => `  ${s.id}: { d: "${s.d}", linea: "${s.linea}", ladoKm: ${s.ladoKm}, lon: ${s.lon.toFixed(3)}, lat: ${s.lat.toFixed(3)} },`).join("\n")}
+${salida.map((s) => `  ${s.id}: { d: "${s.d}", linea: "${s.linea}", separador: "${s.separador}", ladoKm: ${s.ladoKm}, lon: ${s.lon.toFixed(3)}, lat: ${s.lat.toFixed(3)} },`).join("\n")}
 };
 `;
 fs.mkdirSync(new URL(".", SALIDA), { recursive: true });

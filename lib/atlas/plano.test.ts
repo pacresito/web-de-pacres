@@ -23,4 +23,25 @@ const EUROPA: Marco = [-25, 34, 60, 72];
   assert.equal(pathDelPlano(cruza, EUROPA).match(/L/g)?.length, 3);
 }
 
+{
+  // Oceanía se pasa del antimeridiano: lo que llega en negativo cae por el este, no fuera.
+  const OCEANIA: Marco = [110, -48, 205, 12];
+  const { w, xy } = plano(OCEANIA);
+  assert.equal(xy(-172, -14)[0], xy(188, -14)[0]);       // Samoa, por los dos nombres del mismo sitio
+  assert.ok(xy(-172, -14)[0] > 0 && xy(-172, -14)[0] < w);
+  assert.ok(xy(150, -25)[0] < xy(-172, -14)[0]);         // y Australia sigue a su izquierda
+  // Ni el que cruza el borde oeste —Java entra en el marco de Oceanía por 110°— ni Sudamérica,
+  // que está en las antípodas y con la costura mal puesta rayaba el mapa de lado a lado.
+  const sudamerica = [[[-73, -20], [-40, -20], [-40, -10], [-73, -20]]];
+  assert.equal(pathDelPlano(sudamerica, OCEANIA), "");
+  // Y un anillo que cruza el borde oeste del marco tampoco se parte: Java entra por 110°.
+  const java = [[[105, -7], [115, -7], [115, -6], [105, -7]]];
+  const xsJava = pathDelPlano(java, OCEANIA).match(/-?\d+\.\d+(?=,)/g)!.map(Number);
+  assert.ok(Math.max(...xsJava) - Math.min(...xsJava) < 15, `sin raya de lado a lado: ${xsJava}`);
+  // Un anillo que cruza el antimeridiano no se parte: sus dos mitades caen seguidas.
+  const cruza = [[[179, -17], [-179, -17], [-179, -16], [179, -17]]];
+  const xs = pathDelPlano(cruza, OCEANIA).match(/-?\d+\.\d+(?=,)/g)!.map(Number);
+  assert.ok(Math.max(...xs) - Math.min(...xs) < 5, `las dos mitades van juntas: ${xs}`);
+}
+
 console.log("plano: ok");

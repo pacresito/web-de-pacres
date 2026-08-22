@@ -1,6 +1,6 @@
 // Test de lógica pura: `npx tsx lib/atlas/globo.test.ts`. Fuera del build.
 import assert from "assert";
-import { ortografica, pathDelGlobo } from "./globo";
+import { alLimbo, ortografica, pathDelGlobo, rellenoDelGlobo } from "./globo";
 
 const R = 100;
 const cerca = (a: number, b: number, msg: string) => assert.ok(Math.abs(a - b) < 0.001, `${msg}: ${a} vs ${b}`);
@@ -39,5 +39,26 @@ const meridiano = [[[-3.7, -80], [-3.7, 0], [-3.7, 80], [176.3, 80], [176.3, 0],
 const d = pathDelGlobo(meridiano, enMadrid);
 assert.ok(d.startsWith("M") && !d.includes("Z"), "los trozos del globo no se cierran");
 assert.strictEqual((d.match(/M/g) ?? []).length, 1, "solo el trozo visible");
+
+// El relleno cierra los anillos pegando al limbo lo que se va por detrás: la costa que se ve
+// queda igual, y lo escondido no cruza el globo por dentro.
+{
+  const borde = alLimbo(-3.7, 40.4, R);
+  const visible = borde(-3.7, 40.4);
+  cerca(visible[0], 0, "el centro sigue en el centro");
+  const escondido = borde(176.3, -40.4);
+  cerca(Math.hypot(escondido[0], escondido[1]), R, "lo de detrás se pega al canto");
+  // Un anillo que cruza el horizonte sale de una pieza y sin salirse del círculo.
+  const anillo = [[-3.7, 40.4], [80, 20], [176.3, -40.4], [-80, 10], [-3.7, 40.4]];
+  const d = rellenoDelGlobo([anillo], enMadrid, borde);
+  assert.equal((d.match(/M/g) ?? []).length, 1, "un anillo, un trozo");
+  assert.ok(d.endsWith("Z"), "y cerrado");
+  const puntos = d.slice(1, -1).split("L").map((par) => par.split(",").map(Number));
+  assert.ok(puntos.every(([x, y]) => Math.hypot(x, y) <= R + 0.1), "nada se sale del globo");
+  // Y el anillo que no asoma nada no se dibuja: pegado entero al canto sería un polígono
+  // inscrito en el círculo, que rellena media cara visible.
+  const antipodas = [[170, -40], [-170, -45], [-175, -35], [170, -40]];
+  assert.equal(rellenoDelGlobo([antipodas], enMadrid, borde), "", "lo que no se ve no se pinta");
+}
 
 console.log("globo: ok");

@@ -39,6 +39,30 @@ function Marca({ estado, arriba = 0 }: { estado: Dominio; arriba?: number }) {
   );
 }
 
+// Los caracteres que caben en una línea del nombre a tamaño entero. La fuente es mono y la
+// columna mide lo mismo en móvil y a lo ancho, así que sale una cuenta y no una medición: medir
+// el DOM daría un número que el HTML del server no tiene.
+const CARACTERES = 15;
+
+/**
+ * Cuánto encoge el nombre para caber en dos líneas. La ficha reserva dos siempre —así no se
+ * mueve nada al pasar de España a Bosnia y Herzegovina— y de los 195 solo la República
+ * Democrática del Congo pide una tercera: encogerla es preferible a bajar todo lo que va debajo.
+ */
+function escalaDelNombre(nombre: string) {
+  const palabras = nombre.split(" ");
+  return [1, 0.85, 0.75, 0.68].find((escala) => {
+    const ancho = Math.floor(CARACTERES / escala);
+    let lineas = 1, largo = 0;
+    for (const palabra of palabras) {
+      if (!largo) largo = palabra.length;
+      else if (largo + 1 + palabra.length <= ancho) largo += 1 + palabra.length;
+      else { lineas++; largo = palabra.length; }
+    }
+    return lineas <= 2;
+  }) ?? 0.55;
+}
+
 // Sin `toLocaleString`: el ICU del server y el del navegador no tienen por qué coincidir, y un
 // número distinto en cada lado es un desajuste de hidratación, que sale como un error ilegible.
 function km2(n: number) {
@@ -154,11 +178,17 @@ export default function Explorar() {
 
       <div className="atlas-ficha atlas-lado" style={{ flex: 1 }}>
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--a-ficha-gap)" }}>
-          {fila("nombre",
-            <>
-              <div style={{ fontFamily: MONO, fontSize: "var(--a-pais)", fontWeight: 500, lineHeight: 1.15, letterSpacing: "-0.03em", color: "var(--t-ink)" }}>{pais.nombre}</div>
-              <div style={{ fontFamily: MONO, fontSize: 11, lineHeight: 1.6, color: "var(--t-ink3)", paddingTop: 4 }}>{pais.oficial}</div>
-            </>, 11)}
+          {/* El nombre vive en una caja de dos líneas para que nada de lo que va debajo se mueva
+              al pasar de España a Bosnia y Herzegovina, y se apoya en su techo: así su marca
+              abre la columna a la misma altura que la de la forma, en la de al lado. El aire
+              sobrante cae debajo del oficial, que es donde no separa nada de lo suyo. */}
+          <div style={{ display: "grid", alignContent: "start", height: "calc(var(--a-pais) * 2.3 + 22px)" }}>
+            {fila("nombre",
+              <>
+                <div style={{ fontFamily: MONO, fontSize: `calc(var(--a-pais) * ${escalaDelNombre(pais.nombre)})`, fontWeight: 500, lineHeight: 1.15, letterSpacing: "-0.03em", color: "var(--t-ink)" }}>{pais.nombre}</div>
+                <div style={{ fontFamily: MONO, fontSize: 11, lineHeight: 1.6, color: "var(--t-ink3)", paddingTop: 4 }}>{pais.oficial}</div>
+              </>, 11)}
+          </div>
 
           {/* Sin etiqueta, como en la tarjeta: el sitio y el tamaño ya la dicen. */}
           {fila("capital",
@@ -171,10 +201,6 @@ export default function Explorar() {
                  // caja se queda flotando a la derecha de las que son estrechas.
                  style={{ height: "var(--a-bandera)", width: "auto", maxWidth: 200, display: "block" }} />)}
 
-          {/* El tamaño es del país, no del mapa: con sitio va al pie de su columna, y en móvil
-              cierra la ficha con una regla, que es donde no le quita aire a nada. */}
-          {/* Alineadas con los datos, no con las marcas: no son un quinto dato. */}
-          <div className="atlas-solo-ancho" style={{ paddingLeft: "calc(var(--a-marca) + var(--a-marca-gap))" }}>{cifras}</div>
         </div>
 
         {/* Las dos figuras, del mismo alto y una al lado de la otra: la silueta es la forma sola
@@ -183,18 +209,31 @@ export default function Explorar() {
             dibujo, lo que sobra es un hueco que no se ve pero empequeñece los dos mapas. Sin
             etiquetas debajo: una silueta verde y un continente con un país encendido no se
             confunden con otra cosa. */}
+        {/* El tamaño va al pie de la silueta, que es de quien habla —los km² y el largo son del
+            país, no del continente de al lado—, y en móvil cierra la ficha con una regla, que es
+            donde no le quita aire a nada. */}
         {fila("forma",
+          <div style={{ display: "grid", gap: 10 }}>
           <div className="atlas-mapas">
             {/* Las dos figuras se pegan a la izquierda de su casilla en vez de centrarse en ella,
                 y la silueta además se ciñe a su tinta: Chile en un lienzo cuadrado es un hilo con
                 dos palmos de nada a los lados, y ese vacío no se distingue del hueco entre
                 columnas. */}
             <svg viewBox={marcoDeTinta(forma.d)} preserveAspectRatio="xMinYMid meet" style={{ width: "100%", aspectRatio: 1 }} aria-label={`Forma de ${pais.nombre}`}>
-              <path d={forma.d} fill="var(--t-accent)" fillRule="evenodd" />
+            {/* Trazo además de relleno, como en el globo y el minimapa: un archipiélago de
+                atolones —Maldivas, Tuvalu, las Marshall— relleno a secas se queda en unas motas
+                que no se ven. A los grandes, un píxel y medio de contorno no les hace nada. */}
+              <path d={forma.d} fill="var(--t-accent)" fillRule="evenodd"
+                    stroke="var(--t-accent)" strokeWidth={1.5} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
               {forma.linea && <path d={forma.linea} fill="none" stroke="var(--t-paper)" strokeWidth={6} strokeDasharray="18 14" strokeLinecap="round" opacity={0.75} />}
+              {/* La línea entre los dos paneles de un país partido: dice que sus dos islas
+                  están a la escala buena pero no a la distancia buena. */}
+              {forma.separador && <path d={forma.separador} fill="none" stroke="var(--t-ink4)" strokeWidth={6} strokeDasharray="18 14" strokeLinecap="round" />}
             </svg>
             <Minimapa id={id} marco={grupo.marco} lon={forma.lon} lat={forma.lat} />
-          </div>, 5, true)}
+          </div>
+            <div className="atlas-solo-ancho">{cifras}</div>
+          </div>, 11, true)}
       </div>
 
       <div className="atlas-solo-movil atlas-lado" style={{ borderTop: "1px solid var(--t-rule2)", padding: "16px var(--a-lado) 30px", textAlign: "center", flexShrink: 0 }}>

@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { MUNDO } from "@/data/atlas/mundo";
-import { ortografica, pathDelGlobo } from "@/lib/atlas/globo";
+import { alLimbo, ortografica, pathDelGlobo, rellenoDelGlobo } from "@/lib/atlas/globo";
 
 /**
  * El globo de la tarjeta: la Tierra centrada en el país, con él resaltado. Es quien cuenta el
@@ -12,11 +12,14 @@ import { ortografica, pathDelGlobo } from "@/lib/atlas/globo";
  * un mapa, que es media respuesta regalada.
  */
 export default function Globo({ id, lon, lat, r = 74, lado }: { id: string; lon: number; lat: number; r?: number; lado?: string }) {
-  const { tierra, mio, punto } = useMemo(() => {
+  const { tierra, relleno, mio, punto } = useMemo(() => {
     const proy = ortografica(lon, lat, r);
     const suyos = MUNDO.filter((a) => a.id === id).map((a) => a.r);
     return {
       tierra: pathDelGlobo(MUNDO.filter((a) => a.id !== id).map((a) => a.r), proy),
+      // La tierra rellena, un punto más oscura que el agua: sin ella el globo es un círculo de
+      // un solo tono con rayas, y no se lee cuál de los dos lados de la costa es mar.
+      relleno: rellenoDelGlobo(MUNDO.map((a) => a.r), proy, alLimbo(lon, lat, r)),
       mio: pathDelGlobo(suyos, proy),
       // Los diminutos no están en el mapa de baja resolución del globo, y a esta escala un
       // punto es exactamente lo que son.
@@ -32,6 +35,9 @@ export default function Globo({ id, lon, lat, r = 74, lado }: { id: string; lon:
     <svg width={d} height={d} viewBox={`${-r - 1} ${-r - 1} ${d} ${d}`}
          style={lado ? { width: lado, height: lado, flexShrink: 0 } : undefined} aria-hidden>
       <circle r={r} fill="var(--t-paper2)" stroke="var(--t-rule)" />
+      {/* No hace falta recortar por el círculo: lo escondido va pegado al canto y la cuerda
+          entre dos puntos del borde cae siempre por dentro. */}
+      <path d={relleno} fill="var(--t-rule2)" />
       <path d={tierra} fill="none" stroke="var(--t-ink4)" strokeWidth={1} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
       {/* Trazo además de relleno: un país fino (Chile, Italia) desaparece si solo se rellena. */}
       <path d={mio} fill="var(--t-accent)" stroke="var(--t-accent)" strokeWidth={2.5} strokeLinejoin="round" />

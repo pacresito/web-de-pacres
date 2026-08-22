@@ -27,8 +27,14 @@ const CONTINENTES: Continente[] = ["Asia", "Oceanía", "África", "América del 
 // Malta es un píxel— y Rusia se sale por el este, que es justo lo que hay que entender de Rusia.
 const MARCO: Record<Continente, [number, number, number, number]> = {
   "Asia":              [26, -11, 147, 78],
-  "Oceanía":           [110, -48, 180, 0],
-  "África":            [-19, -36, 52, 38],
+  // Oceanía se pasa de los 180° a propósito: Samoa, Tonga y las Line de Kiribati están al otro
+  // lado del antimeridiano, y con el marco cortado ahí no salían en su propio continente. Por
+  // arriba llega a 12°N porque Micronesia entera —Palaos, Marshall, los Estados Federados— cae
+  // por encima del ecuador, que es donde el marco terminaba.
+  "Oceanía":           [110, -48, 205, 12],
+  // África llega hasta Cabo Verde por el oeste y hasta Mauricio por el este: son países, no
+  // adornos del océano, y fuera del marco su punto no se pintaba en ninguna parte.
+  "África":            [-26, -36, 60, 38],
   "América del Norte": [-172, 7, -52, 72],
   "América del Sur":   [-82, -56, -34, 13],
   "Europa":            [-25, 34, 60, 72],

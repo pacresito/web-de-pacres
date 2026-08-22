@@ -253,7 +253,7 @@
   --a-acc-tx: var(--t-accent2);
   /* Lo único que cambia de móvil a escritorio, en un sitio: el resto del dibujo va en el style
      de cada pieza, como en el resto del sitio. */
-  --a-lado: 20px; --a-pais: 32px; --a-capital: 20px; --a-globo: 52px; --a-btn: 58px;
+  --a-lado: 20px; --a-pais: 32px; --a-capital: 20px; --a-globo: 76px; --a-btn: 58px;
   --a-marca: 22px; --a-marca-gap: 10px; --a-ficha-gap: 30px; --a-bandera: 72px;
   --a-marca-mapa: 22px; --a-marca-mapa-gap: 10px;
 }
@@ -265,7 +265,7 @@
 }
 @media (min-width: 768px) {
   .atlas {
-    --a-lado: 28px; --a-pais: 36px; --a-capital: 21px; --a-globo: 56px; --a-btn: 54px;
+    --a-lado: 28px; --a-pais: 36px; --a-capital: 21px; --a-btn: 54px;
     --a-marca: 26px; --a-marca-gap: 14px; --a-ficha-gap: 38px; --a-bandera: 84px;
     /* En la columna de los mapas la marca no alinea con nada: solo tiene que caber, y cada
        píxel suyo es hueco entre el texto y la silueta. */

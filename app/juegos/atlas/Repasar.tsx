@@ -260,11 +260,18 @@ function Tarjeta({ vista }: { vista: Vista }) {
         {fila("forma",
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 22, opacity: notas.forma ? 0.55 : 1 }}>
             <svg viewBox="0 0 1000 1000" style={{ width: 132, height: 132, flexShrink: 0 }} aria-label={`Forma de ${pais.nombre}`}>
-              <path d={forma.d} fill="var(--t-accent)" fillRule="evenodd" />
+            {/* Trazo además de relleno, como en el globo y el minimapa: un archipiélago de
+                atolones —Maldivas, Tuvalu, las Marshall— relleno a secas se queda en unas motas
+                que no se ven. A los grandes, un píxel y medio de contorno no les hace nada. */}
+              <path d={forma.d} fill="var(--t-accent)" fillRule="evenodd"
+                    stroke="var(--t-accent)" strokeWidth={1.5} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
               {/* Frontera interior, cuando la hay: Marruecos y el Sáhara Occidental salen
                   juntos —el globo viene de otra fuente y recortar uno los descuadraba— y la
                   línea dice dónde acaba uno. */}
               {forma.linea && <path d={forma.linea} fill="none" stroke="var(--t-paper)" strokeWidth={6} strokeDasharray="18 14" strokeLinecap="round" opacity={0.75} />}
+              {/* La línea entre los dos paneles de un país partido: dice que sus dos islas
+                  están a la escala buena pero no a la distancia buena. */}
+              {forma.separador && <path d={forma.separador} fill="none" stroke="var(--t-ink4)" strokeWidth={6} strokeDasharray="18 14" strokeLinecap="round" />}
             </svg>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, flexShrink: 0 }}>
               <Globo id={pais.id} lon={forma.lon} lat={forma.lat} lado="var(--a-globo)" />

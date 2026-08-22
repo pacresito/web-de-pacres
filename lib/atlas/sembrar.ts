@@ -8,7 +8,7 @@
 //
 // Son relojes inventados, y el algoritmo los corrige solo: un dato que se falla cae a 0,01 días
 // y vuelve en la misma sesión, así que en dos sesiones el mazo se parece a lo que se sabe.
-import { DATOS, type Dato, type Mazo } from "./srs";
+import { DATOS, type Mazo } from "./srs";
 import { RECORRIDO } from "@/data/atlas/orden";
 
 export const PERFILES = ["vacio", "facil", "medio", "dominado", "mezcla"] as const;
@@ -67,7 +67,13 @@ export function sembrar(perfil: Perfil, ahora: number, semilla = ""): Mazo {
       const vida = estado === "dominado" ? 40 + r * 200
         : estado === "facil" ? 2 + r * 15
         : r < 0.5 ? 2 + r * 10 : 30 + r * 60;
-      mazo[id]![d] = { vida, visto: ahora - r * vida * DIA };
+      // Cuándo se vio, en fracciones de su propia vida: la mitad del mazo llega vencida y la
+      // otra mitad no. Con todo a medio camino no habría nada que repasar y la cola se pondría
+      // a meter países nuevos —treinta seguidos, hasta el tope del freno—, que es justo por lo
+      // que existe un mazo de salida. Sorteo aparte del de la vida: si no, el que más aguanta
+      // sería siempre el más vencido.
+      const cuando = revuelto(id, d, "cuando") * 2;
+      mazo[id]![d] = { vida, visto: ahora - cuando * vida * DIA };
     }
   });
   return mazo;

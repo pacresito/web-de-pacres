@@ -26,9 +26,13 @@ export default function Minimapa({ id, marco, lon, lat }: {
   // se lee como el planeta y un rectángulo solo se lee como una caja gris. El dibujo se centra
   // en la celda que le toque, que es del mismo alto que la de la silueta — las dos figuras se
   // comparan mal si cada una mide lo suyo.
+  //
+  // Por eso la tierra y el agua se separan **rellenando la tierra**, no pintando el agua: el
+  // relleno es el mismo tono que en el globo y el mar lo pone el papel de la página, así que
+  // los continentes se leen sin que aparezca la caja.
   return (
     <svg viewBox={`0 0 ${w.toFixed(2)} ${h}`} preserveAspectRatio="xMinYMid meet" style={{ width: "100%", aspectRatio: 1 }} aria-hidden>
-      <path d={fondo} fill="none" stroke="var(--t-ink4)" strokeWidth={1} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+      <path d={fondo} fill="var(--t-rule2)" stroke="var(--t-ink4)" strokeWidth={1} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
       {/* Trazo además de relleno: un país fino se queda en nada si solo se rellena, y a esta
           escala casi todos lo son. */}
       <path d={mio} fill="var(--t-accent)" stroke="var(--t-accent)" strokeWidth={2} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
