@@ -18,6 +18,9 @@ const TINTA: Record<Dominio, string> = {
  * La marca de dominio de un dato: aro vacío, punto gris, punto verde. No es una nota ni una
  * puntuación —es la vida de ese reloj, mirada sin tocarla—, y va pegada a su dato: agregada por
  * continente sería un porcentaje, que es justo el número que hace abandonar.
+ *
+ * Sin leyenda: son tres estados y se aprenden una vez. Lo que se mira cuarenta veces no puede
+ * llevar al lado la explicación de lo que es. El nombre queda en el `title`, por si acaso.
  */
 function Marca({ estado }: { estado: Dominio }) {
   return (
@@ -137,14 +140,6 @@ export default function Explorar() {
           no colgando del borde de un mapa que cambia de ancho en cada continente. */}
       <div style={{ fontFamily: MONO, fontSize: "0.62rem", color: "var(--t-ink4)", marginLeft: MARGEN }}>
         {km2(pais.km2)} km² · {forma.ladoKm} km de largo
-      </div>
-
-      <div style={{ display: "flex", gap: "0.85rem", marginLeft: MARGEN }}>
-        {(Object.keys(TINTA) as Dominio[]).map((e) => (
-          <span key={e} style={{ display: "flex", alignItems: "center", gap: "0.3rem", fontFamily: MONO, fontSize: "0.6rem", color: "var(--t-ink4)" }}>
-            <Marca estado={e} />{e}
-          </span>
-        ))}
       </div>
     </div>
   );
