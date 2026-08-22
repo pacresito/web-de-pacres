@@ -226,11 +226,20 @@
    taco. Cortísima a propósito: se ve cuarenta veces seguidas, y lo que a la primera es un
    detalle a la cuadragésima es una espera. Y el cambio de tarjeta lo dispara el final de la
    salida, así que acortarla aquí acorta la espera de verdad — no hay milisegundos escritos
-   también en el JS que se queden atrás. */
-.atlas-sale  { animation: atlas-sale 110ms ease-in both; pointer-events: none; }
-.atlas-entra { animation: atlas-entra 170ms ease-out both; }
-@keyframes atlas-sale  { to   { opacity: 0; transform: translateY(-10px); } }
-@keyframes atlas-entra { from { opacity: 0; transform: translateY(10px); } }
+   también en el JS que se queden atrás.
+
+   **Se mueve el contenido; los carriles y la barra se quedan.** Los cuatro carriles son las
+   casillas de la tarjeta, no lo que hay dentro: moviéndolos, cada tarjeta parecía traer las
+   suyas. Quietos, lo que pasa es el contenido —de derecha a izquierda, como el renglón de un
+   terminal— y las casillas siguen ahí para la siguiente. La barra tampoco entra: es el sitio
+   que aprende el pulgar, y lo que se mueve deja de ser un sitio.
+
+   La salida es corta y seca —ya has contestado—; la entrada frena al final y va escalonada
+   por filas, que es lo que la lee como un barrido y no como cuatro cosas que aparecen. */
+.atlas-sale  { animation: atlas-sale 130ms ease-in both; pointer-events: none; }
+.atlas-entra { animation: atlas-entra 260ms cubic-bezier(0.32, 0.72, 0, 1) both; }
+@keyframes atlas-sale  { to   { opacity: 0; transform: translateX(-24px); } }
+@keyframes atlas-entra { from { opacity: 0; transform: translateX(28px); } }
 /* Sin prefers-reduced-motion: es laboratorio, se ve como se diseñó. */
 
 /* Los cuatro tonos que el sitio no tenía: los estados del carril de un dato y el lavado del que
@@ -245,7 +254,8 @@
   /* Lo único que cambia de móvil a escritorio, en un sitio: el resto del dibujo va en el style
      de cada pieza, como en el resto del sitio. */
   --a-lado: 20px; --a-pais: 32px; --a-capital: 20px; --a-globo: 52px; --a-btn: 58px;
-  --a-marca: 22px; --a-marca-gap: 10px; --a-mapa: 200px; --a-ficha-gap: 30px;
+  --a-marca: 22px; --a-marca-gap: 10px; --a-ficha-gap: 30px; --a-bandera: 72px;
+  --a-marca-mapa: 22px; --a-marca-mapa-gap: 10px;
 }
 [data-theme="dark"] .atlas {
   --a-wash:   color-mix(in oklab, var(--t-accent) 12%, var(--t-paper));
@@ -256,7 +266,10 @@
 @media (min-width: 768px) {
   .atlas {
     --a-lado: 28px; --a-pais: 36px; --a-capital: 21px; --a-globo: 56px; --a-btn: 54px;
-    --a-marca: 26px; --a-marca-gap: 14px; --a-mapa: 372px; --a-ficha-gap: 38px;
+    --a-marca: 26px; --a-marca-gap: 14px; --a-ficha-gap: 38px; --a-bandera: 84px;
+    /* En la columna de los mapas la marca no alinea con nada: solo tiene que caber, y cada
+       píxel suyo es hueco entre el texto y la silueta. */
+    --a-marca-mapa: 9px; --a-marca-mapa-gap: 12px;
   }
 }
 
@@ -313,11 +326,15 @@
 .atlas-ficha { display: flex; flex-direction: column; justify-content: center; gap: var(--a-ficha-gap); }
 .atlas-mapas { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 @media (min-width: 768px) {
+  /* Dos columnas de ancho fijo, pegadas y centradas, con el aire sobrante a los lados. Con
+     `1fr 1fr` el hueco de verdad no era el `gap`, era todo lo que le sobraba a la columna del
+     texto —y cambiaba con cada país—; y midiendo lo que mida el nombre, el mapa se movería de
+     sitio al pasar de Malta a Marruecos. */
   .atlas-ficha {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 72px;
+    display: grid; grid-template-columns: 380px 420px; gap: 0; justify-content: center;
     align-content: center; padding-top: 40px; padding-bottom: 44px;
   }
-  .atlas-mapas { grid-template-columns: 1.15fr 1fr; gap: 24px; }
+  .atlas-mapas { gap: 24px; }
 }
 
 /* Seis continentes no caben en una tira de móvil: ahí son una palabra que despliega una rejilla
@@ -337,7 +354,9 @@
 }
 .atlas-cont-celda-on { background: var(--a-wash); color: var(--a-acc-tx); font-weight: 500; }
 @media (min-width: 768px) {
-  .atlas-cont-fila { height: 52px; gap: 40px; }
+  /* Las reglas se separan del borde: a lo ancho, una línea de lado a lado parte la pantalla en
+     vez de enmarcar la tira. */
+  .atlas-cont-fila { height: 52px; gap: 40px; padding: 0; margin: 18px var(--a-lado) 0; }
 }
 
 /* TerminalShell — chrome bar, navegación y animación de salida */

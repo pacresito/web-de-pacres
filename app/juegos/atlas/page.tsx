@@ -8,12 +8,17 @@ import Explorar from "./Explorar";
 import ColaDelPrompt from "./Puerta";
 import { mazoActual, sesionActual, sincronizar, sinMazo, sinSesion, suscribir } from "@/lib/atlas/almacen";
 
-const MODOS = ["repasar", "explorar"] as const;
-type Modo = (typeof MODOS)[number];
+type Modo = "repasar" | "explorar";
+
+const MONO = "var(--t-mono)";
 
 /**
  * Atlas: el marco y las dos maneras de estar aquí. **Repasar** pregunta y mueve los relojes;
  * **explorar** solo mira, y no toca ninguno.
+ *
+ * No son dos pestañas: repasar es la app y explorar una salida, así que cada pantalla enseña
+ * solo la puerta contraria. Dos pestañas iguales arriba competían con la tira de continentes de
+ * dentro de explorar —dos niveles de lo mismo— y le daban al paseo el peso del trabajo.
  */
 export default function Atlas() {
   const [modo, setModo] = useState<Modo>("repasar");
@@ -34,52 +39,57 @@ export default function Atlas() {
       hideChrome={pantallaCompleta}
       colaDelPrompt={<ColaDelPrompt mazo={mazo} identificado={identificado} />}
     >
-      <main style={{ minHeight: "100%", padding: pantallaCompleta ? "0.5rem 1rem" : "1.5rem 1rem 0", display: "flex", flexDirection: "column", alignItems: "center" }}>
-        <div style={{ width: "100%", maxWidth: 420, flex: 1, display: "flex", flexDirection: "column", gap: "1rem" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-            {MODOS.map((m) => (
-              <button
-                key={m}
-                onClick={() => setModo(m)}
-                className={`atlas-tab${m === modo ? " atlas-tab-on" : ""}`}
-                style={{ background: "none", border: "none", padding: "0.15rem 0", cursor: "pointer", fontFamily: "var(--t-mono)", fontSize: "0.8rem" }}
-              >
-                {m}
-              </button>
-            ))}
-            <span style={{ flex: 1 }} />
-            <button
-              className="hover-accent"
-              onClick={() => setPantallaCompleta((v) => !v)}
-              title={pantallaCompleta ? "Salir de pantalla completa" : "Pantalla completa"}
-              aria-label={pantallaCompleta ? "Salir de pantalla completa" : "Pantalla completa"}
-              style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex" }}
-            >
-              {pantallaCompleta ? (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="4 14 10 14 10 20" /><polyline points="20 10 14 10 14 4" />
-                  <line x1="10" y1="14" x2="3" y2="21" /><line x1="21" y1="3" x2="14" y2="10" />
-                </svg>
-              ) : (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="15 3 21 3 21 9" /><polyline points="9 21 3 21 3 15" />
-                  <line x1="21" y1="3" x2="14" y2="10" /><line x1="3" y1="21" x2="10" y2="14" />
-                </svg>
-              )}
+      {/* La pantalla mide lo que la ventana: la tarjeta se centra en ella y la barra de
+          calificar cae en el borde de abajo, que es donde está el pulgar. El porqué queda
+          debajo, a un scroll — sigue estando y no le roba alto a lo que se usa. */}
+      <main className="atlas" style={{ minHeight: "100%", flexShrink: 0, display: "flex", flexDirection: "column" }}>
+        <div
+          className="atlas-lado"
+          style={{
+            display: "flex", alignItems: "center", height: 44, gap: 18, flexShrink: 0,
+            justifyContent: modo === "repasar" ? "flex-end" : "space-between",
+          }}
+        >
+          {modo === "repasar" ? (
+            <button className="atlas-modo" onClick={() => setModo("explorar")} style={{ ...enlace, fontSize: 12, letterSpacing: "0.04em" }}>
+              explorar ›
             </button>
-          </div>
-
-          {modo === "repasar" ? <Repasar pantallaCompleta={pantallaCompleta} /> : <Explorar />}
+          ) : (
+            <button className="atlas-modo-v" onClick={() => setModo("repasar")} style={{ ...enlace, fontSize: 13, fontWeight: 500, letterSpacing: "0.02em" }}>
+              ‹ repasar
+            </button>
+          )}
+          <button
+            className="atlas-modo"
+            onClick={() => setPantallaCompleta((v) => !v)}
+            title={pantallaCompleta ? "Salir de pantalla completa" : "Pantalla completa"}
+            aria-label={pantallaCompleta ? "Salir de pantalla completa" : "Pantalla completa"}
+            style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex" }}
+          >
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1">
+              {pantallaCompleta
+                ? <path d="M4.5 1V4.5H1M12 4.5H8.5V1M8.5 12V8.5H12M1 8.5h3.5V12" />
+                : <path d="M1 4.5V1h3.5M8.5 1H12v3.5M12 8.5V12H8.5M4.5 12H1V8.5" />}
+            </svg>
+          </button>
         </div>
 
-        {!pantallaCompleta && <WhyFooter question="¿por qué un test de países?" date="21 de agosto de 2026">
+        {modo === "repasar" ? <Repasar /> : <Explorar />}
+      </main>
+
+      {/* Fuera del <main>, que mide lo que la ventana: dentro le robaría a la tarjeta el alto que
+          ocupa, y lo que se usa cuarenta veces al día no paga el sitio de lo que se lee una. */}
+      {!pantallaCompleta && <div className="atlas atlas-lado"><WhyFooter question="¿por qué un test de países?" date="21 de agosto de 2026">
           Llevo años queriendo aprenderme todos los países del mundo y no lo he conseguido nunca. Lo más
           cerca que estuve fue con Anki, que va enseñándote cada tarjeta justo antes de que se te olvide y
           espaciándolas cuando aciertas. Funciona, pero no terminó de engancharme: vuelves después de diez
           días, te recibe con cuatrocientas pendientes, y cierras. Esta es mi versión, a ver si por fin lo
           consigo.
-        </WhyFooter>}
-      </main>
+        </WhyFooter></div>}
     </TerminalShell>
   );
 }
+
+const enlace: React.CSSProperties = {
+  background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: MONO,
+};

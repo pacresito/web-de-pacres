@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { entrar, salir } from "@/lib/atlas/almacen";
 import { cuenta, type Mazo } from "@/lib/atlas/srs";
 
@@ -31,7 +31,27 @@ export default function ColaDelPrompt({ mazo, identificado }: { mazo: Mazo; iden
   const [abierta, setAbierta] = useState(false);
   const [clave, setClave] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const caja = useRef<HTMLSpanElement>(null);
   const { empezados, aprendidos } = cuenta(mazo);
+
+  /**
+   * Abierta, se cierra al tocar fuera — pero **no al perder el foco**: el desplegable del gestor
+   * de contraseñas se lo quita al input, y cerrando en el `blur` la caja desaparecía justo antes
+   * de que el gestor escribiera la clave. Lo que hay fuera de la caja son toques del documento,
+   * y lo que pinta el gestor no es uno.
+   */
+  useEffect(() => {
+    if (!abierta) return;
+    const fuera = (e: PointerEvent) => {
+      if (caja.current && !caja.current.contains(e.target as Node)) {
+        setAbierta(false);
+        setClave("");
+        setError(null);
+      }
+    };
+    document.addEventListener("pointerdown", fuera);
+    return () => document.removeEventListener("pointerdown", fuera);
+  }, [abierta]);
 
   const enviar = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,12 +63,6 @@ export default function ColaDelPrompt({ mazo, identificado }: { mazo: Mazo; iden
 
   const cerrar = () => { setAbierta(false); setClave(""); setError(null); };
 
-  if (!empezados && !abierta) {
-    // Sin nada empezado no hay cifra que enseñar, pero la puerta tiene que seguir existiendo:
-    // el espacio en blanco de después del comando es lo que se pincha.
-    return <span onClick={() => setAbierta(true)} style={{ cursor: "default", paddingLeft: "1.2rem" }}>&nbsp;</span>;
-  }
-
   if (!abierta) {
     return (
       <span onClick={() => setAbierta(true)} style={{ color: "var(--t-ink)", cursor: "default" }}>
@@ -57,38 +71,38 @@ export default function ColaDelPrompt({ mazo, identificado }: { mazo: Mazo; iden
     );
   }
 
-  if (identificado) {
-    return (
-      <span style={{ color: "var(--t-ink)" }}>
-        <Bandera aprendidos={aprendidos} empezados={empezados} />{" "}
-        <button onClick={() => { void salir(); cerrar(); }} className="hover-accent" style={boton}>--salir</button>
-      </span>
-    );
-  }
-
   return (
-    <form onSubmit={enviar} onBlur={cerrar} style={{ display: "inline", color: "var(--t-ink)" }}>
-      {" "}--clave=
-      <input
-        type="password"
-        value={clave}
-        autoFocus
-        autoComplete="current-password"
-        onChange={(e) => { setClave(e.target.value); setError(null); }}
-        onKeyDown={(e) => { if (e.key === "Escape") cerrar(); }}
-        // Se escribe donde se lee: mismo tipo, mismo tamaño y sin caja, para que teclear la
-        // clave sea seguir escribiendo el comando y no rellenar un formulario.
-        // El ancho sigue a lo tecleado, que es lo que deja ver cuántos caracteres llevas: fijo,
-        // los puntos se cortan y una clave larga parece corta. Con tope, que a partir de ahí se
-        // saldría de la caja del prompt y rompería la línea.
-        style={{
-          width: `${Math.min(Math.max(clave.length + 1, 4), 24)}ch`,
-          background: "none", border: "none", outline: "none", padding: 0,
-          fontFamily: MONO, fontSize: "inherit", color: "var(--t-ink)",
-        }}
-      />
-      {error && <span style={{ color: "var(--t-ink4)" }}> {error.toLowerCase()}</span>}
-    </form>
+    <span ref={caja} style={{ color: "var(--t-ink)" }}>
+      {identificado ? (
+        <>
+          <Bandera aprendidos={aprendidos} empezados={empezados} />{" "}
+          <button onClick={() => { void salir(); cerrar(); }} className="hover-accent" style={boton}>--salir</button>
+        </>
+      ) : (
+        <form onSubmit={enviar} style={{ display: "inline" }}>
+          {" "}--clave=
+          <input
+            type="password"
+            value={clave}
+            autoFocus
+            autoComplete="current-password"
+            onChange={(e) => { setClave(e.target.value); setError(null); }}
+            onKeyDown={(e) => { if (e.key === "Escape") cerrar(); }}
+            // Se escribe donde se lee: mismo tipo, mismo tamaño y sin caja, para que teclear la
+            // clave sea seguir escribiendo el comando y no rellenar un formulario.
+            // El ancho sigue a lo tecleado, que es lo que deja ver cuántos caracteres llevas: fijo,
+            // los puntos se cortan y una clave larga parece corta. Con tope, que a partir de ahí se
+            // saldría de la caja del prompt y rompería la línea.
+            style={{
+              width: `${Math.min(Math.max(clave.length + 1, 4), 24)}ch`,
+              background: "none", border: "none", outline: "none", padding: 0,
+              fontFamily: MONO, fontSize: "inherit", color: "var(--t-ink)",
+            }}
+          />
+          {error && <span style={{ color: "var(--t-ink4)" }}> {error.toLowerCase()}</span>}
+        </form>
+      )}
+    </span>
   );
 }
 

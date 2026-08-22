@@ -5,8 +5,11 @@ import Minimapa from "./Minimapa";
 import { ORDEN } from "@/data/atlas/orden";
 import { FORMAS } from "@/data/atlas/formas";
 import { PAIS_POR_ID } from "@/lib/atlas/paises";
+import { marcoDeTinta } from "@/lib/atlas/silueta";
 import { dominio, type Dato, type Dominio } from "@/lib/atlas/srs";
 import { mazoActual, sinMazo, suscribir } from "@/lib/atlas/almacen";
+
+const MONO = "var(--t-mono)";
 
 const TINTA: Record<Dominio, string> = {
   "sin ver": "transparent",
@@ -22,14 +25,14 @@ const TINTA: Record<Dominio, string> = {
  * Sin leyenda: son tres estados y se aprenden una vez. Lo que se mira cuarenta veces no puede
  * llevar al lado la explicación de lo que es. El nombre queda en el `title`, por si acaso.
  */
-function Marca({ estado }: { estado: Dominio }) {
+function Marca({ estado, arriba = 0 }: { estado: Dominio; arriba?: number }) {
   return (
     <span
       title={estado}
       aria-label={estado}
       style={{
-        width: 9, height: 9, borderRadius: "50%", flexShrink: 0, display: "block",
-        border: `1px solid ${estado === "sin ver" ? "var(--t-rule2)" : TINTA[estado]}`,
+        width: 9, height: 9, borderRadius: "50%", flexShrink: 0, display: "block", marginTop: arriba,
+        border: `1px solid ${estado === "sin ver" ? "var(--t-ink4)" : TINTA[estado]}`,
         background: TINTA[estado],
       }}
     />
@@ -43,12 +46,6 @@ function km2(n: number) {
   return entera.replace(/\B(?=(\d{3})+$)/g, ".") + (decimal ? `,${decimal}` : "");
 }
 
-const MONO = "var(--t-mono)";
-
-// Lo que ocupan la marca y su hueco. Lo que no es una fila —la superficie, la leyenda— se
-// alinea con esto a mano, y así las tres cosas cuelgan de la misma vertical.
-const MARGEN = "1.26rem";
-
 /**
  * La pestaña de explorar: los países de un continente, uno a uno y en el orden del barrido en S
  * —nunca alfabético, que el alfabeto no enseña geografía—. Solo mira: no toca ningún reloj.
@@ -57,12 +54,14 @@ export default function Explorar() {
   const mazo = useSyncExternalStore(suscribir, mazoActual, sinMazo);
   const [ci, setCi] = useState(0);
   const [pi, setPi] = useState(0);
+  const [abierto, setAbierto] = useState(false);
 
   const grupo = ORDEN[ci];
   const id = grupo.paises[pi];
   const pais = PAIS_POR_ID.get(id)!;
   const forma = FORMAS[id];
   const mover = (n: number) => setPi((i) => (i + n + grupo.paises.length) % grupo.paises.length);
+  const irA = (i: number) => { setCi(i); setPi(0); setAbierto(false); };
 
   // Las flechas del teclado hacen lo que los dos botones: en escritorio recorrer el continente
   // pulsando a un lado y a otro de la pantalla no es recorrerlo.
@@ -79,69 +78,132 @@ export default function Explorar() {
 
   // La marca abre cada fila, no la cierra: a la izquierda las cuatro forman una columna recta y
   // se leen de un vistazo; al final de cada dato caen donde acabe el texto, cada una en su sitio.
-  const fila = (dato: Dato, contenido: React.ReactNode) => (
-    <div style={{ display: "flex", alignItems: "center", gap: "0.7rem" }}>
-      <Marca estado={dominio(mazo[id]?.[dato])} />
-      <div style={{ flex: 1, minWidth: 0 }}>{contenido}</div>
+  const fila = (dato: Dato, contenido: React.ReactNode, arriba = 0, mapas = false) => (
+    <div style={{
+      display: "grid",
+      gridTemplateColumns: mapas ? "var(--a-marca-mapa) 1fr" : "var(--a-marca) 1fr",
+      columnGap: mapas ? "var(--a-marca-mapa-gap)" : "var(--a-marca-gap)",
+      alignItems: arriba ? "start" : "center",
+    }}>
+      <Marca estado={dominio(mazo[id]?.[dato])} arriba={arriba} />
+      <div style={{ minWidth: 0 }}>{contenido}</div>
     </div>
   );
 
+  const cifras = (
+    <span style={{ fontFamily: MONO, fontSize: 11, color: "var(--t-ink3)", letterSpacing: "0.04em" }}>
+      {km2(pais.km2)} km² · {forma.ladoKm} km de largo
+    </span>
+  );
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem" }}>
-        {ORDEN.map((g, i) => (
-          <button
-            key={g.continente}
-            onClick={() => { setCi(i); setPi(0); }}
-            className={`atlas-tab${i === ci ? " atlas-tab-on" : ""}`}
-            style={{ background: "none", border: "none", padding: "0.15rem 0", cursor: "pointer", fontFamily: MONO, fontSize: "0.7rem" }}
-          >
-            {g.continente}
-          </button>
-        ))}
-      </div>
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+      {/* Un continente por vez, y el nombre del que se mira. En móvil los seis no caben en una
+          tira sin partirse en dos líneas —«américa del norte» sola ya la parte—, así que son una
+          palabra que despliega la rejilla; con sitio, los seis en la misma línea. El orden es el
+          del recorrido, de lo lejano a lo cercano, y no se toca para que quepan. */}
+      <div className="atlas-cont-fila atlas-lado" style={{ flexShrink: 0 }}>
+        <button className="atlas-modo atlas-solo-movil" onClick={() => setAbierto((v) => !v)}
+                style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: MONO, fontSize: 14, color: "var(--t-ink)" }}>
+          {grupo.continente.toLowerCase()} <span style={{ color: "var(--t-ink4)" }}>{abierto ? "▴" : "▾"}</span>
+        </button>
+        <div className="atlas-solo-ancho">
+          <div style={{ display: "flex", alignItems: "center", gap: 26 }}>
+            {ORDEN.map((g, i) => (
+              <button key={g.continente} onClick={() => irA(i)}
+                      className={i === ci ? "atlas-modo-v" : "atlas-modo"}
+                      style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: MONO, fontSize: 13, fontWeight: i === ci ? 500 : 400, display: "flex", alignItems: "center", gap: 8 }}>
+                {i === ci && <span style={{ width: 5, height: 5, borderRadius: "50%", background: "var(--t-accent)" }} />}
+                {g.continente.toLowerCase()}
+              </button>
+            ))}
+          </div>
+        </div>
 
-      {/* El contador es de sitio, no de deuda: dice por dónde va el recorrido, no cuánto falta
-          por estudiar. Da la vuelta al llegar al final — un continente es un circuito. */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "1.2rem" }}>
-        <button onClick={() => mover(-1)} className="t-ibtn" aria-label="Anterior">‹</button>
-        <span style={{ fontFamily: MONO, fontSize: "0.75rem", color: "var(--t-ink4)" }}>
-          {pi + 1} / {grupo.paises.length}
+        {/* El contador es de sitio, no de deuda: dice por dónde va el recorrido, no cuánto falta
+            por estudiar. Da la vuelta al llegar al final — un continente es un circuito. */}
+        <span style={{ fontFamily: MONO, fontSize: 13, color: "var(--t-ink3)", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>
+          <button onClick={() => mover(-1)} className="atlas-modo" style={flecha} aria-label="Anterior">‹</button>
+          {"  "}{pi + 1} / {grupo.paises.length}{"  "}
+          <button onClick={() => mover(1)} className="atlas-modo" style={flecha} aria-label="Siguiente">›</button>
         </span>
-        <button onClick={() => mover(1)} className="t-ibtn" aria-label="Siguiente">›</button>
       </div>
 
-      {fila("nombre",
-        <>
-          <div style={{ fontFamily: MONO, fontSize: "1.35rem", color: "var(--t-ink)" }}>{pais.nombre}</div>
-          <div style={{ fontFamily: MONO, fontSize: "0.68rem", color: "var(--t-ink4)" }}>{pais.oficial}</div>
-        </>)}
+      {abierto && (
+        <div className="atlas-solo-movil atlas-lado" style={{ paddingTop: 14, flexShrink: 0 }}>
+          <div className="atlas-cont-rejilla">
+            {ORDEN.map((g, i) => (
+              <button key={g.continente} onClick={() => irA(i)}
+                      className={`atlas-cont-celda${i === ci ? " atlas-cont-celda-on" : ""}`}
+                      style={{
+                        // Las líneas de la rejilla se dibujan por celda, no con nth-child: los
+                        // continentes son seis cuando estén los 195 y tres mientras se prueba, y
+                        // el que se queda solo en su fila la ocupa entera —media celda vacía
+                        // dentro de la caja se lee como una opción que falta—.
+                        gridColumn: i === ORDEN.length - 1 && ORDEN.length % 2 === 1 ? "1 / -1" : undefined,
+                        borderRight: i % 2 === 0 && i + 1 < ORDEN.length ? "1px solid var(--t-rule2)" : undefined,
+                        borderBottom: i < ORDEN.length - (ORDEN.length % 2 === 0 ? 2 : 1) ? "1px solid var(--t-rule2)" : undefined,
+                      }}>
+                {i === ci && <span style={{ width: 5, height: 5, borderRadius: "50%", background: "var(--t-accent)", flexShrink: 0 }} />}
+                {g.continente.toLowerCase()}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
-      {/* Sin etiqueta, como en la tarjeta: el sitio y el tamaño ya la dicen. */}
-      {fila("capital",
-        <span style={{ fontFamily: MONO, fontSize: "1rem", color: "var(--t-ink2)" }}>{pais.capital}</span>)}
+      <div className="atlas-ficha atlas-lado" style={{ flex: 1 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--a-ficha-gap)" }}>
+          {fila("nombre",
+            <>
+              <div style={{ fontFamily: MONO, fontSize: "var(--a-pais)", fontWeight: 500, lineHeight: 1.15, letterSpacing: "-0.03em", color: "var(--t-ink)" }}>{pais.nombre}</div>
+              <div style={{ fontFamily: MONO, fontSize: 11, lineHeight: 1.6, color: "var(--t-ink3)", paddingTop: 4 }}>{pais.oficial}</div>
+            </>, 11)}
 
-      {fila("bandera",
-        // eslint-disable-next-line @next/next/no-img-element -- SVG suelto de /public, sin optimización que aportar
-        <img src={`/atlas/banderas/${id}.svg`} alt={`Bandera de ${pais.nombre}`}
-             // Ancho por el alto, no una caja fija: la marca va pegada a la bandera, y con caja
-             // se queda flotando a la derecha de las que son estrechas.
-             style={{ height: 72, width: "auto", maxWidth: 200, display: "block" }} />)}
+          {/* Sin etiqueta, como en la tarjeta: el sitio y el tamaño ya la dicen. */}
+          {fila("capital",
+            <span style={{ fontFamily: MONO, fontSize: "var(--a-capital)", lineHeight: 1.2, color: "var(--t-ink)" }}>{pais.capital}</span>)}
 
-      {fila("forma",
-        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-          <svg viewBox="0 0 1000 1000" style={{ width: 128, flexShrink: 0, aspectRatio: 1 }} aria-label={`Forma de ${pais.nombre}`}>
-            <path d={forma.d} fill="var(--t-accent)" fillRule="evenodd" />
-            {forma.linea && <path d={forma.linea} fill="none" stroke="var(--t-paper)" strokeWidth={6} strokeDasharray="18 14" strokeLinecap="round" opacity={0.75} />}
-          </svg>
-          <Minimapa id={id} marco={grupo.marco} lon={forma.lon} lat={forma.lat} />
-        </div>)}
+          {fila("bandera",
+            // eslint-disable-next-line @next/next/no-img-element -- SVG suelto de /public, sin optimización que aportar
+            <img src={`/atlas/banderas/${id}.svg`} alt={`Bandera de ${pais.nombre}`}
+                 // Ancho por el alto, no una caja fija: la marca va pegada a la bandera, y con
+                 // caja se queda flotando a la derecha de las que son estrechas.
+                 style={{ height: "var(--a-bandera)", width: "auto", maxWidth: 200, display: "block" }} />)}
 
-      {/* El tamaño es del país, no del minimapa: va al margen de la ficha, con todo lo demás, y
-          no colgando del borde de un mapa que cambia de ancho en cada continente. */}
-      <div style={{ fontFamily: MONO, fontSize: "0.62rem", color: "var(--t-ink4)", marginLeft: MARGEN }}>
-        {km2(pais.km2)} km² · {forma.ladoKm} km de largo
+          {/* El tamaño es del país, no del mapa: con sitio va al pie de su columna, y en móvil
+              cierra la ficha con una regla, que es donde no le quita aire a nada. */}
+          {/* Alineadas con los datos, no con las marcas: no son un quinto dato. */}
+          <div className="atlas-solo-ancho" style={{ paddingLeft: "calc(var(--a-marca) + var(--a-marca-gap))" }}>{cifras}</div>
+        </div>
+
+        {/* Las dos figuras, del mismo alto y una al lado de la otra: la silueta es la forma sola
+            y el minimapa dice quiénes son sus vecinos. Las dos casillas van cuadradas y las dos
+            figuras dentro, cada una a lo que le dé su forma: con la casilla más alta que el
+            dibujo, lo que sobra es un hueco que no se ve pero empequeñece los dos mapas. Sin
+            etiquetas debajo: una silueta verde y un continente con un país encendido no se
+            confunden con otra cosa. */}
+        {fila("forma",
+          <div className="atlas-mapas">
+            {/* Las dos figuras se pegan a la izquierda de su casilla en vez de centrarse en ella,
+                y la silueta además se ciñe a su tinta: Chile en un lienzo cuadrado es un hilo con
+                dos palmos de nada a los lados, y ese vacío no se distingue del hueco entre
+                columnas. */}
+            <svg viewBox={marcoDeTinta(forma.d)} preserveAspectRatio="xMinYMid meet" style={{ width: "100%", aspectRatio: 1 }} aria-label={`Forma de ${pais.nombre}`}>
+              <path d={forma.d} fill="var(--t-accent)" fillRule="evenodd" />
+              {forma.linea && <path d={forma.linea} fill="none" stroke="var(--t-paper)" strokeWidth={6} strokeDasharray="18 14" strokeLinecap="round" opacity={0.75} />}
+            </svg>
+            <Minimapa id={id} marco={grupo.marco} lon={forma.lon} lat={forma.lat} />
+          </div>, 5, true)}
+      </div>
+
+      <div className="atlas-solo-movil atlas-lado" style={{ borderTop: "1px solid var(--t-rule2)", padding: "16px var(--a-lado) 30px", textAlign: "center", flexShrink: 0 }}>
+        {cifras}
       </div>
     </div>
   );
 }
+
+const flecha: React.CSSProperties = {
+  background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: MONO, fontSize: 13,
+};

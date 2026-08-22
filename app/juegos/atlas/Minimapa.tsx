@@ -12,8 +12,8 @@ import { pathDelPlano, plano, type Marco } from "@/lib/atlas/plano";
  * Va en el sitio que en la tarjeta ocupa el globo, y cuenta lo otro: el globo dice cuánto mide
  * el país y en qué parte del mundo cae; el minimapa, quiénes son sus vecinos.
  */
-export default function Minimapa({ id, marco, lon, lat, alto = 112 }: {
-  id: string; marco: Marco; lon: number; lat: number; alto?: number;
+export default function Minimapa({ id, marco, lon, lat }: {
+  id: string; marco: Marco; lon: number; lat: number;
 }) {
   const { w, h } = plano(marco);
   // El fondo es el mundo entero y solo depende del marco: mientras no se cambie de continente,
@@ -22,13 +22,12 @@ export default function Minimapa({ id, marco, lon, lat, alto = 112 }: {
   const mio = useMemo(() => pathDelPlano(MUNDO.filter((a) => a.id === id).map((a) => a.r), marco), [marco, id]);
   const punto = mio ? null : plano(marco).xy(lon, lat);
 
-  // El elemento mide exactamente lo que mide el mapa, no el hueco que le toque: con el hueco,
-  // el dibujo se centra dentro y lo que va debajo deja de estar alineado con nada.
-  //
-  // Y va sin fondo ni marco. El globo de la tarjeta sí lleva su círculo de papel, pero un
-  // círculo se lee como el planeta y un rectángulo solo se lee como una caja gris.
+  // Va sin fondo ni marco: el globo de la tarjeta sí lleva su círculo de papel, pero un círculo
+  // se lee como el planeta y un rectángulo solo se lee como una caja gris. El dibujo se centra
+  // en la celda que le toque, que es del mismo alto que la de la silueta — las dos figuras se
+  // comparan mal si cada una mide lo suyo.
   return (
-    <svg viewBox={`0 0 ${w.toFixed(2)} ${h}`} style={{ height: alto, width: (alto * w) / h, maxWidth: "100%" }} aria-hidden>
+    <svg viewBox={`0 0 ${w.toFixed(2)} ${h}`} preserveAspectRatio="xMinYMid meet" style={{ width: "100%", aspectRatio: 1 }} aria-hidden>
       <path d={fondo} fill="none" stroke="var(--t-ink4)" strokeWidth={1} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
       {/* Trazo además de relleno: un país fino se queda en nada si solo se rellena, y a esta
           escala casi todos lo son. */}

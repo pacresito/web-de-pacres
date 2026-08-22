@@ -11,7 +11,7 @@ import { ortografica, pathDelGlobo } from "@/lib/atlas/globo";
  * Va con la forma, no aparte: si se enseñara con la forma tapada estaría señalando el país en
  * un mapa, que es media respuesta regalada.
  */
-export default function Globo({ id, lon, lat, r = 74 }: { id: string; lon: number; lat: number; r?: number }) {
+export default function Globo({ id, lon, lat, r = 74, lado }: { id: string; lon: number; lat: number; r?: number; lado?: string }) {
   const { tierra, mio, punto } = useMemo(() => {
     const proy = ortografica(lon, lat, r);
     const suyos = MUNDO.filter((a) => a.id === id).map((a) => a.r);
@@ -24,11 +24,15 @@ export default function Globo({ id, lon, lat, r = 74 }: { id: string; lon: numbe
     };
   }, [id, lon, lat, r]);
 
+  // El dibujo se calcula a radio grande y se pinta al tamaño que pida quien lo usa: bajar el
+  // radio adelgazaría la costa hasta perderla. Los trazos no escalan, para que a 52 px sigan
+  // midiendo un píxel.
   const d = r * 2 + 2;
   return (
-    <svg width={d} height={d} viewBox={`${-r - 1} ${-r - 1} ${d} ${d}`} aria-hidden>
+    <svg width={d} height={d} viewBox={`${-r - 1} ${-r - 1} ${d} ${d}`}
+         style={lado ? { width: lado, height: lado, flexShrink: 0 } : undefined} aria-hidden>
       <circle r={r} fill="var(--t-paper2)" stroke="var(--t-rule)" />
-      <path d={tierra} fill="none" stroke="var(--t-ink4)" strokeWidth={1} strokeLinejoin="round" />
+      <path d={tierra} fill="none" stroke="var(--t-ink4)" strokeWidth={1} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
       {/* Trazo además de relleno: un país fino (Chile, Italia) desaparece si solo se rellena. */}
       <path d={mio} fill="var(--t-accent)" stroke="var(--t-accent)" strokeWidth={2.5} strokeLinejoin="round" />
       {punto && <circle cx={punto[0]} cy={punto[1]} r={3.5} fill="var(--t-accent)" />}
