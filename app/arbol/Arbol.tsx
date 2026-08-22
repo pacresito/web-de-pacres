@@ -58,7 +58,7 @@ import Celebraciones, { AvisoCelebraciones } from "./Celebraciones";
 import Esqueleto from "./Esqueleto";
 import Ficha from "./Ficha";
 import Hoja from "./Hoja";
-import Nodo, { ATENUADO } from "./Nodo";
+import Nodo, { ATENUADO, type Fiesta } from "./Nodo";
 import { ContadorRama, GUION, Manija, MasPareja, TrazoDePareja } from "./Piezas";
 import Ramas from "./Ramas";
 import Recuento from "./Recuento";
@@ -324,11 +324,20 @@ export default function Arbol({
     escribirlo(id, { fechas: "ocultar", apellidos: 1, largos: { titulo: LARGO_BARRA, contexto: 0 } })
       .titulo.map((t) => t.texto)
       .join("");
-  /** Quien cumple años hoy se lleva la guirnalda en su nodo, con los que cumple escritos. */
-  const cumplenHoy = useMemo(
-    () => new Map(celebraciones.filter((c) => c.tipo === "cumpleaños" && c.faltan === 0).map((c) => [c.id!, c.edad!])),
-    [celebraciones],
-  );
+  /**
+   * Quien celebra algo se lleva la guirnalda en su nodo, con lo que celebra escrito. **Una
+   * por nodo, y gana la primera**: la lista viene ordenada por día y, dentro del día, con el
+   * cumpleaños por delante, así que el santo de hoy solo sale si no hay tarta que anunciar.
+   */
+  const fiestas = useMemo(() => {
+    const salida = new Map<string, Fiesta>();
+    for (const c of celebraciones) {
+      if (c.id === null || salida.has(c.id)) continue;
+      if (c.tipo === "cumpleaños" && c.faltan <= 1) salida.set(c.id, { tipo: "cumpleaños", edad: c.edad!, faltan: c.faltan });
+      else if (c.tipo === "onomástica" && c.faltan === 0) salida.set(c.id, { tipo: "onomástica" });
+    }
+    return salida;
+  }, [celebraciones]);
 
   /**
    * El arranque, que ocurre una vez: el enlace con el que se ha entrado se recuerda para la
@@ -894,7 +903,7 @@ export default function Arbol({
               })}
               vida={vidaDe(n.id)}
               huecos={huecosDelNodo(n.id)}
-              cumple={cumplenHoy.get(n.id) ?? null}
+              fiesta={fiestas.get(n.id) ?? null}
               atenuado={opacidadDe(n.id) !== undefined}
               // El camino no deja de leer a quien lo abrió: el cerco sigue puesto mientras
               // se mira cómo se llega hasta él, que es lo que se ha ido a ver.

@@ -11,9 +11,9 @@ import type { Union } from "@/lib/arbol/tree";
 export const GUION = "4 3"; // el trazo de la unión que acabó, rota como el tachón del documento
 // Un corazón de 14×11 centrado en el origen: la marca de los novios que no se casaron.
 // Más pequeño no cabía la grieta del roto sin volverse un borrón a tamaño de lectura.
-export const CORAZON = "M 0 5.5 C -7.4 0.3 -7.3 -5.6 -3.8 -5.6 C -1.4 -5.6 0 -3.9 0 -2.7 C 0 -3.9 1.4 -5.6 3.8 -5.6 C 7.3 -5.6 7.4 0.3 0 5.5 Z";
+const CORAZON = "M 0 5.5 C -7.4 0.3 -7.3 -5.6 -3.8 -5.6 C -1.4 -5.6 0 -3.9 0 -2.7 C 0 -3.9 1.4 -5.6 3.8 -5.6 C 7.3 -5.6 7.4 0.3 0 5.5 Z";
 // La grieta del que se rompió, del escote al pico y en zigzag para que no parezca el trazo.
-export const GRIETA = "M 0 -2.7 L 1.7 -0.8 L -1.4 1.2 L 1.2 3.2 L 0 5.5";
+const GRIETA = "M 0 -2.7 L 1.7 -0.8 L -1.4 1.2 L 1.2 3.2 L 0 5.5";
 
 /**
  * El trazo que une a los dos miembros de una pareja, más marcado que el resto: en una

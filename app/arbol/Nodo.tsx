@@ -19,6 +19,16 @@ const SANGRADO = 9; // el aire entre el borde del nodo y su texto
  */
 const BASE = { conAños: -3, solo: 4 };
 
+/**
+ * Lo que un nodo celebra, que es lo que enciende su guirnalda. **El cumpleaños llega un día
+ * antes** —felicitar a tiempo se prepara la víspera, que es para lo que sirve verlo— y la
+ * onomástica no: es un día que se felicita el día, y anunciarla la víspera la subía de rango.
+ */
+export type Fiesta =
+  /** `faltan`: 0 es hoy y 1 es mañana. */
+  | { tipo: "cumpleaños"; edad: number; faltan: number }
+  | { tipo: "onomástica" };
+
 /** Cada trozo de la primera línea, con la clase y la cursiva que le tocan. */
 const PINTAS: Record<Pinta, { clase: string; cursiva?: boolean }> = {
   nombre: { clase: "nm" },
@@ -40,7 +50,7 @@ export default function Nodo({
   identidad,
   vida,
   huecos,
-  cumple,
+  fiesta,
   atenuado,
   abierta,
   onElegir,
@@ -51,8 +61,8 @@ export default function Nodo({
   vida: string;
   /** Durante el repaso, lo que le falta: sustituye a los años y añade un aviso al nombre. */
   huecos: Huecos | null;
-  /** Los que cumple hoy, o nada si hoy no es su día: es lo que enciende la guirnalda. */
-  cumple: number | null;
+  /** Lo que celebra, o nada si no le toca nada: es lo que enciende la guirnalda. */
+  fiesta: Fiesta | null;
   atenuado: boolean;
   /** Es la ficha que está abierta: el borde de acento dice desde el lienzo a quién lees. */
   abierta: boolean;
@@ -72,7 +82,7 @@ export default function Nodo({
       }`}
       style={atenuado ? { opacity: ATENUADO } : undefined}
     >
-      {cumple !== null && <Guirnalda nodo={nodo} cumple={cumple} />}
+      {fiesta && <Guirnalda nodo={nodo} fiesta={fiesta} />}
       {/* El cerco es la tercera marca y no le quita el canal a ninguna de las dos: el fondo
           sigue midiendo la cercanía y el borde, dónde miras. */}
       {abierta && (
@@ -143,24 +153,21 @@ export default function Nodo({
 const FIESTA = { aire: 9, chapa: 16, letra: 11, paso: 6.6 };
 
 /**
- * Quien cumple hoy, rodeado entero y con una chapa que dice cuántos: rodear es lo que se
- * encuentra sin buscarlo, y la chapa es lo que dice por qué —un marco dorado sin palabras
- * destaca a alguien y no cuenta nada—. **Los años no se los deja a la línea de abajo**, que
- * la apaga el interruptor de fechas. Va montada en el borde de arriba y arrimada a la
- * derecha, la única esquina libre: por el centro sube el vínculo de la pareja y por la
- * izquierda empieza el nombre.
+ * Quien celebra algo, rodeado entero y con una chapa que dice qué: rodear es lo que se
+ * encuentra sin buscarlo, y la chapa es lo que dice por qué —un marco sin palabras destaca a
+ * alguien y no cuenta nada—. **Los años no se los deja a la línea de abajo**, que la apaga
+ * el interruptor de fechas. Va montada en el borde de arriba y arrimada a la derecha, la
+ * única esquina libre: por el centro sube el vínculo de la pareja y por la izquierda empieza
+ * el nombre. **La onomástica va en plata y el cumpleaños en oro**, que es el orden en que
+ * los tiene la casa; la tinta la cambia una clase y todo lo de dentro la sigue.
  */
-function Guirnalda({ nodo, cumple }: { nodo: NodoLayout; cumple: number }) {
-  // A quien mira se le habla de tú, como en el resto de la app: en su propio nodo pone
-  // «cumples». Y cumplir cero años es haber nacido, así que eso es lo que se dice.
-  const tuyo = nodo.esPuntoDeVista;
-  const texto =
-    cumple > 0 ? `hoy ${tuyo ? "cumples" : "cumple"} ${cumple}` : `${tuyo ? "naciste" : "nace"} hoy`;
+function Guirnalda({ nodo, fiesta }: { nodo: NodoLayout; fiesta: Fiesta }) {
+  const texto = fiesta.tipo === "onomástica" ? "onomástica" : loQueCumple(fiesta, nodo.esPuntoDeVista);
   const ancho = Math.round(texto.length * FIESTA.paso) + 16;
   const arriba = nodo.y - ALTO_NODO / 2 - FIESTA.aire;
   const derecha = nodo.x + ANCHO_NODO / 2;
   return (
-    <>
+    <g className={fiesta.tipo === "onomástica" ? "nd-santo" : undefined}>
       <rect
         x={nodo.x - ANCHO_NODO / 2 - FIESTA.aire}
         y={arriba}
@@ -187,6 +194,18 @@ function Guirnalda({ nodo, cumple }: { nodo: NodoLayout; cumple: number }) {
       <text x={derecha - ancho / 2} y={arriba + 4} textAnchor="middle" fontSize={FIESTA.letra} className="nd-chapa-tx">
         {texto}
       </text>
-    </>
+    </g>
   );
+}
+
+/**
+ * Lo que dice la chapa de un cumpleaños. A quien mira se le habla de tú, como en el resto de
+ * la app: en su propio nodo pone «cumples». Y cumplir cero años es haber nacido, así que eso
+ * es lo que se dice.
+ */
+function loQueCumple({ edad, faltan }: { edad: number; faltan: number }, tuyo: boolean): string {
+  const hoy = faltan === 0;
+  const cuando = hoy ? "hoy" : "mañana";
+  if (edad > 0) return `${cuando} ${tuyo ? "cumples" : "cumple"} ${edad}`;
+  return `${tuyo ? (hoy ? "naciste" : "naces") : "nace"} ${cuando}`;
 }

@@ -79,6 +79,9 @@
      color que en una pantalla de morados y grises se lee como una fiesta y no como un
      aviso —para eso está el rojo— ni como un tercer eje del árbol. */
   --fiesta: oklch(0.66 0.15 70);
+  /* Y la onomástica, en plata: es el mismo día de alguien un peldaño por debajo —se felicita,
+     pero no se cumple—, y los dos metales lo dicen sin tener que escribirlo. */
+  --plata: oklch(0.58 0.025 255);
   /* Y el hueco que queda por preguntar, en el repaso: ni acento (es del punto de vista), ni
      dorado (eso es una fiesta), ni rojo (nadie ha hecho nada mal porque un documento de 1950
      no diera el día). Azul, que en una pantalla de morados y grises se lee como una marca. */
@@ -107,6 +110,7 @@
   --accv:  oklch(0.76 0.12 300);
   --err:   oklch(0.68 0.17 25);
   --fiesta: oklch(0.82 0.14 75);
+  --plata: oklch(0.78 0.03 255);
   --hueco: oklch(0.76 0.13 215);
   --sh: 0 1px 2px rgba(0, 0, 0, 0.5), 0 8px 22px rgba(0, 0, 0, 0.45);
 }
@@ -149,7 +153,7 @@
 /* Y a quien se está leyendo, un cerco por fuera: el fondo y el borde ya dicen cada uno lo
    suyo, así que la tercera marca se pone donde no hay nada dibujado. */
 .arbol .nd-cerco { stroke: var(--acc); stroke-width: 2; opacity: 0.35; }   /* el relleno, en el atributo */
-/* Y a quien cumple hoy, una guirnalda de bombillas que da la vuelta despacio: es la cuarta
+/* Y a quien celebra algo, una guirnalda de bombillas que da la vuelta despacio: es la cuarta
    marca del nodo y la única que se mueve, que es lo que la encuentra en un lienzo de 342.
    Va por fuera del cerco, así que los dos conviven. Quieta sigue siendo un cerco punteado,
    y por eso quien no quiera movimiento no pierde nada. */
@@ -161,6 +165,10 @@
    la guirnalda le pase por detrás es lo que la deja puesta encima y no flotando al lado. */
 .arbol .nd-chapa    { fill: var(--paper); stroke: var(--fiesta); stroke-width: 1.5; }
 .arbol .nd-chapa-tx { fill: var(--fiesta); font-family: var(--mono); font-weight: 600; }
+/* La onomástica lleva esa misma guirnalda en plata: es un día de alguien igual que el
+   cumpleaños y no se gana una marca propia, pero el oro es de la tarta. Se le cambia la
+   tinta en el grupo y la guirnalda, la chapa y su letra la siguen sin una regla más. */
+.arbol .nd-santo { --fiesta: var(--plata); }
 @keyframes arbol-guirnalda { to { stroke-dashoffset: -9; } }
 @media (prefers-reduced-motion: reduce) {
   .arbol .nd-fiesta { animation: none; }
@@ -225,12 +233,112 @@
 @keyframes atlas-entra { from { opacity: 0; transform: translateY(10px); } }
 /* Sin prefers-reduced-motion: es laboratorio, se ve como se diseñó. */
 
-/* Las dos pestañas y la tira de continentes: la misma marca de «estás aquí» en las dos, que es
-   la misma idea. El color base va en la clase, no en el style, para que el :hover pueda ganarle. */
-.atlas-tab    { color: var(--t-ink4); border-bottom: 1px solid transparent; }
-.atlas-tab-on { color: var(--t-accent); border-bottom-color: var(--t-accent); }
-.atlas-tab:active { color: var(--t-accent); }
-@media (hover: hover) { .atlas-tab:hover { color: var(--t-accent); } }
+/* Los cuatro tonos que el sitio no tenía: los estados del carril de un dato y el lavado del que
+   se está calificando. Salen de los tokens del tema en vez de ir en hex, así que el oscuro no se
+   mantiene aparte — solo cambia el verde de texto, que el oscuro sobre papel negro no se lee, y
+   los lavados, que al 5 % sobre negro no existen. */
+.atlas {
+  --a-wash:   color-mix(in oklab, var(--t-accent) 5%, var(--t-paper));
+  --a-wash2:  color-mix(in oklab, var(--t-accent) 9%, var(--t-paper));
+  --a-hecho:  color-mix(in oklab, var(--t-accent) 45%, var(--t-paper));
+  --a-acc-tx: var(--t-accent2);
+  /* Lo único que cambia de móvil a escritorio, en un sitio: el resto del dibujo va en el style
+     de cada pieza, como en el resto del sitio. */
+  --a-lado: 20px; --a-pais: 32px; --a-capital: 20px; --a-globo: 52px; --a-btn: 58px;
+  --a-marca: 22px; --a-marca-gap: 10px; --a-mapa: 200px; --a-ficha-gap: 30px;
+}
+[data-theme="dark"] .atlas {
+  --a-wash:   color-mix(in oklab, var(--t-accent) 12%, var(--t-paper));
+  --a-wash2:  color-mix(in oklab, var(--t-accent) 18%, var(--t-paper));
+  --a-hecho:  color-mix(in oklab, var(--t-accent) 40%, var(--t-paper));
+  --a-acc-tx: var(--t-accent);
+}
+@media (min-width: 768px) {
+  .atlas {
+    --a-lado: 28px; --a-pais: 36px; --a-capital: 21px; --a-globo: 56px; --a-btn: 54px;
+    --a-marca: 26px; --a-marca-gap: 14px; --a-mapa: 372px; --a-ficha-gap: 38px;
+  }
+}
+
+/* Ir al otro modo es un enlace en una esquina, no una pestaña: solo se usa una vez por sesión.
+   Volver al trabajo pesa más que salir de él, y por eso la vuelta va en verde. */
+.atlas-modo   { color: var(--t-ink3); }
+.atlas-modo-v { color: var(--a-acc-tx); }
+.atlas-modo:active, .atlas-modo-v:active { color: var(--t-accent); }
+@media (hover: hover) { .atlas-modo:hover, .atlas-modo-v:hover { color: var(--t-accent); } }
+
+.atlas-lado { padding-left: var(--a-lado); padding-right: var(--a-lado); }
+
+/* Lo que solo existe en un tamaño de pantalla se pinta siempre y lo esconde el CSS: elegirlo en
+   JS obliga a medir la ventana, y lo que se mide al montar no está en el HTML del server. */
+.atlas-solo-ancho { display: none; }
+@media (min-width: 768px) {
+  .atlas-solo-movil { display: none; }
+  .atlas-solo-ancho { display: revert; }
+}
+
+/* La tarjeta y su barra. En móvil los datos se comen el alto y la barra queda pegada al borde
+   —ahí califica el pulgar—; en escritorio las dos van juntas al centro, que ahí la mano está en
+   el teclado y anclar la fila abajo solo la aleja de lo que se mira. */
+.atlas-cuerpo { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.atlas-datos  { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.atlas-barra  { border-top: 1px solid var(--t-rule); padding: 13px var(--a-lado) 26px; }
+@media (min-width: 768px) {
+  .atlas-cuerpo { justify-content: center; gap: 34px; }
+  .atlas-datos  { flex: 0 0 auto; width: 420px; margin: 0 auto; padding: 0; }
+  .atlas-barra  { width: 420px; margin: 0 auto; border-top: none; padding: 0; }
+}
+
+/* Los tres botones no se mueven nunca: misma posición, mismo tamaño y mismo orden en todas las
+   calificaciones de todas las tarjetas. Lo que cambia es el dato al que apuntan. */
+.atlas-btn {
+  position: relative; border-radius: 2px; cursor: pointer; font-family: var(--t-mono);
+  font-size: 15px; transition: background 0.06s, border-color 0.12s, transform 0.08s;
+}
+.atlas-btn:active { transform: scale(0.985); }
+.atlas-btn:focus-visible { outline: 2px solid var(--t-accent); outline-offset: 2px; }
+.atlas-btn-no    { border: 1px solid var(--t-rule); background: transparent; color: var(--t-ink3); }
+.atlas-btn-si    { border: 1px solid var(--t-ink); background: var(--t-ink); color: var(--t-paper); font-weight: 500; }
+.atlas-btn-facil { border: 1px solid var(--t-accent); background: var(--a-wash2); color: var(--a-acc-tx); }
+.atlas-btn-no:active    { background: var(--t-paper2); }
+.atlas-btn-facil:active { background: var(--a-wash); }
+@media (hover: hover) {
+  .atlas-btn-no:hover    { border-color: var(--t-ink4); background: var(--t-paper2); }
+  .atlas-btn-si:hover    { background: var(--t-ink2); border-color: var(--t-ink2); }
+  .atlas-btn-facil:hover { background: var(--a-wash); }
+}
+
+/* La ficha de explorar no se ciñe al ancho de la tarjeta: con sitio, los datos a un lado y los
+   dos mapas al otro. */
+.atlas-ficha { display: flex; flex-direction: column; justify-content: center; gap: var(--a-ficha-gap); }
+.atlas-mapas { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (min-width: 768px) {
+  .atlas-ficha {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 72px;
+    align-content: center; padding-top: 40px; padding-bottom: 44px;
+  }
+  .atlas-mapas { grid-template-columns: 1.15fr 1fr; gap: 24px; }
+}
+
+/* Seis continentes no caben en una tira de móvil: ahí son una palabra que despliega una rejilla
+   de 2×3, leída por filas y en el mismo orden lejano→cercano. Con sitio, los seis en una línea. */
+.atlas-cont-fila {
+  display: flex; justify-content: space-between; align-items: center; height: 48px;
+  border-top: 1px solid var(--t-rule2); border-bottom: 1px solid var(--t-rule2);
+}
+.atlas-cont-rejilla {
+  display: grid; grid-template-columns: 1fr 1fr;
+  border: 1px solid var(--t-rule); border-radius: 2px;
+}
+.atlas-cont-celda {
+  display: flex; align-items: center; gap: 8px; height: 56px; padding: 0 14px;
+  background: none; border: none; cursor: pointer;
+  font-family: var(--t-mono); font-size: 13px; color: var(--t-ink); text-align: left;
+}
+.atlas-cont-celda-on { background: var(--a-wash); color: var(--a-acc-tx); font-weight: 500; }
+@media (min-width: 768px) {
+  .atlas-cont-fila { height: 52px; gap: 40px; }
+}
 
 /* TerminalShell — chrome bar, navegación y animación de salida */
 
