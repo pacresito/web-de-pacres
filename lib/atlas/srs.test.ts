@@ -1,6 +1,6 @@
 // Test de lógica pura: `npx tsx lib/atlas/srs.test.ts`. Fuera del build.
 import assert from "assert";
-import { calificar, DATOS, huecos, MAX_EN_EL_AIRE, montar, nuevaVida, siguiente, sospecha, type Mazo } from "./srs";
+import { calificar, cuenta, DATOS, huecos, MAX_EN_EL_AIRE, montar, nuevaVida, siguiente, sospecha, type Mazo } from "./srs";
 import { PAISES } from "./paises";
 
 const DIA = 86_400_000;
@@ -85,5 +85,19 @@ assert.strictEqual(siguiente({ es: { nombre: vida(100, 1) } }, orden, AHORA)!.id
 const enElAire: Mazo = Object.fromEntries(PAISES.slice(0, 9).map((p) => [p.id, { nombre: vida(100, 1) }]));
 assert.strictEqual(siguiente(enElAire, orden, AHORA)!.id, orden[9]); // nueve en el aire: aún entran
 assert.ok(MAX_EN_EL_AIRE > 9, "el freno no debe saltar con los diez países de la fase 1");
+
+{
+  // La cuenta del prompt: empezado es haber visto algo; aprendido, tener los cuatro asentados.
+  const viejo = { visto: Date.now(), vida: 100 };
+  const nuevo = { visto: Date.now(), vida: 2 };
+  assert.deepEqual(cuenta({}), { empezados: 0, aprendidos: 0 });
+  assert.deepEqual(cuenta({ es: { nombre: nuevo } }), { empezados: 1, aprendidos: 0 });
+  assert.deepEqual(
+    cuenta({ es: { nombre: viejo, capital: viejo, bandera: viejo, forma: viejo }, fr: { nombre: viejo, capital: nuevo } }),
+    { empezados: 2, aprendidos: 1 },
+  );
+  // Un país que no está en la lista no cuenta: el mazo puede traer restos de otra versión.
+  assert.deepEqual(cuenta({ zz: { nombre: viejo } }), { empezados: 0, aprendidos: 0 });
+}
 
 console.log("srs: ok");

@@ -81,6 +81,24 @@ export function huecos(mazo: Mazo, paisId: string): number {
   return n === 4 ? 3 : n >= 2 ? 2 : 1;
 }
 
+/**
+ * Cuántos países se han empezado y cuántos están enteros —los cuatro datos asentados—.
+ *
+ * Esto **no es el contador de Anki**, que es lo que hay que mirar antes de enseñarlo: aquel
+ * cuenta deuda y sube solo mientras no vuelves; este cuenta trabajo hecho y solo sube cuando
+ * trabajas. Y el freno de países nuevos limita a qué velocidad puede separarse el segundo
+ * número del primero, así que no hay manera de volver y encontrarse un 0/418.
+ */
+export function cuenta(mazo: Mazo): { empezados: number; aprendidos: number } {
+  let empezados = 0, aprendidos = 0;
+  for (const p of PAISES) {
+    if (!DATOS.some((d) => mazo[p.id]?.[d])) continue;
+    empezados++;
+    if (DATOS.every((d) => asentado(mazo[p.id]?.[d]))) aprendidos++;
+  }
+  return { empezados, aprendidos };
+}
+
 export type Tarjeta = { pais: Pais; tapados: Dato[]; primeraVez: boolean };
 
 /**

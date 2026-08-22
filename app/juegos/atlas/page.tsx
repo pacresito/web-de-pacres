@@ -5,8 +5,8 @@ import TerminalShell from "../../components/TerminalShell";
 import WhyFooter from "../../components/WhyFooter";
 import Repasar from "./Repasar";
 import Explorar from "./Explorar";
-import { PanelPuerta, PuertaOculta } from "./Puerta";
-import { sesionActual, sincronizar, sinSesion, suscribir } from "@/lib/atlas/almacen";
+import ColaDelPrompt from "./Puerta";
+import { mazoActual, sesionActual, sincronizar, sinMazo, sinSesion, suscribir } from "@/lib/atlas/almacen";
 
 const MODOS = ["repasar", "explorar"] as const;
 type Modo = (typeof MODOS)[number];
@@ -18,8 +18,8 @@ type Modo = (typeof MODOS)[number];
 export default function Atlas() {
   const [modo, setModo] = useState<Modo>("repasar");
   const [pantallaCompleta, setPantallaCompleta] = useState(false);
-  const [puerta, setPuerta] = useState(false);
   const identificado = useSyncExternalStore(suscribir, sesionActual, sinSesion);
+  const mazo = useSyncExternalStore(suscribir, mazoActual, sinMazo);
 
   // Al cargar, y solo al cargar: se vuelca lo calificado sin cobertura y manda lo que diga
   // Redis. A media sesión no, que cambiar de tarjeta porque el otro dispositivo dijo otra cosa
@@ -29,16 +29,13 @@ export default function Atlas() {
   return (
     <TerminalShell
       title="atlas"
-      prompt={{ host: "atlas", path: "~/juegos", command: "./atlas" }}
+      // Quién teclea lo dice el prompt, como en cualquier terminal: sin sesión, nadie.
+      prompt={{ host: "atlas", path: "~/juegos", command: "./atlas", user: identificado ? "pacres" : "anon" }}
       hideChrome={pantallaCompleta}
-      envolverTitulo={(titulo) => (
-        <PuertaOculta identificado={identificado} onLarga={() => setPuerta(true)}>{titulo}</PuertaOculta>
-      )}
+      colaDelPrompt={<ColaDelPrompt mazo={mazo} identificado={identificado} />}
     >
       <main style={{ minHeight: "100%", padding: pantallaCompleta ? "0.5rem 1rem" : "1.5rem 1rem 0", display: "flex", flexDirection: "column", alignItems: "center" }}>
         <div style={{ width: "100%", maxWidth: 420, flex: 1, display: "flex", flexDirection: "column", gap: "1rem" }}>
-          {puerta && <PanelPuerta identificado={identificado} onCerrar={() => setPuerta(false)} />}
-
           <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
             {MODOS.map((m) => (
               <button

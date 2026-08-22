@@ -13,6 +13,8 @@ interface PromptConfig {
   host: string;
   path: string;
   command: string;
+  /** Quién teclea. Por defecto Pablo; atlas lo cambia a `anon` cuando no hay sesión. */
+  user?: string;
 }
 
 interface Props {
@@ -25,9 +27,10 @@ interface Props {
    *  animación de restaurar. */
   destMaximized?: boolean;
   hideChrome?: boolean;
-  /** Envuelve el título del chrome. Atlas cuelga de aquí su puerta oculta: tiene que ir en algo
-   *  que no parezca un botón, y el título es lo único que hay. */
-  envolverTitulo?: (titulo: ReactNode) => ReactNode;
+  /** Lo que va detrás del comando, en la misma línea. Atlas cuelga aquí sus banderas y su
+   *  puerta. Se pinta cuando el tecleo termina: dentro del comando se reescribiría entero cada
+   *  vez que cambiara una cifra. */
+  colaDelPrompt?: ReactNode;
   children: ReactNode;
 }
 
@@ -39,7 +42,7 @@ export default function TerminalShell({
   backUrl,
   destMaximized = false,
   hideChrome = false,
-  envolverTitulo,
+  colaDelPrompt,
   children,
 }: Props) {
   const router = useRouter();
@@ -121,7 +124,7 @@ export default function TerminalShell({
         </button>
       </div>
       <div style={{ flex: 1, textAlign: "center", fontFamily: MONO, fontSize: 12, color: "var(--t-ink2)" }}>
-        {(envolverTitulo ?? ((t: ReactNode) => t))(<>⌘&nbsp;&nbsp;pacr.es — {title}</>)}
+        ⌘&nbsp;&nbsp;pacr.es — {title}
       </div>
       <div style={{ flexShrink: 0, fontFamily: MONO, fontSize: 10, color: "var(--t-ink4)", whiteSpace: "nowrap" }}>
         {version.endsWith("zsh") ? (
@@ -199,14 +202,14 @@ export default function TerminalShell({
             }}>
               <span style={{ fontFamily: MONO, fontSize: 11, color: "var(--t-ink4)" }}>000</span>
               <span style={{ fontFamily: MONO, fontSize: 13.5 }}>
-                <span style={{ color: "var(--t-accent2)" }}>pacres</span>
+                <span style={{ color: "var(--t-accent2)" }}>{prompt.user ?? "pacres"}</span>
                 <span style={{ color: "var(--t-ink3)" }}>@{prompt.host}</span>
                 <span style={{ color: "var(--t-ink2)" }}>:{prompt.path}</span>
                 <span style={{ color: "var(--t-ink3)" }}>$ </span>
                 <span style={{ color: "var(--t-ink)" }}>{typed}</span>
-                {execMs === null && (
+                {execMs === null ? (
                   <span style={{ color: "var(--t-accent)", animation: "ts-blink 1s steps(1) infinite", marginLeft: 2 }}>▍</span>
-                )}
+                ) : colaDelPrompt}
               </span>
               <span style={{ fontFamily: MONO, fontSize: 10, color: "var(--t-ink4)", visibility: execMs !== null ? "visible" : "hidden", whiteSpace: "nowrap" }}>
                 ↳ {execMs ?? 0}ms

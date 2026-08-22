@@ -1,106 +1,88 @@
 "use client";
 
-import { useRef, useState, type ReactNode } from "react";
+import { useState } from "react";
 import { entrar, salir } from "@/lib/atlas/almacen";
-
-const LARGA = 550; // ms de pulsación para que se abra
+import { cuenta, type Mazo } from "@/lib/atlas/srs";
 
 const MONO = "var(--t-mono)";
 
 /**
- * La puerta oculta: una pulsación larga sobre el título del chrome. No se anuncia, y sin sesión
- * no hay ni un indicio de que exista — detrás solo hay una clave, y un botón permanente que
- * ponga "identifícate" es ruido en cada tarjeta a cambio de un uso al año.
+ * La cola del prompt: lo que hay detrás de `./atlas`, y la puerta.
  *
- * El punto verde, cuando la hay, es el único indicador: dice que lo que se califica está yendo
- * a algún sitio además de a este navegador.
+ * **Las cifras van aquí y no en la pantalla** porque un prompt es el sitio donde un número no
+ * exige nada: forma parte del comando que se tecleó, no de la tarjeta que se está mirando. Y no
+ * son las de Anki —aquellas cuentan deuda y suben mientras no vuelves; estas cuentan trabajo
+ * hecho y solo suben cuando trabajas—.
+ *
+ * **La puerta es pinchar la bandera.** No se anuncia y no hace falta que se anuncie: quien no
+ * sepa que está ahí no tiene nada que hacer detrás. Quién eres lo dice el propio prompt —`anon@`
+ * o `pacres@`—, que es donde un terminal lo dice, y por eso no hay ningún indicador más.
  */
-export function PuertaOculta({ identificado, onLarga, children }: {
-  identificado: boolean; onLarga: () => void; children: ReactNode;
-}) {
-  const reloj = useRef<number | null>(null);
-  const parar = () => {
-    if (reloj.current) clearTimeout(reloj.current);
-    reloj.current = null;
-  };
-
-  return (
-    <span
-      onPointerDown={() => { parar(); reloj.current = window.setTimeout(onLarga, LARGA); }}
-      onPointerUp={parar}
-      onPointerLeave={parar}
-      onPointerCancel={parar}
-      // En el móvil, una pulsación larga sobre texto selecciona la palabra y saca el menú del
-      // sistema. Sin matar las dos cosas, la puerta no llega a abrirse nunca.
-      onContextMenu={(e) => e.preventDefault()}
-      style={{
-        userSelect: "none", WebkitUserSelect: "none", WebkitTouchCallout: "none",
-        display: "inline-flex", alignItems: "center", gap: 6,
-      }}
-    >
-      {children}
-      {identificado && (
-        <span title="el mazo se guarda en la nube" style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--t-accent)" }} />
-      )}
-    </span>
-  );
-}
-
-/** Lo que hay detrás de la puerta: entrar si no hay sesión, cerrarla si la hay. Nada más — no
- *  existe un reinicio de progreso, que es la clase de botón que un día se pulsa sin querer. */
-export function PanelPuerta({ identificado, onCerrar }: { identificado: boolean; onCerrar: () => void }) {
+export default function ColaDelPrompt({ mazo, identificado }: { mazo: Mazo; identificado: boolean }) {
+  const [abierta, setAbierta] = useState(false);
   const [clave, setClave] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [yendo, setYendo] = useState(false);
+  const { empezados, aprendidos } = cuenta(mazo);
 
   const enviar = async (e: React.FormEvent) => {
     e.preventDefault();
-    setYendo(true);
     const fallo = await entrar(clave);
-    setYendo(false);
     if (fallo) return setError(fallo);
     setClave("");
-    onCerrar();
+    setAbierta(false);
   };
 
-  const marco: React.CSSProperties = {
-    display: "flex", gap: "0.5rem", alignItems: "center",
-    border: "1px solid var(--t-rule2)", borderRadius: 4, padding: "0.6rem 0.7rem",
-    fontFamily: MONO, fontSize: "0.75rem",
-  };
+  const cerrar = () => { setAbierta(false); setClave(""); setError(null); };
+
+  if (!empezados && !abierta) {
+    // Sin nada empezado no hay cifra que enseñar, pero la puerta tiene que seguir existiendo:
+    // el espacio en blanco de después del comando es lo que se pincha.
+    return <span onClick={() => setAbierta(true)} style={{ cursor: "default", paddingLeft: "1.2rem" }}>&nbsp;</span>;
+  }
+
+  if (!abierta) {
+    return (
+      <span
+        onClick={() => setAbierta(true)}
+        style={{ color: "var(--t-ink3)", cursor: "default" }}
+      >
+        {" "}--aprendidos={aprendidos}/{empezados}
+      </span>
+    );
+  }
 
   if (identificado) {
     return (
-      <div style={marco}>
-        <span style={{ flex: 1, color: "var(--t-ink3)" }}>sesión abierta</span>
-        <button onClick={() => { void salir(); onCerrar(); }} className="t-ibtn" style={{ width: "auto", padding: "0 0.6rem", fontFamily: MONO, fontSize: "0.72rem" }}>
-          cerrar
-        </button>
-        <button onClick={onCerrar} className="hover-accent" aria-label="Cerrar" style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}>✕</button>
-      </div>
+      <span style={{ color: "var(--t-ink3)" }}>
+        {" "}--aprendidos={aprendidos}/{empezados}{" "}
+        <button onClick={() => { void salir(); cerrar(); }} className="hover-accent" style={boton}>--salir</button>
+      </span>
     );
   }
 
   return (
-    <form onSubmit={enviar} style={marco}>
+    <form onSubmit={enviar} onBlur={cerrar} style={{ display: "inline" }}>
+      {" "}--clave=
       <input
         type="password"
         value={clave}
         autoFocus
         autoComplete="current-password"
         onChange={(e) => { setClave(e.target.value); setError(null); }}
-        placeholder="clave"
+        onKeyDown={(e) => { if (e.key === "Escape") cerrar(); }}
+        // Se escribe donde se lee: mismo tipo, mismo tamaño y sin caja, para que teclear la
+        // clave sea seguir escribiendo el comando y no rellenar un formulario.
         style={{
-          flex: 1, minWidth: 0, background: "var(--t-paper)", color: "var(--t-ink)",
-          border: "1px solid var(--t-rule2)", borderRadius: 4, padding: "0.35rem 0.5rem",
-          fontFamily: MONO, fontSize: "0.75rem",
+          width: "7ch", background: "none", border: "none", outline: "none", padding: 0,
+          fontFamily: MONO, fontSize: "inherit", color: "var(--t-ink)",
         }}
       />
-      <button type="submit" disabled={yendo || !clave} className="t-ibtn" style={{ width: "auto", padding: "0 0.6rem", fontFamily: MONO, fontSize: "0.72rem" }}>
-        entrar
-      </button>
-      {error && <span style={{ color: "var(--t-ink3)" }}>{error}</span>}
-      <button type="button" onClick={onCerrar} className="hover-accent" aria-label="Cerrar" style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}>✕</button>
+      {error && <span style={{ color: "var(--t-ink4)" }}> {error.toLowerCase()}</span>}
     </form>
   );
 }
+
+const boton: React.CSSProperties = {
+  background: "none", border: "none", padding: 0, cursor: "pointer",
+  fontFamily: MONO, fontSize: "inherit",
+};
