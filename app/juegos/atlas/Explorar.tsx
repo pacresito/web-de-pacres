@@ -68,7 +68,8 @@ export default function Explorar() {
   // pulsando a un lado y a otro de la pantalla no es recorrerlo.
   useEffect(() => {
     const tecla = (e: KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      // Con la puerta abierta se está tecleando la clave: un «2» no puede calificar.
+      if (e.metaKey || e.ctrlKey || e.altKey || (e.target as HTMLElement)?.tagName === "INPUT") return;
       if (e.key === "ArrowLeft") mover(-1);
       if (e.key === "ArrowRight") mover(1);
     };

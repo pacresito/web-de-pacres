@@ -25,6 +25,9 @@ interface Props {
    *  animación de restaurar. */
   destMaximized?: boolean;
   hideChrome?: boolean;
+  /** Envuelve el título del chrome. Atlas cuelga de aquí su puerta oculta: tiene que ir en algo
+   *  que no parezca un botón, y el título es lo único que hay. */
+  envolverTitulo?: (titulo: ReactNode) => ReactNode;
   children: ReactNode;
 }
 
@@ -36,6 +39,7 @@ export default function TerminalShell({
   backUrl,
   destMaximized = false,
   hideChrome = false,
+  envolverTitulo,
   children,
 }: Props) {
   const router = useRouter();
@@ -117,7 +121,7 @@ export default function TerminalShell({
         </button>
       </div>
       <div style={{ flex: 1, textAlign: "center", fontFamily: MONO, fontSize: 12, color: "var(--t-ink2)" }}>
-        ⌘&nbsp;&nbsp;pacr.es — {title}
+        {(envolverTitulo ?? ((t: ReactNode) => t))(<>⌘&nbsp;&nbsp;pacr.es — {title}</>)}
       </div>
       <div style={{ flexShrink: 0, fontFamily: MONO, fontSize: 10, color: "var(--t-ink4)", whiteSpace: "nowrap" }}>
         {version.endsWith("zsh") ? (
