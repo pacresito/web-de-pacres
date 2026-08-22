@@ -42,6 +42,10 @@ function km2(n: number) {
 
 const MONO = "var(--t-mono)";
 
+// Lo que ocupan la marca y su hueco. Lo que no es una fila —la superficie, la leyenda— se
+// alinea con esto a mano, y así las tres cosas cuelgan de la misma vertical.
+const MARGEN = "1.26rem";
+
 /**
  * La pestaña de explorar: los países de un continente, uno a uno y en el orden del barrido en S
  * —nunca alfabético, que el alfabeto no enseña geografía—. Solo mira: no toca ningún reloj.
@@ -109,11 +113,9 @@ export default function Explorar() {
           <div style={{ fontFamily: MONO, fontSize: "0.68rem", color: "var(--t-ink4)" }}>{pais.oficial}</div>
         </>)}
 
+      {/* Sin etiqueta, como en la tarjeta: el sitio y el tamaño ya la dicen. */}
       {fila("capital",
-        <div style={{ display: "flex", alignItems: "baseline", gap: "0.5rem" }}>
-          <span style={{ fontFamily: MONO, fontSize: "0.65rem", color: "var(--t-ink4)", letterSpacing: "0.08em" }}>capital</span>
-          <span style={{ fontFamily: MONO, fontSize: "1rem", color: "var(--t-ink2)" }}>{pais.capital}</span>
-        </div>)}
+        <span style={{ fontFamily: MONO, fontSize: "1rem", color: "var(--t-ink2)" }}>{pais.capital}</span>)}
 
       {fila("bandera",
         // eslint-disable-next-line @next/next/no-img-element -- SVG suelto de /public, sin optimización que aportar
@@ -133,11 +135,11 @@ export default function Explorar() {
 
       {/* El tamaño es del país, no del minimapa: va al margen de la ficha, con todo lo demás, y
           no colgando del borde de un mapa que cambia de ancho en cada continente. */}
-      <div style={{ fontFamily: MONO, fontSize: "0.62rem", color: "var(--t-ink4)", marginLeft: "1.26rem" }}>
+      <div style={{ fontFamily: MONO, fontSize: "0.62rem", color: "var(--t-ink4)", marginLeft: MARGEN }}>
         {km2(pais.km2)} km² · {forma.ladoKm} km de largo
       </div>
 
-      <div style={{ display: "flex", gap: "0.85rem" }}>
+      <div style={{ display: "flex", gap: "0.85rem", marginLeft: MARGEN }}>
         {(Object.keys(TINTA) as Dominio[]).map((e) => (
           <span key={e} style={{ display: "flex", alignItems: "center", gap: "0.3rem", fontFamily: MONO, fontSize: "0.6rem", color: "var(--t-ink4)" }}>
             <Marca estado={e} />{e}
