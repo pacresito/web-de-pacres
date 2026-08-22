@@ -6,8 +6,9 @@ import { cuenta, type Mazo } from "@/lib/atlas/srs";
 
 const MONO = "var(--t-mono)";
 
-/** La bandera va en gris de salida y **el número de aprendidos en acento**: es lo único de la
- *  línea que cuenta algo conseguido, y lo que se busca al mirar. El resto es sintaxis. */
+/** La bandera es parte del comando y va del color del comando, como el `--holes=4` del laberinto
+ *  o el `--cartas=21` de magia. Dentro, **el número de aprendidos en acento**: es lo único de la
+ *  línea que cuenta algo conseguido, y lo que se busca al mirar; el resto es sintaxis. */
 const Bandera = ({ aprendidos, empezados }: { aprendidos: number; empezados: number }) => (
   <>
     {" "}--aprendidos=<span style={{ color: "var(--t-accent)" }}>{aprendidos}</span>/{empezados}
@@ -50,7 +51,7 @@ export default function ColaDelPrompt({ mazo, identificado }: { mazo: Mazo; iden
 
   if (!abierta) {
     return (
-      <span onClick={() => setAbierta(true)} style={{ color: "var(--t-ink3)", cursor: "default" }}>
+      <span onClick={() => setAbierta(true)} style={{ color: "var(--t-ink)", cursor: "default" }}>
         <Bandera aprendidos={aprendidos} empezados={empezados} />
       </span>
     );
@@ -58,7 +59,7 @@ export default function ColaDelPrompt({ mazo, identificado }: { mazo: Mazo; iden
 
   if (identificado) {
     return (
-      <span style={{ color: "var(--t-ink3)" }}>
+      <span style={{ color: "var(--t-ink)" }}>
         <Bandera aprendidos={aprendidos} empezados={empezados} />{" "}
         <button onClick={() => { void salir(); cerrar(); }} className="hover-accent" style={boton}>--salir</button>
       </span>
@@ -66,7 +67,7 @@ export default function ColaDelPrompt({ mazo, identificado }: { mazo: Mazo; iden
   }
 
   return (
-    <form onSubmit={enviar} onBlur={cerrar} style={{ display: "inline" }}>
+    <form onSubmit={enviar} onBlur={cerrar} style={{ display: "inline", color: "var(--t-ink)" }}>
       {" "}--clave=
       <input
         type="password"
