@@ -936,7 +936,6 @@ export default function TerminalHome() {
         .t-avatar-desktop { display: block; }
         .t-avatar-mobile  { display: none; }
         .t-stack-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 28px; }
-        .t-session-meta { display: block; }
 
         @media (max-width: 700px) {
           .t-tl-desktop { display: none !important; }
@@ -945,7 +944,6 @@ export default function TerminalHome() {
           .t-avatar-mobile  { display: block; }
           .t-whoami-row { flex-direction: column !important; }
           .t-stack-grid { grid-template-columns: 1fr; gap: 22px; }
-          .t-session-meta { display: none; }
           .t-content { padding: 0 16px 24px 16px !important; }
           .t-prompt { padding: 16px 16px 6px !important; }
           .t-prompt-num { font-size: 10px !important; }

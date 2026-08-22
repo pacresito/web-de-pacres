@@ -446,3 +446,10 @@
   .win-dots:hover .win-icon { opacity: 1; }
   .t-rowhover:hover { background: var(--t-paper2); }
 }
+
+/* Meta de la barra de pestañas ("session #06 — terminal"): en móvil el ancho
+   es para las pestañas. Vive aquí y no en cada página porque la pinta un
+   componente compartido (TabsBar) y una página nueva se olvidaría. */
+@media (max-width: 700px) {
+  .t-session-meta { display: none; }
+}

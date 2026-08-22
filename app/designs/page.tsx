@@ -167,12 +167,10 @@ export default function Designs() {
 
         .t-lab-desktop { display: block; }
         .t-lab-mobile  { display: none; }
-        .t-session-meta { display: block; }
 
         @media (max-width: 700px) {
           .t-lab-desktop { display: none !important; }
           .t-lab-mobile  { display: flex; }
-          .t-session-meta { display: none; }
           .t-content { padding: 0 16px 24px 16px !important; }
           .t-prompt  { padding: 16px 16px 6px !important; }
           .t-prompt-num { font-size: 10px !important; }
