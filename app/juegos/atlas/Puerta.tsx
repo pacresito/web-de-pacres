@@ -6,6 +6,14 @@ import { cuenta, type Mazo } from "@/lib/atlas/srs";
 
 const MONO = "var(--t-mono)";
 
+/** La bandera va en gris de salida y **el número de aprendidos en acento**: es lo único de la
+ *  línea que cuenta algo conseguido, y lo que se busca al mirar. El resto es sintaxis. */
+const Bandera = ({ aprendidos, empezados }: { aprendidos: number; empezados: number }) => (
+  <>
+    {" "}--aprendidos=<span style={{ color: "var(--t-accent)" }}>{aprendidos}</span>/{empezados}
+  </>
+);
+
 /**
  * La cola del prompt: lo que hay detrás de `./atlas`, y la puerta.
  *
@@ -42,11 +50,8 @@ export default function ColaDelPrompt({ mazo, identificado }: { mazo: Mazo; iden
 
   if (!abierta) {
     return (
-      <span
-        onClick={() => setAbierta(true)}
-        style={{ color: "var(--t-ink3)", cursor: "default" }}
-      >
-        {" "}--aprendidos={aprendidos}/{empezados}
+      <span onClick={() => setAbierta(true)} style={{ color: "var(--t-ink3)", cursor: "default" }}>
+        <Bandera aprendidos={aprendidos} empezados={empezados} />
       </span>
     );
   }
@@ -54,7 +59,7 @@ export default function ColaDelPrompt({ mazo, identificado }: { mazo: Mazo; iden
   if (identificado) {
     return (
       <span style={{ color: "var(--t-ink3)" }}>
-        {" "}--aprendidos={aprendidos}/{empezados}{" "}
+        <Bandera aprendidos={aprendidos} empezados={empezados} />{" "}
         <button onClick={() => { void salir(); cerrar(); }} className="hover-accent" style={boton}>--salir</button>
       </span>
     );
@@ -72,8 +77,12 @@ export default function ColaDelPrompt({ mazo, identificado }: { mazo: Mazo; iden
         onKeyDown={(e) => { if (e.key === "Escape") cerrar(); }}
         // Se escribe donde se lee: mismo tipo, mismo tamaño y sin caja, para que teclear la
         // clave sea seguir escribiendo el comando y no rellenar un formulario.
+        // El ancho sigue a lo tecleado, que es lo que deja ver cuántos caracteres llevas: fijo,
+        // los puntos se cortan y una clave larga parece corta. Con tope, que a partir de ahí se
+        // saldría de la caja del prompt y rompería la línea.
         style={{
-          width: "7ch", background: "none", border: "none", outline: "none", padding: 0,
+          width: `${Math.min(Math.max(clave.length + 1, 4), 24)}ch`,
+          background: "none", border: "none", outline: "none", padding: 0,
           fontFamily: MONO, fontSize: "inherit", color: "var(--t-ink)",
         }}
       />
