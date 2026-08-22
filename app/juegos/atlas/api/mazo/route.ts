@@ -9,9 +9,7 @@ import redis from "@/lib/redis";
 import { KEYS } from "@/lib/atlas/keys";
 import { verifySession } from "@/lib/atlas/session";
 import { PAIS_POR_ID } from "@/lib/atlas/paises";
-import { calificar, DATOS, type Dato, type Mazo, type Nota } from "@/lib/atlas/srs";
-
-const NOTAS: readonly string[] = ["fallo", "bien", "facil"];
+import { calificar, DATOS, NOTAS, type Dato, type Mazo, type Nota } from "@/lib/atlas/srs";
 
 const conSesion = async () => verifySession((await cookies()).get("atlas_session")?.value);
 
@@ -42,7 +40,8 @@ export async function POST(request: Request): Promise<Response> {
     // vida que ya no vuelve a salir a preguntar nunca.
     const { pais, dato, nota, ms } = (c ?? {}) as Record<string, unknown>;
     if (typeof pais !== "string" || !PAIS_POR_ID.has(pais)) continue;
-    if (!(DATOS as readonly string[]).includes(dato as string) || !NOTAS.includes(nota as string)) continue;
+    if (!(DATOS as readonly string[]).includes(dato as string)) continue;
+    if (!(NOTAS as readonly string[]).includes(nota as string)) continue;
     // El reloj lo pone quien calificó —lo de hace tres días sin cobertura es de hace tres
     // días—, pero nunca del futuro: una fecha adelantada infla la vida y no se deshace.
     const cuando = typeof ms === "number" && Number.isFinite(ms) ? Math.min(ms, ahora) : ahora;

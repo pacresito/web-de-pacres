@@ -10,9 +10,7 @@
 // y luego por las islas, y Europa arranca por el norte para bajar por el este. **Volver a correr
 // el script lo pisa todo**, así que ya no se corre: se mueven ids.
 import type { Continente } from "@/lib/atlas/paises";
-
-/** El marco del minimapa del continente: [lon0, lat0, lon1, lat1]. */
-export type Marco = [number, number, number, number];
+import type { Marco } from "@/lib/atlas/plano";
 
 export const ORDEN: { continente: Continente; marco: Marco; paises: string[] }[] = [
   { continente: "Asia", marco: [26, -11, 147, 78], paises: [

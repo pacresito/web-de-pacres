@@ -8,14 +8,16 @@
 // En su lugar cada dato guarda cuánto aguanta en la cabeza (`vida`, en días) y cuándo se vio.
 // La cola es un ranking de sospecha, infinito y sin fondo: siempre hay una siguiente.
 
-import { PAISES, type Pais } from "./paises";
+import { PAISES, PAIS_POR_ID, type Pais } from "./paises";
 
 export const DATOS = ["nombre", "capital", "bandera", "forma"] as const;
 export type Dato = (typeof DATOS)[number];
 
 export type Estado = { visto: number; vida: number }; // ms epoch · días
 export type Mazo = Record<string, Partial<Record<Dato, Estado>>>; // paisId -> dato -> estado
-export type Nota = "fallo" | "bien" | "facil";
+// De peor a mejor, que es el orden en que se enseñan y el que valida lo que llega de fuera.
+export const NOTAS = ["fallo", "bien", "facil"] as const;
+export type Nota = (typeof NOTAS)[number];
 
 const DIA = 86_400_000;
 
@@ -139,7 +141,7 @@ export function siguiente(mazo: Mazo, orden: string[], ahora: number): Pais | nu
     }
   }
   const nuevo = orden.find((id) => !DATOS.some((d) => mazo[id]?.[d]));
-  if ((!mejor || mejor.s < 1) && nuevo && enElAire < MAX_EN_EL_AIRE)
-    return PAISES.find((p) => p.id === nuevo) ?? null;
-  return mejor ? PAISES.find((p) => p.id === mejor!.id) ?? null : (nuevo ? PAISES.find((p) => p.id === nuevo) ?? null : null);
+  const cedeAlNuevo = (!mejor || mejor.s < 1) && enElAire < MAX_EN_EL_AIRE;
+  const id = cedeAlNuevo && nuevo ? nuevo : mejor?.id ?? nuevo;
+  return id ? PAIS_POR_ID.get(id) ?? null : null;
 }

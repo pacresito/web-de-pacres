@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Globo from "./Globo";
+import Silueta from "./Silueta";
 import { FORMAS } from "@/data/atlas/formas";
-import { DATOS, type Dato, type Nota } from "@/lib/atlas/srs";
+import { DATOS, NOTAS, type Dato, type Nota } from "@/lib/atlas/srs";
 import { calificarTarjeta, sinVista, suscribir, vistaActual, type Vista } from "@/lib/atlas/almacen";
 
 const MONO = "var(--t-mono)";
@@ -12,11 +13,7 @@ const ETIQUETA: Record<Dato, string> = { nombre: "país", capital: "capital", ba
 
 // Cortas a propósito: se califica hasta cuatro veces por tarjeta, y una palabra más en el botón
 // es una palabra más leída por cuatro.
-const NOTAS: { nota: Nota; texto: string }[] = [
-  { nota: "fallo", texto: "no" },
-  { nota: "bien", texto: "sí" },
-  { nota: "facil", texto: "fácil" },
-];
+const TEXTO: Record<Nota, string> = { fallo: "no", bien: "sí", facil: "fácil" };
 
 const CLASE: Record<Nota, string> = { fallo: "atlas-btn-no", bien: "atlas-btn-si", facil: "atlas-btn-facil" };
 
@@ -162,7 +159,7 @@ function Tarjeta({ vista }: { vista: Vista }) {
       }
       const i = ["1", "2", "3"].indexOf(e.key);
       if (i < 0 || !activo) return;
-      anotar(activo, NOTAS[i].nota);
+      anotar(activo, NOTAS[i]);
     };
     window.addEventListener("keydown", tecla);
     return () => window.removeEventListener("keydown", tecla);
@@ -199,7 +196,7 @@ function Tarjeta({ vista }: { vista: Vista }) {
           {visible(dato) ? contenido : <Tapado dato={dato} alto={alto} />}
         </div>
         <div style={{ fontFamily: MONO, fontSize: 10, color: "var(--a-acc-tx)" }}>
-          {puesta && NOTAS.find((n) => n.nota === puesta)!.texto}
+          {puesta && TEXTO[puesta]}
         </div>
       </div>
     );
@@ -259,20 +256,7 @@ function Tarjeta({ vista }: { vista: Vista }) {
             enseñarlo con la forma tapada sería señalar el país en un mapa. */}
         {fila("forma",
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 22, opacity: notas.forma ? 0.55 : 1 }}>
-            <svg viewBox="0 0 1000 1000" style={{ width: 132, height: 132, flexShrink: 0 }} aria-label={`Forma de ${pais.nombre}`}>
-            {/* Trazo además de relleno, como en el globo y el minimapa: un archipiélago de
-                atolones —Maldivas, Tuvalu, las Marshall— relleno a secas se queda en unas motas
-                que no se ven. A los grandes, un píxel y medio de contorno no les hace nada. */}
-              <path d={forma.d} fill="var(--t-accent)" fillRule="evenodd"
-                    stroke="var(--t-accent)" strokeWidth={1.5} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-              {/* Frontera interior, cuando la hay: Marruecos y el Sáhara Occidental salen
-                  juntos —el globo viene de otra fuente y recortar uno los descuadraba— y la
-                  línea dice dónde acaba uno. */}
-              {forma.linea && <path d={forma.linea} fill="none" stroke="var(--t-paper)" strokeWidth={6} strokeDasharray="18 14" strokeLinecap="round" opacity={0.75} />}
-              {/* La línea entre los dos paneles de un país partido: dice que sus dos islas
-                  están a la escala buena pero no a la distancia buena. */}
-              {forma.separador && <path d={forma.separador} fill="none" stroke="var(--t-ink4)" strokeWidth={6} strokeDasharray="18 14" strokeLinecap="round" />}
-            </svg>
+            <Silueta forma={forma} nombre={pais.nombre} style={{ width: 132, height: 132, flexShrink: 0 }} />
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, flexShrink: 0 }}>
               <Globo id={pais.id} lon={forma.lon} lat={forma.lat} lado="var(--a-globo)" />
               <span style={{ fontFamily: MONO, fontSize: 10, color: "var(--t-ink3)" }}>{forma.ladoKm} km</span>
@@ -293,9 +277,9 @@ function Tarjeta({ vista }: { vista: Vista }) {
             </span>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1.35fr 1fr", gap: 8 }}>
-            {NOTAS.map(({ nota, texto }, i) => (
+            {NOTAS.map((nota, i) => (
               <button key={nota} onClick={() => activo && anotar(activo, nota)} className={`atlas-btn ${CLASE[nota]}`} style={{ height: "var(--a-btn)" }}>
-                {texto}
+                {TEXTO[nota]}
                 <span className="atlas-solo-ancho" style={{ position: "absolute", left: 8, top: 7, fontSize: 9, opacity: 0.7 }}>{i + 1}</span>
               </button>
             ))}

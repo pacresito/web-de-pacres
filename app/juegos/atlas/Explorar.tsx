@@ -2,10 +2,10 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import Minimapa from "./Minimapa";
+import Silueta from "./Silueta";
 import { ORDEN } from "@/data/atlas/orden";
 import { FORMAS } from "@/data/atlas/formas";
 import { PAIS_POR_ID } from "@/lib/atlas/paises";
-import { marcoDeTinta } from "@/lib/atlas/silueta";
 import { dominio, type Dato, type Dominio } from "@/lib/atlas/srs";
 import { mazoActual, sinMazo, suscribir } from "@/lib/atlas/almacen";
 
@@ -91,7 +91,7 @@ export default function Explorar() {
   // pulsando a un lado y a otro de la pantalla no es recorrerlo.
   useEffect(() => {
     const tecla = (e: KeyboardEvent) => {
-      // Con la puerta abierta se está tecleando la clave: un «2» no puede calificar.
+      // Con la puerta abierta se está tecleando la clave: una flecha mueve el cursor, no el país.
       if (e.metaKey || e.ctrlKey || e.altKey || (e.target as HTMLElement)?.tagName === "INPUT") return;
       if (e.key === "ArrowLeft") mover(-1);
       if (e.key === "ArrowRight") mover(1);
@@ -219,17 +219,7 @@ export default function Explorar() {
                 y la silueta además se ciñe a su tinta: Chile en un lienzo cuadrado es un hilo con
                 dos palmos de nada a los lados, y ese vacío no se distingue del hueco entre
                 columnas. */}
-            <svg viewBox={marcoDeTinta(forma.d)} preserveAspectRatio="xMinYMid meet" style={{ width: "100%", aspectRatio: 1 }} aria-label={`Forma de ${pais.nombre}`}>
-            {/* Trazo además de relleno, como en el globo y el minimapa: un archipiélago de
-                atolones —Maldivas, Tuvalu, las Marshall— relleno a secas se queda en unas motas
-                que no se ven. A los grandes, un píxel y medio de contorno no les hace nada. */}
-              <path d={forma.d} fill="var(--t-accent)" fillRule="evenodd"
-                    stroke="var(--t-accent)" strokeWidth={1.5} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-              {forma.linea && <path d={forma.linea} fill="none" stroke="var(--t-paper)" strokeWidth={6} strokeDasharray="18 14" strokeLinecap="round" opacity={0.75} />}
-              {/* La línea entre los dos paneles de un país partido: dice que sus dos islas
-                  están a la escala buena pero no a la distancia buena. */}
-              {forma.separador && <path d={forma.separador} fill="none" stroke="var(--t-ink4)" strokeWidth={6} strokeDasharray="18 14" strokeLinecap="round" />}
-            </svg>
+            <Silueta forma={forma} nombre={pais.nombre} ajustada style={{ width: "100%", aspectRatio: 1 }} />
             <Minimapa id={id} marco={grupo.marco} lon={forma.lon} lat={forma.lat} />
           </div>
             <div className="atlas-solo-ancho">{cifras}</div>

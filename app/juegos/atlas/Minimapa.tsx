@@ -15,12 +15,12 @@ import { pathDelPlano, plano, type Marco } from "@/lib/atlas/plano";
 export default function Minimapa({ id, marco, lon, lat }: {
   id: string; marco: Marco; lon: number; lat: number;
 }) {
-  const { w, h } = plano(marco);
+  const { w, h, xy } = plano(marco);
   // El fondo es el mundo entero y solo depende del marco: mientras no se cambie de continente,
   // pasar de país no lo recorre otra vez. El país va encima, así que no hay que descontarlo.
   const fondo = useMemo(() => pathDelPlano(MUNDO.map((a) => a.r), marco), [marco]);
   const mio = useMemo(() => pathDelPlano(MUNDO.filter((a) => a.id === id).map((a) => a.r), marco), [marco, id]);
-  const punto = mio ? null : plano(marco).xy(lon, lat);
+  const punto = mio ? null : xy(lon, lat);
 
   // Va sin fondo ni marco: el globo de la tarjeta sí lleva su círculo de papel, pero un círculo
   // se lee como el planeta y un rectángulo solo se lee como una caja gris. El dibujo se centra

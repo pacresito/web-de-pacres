@@ -154,10 +154,6 @@ async function volcar(): Promise<Mazo | null> {
   return remoto;
 }
 
-/**
- * Al cargar: se vuelca lo pendiente y **gana Redis**. En ese orden — al revés, lo calificado sin
- * cobertura lo pisaría el mazo del servidor y se perdería sin que nadie se enterase.
- */
 export const nivelActual = (): Perfil => nivel;
 
 /**
@@ -178,6 +174,10 @@ export function elegirNivel(perfil: Perfil) {
   notificar();
 }
 
+/**
+ * Al cargar: se vuelca lo pendiente y **gana Redis**. En ese orden — al revés, lo calificado sin
+ * cobertura lo pisaría el mazo del servidor y se perdería sin que nadie se enterase.
+ */
 export async function sincronizar() {
   if (sembrado) return;
   const remoto = await volcar();
