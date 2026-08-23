@@ -13,7 +13,7 @@ const MONO = "var(--t-mono)";
 
 const TINTA: Record<Dominio, string> = {
   "sin ver": "transparent",
-  pendiente: "var(--t-ink4)",
+  empezado: "var(--t-ink4)",
   dominado: "var(--t-accent)",
 };
 
@@ -44,16 +44,16 @@ function Marca({ estado, arriba = 0 }: { estado: Dominio; arriba?: number }) {
  * devuelve `dominioPais`, así que no hay tabla que traducir; solo la etiqueta va en plural, que
  * es como se leen ("dominados"), y el dominio en singular, que es como se dice de un país.
  */
-const ESTADOS = ["pendiente", "dominado"] as const;
-const ETIQUETA: Record<(typeof ESTADOS)[number], string> = { pendiente: "pendientes", dominado: "dominados" };
+const ESTADOS = ["empezado", "dominado"] as const;
+const ETIQUETA: Record<(typeof ESTADOS)[number], string> = { empezado: "empezados", dominado: "dominados" };
 
 // El marco del minimapa sale del continente **del país**, no de lo que se esté recorriendo: por
 // «dominados» pasan países de los seis, y cada uno quiere el mapa de su vecindario.
 const MARCO = new Map(ORDEN.map((g) => [g.continente, g.marco]));
 
-// Dónde cae «pendientes» en `vistas`: los estados van detrás de los seis continentes, y es el
+// Dónde cae «empezados» en `vistas`: los estados van detrás de los seis continentes, y es el
 // primero de los dos.
-const I_PENDIENTES = ORDEN.length;
+const I_EMPEZADOS = ORDEN.length;
 
 // Los caracteres que caben en una línea del nombre a tamaño entero. La fuente es mono y la
 // columna mide lo mismo en móvil y a lo ancho, así que sale una cuenta y no una medición: medir
@@ -90,9 +90,9 @@ function km2(n: number) {
  * La pestaña de explorar: los países de un continente, uno a uno y en el orden del barrido en S
  * —nunca alfabético, que el alfabeto no enseña geografía—. Solo mira: no toca ningún reloj.
  */
-export default function Explorar({ abrirEnPendientes = false }: { abrirEnPendientes?: boolean }) {
+export default function Explorar({ abrirEnEmpezados = false }: { abrirEnEmpezados?: boolean }) {
   const mazo = useSyncExternalStore(suscribir, mazoActual, sinMazo);
-  const [ci, setCi] = useState(abrirEnPendientes ? I_PENDIENTES : 0);
+  const [ci, setCi] = useState(abrirEnEmpezados ? I_EMPEZADOS : 0);
   const [pi, setPi] = useState(0);
   const [abierto, setAbierto] = useState(false);
 

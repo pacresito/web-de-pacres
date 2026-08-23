@@ -1,7 +1,7 @@
 // El motor de Atlas: qué se pregunta, en qué orden y qué le pasa a la memoria al responder.
 // Lógica pura, sin React ni DOM: se verifica con `npx tsx lib/atlas/srs.test.ts`.
 //
-// No es SM-2. Aquí no hay fechas de vencimiento ni cola de deuda, porque Pablo juega
+// No es SM-2. Aquí no hay fechas de vencimiento ni tarjetas pendientes, porque Pablo juega
 // cuando le apetece —cinco tarjetas o doscientas, hoy o dentro de dos semanas— y una cola con
 // deuda visible es lo que mata los mazos: se abre, pone "418 pendientes" y se cierra.
 //
@@ -70,18 +70,19 @@ const dominado = (e: Estado | undefined) => !!e && e.vida > VIDA_DOMINADO;
  *
  * Los tres nombres son los que se enseñan: no hay traducción que mantener en dos sitios.
  */
-export type Dominio = "sin ver" | "pendiente" | "dominado";
-export const dominio = (e: Estado | undefined): Dominio => (!e ? "sin ver" : dominado(e) ? "dominado" : "pendiente");
+export type Dominio = "sin ver" | "empezado" | "dominado";
+export const dominio = (e: Estado | undefined): Dominio => (!e ? "sin ver" : dominado(e) ? "dominado" : "empezado");
 
 /**
  * Lo mismo para un país entero, que es por lo que se filtra en explorar. **Dominado exige los
  * cuatro datos** —el mismo listón que `cuenta` llama aprendido, y no otro: dos listones para la
- * misma palabra harían que el filtro y el contador se contradijeran a la vista—; pendiente basta
- * con haber visto uno.
+ * misma palabra harían que el filtro y el contador se contradijeran a la vista—; empezado basta
+ * con haber visto uno. **Aquí «empezado» excluye a los dominados y en `cuenta` los incluye**: uno
+ * es un estado de tres, el otro el total de lo tocado.
  */
 export function dominioPais(mazo: Mazo, paisId: string): Dominio {
   if (DATOS.every((d) => dominado(mazo[paisId]?.[d]))) return "dominado";
-  return DATOS.some((d) => mazo[paisId]?.[d]) ? "pendiente" : "sin ver";
+  return DATOS.some((d) => mazo[paisId]?.[d]) ? "empezado" : "sin ver";
 }
 
 /**

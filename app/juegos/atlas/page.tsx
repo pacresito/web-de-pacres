@@ -80,9 +80,9 @@ export default function Atlas() {
           </button>
         </div>
 
-        {/* Aterrizando se abre por «pendientes», que es lo que está a medias y a lo que se viene;
+        {/* Aterrizando se abre por «empezados», que es lo que está a medias y a lo que se viene;
             entrando a mano desde repasar, por el primer continente, que es el paseo. */}
-        {modo === "repasar" ? <Repasar /> : <Explorar abrirEnPendientes={!elegido} />}
+        {modo === "repasar" ? <Repasar /> : <Explorar abrirEnEmpezados={!elegido} />}
       </main>
 
       {/* Fuera del <main>, que mide lo que la ventana: dentro le robaría a la tarjeta el alto que

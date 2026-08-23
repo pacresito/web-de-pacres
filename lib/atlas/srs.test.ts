@@ -103,12 +103,12 @@ assert.ok(MAX_EN_EL_AIRE > 9, "el freno no debe saltar con los diez países de l
 // El dominio de un país entero, que es por lo que filtra explorar
 {
   const viejo = vida(400, 1);   // dominado de sobra
-  const nuevo = vida(1, 0);     // pendiente
+  const nuevo = vida(1, 0);     // empezado
   const cuatro = { nombre: viejo, capital: viejo, bandera: viejo, forma: viejo };
   assert.strictEqual(dominioPais({ es: cuatro }, "es"), "dominado");
   // Con tres de cuatro todavía no: es el mismo listón que usa `cuenta` para «aprendido».
-  assert.strictEqual(dominioPais({ es: { ...cuatro, forma: nuevo } }, "es"), "pendiente");
-  assert.strictEqual(dominioPais({ es: { nombre: nuevo } }, "es"), "pendiente");
+  assert.strictEqual(dominioPais({ es: { ...cuatro, forma: nuevo } }, "es"), "empezado");
+  assert.strictEqual(dominioPais({ es: { nombre: nuevo } }, "es"), "empezado");
   assert.strictEqual(dominioPais({}, "es"), "sin ver");
 }
 
