@@ -1,12 +1,18 @@
 // Leer, escribir y restar las fechas del árbol. Puro: `npx tsx lib/arbol/fechas.test.ts`.
 
-/** Una fecha con la precisión que consta: `"1986"` o `"1986-03-01"`. */
+/** Una fecha con la precisión que consta: `"1986"`, `"2015-07"` o `"1986-03-01"`. */
 export type Fecha = string;
 
 export const MS_DIA = 86_400_000;
 
-/** De la mayoría solo se sabe el año; el día lo tienen los del calendario de cumpleaños. */
-export const conDia = (f: Fecha): boolean => f.length > 4;
+/**
+ * De la mayoría solo se sabe el año; el día lo tienen los del calendario de cumpleaños. Y a
+ * alguno le consta el mes y no el día —«murió en julio»—: una fecha se lee por lo que trae,
+ * y truncar eso al año tira lo único que la familia recordaba.
+ */
+export const conDia = (f: Fecha): boolean => f.length > 7;
+
+export const conMes = (f: Fecha): boolean => f.length > 4;
 
 export const añoDe = (f: Fecha): number => Number(f.slice(0, 4));
 
@@ -48,7 +54,7 @@ export const diaDeLaSemana = (f: Fecha): string => DIAS[new Date(`${f}T00:00:00Z
 
 /**
  * Los años cumplidos entre dos fechas, contados con la precisión que tengan las dos:
- * exacta si a ambas les consta el día, y por años naturales si a alguna solo el año —como
+ * exacta si a ambas les consta el día, y por años naturales si a alguna le falta —como
  * si hubiera caído el 1 de enero—. Mezclar las dos cuentas haría que añadir el día de
  * nacimiento de alguien le quitara un año de golpe, y eso no es un dato nuevo, es un susto.
  */

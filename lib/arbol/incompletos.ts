@@ -16,7 +16,7 @@
 // hueco del documento y cuando lo tiene y no es el que celebra esa persona se arregla en
 // `santoral.ts`, no preguntándoselo a nadie.
 
-import { conDia, seLeSuponeFallecido, type Fecha } from "./fechas";
+import { conDia, conMes, seLeSuponeFallecido, type Fecha } from "./fechas";
 import type { Grafo } from "./grafo";
 import { SIN_NOMBRE } from "./identidad";
 import type { Apellidos } from "./personas";
@@ -91,10 +91,17 @@ function escribirVida(p: Persona, hoy: Fecha): Trozo[] {
   return p.incierto === "fechas" ? trozos.map((t) => ({ ...t, falta: true })) : trozos;
 }
 
-/** `1986-03-01` entera, `1937-MM-DD` a la que solo le consta el año, y sin nada, `AAAA-MM-DD`. */
+/**
+ * `1986-03-01` entera, `1937-MM-DD` a la que solo le consta el año, `2015-07-DD` a la que le
+ * consta el mes, y sin nada, `AAAA-MM-DD`. **Se pide solo lo que falta**: a quien ya trae el
+ * mes, volver a pedírselo diría que lo que puso no valía.
+ */
 const deFecha = (f: Fecha | undefined): Trozo[] =>
   f === undefined
     ? [{ texto: "AAAA-MM-DD", falta: true }]
     : conDia(f)
       ? [{ texto: f, falta: false }]
-      : [{ texto: `${f}-`, falta: false }, { texto: "MM-DD", falta: true }];
+      : [
+          { texto: `${f}-`, falta: false },
+          { texto: conMes(f) ? "DD" : "MM-DD", falta: true },
+        ];

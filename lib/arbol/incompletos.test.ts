@@ -28,6 +28,11 @@ assert.strictEqual(
   "1921-10-01 – 1990-[MM-DD]",
   "la fecha que sí consta se lee entera y no se resalta",
 );
+assert.strictEqual(
+  linea(quien({ birth: "1944", death: "2015-07" }), apellidos(["A"])),
+  "1944-[MM-DD] – 2015-07-[DD]",
+  "a quien ya trae el mes solo se le pide el día",
+);
 // Lo dudoso se marca en color y sin decirlo: tiñe la fecha entera, que la duda es de la vida
 // y no de una cifra.
 assert.strictEqual(linea(quien({ birth: "1975-05-18", incierto: "fechas" }), apellidos(["A"])), "[1975-05-18]");

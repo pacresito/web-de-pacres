@@ -4,6 +4,7 @@ import {
   añoDe,
   conDia,
   conDuda,
+  conMes,
   edadDe,
   edadEntre,
   escribirCorto,
@@ -16,6 +17,8 @@ import {
 assert.strictEqual(añoDe("1986"), 1986);
 assert.strictEqual(añoDe("1986-03-01"), 1986);
 assert.ok(!conDia("1986") && conDia("1986-03-01"));
+assert.ok(!conDia("2015-07"), "el mes suelto no es un día");
+assert.ok(!conMes("1986") && conMes("2015-07") && conMes("1986-03-01"));
 assert.strictEqual(escribirCorto("2026-03-01"), "1 mar", "la corta va sin el cero de delante");
 assert.strictEqual(escribirCorto("2026-12-25"), "25 dic");
 assert.strictEqual(escribirCorto("1986"), "1986");
@@ -24,6 +27,7 @@ assert.strictEqual(escribirCorto("1986"), "1986");
 assert.strictEqual(edadEntre("1945", "2018"), 73);
 assert.strictEqual(edadEntre("1945-05-31", "2018"), 73, "el año natural manda aunque una sí tenga día");
 assert.strictEqual(edadEntre("1926", "1926"), 0);
+assert.strictEqual(edadEntre("1944", "2015-07"), 71, "con el mes se sigue contando por años naturales");
 
 // Exacta cuando las dos lo tienen
 assert.strictEqual(edadEntre("1986-03-01", "2026-08-06"), 40, "cumplido");
