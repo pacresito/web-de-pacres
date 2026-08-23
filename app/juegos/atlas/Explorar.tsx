@@ -13,8 +13,8 @@ const MONO = "var(--t-mono)";
 
 const TINTA: Record<Dominio, string> = {
   "sin ver": "transparent",
-  "en marcha": "var(--t-ink4)",
-  "asentado": "var(--t-accent)",
+  pendiente: "var(--t-ink4)",
+  dominado: "var(--t-accent)",
 };
 
 /**
@@ -42,14 +42,18 @@ function Marca({ estado, arriba = 0 }: { estado: Dominio; arriba?: number }) {
 /**
  * Los dos estados que se recorren además de los continentes. El valor **es** el dominio que
  * devuelve `dominioPais`, así que no hay tabla que traducir; solo la etiqueta va en plural, que
- * es como se leen ("asentados"), y el dominio en singular, que es como se dice de un país.
+ * es como se leen ("dominados"), y el dominio en singular, que es como se dice de un país.
  */
-const ESTADOS = ["en marcha", "asentado"] as const;
-const ETIQUETA: Record<(typeof ESTADOS)[number], string> = { "en marcha": "en marcha", asentado: "asentados" };
+const ESTADOS = ["pendiente", "dominado"] as const;
+const ETIQUETA: Record<(typeof ESTADOS)[number], string> = { pendiente: "pendientes", dominado: "dominados" };
 
 // El marco del minimapa sale del continente **del país**, no de lo que se esté recorriendo: por
-// «asentados» pasan países de los seis, y cada uno quiere el mapa de su vecindario.
+// «dominados» pasan países de los seis, y cada uno quiere el mapa de su vecindario.
 const MARCO = new Map(ORDEN.map((g) => [g.continente, g.marco]));
+
+// Dónde cae «pendientes» en `vistas`: los estados van detrás de los seis continentes, y es el
+// primero de los dos.
+const I_PENDIENTES = ORDEN.length;
 
 // Los caracteres que caben en una línea del nombre a tamaño entero. La fuente es mono y la
 // columna mide lo mismo en móvil y a lo ancho, así que sale una cuenta y no una medición: medir
@@ -86,9 +90,9 @@ function km2(n: number) {
  * La pestaña de explorar: los países de un continente, uno a uno y en el orden del barrido en S
  * —nunca alfabético, que el alfabeto no enseña geografía—. Solo mira: no toca ningún reloj.
  */
-export default function Explorar() {
+export default function Explorar({ abrirEnPendientes = false }: { abrirEnPendientes?: boolean }) {
   const mazo = useSyncExternalStore(suscribir, mazoActual, sinMazo);
-  const [ci, setCi] = useState(0);
+  const [ci, setCi] = useState(abrirEnPendientes ? I_PENDIENTES : 0);
   const [pi, setPi] = useState(0);
   const [abierto, setAbierto] = useState(false);
 
@@ -97,7 +101,7 @@ export default function Explorar() {
    * continente, pero se elige en el mismo sitio porque se elige por lo mismo —qué recorrido toca
    * hoy— y así no hay un segundo control a la vista compitiendo con este.
    *
-   * Y va **del mundo entero**, no del continente puesto: los asentados de Asia son tres, y tres
+   * Y va **del mundo entero**, no del continente puesto: los dominados de Asia son tres, y tres
    * países no son un repaso. Todos siguen el orden del barrido en S — quitar países no los
    * reordena.
    */
@@ -108,7 +112,7 @@ export default function Explorar() {
 
   const vista = vistas[ci];
   const lista = vista.paises;
-  // Un estado puede no tener ningún país —ninguno asentado todavía— y puede encoger por debajo
+  // Un estado puede no tener ningún país —ninguno dominado todavía— y puede encoger por debajo
   // del índice actual. Se acota al leer en vez de corregirlo con un efecto: un `setPi` en cascada
   // pintaría antes un país que ya no está en la lista.
   const id = lista[Math.min(pi, lista.length - 1)] ?? "";

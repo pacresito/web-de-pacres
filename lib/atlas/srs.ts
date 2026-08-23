@@ -1,7 +1,7 @@
 // El motor de Atlas: qué se pregunta, en qué orden y qué le pasa a la memoria al responder.
 // Lógica pura, sin React ni DOM: se verifica con `npx tsx lib/atlas/srs.test.ts`.
 //
-// No es SM-2. Aquí no hay fechas de vencimiento ni tarjetas pendientes, porque Pablo juega
+// No es SM-2. Aquí no hay fechas de vencimiento ni cola de deuda, porque Pablo juega
 // cuando le apetece —cinco tarjetas o doscientas, hoy o dentro de dos semanas— y una cola con
 // deuda visible es lo que mata los mazos: se abre, pone "418 pendientes" y se cierra.
 //
@@ -21,9 +21,9 @@ export type Nota = (typeof NOTAS)[number];
 
 const DIA = 86_400_000;
 
-// Un dato está asentado cuando aguanta más de tres semanas, el umbral clásico de Anki para
+// Un dato está dominado cuando aguanta más de tres semanas, el umbral clásico de Anki para
 // separar lo que se está aprendiendo de lo que ya se sabe.
-export const VIDA_ASENTADO = 21;
+export const VIDA_DOMINADO = 21;
 
 // Vidas de arranque, para la primera vez: ahí no hay `transcurrido` del que tirar.
 const VIDA_INICIAL: Record<Nota, number> = { fallo: 0.01, bien: 1, facil: 4 };
@@ -62,7 +62,7 @@ export function sospecha(estado: Estado | undefined, ahora: number): number {
   return (ahora - estado.visto) / DIA / estado.vida;
 }
 
-const asentado = (e: Estado | undefined) => !!e && e.vida > VIDA_ASENTADO;
+const dominado = (e: Estado | undefined) => !!e && e.vida > VIDA_DOMINADO;
 
 /**
  * Cómo de agarrado está un dato, para la ficha de explorar. Mira el reloj sin tocarlo: explorar
@@ -70,18 +70,18 @@ const asentado = (e: Estado | undefined) => !!e && e.vida > VIDA_ASENTADO;
  *
  * Los tres nombres son los que se enseñan: no hay traducción que mantener en dos sitios.
  */
-export type Dominio = "sin ver" | "en marcha" | "asentado";
-export const dominio = (e: Estado | undefined): Dominio => (!e ? "sin ver" : asentado(e) ? "asentado" : "en marcha");
+export type Dominio = "sin ver" | "pendiente" | "dominado";
+export const dominio = (e: Estado | undefined): Dominio => (!e ? "sin ver" : dominado(e) ? "dominado" : "pendiente");
 
 /**
- * Lo mismo para un país entero, que es por lo que se filtra en explorar. **Asentado exige los
+ * Lo mismo para un país entero, que es por lo que se filtra en explorar. **Dominado exige los
  * cuatro datos** —el mismo listón que `cuenta` llama aprendido, y no otro: dos listones para la
- * misma palabra harían que el filtro y el contador se contradijeran a la vista—; en marcha basta
+ * misma palabra harían que el filtro y el contador se contradijeran a la vista—; pendiente basta
  * con haber visto uno.
  */
 export function dominioPais(mazo: Mazo, paisId: string): Dominio {
-  if (DATOS.every((d) => asentado(mazo[paisId]?.[d]))) return "asentado";
-  return DATOS.some((d) => mazo[paisId]?.[d]) ? "en marcha" : "sin ver";
+  if (DATOS.every((d) => dominado(mazo[paisId]?.[d]))) return "dominado";
+  return DATOS.some((d) => mazo[paisId]?.[d]) ? "pendiente" : "sin ver";
 }
 
 /**
@@ -90,12 +90,12 @@ export function dominioPais(mazo: Mazo, paisId: string): Dominio {
  * enseña, solo frustra; y lo visible es el material de estudio.
  */
 export function huecos(mazo: Mazo, paisId: string): number {
-  const n = DATOS.filter((d) => asentado(mazo[paisId]?.[d])).length;
+  const n = DATOS.filter((d) => dominado(mazo[paisId]?.[d])).length;
   return n === 4 ? 3 : n >= 2 ? 2 : 1;
 }
 
 /**
- * Cuántos países se han empezado y cuántos están enteros —los cuatro datos asentados—.
+ * Cuántos países se han empezado y cuántos están enteros —los cuatro datos dominados—.
  *
  * Esto **no es el contador de Anki**, que es lo que hay que mirar antes de enseñarlo: aquel
  * cuenta deuda y sube solo mientras no vuelves; este cuenta trabajo hecho y solo sube cuando
@@ -107,7 +107,7 @@ export function cuenta(mazo: Mazo): { empezados: number; aprendidos: number } {
   for (const p of PAISES) {
     if (!DATOS.some((d) => mazo[p.id]?.[d])) continue;
     empezados++;
-    if (DATOS.every((d) => asentado(mazo[p.id]?.[d]))) aprendidos++;
+    if (DATOS.every((d) => dominado(mazo[p.id]?.[d]))) aprendidos++;
   }
   return { empezados, aprendidos };
 }
@@ -134,7 +134,7 @@ export function montar(mazo: Mazo, pais: Pais, ahora: number): Tarjeta {
  * adelanta el más sospechoso aunque no llegue a 1: la cola no se acaba nunca.
  *
  * El freno a los nuevos es invisible y no mira el calendario: mientras haya demasiados países
- * sin asentar peleando arriba, no entran más. Así una tarde de entusiasmo no se convierte en
+ * sin dominar peleando arriba, no entran más. Así una tarde de entusiasmo no se convierte en
  * una deuda de cuatrocientas tarjetas dentro de diez días.
  */
 export const MAX_EN_EL_AIRE = 30;
@@ -145,7 +145,7 @@ export function siguiente(mazo: Mazo, orden: string[], ahora: number): Pais | nu
   for (const p of PAISES) {
     const visto = DATOS.some((d) => mazo[p.id]?.[d]);
     if (!visto) continue;
-    if (!DATOS.some((d) => asentado(mazo[p.id]?.[d]))) enElAire++;
+    if (!DATOS.some((d) => dominado(mazo[p.id]?.[d]))) enElAire++;
     for (const d of DATOS) {
       const s = sospecha(mazo[p.id]?.[d], ahora);
       if (!mejor || s > mejor.s) mejor = { id: p.id, s };

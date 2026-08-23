@@ -21,10 +21,16 @@ const MONO = "var(--t-mono)";
  * dentro de explorar —dos niveles de lo mismo— y le daban al paseo el peso del trabajo.
  */
 export default function Atlas() {
-  const [modo, setModo] = useState<Modo>("repasar");
   const [pantallaCompleta, setPantallaCompleta] = useState(false);
   const identificado = useSyncExternalStore(suscribir, sesionActual, sinSesion);
   const mazo = useSyncExternalStore(suscribir, mazoActual, sinMazo);
+
+  // Dónde se aterriza depende de quién entra: con sesión, explorar —quien vuelve un día sí y
+  // otro también entra a ver por dónde va, no a la tarjeta que toque—; sin ella, repasar, que
+  // es la app y lo único que enseña qué es esto. Se deriva en vez de arrancar el estado con
+  // ello porque en la primera pintura no se sabe todavía; elegido a mano, manda la elección.
+  const [elegido, setElegido] = useState<Modo | null>(null);
+  const modo = elegido ?? (identificado ? "explorar" : "repasar");
 
   // Al cargar, y solo al cargar: se vuelca lo calificado sin cobertura y manda lo que diga
   // Redis. A media sesión no, que cambiar de tarjeta porque el otro dispositivo dijo otra cosa
@@ -51,11 +57,11 @@ export default function Atlas() {
           }}
         >
           {modo === "repasar" ? (
-            <button className="atlas-modo" onClick={() => setModo("explorar")} style={{ ...enlace, fontSize: 12, letterSpacing: "0.04em" }}>
+            <button className="atlas-modo" onClick={() => setElegido("explorar")} style={{ ...enlace, fontSize: 12, letterSpacing: "0.04em" }}>
               explorar ›
             </button>
           ) : (
-            <button className="atlas-modo-v" onClick={() => setModo("repasar")} style={{ ...enlace, fontSize: 13, fontWeight: 500, letterSpacing: "0.02em" }}>
+            <button className="atlas-modo-v" onClick={() => setElegido("repasar")} style={{ ...enlace, fontSize: 13, fontWeight: 500, letterSpacing: "0.02em" }}>
               ‹ repasar
             </button>
           )}
@@ -74,7 +80,9 @@ export default function Atlas() {
           </button>
         </div>
 
-        {modo === "repasar" ? <Repasar /> : <Explorar />}
+        {/* Aterrizando se abre por «pendientes», que es lo que está a medias y a lo que se viene;
+            entrando a mano desde repasar, por el primer continente, que es el paseo. */}
+        {modo === "repasar" ? <Repasar /> : <Explorar abrirEnPendientes={!elegido} />}
       </main>
 
       {/* Fuera del <main>, que mide lo que la ventana: dentro le robaría a la tarjeta el alto que

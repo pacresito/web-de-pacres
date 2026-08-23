@@ -14,6 +14,7 @@ import { calificar, montar, siguiente, type Dato, type Mazo, type Nota, type Tar
 const CLAVE = "atlas:mazo";
 const CLAVE_COLA = "atlas:cola";
 const CLAVE_NIVEL = "atlas:nivel";
+const CLAVE_SESION = "atlas:sesion";
 const RUTA_MAZO = "/juegos/atlas/api/mazo";
 const RUTA_LOGIN = "/juegos/atlas/api/login";
 
@@ -49,6 +50,7 @@ function leerDeDisco(): Mazo {
   }
   try {
     cola = JSON.parse(localStorage.getItem(CLAVE_COLA) ?? "[]") as Calificacion[];
+    identificado = localStorage.getItem(CLAVE_SESION) === "1";
     const n = localStorage.getItem(CLAVE_NIVEL);
     if (esPerfil(n)) nivel = n;
     const s = localStorage.getItem(CLAVE);
@@ -64,6 +66,7 @@ function guardar() {
     localStorage.setItem(CLAVE, JSON.stringify(mazo));
     localStorage.setItem(CLAVE_COLA, JSON.stringify(cola));
     localStorage.setItem(CLAVE_NIVEL, nivel);
+    localStorage.setItem(CLAVE_SESION, identificado ? "1" : "0");
   } catch {}
 }
 
@@ -97,7 +100,17 @@ export function mazoActual(): Mazo {
 }
 export const sinMazo = (): Mazo => VACIO;
 
-export const sesionActual = () => identificado;
+/**
+ * Quién entra. La cookie es `HttpOnly` y desde aquí no se puede mirar, así que quien manda
+ * mientras no contesta Redis es lo que se recordó de la última vez: sin eso nadie es nadie
+ * hasta que vuelve el primer volcado, y lo que depende de tener sesión —el prompt, la pantalla
+ * de entrada— se pintaría dos veces. Es una copia optimista, no un permiso: la corrige ese
+ * mismo volcado, que va en cada carga, y lo que autoriza es la cookie, en el servidor.
+ */
+export const sesionActual = () => {
+  if (!mazo) vistaActual();
+  return identificado;
+};
 export const sinSesion = () => false;
 
 /** Aplica las notas de la tarjeta actual, guarda y pasa a la siguiente. */
