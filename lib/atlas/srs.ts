@@ -75,9 +75,9 @@ export const dominio = (e: Estado | undefined): Dominio => (!e ? "sin ver" : apr
 
 /**
  * Lo mismo para un país entero, que es por lo que se filtra en explorar. **Aprendido exige los
- * cuatro datos** —el mismo listón que cuenta `cuenta`, y no otro: dos listones para la misma
+ * cuatro datos** —el mismo listón que usa `cuenta`, y no otro: dos listones para la misma
  * palabra harían que el filtro y el contador se contradijeran a la vista—; empezado basta con
- * haber visto uno, y por eso no incluye a los aprendidos: son el estado de al lado.
+ * haber visto uno.
  */
 export function dominioPais(mazo: Mazo, paisId: string): Dominio {
   if (DATOS.every((d) => aprendido(mazo[paisId]?.[d]))) return "aprendido";
@@ -95,9 +95,8 @@ export function huecos(mazo: Mazo, paisId: string): number {
 }
 
 /**
- * Cuántos países se han visto y cuántos están enteros —los cuatro datos aprendidos—. Las dos
- * palabras son las de los estados, que es lo que evita el contador que dice otra cosa que el
- * filtro: los vistos son los empezados más los aprendidos.
+ * Cuántos países se han visto y cuántos están enteros —los cuatro datos aprendidos—. Visto es
+ * todo lo que no está «sin ver»: los empezados más los aprendidos.
  *
  * Esto **no es el contador de Anki**, que es lo que hay que mirar antes de enseñarlo: aquel
  * cuenta deuda y sube solo mientras no vuelves; este cuenta trabajo hecho y solo sube cuando
