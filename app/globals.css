@@ -337,6 +337,14 @@
   .atlas-mapas { gap: 24px; }
 }
 
+/* Media ficha por lado, para pasar de país con el pulgar donde ya está. Van encima de todo lo de
+   la ficha, que no tiene nada que pulsar; sin realce al tocar, que el país cambia y eso ya lo
+   dice. Solo existen en móvil: con ratón están las flechas y el teclado. */
+.atlas-toque {
+  position: absolute; top: 0; bottom: 0; width: 50%; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
 /* Seis continentes no caben en una tira de móvil: ahí son una palabra que despliega una rejilla
    de 2×3, leída por filas y en el mismo orden lejano→cercano. Con sitio, los seis en una línea. */
 .atlas-cont-fila {

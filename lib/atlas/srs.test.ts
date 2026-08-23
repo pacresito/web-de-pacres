@@ -1,6 +1,6 @@
 // Test de lógica pura: `npx tsx lib/atlas/srs.test.ts`. Fuera del build.
 import assert from "assert";
-import { calificar, cuenta, DATOS, huecos, MAX_EN_EL_AIRE, montar, nuevaVida, siguiente, sospecha, type Mazo } from "./srs";
+import { calificar, cuenta, DATOS, dominioPais, huecos, MAX_EN_EL_AIRE, montar, nuevaVida, siguiente, sospecha, type Mazo } from "./srs";
 import { PAISES } from "./paises";
 
 const DIA = 86_400_000;
@@ -98,6 +98,18 @@ assert.ok(MAX_EN_EL_AIRE > 9, "el freno no debe saltar con los diez países de l
   );
   // Un país que no está en la lista no cuenta: el mazo puede traer restos de otra versión.
   assert.deepEqual(cuenta({ zz: { nombre: viejo } }), { empezados: 0, aprendidos: 0 });
+}
+
+// El dominio de un país entero, que es por lo que filtra explorar
+{
+  const viejo = vida(400, 1);   // asentado de sobra
+  const nuevo = vida(1, 0);     // en marcha
+  const cuatro = { nombre: viejo, capital: viejo, bandera: viejo, forma: viejo };
+  assert.strictEqual(dominioPais({ es: cuatro }, "es"), "asentado");
+  // Con tres de cuatro todavía no: es el mismo listón que usa `cuenta` para «aprendido».
+  assert.strictEqual(dominioPais({ es: { ...cuatro, forma: nuevo } }, "es"), "en marcha");
+  assert.strictEqual(dominioPais({ es: { nombre: nuevo } }, "es"), "en marcha");
+  assert.strictEqual(dominioPais({}, "es"), "sin ver");
 }
 
 console.log("srs: ok");

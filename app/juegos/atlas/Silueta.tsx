@@ -17,11 +17,18 @@ export default function Silueta({ forma, nombre, ajustada = false, style }: {
 }) {
   return (
     <svg
-      viewBox={ajustada ? marcoDeTinta(forma.d) : "0 0 1000 1000"}
+      // El arrecife entra en la cuenta de la tinta: asoma por fuera de la tierra, y ceñirse solo
+      // a ella le cortaría los anillos por los lados.
+      viewBox={ajustada ? marcoDeTinta(forma.d + forma.arrecife) : "0 0 1000 1000"}
       preserveAspectRatio={ajustada ? "xMinYMid meet" : undefined}
       style={style}
       aria-label={`Forma de ${nombre}`}
     >
+      {/* El coral, debajo de la tierra: en un archipiélago de atolones el anillo es la forma que
+          se reconoce y los islotes que lo coronan son el detalle que va encima. Sin relleno y sin
+          cerrar — un arrecife no encierra nada. */}
+      {forma.arrecife && <path d={forma.arrecife} fill="none" stroke="var(--t-accent)" strokeWidth={1.5}
+            strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />}
       {/* Trazo además de relleno, como en el globo y el minimapa: un archipiélago de atolones
           —Maldivas, Tuvalu, las Marshall— relleno a secas se queda en unas motas que no se ven.
           A los grandes, un píxel y medio de contorno no les hace nada. */}

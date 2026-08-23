@@ -18,6 +18,7 @@ import { PAISES, PAIS_POR_ID } from "../lib/atlas/paises";
 
 const BASE = "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson";
 const GB = "https://www.geoboundaries.org/api/current/gbOpen"; // solo para los diminutos, ver abajo
+const MARGEN_ARRECIFE = 0.3; // grados: cuánto se ensancha la caja del país al buscarle arrecife
 const SALIDA = new URL("../data/atlas/formas.ts", import.meta.url);
 const SALIDA_MUNDO = new URL("../data/atlas/mundo.ts", import.meta.url);
 const CACHE = process.env.ATLAS_CACHE; // carpeta con los geojson ya bajados, para iterar sin red
@@ -57,11 +58,32 @@ const FRONTERAS: Record<string, number> = { ma: 27 + 40 / 60 };
 // **con la misma escala** —el tamaño entre ellas sigue siendo verdad— y la línea discontinua del
 // medio dice que lo que no está a escala es la distancia. Los paneles van de oeste a este, como
 // un mapa; el globo y el punto del minimapa se plantan en el mayor de los dos.
-const AJUSTES: Record<string, { cerca?: Cerca; paneles?: [Cerca, Cerca]; tol?: number }> = {
+//
+// `arrecife` dibuja además el coral de Natural Earth, trazado y sin rellenar. Es para el país
+// cuya forma **no es su tierra**: en un archipiélago de atolones la tierra son islotes de dos
+// kilómetros repartidos por ochocientos, y a tamaño de silueta eso no es una forma, es polvo. El
+// anillo del atolón sí lo es, y es lo que dibuja cualquier mapa del país. Va país a país porque
+// el coral solo manda donde el atolón **es** el país: en Australia sería la Gran Barrera pegada
+// a un continente, que no es la forma de nada.
+//
+// `islas` baja el suelo de las islas que se quedan a un absoluto en km², para el país al que la
+// regla relativa le come las suyas: `MIN_AREA_REL` mide contra el polígono mayor, así que cuanto
+// más grande es la masa principal más grande tiene que ser la isla para sobrevivir. También va
+// país a país, y no como regla general, porque no hay suelo absoluto que sirva a la vez: el que
+// deja pasar Formentera (91 km²) mete 931 islas más en el mundo —Canadá 186, Rusia 112, Chile
+// 119—, y una costa fiordo no se lee mejor con doscientos islotes alrededor.
+// `cadena` mide `MAX_KM` desde todo lo admitido y no solo desde el polígono mayor, para el país
+// que **es** una ristra: medida desde el mayor, una cadena continua se corta por donde la isla
+// grande se queda atrás, y el país sale amputado sin que falte ningún salto. Va país a país
+// porque cambia trece —Japón se traería Okinawa y encogería Honshu, Indonesia pasa de 8 islas a
+// 47—, y cada uno de esos hay que mirarlo antes, no darlo por bueno.
+const AJUSTES: Record<string, { cerca?: Cerca; paneles?: [Cerca, Cerca]; tol?: number; arrecife?: boolean; islas?: number; cadena?: boolean }> = {
   bs: { cerca: [-77.5, 25.5, 260] },  // el racimo del noroeste: Andros, Gran Bahama, Ábaco
+  es: { islas: 60 },                  // Menorca, Ibiza y Formentera, que la regla relativa suelta
   fm: { paneles: [[151.8, 7.4, 60], [158.2, 6.9, 60]] },   // la laguna de Chuuk y Pohnpei
   ki: { paneles: [[172.98, 1.35, 30], [-157.4, 1.9, 60]] }, // Tarawa y Kiritimati
   mh: { cerca: [171.2, 7.1, 60] },    // Majuro y Arno
+  mv: { arrecife: true, cadena: true }, // los atolones, que son lo que se reconoce, y los 871 km
   nr: { tol: 6 },
   pw: { cerca: [134.5, 7.5, 60] },    // Babeldaob y Koror, no los arrecifes del suroeste
   sc: { cerca: [55.5, -4.6, 60] },    // Mahé, Praslin y La Digue
@@ -84,7 +106,7 @@ type Poly = Anillo[];
 type Geometria = { type: "Polygon"; coordinates: Poly } | { type: "MultiPolygon"; coordinates: Poly[] };
 /** En torno a qué punto se recorta una silueta y con cuánto radio, en km. */
 type Cerca = [number, number, number];
-type Salida = { id: string; nombre: string; d: string; linea: string; separador: string; ladoKm: number; lon: number; lat: number; puntos: number };
+type Salida = { id: string; nombre: string; d: string; arrecife: string; linea: string; separador: string; ladoKm: number; lon: number; lat: number; puntos: number };
 type Pieza = { properties: Record<string, string | number | null>; geometry: Geometria };
 
 // El contorno de alta resolución de un país suelto. Se usa poco —una veintena de los 195— así
@@ -144,13 +166,33 @@ function recortar(polys: Poly[], [lon, lat, km]: Cerca, nombre: string): Poly[] 
   return cerca;
 }
 
-function polysQueSeQuedan(polys: Poly[]): Poly[] {
+/** El área de un anillo en km². `areaRel` va en grados², que solo sirve para comparar entre sí. */
+function km2De(anillo: Anillo, grados: number): number {
+  const c = caja([anillo]);
+  return grados * 111 * 111 * Math.cos(((c.y0 + c.y1) / 2) * rad);
+}
+
+function polysQueSeQuedan(polys: Poly[], suelo = 0, cadena = false): Poly[] {
   if (polys.length === 1) return polys;
   const areas = polys.map((p) => areaRel(p[0]));
   const mayor = areas.indexOf(Math.max(...areas));
-  const c = caja([polys[mayor][0]]);
-  return polys.filter((p, i) =>
-    i === mayor || (areas[i] >= areas[mayor] * MIN_AREA_REL && kmEntre(c, caja([p[0]])) <= MAX_KM));
+  const cajas = polys.map((p) => caja([p[0]]));
+  const pesa = (i: number) =>
+    areas[i] >= areas[mayor] * MIN_AREA_REL || (suelo > 0 && km2De(polys[i][0], areas[i]) >= suelo);
+  // `MAX_KM` se mide desde el polígono mayor; con `cadena`, desde todo lo ya admitido, así que
+  // la distancia se recorre a saltos y una ristra de islas entra entera.
+  const dentro = new Set([mayor]);
+  for (let crece = true; crece; ) {
+    crece = false;
+    for (let i = 0; i < polys.length; i++) {
+      if (dentro.has(i) || !pesa(i)) continue;
+      const llega = cadena
+        ? [...dentro].some((j) => kmEntre(cajas[j], cajas[i]) <= MAX_KM)
+        : kmEntre(cajas[mayor], cajas[i]) <= MAX_KM;
+      if (llega) { dentro.add(i); crece = cadena; }
+    }
+  }
+  return polys.filter((_, i) => dentro.has(i));
 }
 
 // Lambert azimutal equivalente centrada en (lon0, lat0), en km. La resta de longitudes entra
@@ -223,6 +265,13 @@ for (const f of g10.features) {
   if (iso && iso !== "-99" && !porIso.has(iso)) porIso.set(iso, f);
 }
 
+// El coral, para los países que lo piden en AJUSTES: líneas sueltas en lon/lat, no polígonos —
+// un arrecife no encierra nada, es el borde de lo que asoma.
+const arrecifes: Anillo[] = JSON.parse(CACHE
+  ? fs.readFileSync(`${CACHE}/ne_10m_reefs.geojson`, "utf8")
+  : await (await fetch(`${BASE}/ne_10m_reefs.geojson`)).text())
+  .features.map((f: { geometry: { coordinates: Anillo } }) => f.geometry.coordinates);
+
 const salida: Salida[] = [];
 for (const p of PAISES) {
   const feat = porIso.get(p.id);
@@ -250,12 +299,20 @@ for (const p of PAISES) {
   // los agujeros de una fuente de alta resolución son dársenas y puertos, y en una silueta que
   // se memoriza son manchas blancas sin significado.
   const grupos = (ajuste?.paneles ?? [null]).map((cerca) => {
-    const polys = polysQueSeQuedan(cerca ? recortar(crudo, cerca, p.nombre) : crudo);
+    const polys = polysQueSeQuedan(cerca ? recortar(crudo, cerca, p.nombre) : crudo, ajuste?.islas, ajuste?.cadena);
     const anillos = polys.map((poly) => poly[0]);
     const c = caja(anillos);
     const lon0 = (c.x0 + c.x1) / 2, lat0 = (c.y0 + c.y1) / 2;
-    const proy = anillos.map((a) => a.map(([lon, lat]) => laea(lon, lat, lon0, lat0)) as Anillo);
-    return { polys, c, lon0, lat0, proy, b: caja(proy), area: anillos.reduce((n, a) => n + areaRel(a), 0) };
+    // El coral de la caja del país, ensanchada: el anillo del atolón asoma bastante por fuera del
+    // islote que lo corona. Se exige la línea **entera** dentro para no cortar un arrecife por el
+    // borde de la caja y dejar medio anillo suelto flotando.
+    const coral = !ajuste?.arrecife ? [] : arrecifes.filter((linea) => linea.every(([lon, lat]) =>
+      lon >= c.x0 - MARGEN_ARRECIFE && lon <= c.x1 + MARGEN_ARRECIFE &&
+      lat >= c.y0 - MARGEN_ARRECIFE && lat <= c.y1 + MARGEN_ARRECIFE));
+    const proyectar = (a: Anillo) => a.map(([lon, lat]) => laea(lon, lat, lon0, lat0)) as Anillo;
+    const proy = anillos.map(proyectar), proyCoral = coral.map(proyectar);
+    return { polys, coral, c, lon0, lat0, proy, proyCoral, b: caja([...proy, ...proyCoral]),
+             area: anillos.reduce((n, a) => n + areaRel(a), 0) };
   });
 
   // Los paneles comparten escala: la que hace caber al que peor lo tiene. El tamaño de uno frente
@@ -267,7 +324,7 @@ for (const p of PAISES) {
   const escala = Math.min(...grupos.map(({ b }, i) =>
     Math.min((cajas[i][1] - cajas[i][0]) / (b.x1 - b.x0), (BOX * (1 - 2 * PAD)) / (b.y1 - b.y0))));
 
-  let d = "", puntos = 0;
+  let d = "", arrecife = "", puntos = 0;
   const pinta = grupos.map(({ b }, i) => {
     const cx = (cajas[i][0] + cajas[i][1]) / 2;
     return {
@@ -275,14 +332,24 @@ for (const p of PAISES) {
       py: (y: number) => BOX / 2 - (y - (b.y0 + b.y1) / 2) * escala,
     };
   });
-  grupos.forEach(({ proy }, i) => {
+  grupos.forEach(({ proy, proyCoral }, i) => {
     const { px, py } = pinta[i];
+    const trazo = (a: Anillo) => simplificar(a.map(([x, y]) => [px(x), py(y)] as [number, number]), tol);
+    // Redondear al pintar: Math.cos/sin no están fijados por IEEE y Node y el navegador
+    // discrepan en el último bit, lo que rompe la hidratación con un error ilegible.
+    const eme = (a: Anillo) => "M" + a.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join("L");
     for (const anillo of proy) {
-      const out = simplificar(anillo.map(([x, y]) => [px(x), py(y)] as [number, number]), tol);
+      const out = trazo(anillo);
       if (out.length < 3) continue;
-      // Redondear al pintar: Math.cos/sin no están fijados por IEEE y Node y el navegador
-      // discrepan en el último bit, lo que rompe la hidratación con un error ilegible.
-      d += "M" + out.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join("L") + "Z";
+      d += eme(out) + "Z";
+      puntos += out.length;
+    }
+    // El coral va sin `Z`: es la línea del arrecife tal como viene, y cerrarla inventaría el
+    // tramo que la fuente no trae.
+    for (const linea of proyCoral) {
+      const out = trazo(linea);
+      if (out.length < 2) continue;
+      arrecife += eme(out);
       puntos += out.length;
     }
   });
@@ -292,7 +359,7 @@ for (const p of PAISES) {
   const mayor = grupos.reduce((a, b) => (b.area > a.area ? b : a));
   const { lon0, lat0, c, polys } = mayor;
   const { px, py } = pinta[grupos.indexOf(mayor)];
-  const entero = caja(grupos.flatMap((g) => g.polys.map((poly) => poly[0]))
+  const entero = caja(grupos.flatMap((g) => [...g.polys.map((poly) => poly[0]), ...g.coral])
     .map((a) => a.map(([lon, lat]) => laea(lon, lat, lon0, lat0)) as Anillo));
   const lado = Math.max(entero.x1 - entero.x0, entero.y1 - entero.y0);
 
@@ -316,7 +383,7 @@ for (const p of PAISES) {
     suelta();
   }
 
-  salida.push({ id: p.id, nombre: p.nombre, d, linea, separador, ladoKm: Math.round(lado), lon: lon0, lat: lat0, puntos });
+  salida.push({ id: p.id, nombre: p.nombre, d, arrecife, linea, separador, ladoKm: Math.round(lado), lon: lon0, lat: lat0, puntos });
 }
 
 const ts = `// GENERADO por scripts/build-atlas-formas.mts — no editar a mano.
@@ -324,6 +391,7 @@ const ts = `// GENERADO por scripts/build-atlas-formas.mts — no editar a mano.
 
 export type Forma = {
   d: string;      // path SVG en un viewBox 0 0 ${BOX} ${BOX}, normalizado
+  arrecife: string; // el coral, a trazar sin rellenar y sin cerrar ("" si el país no lo lleva)
   linea: string;  // frontera interior a marcar dentro de la silueta ("" si no hay)
   separador: string; // la línea entre los dos paneles de un país partido ("" si va de una pieza)
   ladoKm: number; // lado mayor real, para la ficha
@@ -332,7 +400,7 @@ export type Forma = {
 };
 
 export const FORMAS: Record<string, Forma> = {
-${salida.map((s) => `  ${s.id}: { d: "${s.d}", linea: "${s.linea}", separador: "${s.separador}", ladoKm: ${s.ladoKm}, lon: ${s.lon.toFixed(3)}, lat: ${s.lat.toFixed(3)} },`).join("\n")}
+${salida.map((s) => `  ${s.id}: { d: "${s.d}", arrecife: "${s.arrecife}", linea: "${s.linea}", separador: "${s.separador}", ladoKm: ${s.ladoKm}, lon: ${s.lon.toFixed(3)}, lat: ${s.lat.toFixed(3)} },`).join("\n")}
 };
 `;
 fs.mkdirSync(new URL(".", SALIDA), { recursive: true });

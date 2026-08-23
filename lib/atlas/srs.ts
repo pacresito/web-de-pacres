@@ -74,6 +74,17 @@ export type Dominio = "sin ver" | "en marcha" | "asentado";
 export const dominio = (e: Estado | undefined): Dominio => (!e ? "sin ver" : asentado(e) ? "asentado" : "en marcha");
 
 /**
+ * Lo mismo para un país entero, que es por lo que se filtra en explorar. **Asentado exige los
+ * cuatro datos** —el mismo listón que `cuenta` llama aprendido, y no otro: dos listones para la
+ * misma palabra harían que el filtro y el contador se contradijeran a la vista—; en marcha basta
+ * con haber visto uno.
+ */
+export function dominioPais(mazo: Mazo, paisId: string): Dominio {
+  if (DATOS.every((d) => asentado(mazo[paisId]?.[d]))) return "asentado";
+  return DATOS.some((d) => mazo[paisId]?.[d]) ? "en marcha" : "sin ver";
+}
+
+/**
  * Cuántos huecos lleva la tarjeta de un país. Va con la madurez, no con la sospecha: cuanto
  * menos se sabe un país, más datos se ven. Examinar de algo que aún no está codificado no
  * enseña, solo frustra; y lo visible es el material de estudio.

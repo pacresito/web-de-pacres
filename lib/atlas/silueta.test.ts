@@ -13,4 +13,9 @@ assert.equal(marcoDeTinta("M400.0,0.0L600.0,500.0L400.0,1000.0Z"), "400.0 0 200.
 // en blanco, sin error que lo delate.
 assert.equal(marcoDeTinta(""), "0 0 1000 1000");
 
+// El arrecife llega concatenado a la tierra y cuenta como tinta: asoma por fuera y el marco tiene
+// que ensancharse, o los anillos del atolón salen cortados por los lados.
+assert.equal(marcoDeTinta("M400.0,0.0L600.0,500.0L400.0,1000.0Z" + "M300.0,200.0L700.0,800.0"),
+             "300.0 0 400.0 1000");
+
 console.log("silueta ok");
