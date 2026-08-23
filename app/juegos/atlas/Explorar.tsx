@@ -14,7 +14,7 @@ const MONO = "var(--t-mono)";
 const TINTA: Record<Dominio, string> = {
   "sin ver": "transparent",
   empezado: "var(--t-ink4)",
-  dominado: "var(--t-accent)",
+  aprendido: "var(--t-accent)",
 };
 
 /**
@@ -42,13 +42,13 @@ function Marca({ estado, arriba = 0 }: { estado: Dominio; arriba?: number }) {
 /**
  * Los dos estados que se recorren además de los continentes. El valor **es** el dominio que
  * devuelve `dominioPais`, así que no hay tabla que traducir; solo la etiqueta va en plural, que
- * es como se leen ("dominados"), y el dominio en singular, que es como se dice de un país.
+ * es como se leen ("aprendidos"), y el dominio en singular, que es como se dice de un país.
  */
-const ESTADOS = ["empezado", "dominado"] as const;
-const ETIQUETA: Record<(typeof ESTADOS)[number], string> = { empezado: "empezados", dominado: "dominados" };
+const ESTADOS = ["empezado", "aprendido"] as const;
+const ETIQUETA: Record<(typeof ESTADOS)[number], string> = { empezado: "empezados", aprendido: "aprendidos" };
 
 // El marco del minimapa sale del continente **del país**, no de lo que se esté recorriendo: por
-// «dominados» pasan países de los seis, y cada uno quiere el mapa de su vecindario.
+// «aprendidos» pasan países de los seis, y cada uno quiere el mapa de su vecindario.
 const MARCO = new Map(ORDEN.map((g) => [g.continente, g.marco]));
 
 // Dónde cae «empezados» en `vistas`: los estados van detrás de los seis continentes, y es el
@@ -101,7 +101,7 @@ export default function Explorar({ abrirEnEmpezados = false }: { abrirEnEmpezado
    * continente, pero se elige en el mismo sitio porque se elige por lo mismo —qué recorrido toca
    * hoy— y así no hay un segundo control a la vista compitiendo con este.
    *
-   * Y va **del mundo entero**, no del continente puesto: los dominados de Asia son tres, y tres
+   * Y va **del mundo entero**, no del continente puesto: los aprendidos de Asia son tres, y tres
    * países no son un repaso. Todos siguen el orden del barrido en S — quitar países no los
    * reordena.
    */
@@ -112,7 +112,7 @@ export default function Explorar({ abrirEnEmpezados = false }: { abrirEnEmpezado
 
   const vista = vistas[ci];
   const lista = vista.paises;
-  // Un estado puede no tener ningún país —ninguno dominado todavía— y puede encoger por debajo
+  // Un estado puede no tener ningún país —ninguno aprendido todavía— y puede encoger por debajo
   // del índice actual. Se acota al leer en vez de corregirlo con un efecto: un `setPi` en cascada
   // pintaría antes un país que ya no está en la lista.
   const id = lista[Math.min(pi, lista.length - 1)] ?? "";

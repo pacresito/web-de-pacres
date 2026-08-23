@@ -44,9 +44,9 @@ assert.strictEqual(huecos(conVidas({}), "es"), 1);
 assert.strictEqual(huecos(conVidas({ nombre: 100 }), "es"), 1);
 // A medias, dos y dos.
 assert.strictEqual(huecos(conVidas({ nombre: 100, capital: 100 }), "es"), 2);
-// Dominado, tres preguntas y una pista. La proporción estudio:examen se invierte sola.
+// Aprendido, tres preguntas y una pista. La proporción estudio:examen se invierte sola.
 assert.strictEqual(huecos(conVidas({ nombre: 100, capital: 100, bandera: 100, forma: 100 }), "es"), 3);
-// Y el umbral es la vida, no el número de aciertos: veinte días aún no es dominado.
+// Y el umbral es la vida, no el número de aciertos: veinte días aún no es aprendido.
 assert.strictEqual(huecos(conVidas({ nombre: 20, capital: 20, bandera: 20, forma: 20 }), "es"), 1);
 
 // El montaje de la tarjeta
@@ -56,9 +56,9 @@ const espana = PAISES.find((p) => p.id === "es")!;
 assert.deepStrictEqual(montar({}, espana, AHORA).tapados, []);
 assert.strictEqual(montar({}, espana, AHORA).primeraVez, true);
 
-// Con todo dominado y todo igual de olvidado, se tapan tres y queda una pista: nunca los cuatro.
-const dominado: Mazo = { es: { nombre: vida(100, 300), capital: vida(100, 200), bandera: vida(100, 100), forma: vida(100, 50) } };
-const t = montar(dominado, espana, AHORA);
+// Con todo aprendido y todo igual de olvidado, se tapan tres y queda una pista: nunca los cuatro.
+const aprendido: Mazo = { es: { nombre: vida(100, 300), capital: vida(100, 200), bandera: vida(100, 100), forma: vida(100, 50) } };
+const t = montar(aprendido, espana, AHORA);
 assert.strictEqual(t.tapados.length, 3);
 assert.strictEqual(t.primeraVez, false);
 // Se tapa lo más sospechoso y la pista es lo que mejor se tiene agarrado: aquí, la forma.
@@ -67,7 +67,7 @@ assert.ok(!t.tapados.includes("forma"));
 
 // Calificar solo toca el dato calificado, no la tarjeta entera. Es la razón de que cada dato
 // lleve su propio reloj: acertar la bandera no debe estirar la capital.
-const tras = calificar(dominado, "es", "nombre", "fallo", AHORA);
+const tras = calificar(aprendido, "es", "nombre", "fallo", AHORA);
 assert.strictEqual(tras.es.nombre!.vida, 0.01);
 assert.strictEqual(tras.es.capital!.vida, 100);
 
@@ -80,32 +80,32 @@ assert.strictEqual(siguiente({ pt: { capital: vida(1, 9) } }, orden, AHORA)!.id,
 // Si nada ha superado su vida, entra uno nuevo en vez de adelantar trabajo.
 assert.strictEqual(siguiente({ es: { nombre: vida(100, 1) } }, orden, AHORA)!.id, orden[0] === "es" ? orden[1] : orden[0]);
 
-// El freno invisible: con demasiados países sin dominar, deja de entrar gente nueva aunque no
+// El freno invisible: con demasiados países sin aprender, deja de entrar gente nueva aunque no
 // haya nada vencido. Una tarde de entusiasmo no debe volverse una deuda de cuatrocientas.
 const enElAire: Mazo = Object.fromEntries(PAISES.slice(0, 9).map((p) => [p.id, { nombre: vida(100, 1) }]));
 assert.strictEqual(siguiente(enElAire, orden, AHORA)!.id, orden[9]); // nueve en el aire: aún entran
 assert.ok(MAX_EN_EL_AIRE > 9, "el freno no debe saltar con los diez países de la fase 1");
 
 {
-  // La cuenta del prompt: empezado es haber visto algo; aprendido, tener los cuatro dominados.
+  // La cuenta del prompt: visto es tener algún dato; aprendido, tenerlos los cuatro.
   const viejo = { visto: Date.now(), vida: 100 };
   const nuevo = { visto: Date.now(), vida: 2 };
-  assert.deepEqual(cuenta({}), { empezados: 0, aprendidos: 0 });
-  assert.deepEqual(cuenta({ es: { nombre: nuevo } }), { empezados: 1, aprendidos: 0 });
+  assert.deepEqual(cuenta({}), { vistos: 0, aprendidos: 0 });
+  assert.deepEqual(cuenta({ es: { nombre: nuevo } }), { vistos: 1, aprendidos: 0 });
   assert.deepEqual(
     cuenta({ es: { nombre: viejo, capital: viejo, bandera: viejo, forma: viejo }, fr: { nombre: viejo, capital: nuevo } }),
-    { empezados: 2, aprendidos: 1 },
+    { vistos: 2, aprendidos: 1 },
   );
   // Un país que no está en la lista no cuenta: el mazo puede traer restos de otra versión.
-  assert.deepEqual(cuenta({ zz: { nombre: viejo } }), { empezados: 0, aprendidos: 0 });
+  assert.deepEqual(cuenta({ zz: { nombre: viejo } }), { vistos: 0, aprendidos: 0 });
 }
 
 // El dominio de un país entero, que es por lo que filtra explorar
 {
-  const viejo = vida(400, 1);   // dominado de sobra
+  const viejo = vida(400, 1);   // aprendido de sobra
   const nuevo = vida(1, 0);     // empezado
   const cuatro = { nombre: viejo, capital: viejo, bandera: viejo, forma: viejo };
-  assert.strictEqual(dominioPais({ es: cuatro }, "es"), "dominado");
+  assert.strictEqual(dominioPais({ es: cuatro }, "es"), "aprendido");
   // Con tres de cuatro todavía no: es el mismo listón que usa `cuenta` para «aprendido».
   assert.strictEqual(dominioPais({ es: { ...cuatro, forma: nuevo } }, "es"), "empezado");
   assert.strictEqual(dominioPais({ es: { nombre: nuevo } }, "es"), "empezado");

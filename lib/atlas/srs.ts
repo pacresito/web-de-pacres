@@ -21,9 +21,9 @@ export type Nota = (typeof NOTAS)[number];
 
 const DIA = 86_400_000;
 
-// Un dato está dominado cuando aguanta más de tres semanas, el umbral clásico de Anki para
+// Un dato está aprendido cuando aguanta más de tres semanas, el umbral clásico de Anki para
 // separar lo que se está aprendiendo de lo que ya se sabe.
-export const VIDA_DOMINADO = 21;
+export const VIDA_APRENDIDO = 21;
 
 // Vidas de arranque, para la primera vez: ahí no hay `transcurrido` del que tirar.
 const VIDA_INICIAL: Record<Nota, number> = { fallo: 0.01, bien: 1, facil: 4 };
@@ -62,7 +62,7 @@ export function sospecha(estado: Estado | undefined, ahora: number): number {
   return (ahora - estado.visto) / DIA / estado.vida;
 }
 
-const dominado = (e: Estado | undefined) => !!e && e.vida > VIDA_DOMINADO;
+const aprendido = (e: Estado | undefined) => !!e && e.vida > VIDA_APRENDIDO;
 
 /**
  * Cómo de agarrado está un dato, para la ficha de explorar. Mira el reloj sin tocarlo: explorar
@@ -70,18 +70,17 @@ const dominado = (e: Estado | undefined) => !!e && e.vida > VIDA_DOMINADO;
  *
  * Los tres nombres son los que se enseñan: no hay traducción que mantener en dos sitios.
  */
-export type Dominio = "sin ver" | "empezado" | "dominado";
-export const dominio = (e: Estado | undefined): Dominio => (!e ? "sin ver" : dominado(e) ? "dominado" : "empezado");
+export type Dominio = "sin ver" | "empezado" | "aprendido";
+export const dominio = (e: Estado | undefined): Dominio => (!e ? "sin ver" : aprendido(e) ? "aprendido" : "empezado");
 
 /**
- * Lo mismo para un país entero, que es por lo que se filtra en explorar. **Dominado exige los
- * cuatro datos** —el mismo listón que `cuenta` llama aprendido, y no otro: dos listones para la
- * misma palabra harían que el filtro y el contador se contradijeran a la vista—; empezado basta
- * con haber visto uno. **Aquí «empezado» excluye a los dominados y en `cuenta` los incluye**: uno
- * es un estado de tres, el otro el total de lo tocado.
+ * Lo mismo para un país entero, que es por lo que se filtra en explorar. **Aprendido exige los
+ * cuatro datos** —el mismo listón que cuenta `cuenta`, y no otro: dos listones para la misma
+ * palabra harían que el filtro y el contador se contradijeran a la vista—; empezado basta con
+ * haber visto uno, y por eso no incluye a los aprendidos: son el estado de al lado.
  */
 export function dominioPais(mazo: Mazo, paisId: string): Dominio {
-  if (DATOS.every((d) => dominado(mazo[paisId]?.[d]))) return "dominado";
+  if (DATOS.every((d) => aprendido(mazo[paisId]?.[d]))) return "aprendido";
   return DATOS.some((d) => mazo[paisId]?.[d]) ? "empezado" : "sin ver";
 }
 
@@ -91,26 +90,28 @@ export function dominioPais(mazo: Mazo, paisId: string): Dominio {
  * enseña, solo frustra; y lo visible es el material de estudio.
  */
 export function huecos(mazo: Mazo, paisId: string): number {
-  const n = DATOS.filter((d) => dominado(mazo[paisId]?.[d])).length;
+  const n = DATOS.filter((d) => aprendido(mazo[paisId]?.[d])).length;
   return n === 4 ? 3 : n >= 2 ? 2 : 1;
 }
 
 /**
- * Cuántos países se han empezado y cuántos están enteros —los cuatro datos dominados—.
+ * Cuántos países se han visto y cuántos están enteros —los cuatro datos aprendidos—. Las dos
+ * palabras son las de los estados, que es lo que evita el contador que dice otra cosa que el
+ * filtro: los vistos son los empezados más los aprendidos.
  *
  * Esto **no es el contador de Anki**, que es lo que hay que mirar antes de enseñarlo: aquel
  * cuenta deuda y sube solo mientras no vuelves; este cuenta trabajo hecho y solo sube cuando
  * trabajas. Y el freno de países nuevos limita a qué velocidad puede separarse el segundo
  * número del primero, así que no hay manera de volver y encontrarse un 0/418.
  */
-export function cuenta(mazo: Mazo): { empezados: number; aprendidos: number } {
-  let empezados = 0, aprendidos = 0;
+export function cuenta(mazo: Mazo): { vistos: number; aprendidos: number } {
+  let vistos = 0, aprendidos = 0;
   for (const p of PAISES) {
     if (!DATOS.some((d) => mazo[p.id]?.[d])) continue;
-    empezados++;
-    if (DATOS.every((d) => dominado(mazo[p.id]?.[d]))) aprendidos++;
+    vistos++;
+    if (DATOS.every((d) => aprendido(mazo[p.id]?.[d]))) aprendidos++;
   }
-  return { empezados, aprendidos };
+  return { vistos, aprendidos };
 }
 
 export type Tarjeta = { pais: Pais; tapados: Dato[]; primeraVez: boolean };
@@ -135,7 +136,7 @@ export function montar(mazo: Mazo, pais: Pais, ahora: number): Tarjeta {
  * adelanta el más sospechoso aunque no llegue a 1: la cola no se acaba nunca.
  *
  * El freno a los nuevos es invisible y no mira el calendario: mientras haya demasiados países
- * sin dominar peleando arriba, no entran más. Así una tarde de entusiasmo no se convierte en
+ * sin aprender peleando arriba, no entran más. Así una tarde de entusiasmo no se convierte en
  * una deuda de cuatrocientas tarjetas dentro de diez días.
  */
 export const MAX_EN_EL_AIRE = 30;
@@ -146,7 +147,7 @@ export function siguiente(mazo: Mazo, orden: string[], ahora: number): Pais | nu
   for (const p of PAISES) {
     const visto = DATOS.some((d) => mazo[p.id]?.[d]);
     if (!visto) continue;
-    if (!DATOS.some((d) => dominado(mazo[p.id]?.[d]))) enElAire++;
+    if (!DATOS.some((d) => aprendido(mazo[p.id]?.[d]))) enElAire++;
     for (const d of DATOS) {
       const s = sospecha(mazo[p.id]?.[d], ahora);
       if (!mejor || s > mejor.s) mejor = { id: p.id, s };

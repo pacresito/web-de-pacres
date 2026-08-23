@@ -21,9 +21,9 @@ const etiqueta = (p: Perfil) => NIVELES.find((n) => n.perfil === p)?.etiqueta ??
 /** La bandera es parte del comando y va del color del comando, como el `--holes=4` del laberinto
  *  o el `--cartas=21` de magia. Dentro, **el número de aprendidos en acento**: es lo único de la
  *  línea que cuenta algo conseguido, y lo que se busca al mirar; el resto es sintaxis. */
-const Bandera = ({ aprendidos, empezados }: { aprendidos: number; empezados: number }) => (
+const Bandera = ({ aprendidos, vistos }: { aprendidos: number; vistos: number }) => (
   <>
-    {" "}--aprendidos=<span style={{ color: "var(--t-accent)" }}>{aprendidos}</span>/{empezados}
+    {" "}--aprendidos=<span style={{ color: "var(--t-accent)" }}>{aprendidos}</span>/{vistos}
   </>
 );
 
@@ -45,7 +45,7 @@ export default function ColaDelPrompt({ mazo, identificado }: { mazo: Mazo; iden
   const [error, setError] = useState<string | null>(null);
   const caja = useRef<HTMLSpanElement>(null);
   const nivel = useSyncExternalStore(suscribir, nivelActual, () => "vacio" as Perfil);
-  const { empezados, aprendidos } = cuenta(mazo);
+  const { vistos, aprendidos } = cuenta(mazo);
 
   /**
    * Abierta, se cierra al tocar fuera — pero **no al perder el foco**: el desplegable del gestor
@@ -83,11 +83,11 @@ export default function ColaDelPrompt({ mazo, identificado }: { mazo: Mazo; iden
     return (
       <span onClick={() => setAbierta(true)} style={{ color: "var(--t-ink)", cursor: "default" }}>
         {/* Una bandera cada vez: medido en un móvil, dos separadas pasan el prompt de dos líneas
-            a tres. Sin nada empezado no hay trabajo que contar y lo que dice algo es de dónde se
+            a tres. Sin nada visto no hay trabajo que contar y lo que dice algo es de dónde se
             arranca; en cuanto hay mazo manda el recuento, y el nivel sigue a un toque. */}
-        {sinCuenta && empezados === 0
+        {sinCuenta && vistos === 0
           ? <> --nivel=<span style={{ color: "var(--t-accent)" }}>{etiqueta(nivel)}</span></>
-          : <Bandera aprendidos={aprendidos} empezados={empezados} />}
+          : <Bandera aprendidos={aprendidos} vistos={vistos} />}
       </span>
     );
   }
@@ -96,7 +96,7 @@ export default function ColaDelPrompt({ mazo, identificado }: { mazo: Mazo; iden
     <span ref={caja} style={{ color: "var(--t-ink)" }}>
       {identificado ? (
         <>
-          <Bandera aprendidos={aprendidos} empezados={empezados} />{" "}
+          <Bandera aprendidos={aprendidos} vistos={vistos} />{" "}
           <button onClick={() => { void salir(); cerrar(); }} className="hover-accent" style={boton}>--salir</button>
         </>
       ) : (
