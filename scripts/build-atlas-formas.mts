@@ -66,6 +66,10 @@ const FRONTERAS: Record<string, number> = { ma: 27 + 40 / 60 };
 // el coral solo manda donde el atolón **es** el país: en Australia sería la Gran Barrera pegada
 // a un continente, que no es la forma de nada.
 //
+// **Donde hay coral, gana a `cerca`.** Recortar a un atolón da una silueta limpia, pero de un país
+// que no existe: Tuvalu son nueve atolones repartidos por 600 km, no Funafuti solo. El recorte se
+// queda para los que no tienen anillo que dibujar.
+//
 // `islas` baja el suelo de las islas que se quedan a un absoluto en km², para el país al que la
 // regla relativa le come las suyas: `MIN_AREA_REL` mide contra el polígono mayor, así que cuanto
 // más grande es la masa principal más grande tiene que ser la isla para sobrevivir. También va
@@ -75,20 +79,26 @@ const FRONTERAS: Record<string, number> = { ma: 27 + 40 / 60 };
 // `cadena` mide `MAX_KM` desde todo lo admitido y no solo desde el polígono mayor, para el país
 // que **es** una ristra: medida desde el mayor, una cadena continua se corta por donde la isla
 // grande se queda atrás, y el país sale amputado sin que falte ningún salto. Va país a país
-// porque cambia trece —Japón se traería Okinawa y encogería Honshu, Indonesia pasa de 8 islas a
-// 47—, y cada uno de esos hay que mirarlo antes, no darlo por bueno.
+// porque el precio es que lo que entra estira el lienzo y **encoge todo lo demás**: a Japón le
+// costaría un cuarto del tamaño de sus cuatro islas por traerse Ryukyu, y ahí no compensa.
 const AJUSTES: Record<string, { cerca?: Cerca; paneles?: [Cerca, Cerca]; tol?: number; arrecife?: boolean; islas?: number; cadena?: boolean }> = {
   bs: { cerca: [-77.5, 25.5, 260] },  // el racimo del noroeste: Andros, Gran Bahama, Ábaco
+  ca: { cadena: true },
   es: { islas: 60 },                  // Menorca, Ibiza y Formentera, que la regla relativa suelta
   fm: { paneles: [[151.8, 7.4, 60], [158.2, 6.9, 60]] },   // la laguna de Chuuk y Pohnpei
+  id: { cadena: true },               // sin ella no dibuja ni Sumatra ni Papúa
   ki: { paneles: [[172.98, 1.35, 30], [-157.4, 1.9, 60]] }, // Tarawa y Kiritimati
-  mh: { cerca: [171.2, 7.1, 60] },    // Majuro y Arno
+  mh: { arrecife: true, cadena: true }, // las dos hileras de atolones, no solo Majuro
   mv: { arrecife: true, cadena: true }, // los atolones, que son lo que se reconoce, y los 871 km
   nr: { tol: 6 },
+  pg: { cadena: true },
+  ph: { cadena: true },
   pw: { cerca: [134.5, 7.5, 60] },    // Babeldaob y Koror, no los arrecifes del suroeste
+  sb: { cadena: true },
   sc: { cerca: [55.5, -4.6, 60] },    // Mahé, Praslin y La Digue
   to: { cerca: [-175.2, -21.2, 60] }, // Tongatapu
-  tv: { cerca: [179.1, -8.5, 30] },   // Funafuti
+  tv: { arrecife: true, cadena: true }, // los nueve atolones, no solo Funafuti
+  vu: { cadena: true },
 };
 
 // Se conserva lo que pesa algo Y cae cerca: Gozo, Baleares, Córcega, Sicilia, Cerdeña. Se

@@ -8,7 +8,10 @@ import { ImageResponse } from "next/og";
 //
 // 192 y no los 180 canónicos de Apple: iOS escala sin quejarse y es el tamaño por debajo del cual
 // Chrome empieza a preferir su propio dibujo. Sin esquinas redondeadas — el sistema aplica su
-// máscara encima, y redondear aquí deja el borde doble.
+// máscara encima, y redondear aquí deja el borde doble. El `viewBox` va ceñido al corazón y no
+// al lienzo de 24 en que está dibujado: sin ceñirlo, el aire que le sobra al trazado se cuela
+// como margen y el dibujo sale pequeño por mucho que se suba el `width`. Lo que queda de blanco
+// es a propósito — el lanzador redondea las esquinas y un dibujo a ras de borde se descantilla.
 //
 // La portada lo sobrescribe con el naranja, igual que hace con el favicon.
 export const size = { width: 192, height: 192 };
@@ -27,7 +30,7 @@ export default function AppleIcon() {
           justifyContent: "center",
         }}
       >
-        <svg width="132" height="132" viewBox="0 0 24 24" fill="#00b87a">
+        <svg width="176" height="176" viewBox="2 3 20 18.4" fill="#00b87a">
           <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
         </svg>
       </div>

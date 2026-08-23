@@ -26,8 +26,12 @@ export default function Silueta({ forma, nombre, ajustada = false, style }: {
     >
       {/* El coral, debajo de la tierra: en un archipiélago de atolones el anillo es la forma que
           se reconoce y los islotes que lo coronan son el detalle que va encima. Sin relleno y sin
-          cerrar — un arrecife no encierra nada. */}
-      {forma.arrecife && <path d={forma.arrecife} fill="none" stroke="var(--t-accent)" strokeWidth={1.5}
+          cerrar — un arrecife no encierra nada.
+          **Va más grueso que la tierra**, y no por jerarquía: la tierra tiene relleno detrás y el
+          trazo solo la salva de desaparecer, mientras que el anillo **es** solo trazo. A tamaño de
+          ficha un atolón mide cuatro píxeles, y a un pelo de ancho el anillo no se cierra: se lee
+          como suciedad. Los de Tuvalu, que son los más pequeños, marcan el listón. */}
+      {forma.arrecife && <path d={forma.arrecife} fill="none" stroke="var(--t-accent)" strokeWidth={3}
             strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />}
       {/* Trazo además de relleno, como en el globo y el minimapa: un archipiélago de atolones
           —Maldivas, Tuvalu, las Marshall— relleno a secas se queda en unas motas que no se ven.
