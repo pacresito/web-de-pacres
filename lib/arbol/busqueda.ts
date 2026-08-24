@@ -135,6 +135,10 @@ export const TAMBIEN_ENCUENTRA: [string, string][] = [
   ["jose juan", "pepe"],
   // Y Josele el de otro José, con el mismo motivo: no se funde con el grupo de «jose».
   ["jose", "josele"],
+  // Al hijo de Jose Alberto también se le llama Pepe, pero su nombre completo no entra en
+  // el grupo de «jose» —«jose alberto» no es «jose»—. Su padre se llama igual y no hay
+  // forma de separarlos por texto: quien teclee «Pepe» encuentra a los dos.
+  ["pepe", "jose alberto"],
   // María de los Ángeles, de nombre reconocido Ángela: el hipocorístico corre solo hacia
   // ella, no hacia cualquier Ángela del árbol.
   ["maria de los angeles", "angela"],
