@@ -257,7 +257,7 @@ export default function Explorar({ abrirEnEmpezados = false }: { abrirEnEmpezado
                 y la silueta además se ciñe a su tinta: Chile en un lienzo cuadrado es un hilo con
                 dos palmos de nada a los lados, y ese vacío no se distingue del hueco entre
                 columnas. */}
-            <Silueta forma={forma} nombre={pais.nombre} ajustada style={{ width: "100%", aspectRatio: 1 }} />
+            <Silueta id={pais.id} forma={forma} nombre={pais.nombre} ajustada style={{ width: "100%", aspectRatio: 1 }} />
             <Minimapa id={id} marco={MARCO.get(pais.continente)!} lon={forma.lon} lat={forma.lat} />
           </div>
             <div className="atlas-solo-ancho">{cifras}</div>

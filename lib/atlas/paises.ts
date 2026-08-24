@@ -2,6 +2,10 @@
 // verdad de nombres y capitales — el resto (formas, orden del barrido) se genera a partir
 // de aquí. Son los 195 Estados soberanos: los 193 de la ONU más el Vaticano y Palestina.
 //
+// **Tocar esta lista obliga a correr los dos generadores**, `build-atlas-formas.mts` y
+// `build-atlas-relieve.mts`: comparten el encuadre de `atlas-geo.mts`, y con uno solo el
+// relieve de un país se queda encajado en un contorno que ya no es el suyo, sin que falle nada.
+//
 // `nombre` es el común en español, el que se diría en voz alta, y es el único que se
 // pregunta: como la calificación es autoinforme, no hay corrector al que satisfacer y una
 // segunda forma solo añade ruido. `oficial` solo se muestra en la ficha de explorar.

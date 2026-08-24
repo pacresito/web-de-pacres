@@ -256,7 +256,7 @@ function Tarjeta({ vista }: { vista: Vista }) {
             enseñarlo con la forma tapada sería señalar el país en un mapa. */}
         {fila("forma",
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 22, opacity: notas.forma ? 0.55 : 1 }}>
-            <Silueta forma={forma} nombre={pais.nombre} style={{ width: 132, height: 132, flexShrink: 0 }} />
+            <Silueta id={pais.id} forma={forma} nombre={pais.nombre} style={{ width: 132, height: 132, flexShrink: 0 }} />
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, flexShrink: 0 }}>
               <Globo id={pais.id} lon={forma.lon} lat={forma.lat} lado="var(--a-globo)" />
               <span style={{ fontFamily: MONO, fontSize: 10, color: "var(--t-ink3)" }}>{forma.ladoKm} km</span>

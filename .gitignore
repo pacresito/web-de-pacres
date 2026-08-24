@@ -53,3 +53,6 @@ AGENTS.md
 # backups que generan van fuera del repo, a WEB/farma/backups/)
 /scripts/migrate-descuentos-orden.ts
 /scripts/aplicar-descuentos.ts
+
+# atlas: geojson y teselas de elevación cacheados para no volver a bajarlos en cada corrida
+/.cache-atlas/

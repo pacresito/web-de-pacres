@@ -1,6 +1,8 @@
 "use client";
 
 import { type Forma } from "@/data/atlas/formas";
+import { CON_RELIEVE } from "@/data/atlas/relieve";
+import { useTema } from "@/app/components/usePersistedTheme";
 import { marcoDeTinta } from "@/lib/atlas/silueta";
 
 /**
@@ -11,10 +13,17 @@ import { marcoDeTinta } from "@/lib/atlas/silueta";
  * `ajustada` la ciñe a su tinta a lo ancho: es lo que pide la ficha, donde la figura se pega a
  * la izquierda de su casilla y Chile en un lienzo cuadrado dejaría dos palmos de nada a los
  * lados. La tarjeta la quiere centrada en el lienzo, que es donde ese aire es el margen.
+ *
+ * Los países que tienen relieve lo llevan encima del relleno, en una imagen precalculada por
+ * scripts/build-atlas-relieve.mts. **El relleno se queda debajo**: mientras la imagen carga, si
+ * falla o si el país no tiene, se ve exactamente la silueta de siempre.
  */
-export default function Silueta({ forma, nombre, ajustada = false, style }: {
-  forma: Forma; nombre: string; ajustada?: boolean; style?: React.CSSProperties;
+export default function Silueta({ id, forma, nombre, ajustada = false, style }: {
+  id: string; forma: Forma; nombre: string; ajustada?: boolean; style?: React.CSSProperties;
 }) {
+  const tema = useTema();
+  const relieve = tema && CON_RELIEVE.has(id) && `/atlas/relieve/${id}-${tema === "dark" ? "oscuro" : "claro"}.webp`;
+
   return (
     <svg
       // El arrecife entra en la cuenta de la tinta: asoma por fuera de la tierra, y ceñirse solo
@@ -38,6 +47,18 @@ export default function Silueta({ forma, nombre, ajustada = false, style }: {
           A los grandes, un píxel y medio de contorno no les hace nada. */}
       <path d={forma.d} fill="var(--t-accent)" fillRule="evenodd"
             stroke="var(--t-accent)" strokeWidth={1.5} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+      {/* El relieve va enmascarado en su propio alfa, recortado del mismo path que se dibuja
+          aquí: no hace falta recortarlo otra vez con un clipPath, y una máscara sola es una
+          máscara que no puede desajustarse de la otra. En el viewBox ceñido de la ficha se
+          recorta con él, porque va en las mismas coordenadas del lienzo.
+          Encima, el contorno otra vez y sin relleno: la imagen tapa la mitad interior del trazo
+          del path de abajo, y en un archipiélago ese trazo es lo que salva de desaparecer a las
+          islas que a este tamaño son motas. */}
+      {relieve && <>
+        <image href={relieve} x={0} y={0} width={1000} height={1000} />
+        <path d={forma.d} fill="none" stroke="var(--t-accent)" strokeWidth={1.5}
+              strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+      </>}
       {/* Frontera interior, cuando la hay: Marruecos y el Sáhara Occidental salen juntos —el
           globo viene de otra fuente y recortar uno los descuadraba— y la línea dice dónde acaba
           uno. */}
