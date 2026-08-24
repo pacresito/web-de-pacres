@@ -135,6 +135,18 @@ export const TAMBIEN_ENCUENTRA: [string, string][] = [
   ["jose juan", "pepe"],
   // Y Josele el de otro José, con el mismo motivo: no se funde con el grupo de «jose».
   ["jose", "josele"],
+  // El nombre compuesto de quien pasó a llamarse por su apodo: quien teclea el compuesto
+  // quiere encontrarlo igual. Todos colisionan —hay doce Pablo, diez María, siete Teresa,
+  // siete Luis y cinco Pepe en el árbol—, así que el compuesto los saca a todos, no solo a
+  // quien lo tenía escrito; se acepta a propósito, igual que ya pasa con «Teresita».
+  ["jose alberto", "pepe"],
+  ["jose gerardo", "pepe"],
+  ["pablo enrique", "pablo"],
+  ["luis nazario", "luis"],
+  ["mariano jose", "mariano"],
+  ["chiara teresa", "teresa"],
+  ["maria teresa", "teresa"],
+  ["maria de los angeles", "maria"],
   // María de los Ángeles, de nombre reconocido Ángela: el hipocorístico corre solo hacia
   // ella, no hacia cualquier Ángela del árbol.
   ["maria de los angeles", "angela"],
