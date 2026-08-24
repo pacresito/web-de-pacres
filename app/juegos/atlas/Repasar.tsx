@@ -65,6 +65,7 @@ export default function Repasar() {
 function Tarjeta({ vista }: { vista: Vista }) {
   const [vistaPintada, setVistaPintada] = useState<Vista | null>(null);
   const [abierta, setAbierta] = useState(false);
+  const [lupa, setLupa] = useState(false);
   const [notas, setNotas] = useState<Partial<Record<Dato, Nota>>>({});
   const [saliendo, setSaliendo] = useState(false);
   const [pase, setPase] = useState(0);
@@ -77,6 +78,7 @@ function Tarjeta({ vista }: { vista: Vista }) {
   if (vista !== vistaPintada) {
     setVistaPintada(vista);
     setAbierta(false);
+    setLupa(false);
     setNotas({});
     setPase((n) => n + 1);
   }
@@ -152,6 +154,14 @@ function Tarjeta({ vista }: { vista: Vista }) {
     const tecla = (e: KeyboardEvent) => {
       // Con la puerta abierta se está tecleando la clave: un «2» no puede calificar.
       if (saliendo || e.metaKey || e.ctrlKey || e.altKey || (e.target as HTMLElement)?.tagName === "INPUT") return;
+      // Mirando el globo grande no se califica: la tarjeta está tapada por él, y calificar lo
+      // que no se ve es calificar a ciegas. La tecla que sea lo cierra —incluidas las tres de
+      // calificar—, que es lo que se quiere hacer justo después de mirar.
+      if (lupa) {
+        e.preventDefault();
+        setLupa(false);
+        return;
+      }
       if (e.key === " ") {
         e.preventDefault();
         if (!primeraVez) setAbierta(true);
@@ -257,10 +267,15 @@ function Tarjeta({ vista }: { vista: Vista }) {
         {fila("forma",
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 22, opacity: notas.forma ? 0.55 : 1 }}>
             <Silueta id={pais.id} forma={forma} nombre={pais.nombre} style={{ width: 132, height: 132, flexShrink: 0 }} />
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, flexShrink: 0 }}>
+            {/* El globo de la tarjeta mide 76 px: dice en qué parte del mundo cae el país, pero
+                no si estaba en el sitio que uno creía. Tocarlo lo abre grande, que es la
+                comprobación que se quiere hacer justo antes de calificar. Se traga el toque
+                —destapar es tocar donde sea— porque aquí tocar es esto. */}
+            <button type="button" className="atlas-globo" aria-label={`Ver el globo de ${pais.nombre} en grande`}
+                    onClick={(e) => { e.stopPropagation(); setLupa(true); }}>
               <Globo id={pais.id} lon={forma.lon} lat={forma.lat} lado="var(--a-globo)" />
               <span style={{ fontFamily: MONO, fontSize: 10, color: "var(--t-ink3)" }}>{forma.ladoKm} km</span>
-            </div>
+            </button>
           </div>)}
       </div>
 
@@ -284,6 +299,21 @@ function Tarjeta({ vista }: { vista: Vista }) {
               </button>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* La lupa: el mismo globo a pantalla completa, recalculado a radio grande —escalar el de
+          76 px sube también el redondeo de sus coordenadas— y sin un solo dato más. **El nombre
+          del país no entra aunque se sepa**: si está tapado, esto sería la respuesta.
+
+          Se cierra tocando donde sea, como se abrió. */}
+      {lupa && (
+        <div className="atlas-lupa" onClick={(e) => { e.stopPropagation(); setLupa(false); }}>
+          <Globo id={pais.id} lon={forma.lon} lat={forma.lat} r={200} lado="min(86vw, 56vh)" />
+          <span style={{ fontFamily: MONO, fontSize: 11, color: "var(--t-ink4)", letterSpacing: "0.14em" }}>
+            <span className="atlas-solo-movil">toca para volver</span>
+            <span className="atlas-solo-ancho">una tecla para volver</span>
+          </span>
         </div>
       )}
 
