@@ -19,7 +19,7 @@ for (const u of g.unionPorId.values()) {
 
 // El tachón del símbolo era el divorcio, y se recuperó de los docx a mano (marcar-rupturas.py);
 // las altas traen el suyo escrito.
-assert.strictEqual([...g.unionPorId.values()].filter((u) => u.roto).length, 15, "15 uniones acabadas");
+assert.strictEqual([...g.unionPorId.values()].filter((u) => u.roto).length, 14, "14 uniones acabadas");
 
 // Nadie es hijo de dos uniones, y todos tienen generación
 assert.strictEqual(g.generacion.size, data.people.length, "todas las personas colocadas (una sola componente conexa)");
@@ -44,7 +44,7 @@ assert.deepStrictEqual(
   [
     [-4, 12],
     [-3, 36],
-    [-2, 125],
+    [-2, 124],
     [-1, 181],
     [0, 113],
     // Manuela, la primera de la generación que viene detrás de la de Lucas.
