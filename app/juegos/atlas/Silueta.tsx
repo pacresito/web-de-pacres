@@ -55,7 +55,11 @@ export default function Silueta({ id, forma, nombre, ajustada = false, style }: 
           del path de abajo, y en un archipiélago ese trazo es lo que salva de desaparecer a las
           islas que a este tamaño son motas. */}
       {relieve && <>
-        <image href={relieve} x={0} y={0} width={1000} height={1000} />
+        {/* `key` por archivo: sin ella React reutiliza el mismo `<image>` de un país al
+            siguiente, y un `<image>` al que le cambias el `href` sigue pintando lo anterior
+            hasta que descarga lo nuevo — con el relleno de debajo ya cambiado, se ven las dos
+            siluetas a la vez. Con `key` monta uno nuevo, que nace vacío. */}
+        <image key={relieve} href={relieve} x={0} y={0} width={1000} height={1000} />
         <path d={forma.d} fill="none" stroke="var(--t-accent)" strokeWidth={1.5}
               strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
       </>}

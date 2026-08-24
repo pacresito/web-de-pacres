@@ -234,7 +234,7 @@ export default function Explorar({ abrirEnEmpezados = false }: { abrirEnEmpezado
 
           {fila("bandera",
             // eslint-disable-next-line @next/next/no-img-element -- SVG suelto de /public, sin optimización que aportar
-            <img src={`/atlas/banderas/${id}.svg`} alt={`Bandera de ${pais.nombre}`}
+            <img key={id} src={`/atlas/banderas/${id}.svg`} alt={`Bandera de ${pais.nombre}`}
                  // Ancho por el alto, no una caja fija: la marca va pegada a la bandera, y con
                  // caja se queda flotando a la derecha de las que son estrechas.
                  style={{ height: "var(--a-bandera)", width: "auto", maxWidth: 200, display: "block" }} />)}

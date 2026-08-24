@@ -248,7 +248,7 @@ function Tarjeta({ vista }: { vista: Vista }) {
         {fila("bandera",
           <div style={{ display: "flex", justifyContent: "center" }}>
             {/* eslint-disable-next-line @next/next/no-img-element -- SVG suelto de /public, sin optimización que aportar */}
-            <img src={`/atlas/banderas/${pais.id}.svg`} alt={`Bandera de ${pais.nombre}`}
+            <img key={pais.id} src={`/atlas/banderas/${pais.id}.svg`} alt={`Bandera de ${pais.nombre}`}
                  style={{ width: 144, height: 96, objectFit: "contain", display: "block", opacity: notas.bandera ? 0.55 : 1 }} />
           </div>)}
 
