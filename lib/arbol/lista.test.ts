@@ -35,7 +35,7 @@ assert.strictEqual(comoLoLlamo("p29"), "hermano de Carmen");
 assert.strictEqual(comoLoLlamo("p13"), "sobrina segunda de Carmen");
 // Y su familia política con ellos, nombrada por aquel con quien está: Eva no me es nada ni le
 // es sangre a Carmen, pero está con su primo.
-assert.strictEqual(comoLoLlamo("p8"), "pareja de Mariano José");
+assert.strictEqual(comoLoLlamo("p8"), "pareja de Mariano");
 // Lo que no arrastra la pareja son los suyos: Mar entra por estar con mi hermano, y sus
 // padres se quedan fuera. La política de la política no la felicita nadie.
 assert.strictEqual(comoLoLlamo("p127"), "pareja de Ricardo");

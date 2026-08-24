@@ -31,7 +31,7 @@ export const ENLACES: Enlace[] = [
   { alias: "Crespo", id: "p84", nombre: "Vicente", nace: "1900" },
   { alias: "Maestre", id: "p289", nombre: "José", nace: "1914" },
   { alias: "Perez", id: "p466", nombre: "Francisco", nace: "" },
-  { alias: "Cardona", id: "p21", nombre: "María de los Ángeles", nace: "1955" },
+  { alias: "Cardona", id: "p21", nombre: "María Ángeles", nace: "1955" },
   { alias: "Sala", id: "p442", nombre: "Pepe", nace: "1942" },
   { alias: "Castrillo", id: "p81", nombre: "Ambrosio", nace: "1883" },
   { alias: "Pablo", id: "p25", nombre: "Pablo", nace: "1986" },

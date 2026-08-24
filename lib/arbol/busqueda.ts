@@ -126,19 +126,15 @@ export const IGUALES: string[][] = [
  */
 export const TAMBIEN_ENCUENTRA: [string, string][] = [
   ["carmen", "carmina"],
-  // A Chiara Teresa la llaman Teresita, y va aquí y no arriba porque el diminutivo no es de
-  // «Teresa»: en el grupo de iguales, teclearlo sacaría a las once que sí se llaman así.
-  ["teresita", "chiara teresa"],
+  // Teresita va aquí y no al grupo de iguales porque el diminutivo no es de cualquier
+  // «Teresa»: siete la llevan, y quien teclee «Teresita» las quiere a las siete.
+  ["teresita", "teresa"],
   // A este Pepe se le reconoce por Pepe, no por José Juan: su nombre ya es «Pepe» y lo
   // encuentra el grupo de iguales de siempre. Lo que hace falta es lo contrario, que
   // teclear su nombre largo también dé con él.
   ["jose juan", "pepe"],
   // Y Josele el de otro José, con el mismo motivo: no se funde con el grupo de «jose».
   ["jose", "josele"],
-  // Al hijo de Jose Alberto también se le llama Pepe, pero su nombre completo no entra en
-  // el grupo de «jose» —«jose alberto» no es «jose»—. Su padre se llama igual y no hay
-  // forma de separarlos por texto: quien teclee «Pepe» encuentra a los dos.
-  ["pepe", "jose alberto"],
   // María de los Ángeles, de nombre reconocido Ángela: el hipocorístico corre solo hacia
   // ella, no hacia cualquier Ángela del árbol.
   ["maria de los angeles", "angela"],
