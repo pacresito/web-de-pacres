@@ -1,5 +1,4 @@
-import { cuerpoFirmado } from "@/lib/avisar";
-import { enviarTelegram } from "@/lib/telegram";
+import { avisarUnaVez, cuerpoFirmado } from "@/lib/avisar";
 
 // El aviso que no llegó: QStash llama aquí cuando un mensaje agota sus reintentos, y esta ruta
 // lo cuenta por el mismo canal al que iba dirigido.
@@ -22,19 +21,22 @@ export async function POST(request: Request) {
     return Response.json({ error: "JSON inválido" }, { status: 400 });
   }
 
-  const original = textoDelAviso(fallo.sourceBody);
+  const original = avisoDelFallo(fallo.sourceBody);
   const cabecera = `⚠️ <b>Un aviso no se ha entregado</b> (HTTP ${fallo.status})`;
-  await enviarTelegram(original ? `${cabecera}. Decía:\n\n${original}` : `${cabecera} — ${fallo.url}`);
+  const texto = original ? `${cabecera}. Decía:\n\n${original.texto}` : `${cabecera} — ${fallo.url}`;
 
+  // Este aviso también lo reintenta QStash, así que también se da una sola vez. Sin id del
+  // original —un aviso de antes de que lo llevaran— identifica al fallo su propio texto.
+  await avisarUnaVez(original ? `fallo-${original.id}` : texto, texto);
   return Response.json({ ok: true });
 }
 
-/** El texto del aviso que no salió, que viaja en base64 dentro del fallo. */
-function textoDelAviso(sourceBody: unknown): string | null {
+/** El aviso que no salió, que viaja en base64 dentro del fallo. */
+function avisoDelFallo(sourceBody: unknown): { texto: string; id: string } | null {
   if (typeof sourceBody !== "string") return null;
   try {
-    const { texto } = JSON.parse(Buffer.from(sourceBody, "base64").toString());
-    return typeof texto === "string" && texto.length > 0 ? texto : null;
+    const { texto, id } = JSON.parse(Buffer.from(sourceBody, "base64").toString());
+    return typeof texto === "string" && texto.length > 0 && typeof id === "string" ? { texto, id } : null;
   } catch {
     return null;
   }

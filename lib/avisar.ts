@@ -9,6 +9,8 @@
 // lo que permite probar un preview entero sin tocar el dominio.
 
 import { Receiver } from "@upstash/qstash";
+import redis from "./redis";
+import { enviarTelegram, TelegramRechaza } from "./telegram";
 
 const SITIO = "https://pacr.es";
 
@@ -47,4 +49,32 @@ export async function cuerpoFirmado(request: Request): Promise<string | null> {
     return null;
   }
   return cuerpo;
+}
+
+/** Lo que se recuerda de un aviso ya dado. Los reintentos duran minutos; un día sobra. */
+const RECUERDO_S = 60 * 60 * 24;
+
+/**
+ * Manda un aviso al móvil, y solo una vez. Devuelve si ha sonado o si era un repetido.
+ *
+ * QStash reintenta mientras no reciba un OK, y una entrega que se corta con el mensaje ya en el
+ * móvil es indistinguible de una que no salió: por eso el reparto **se apunta antes de mandar**
+ * y el reintento que se encuentra la marca puesta calla. La marca solo se levanta cuando consta
+ * que Telegram dijo que no, que es el único caso en que se sabe que no sonó. A cambio, un aviso
+ * cortado a mitad puede perderse: tres vibraciones seguidas molestan más que una que falta.
+ *
+ * Vive aquí y no en cada ruta porque son dos las que hablan por este canal —la entrega y el
+ * fallo— y las dos las reintenta QStash. Una segunda copia de esto es una que un día deja de
+ * proteger sin que nada falle.
+ */
+export async function avisarUnaVez(id: string, texto: string): Promise<boolean> {
+  const marca = `avisar:dado:${id}`;
+  if ((await redis.set(marca, "1", "EX", RECUERDO_S, "NX")) === null) return false;
+  try {
+    await enviarTelegram(texto);
+  } catch (error) {
+    if (error instanceof TelegramRechaza) await redis.del(marca);
+    throw error;
+  }
+  return true;
 }

@@ -7,6 +7,16 @@
 
 const API = "https://api.telegram.org";
 
+/**
+ * Que Telegram diga que no. **Se distingue del corte a mitad** porque son lo contrario: aquí
+ * consta que el mensaje no salió, y ahí no consta nada. Quien reintente necesita saber cuál
+ * de las dos le pasó.
+ */
+export class TelegramRechaza extends Error {}
+
+/** Lo que se espera a que conteste. Un envío normal tarda menos de un segundo. */
+const ESPERA_MS = 10_000;
+
 export async function enviarTelegram(texto: string): Promise<void> {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
@@ -25,9 +35,12 @@ export async function enviarTelegram(texto: string): Promise<void> {
       // de previsualización ocuparía más que el propio mensaje.
       link_preview_options: { is_disabled: true },
     }),
+    // Sin tope, una respuesta que no llega tiene esperando a la función hasta que la mata la
+    // plataforma, y el reintento sale minutos después de que el mensaje ya sonara.
+    signal: AbortSignal.timeout(ESPERA_MS),
   });
 
   if (!res.ok) {
-    throw new Error(`Telegram respondió ${res.status}: ${await res.text()}`);
+    throw new TelegramRechaza(`Telegram respondió ${res.status}: ${await res.text()}`);
   }
 }

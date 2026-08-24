@@ -36,7 +36,7 @@ export async function GET(request: Request) {
       qstash.publishJSON({
         url: urlDeEntrega(request),
         failureCallback: urlDeFallo(request),
-        body: { texto: aviso.texto },
+        body: { texto: aviso.texto, id: aviso.id },
         notBefore: Math.floor(aviso.sale / 1000),
         // Con el id fijado por el evento, una segunda invocación del cron no duplica avisos.
         deduplicationId: aviso.id,

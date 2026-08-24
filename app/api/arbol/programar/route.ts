@@ -41,7 +41,7 @@ export async function GET(request: Request) {
   await new Client({ token }).publishJSON({
     url: urlDeEntrega(request),
     failureCallback: urlDeFallo(request),
-    body: { texto: aviso.texto },
+    body: { texto: aviso.texto, id: aviso.id },
     notBefore: Math.floor(aviso.sale / 1000),
     deduplicationId: aviso.id,
   });
