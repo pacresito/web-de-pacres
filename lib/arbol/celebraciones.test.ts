@@ -70,23 +70,23 @@ assert.deepStrictEqual(
 // Desde Pablo, el panel es su lista y no la regla: la misma gente que le llega al móvil.
 // Tener dos respuestas a «a quién felicito» dejaba a las dos sin poder creerse ninguna.
 const nombrados = new Map(proximasCelebraciones(g, "p25", "2026-03-01", 366).map((c) => [c.id, c.parentesco]));
-assert.strictEqual(nombrados.get("p125"), "madre", "el parentesco va declinado, en singular y en femenino");
-assert.strictEqual(nombrados.get("p26"), "hijo");
+assert.strictEqual(nombrados.get("p125"), "tu madre", "el parentesco va declinado, en singular y en femenino");
+assert.strictEqual(nombrados.get("p26"), "tu hijo");
 assert.strictEqual(nombrados.has("p124"), false, "su padre murió en 2018 y no celebra nada");
 assert.strictEqual(nombrados.get("p24"), "tu pareja", "su mujer entra por él, y se la llama por lo que es");
-assert.ok([...nombrados.values()].some((p) => p?.startsWith("pareja de ")), "los cuñados entran por su pareja");
+assert.ok([...nombrados.values()].some((p) => p?.startsWith("la pareja de ")), "los cuñados entran por su pareja");
 const laDeTelegram = laLista(g);
 for (const id of nombrados.keys()) {
   if (id !== null) assert.ok(laDeTelegram.has(id), `${id} sale en su panel y no está en su lista`);
 }
-assert.strictEqual(nombrados.get("p5"), "tía de Carmen", "y con ellos entra lo que su lista añade a la regla");
+assert.strictEqual(nombrados.get("p5"), "la tía de Carmen", "y con ellos entra lo que su lista añade a la regla");
 
 // A los demás se les da la regla, que es lo único que se puede saber de ellos: la sangre de
 // primer grado y las parejas de todos. Nadie de segundo grado.
 const deSuHermana = new Map(proximasCelebraciones(g, "p131", "2026-03-01", 366).map((c) => [c.id, c.parentesco]));
 for (const [, parentesco] of deSuHermana) {
   assert.ok(
-    parentesco === null || parentesco.startsWith("pareja") || !/(segund|abuel[oa]s|nieto)/.test(parentesco.replace(/^bisabuel/, "")),
+    parentesco === null || parentesco.startsWith("la pareja") || !/(segund|abuel[oa]s|nieto)/.test(parentesco.replace(/^bisabuel/, "")),
     `${parentesco} no es familia cercana`,
   );
 }
@@ -97,7 +97,7 @@ assert.notDeepStrictEqual(
   desdeSuHijo.map((c) => c.id),
   orden.map((c) => c.id),
 );
-assert.strictEqual(desdeSuHijo.find((c) => c.id === "p25")!.parentesco, "padre");
+assert.strictEqual(desdeSuHijo.find((c) => c.id === "p25")!.parentesco, "tu padre");
 
 // Los dos días que son de todos: una fila, sin nombres, y siempre
 // El del padre no se mueve (San José) y el de la madre sí. Salen una vez y una sola, mire

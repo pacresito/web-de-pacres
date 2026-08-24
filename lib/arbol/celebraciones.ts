@@ -145,7 +145,7 @@ function familiaCercana(g: Grafo, pov: string): Map<string, Entrada> {
     // El punto de vista se cuenta entre sus propios hermanos: es familia suya, pero no
     // se llama a sí mismo hermano de nadie.
     if (id === pov) salida.set(id, { como: null, santo: true });
-    else salida.set(id, { como: declinar(termino, 1, g.personaPorId.get(id)!.sexo === "m" ? 1 : 0), santo: true });
+    else salida.set(id, { como: `tu ${declinar(termino, 1, g.personaPorId.get(id)!.sexo === "m" ? 1 : 0)}`, santo: true });
   }
 
   // Las parejas van después y sobre una foto fija de la sangre: si no, la pareja de un
@@ -156,7 +156,7 @@ function familiaCercana(g: Grafo, pov: string): Map<string, Entrada> {
       if (union.roto) continue; // el divorcio saca de la familia, y del panel
       for (const otro of union.partners) {
         if (otro === id || salida.has(otro)) continue;
-        salida.set(otro, { como: id === pov ? "tu pareja" : `pareja de ${g.personaPorId.get(id)!.nombre}`, santo: true });
+        salida.set(otro, { como: id === pov ? "tu pareja" : `la pareja de ${g.personaPorId.get(id)!.nombre}`, santo: true });
       }
     }
   }

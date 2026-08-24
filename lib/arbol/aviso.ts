@@ -14,7 +14,8 @@
 import { añoDe, conDia, MS_DIA, seLeSuponeFallecido, type Fecha } from "./fechas";
 import { type Grafo } from "./grafo";
 import { laLista, PAREJA, YO } from "./lista";
-import { onomasticaDePersona, primerDomingoDeMayo, proximaVez, type DiaDelAño } from "./santoral";
+import { pluralDeNombre } from "./plural";
+import { onomasticaDe, onomasticaDePersona, primerDomingoDeMayo, proximaVez, type DiaDelAño } from "./santoral";
 
 /** La hora a la que sale, en Madrid. */
 export const HORA = 22;
@@ -75,9 +76,14 @@ function* deLaGente(g: Grafo, hoy: Fecha, mañana: Fecha): Generator<Linea> {
 
     const suSanto = santo ? onomasticaDePersona(persona) : null;
     if (suSanto && cae(suSanto)) {
+      // La cola que nombra a todos los que se llaman igual solo vale si el día es el de su
+      // nombre: hay quien celebra el de otro —una María que celebra San José— y a ese
+      // «el día de las Marías» le estaría diciendo el día que no es.
+      const suNombre = persona.nombre.split(" ")[0];
+      const colas = onomasticaDe(suNombre) === suSanto ? SANTOS : SANTOS.slice(0, -1);
       const texto = mio
         ? `${FIESTAS[suerte(FIESTAS.length)]} ${MIO_SANTO[añoDe(mañana) % MIO_SANTO.length]}`
-        : `${FIESTAS[suerte(FIESTAS.length)]} ${quien} — ${SANTOS[suerte(SANTOS.length)]}`;
+        : `${FIESTAS[suerte(FIESTAS.length)]} ${quien} — ${colas[suerte(colas.length)](suNombre, persona.sexo === "m")}`;
       yield { grupo: 2, nombre: mio ? "" : persona.nombre, texto };
     }
   }
@@ -121,7 +127,16 @@ const CUMPLES_DE_ELLA: Frase[] = [
   (q, e) => `${q}, cumple ${e} mañana. Si dudas, pregunta en casa antes de escribir.`,
 ];
 
-const SANTOS = ["su santo", "onomástica", "el día de su nombre", "santo"];
+/**
+ * Las colas de la línea del santo. **La que los nombra a todos va la última** porque es la
+ * única que no siempre se puede decir, y así quitarla es quedarse con las de delante.
+ */
+const SANTOS: ((nombre: string, mujer: boolean) => string)[] = [
+  () => "su onomástica",
+  () => "onomástica",
+  () => "el día de su nombre",
+  (nombre, mujer) => `el día de ${mujer ? "las" : "los"} ${pluralDeNombre(nombre)}`,
+];
 
 /** Y lo mío, que va en segunda persona y rota con la edad, no con la suerte. */
 const MIO_CUMPLE: ((edad: number) => string)[] = [

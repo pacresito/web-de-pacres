@@ -25,28 +25,28 @@ const comoLoLlamo = (id: string) => lista.get(id)?.como;
 // Quién entra
 assert.ok(lista.has(YO.id), "el primero de la lista soy yo: mi cumpleaños también se avisa");
 assert.strictEqual(comoLoLlamo(YO.id), null, "y a mí no me llamo de ninguna manera");
-assert.strictEqual(comoLoLlamo("p125"), "madre");
+assert.strictEqual(comoLoLlamo("p125"), "tu madre");
 assert.strictEqual(comoLoLlamo("p24"), "tu pareja");
-assert.strictEqual(comoLoLlamo("p26"), "hijo");
+assert.strictEqual(comoLoLlamo("p26"), "tu hijo");
 
 // Los de Carmen entran por ella y se nombran desde ella, hasta el hijo de sus primos.
-assert.strictEqual(comoLoLlamo("p21"), "madre de Carmen");
-assert.strictEqual(comoLoLlamo("p29"), "hermano de Carmen");
-assert.strictEqual(comoLoLlamo("p13"), "sobrina segunda de Carmen");
+assert.strictEqual(comoLoLlamo("p21"), "la madre de Carmen");
+assert.strictEqual(comoLoLlamo("p29"), "el hermano de Carmen");
+assert.strictEqual(comoLoLlamo("p13"), "la sobrina segunda de Carmen");
 // Y su familia política con ellos, nombrada por aquel con quien está: Eva no me es nada ni le
 // es sangre a Carmen, pero está con su primo.
-assert.strictEqual(comoLoLlamo("p8"), "pareja de Mariano");
+assert.strictEqual(comoLoLlamo("p8"), "la pareja de Mariano");
 // Lo que no arrastra la pareja son los suyos: Mar entra por estar con mi hermano, y sus
 // padres se quedan fuera. La política de la política no la felicita nadie.
-assert.strictEqual(comoLoLlamo("p127"), "pareja de Ricardo");
+assert.strictEqual(comoLoLlamo("p127"), "la pareja de Ricardo");
 for (const id of ["p461", "p462"]) assert.strictEqual(lista.has(id), false, `${persona(id).nombre} es de la familia de Mar, no de la mía`);
 
 // La rama entera de los abuelos maternos, sin tope de grado: por parentesco, una sobrina
 // segunda no entraría —no está entre los términos de la lista—, y por rama sí.
-assert.strictEqual(comoLoLlamo("p416"), "sobrina segunda", "Elena, la hija de Marta");
+assert.strictEqual(comoLoLlamo("p416"), "tu sobrina segunda", "Elena, la hija de Marta");
 // De los catorce sobrinos segundos que tengo entran tres, y ninguno por ser sobrino segundo:
 // Elena por la rama Velasco, y los dos de Vicente porque están escritos uno a uno.
-const sobrinasSegundas = [...lista].filter(([, e]) => e.como === "sobrina segunda" || e.como === "sobrino segundo");
+const sobrinasSegundas = [...lista].filter(([, e]) => e.como === "tu sobrina segunda" || e.como === "tu sobrino segundo");
 assert.deepStrictEqual(
   sobrinasSegundas.map(([id]) => id).sort(),
   ["p144", "p145", "p416"],
@@ -54,8 +54,8 @@ assert.deepStrictEqual(
 );
 
 // Los tíos de Carmen entran como los míos: es la regla que se dejaba fuera a Teresa.
-assert.strictEqual(comoLoLlamo("p5"), "tía de Carmen");
-assert.strictEqual(comoLoLlamo("p3"), "abuelo de Carmen");
+assert.strictEqual(comoLoLlamo("p5"), "la tía de Carmen");
+assert.strictEqual(comoLoLlamo("p3"), "el abuelo de Carmen");
 
 // Un suelto entra sin parentesco que lo nombre, y lo nombra su propia línea de la lista.
 assert.strictEqual(comoLoLlamo("p425"), "la hija de Ana", "Aina, que no es hija de Javi");

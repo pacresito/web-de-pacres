@@ -126,17 +126,24 @@ function comoLoLlamo(g: Grafo, id: string, desdeMi: Mapa, desdeElla: Mapa): stri
 
 type Mapa = Map<string, Parentesco>;
 
-/** Su término declinado; y al que solo entró por su pareja, con quién está, que es lo que lo sitúa. */
+/**
+ * Su término declinado; y al que solo entró por su pareja, con quién está, que es lo que lo
+ * sitúa. **Al que me es algo se le nombra desde mí —«tu hijo»— y al que me es algo a través
+ * de otro, desde ese otro —«el primo de Carmen»—**: el mensaje me habla a mí, y un parentesco
+ * a secas obliga a preguntarse de quién.
+ */
 function porLoQueEs(g: Grafo, id: string, mapa: Mapa, sufijo: string): string | null {
   const { termino } = mapa.get(id)!;
   if (termino === SIN_PARENTESCO) return null;
+  const mujer = g.personaPorId.get(id)!.sexo === "m";
   if (termino !== PAREJAS) {
-    return `${declinar(termino, 1, g.personaPorId.get(id)!.sexo === "m" ? 1 : 0)}${sufijo}`;
+    const suyo = declinar(termino, 1, mujer ? 1 : 0);
+    return sufijo ? `${mujer ? "la" : "el"} ${suyo}${sufijo}` : `tu ${suyo}`;
   }
   for (const otro of parejaActual(g, id)) {
     if (otro === YO.id) return "tu pareja";
     const suyo = mapa.get(otro)!.termino;
-    if (suyo !== PAREJAS && suyo !== SIN_PARENTESCO) return `pareja de ${g.personaPorId.get(otro)!.nombre}`;
+    if (suyo !== PAREJAS && suyo !== SIN_PARENTESCO) return `la pareja de ${g.personaPorId.get(otro)!.nombre}`;
   }
   return null;
 }

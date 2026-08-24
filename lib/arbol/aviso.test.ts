@@ -42,9 +42,9 @@ assert.ok(!mio.texto.includes("pacr.es"), "ni fecha ni enlace: el mensaje es de 
 const marzo = laNoche("2026-03-18")!;
 const lineas = marzo.texto.split("\n").filter((l) => l.startsWith("🎂") || l.startsWith("🎉"));
 assert.strictEqual(lineas[0], "🎉 Mañana es el día del padre, y va por ti. Ve dejando pistas.");
-assert.ok(/^\S+ <b>Pepe<\/b>, tío — /m.test(marzo.texto), marzo.texto);
+assert.ok(/^\S+ <b>Pepe<\/b>, tu tío — /m.test(marzo.texto), marzo.texto);
 // El santo llega hasta la casa de Carmen —su padre sí— y no más allá: su tío, no.
-assert.ok(/^\S+ <b>Jose Alberto<\/b>, padre de Carmen — /m.test(marzo.texto), marzo.texto);
+assert.ok(/^\S+ <b>Jose Alberto<\/b>, el padre de Carmen — /m.test(marzo.texto), marzo.texto);
 assert.ok(!marzo.texto.includes("tío de Carmen"), "de sus tíos, el cumpleaños y nada más");
 
 // El día de la madre no va por mí aunque sea padre: va por Carmen, y por la mía mientras viva.
@@ -60,7 +60,7 @@ for (const dia of ["día del padre", "día de la madre"]) {
 
 // Un cumpleaños ajeno dice quién es y los que cumple, y nunca cae en la línea de otro.
 const conCumple = delAño.find((a) => /^\S+ [^\n]*<b>Mar<\/b>/m.test(a?.texto ?? ""))!;
-assert.ok(/<b>Mar<\/b>, pareja de Ricardo[.,] /.test(conCumple.texto), conCumple.texto);
+assert.ok(/<b>Mar<\/b>, la pareja de Ricardo[.,] /.test(conCumple.texto), conCumple.texto);
 assert.ok(/\b45\b/.test(conCumple.texto.split("\n").find((l) => l.includes("<b>Mar</b>"))!), conCumple.texto);
 
 // Todo el año: cada línea con su emoji, nadie sin decir quién es y nada a medio redactar.
