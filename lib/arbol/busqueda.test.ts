@@ -3,7 +3,7 @@
 import assert from "assert";
 import { readFileSync } from "fs";
 import { resolve } from "path";
-import { acortar, buscar, IGUALES, losSinNombre, TAMBIEN_ENCUENTRA, type Resultado } from "./busqueda";
+import { acortar, buscar, IGUALES, losSinNombre, SOLO_SUYOS, TAMBIEN_ENCUENTRA, type Resultado } from "./busqueda";
 import { construirGrafo, pasosDesde } from "./grafo";
 import { contextoEntero, libretaDe, SIN_NOMBRE } from "./identidad";
 import type { ArbolData, Persona, Union } from "./tree";
@@ -117,10 +117,41 @@ assert.ok(porNombre("Carmen").includes("p277"), "Carmiña sale al buscar «Carme
 assert.deepStrictEqual(porNombre("Carmiña"), ["p277"], "y «Carmiña» no saca a nadie más");
 
 assert.deepStrictEqual(porNombre("Catina"), porNombre("Catalina"), "a Catina se la busca por los dos");
+
+// Los nombres de uno solo. Cada id con el nombre que tiene que seguir teniendo: el JSON se
+// edita a mano y uno que cambiara de dueño mandaría a quien teclea el nombre de su tía a la
+// ficha de un desconocido sin que fallara nada.
+for (const [id, nombre, ...suyos] of SOLO_SUYOS) {
+  const p = real.personaPorId.get(id);
+  assert.ok(p, `${id} ya no está en el árbol`);
+  assert.strictEqual(p.nombre, nombre, `${id} ya no se llama ${nombre}`);
+  for (const otro of suyos) assert.ok(porNombre(otro).includes(id), `buscando «${otro}» tendría que salir ${id}`);
+}
+
+// Y llegan a uno, que es lo que no sabía hacer la tabla de nombres: «Chiara Teresa» sacaba a
+// las siete Teresa y «Pablo Enrique» a los quince Pablo.
+for (const [escrito, esperado] of [
+  ["Chiara Teresa", "p14"],
+  ["Teresita", "p14"],
+  ["Mariano José", "p7"],
+  ["Pablo Enrique", "p18"],
+  ["Carmen Adoración", "p24"],
+  ["Luis Nazario", "p30"],
+  ["Merceditas", "p422"],
+  ["Nena", "p422"],
+  ["Elena María", "p444"],
+] as const) {
+  assert.deepStrictEqual(porNombre(escrito), [esperado], `«${escrito}» es de una persona y de nadie más`);
+}
+
+// Salvo cuando el nombre lo lleva más gente escrito, que entonces salen todos: el de uno no
+// esconde al que se llama así. Son los dos únicos criterios, y no se contradicen.
+assert.deepStrictEqual(porNombre("José Gerardo").sort(), ["p16", "p3"], "y p3 se llama José Gerardo");
+assert.deepStrictEqual(porNombre("Jose Alberto").sort(), ["p22", "p29"], "y p22 se llama Jose Alberto");
 assert.deepStrictEqual(
-  porNombre("Teresita"),
-  ["p5", "p11", "p2", "p60", "p63", "p14", "p58"],
-  "«Teresita» encuentra a las siete que se llaman «Teresa» a secas, no a las «María Teresa»",
+  porNombre("María Teresa").sort(),
+  ["p11", "p115", "p36", "p5", "p66", "p75"],
+  "las dos que lo llevan de nota y las cuatro que lo llevan de nombre, y ninguna Teresa más",
 );
 
 // Ningún grupo de más: uno cuyos nombres no lleve nadie no ayuda a encontrar a nadie.

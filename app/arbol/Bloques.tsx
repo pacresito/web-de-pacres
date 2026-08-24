@@ -14,7 +14,7 @@ const MARCA = { ancho: 7, alto: 12, hueco: 3 };
 
 /**
  * El título nombra a dos personas y no se recorta: **encoge**. Dos nombres compuestos
- * —«de Miguel Ángel y María Antonia»— piden medio recuadro más del que hay, y las dos
+ * —«de José Gerardo y María de los Ángeles»— piden medio recuadro más del que hay, y las dos
  * salidas de siempre son peores que esta: acortarlos en el dato le cambia el nombre a
  * alguien en toda la app, y cortarlos con «…» tapa justo la mitad que distingue a una
  * pareja de la de al lado. Un cuerpo más pequeño se lee; medio nombre, no.
