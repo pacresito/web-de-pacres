@@ -14,9 +14,9 @@ import type { Marco } from "@/lib/atlas/plano";
 
 export const ORDEN: { continente: Continente; marco: Marco; paises: string[] }[] = [
   { continente: "Asia", marco: [26, -11, 147, 78], paises: [
-    "ge", "am", "tr", "cy", "sy", "lb", "iq", "ps", "il", "jo", "sa", "ye", "om", "ae", "qa", "bh", "kw", "ir",
-    "az", "kz", "uz", "tm", "tj", "af", "pk", "mv", "lk", "in", "np", "kg", "bt", "bd", "mm", "th", "id", "tl",
-    "sg", "my", "bn", "ph", "kh", "vn", "la", "cn", "mn", "kp", "kr", "jp",
+    "ge", "am", "az", "tr", "cy", "sy", "iq", "lb", "il", "ps", "jo", "sa", "ye", "om", "ae", "qa", "bh", "kw",
+    "ir", "tm", "uz", "kz", "kg", "tj", "af", "pk", "mv", "lk", "in", "np", "bt", "bd", "mm", "la", "vn", "th",
+    "kh", "my", "id", "tl", "sg", "bn", "ph", "cn", "mn", "kp", "kr", "jp",
   ] },
   { continente: "Oceanía", marco: [110, -48, 205, 12], paises: ["pw", "fm", "nr", "mh", "tv", "ki", "ws", "to", "fj", "vu", "sb", "pg", "au", "nz"] },
   { continente: "África", marco: [-26, -36, 60, 38], paises: [
