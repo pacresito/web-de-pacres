@@ -9,13 +9,16 @@ import redis from "@/lib/redis";
 import { KEYS } from "@/lib/atlas/keys";
 import { verifySession } from "@/lib/atlas/session";
 import { PAIS_POR_ID } from "@/lib/atlas/paises";
-import { calificar, DATOS, NOTAS, type Dato, type Mazo, type Nota } from "@/lib/atlas/srs";
+import { calificar, DATOS, migrar, migrarDato, NOTAS, type Dato, type Mazo, type Nota } from "@/lib/atlas/srs";
 
 const conSesion = async () => verifySession((await cookies()).get("atlas_session")?.value);
 
 async function leer(): Promise<Mazo> {
   const guardado = await redis.get(KEYS.mazo());
-  return guardado ? (JSON.parse(guardado) as Mazo) : {};
+  // Lo de Redis se escribió con el nombre viejo del cuarto dato hasta que dejó de llamarse así.
+  // Se traduce al leer y se reescribe traducido en el primer POST, pero la traducción se queda:
+  // lo que se guardó una vez no vuelve a pasar por aquí si nadie califica.
+  return guardado ? migrar(JSON.parse(guardado)) : {};
 }
 
 export async function GET(): Promise<Response> {
@@ -40,12 +43,15 @@ export async function POST(request: Request): Promise<Response> {
     // vida que ya no vuelve a salir a preguntar nunca.
     const { pais, dato, nota, ms } = (c ?? {}) as Record<string, unknown>;
     if (typeof pais !== "string" || !PAIS_POR_ID.has(pais)) continue;
-    if (!(DATOS as readonly string[]).includes(dato as string)) continue;
+    // Se traduce **antes** de validar: un dispositivo que lleve semanas sin cobertura sube la
+    // cola con el nombre viejo, y validarla contra los nombres de hoy la tiraría en silencio.
+    const suyo = typeof dato === "string" ? migrarDato(dato) : dato;
+    if (!(DATOS as readonly string[]).includes(suyo as string)) continue;
     if (!(NOTAS as readonly string[]).includes(nota as string)) continue;
     // El reloj lo pone quien calificó —lo de hace tres días sin cobertura es de hace tres
     // días—, pero nunca del futuro: una fecha adelantada infla la vida y no se deshace.
     const cuando = typeof ms === "number" && Number.isFinite(ms) ? Math.min(ms, ahora) : ahora;
-    mazo = calificar(mazo, pais, dato as Dato, nota as Nota, cuando);
+    mazo = calificar(mazo, pais, suyo as Dato, nota as Nota, cuando);
   }
 
   await redis.set(KEYS.mazo(), JSON.stringify(mazo));

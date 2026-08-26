@@ -250,7 +250,7 @@ export default function Explorar({ abrirEnEmpezados = false }: { abrirEnEmpezado
         {/* El tamaño va al pie de la silueta, que es de quien habla —los km² y el largo son del
             país, no del continente de al lado—, y en móvil cierra la ficha con una regla, que es
             donde no le quita aire a nada. */}
-        {fila("forma",
+        {fila("lugar",
           <div style={{ display: "grid", gap: 10 }}>
           <div className="atlas-mapas">
             {/* Las dos figuras se pegan a la izquierda de su casilla en vez de centrarse en ella,

@@ -9,7 +9,7 @@
 // vez, al avanzar, y `useSyncExternalStore` lee el resultado sin efectos ni cascadas.
 import { esPerfil, sembrar, type Perfil } from "./sembrar";
 import { RECORRIDO } from "@/data/atlas/orden";
-import { calificar, montar, siguiente, type Dato, type Mazo, type Nota, type Tarjeta } from "./srs";
+import { calificar, migrar, migrarDato, montar, siguiente, type Dato, type Mazo, type Nota, type Tarjeta } from "./srs";
 
 const CLAVE = "atlas:mazo";
 const CLAVE_COLA = "atlas:cola";
@@ -49,12 +49,15 @@ function leerDeDisco(): Mazo {
     return sembrar(perfil, Date.now());
   }
   try {
-    cola = JSON.parse(localStorage.getItem(CLAVE_COLA) ?? "[]") as Calificacion[];
+    // Lo guardado puede venir del nombre viejo del cuarto dato, aquí y en la cola pendiente:
+    // se traduce al entrar, que es el único sitio por donde pasa todo lo que se leyó de disco.
+    cola = (JSON.parse(localStorage.getItem(CLAVE_COLA) ?? "[]") as Calificacion[])
+      .map((c) => ({ ...c, dato: migrarDato(c.dato) as Dato }));
     identificado = localStorage.getItem(CLAVE_SESION) === "1";
     const n = localStorage.getItem(CLAVE_NIVEL);
     if (esPerfil(n)) nivel = n;
     const s = localStorage.getItem(CLAVE);
-    return s ? (JSON.parse(s) as Mazo) : {};
+    return s ? migrar(JSON.parse(s)) : {};
   } catch {
     // Modo privado o almacenamiento lleno: se juega sin recordar, que es mejor que no jugar.
     return {};

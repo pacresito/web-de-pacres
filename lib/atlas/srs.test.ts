@@ -1,6 +1,6 @@
 // Test de lógica pura: `npx tsx lib/atlas/srs.test.ts`. Fuera del build.
 import assert from "assert";
-import { calificar, cuenta, DATOS, dominioPais, huecos, MAX_EN_EL_AIRE, montar, nuevaVida, siguiente, sospecha, type Mazo } from "./srs";
+import { calificar, cuenta, DATOS, dominioPais, huecos, MAX_EN_EL_AIRE, migrar, migrarDato, montar, nuevaVida, siguiente, sospecha, type Mazo } from "./srs";
 import { PAISES } from "./paises";
 
 const DIA = 86_400_000;
@@ -45,9 +45,9 @@ assert.strictEqual(huecos(conVidas({ nombre: 100 }), "es"), 1);
 // A medias, dos y dos.
 assert.strictEqual(huecos(conVidas({ nombre: 100, capital: 100 }), "es"), 2);
 // Aprendido, tres preguntas y una pista. La proporción estudio:examen se invierte sola.
-assert.strictEqual(huecos(conVidas({ nombre: 100, capital: 100, bandera: 100, forma: 100 }), "es"), 3);
+assert.strictEqual(huecos(conVidas({ nombre: 100, capital: 100, bandera: 100, lugar: 100 }), "es"), 3);
 // Y el umbral es la vida, no el número de aciertos: veinte días aún no es aprendido.
-assert.strictEqual(huecos(conVidas({ nombre: 20, capital: 20, bandera: 20, forma: 20 }), "es"), 1);
+assert.strictEqual(huecos(conVidas({ nombre: 20, capital: 20, bandera: 20, lugar: 20 }), "es"), 1);
 
 // El montaje de la tarjeta
 const espana = PAISES.find((p) => p.id === "es")!;
@@ -57,13 +57,13 @@ assert.deepStrictEqual(montar({}, espana, AHORA).tapados, []);
 assert.strictEqual(montar({}, espana, AHORA).primeraVez, true);
 
 // Con todo aprendido y todo igual de olvidado, se tapan tres y queda una pista: nunca los cuatro.
-const aprendido: Mazo = { es: { nombre: vida(100, 300), capital: vida(100, 200), bandera: vida(100, 100), forma: vida(100, 50) } };
+const aprendido: Mazo = { es: { nombre: vida(100, 300), capital: vida(100, 200), bandera: vida(100, 100), lugar: vida(100, 50) } };
 const t = montar(aprendido, espana, AHORA);
 assert.strictEqual(t.tapados.length, 3);
 assert.strictEqual(t.primeraVez, false);
-// Se tapa lo más sospechoso y la pista es lo que mejor se tiene agarrado: aquí, la forma.
+// Se tapa lo más sospechoso y la pista es lo que mejor se tiene agarrado: aquí, el lugar.
 assert.deepStrictEqual(t.tapados, ["nombre", "capital", "bandera"]);
-assert.ok(!t.tapados.includes("forma"));
+assert.ok(!t.tapados.includes("lugar"));
 
 // Calificar solo toca el dato calificado, no la tarjeta entera. Es la razón de que cada dato
 // lleve su propio reloj: acertar la bandera no debe estirar la capital.
@@ -93,7 +93,7 @@ assert.ok(MAX_EN_EL_AIRE > 9, "el freno no debe saltar con los diez países de l
   assert.deepEqual(cuenta({}), { vistos: 0, aprendidos: 0 });
   assert.deepEqual(cuenta({ es: { nombre: nuevo } }), { vistos: 1, aprendidos: 0 });
   assert.deepEqual(
-    cuenta({ es: { nombre: viejo, capital: viejo, bandera: viejo, forma: viejo }, fr: { nombre: viejo, capital: nuevo } }),
+    cuenta({ es: { nombre: viejo, capital: viejo, bandera: viejo, lugar: viejo }, fr: { nombre: viejo, capital: nuevo } }),
     { vistos: 2, aprendidos: 1 },
   );
   // Un país que no está en la lista no cuenta: el mazo puede traer restos de otra versión.
@@ -104,12 +104,44 @@ assert.ok(MAX_EN_EL_AIRE > 9, "el freno no debe saltar con los diez países de l
 {
   const viejo = vida(400, 1);   // aprendido de sobra
   const nuevo = vida(1, 0);     // empezado
-  const cuatro = { nombre: viejo, capital: viejo, bandera: viejo, forma: viejo };
+  const cuatro = { nombre: viejo, capital: viejo, bandera: viejo, lugar: viejo };
   assert.strictEqual(dominioPais({ es: cuatro }, "es"), "aprendido");
   // Con tres de cuatro todavía no: es el mismo listón que usa `cuenta` para «aprendido».
-  assert.strictEqual(dominioPais({ es: { ...cuatro, forma: nuevo } }, "es"), "empezado");
+  assert.strictEqual(dominioPais({ es: { ...cuatro, lugar: nuevo } }, "es"), "empezado");
   assert.strictEqual(dominioPais({ es: { nombre: nuevo } }, "es"), "empezado");
   assert.strictEqual(dominioPais({}, "es"), "sin ver");
+}
+
+// El nombre viejo del cuarto dato
+{
+  const e = vida(37, 4);
+  // Lo guardado como `forma` sale como `lugar`, con su reloj intacto: es el mazo de verdad de
+  // quien lleva meses jugando, y perderlo es empezar ese dato de cero sin que nada avise.
+  const migrado = migrar({ es: { nombre: vida(9, 1), forma: e } });
+  assert.deepStrictEqual(migrado.es.lugar, e);
+  assert.ok(!("forma" in migrado.es));
+  assert.deepStrictEqual(migrado.es.nombre, vida(9, 1));
+
+  // Un mazo ya migrado se devuelve **tal cual, la misma referencia**: quien lo lee compara por
+  // identidad, y una copia nueva por lectura sería un bucle de renders.
+  const nuevo: Mazo = { es: { lugar: e } };
+  assert.strictEqual(migrar(nuevo), nuevo);
+  assert.strictEqual(migrar(migrado), migrado);
+  assert.deepStrictEqual(migrar({}), {});
+
+  // Conviviendo los dos manda el nuevo, que es el que se calificó después.
+  const dos = migrar({ es: { forma: vida(1, 0), lugar: e } });
+  assert.deepStrictEqual(dos.es.lugar, e);
+
+  // Y un país sin el dato viejo no se toca, aunque otro del mismo mazo sí lo lleve.
+  const mixto = migrar({ es: { forma: e }, fr: { capital: vida(5, 2) } });
+  assert.deepStrictEqual(mixto.fr, { capital: vida(5, 2) });
+
+  // La cola pendiente viaja con el nombre del dato dentro: un móvil sin cobertura desde antes
+  // del cambio la sube con el viejo, y sin traducir se tiraría entera al validarla.
+  assert.strictEqual(migrarDato("forma"), "lugar");
+  assert.strictEqual(migrarDato("capital"), "capital");
+  assert.ok((DATOS as readonly string[]).includes(migrarDato("forma")));
 }
 
 console.log("srs: ok");

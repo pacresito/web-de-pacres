@@ -10,11 +10,41 @@
 
 import { PAISES, PAIS_POR_ID, type Pais } from "./paises";
 
-export const DATOS = ["nombre", "capital", "bandera", "forma"] as const;
+export const DATOS = ["nombre", "capital", "bandera", "lugar"] as const;
 export type Dato = (typeof DATOS)[number];
 
 export type Estado = { visto: number; vida: number }; // ms epoch · días
 export type Mazo = Record<string, Partial<Record<Dato, Estado>>>; // paisId -> dato -> estado
+
+// El cuarto dato se llamó `forma` mientras la pregunta era la silueta; ahora se pregunta dónde
+// cae el país y la silueta es solo una de las dos maneras de contarlo. Los mazos guardados
+// —Redis y el navegador— siguen trayendo el nombre viejo, así que se traduce al leerlos.
+// **Esto no se retira cuando «ya no queden»:** un navegador que no se abra en un año lo traerá
+// igual, y descartarlo tiraría el reloj de ese dato sin que nada avise.
+const VIEJO = "forma";
+type MazoGuardado = Record<string, Partial<Record<Dato, Estado>> & { forma?: Estado }>;
+
+/**
+ * El mazo tal como se guardó, con el cuarto dato ya renombrado.
+ *
+ * Devuelve **el mismo objeto** cuando no hay nada que traducir, que es lo normal: quien lo lee
+ * lo compara por identidad, y una copia nueva por lectura sería un bucle de renders.
+ */
+export function migrar(mazo: MazoGuardado): Mazo {
+  const viejos = Object.entries(mazo).filter(([, datos]) => datos && VIEJO in datos);
+  if (!viejos.length) return mazo as Mazo;
+  const salida: Mazo = { ...(mazo as Mazo) };
+  for (const [id, datos] of viejos) {
+    const { forma, ...resto } = datos;
+    // Si por lo que sea conviven los dos, manda el nuevo: es el que se ha calificado después.
+    const lugar = resto.lugar ?? forma;
+    salida[id] = lugar ? { ...resto, lugar } : resto;
+  }
+  return salida;
+}
+
+/** Lo mismo para una calificación suelta, que viaja con el nombre del dato dentro. */
+export const migrarDato = (dato: string): string => (dato === VIEJO ? "lugar" : dato);
 // De peor a mejor, que es el orden en que se enseñan y el que valida lo que llega de fuera.
 export const NOTAS = ["fallo", "bien", "facil"] as const;
 export type Nota = (typeof NOTAS)[number];

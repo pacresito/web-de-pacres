@@ -9,7 +9,9 @@ import { calificarTarjeta, sinVista, suscribir, vistaActual, type Vista } from "
 
 const MONO = "var(--t-mono)";
 
-const ETIQUETA: Record<Dato, string> = { nombre: "país", capital: "capital", bandera: "bandera", forma: "forma" };
+// Lo que se lee en la tarjeta. `lugar` se rotula «ubicación» porque el identificador no puede
+// llevar la tilde y `ubicacion` mutilada no se escribe (CLAUDE, regla «Nombres»).
+const ETIQUETA: Record<Dato, string> = { nombre: "país", capital: "capital", bandera: "bandera", lugar: "ubicación" };
 
 // Cortas a propósito: se califica hasta cuatro veces por tarjeta, y una palabra más en el botón
 // es una palabra más leída por cuatro.
@@ -23,10 +25,10 @@ const CLASE: Record<Nota, string> = { fallo: "atlas-btn-no", bien: "atlas-btn-si
  * está la pregunta.
  */
 const ALTO: Record<Dato, [visible: number, tapado: number]> = {
-  nombre: [60, 60], capital: [52, 52], bandera: [104, 104], forma: [150, 168],
+  nombre: [60, 60], capital: [52, 52], bandera: [104, 104], lugar: [150, 168],
 };
 // La primera vez se ve todo y se califica todo: cuatro filas con botones no caben tan holgadas.
-const ALTO_PRIMERA: Record<Dato, number> = { nombre: 58, capital: 48, bandera: 100, forma: 140 };
+const ALTO_PRIMERA: Record<Dato, number> = { nombre: 58, capital: 48, bandera: 100, lugar: 140 };
 
 /** Los cuatro estados del carril, que es lo único que dice en qué punto va la tarjeta. */
 const CARRIL = { reposo: "var(--t-rule2)", espera: "var(--t-rule)", activo: "var(--t-accent)", hecho: "var(--a-hecho)" };
@@ -262,19 +264,30 @@ function Tarjeta({ vista }: { vista: Vista }) {
                  style={{ width: 144, height: 96, objectFit: "contain", display: "block", opacity: notas.bandera ? 0.55 : 1 }} />
           </div>)}
 
-        {/* La forma y su globo van juntos: el globo dice dónde está y cuánto mide, así que
-            enseñarlo con la forma tapada sería señalar el país en un mapa. */}
-        {fila("forma",
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 22, opacity: notas.forma ? 0.55 : 1 }}>
-            <Silueta id={pais.id} forma={forma} nombre={pais.nombre} style={{ width: 132, height: 132, flexShrink: 0 }} />
-            {/* El globo de la tarjeta mide 76 px: dice en qué parte del mundo cae el país, pero
-                no si estaba en el sitio que uno creía. Tocarlo lo abre grande, que es la
-                comprobación que se quiere hacer justo antes de calificar. Se traga el toque
-                —destapar es tocar donde sea— porque aquí tocar es esto. */}
+        {/* La silueta y su globo van juntos: el globo dice dónde está, así que enseñarlo con la
+            silueta tapada sería señalar el país en un mapa.
+
+            Van alineados por arriba y no por el centro: los dos dibujos miden lo mismo y tienen
+            que leerse a la misma altura, y centrar los bloques hundiría el globo justo lo que
+            ocupa el pie de los km. Quien empareja las dos alturas es `.atlas-globo`, que mide el
+            lienzo de la silueta y centra el globo dentro. */}
+        {fila("lugar",
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "center", gap: 22, opacity: notas.lugar ? 0.55 : 1 }}>
+            {/* La escala va al pie de la silueta, que es a quien le falta: va normalizada al
+                lienzo, así que Rusia y Mónaco se dibujan del mismo tamaño y sin los km no hay
+                manera de saber cuál se está mirando. El globo no la necesita —ahí el país sale a
+                escala del mundo—, y el pie le roba al lienzo el alto que ocupa. */}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 7, flexShrink: 0 }}>
+              <Silueta id={pais.id} forma={forma} nombre={pais.nombre} style={{ width: "var(--a-silueta)", height: "var(--a-silueta)" }} />
+              <span style={{ fontFamily: MONO, fontSize: 10, color: "var(--t-ink3)" }}>{forma.ladoKm} km</span>
+            </div>
+            {/* Tocar el globo lo abre grande, que es la comprobación que se quiere hacer justo
+                antes de calificar: el de la tarjeta dice en qué parte del mundo cae el país, pero
+                no si estaba en el sitio que uno creía. Se traga el toque —destapar es tocar donde
+                sea— porque aquí tocar es esto. */}
             <button type="button" className="atlas-globo" aria-label={`Ver el globo de ${pais.nombre} en grande`}
                     onClick={(e) => { e.stopPropagation(); setLupa(true); }}>
               <Globo id={pais.id} lon={forma.lon} lat={forma.lat} lado="var(--a-globo)" />
-              <span style={{ fontFamily: MONO, fontSize: 10, color: "var(--t-ink3)" }}>{forma.ladoKm} km</span>
             </button>
           </div>)}
       </div>
