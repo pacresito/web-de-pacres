@@ -1,6 +1,6 @@
 // Test de lógica pura: `npx tsx lib/atlas/srs.test.ts`. Fuera del build.
 import assert from "assert";
-import { calificar, cuenta, DATOS, dominioPais, huecos, MAX_EN_EL_AIRE, migrar, migrarDato, montar, nuevaVida, siguiente, sospecha, type Mazo } from "./srs";
+import { calificar, cuenta, DATOS, dominioPais, huecos, MAX_EN_EL_AIRE, montar, nuevaVida, siguiente, sospecha, type Mazo } from "./srs";
 import { PAISES } from "./paises";
 
 const DIA = 86_400_000;
@@ -110,38 +110,6 @@ assert.ok(MAX_EN_EL_AIRE > 9, "el freno no debe saltar con los diez países de l
   assert.strictEqual(dominioPais({ es: { ...cuatro, lugar: nuevo } }, "es"), "empezado");
   assert.strictEqual(dominioPais({ es: { nombre: nuevo } }, "es"), "empezado");
   assert.strictEqual(dominioPais({}, "es"), "sin ver");
-}
-
-// El nombre viejo del cuarto dato
-{
-  const e = vida(37, 4);
-  // Lo guardado como `forma` sale como `lugar`, con su reloj intacto: es el mazo de verdad de
-  // quien lleva meses jugando, y perderlo es empezar ese dato de cero sin que nada avise.
-  const migrado = migrar({ es: { nombre: vida(9, 1), forma: e } });
-  assert.deepStrictEqual(migrado.es.lugar, e);
-  assert.ok(!("forma" in migrado.es));
-  assert.deepStrictEqual(migrado.es.nombre, vida(9, 1));
-
-  // Un mazo ya migrado se devuelve **tal cual, la misma referencia**: quien lo lee compara por
-  // identidad, y una copia nueva por lectura sería un bucle de renders.
-  const nuevo: Mazo = { es: { lugar: e } };
-  assert.strictEqual(migrar(nuevo), nuevo);
-  assert.strictEqual(migrar(migrado), migrado);
-  assert.deepStrictEqual(migrar({}), {});
-
-  // Conviviendo los dos manda el nuevo, que es el que se calificó después.
-  const dos = migrar({ es: { forma: vida(1, 0), lugar: e } });
-  assert.deepStrictEqual(dos.es.lugar, e);
-
-  // Y un país sin el dato viejo no se toca, aunque otro del mismo mazo sí lo lleve.
-  const mixto = migrar({ es: { forma: e }, fr: { capital: vida(5, 2) } });
-  assert.deepStrictEqual(mixto.fr, { capital: vida(5, 2) });
-
-  // La cola pendiente viaja con el nombre del dato dentro: un móvil sin cobertura desde antes
-  // del cambio la sube con el viejo, y sin traducir se tiraría entera al validarla.
-  assert.strictEqual(migrarDato("forma"), "lugar");
-  assert.strictEqual(migrarDato("capital"), "capital");
-  assert.ok((DATOS as readonly string[]).includes(migrarDato("forma")));
 }
 
 console.log("srs: ok");

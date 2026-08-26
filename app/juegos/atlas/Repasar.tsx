@@ -9,8 +9,7 @@ import { calificarTarjeta, sinVista, suscribir, vistaActual, type Vista } from "
 
 const MONO = "var(--t-mono)";
 
-// Lo que se lee en la tarjeta. `lugar` se rotula «ubicación» porque el identificador no puede
-// llevar la tilde y `ubicacion` mutilada no se escribe (CLAUDE, regla «Nombres»).
+// Lo que se lee en la tarjeta. `lugar` se rotula «ubicación»: el identificador no lleva tilde.
 const ETIQUETA: Record<Dato, string> = { nombre: "país", capital: "capital", bandera: "bandera", lugar: "ubicación" };
 
 // Cortas a propósito: se califica hasta cuatro veces por tarjeta, y una palabra más en el botón
