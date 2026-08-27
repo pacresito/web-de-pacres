@@ -70,32 +70,39 @@ assert.strictEqual((d.match(/M/g) ?? []).length, 1, "solo el trozo visible");
   const anillos = [
     { id: "grande", r: caja(-10, -10, 20) },  // 35 px de lado
     { id: "chico", r: caja(2, 2, 0.5) },      // 0,9 px, y dentro del grande
-    { id: "isla", r: caja(12, 2, 0.5) },      // 0,9 px, y en el mar
     { id: "", r: caja(28, 28, 4) },           // tierra de nadie: se ve y no se engancha
     { id: "detras", r: caja(170, -2, 4) },    // al otro lado del horizonte
   ];
-  const puntos = [{ id: "punto", lon: -25, lat: -25 }, { id: "vecino", lon: -24, lat: -25 }];
+  // Los que se dibujan como punto, que son los únicos que cobran cortesía.
+  const puntos = [
+    { id: "dentro", lon: -3, lat: -3 },   // dentro del grande
+    { id: "mar", lon: 12.2, lat: 2 },     // en el mar, junto a la costa del grande
+    { id: "enano", lon: 2.2, lat: 2.2 },  // dentro del chico, que mide 0,9 px
+    { id: "lejos", lon: -25, lat: -25 },
+    { id: "vecino", lon: -24, lat: -25 },
+  ];
   const en = (lon: number, lat: number, unidad = 1) => enganche(anillos, puntos, proy, borde, proy(lon, lat)!, unidad);
 
-  assert.strictEqual(en(-8, -8), "grande", "dentro del grande y lejos del resto");
+  assert.strictEqual(en(-8, -8), "grande", "dentro del grande y lejos de todo punto");
   // De los que contienen el toque gana el pequeño: el grande tiene otros mil píxeles donde
   // pincharlo y el pequeño no tiene ninguno.
-  assert.strictEqual(en(2.25, 2.25), "chico", "el diminuto gana dentro del grande");
-  // Y lo gana desde cerca, sin tener que clavar el toque encima: el punto que el globo dibuja
-  // cae dentro del polígono del vecino grande —el de Andorra, dentro de España—, así que sin
-  // radio de gracia por delante sería inalcanzable.
-  assert.strictEqual(en(2.25, 3.5), "chico", "el diminuto gana al que lo contiene");
-  // Fuera de todo contorno entra el radio de gracia, y ahí el que no tiene forma se lleva el
-  // toque aunque el grande esté seis veces más cerca: al grande se le puede apuntar.
-  assert.strictEqual(en(10.5, 5), "isla", "el que no tiene forma gana en el mar");
-  // El país sin contorno entra por su centro, con lado cero.
-  assert.strictEqual(en(-24.9, -24.9), "punto", "el que no tiene forma engancha por su punto");
-  assert.strictEqual(en(-24.1, -25), "vecino", "de los que no tienen forma, el más cercano");
-  // Sin nadie cerca a quien no se pueda apuntar, manda el vecino de verdad.
+  assert.strictEqual(en(2.25, 2.4), "chico", "el chico gana dentro del grande");
+  // El punto gana al país que lo contiene, y desde cerca: el de Andorra cae dentro del polígono
+  // de España, así que sin esto sería inalcanzable salvo clavándole el toque encima.
+  assert.strictEqual(en(-2.9, -3), "dentro", "el punto gana al que lo contiene");
+  // En el mar, el punto se lleva el toque aunque la costa quede tres veces más cerca: a la costa
+  // se le puede apuntar y al punto no.
+  assert.strictEqual(en(10.5, 2), "mar", "el punto gana a la costa que tiene al lado");
+  // Pero la cortesía no puede morder más de un tercio del país que tiene el dedo dentro: el
+  // enano vive en un país de 0,9 px, así que su radio ahí es de tres décimas.
+  assert.strictEqual(en(2.45, 2.2), "chico", "la cortesía se encoge con el país de debajo");
+  // Sin ningún punto cerca, manda el vecino de verdad.
   assert.strictEqual(en(0, 14), "grande", "en el mar, el más cercano");
-  // El mismo toque con el globo pintado a un cuarto: los 6 px de gracia abarcan ahora 24
-  // unidades del dibujo, y el diminuto que quedaba fuera se lleva el enganche.
-  assert.strictEqual(en(0, 14, 4), "chico", "los umbrales van en píxeles de pantalla, no del dibujo");
+  // Y con el globo pintado más pequeño, los mismos 5 px de pantalla abarcan menos mundo: el
+  // punto del mar se queda fuera y el toque vuelve a la costa.
+  assert.strictEqual(en(10.5, 2, 0.4), "grande", "los umbrales van en píxeles de pantalla, no del dibujo");
+  assert.strictEqual(en(-24.9, -24.9), "lejos", "el que no tiene forma engancha por su punto");
+  assert.strictEqual(en(-24.1, -25), "vecino", "de los que no tienen forma, el más cercano");
   assert.strictEqual(en(30, 30), null, "lejos de todo no engancha, ni la tierra sin país");
   // Lo escondido tras el horizonte no está: pegarlo al canto lo haría enganchable desde el mar.
   for (let lon = -20; lon <= 20; lon += 5) assert.notStrictEqual(en(lon, 20), "detras", "no se engancha lo que no se ve");
