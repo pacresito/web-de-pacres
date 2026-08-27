@@ -43,7 +43,7 @@ export default function Globo({ id, lon, lat, r = 74, lado, oculto, puntos, marc
   oculto?: boolean; puntos?: boolean; marca?: string | null; alMarcar?: (id: string) => void;
 }) {
   const svg = useRef<SVGSVGElement>(null);
-  const { proy, borde, tierra, relleno, mio, punto, diminutos, trazo, trazoPunto } = useMemo(() => {
+  const { proy, borde, cercanos, tierra, relleno, mio, punto, diminutos, trazo, trazoPunto } = useMemo(() => {
     const proy = ortografica(lon, lat, r);
     const borde = alLimbo(lon, lat, r);
     // `null` y no "" para el que no se resalta: la cadena vacía es el id de la tierra que no es de
@@ -52,8 +52,11 @@ export default function Globo({ id, lon, lat, r = 74, lado, oculto, puntos, marc
     const anillosDe = (quien: string | null) => (quien ? MUNDO.filter((a) => a.id === quien).map((a) => a.r) : []);
     const suyos = anillosDe(resaltado);
     const marcados = anillosDe(marca ?? null);
+    // Los que se dibujan son los mismos que se pueden enganchar, y por eso salen de aquí: dos
+    // listas separadas serían un punto que se ve y no responde, o al revés.
+    const cercanos = puntos ? PUNTOS.filter((p) => gradosEntre(lon, lat, p.lon, p.lat) <= RADIO_PUNTOS) : [];
     return {
-      proy, borde,
+      proy, borde, cercanos,
       tierra: pathDelGlobo(MUNDO.filter((a) => a.id !== resaltado).map((a) => a.r), proy),
       // La tierra rellena, un punto más oscura que el agua: sin ella el globo es un círculo de
       // un solo tono con rayas, y no se lee cuál de los dos lados de la costa es mar.
@@ -63,13 +66,10 @@ export default function Globo({ id, lon, lat, r = 74, lado, oculto, puntos, marc
       // punto es exactamente lo que son. Va por su sitio en `FORMAS`, no por el centro del globo,
       // que es otra cosa desde que la tarjeta lo desvía.
       punto: resaltado && !suyos.length ? proy(FORMAS[resaltado].lon, FORMAS[resaltado].lat) : null,
-      // El resaltado no entra: ya se pinta en acento un poco más abajo, y dos círculos en el
-      // mismo sitio dejan un halo gris asomando por fuera del verde. Dentro del radio no hace
+      // El resaltado no se dibuja gris: ya se pinta en acento un poco más abajo, y dos círculos
+      // en el mismo sitio dejan un halo asomando por fuera del verde. Dentro del radio no hace
       // falta comprobar el horizonte: veinte grados caben de sobra en la cara visible.
-      diminutos: puntos
-        ? PUNTOS.filter((p) => p.id !== resaltado && gradosEntre(lon, lat, p.lon, p.lat) <= RADIO_PUNTOS)
-                .map((p) => proy(p.lon, p.lat)!)
-        : [],
+      diminutos: cercanos.filter((p) => p.id !== resaltado).map((p) => proy(p.lon, p.lat)!),
       trazo: pathDelGlobo(marcados, proy),
       trazoPunto: marca && !marcados.length ? proy(FORMAS[marca].lon, FORMAS[marca].lat) : null,
     };
@@ -91,7 +91,7 @@ export default function Globo({ id, lon, lat, r = 74, lado, oculto, puntos, marc
     ];
     if (Math.hypot(p[0], p[1]) > r) return;
     e.stopPropagation();
-    const enganchado = enganche(MUNDO, PUNTOS, proy, borde, p, unidad);
+    const enganchado = enganche(MUNDO, cercanos, proy, borde, p, unidad);
     if (enganchado) alMarcar(enganchado);
   };
 

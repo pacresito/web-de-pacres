@@ -81,6 +81,10 @@ assert.strictEqual((d.match(/M/g) ?? []).length, 1, "solo el trozo visible");
   // De los que contienen el toque gana el pequeño: el grande tiene otros mil píxeles donde
   // pincharlo y el pequeño no tiene ninguno.
   assert.strictEqual(en(2.25, 2.25), "chico", "el diminuto gana dentro del grande");
+  // Y lo gana desde cerca, sin tener que clavar el toque encima: el punto que el globo dibuja
+  // cae dentro del polígono del vecino grande —el de Andorra, dentro de España—, así que sin
+  // radio de gracia por delante sería inalcanzable.
+  assert.strictEqual(en(2.25, 3.5), "chico", "el diminuto gana al que lo contiene");
   // Fuera de todo contorno entra el radio de gracia, y ahí el que no tiene forma se lleva el
   // toque aunque el grande esté seis veces más cerca: al grande se le puede apuntar.
   assert.strictEqual(en(10.5, 5), "isla", "el que no tiene forma gana en el mar");
@@ -89,9 +93,9 @@ assert.strictEqual((d.match(/M/g) ?? []).length, 1, "solo el trozo visible");
   assert.strictEqual(en(-24.1, -25), "vecino", "de los que no tienen forma, el más cercano");
   // Sin nadie cerca a quien no se pueda apuntar, manda el vecino de verdad.
   assert.strictEqual(en(0, 14), "grande", "en el mar, el más cercano");
-  // El mismo toque con el globo pintado a un tercio: los 10 px de gracia abarcan ahora 30
+  // El mismo toque con el globo pintado a un cuarto: los 6 px de gracia abarcan ahora 24
   // unidades del dibujo, y el diminuto que quedaba fuera se lleva el enganche.
-  assert.strictEqual(en(0, 14, 3), "chico", "los umbrales van en píxeles de pantalla, no del dibujo");
+  assert.strictEqual(en(0, 14, 4), "chico", "los umbrales van en píxeles de pantalla, no del dibujo");
   assert.strictEqual(en(30, 30), null, "lejos de todo no engancha, ni la tierra sin país");
   // Lo escondido tras el horizonte no está: pegarlo al canto lo haría enganchable desde el mar.
   for (let lon = -20; lon <= 20; lon += 5) assert.notStrictEqual(en(lon, 20), "detras", "no se engancha lo que no se ve");

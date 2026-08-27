@@ -87,7 +87,7 @@ export function pathDelGlobo(anillos: number[][][], proy: ReturnType<typeof orto
  * dedo, no a qué escala se pintó el dibujo. Quien los traduce a unidades del `viewBox` es
  * `unidad`, y por eso el mismo toque abarca más mundo en el globo pequeño que en el grande.
  */
-const GRACIA = 10;  // radio de cortesía de los que no se pueden pinchar
+const GRACIA = 6;   // radio de cortesía alrededor del punto de los que no tienen forma
 const DIMINUTO = 5; // por debajo de este lado, un país no tiene forma a la que apuntar
 const CERCA = 15;   // hasta dónde se busca al vecino cuando el toque cae en el mar
 
@@ -113,26 +113,27 @@ function aSegmento(px: number, py: number, ax: number, ay: number, bx: number, b
  * solo pone la marca donde señaló.
  *
  * El orden de preferencia:
- * 1. **El que contiene el toque**, y el más pequeño de ellos si el mapa los solapa: el grande
- *    tiene otros mil píxeles donde pincharlo y el pequeño no tiene ninguno.
- * 2. **De los que no tienen forma a la que apuntar, el más cercano.** Son los 29 que el mapa de
- *    baja resolución no trae y los que miden menos de 5 px, que no se pueden pinchar aunque uno
- *    sepa dónde están. Sin este paso, el toque junto a Bahrein se lo lleva la costa de Arabia
- *    Saudí, que queda más cerca.
+ * 1. **De los que no tienen forma a la que apuntar, el más cercano dentro del radio de gracia.**
+ *    Son los que el mapa de baja resolución no trae y los que miden menos de 5 px: no se pueden
+ *    pinchar aunque uno sepa dónde están, y por eso el globo grande les dibuja un punto.
+ * 2. **El que contiene el toque**, y el más pequeño de ellos si el mapa los solapa.
  * 3. **El más cercano**, para el toque que cae en el mar o en tierra de nadie —Groenlandia, el
  *    Sáhara Occidental, la Antártida—, que si no dejaría el dedo en el vacío.
  * 4. Nada: el toque no engancha y se vuelve a intentar.
  *
- * **Quien contiene va antes que el pequeño, y eso se midió.** Al revés —el diminuto ganando
- * siempre en su radio de gracia— el toque en el centro del globo, que es el sitio exacto de la
- * respuesta, enganchaba al vecino en 17 países de 195: el Vaticano le robaba el centro a Italia,
- * Luxemburgo a Bélgica, Liechtenstein a Austria y a Suiza. Con el contorno por delante son 8, y
- * los ocho son países cuyo centro cae de verdad en el vecino —Croacia dentro de Bosnia, Noruega
- * dentro de Suecia—, que no lo arregla ninguna regla. Los sin forma no pierden nada: en su propio
- * globo su punto cae clavado en el centro, así que el toque los toca y ganan por el paso 1.
+ * **El punto va antes que el contorno porque si no es inalcanzable.** El de Andorra cae dentro
+ * del polígono de España, así que con el contorno delante solo se enganchaba clavando el toque
+ * en él: fallando por cinco píxeles, los que no tienen forma se cogían 156 veces de 232, y
+ * Liechtenstein no había manera. Con el punto delante, 184.
  *
- * `puntos` son los países que el mapa de baja resolución no trae —Malta, Mónaco, Singapur…—, que
- * entran por su centro y con lado cero, así que caen siempre en el primer paso.
+ * **Y el radio es seis, no diez.** Con diez se coge lo mismo —a cinco píxeles de error ya sobra
+ * con seis— y encima roba más: tocando el sitio exacto del país preguntado, con seis se engancha
+ * el suyo en 182 de 195 y con diez en 177. Lo que pierde son vecindarios apretados donde el
+ * punto está de verdad ahí: Italia junto al Vaticano, Suiza junto a Liechtenstein, el Levante
+ * alrededor de Palestina.
+ *
+ * `puntos` son esos países sin forma. **Se le pasan los mismos que el globo dibuja**, ni uno más:
+ * enganchar uno que no se ve sería premiar la suerte, y el que se ve tiene que responder.
  */
 export function enganche(
   anillos: { id: string; r: number[][] }[],
@@ -181,13 +182,6 @@ export function enganche(
   const lado = (c: { x0: number; x1: number; y0: number; y1: number }) => Math.max(c.x1 - c.x0, c.y1 - c.y0);
   let elegido: string | null = null;
 
-  let menor = Infinity;
-  for (const [id, c] of cajas) {
-    const l = lado(c);
-    if (c.dist === 0 && l < menor) { menor = l; elegido = id; }
-  }
-  if (elegido) return elegido;
-
   // Entre los que no tienen forma manda la distancia, no el tamaño: son todos igual de
   // impinchables, así que lo único que los ordena es cuál estaba más cerca del dedo. Con el
   // tamaño por delante, el Vaticano le ganaba el centro a San Marino desde seis píxeles.
@@ -195,6 +189,13 @@ export function enganche(
   let min = gracia;
   for (const [id, c] of cajas) {
     if (c.dist <= min && lado(c) < diminuto) { min = c.dist; elegido = id; }
+  }
+  if (elegido) return elegido;
+
+  let menor = Infinity;
+  for (const [id, c] of cajas) {
+    const l = lado(c);
+    if (c.dist === 0 && l < menor) { menor = l; elegido = id; }
   }
   if (elegido) return elegido;
 
