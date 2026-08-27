@@ -5,6 +5,7 @@ import { readFileSync } from "fs";
 import { resolve } from "path";
 import { centroDeEnlace, ENLACES } from "./enlaces";
 import { construirGrafo } from "./grafo";
+import { comoSeLlama } from "./personas";
 import type { ArbolData } from "./tree";
 
 const data: ArbolData = JSON.parse(readFileSync(resolve("seed/arbol.json"), "utf-8"));
@@ -16,7 +17,7 @@ const g = construirGrafo(data);
 for (const { alias, id, nombre, nace } of ENLACES) {
   const p = g.personaPorId.get(id);
   assert.ok(p, `el enlace ${alias} apunta a ${id}, que ya no está en el árbol`);
-  assert.strictEqual(p.nombre, nombre, `${alias} (${id}) ya no es ${nombre}`);
+  assert.strictEqual(comoSeLlama(p, "familiar"), nombre, `${alias} (${id}) ya no es ${nombre}`);
   assert.strictEqual(p.birth?.slice(0, 4) ?? "", nace, `${alias} (${id}) ya no nace en ${nace}`);
 }
 

@@ -16,6 +16,28 @@ export type ModoApellidos = "nuevos" | 0 | 1 | 2;
  */
 export const APELLIDOS_POR_DEFECTO: ModoApellidos = 1;
 
+/** Con cuál de sus dos nombres sale una persona: el que consta o el que usa la familia. */
+export type ModoNombre = "familiar" | "completo";
+
+/**
+ * El de casa. Este árbol lo mira la familia, y a Pepe nadie lo busca por José Gerardo: el
+ * nombre entero es un dato que se consulta, no la forma de reconocer a alguien de un vistazo.
+ */
+export const NOMBRE_POR_DEFECTO: ModoNombre = "familiar";
+
+/**
+ * Cómo se llama alguien, con el interruptor donde esté. **Es el único sitio donde se elige
+ * entre los dos nombres**: cualquier superficie que escriba `p.nombre` a pelo se queda
+ * enseñando el del documento cuando el árbol entero está enseñando el de casa. Quien no
+ * tiene apodo sale igual con las dos, que son la mayoría del árbol.
+ */
+export const comoSeLlama = (p: Persona, modo: ModoNombre): string =>
+  modo === "completo" ? p.nombre : (p.apodos?.[0] ?? p.nombre);
+
+/** Y los que el título no está enseñando, que son los que la ficha tiene que decir. */
+export const losOtrosApodos = (p: Persona, modo: ModoNombre): string[] =>
+  modo === "completo" ? (p.apodos ?? []) : (p.apodos ?? []).slice(1);
+
 /**
  * El hombre arriba y la mujer abajo. Si ninguno de los dos trae sexo, se respeta el
  * orden del documento en vez de inventarse un criterio.
@@ -105,13 +127,14 @@ export interface Etiqueta {
   heredadoDesde: number;
 }
 
-/** Según cuántos apellidos pida el interruptor, y de los suyos. */
-export function etiquetaDe(p: Persona, modo: ModoApellidos, apellidos: Apellidos): Etiqueta {
+/** Según cuántos apellidos pida un interruptor y cuál de sus nombres pida el otro. */
+export function etiquetaDe(p: Persona, modo: ModoApellidos, apellidos: Apellidos, nombre: ModoNombre): Etiqueta {
   const puestos = modo === 0 ? [] : modo === "nuevos" ? apellidos.nuevos : apellidos.todos.slice(0, modo);
   const heredados = new Set(apellidos.todos.slice(apellidos.escritos));
   const primero = puestos.findIndex((apellido) => heredados.has(apellido));
+  const llamado = comoSeLlama(p, nombre);
   return {
-    texto: [p.nombre, ...puestos].join(" "),
-    heredadoDesde: [p.nombre, ...puestos.slice(0, primero < 0 ? puestos.length : primero)].join(" ").length,
+    texto: [llamado, ...puestos].join(" "),
+    heredadoDesde: [llamado, ...puestos.slice(0, primero < 0 ? puestos.length : primero)].join(" ").length,
   };
 }

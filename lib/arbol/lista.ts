@@ -13,6 +13,7 @@
 
 import { descendientes, type Grafo } from "./grafo";
 import { declinar, PAREJAS, parentescos, SIN_PARENTESCO, type Parentesco } from "./parentesco";
+import { comoSeLlama } from "./personas";
 
 /** Un id con el nombre al lado. Manda el id; el nombre está para poder leer esta lista. */
 type Quien = { id: string; nombre: string };
@@ -42,7 +43,7 @@ const SANTO_DE_LOS_SUYOS = ["abuelos", "padres", "hermanos", "sobrinos"];
  */
 const RAMAS: [Quien, Quien][] = [
   // Mis abuelos maternos: la rama Velasco entera.
-  [{ id: "p395", nombre: "José" }, { id: "p396", nombre: "Catalina" }],
+  [{ id: "p395", nombre: "José" }, { id: "p396", nombre: "Catina" }],
 ];
 
 /**
@@ -143,7 +144,8 @@ function porLoQueEs(g: Grafo, id: string, mapa: Mapa, sufijo: string): string | 
   for (const otro of parejaActual(g, id)) {
     if (otro === YO.id) return "tu pareja";
     const suyo = mapa.get(otro)!.termino;
-    if (suyo !== PAREJAS && suyo !== SIN_PARENTESCO) return `la pareja de ${g.personaPorId.get(otro)!.nombre}`;
+    if (suyo !== PAREJAS && suyo !== SIN_PARENTESCO)
+      return `la pareja de ${comoSeLlama(g.personaPorId.get(otro)!, "familiar")}`;
   }
   return null;
 }

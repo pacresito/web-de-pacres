@@ -8,7 +8,7 @@ import { añoDe, conDia, enMs, escribirDiaDeMes, escribirVida, MS_DIA, seLeSupon
 import { fotosDe, type FotoEnFicha } from "./fotos";
 import type { Grafo } from "./grafo";
 import { identidadDe, SIN_NOMBRE, verboDeUnion, type Homonimia, type Trozo } from "./identidad";
-import { ordenarPareja, type Apellidos } from "./personas";
+import { comoSeLlama, losOtrosApodos, ordenarPareja, type Apellidos, type ModoNombre } from "./personas";
 import type { Relacion } from "./parentesco";
 import type { Pertenencia } from "./ramas";
 import { enElAño, onomasticaDePersona } from "./santoral";
@@ -53,6 +53,8 @@ export interface Homonimos {
 
 export interface OpcionesFicha {
   puntoDeVista: string;
+  /** Con cuál de sus dos nombres se lee a todo el mundo; la ficha dice el otro en su fila. */
+  nombre: ModoNombre;
   linaje: Map<string, Apellidos>;
   hoy: Fecha;
   relacion: Relacion;
@@ -80,9 +82,13 @@ export function fichaDe(g: Grafo, id: string, o: OpcionesFicha): Ficha {
     nota: identidad.nota,
     aviso: p.nombre === SIN_NOMBRE && !p.birth && !p.death ? AVISO_SIN_NADA : undefined,
     filas: filasDe(g, p, o, id === o.puntoDeVista),
-    // El nombre entero sale del título, que aquí viene con los dos apellidos y sin año: es
-    // el mismo que se lee en grande, y con el que se guarda la foto al descargarla.
-    fotos: fotosDe(id, { nombreCompleto: identidad.titulo.map((t) => t.texto).join(""), birth: p.birth }),
+    // **La foto se guarda con el nombre entero y sus dos apellidos**, mire el árbol como
+    // mire: el archivo se queda en el carrete mucho después de que se haya movido un
+    // interruptor, y dos descargas de la misma persona con dos nombres son dos personas.
+    fotos: fotosDe(id, {
+      nombreCompleto: [comoSeLlama(p, "completo"), ...(o.linaje.get(id)?.todos ?? [])].join(" "),
+      birth: p.birth,
+    }),
     homonimos: homonimosDe(p, o),
   };
 }
@@ -92,7 +98,7 @@ export function fichaDe(g: Grafo, id: string, o: OpcionesFicha): Ficha {
  * sale a la búsqueda, que es la superficie que sabe ponerlos uno debajo de otro con de quién
  * es cada uno, que es lo único que los distingue.
  */
-function homonimosDe(p: Persona, { homonimia, linaje }: OpcionesFicha): Homonimos | undefined {
+function homonimosDe(p: Persona, { homonimia, linaje, nombre }: OpcionesFicha): Homonimos | undefined {
   if (!homonimia || homonimia.total < 2) return undefined;
   const otros = homonimia.total - 1;
   if (p.nombre === SIN_NOMBRE) {
@@ -100,9 +106,12 @@ function homonimosDe(p: Persona, { homonimia, linaje }: OpcionesFicha): Homonimo
     return { texto: `${cuantas} sin nombre`, consulta: null };
   }
   const año = p.birth ? ` (${añoDe(p.birth)})` : "";
+  // Se comparte el nombre del documento, que es de lo que va la homonimia; pero la salida se
+  // lee con el que el árbol esté enseñando, que es el que se acaba de leer ahí arriba.
+  const llamado = comoSeLlama(p, nombre);
   return {
-    texto: `${otros === 1 ? "El otro" : `Los otros ${otros}`} «${p.nombre}${año}»`,
-    consulta: [p.nombre, ...(linaje.get(p.id)?.todos ?? [])].join(" "),
+    texto: `${otros === 1 ? "El otro" : `Los otros ${otros}`} «${llamado}${año}»`,
+    consulta: [llamado, ...(linaje.get(p.id)?.todos ?? [])].join(" "),
   };
 }
 
@@ -110,21 +119,20 @@ const AVISO_SIN_NADA =
   "No consta su nombre ni sus fechas. Solo se la puede identificar por su familia, y así aparece en toda la app.";
 
 /**
- * De dónde viene y qué hizo con su vida, en ese orden. **Solo las dos primeras se escriben
- * vacías**, porque todo el mundo tiene padres y todo el mundo es de una rama: ahí el hueco
- * es un dato —el documento callaba—. Casarse y tener hijos no le pasa a todo el mundo, así
- * que anunciar que no consta sería contestar a una pregunta que nadie ha hecho, y en un
- * niño suena a reproche.
+ * De dónde viene y qué hizo con su vida, en ese orden. **Una fila sin dato no se escribe**:
+ * anunciar lo que no consta es contestar a una pregunta que nadie ha hecho, y en la de los
+ * padres de un huérfano suena a reproche. La única que sí lo dice es la rama, porque todo el
+ * mundo es de una y no estar en ninguna es un dato: le pasa a una persona del árbol.
  */
 function filasDe(g: Grafo, p: Persona, o: OpcionesFicha, esCentro: boolean): Fila[] {
   const { hoy } = o;
-  const filas = [fila("Padres", padres(g, p.id), "no constan"), ...ramas(g, o.pertenencia)];
-  for (const [clave, valor] of [
-    ["Unión", uniones(g, p.id, o.linaje)],
-    ["Hijos", hijos(g, p.id)],
-  ]) {
-    if (valor !== "") filas.push({ clave, valor, falta: false });
-  }
+  const filas = [
+    ...comoSeLeLlama(p, o.nombre),
+    ...conDato("Padres", padres(g, p.id, o.nombre)),
+    ...ramas(g, o.pertenencia),
+    ...conDato("Unión", uniones(g, p.id, o.linaje, o.nombre)),
+    ...conDato("Hijos", hijos(g, p.id, o.nombre)),
+  ];
   const cuenta = vivencia(p, hoy, esCentro);
   if (cuenta) filas.push(cuenta);
   const santo = onomastica(p, hoy);
@@ -186,14 +194,30 @@ function onomastica(p: Persona, hoy: Fecha): Fila | null {
   return { clave: "Onomástica", valor: escribirDiaDeMes(`${año}-${typeof dia === "function" ? dia(año) : dia}`), falta: false };
 }
 
-const fila = (clave: string, valor: string, ausente: string): Fila =>
-  valor === "" ? { clave, valor: `— ${ausente}`, falta: true } : { clave, valor, falta: false };
+/** La fila, o ninguna: el orden se lee aquí de arriba abajo, y lo que no consta no se escribe. */
+const conDato = (clave: string, valor: string): Fila[] => (valor === "" ? [] : [{ clave, valor, falta: false }]);
 
-function padres(g: Grafo, id: string): string {
+/**
+ * El nombre que el título no está enseñando, arriba del todo: es lo primero que se va a
+ * buscar de quien sale con dos nombres, y de quien no tiene más que uno no hay fila. **Cada
+ * clave nombra lo que hay a su derecha** y no el interruptor que la trajo: el valor es un
+ * nombre entero o son los apodos, y así se llama en las dos posiciones del interruptor. Los
+ * apodos de más —a una la llaman de dos maneras— caen en su fila igual, que si no no habría
+ * dónde leerlos.
+ */
+function comoSeLeLlama(p: Persona, modo: ModoNombre): Fila[] {
+  const filas: Fila[] = [];
+  if (modo === "familiar" && p.apodos?.length) filas.push({ clave: "Nombre", valor: p.nombre, falta: false });
+  const otros = losOtrosApodos(p, modo);
+  if (otros.length > 0) filas.push({ clave: "En casa", valor: enumerar(otros), falta: false });
+  return filas;
+}
+
+function padres(g: Grafo, id: string, modo: ModoNombre): string {
   const union = g.unionPorId.get(g.unionDeHijo.get(id) ?? "");
   if (!union) return "";
   return ordenarPareja(union.partners, (x) => g.personaPorId.get(x))
-    .map((x) => nombrar(g, x))
+    .map((x) => nombrar(g, x, modo))
     .filter((t) => t !== "")
     .join(" y ");
 }
@@ -202,21 +226,21 @@ function padres(g: Grafo, id: string): string {
  * Con quién se unió, **todas** y no solo la primera: la ficha es el sitio donde consta lo
  * que consta, y la segunda línea del bloque de identidad solo tiene sitio para una.
  */
-function uniones(g: Grafo, id: string, linaje: Map<string, Apellidos>): string {
+function uniones(g: Grafo, id: string, linaje: Map<string, Apellidos>, modo: ModoNombre): string {
   const escritas: string[] = [];
   for (const uid of g.unionesDePartner.get(id) ?? []) {
     const u = g.unionPorId.get(uid)!;
     const otro = u.partners.find((x) => x !== id);
     if (otro === undefined) continue; // progenitor sin pareja documentada: la unión no es con nadie
-    escritas.push(`${verboDeUnion(g, id, u)} ${nombrar(g, otro, linaje.get(otro)?.todos[0])}`);
+    escritas.push(`${verboDeUnion(g, id, u)} ${nombrar(g, otro, modo, linaje.get(otro)?.todos[0])}`);
   }
   return escritas.join("; ");
 }
 
-const hijos = (g: Grafo, id: string): string =>
+const hijos = (g: Grafo, id: string, modo: ModoNombre): string =>
   (g.unionesDePartner.get(id) ?? [])
     .flatMap((uid) => g.unionPorId.get(uid)!.children)
-    .map((x) => nombrar(g, x))
+    .map((x) => nombrar(g, x, modo))
     .join(", ");
 
 /**
@@ -226,7 +250,7 @@ const hijos = (g: Grafo, id: string): string =>
  * decía «por matrimonio», que a los que nunca se casaron los casaba de oficio.
  */
 function ramas(g: Grafo, pertenencia?: Pertenencia): Fila[] {
-  if (!pertenencia) return [fila("Rama", "", "no consta")];
+  if (!pertenencia) return [{ clave: "Rama", valor: "— no consta", falta: true }];
   const lista = enumerar(pertenencia.ramas);
   const quien = pertenencia.porMatrimonio && g.personaPorId.get(pertenencia.porMatrimonio)?.nombre;
   return [
@@ -246,9 +270,10 @@ const enumerar = (partes: string[]): string =>
  * lleva apellido**, porque es el único de la ficha que trae uno de fuera: los padres y los
  * hijos comparten el del sujeto, que está escrito en grande ahí arriba.
  */
-function nombrar(g: Grafo, id: string, apellido?: string): string {
+function nombrar(g: Grafo, id: string, modo: ModoNombre, apellido?: string): string {
   const p = g.personaPorId.get(id);
   if (!p) return "";
-  const llamado = apellido ? `${p.nombre} ${apellido}` : p.nombre;
+  const suyo = comoSeLlama(p, modo);
+  const llamado = apellido ? `${suyo} ${apellido}` : suyo;
   return p.birth ? `${llamado} (${añoDe(p.birth)})` : llamado;
 }

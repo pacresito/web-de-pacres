@@ -67,6 +67,7 @@ const opciones = (o: Partial<OpcionesIdentidad> = {}): OpcionesIdentidad => ({
   linaje,
   fechas: "año",
   apellidos: 2,
+  nombre: "familiar",
   hoy: HOY,
   largos: { titulo: 80, contexto: 80 },
   ...o,
@@ -187,20 +188,24 @@ const crudos = homonimias(
 assert.ok(crudos.size > libreta.homonimias.size * 2, `con los apellidos tal como vienen serían ${crudos.size}`);
 
 // La regla que sostiene todo el diseño: nadie aparece nunca como un nombre suelto. Y todos
-// caben en un nodo, que es la superficie más estrecha en la que se les pinta.
-for (const p of data.people) {
-  const { titulo, contexto } = identidadDe(real, p.id, {
-    linaje: libreta.linaje,
-    fechas: "año",
-    apellidos: "nuevos",
-    hoy: HOY,
-    largos: LARGOS_NODO,
-    homonimia: libreta.homonimias.get(p.id),
-  });
-  assert.ok(contexto !== "", `${p.id} (${p.nombre}) sale sin nadie que lo identifique`);
-  assert.ok(contexto.length <= LARGOS_NODO.contexto, `${p.id}: la segunda línea se sale (${contexto.length})`);
-  const largo = titulo.reduce((n, t) => n + t.texto.length, 0);
-  assert.ok(largo <= LARGOS_NODO.titulo, `${p.id}: la primera línea se sale (${largo})`);
+// caben en un nodo, que es la superficie más estrecha en la que se les pinta — con el
+// interruptor de nombre en cualquiera de sus dos posiciones, que es lo que lo alarga.
+for (const modo of ["familiar", "completo"] as const) {
+  for (const p of data.people) {
+    const { titulo, contexto } = identidadDe(real, p.id, {
+      linaje: libreta.linaje,
+      fechas: "año",
+      apellidos: "nuevos",
+      nombre: modo,
+      hoy: HOY,
+      largos: LARGOS_NODO,
+      homonimia: libreta.homonimias.get(p.id),
+    });
+    assert.ok(contexto !== "", `${p.id} (${p.nombre}) sale sin nadie que lo identifique`);
+    assert.ok(contexto.length <= LARGOS_NODO.contexto, `${p.id}: la segunda línea se sale (${contexto.length})`);
+    const largo = titulo.reduce((n, t) => n + t.texto.length, 0);
+    assert.ok(largo <= LARGOS_NODO.titulo, `${p.id}: la primera línea se sale (${largo}, ${modo})`);
+  }
 }
 
 console.log(`identidad.test.ts OK (${data.people.length} personas, todas con quien las identifique)`);

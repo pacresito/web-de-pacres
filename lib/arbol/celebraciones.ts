@@ -6,6 +6,7 @@ import { añoDe, conDia, seLeSuponeFallecido, type Fecha } from "./fechas";
 import { type Grafo } from "./grafo";
 import { laLista, YO, type Entrada } from "./lista";
 import { declinar, parentescos } from "./parentesco";
+import { comoSeLlama } from "./personas";
 import { onomasticaDePersona, primerDomingoDeMayo, proximaVez, type DiaDelAño } from "./santoral";
 
 /** Cuánto se mira hacia delante. Más allá deja de ser un aviso y pasa a ser un listado. */
@@ -76,7 +77,7 @@ export function proximasCelebraciones(g: Grafo, pov: string, hoy: Fecha, ventana
   for (const [id, { como, santo }] of quienCelebra(g, pov)) {
     const persona = g.personaPorId.get(id)!;
     if (!vive(persona, hoy)) continue;
-    const comun = { id, nombre: persona.nombre, parentesco: como, esPuntoDeVista: id === pov };
+    const comun = { id, nombre: comoSeLlama(persona, "familiar"), parentesco: como, esPuntoDeVista: id === pov };
     // La edad se calcula sobre la fecha ya resuelta y no sobre hoy: el que cumple la
     // semana que viene cumple los del año que viene, aunque hoy tenga uno menos.
     const cabe = (tipo: TipoCelebracion, dia: DiaDelAño, edadEn?: (fecha: Fecha) => number) => {
@@ -156,7 +157,8 @@ function familiaCercana(g: Grafo, pov: string): Map<string, Entrada> {
       if (union.roto) continue; // el divorcio saca de la familia, y del panel
       for (const otro of union.partners) {
         if (otro === id || salida.has(otro)) continue;
-        salida.set(otro, { como: id === pov ? "tu pareja" : `la pareja de ${g.personaPorId.get(id)!.nombre}`, santo: true });
+        const suyo = comoSeLlama(g.personaPorId.get(id)!, "familiar");
+        salida.set(otro, { como: id === pov ? "tu pareja" : `la pareja de ${suyo}`, santo: true });
       }
     }
   }

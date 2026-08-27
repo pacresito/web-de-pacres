@@ -5,6 +5,7 @@ import { readFileSync } from "fs";
 import { resolve } from "path";
 import { claveDeFoto, FOTOS, fotosDe, nombreDeArchivo, rotuloDeFoto, type Foto } from "./fotos";
 import { construirGrafo } from "./grafo";
+import { comoSeLlama } from "./personas";
 import type { ArbolData } from "./tree";
 
 const data: ArbolData = JSON.parse(readFileSync(resolve("seed/arbol.json"), "utf-8"));
@@ -16,7 +17,7 @@ const g = construirGrafo(data);
 for (const f of FOTOS) {
   const p = g.personaPorId.get(f.id);
   assert.ok(p, `${f.nombre} (${f.id}) ya no está en el árbol`);
-  assert.strictEqual(p.nombre, f.nombre, `${f.id} ya no es ${f.nombre}`);
+  assert.strictEqual(comoSeLlama(p, "familiar"), f.nombre, `${f.id} ya no es ${f.nombre}`);
 }
 
 // Y ninguna pisa a otra: la clave sale del dueño y del año, así que dos fotos del mismo año

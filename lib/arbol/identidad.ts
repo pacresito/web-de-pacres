@@ -9,7 +9,15 @@
 
 import { añoDe, conDuda, escribirVida, type Fecha, type ModoFechas } from "./fechas";
 import { parejaDirecta, type Grafo } from "./grafo";
-import { apellidosDe, etiquetaDe, ordenarPareja, type Apellidos, type ModoApellidos } from "./personas";
+import {
+  apellidosDe,
+  comoSeLlama,
+  etiquetaDe,
+  ordenarPareja,
+  type Apellidos,
+  type ModoApellidos,
+  type ModoNombre,
+} from "./personas";
 import type { Persona, Union } from "./tree";
 
 /** Como los registró el documento cuando no dio ninguno: se pinta en cursiva y apagado. */
@@ -51,6 +59,8 @@ export interface OpcionesIdentidad {
   linaje: Map<string, Apellidos>;
   fechas: ModoFechas;
   apellidos: ModoApellidos;
+  /** Con cuál de sus dos nombres sale cada uno, aquí y en los suyos de la segunda línea. */
+  nombre: ModoNombre;
   /** El día del servidor, del que sale la edad. Nunca el reloj del navegador. */
   hoy: Fecha;
   /** Caracteres que caben en cada línea de la superficie que la pinta. */
@@ -72,7 +82,7 @@ export function identidadDe(g: Grafo, id: string, o: OpcionesIdentidad): Identid
   if (!p) throw new Error(`Persona desconocida: ${id}.`);
   return {
     titulo: tituloDe(p, o),
-    contexto: contextoDe(g, id, o.ramas, o.largos.contexto, o.añosDeLosSuyos ?? true),
+    contexto: contextoDe(g, id, o.ramas, o.largos.contexto, o.añosDeLosSuyos ?? true, o.nombre),
     marcas: marcasDe(p, o),
     nota: p.nota,
   };
@@ -84,13 +94,13 @@ export function identidadDe(g: Grafo, id: string, o: OpcionesIdentidad): Identid
  * El nombre manda y el año no se recorta nunca: es el desempate más barato que hay y lo
  * llevan 309 personas. Lo que cede es el apellido, que además se lee subiendo por el árbol.
  */
-function tituloDe(p: Persona, { linaje, apellidos, fechas, hoy, largos }: OpcionesIdentidad): Trozo[] {
+function tituloDe(p: Persona, { linaje, apellidos, fechas, hoy, largos, nombre }: OpcionesIdentidad): Trozo[] {
   const año = añoEscrito(p, fechas, hoy);
-  const etiqueta = etiquetaDe(p, apellidos, linaje.get(p.id)!);
+  const etiqueta = etiquetaDe(p, apellidos, linaje.get(p.id)!, nombre);
   const nombrado = recortar(etiqueta.texto, largos.titulo - (año ? año.length + 1 : 0));
   // Tres tratamientos en una línea: el nombre, los apellidos que constan por escrito y
   // los que se deducen del árbol, que van apagados porque el documento no los decía.
-  const corte = Math.min(p.nombre.length, etiqueta.heredadoDesde, nombrado.length);
+  const corte = Math.min(comoSeLlama(p, nombre).length, etiqueta.heredadoDesde, nombrado.length);
   const suyo: Pinta = p.nombre === SIN_NOMBRE ? "sinNombre" : p.incierto === "nombre" ? "dudoso" : "nombre";
   const trozos: Trozo[] = [
     { texto: nombrado.slice(0, corte), pinta: suyo },
@@ -129,7 +139,14 @@ const PELDAÑOS = [
 
 type Peldaño = (typeof PELDAÑOS)[number];
 
-function contextoDe(g: Grafo, id: string, ramas: string[] | undefined, largo: number, años: boolean): string {
+function contextoDe(
+  g: Grafo,
+  id: string,
+  ramas: string[] | undefined,
+  largo: number,
+  años: boolean,
+  nombre: ModoNombre,
+): string {
   // Cero es que quien pinta no tiene segunda línea, no que le quepan cero caracteres:
   // degradar por los cuatro peldaños para acabar en «…» es trabajo que nadie lee.
   if (largo === 0) return "";
@@ -138,7 +155,7 @@ function contextoDe(g: Grafo, id: string, ramas: string[] | undefined, largo: nu
     // Quien no los quiere entra por el peldaño de abajo, y así el sitio que ahorra se lo
     // queda el segundo progenitor en vez de gastarse en volver a subir el escalón.
     if (!años && peldaño.años) continue;
-    texto = escribirContexto(g, id, ramas, peldaño);
+    texto = escribirContexto(g, id, ramas, peldaño, nombre);
     if (texto.length <= largo) return texto;
   }
   return recortar(texto, largo);
@@ -147,20 +164,29 @@ function contextoDe(g: Grafo, id: string, ramas: string[] | undefined, largo: nu
 /**
  * La segunda línea entera, sin degradar ni recortar. Nadie la pinta así: es lo que la
  * búsqueda mira además del nombre, porque a quien el documento deja sin apellido y sin fecha
- * solo se llega por su gente.
+ * solo se llega por su gente. **Nombra a los suyos por el de casa** y no por el que consta:
+ * quien llega a alguien por su padre teclea el padre que conoce, y el nombre entero ya lleva
+ * a su dueño por la otra vía.
  */
-export const contextoEntero = (g: Grafo, id: string): string => escribirContexto(g, id, undefined, PELDAÑOS[0]);
+export const contextoEntero = (g: Grafo, id: string): string =>
+  escribirContexto(g, id, undefined, PELDAÑOS[0], "familiar");
 
-function escribirContexto(g: Grafo, id: string, ramas: string[] | undefined, peldaño: Peldaño): string {
-  const partes = [filiacion(g, id, peldaño), union(g, id, peldaño)].filter((t) => t !== "");
+function escribirContexto(
+  g: Grafo,
+  id: string,
+  ramas: string[] | undefined,
+  peldaño: Peldaño,
+  nombre: ModoNombre,
+): string {
+  const partes = [filiacion(g, id, peldaño, nombre), union(g, id, peldaño, nombre)].filter((t) => t !== "");
   // Los bisabuelos de arriba del todo no son hijos ni cónyuges de nadie documentado: se
   // les nombra por lo que sí trajeron los documentos, que es su descendencia.
-  if (partes.length === 0) partes.push(prole(g, id));
+  if (partes.length === 0) partes.push(prole(g, id, nombre));
   if (peldaño.rama && ramas && ramas.length > 0) partes.push(escribirRamas(ramas));
   return partes.filter((t) => t !== "").join(" · ");
 }
 
-function filiacion(g: Grafo, id: string, { años, ambosPadres }: Peldaño): string {
+function filiacion(g: Grafo, id: string, { años, ambosPadres }: Peldaño, nombre: ModoNombre): string {
   const union = g.unionPorId.get(g.unionDeHijo.get(id) ?? "");
   if (!union) return "";
   const padres = ordenarPareja(union.partners, (p) => g.personaPorId.get(p))
@@ -171,7 +197,7 @@ function filiacion(g: Grafo, id: string, { años, ambosPadres }: Peldaño): stri
   // nadie, y quien sí tiene nombre está justo al lado. Solo pasa cuando el que no lo tiene
   // es además el que sube en la pareja, que es el orden con el que se dibuja, no un rango.
   const puestos = ambosPadres ? padres : [padres.find((p) => p.nombre !== SIN_NOMBRE) ?? padres[0]];
-  return `${declinado(g, id, "hijo", "hija")} de ${puestos.map((p) => conAño(p, años)).join(" y ")}`;
+  return `${declinado(g, id, "hijo", "hija")} de ${puestos.map((p) => conAño(p, años, nombre)).join(" y ")}`;
 }
 
 /**
@@ -180,13 +206,13 @@ function filiacion(g: Grafo, id: string, { años, ambosPadres }: Peldaño): stri
  * once parejas algo que no es cierto. El lienzo ya lo dibuja —trazo roto— y la ficha ya lo
  * escribe; callarlo solo aquí dejaba a la app diciendo dos cosas distintas de lo mismo.
  */
-function union(g: Grafo, id: string, { años }: Peldaño): string {
+function union(g: Grafo, id: string, { años }: Peldaño, nombre: ModoNombre): string {
   for (const uid of g.unionesDePartner.get(id) ?? []) {
     const u = g.unionPorId.get(uid);
     const otro = u?.partners.find((p) => p !== id);
     const pareja = otro === undefined ? undefined : g.personaPorId.get(otro);
     if (!u || !pareja) continue;
-    return `${verboDeUnion(g, id, u)} ${conAño(pareja, años)}`;
+    return `${verboDeUnion(g, id, u)} ${conAño(pareja, años, nombre)}`;
   }
   return "";
 }
@@ -203,16 +229,16 @@ export function verboDeUnion(g: Grafo, id: string, u: Union): string {
   return u.tipo === "pareja" ? "pareja de" : `${declinado(g, id, "casado", "casada")} con`;
 }
 
-function prole(g: Grafo, id: string): string {
+function prole(g: Grafo, id: string, nombre: ModoNombre): string {
   const hijos = (g.unionesDePartner.get(id) ?? []).flatMap((uid) => g.unionPorId.get(uid)?.children ?? []);
   const primero = g.personaPorId.get(hijos[0] ?? "");
   if (!primero) return "";
-  const base = `${declinado(g, id, "padre", "madre")} de ${primero.nombre}`;
+  const base = `${declinado(g, id, "padre", "madre")} de ${comoSeLlama(primero, nombre)}`;
   return hijos.length === 1 ? base : `${base} y ${hijos.length - 1} más`;
 }
 
-const conAño = (p: Persona, años: boolean): string =>
-  años && p.birth ? `${p.nombre} (${añoDe(p.birth as Fecha)})` : p.nombre;
+const conAño = (p: Persona, años: boolean, modo: ModoNombre): string =>
+  años && p.birth ? `${comoSeLlama(p, modo)} (${añoDe(p.birth as Fecha)})` : comoSeLlama(p, modo);
 
 const escribirRamas = (ramas: string[]): string =>
   ramas.length === 1 ? `rama de ${ramas[0]}` : `ramas de ${ramas.slice(0, -1).join(", de ")} y de ${ramas[ramas.length - 1]}`;

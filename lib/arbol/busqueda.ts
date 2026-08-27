@@ -8,7 +8,7 @@
 
 import type { Grafo } from "./grafo";
 import { contextoEntero, SIN_NOMBRE } from "./identidad";
-import type { Apellidos } from "./personas";
+import { comoSeLlama, type Apellidos } from "./personas";
 
 /** Por dónde se ha llegado a alguien. Cada vía es un tramo de la lista, con su cabecera. */
 export type Via = "nombre" | "familia" | "sin nombre";
@@ -37,10 +37,18 @@ export function buscar(g: Grafo, consulta: string, { linaje, pasos }: OpcionesBu
     // «Sin nombre» no es un nombre sino la forma de escribir que el documento no lo daba, así
     // que no se busca ni en el propio ni en el de la familia: teclearlo devolvía a cuatro
     // personas que no se llaman así y a todo el que se casó con una de ellas.
+    // **Se busca por los dos nombres**, se esté enseñando el que se esté enseñando: quien
+    // teclea «José Gerardo» y quien teclea «Pepe» buscan al mismo, y el interruptor de la
+    // hoja decide cómo se lee la lista, no a quién se llega.
     const suyo =
       p.nombre === SIN_NOMBRE
         ? ""
-        : [p.nombre, ...otrosNombres(p.nombre), ...soloSuyos(id), ...(linaje.get(id)?.todos ?? [])].join(" ");
+        : [
+            p.nombre,
+            ...(p.apodos ?? []),
+            ...[p.nombre, ...(p.apodos ?? [])].flatMap(otrosNombres),
+            ...(linaje.get(id)?.todos ?? []),
+          ].join(" ");
     if (casan(buscadas, suyo)) salida.push({ id, via: "nombre" });
     else if (casan(buscadas, contextoEntero(g, id).replaceAll(SIN_NOMBRE, ""))) salida.push({ id, via: "familia" });
   }
@@ -86,106 +94,28 @@ function casan(buscadas: string[], texto: string): boolean {
  * teclear «Pepe» sacaba también a las tres María José, que de Pepe no tienen nada; y el
  * compuesto se escribe entero —«maría josé»— cuando es él el que tiene otro nombre.
  *
- * Solo entran los que el castellano da por equivalentes, el hipocorístico de siempre: el apodo
- * de una persona no es otro nombre suyo, es una nota, y adivinar de dónde sale acaba llevando
- * a alguien a la ficha de otro. Un grupo cuyos nombres no lleve nadie del árbol sobra, y su
- * test lo dice.
+ * **Solo entran los que no son de nadie**, la grafía que valdría igual para quien entre mañana.
+ * Lo que una persona se llama de verdad es su `apodos`, y desde que ese campo existe esta tabla
+ * ha pasado de veintisiete grupos a tres: en cuanto el corto se escribe al lado del largo, el
+ * grupo deja de llevar a nadie nuevo y solo añade a los demás que se llaman igual —«Paco»
+ * sacaba a cuatro Francisco a los que nadie llama Paco—. **Lo que queda son los dos casos que
+ * el dato no cubre:** el corto que aquí lleva alguien sin que se sepa su largo (Marilu, Rober)
+ * y el que no lleva nadie, donde teclearlo no tiene otra respuesta que dar (Merche). Cuando se
+ * sepa el largo, el grupo se cae solo. Un grupo cuyos nombres no lleve nadie del árbol sobra,
+ * y su test lo dice.
  */
 export const IGUALES: string[][] = [
-  ["javier", "javi"],
-  ["santiago", "santi"],
-  ["daniel", "dani"],
-  ["francisco", "paco", "fran"],
-  ["francisca", "paqui", "paquita", "pacita"],
-  ["dolores", "lola"],
-  ["maria dolores", "marilo"],
-  ["pilar", "piluca", "piluquita"],
-  ["jose", "pepe"],
-  ["maria jose", "marijose"],
   ["maria luisa", "marilu"],
-  ["maria del carmen", "mamen"],
-  ["montserrat", "montse"],
-  ["magdalena", "magda"],
-  ["manuel", "manolo"],
-  ["concepcion", "concha", "conchita"],
-  ["ignacio", "nacho"],
-  ["gregorio", "goyo"],
-  ["juana", "juani"],
-  ["yolanda", "yoli"],
   ["mercedes", "merche"],
-  ["antonia", "toni"], // «Toñi» pierde la eñe al normalizar y cae aquí sola
   ["roberto", "rober"],
-  ["gabriel", "gabi"],
-  ["maravillas", "mavi"],
-  ["ascension", "chon"],
-  ["catalina", "catina"],
-];
-
-/**
- * Y los que solo valen hacia un lado: **quien teclea el primero encuentra también al segundo,
- * y no al revés**. Carmiña es una Carmen y quien busca «Carmen» la quiere; quien escribe
- * «Carmiña» está buscando a una persona, no a las otras cuatro.
- *
- * Sigue siendo una regla de la grafía y no de quien la lleva: vale igual para la Carmiña que
- * entre mañana. Lo que es de una persona y de nadie más va en `SOLO_SUYOS`.
- */
-export const TAMBIEN_ENCUENTRA: [string, string][] = [
-  ["carmen", "carmina"],
-  ["jose", "josele"],
-];
-
-/**
- * Y los nombres que son de uno y de nadie más: quien teclea «Chiara Teresa» busca a esa Teresa
- * y no a las otras seis. Aquí entran el nombre entero de quien se conoce por otro más corto
- * —el que la ficha guarda como nota— y el diminutivo que en esta familia lleva uno solo.
- *
- * **Van por id porque no hay nada en el nombre a lo que colgarlos:** el compuesto lo lleva una
- * persona y el árbol llama a las demás exactamente igual que a ella. Por eso «María Teresa» o
- * «Teresita» sacaban a las siete Teresa mientras esto se escribía por nombres — un nombre con
- * un solo dueño es un dato de la persona, no de la grafía. Los nombres se escriben tal como se
- * leen: aquí nadie busca por ellos, se buscan ellos.
- *
- * **Cada id lleva al lado el nombre con el que tiene que seguir cuadrando**, y el test lo
- * comprueba: los ids se editan a mano en el JSON, y uno que cambiara de dueño mandaría a quien
- * teclea el nombre de su tía a la ficha de un desconocido sin que fallara nada.
- */
-export const SOLO_SUYOS: [id: string, nombre: string, ...suyos: string[]][] = [
-  ["p5", "Teresa", "María Teresa"],
-  ["p7", "Mariano", "Mariano José"],
-  ["p11", "Teresa", "María Teresa"],
-  ["p14", "Teresa", "Chiara Teresa", "Teresita"],
-  ["p16", "Pepe", "José Gerardo"],
-  ["p18", "Pablo", "Pablo Enrique"],
-  ["p23", "María", "María de los Ángeles"],
-  ["p24", "Carmen", "Carmen Adoración"],
-  ["p29", "Pepe", "Jose Alberto"],
-  ["p30", "Luis", "Luis Nazario"],
-  ["p68", "Tota", "María Rosa"],
-  ["p75", "Titi", "María Teresa"],
-  ["p383", "Yiyu", "Antonio"],
-  ["p422", "Mercedes", "Merceditas", "Nena"],
-  ["p440", "Marian", "María Antonia"],
-  ["p442", "Pepe", "José Juan"],
-  ["p443", "Ángela", "María de los Ángeles"],
-  ["p444", "Elena", "Elena María"],
 ];
 
 /** Por qué otros nombres se llega a quien se llama así. Se arma una vez, al cargar el módulo. */
 const POR_NOMBRE = new Map<string, string[]>();
 for (const grupo of IGUALES) for (const suyo of grupo) POR_NOMBRE.set(suyo, grupo.filter((n) => n !== suyo));
-for (const [buscado, encontrado] of TAMBIEN_ENCUENTRA) {
-  POR_NOMBRE.set(encontrado, [...(POR_NOMBRE.get(encontrado) ?? []), buscado]);
-}
 
 /** Los otros nombres de quien se llama así, ya normalizados: se buscan como si fueran suyos. */
 export const otrosNombres = (nombre: string): string[] => POR_NOMBRE.get(normalizar(nombre)) ?? [];
-
-/** Y por cuáles se llega a una persona concreta. También una vez, que la lista no cambia. */
-const POR_ID = new Map<string, string[]>();
-for (const [id, , ...suyos] of SOLO_SUYOS) POR_ID.set(id, [...(POR_ID.get(id) ?? []), ...suyos]);
-
-/** Los nombres que solo llevan a esta persona: se buscan como si fueran el suyo. */
-export const soloSuyos = (id: string): string[] => POR_ID.get(id) ?? [];
 
 /** Sin tildes, sin mayúsculas y con un solo espacio: la forma en que se escriben las tablas. */
 const normalizar = (nombre: string): string => palabras(nombre).join(" ");
@@ -215,6 +145,9 @@ function ordenar(g: Grafo, resultados: Resultado[], pasos: Map<string, number>):
  */
 export function porCercania(g: Grafo, pasos: Map<string, number>): (a: string, b: string) => number {
   const lejos = (id: string) => pasos.get(id) ?? Number.MAX_SAFE_INTEGER;
-  const nombre = (id: string) => g.personaPorId.get(id)?.nombre ?? "";
+  const nombre = (id: string) => {
+    const p = g.personaPorId.get(id);
+    return p ? comoSeLlama(p, "familiar") : "";
+  };
   return (a, b) => lejos(a) - lejos(b) || nombre(a).localeCompare(nombre(b), "es") || a.localeCompare(b);
 }

@@ -3,7 +3,7 @@
 import assert from "assert";
 import { readFileSync } from "fs";
 import { resolve } from "path";
-import { acortar, buscar, IGUALES, losSinNombre, SOLO_SUYOS, TAMBIEN_ENCUENTRA, type Resultado } from "./busqueda";
+import { acortar, buscar, IGUALES, losSinNombre, type Resultado } from "./busqueda";
 import { construirGrafo, pasosDesde } from "./grafo";
 import { contextoEntero, libretaDe, SIN_NOMBRE } from "./identidad";
 import type { ArbolData, Persona, Union } from "./tree";
@@ -87,45 +87,52 @@ const pablos = buscar(real, "Pablo", suyo);
 assert.strictEqual(pablos[0]!.id, POV, "el Centro es el más cercano a sí mismo y encabeza su propio nombre");
 assert.strictEqual(pablos.filter((r) => r.via === "nombre").length, 15, "doce Pablo y tres que lo llevan de segundo");
 
-// Los otros nombres: quien busca uno busca a la persona, no a esa grafía, y vale al derecho
-// y al revés. Sin esto, «Pilar» no encontraba a Piluca ni «Javier» a los cinco Javi.
+// Que a cada uno se llega por sus dos nombres, sin mirar por dónde: a casi todos los lleva ya
+// su propio `apodos`, y los que quedan en la tabla de grafías son los que no lo tienen escrito.
 const porNombre = (consulta: string) => buscar(real, consulta, suyo).filter((r) => r.via === "nombre").map((r) => r.id);
 for (const [buscado, esperado] of [
   ["Pilar", "p301"], // Piluquita
-  ["Piluca", "p102"], // Pilar
   ["Javier", "p128"], // Javi
   ["Javi", "p191"], // Javier
   ["José", "p29"], // Pepe
   ["Mavi", "p357"], // Maravillas
   ["Chon", "p290"], // Ascensión
-  ["Marijose", "p350"], // María José
   ["María José", "p286"], // Marijose
   ["Mamen", "p47"], // María del Carmen
-  ["Mariló", "p390"], // María Dolores
   ["Marilu", "p488"], // María Luisa
 ] as const) {
   assert.ok(porNombre(buscado).includes(esperado), `buscando «${buscado}» tendría que salir ${esperado}`);
 }
 
-// Los otros nombres van por el nombre entero: «Pepe» no saca a las María José, que de Pepe no
-// tienen nada, aunque compartan la palabra.
+// Y el apodo que lleva escrito una persona no se estira a los que se llaman como ella: «Pepe»
+// saca a los cinco Pepe y a ningún otro José, y «Marijose» solo a la Marijose. Es lo que la
+// tabla de grafías no sabía hacer, y por lo que ha adelgazado al aparecer `apodos`.
 assert.ok(!porNombre("Pepe").includes("p350"), "«Pepe» no es «María José»");
+assert.deepStrictEqual(porNombre("Marijose"), ["p286"], "«Marijose» es una, no las cuatro María José");
+assert.strictEqual(porNombre("Pepe").length, 5, "los cinco Pepe y ningún José más");
+assert.strictEqual(porNombre("Lola").length, 3, "las tres Lola y ninguna Dolores más");
+assert.strictEqual(porNombre("Paco").length, 5, "los cinco Paco y ningún Francisco más");
+assert.strictEqual(porNombre("Piluca").length, 1, "una Piluca, no las cuatro Pilar");
+// Y al revés sigue funcionando: el largo los saca a todos, que es de lo que va apuntarlo.
+assert.ok(porNombre("Francisco").length >= 7, "«Francisco» saca a los Paco, al Fran y a los suyos");
 
-// Y hay uno que solo va hacia un lado: Carmiña es una Carmen y quien busca «Carmen» la quiere;
-// quien escribe «Carmiña» busca a una persona, no a las cuatro.
+// Lo que antes era una regla de un solo sentido lo dice ahora el dato: Carmiña se llama Carmen
+// y la lleva de apodo, así que «Carmen» la encuentra y «Carmiña» no saca a las otras cuatro.
 assert.ok(porNombre("Carmen").includes("p277"), "Carmiña sale al buscar «Carmen»");
 assert.deepStrictEqual(porNombre("Carmiña"), ["p277"], "y «Carmiña» no saca a nadie más");
 
 assert.deepStrictEqual(porNombre("Catina"), porNombre("Catalina"), "a Catina se la busca por los dos");
 
-// Los nombres de uno solo. Cada id con el nombre que tiene que seguir teniendo: el JSON se
-// edita a mano y uno que cambiara de dueño mandaría a quien teclea el nombre de su tía a la
-// ficha de un desconocido sin que fallara nada.
-for (const [id, nombre, ...suyos] of SOLO_SUYOS) {
-  const p = real.personaPorId.get(id);
-  assert.ok(p, `${id} ya no está en el árbol`);
-  assert.strictEqual(p.nombre, nombre, `${id} ya no se llama ${nombre}`);
-  for (const otro of suyos) assert.ok(porNombre(otro).includes(id), `buscando «${otro}» tendría que salir ${id}`);
+// A quien se llama de dos maneras se le encuentra por las dos. **Sale del propio JSON** y no
+// de una tabla de ids: el apodo vive al lado de su dueño, así que ya no hay forma de que se
+// quede señalando a otro cuando se toca la persona.
+const conApodo = data.people.filter((p) => p.apodos?.length);
+assert.ok(conApodo.length > 0, "sin nadie con apodo esto no comprueba nada");
+for (const p of conApodo) {
+  assert.ok(porNombre(p.nombre).includes(p.id), `${p.id}: no se le encuentra por «${p.nombre}»`);
+  for (const apodo of p.apodos!) {
+    assert.ok(porNombre(apodo).includes(p.id), `${p.id}: no se le encuentra por «${apodo}»`);
+  }
 }
 
 // Y llegan a uno, que es lo que no sabía hacer la tabla de nombres: «Chiara Teresa» sacaba a
@@ -155,7 +162,7 @@ assert.deepStrictEqual(
 );
 
 // Ningún grupo de más: uno cuyos nombres no lleve nadie no ayuda a encontrar a nadie.
-for (const grupo of [...IGUALES, ...TAMBIEN_ENCUENTRA]) {
+for (const grupo of IGUALES) {
   assert.ok(
     grupo.some((n: string) => porNombre(n).length > 0),
     `nadie del árbol se llama de ninguna de estas maneras: ${grupo.join(", ")}`,

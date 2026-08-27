@@ -36,7 +36,13 @@ import {
   type OpcionesIdentidad,
 } from "@/lib/arbol/identidad";
 import { relacionesDesde } from "@/lib/arbol/parentesco";
-import { APELLIDOS_POR_DEFECTO, type ModoApellidos } from "@/lib/arbol/personas";
+import {
+  APELLIDOS_POR_DEFECTO,
+  comoSeLlama,
+  NOMBRE_POR_DEFECTO,
+  type ModoApellidos,
+  type ModoNombre,
+} from "@/lib/arbol/personas";
 import { calcularRamas, ramaVisible, repartoDeRamas } from "@/lib/arbol/ramas";
 import {
   ALTO_NODO,
@@ -143,6 +149,12 @@ export default function Arbol({
   const [fechas, setFechas] = useState<ModoFechas>(FECHAS_POR_DEFECTO);
   const [apellidos, setApellidos] = useState<ModoApellidos>(APELLIDOS_POR_DEFECTO);
   /**
+   * Con cuál de sus dos nombres sale la gente que tiene dos. **El repaso no lo toca**, al
+   * revés que los otros dos de su tramo: un nombre de casa no es un dato que falte, y
+   * enseñar el del documento en mitad del repaso haría que parecieran otras personas.
+   */
+  const [nombre, setNombre] = useState<ModoNombre>(NOMBRE_POR_DEFECTO);
+  /**
    * El repaso: cada nodo enseña lo que le falta y se apaga quien ya está entero. Manda sobre
    * los dos interruptores de arriba —enseñarlo todo es de lo que va— y por eso los fija en vez
    * de leerlos: con «fechas: no» puesto no habría hueco que enseñar.
@@ -199,6 +211,8 @@ export default function Arbol({
     apellidos: repaso ? (1 as const) : apellidos,
     fechas: repaso ? ("completa" as const) : fechas,
   };
+  /** Cómo se llama alguien en una superficie que no pasa por el bloque de identidad. */
+  const comoLoLlamo = (id: string) => comoSeLlama(personaPorId.get(id)!, nombre);
   const huecosDelNodo = (id: string) =>
     repaso ? huecosDe(personaPorId.get(id)!, libreta.linaje.get(id)!, hoy) : null;
 
@@ -256,8 +270,8 @@ export default function Arbol({
    */
   const escribirlo = useMemo(
     () => (id: string, suyo: Pick<OpcionesIdentidad, "fechas" | "apellidos" | "largos" | "añosDeLosSuyos">) =>
-      identidadDe(grafo, id, { linaje: libreta.linaje, hoy, homonimia: libreta.homonimias.get(id), ...suyo }),
-    [grafo, libreta, hoy],
+      identidadDe(grafo, id, { linaje: libreta.linaje, hoy, nombre, homonimia: libreta.homonimias.get(id), ...suyo }),
+    [grafo, libreta, hoy, nombre],
   );
   /**
    * El de una fila de «Lo que se celebra», la única superficie que nombra a los padres y al
@@ -463,6 +477,7 @@ export default function Arbol({
   const datosDeFicha = (id: string) =>
     fichaDe(grafo, id, {
       puntoDeVista,
+      nombre,
       linaje: libreta.linaje,
       hoy,
       relacion: relaciones.get(id)!,
@@ -784,7 +799,8 @@ export default function Arbol({
     repaso ||
     marcados !== null ||
     fechas !== FECHAS_POR_DEFECTO ||
-    apellidos !== APELLIDOS_POR_DEFECTO;
+    apellidos !== APELLIDOS_POR_DEFECTO ||
+    nombre !== NOMBRE_POR_DEFECTO;
 
   return (
     <div ref={contenedor} className="relative h-full w-full overflow-hidden bg-[var(--paper)]">
@@ -981,7 +997,7 @@ export default function Arbol({
       {brujula && parada === "personas" && (
         <Brujula
           posicion={brujula}
-          nombre={personaPorId.get(puntoDeVista)?.nombre ?? ""}
+          nombre={comoLoLlamo(puntoDeVista)}
           onVolver={() => mover(() => CENTRADA)}
         />
       )}
@@ -1076,6 +1092,8 @@ export default function Arbol({
         >
           {hoja.tipo === "capas" ? (
             <Capas
+              nombre={nombre}
+              setNombre={setNombre}
               fechas={fechas}
               setFechas={setFechas}
               apellidos={apellidos}
@@ -1095,7 +1113,6 @@ export default function Arbol({
                 setParejas(new Set());
               }}
               onReiniciar={() => reiniciar("entrada")}
-              inicial={conApellido(inicial)}
             />
           ) : hoja.tipo === "celebraciones" ? (
             <Celebraciones lista={celebraciones} hoy={hoy} identidad={paraCelebrar} onPersona={abrirFicha} />
@@ -1118,7 +1135,7 @@ export default function Arbol({
           ) : (
             <Ficha
               datos={datosDeFicha(hoja.id)}
-              reinicio={tocado ? personaPorId.get(puntoDeVista)!.nombre : undefined}
+              reinicio={tocado ? comoLoLlamo(puntoDeVista) : undefined}
               onCentrar={() => centrarEn(hoja.id)}
               onCamino={() => abrirHoja({ tipo: "camino", id: hoja.id })}
               onVerEnElArbol={() => verEnElArbol(hoja.id)}

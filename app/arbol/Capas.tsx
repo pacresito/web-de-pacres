@@ -7,7 +7,7 @@
 
 import type { ModoFechas } from "@/lib/arbol/fechas";
 import { rotuloDeIncompletos } from "@/lib/arbol/incompletos";
-import type { ModoApellidos } from "@/lib/arbol/personas";
+import type { ModoApellidos, ModoNombre } from "@/lib/arbol/personas";
 import LogoutButton from "./LogoutButton";
 import TemaBoton from "./TemaBoton";
 
@@ -18,9 +18,14 @@ import TemaBoton from "./TemaBoton";
  */
 const FILA = "flex min-h-11 items-center rounded-lg px-3 text-left text-[13px]";
 const APAGADA = `${FILA} bg-[var(--soft)] text-[var(--ink)]`;
+/** Y la del pie, que no es una fila: sin fondo y apagada, pero con los 44 px que se tocan. */
+const PIE =
+  "flex min-h-11 flex-1 items-center justify-center text-[13px] text-[var(--mut)] hover:text-[var(--ink)]";
 const PULSADA = `${FILA} bg-[var(--ink)] text-[var(--paper)]`;
 
 export default function Capas({
+  nombre,
+  setNombre,
   fechas,
   setFechas,
   apellidos,
@@ -34,8 +39,9 @@ export default function Capas({
   todoDesplegado,
   onDesplegarTodo,
   onReiniciar,
-  inicial,
 }: {
+  nombre: ModoNombre;
+  setNombre: (n: ModoNombre) => void;
   fechas: ModoFechas;
   setFechas: (f: ModoFechas) => void;
   apellidos: ModoApellidos;
@@ -51,8 +57,6 @@ export default function Capas({
   todoDesplegado: boolean;
   onDesplegarTodo: () => void;
   onReiniciar: () => void;
-  /** Cómo se llama el punto de vista de entrada, que es al que devuelve reiniciar. */
-  inicial: string;
 }) {
   return (
     <div className="flex flex-col">
@@ -62,6 +66,16 @@ export default function Capas({
           de lo que va— así que se quedan puestas y sin tocar, en vez de desaparecer: lo que
           hay que entender es que el interruptor de abajo manda, no que se han perdido. */}
       <Tramo titulo="En cada nodo">
+        {/* Va la primera porque es la que cambia el nombre, que es lo que se lee antes de
+            nada. **El repaso no la fija**, al revés que las dos de debajo: llamar a alguien
+            como lo llama la familia no es un dato que le falte al documento. */}
+        <Eleccion
+          titulo="Nombre"
+          opciones={["familiar", "completo"] as const}
+          actual={nombre}
+          onElegir={setNombre}
+          nombrar={String}
+        />
         {/* «Nuevos» solo los enseña quien los estrena en su línea; 1 y 2, todo el mundo. */}
         <Eleccion
           titulo="Apellidos"
@@ -113,19 +127,22 @@ export default function Capas({
             {rotuloDeIncompletos(incompletos)}
           </span>
         </button>
-        <button type="button" onClick={onReiniciar} className={APAGADA}>
-          Reiniciar
-          <span className="ml-auto text-[11.5px] text-[var(--mut)]">vuelve al punto de vista de {inicial}</span>
-        </button>
       </Tramo>
 
-      {/* Los dos botones que no son del árbol sino de la sesión. Viven aquí y no en una
-          barra de arriba: el borde de la pantalla es del lienzo, y esto se toca dos veces
-          al año. */}
-      <Tramo titulo="La sesión">
-        <TemaBoton className={APAGADA} conTexto />
-        <LogoutButton className={APAGADA} />
-      </Tramo>
+      {/* El pie: lo que no contesta a «qué se ve». Reiniciar es la salida y los otros dos son
+          de la sesión, así que ninguno de los tres es un filtro. Como filas de la lista medían
+          158 px y aquí miden 44: la hoja tapa como mucho el 85 % de la pantalla, y cada píxel
+          que se le quita aleja el alto en que empieza a desplazarse. **Un tercio cada uno y el
+          texto centrado en el suyo**, que con tres palabras de largos distintos repartir los
+          huecos deja el de en medio descentrado sin que nada lo delate; y así los tres se tocan
+          igual de fácil, con los 44 px de dedo intactos. */}
+      <div className="mt-5 flex border-t border-[var(--line)] pt-1.5">
+        <button type="button" onClick={onReiniciar} className={PIE}>
+          Reiniciar
+        </button>
+        <TemaBoton className={PIE} />
+        <LogoutButton className={PIE} />
+      </div>
     </div>
   );
 }

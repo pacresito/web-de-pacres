@@ -10,14 +10,15 @@ import {
   viernesDeDolores,
 } from "./santoral";
 
-// La excepción por persona: el nodo lleva el nombre corto y el día no se resiente
-// p23 se llama María Ángeles, en el árbol va como María, y celebra con las Ángeles.
+// La excepción por persona, que es para quien celebra un día que su nombre no da
+// p19 se llama María José y celebra San José, no el 12 de septiembre de las Marías.
 assert.strictEqual(onomasticaDe("María"), "09-12");
-assert.strictEqual(onomasticaDePersona({ id: "p23", nombre: "María" }), "08-02");
+assert.strictEqual(onomasticaDePersona({ id: "p19", nombre: "María" }), "03-19");
 // Al que no está apuntado le manda su nombre, como a todo el mundo.
 assert.strictEqual(onomasticaDePersona({ id: "p318", nombre: "María" }), onomasticaDe("María"));
-// Y a Pepe no le hizo falta excepción: su nombre ya lo lleva al 19 de marzo.
-assert.strictEqual(onomasticaDePersona({ id: "p29", nombre: "Pepe" }), "03-19");
+// Y quien lleva el suyo entero en el JSON no necesita excepción: el nombre ya lo sitúa.
+assert.strictEqual(onomasticaDePersona({ id: "p443", nombre: "María de los Ángeles" }), "08-02");
+assert.strictEqual(onomasticaDePersona({ id: "p29", nombre: "José Alberto" }), "03-19");
 // Las Eva son del 19 de diciembre, y la de los Sola es la que va apuntada aparte.
 assert.strictEqual(onomasticaDe("Eva"), "12-19");
 assert.strictEqual(onomasticaDePersona({ id: "p8", nombre: "Eva" }), "06-25");

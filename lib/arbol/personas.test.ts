@@ -3,7 +3,7 @@ import assert from "assert";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 import { construirGrafo } from "./grafo";
-import { apellidosDe, etiquetaDe, ordenarPareja } from "./personas";
+import { apellidosDe, comoSeLlama, etiquetaDe, losOtrosApodos, ordenarPareja } from "./personas";
 import type { ArbolData, Persona } from "./tree";
 
 const persona = (nombre: string, apellidos: string[] = [], sexo?: "h" | "m"): Persona => ({
@@ -33,25 +33,42 @@ assert.deepStrictEqual(ordenarPareja(["m"], buscar), ["m"], "una sola persona no
 // La etiqueta, y dónde empieza lo que no consta escrito
 const conApellidos = persona("José", ["Cardona", "Torres"]);
 const suyos = { todos: ["Cardona", "Torres"], escritos: 2, nuevos: ["Torres"] };
-assert.deepStrictEqual(etiquetaDe(conApellidos, 2, suyos), { texto: "José Cardona Torres", heredadoDesde: 19 });
-assert.strictEqual(etiquetaDe(conApellidos, 1, suyos).texto, "José Cardona");
-assert.strictEqual(etiquetaDe(conApellidos, 0, suyos).texto, "José");
-assert.strictEqual(etiquetaDe(conApellidos, "nuevos", suyos).texto, "José Torres", "en «nuevos» solo el que estrena");
+assert.deepStrictEqual(etiquetaDe(conApellidos, 2, suyos, "familiar"), { texto: "José Cardona Torres", heredadoDesde: 19 });
+assert.strictEqual(etiquetaDe(conApellidos, 1, suyos, "familiar").texto, "José Cardona");
+assert.strictEqual(etiquetaDe(conApellidos, 0, suyos, "familiar").texto, "José");
+assert.strictEqual(etiquetaDe(conApellidos, "nuevos", suyos, "familiar").texto, "José Torres", "en «nuevos» solo el que estrena");
 
 const heredera = persona("Chiara Teresa");
 const heredados = { todos: ["Pieravanti", "Torres"], escritos: 0, nuevos: [] };
 assert.deepStrictEqual(
-  etiquetaDe(heredera, 2, heredados),
+  etiquetaDe(heredera, 2, heredados, "familiar"),
   { texto: "Chiara Teresa Pieravanti Torres", heredadoDesde: "Chiara Teresa".length },
   "sin nada escrito, los dos apellidos son deducidos",
 );
-assert.strictEqual(etiquetaDe(heredera, "nuevos", heredados).texto, "Chiara Teresa", "lo heredado nunca estrena nada");
+assert.strictEqual(etiquetaDe(heredera, "nuevos", heredados, "familiar").texto, "Chiara Teresa", "lo heredado nunca estrena nada");
 assert.strictEqual(
-  etiquetaDe(persona("Carmen", ["Bordallo"]), 2, { todos: ["Bordallo", "Cardona"], escritos: 1, nuevos: ["Bordallo"] })
+  etiquetaDe(persona("Carmen", ["Bordallo"]), 2, { todos: ["Bordallo", "Cardona"], escritos: 1, nuevos: ["Bordallo"] }, "familiar")
     .heredadoDesde,
   "Carmen Bordallo".length,
   "con uno escrito, el corte cae después de él",
 );
+
+// Los dos nombres: el de casa manda de serie, y el interruptor pide el que consta
+const conApodo: Persona = { ...persona("José Gerardo", ["Cardona"], "h"), apodos: ["Pepe"] };
+assert.strictEqual(comoSeLlama(conApodo, "familiar"), "Pepe");
+assert.strictEqual(comoSeLlama(conApodo, "completo"), "José Gerardo");
+assert.strictEqual(comoSeLlama(conApellidos, "familiar"), "José", "quien no tiene apodo sale igual con los dos");
+assert.strictEqual(
+  etiquetaDe(conApodo, 1, { todos: ["Cardona", "Martín"], escritos: 1, nuevos: [] }, "completo").texto,
+  "José Gerardo Cardona",
+  "el apellido no depende de con qué nombre salga",
+);
+
+const dosApodos: Persona = { ...persona("Mercedes", [], "m"), apodos: ["Merceditas", "La nena"] };
+assert.strictEqual(comoSeLlama(dosApodos, "familiar"), "Merceditas", "el primero es el que se pinta");
+assert.deepStrictEqual(losOtrosApodos(dosApodos, "familiar"), ["La nena"], "y el resto los dice la ficha");
+assert.deepStrictEqual(losOtrosApodos(dosApodos, "completo"), ["Merceditas", "La nena"], "con el entero puesto, los dos");
+assert.deepStrictEqual(losOtrosApodos(conApellidos, "completo"), [], "quien no tiene apodo no tiene fila");
 
 // Sobre los datos de verdad
 const data: ArbolData = JSON.parse(readFileSync(resolve("seed/arbol.json"), "utf-8"));

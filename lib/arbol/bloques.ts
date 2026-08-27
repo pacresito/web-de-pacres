@@ -16,7 +16,7 @@
 
 import { ascendientes, descendientes, pasosDesde, visibles, type Grafo } from "./grafo";
 import { ANCHO_COLUMNA } from "./layout";
-import { ordenarPareja } from "./personas";
+import { comoSeLlama, ordenarPareja } from "./personas";
 
 // Un bloque es más grande que un nodo de persona en coordenadas del árbol, y no por
 // capricho: se lee a la altura de zoom en la que el nodo ya no se leía, así que su letra
@@ -162,9 +162,13 @@ function padreDe(g: Grafo, id: string, grupos: Map<string, unknown>): string | u
 /** «de Miguel y Ana». Los dos nombres, porque en esta familia hay cuatro Migueles. */
 function tituloDe(g: Grafo, id: string, cualquiera: string): string {
   const union = g.unionPorId.get(id);
-  if (!union) return g.personaPorId.get(cualquiera)?.nombre ?? "";
+  const suyo = (id: string) => {
+    const p = g.personaPorId.get(id);
+    return p && comoSeLlama(p, "familiar");
+  };
+  if (!union) return suyo(cualquiera) ?? "";
   const nombres = ordenarPareja(union.partners, (p) => g.personaPorId.get(p))
-    .map((p) => g.personaPorId.get(p)?.nombre)
+    .map(suyo)
     .filter((n): n is string => !!n);
   return nombres.length > 0 ? `de ${nombres.join(" y ")}` : "";
 }

@@ -44,7 +44,7 @@ const lineas = marzo.texto.split("\n").filter((l) => l.startsWith("🎂") || l.s
 assert.strictEqual(lineas[0], "🎉 Mañana es el día del padre, y va por ti. Ve dejando pistas.");
 assert.ok(/^\S+ <b>Pepe<\/b>, tu tío — /m.test(marzo.texto), marzo.texto);
 // El santo llega hasta la casa de Carmen —su padre sí— y no más allá: su tío, no.
-assert.ok(/^\S+ <b>Jose Alberto<\/b>, el padre de Carmen — /m.test(marzo.texto), marzo.texto);
+assert.ok(/^\S+ <b>José Alberto<\/b>, el padre de Carmen — /m.test(marzo.texto), marzo.texto);
 assert.ok(!marzo.texto.includes("tío de Carmen"), "de sus tíos, el cumpleaños y nada más");
 
 // El día de la madre no va por mí aunque sea padre: va por Carmen, y por la mía mientras viva.
@@ -82,7 +82,8 @@ assert.ok(noches > 40 && noches < 150, `${noches} noches con aviso al año`);
 // El nombre que trajera marcado se escapa: el mensaje va en HTML y los nombres vienen de los
 // documentos de la familia, no de aquí.
 const trucado = structuredClone(data);
-trucado.people.find((p) => p.id === "p125")!.nombre = "<b>Lola</b> & Co";
+// Por el apodo, que es con el que el aviso nombra a quien lo tiene: es lo que se escapa.
+trucado.people.find((p) => p.id === "p125")!.apodos = ["<b>Lola</b> & Co"];
 const conMarcado = avisoDeVispera(construirGrafo(trucado), "2026-08-15")!;
 assert.ok(conMarcado.texto.includes("&lt;b&gt;Lola&lt;/b&gt; &amp; Co"), conMarcado.texto);
 

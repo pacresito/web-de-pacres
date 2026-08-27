@@ -14,6 +14,7 @@
 import { añoDe, conDia, MS_DIA, seLeSuponeFallecido, type Fecha } from "./fechas";
 import { type Grafo } from "./grafo";
 import { laLista, PAREJA, YO } from "./lista";
+import { comoSeLlama } from "./personas";
 import { pluralDeNombre } from "./plural";
 import { onomasticaDe, onomasticaDePersona, primerDomingoDeMayo, proximaVez, type DiaDelAño } from "./santoral";
 
@@ -58,7 +59,11 @@ function* deLaGente(g: Grafo, hoy: Fecha, mañana: Fecha): Generator<Linea> {
 
     const cae = (dia: DiaDelAño) => proximaVez(hoy, dia).faltan === 1;
     const mio = id === YO.id;
-    const quien = `<b>${escapar(persona.nombre)}</b>${comoLoLlamo ? `, ${escapar(comoLoLlamo)}` : ""}`;
+    // Por el de casa, que es el único que se lee en un aviso: al móvil no llega ningún
+    // interruptor con el que pedir el otro. El santo de más abajo sí sale del entero, que
+    // es de donde sale el día que se está felicitando.
+    const suApodo = comoSeLlama(persona, "familiar");
+    const quien = `<b>${escapar(suApodo)}</b>${comoLoLlamo ? `, ${escapar(comoLoLlamo)}` : ""}`;
     const suerte = (cuantos: number) => pizca(`${id}:${mañana}`, cuantos);
 
     if (persona.birth && conDia(persona.birth) && cae(persona.birth.slice(5))) {
@@ -71,7 +76,7 @@ function* deLaGente(g: Grafo, hoy: Fecha, mañana: Fecha): Generator<Linea> {
       const texto = mio
         ? `${TARTAS[suerte(TARTAS.length)]} ${MIO_CUMPLE[edad % MIO_CUMPLE.length](edad)}`
         : `${TARTAS[suerte(TARTAS.length)]} ${cuales[suerte(cuales.length)](quien, edad)}`;
-      yield { grupo: 0, nombre: mio ? "" : persona.nombre, texto };
+      yield { grupo: 0, nombre: mio ? "" : suApodo, texto };
     }
 
     const suSanto = santo ? onomasticaDePersona(persona) : null;
@@ -84,7 +89,7 @@ function* deLaGente(g: Grafo, hoy: Fecha, mañana: Fecha): Generator<Linea> {
       const texto = mio
         ? `${FIESTAS[suerte(FIESTAS.length)]} ${MIO_SANTO[añoDe(mañana) % MIO_SANTO.length]}`
         : `${FIESTAS[suerte(FIESTAS.length)]} ${quien} — ${colas[suerte(colas.length)](suNombre, persona.sexo === "m")}`;
-      yield { grupo: 2, nombre: mio ? "" : persona.nombre, texto };
+      yield { grupo: 2, nombre: mio ? "" : suApodo, texto };
     }
   }
 }

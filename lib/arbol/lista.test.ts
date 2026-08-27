@@ -4,6 +4,7 @@ import assert from "assert";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 import { construirGrafo } from "./grafo";
+import { comoSeLlama } from "./personas";
 import { CITADOS, laLista, PAREJA, YO } from "./lista";
 import type { ArbolData } from "./tree";
 
@@ -16,7 +17,7 @@ const persona = (id: string) => g.personaPorId.get(id)!;
 // pondría a felicitar a un desconocido sin que fallara nada.
 for (const { id, nombre } of CITADOS) {
   assert.ok(g.personaPorId.has(id), `${nombre} (${id}) ya no está en el árbol`);
-  assert.strictEqual(persona(id).nombre, nombre, `${id} ya no es ${nombre}`);
+  assert.strictEqual(comoSeLlama(persona(id), "familiar"), nombre, `${id} ya no es ${nombre}`);
 }
 
 const lista = laLista(g);

@@ -23,6 +23,7 @@ const CALENDARIO: [DiaDelAño, string[]][] = [
   ["01-20", ["sebastian", "fabian"]],
   ["01-21", ["ines"]],
   ["01-22", ["vicente", "vicenta"]],
+  ["01-24", ["paz"]],
   ["01-26", ["paula"]],
   ["01-27", ["angela"]],
   ["01-28", ["tomas", "tomasa"]],
@@ -195,7 +196,6 @@ const APODOS: Record<string, string> = {
   curro: "francisco",
   fran: "francisco",
   paqui: "francisca",
-  pacita: "francisca",
   lola: "dolores",
   loli: "dolores",
   concha: "concepcion",
@@ -269,15 +269,13 @@ const buscar = (clave: string): DiaDelAño | null =>
 
 /**
  * Quien no celebra la onomástica que le tocaría por su nombre. Va por id, y aquí en vez
- * de en el JSON: es una costumbre de una persona, no un dato que dijera su documento. Es
- * lo que permite que en el nodo vaya el nombre por el que se la conoce sin que eso le
- * cambie el día.
+ * de en el JSON: es una costumbre de una persona, no un dato que dijera su documento.
+ * **La lista adelgaza según el JSON aprende nombres enteros**: el día sale de `nombre`, así
+ * que a quien se le apunta el suyo con sus dos palabras se le cae la línea de aquí sola.
  */
 const POR_PERSONA: Record<string, DiaDelAño> = {
-  p14: "10-15", // en el árbol es Chiara Teresa, en casa es Teresita y celebra Santa Teresa
-  p443: "08-02", // Ángela, que celebra con las Ángeles y no el 27 de enero de las Ángelas
+  p14: "10-15", // se llama Chiara Teresa, en casa es Teresita y celebra Santa Teresa
   p19: "03-19", // en el árbol es María, se llama María José y celebra San José
-  p23: "08-02", // en el árbol es María, se llama María Ángeles y celebra con las Ángeles
   p8: "06-25", // Eva Sola celebra en junio y no el 19 de diciembre de las otras tres
   p445: "12-03", // Fran celebra San Francisco Javier, no el Asís que le da su nombre
   p323: "07-16", // en el árbol es María, se llama María Casas y celebra con las Carmen

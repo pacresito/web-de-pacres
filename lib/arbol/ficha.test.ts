@@ -58,6 +58,7 @@ const pertenencias = calcularRamas(g, [{ nombre: "Serrano", ancestro: "j1" }]);
 const ficha = (id: string, hoy = HOY): Ficha =>
   fichaDe(g, id, {
     puntoDeVista: "j3",
+    nombre: "familiar",
     linaje: apellidosDe(g),
     hoy,
     relacion: relaciones.get(id)!,
@@ -89,6 +90,7 @@ assert.strictEqual(ficha("j8").datos, "1986-03-01", "el día consta y sale, mire
 const conHomonimos = (cual: number, total: number): Ficha =>
   fichaDe(g, "j1", {
     puntoDeVista: "j3",
+    nombre: "familiar",
     linaje: apellidosDe(g),
     hoy: HOY,
     relacion: relaciones.get("j1")!,
@@ -104,6 +106,7 @@ assert.strictEqual(ficha("j1").homonimos, undefined, "quien no comparte nombre n
 assert.deepStrictEqual(
   fichaDe(g, "j6", {
     puntoDeVista: "j3",
+    nombre: "familiar",
     linaje: apellidosDe(g),
     hoy: HOY,
     relacion: relaciones.get("j6")!,
@@ -113,9 +116,9 @@ assert.deepStrictEqual(
   "a los que comparten no tener nombre no se llega tecleando: se sale a su lista",
 );
 
-// Las filas: lo que no consta se escribe, nunca se esconde
+// Las filas: la que no tiene dato no se escribe, y la rama es la única excepción
 assert.strictEqual(valor(ficha("j5"), "Padres"), "Genoveva (1930)", "un solo progenitor documentado no inventa al otro");
-assert.strictEqual(valor(ficha("j1"), "Padres"), "— no constan");
+assert.strictEqual(valor(ficha("j1"), "Padres"), undefined, "a quien no le constan padres no se le dice");
 assert.strictEqual(valor(ficha("j3"), "Hijos"), "Rosa (1959), Lucía (1986)");
 assert.deepStrictEqual(
   ficha("j3").filas.map((f) => f.clave),
@@ -124,7 +127,7 @@ assert.deepStrictEqual(
 );
 assert.deepStrictEqual(
   ficha("j1").filas.map((f) => f.clave),
-  ["Padres", "Rama", "Unión", "Hijos", "Edad"],
+  ["Rama", "Unión", "Hijos", "Edad"],
   "de dónde viene primero, y qué hizo con su vida después",
 );
 
@@ -146,6 +149,7 @@ assert.strictEqual(valor(ficha("j8", "1986-03-01"), "Cumple"), "¡Nació hoy!");
 const suPropiaFicha = (hoy: string): Ficha =>
   fichaDe(g, "j8", {
     puntoDeVista: "j8",
+    nombre: "familiar",
     linaje: apellidosDe(g),
     hoy,
     relacion: relacionesDesde(g, "j8").get("j8")!,
@@ -208,6 +212,7 @@ let sinTermino = 0;
 for (const p of data.people) {
   const f = fichaDe(real, p.id, {
     puntoDeVista: POV,
+    nombre: "familiar",
     linaje: suLinaje,
     hoy: HOY,
     relacion: susRelaciones.get(p.id)!,

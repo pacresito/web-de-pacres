@@ -5,8 +5,14 @@
 
 export interface Persona {
   id: string;
-  /** El nombre de pila, ya separado de los apellidos por `scripts/fix-datos.py`. */
+  /** El nombre de pila entero, el que consta: «José Gerardo» aunque en casa sea Pepe. */
   nombre: string;
+  /**
+   * Y cómo lo llama la familia, cuando no lo llama por su nombre. **El primero es el que se
+   * pinta**; los demás existen porque a algunas personas se las llama de dos maneras. Solo lo
+   * trae quien tiene apodo: el resto se llama como se llama.
+   */
+  apodos?: string[];
   /** Cero, uno o dos. Cuántos se pintan lo decide un interruptor global. */
   apellidos: string[];
   /**
