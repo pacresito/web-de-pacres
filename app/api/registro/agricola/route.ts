@@ -151,7 +151,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   return handleRegistroPost<AgricolaPayload, AgricolaRecord>(request, {
     key: KEY,
-    ratePrefix: "ratelimit:registro:agricola:",
+    rate: "registro:agricola",
     requiredFields: ["date", "players", "inputs"],
     validate: ({ date, players, inputs }) =>
       typeof date === "string" && isStringArray(players) && isNumberMatrix(inputs) && inputs.length === players.length,

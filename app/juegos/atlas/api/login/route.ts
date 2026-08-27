@@ -4,10 +4,9 @@
 // Sin clave el juego funciona igual y el progreso se queda en el navegador: eso es deliberado,
 // sirve para prestarle el móvil a alguien sin ensuciar el mazo.
 import { checkRateLimit, clearRateLimit, clientIp } from "@/lib/registro";
-import { prefijo } from "@/lib/keys";
 import { passwordOk, signSession } from "@/lib/atlas/session";
 
-const RATE_PREFIX = prefijo("atlas:login");
+const RATE = "login:atlas";
 const PROD = process.env.NODE_ENV === "production";
 
 // La cookie solo viaja a las rutas del juego: fuera de aquí no hay nada que autorizar.
@@ -17,7 +16,7 @@ const cookie = (valor: string, expira: Date) =>
 
 export async function POST(request: Request): Promise<Response> {
   const ip = clientIp(request);
-  if (!(await checkRateLimit(ip, RATE_PREFIX))) {
+  if (!(await checkRateLimit(ip, RATE))) {
     return Response.json({ error: "Demasiados intentos. Espera 30 minutos." }, { status: 429 });
   }
 
@@ -31,7 +30,7 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ error: "Clave incorrecta" }, { status: 401 });
   }
 
-  await clearRateLimit(ip, RATE_PREFIX);
+  await clearRateLimit(ip, RATE);
   const { valor, expira } = signSession();
   const res = Response.json({ ok: true });
   res.headers.set("Set-Cookie", cookie(valor, expira));

@@ -95,7 +95,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   return handleRegistroPost<CastlePayload, CastleRecord>(request, {
     key: KEY,
-    ratePrefix: "ratelimit:registro:castle-combo:",
+    rate: "registro:castle-combo",
     requiredFields: ["date", "players", "scores"],
     validate: ({ date, players, scores }) =>
       typeof date === "string" && isStringArray(players) && isNumberMatrix(scores) && scores.length === players.length,

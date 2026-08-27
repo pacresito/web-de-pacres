@@ -2,7 +2,7 @@ import { listAll, setHidden, remove } from "@/lib/guestbook";
 import { checkRateLimit, clearRateLimit, clientIp } from "@/lib/registro";
 import { comparaSecreto } from "@/lib/secreto";
 
-const RATE_PREFIX = "ratelimit:guestbook:moderar:";
+const RATE = "guestbook:moderar";
 
 // Clave propia, no la de los registros de partidas: aquella circula entre quien juega y
 // esto borra firmas con un HDEL que no tiene deshacer.
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
 
   // Camino 1: enlace del email. Oculta por id/token, sin contraseña.
   if (typeof token === "string" && token.length > 0) {
-    if (!(await checkRateLimit(ip, RATE_PREFIX))) {
+    if (!(await checkRateLimit(ip, RATE))) {
       return Response.json({ error: "Demasiados intentos. Espera 30 minutos." }, { status: 429 });
     }
     const ok = await setHidden(token, true);
@@ -37,13 +37,13 @@ export async function POST(request: Request) {
 
   // Camino 2: panel ?moderar. Rate-limit + contraseña (se limpia al acertar, para
   // que moderar varias firmas seguidas no agote el límite).
-  if (!(await checkRateLimit(ip, RATE_PREFIX))) {
+  if (!(await checkRateLimit(ip, RATE))) {
     return Response.json({ error: "Demasiados intentos. Espera 30 minutos." }, { status: 429 });
   }
   if (!passwordOk(password)) {
     return Response.json({ error: "Clave incorrecta" }, { status: 401 });
   }
-  await clearRateLimit(ip, RATE_PREFIX);
+  await clearRateLimit(ip, RATE);
 
   if (action === "list") {
     return Response.json(await listAll());

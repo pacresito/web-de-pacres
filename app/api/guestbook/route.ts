@@ -14,7 +14,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  if (!(await checkRateLimit(clientIp(request), "ratelimit:guestbook:"))) {
+  if (!(await checkRateLimit(clientIp(request), "guestbook"))) {
     return Response.json({ error: "Demasiados envíos. Espera 30 minutos." }, { status: 429 });
   }
 

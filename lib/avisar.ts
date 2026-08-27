@@ -10,6 +10,7 @@
 
 import { Receiver } from "@upstash/qstash";
 import redis from "./redis";
+import { prefijo } from "./keys";
 import { enviarTelegram, TelegramRechaza } from "./telegram";
 
 const SITIO = "https://pacr.es";
@@ -68,7 +69,9 @@ const RECUERDO_S = 60 * 60 * 24;
  * proteger sin que nada falle.
  */
 export async function avisarUnaVez(id: string, texto: string): Promise<boolean> {
-  const marca = `avisar:dado:${id}`;
+  // Con la marca de prod, un aviso probado en local deja mudo al de verdad durante un día — y
+  // callar es justo lo que esta función hace cuando la encuentra puesta.
+  const marca = prefijo("avisar:dado") + id;
   if ((await redis.set(marca, "1", "EX", RECUERDO_S, "NX")) === null) return false;
   try {
     await enviarTelegram(texto);

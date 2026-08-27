@@ -1,5 +1,6 @@
 // Lógica compartida entre los registros de partidas (Castle Combo y Agrícola).
 import redis from "./redis";
+import { prefijo } from "./keys";
 import { comparaSecreto } from "./secreto";
 import { sendEmail, type SendEmailOptions } from "./notify";
 
@@ -15,18 +16,24 @@ const PAGE_SIZE = 10;
 const RATE_MAX = 5;
 const RATE_TTL = 1800; // 30 min
 
+/** Los contadores viven todos bajo `ratelimit:` y su clave la monta esto, nadie más: escrita en
+ *  la ruta se le olvida el `-dev`, y entonces probar un formulario en local gasta los intentos
+ *  de esa IP en producción, media hora, sin nada que lo diga. Con un prefijo único, además,
+ *  `SCAN ratelimit:*` contesta a quién se está frenando ahora mismo. */
+const contador = (nombre: string): string => prefijo(`ratelimit:${nombre}`);
+
 /** Incrementa el contador por IP y devuelve si sigue dentro del límite.
  *  El SET NX fija la caducidad al crear la clave, en la misma transacción que el INCR:
  *  con un EXPIRE aparte, un fallo entre los dos comandos deja la clave sin TTL y esa IP
  *  bloqueada para siempre. */
-export async function checkRateLimit(ip: string, prefix: string, max = RATE_MAX, ttl = RATE_TTL): Promise<boolean> {
-  const key = prefix + ip;
+export async function checkRateLimit(ip: string, nombre: string, max = RATE_MAX, ttl = RATE_TTL): Promise<boolean> {
+  const key = contador(nombre) + ip;
   const res = await redis.multi().set(key, 0, "EX", ttl, "NX").incr(key).exec();
   return Number(res?.[1]?.[1] ?? max + 1) <= max;
 }
 
-export async function clearRateLimit(ip: string, prefix: string): Promise<void> {
-  await redis.del(prefix + ip);
+export async function clearRateLimit(ip: string, nombre: string): Promise<void> {
+  await redis.del(contador(nombre) + ip);
 }
 
 /** IP del cliente. x-real-ip lo fija Vercel y no es spoofeable; como fallback usamos el
@@ -93,7 +100,8 @@ interface RegistroBody {
 
 export interface RegistroPostConfig<T extends RegistroBody, R> {
   key: string;
-  ratePrefix: string;
+  /** Nombre del contador de rate limit, sin prefijo ni `-dev`: los pone `checkRateLimit`. */
+  rate: string;
   requiredFields: (keyof T & string)[];
   /** Valida la FORMA del body (no solo la presencia): evita un 500 si, p.ej., la matriz
    *  numérica llega mal formada. Devuelve false → 400. */
@@ -115,7 +123,7 @@ export async function handleRegistroPost<T extends RegistroBody, R>(
 ): Promise<Response> {
   const ip = clientIp(request);
 
-  if (!(await checkRateLimit(ip, config.ratePrefix))) {
+  if (!(await checkRateLimit(ip, config.rate))) {
     return Response.json({ error: "Demasiados intentos. Espera 30 minutos." }, { status: 429 });
   }
 
@@ -129,7 +137,7 @@ export async function handleRegistroPost<T extends RegistroBody, R>(
   if (!passwordOk(body.password)) {
     return Response.json({ error: "Clave incorrecta" }, { status: 401 });
   }
-  await clearRateLimit(ip, config.ratePrefix);
+  await clearRateLimit(ip, config.rate);
 
   for (const field of config.requiredFields) {
     if (body[field] === undefined || body[field] === null) {
