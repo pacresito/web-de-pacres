@@ -19,6 +19,10 @@ const PUNTOS = Object.entries(FORMAS)
  * Va con la forma, no aparte: si se enseñara con la forma tapada estaría señalando el país en
  * un mapa, que es media respuesta regalada.
  *
+ * **`lon` y `lat` son dónde se planta el globo, no dónde está el país.** No coinciden: la tarjeta
+ * lo desvía a propósito para que la respuesta no caiga en el centro del disco. Quien sabe dónde
+ * está cada país es `FORMAS`, y de ahí salen los puntos de los que no tienen contorno.
+ *
  * `oculto` lo dibuja como tierra cualquiera, con su costa igual que la de sus vecinos, para el
  * globo en el que se marca el sitio antes de destapar: omitirlo dejaría un hueco justo donde está
  * la respuesta. Con `alMarcar` el toque dentro del disco engancha un país y lo devuelve.
@@ -45,8 +49,9 @@ export default function Globo({ id, lon, lat, r = 74, lado, oculto, marca, alMar
       relleno: rellenoDelGlobo(MUNDO.map((a) => a.r), proy, borde),
       mio: pathDelGlobo(suyos, proy),
       // Los diminutos no están en el mapa de baja resolución del globo, y a esta escala un
-      // punto es exactamente lo que son.
-      punto: resaltado && !suyos.length ? proy(lon, lat) : null,
+      // punto es exactamente lo que son. Va por su sitio en `FORMAS`, no por el centro del globo,
+      // que es otra cosa desde que la tarjeta lo desvía.
+      punto: resaltado && !suyos.length ? proy(FORMAS[resaltado].lon, FORMAS[resaltado].lat) : null,
       trazo: pathDelGlobo(marcados, proy),
       trazoPunto: marca && !marcados.length ? proy(FORMAS[marca].lon, FORMAS[marca].lat) : null,
     };
