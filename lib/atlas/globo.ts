@@ -83,18 +83,19 @@ export function pathDelGlobo(anillos: number[][][], proy: Proyeccion): string {
  */
 export const UMBRALES = {
   /** Radio de cortesía alrededor del punto de los que no tienen forma. */
-  gracia: 5,
+  gracia: 6,
   /** Hasta dónde se busca al vecino cuando el toque cae en el mar. */
   cerca: 15,
   /**
    * En cuántas partes puede morder la cortesía al país que tiene el dedo dentro. El punto de
-   * Liechtenstein vive dentro de Suiza, que en el globo mide ocho píxeles: cinco de radio se
-   * comerían Suiza entera.
+   * Liechtenstein vive dentro de Suiza, que en el globo mide ocho píxeles: sin recortarla, seis de
+   * radio dejan a Suiza en el 10% de sí misma.
    *
-   * **Un quinto, medido.** Un toque dentro de un país se lo lleva él el 99,3% de las veces, y Suiza
-   * —el peor caso— conserva el 81% de su superficie en vez del 25% que le quedaba sin recorte. Los
-   * que no tienen forma apenas lo pagan: 688 enganches de 928 contra los 700 de no recortar nada.
-   * Apretar más sí se nota — a un octavo, Suiza sube al 92% pero los puntos caen a 656.
+   * **Un quinto.** Un toque dentro de un país se lo lleva él el 99,1% de las veces y Suiza conserva
+   * el 81%, a cambio de 743 enganches de 928 en los que no tienen forma contra los 762 de no
+   * recortar nada. Es la perilla del precio, y aprieta a los dos lados: a un octavo, Suiza sube al
+   * 92% e Italia —que tiene dentro al Vaticano y a San Marino— del 70% al 89%, y los puntos bajan
+   * a 704.
    */
   mordisco: 5,
 };
@@ -123,9 +124,8 @@ function aSegmento(px: number, py: number, ax: number, ay: number, bx: number, b
  * El orden de preferencia:
  * 1. **De los que se dibujan como punto, el más cercano dentro del radio de gracia.** La cortesía
  *    la cobra el que no tiene forma a la que apuntar, y solo él: cuando la cobraba todo lo que
- *    midiera menos de cinco píxeles, Palestina se quedaba con **todos** los toques dentro de
- *    Israel y Luxemburgo con el 92% de los de Bélgica —países que sí se dibujan, y a los que se
- *    puede apuntar—.
+ *    saliera pequeño, Palestina se quedaba con **todos** los toques dentro de Israel y Luxemburgo
+ *    con el 92% de los de Bélgica —países que sí se dibujan, y a los que se puede apuntar—.
  * 2. **El que contiene el toque**, y el más pequeño de ellos si el mapa los solapa.
  * 3. **El más cercano**, para el toque que cae en el mar o en tierra de nadie —Groenlandia, el
  *    Sáhara Occidental, la Antártida—, que si no dejaría el dedo en el vacío.
@@ -134,13 +134,12 @@ function aSegmento(px: number, py: number, ax: number, ay: number, bx: number, b
  * **El punto va antes que el contorno porque si no es inalcanzable.** El de Andorra cae dentro del
  * polígono de España y el de Liechtenstein dentro del de Suiza, así que con el contorno delante hay
  * que clavarles el toque encima: fallando por cinco píxeles, los que no tienen forma se enganchan
- * 505 veces de 928 sin cortesía y 688 con ella.
+ * 505 veces de 928 sin cortesía y 743 con ella.
  *
- * **El radio son cinco píxeles, elegidos a mano y no medidos.** Es el suelo: por debajo, Andorra y
- * el Vaticano vuelven a ser inalcanzables. No es el techo — a la cortesía le pone freno el mordisco
- * y no el radio, así que subirlo solo da: con seis se enganchan 743 de 928, y ni el país preguntado
- * tocando su sitio (748 de 780) ni lo que conserva Suiza (81%) se mueven un ápice; de seis a diez
- * ya no cambia nada.
+ * **El radio son seis píxeles: el más pequeño que llega al máximo.** De siete en adelante no se
+ * engancha ni uno más —743 de 928 con seis, con siete y con diez—, y por debajo solo se pierde.
+ * Quien le pone precio no es el radio sino el mordisco, así que los dos se miran juntos: subir uno
+ * cambia lo que conviene en el otro.
  *
  * **Los números salen de `npx tsx lib/atlas/globo.medir.ts`** —el globo grande en un móvil, cuatro
  * desvíos por país— y hay que volver a sacarlos al mover un umbral, o este párrafo se queda
@@ -216,8 +215,8 @@ export function enganche(
   };
 
   // Entre los puntos manda la distancia: son todos igual de impinchables, así que lo único que
-  // los ordena es cuál estaba más cerca del dedo. Con el tamaño por delante, el Vaticano le
-  // ganaba el suyo a San Marino desde seis píxeles.
+  // los ordena es cuál estaba más cerca del dedo. Con el tamaño por delante, el más chico de dos
+  // vecinos se llevaba también los toques del sitio del otro.
   const cortesia = Math.min(umbrales.gracia * unidad, contenedor ? menor / umbrales.mordisco : Infinity);
   return masCerca(puntos.map((p) => p.id), cortesia) ?? contenedor ?? masCerca(cajas.keys(), cerca);
 }

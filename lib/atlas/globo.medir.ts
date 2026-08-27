@@ -1,8 +1,8 @@
 // Las cifras que justifican `UMBRALES`: `npx tsx lib/atlas/globo.medir.ts`.
 //
 // No es un test —no falla, mide— y por eso vive aparte: los números que cita el docstring de
-// `enganche` salen de aquí y **se vuelven a sacar cada vez que se mueva un umbral**. Que estuvieran
-// escritos a mano es lo que dejó el texto hablando de un radio de seis cuando ya valía cinco.
+// `enganche` salen de aquí y **se vuelven a sacar cada vez que se mueva un umbral**. Escritos a
+// mano se quedan viejos en cuanto alguien toca una constante, y nada lo delata.
 //
 // El montaje es el de la lupa en el móvil de Pablo, que es el único sitio donde se marca: globo de
 // radio 200 pintado a 86vw de un Pixel 8a (354 px), y el centro desviado 2.000 km del país
@@ -160,6 +160,19 @@ for (const mordisco of [1, 3, 5, 8]) {
   console.log(`  un ${String(mordisco).padStart(2)}º:` +
               ` sin forma fallando por 5 px ${de(p.cogidos, p.total)}` +
               ` · Suiza conserva ${conserva("ch", u)} · Italia ${conserva("it", u)}`);
+}
+
+// Las dos perillas juntas, que es como hay que mirarlas: el radio decide cuánto se regala y el
+// mordisco a quién no se le puede quitar, así que subir uno cambia lo que conviene en el otro.
+console.log("\nLas dos juntas (sin forma / Suiza / Italia)");
+console.log("            " + [1, 3, 5, 8, 12].map((m) => `mordisco ${String(m).padStart(2)}`.padEnd(22)).join(""));
+for (const gracia of [5, 6, 7, 10]) {
+  const fila = [1, 3, 5, 8, 12].map((mordisco) => {
+    const u = { gracia, cerca: UMBRALES.cerca, mordisco };
+    const p = puntosFallandoPorCinco(u);
+    return `${de(p.cogidos, p.total)} ${conserva("ch", u).padStart(5)} ${conserva("it", u).padStart(5)}`.padEnd(22);
+  });
+  console.log(`  radio ${String(gracia).padStart(2)}  ` + fila.join(""));
 }
 
 console.log("\nCon los umbrales de hoy");
