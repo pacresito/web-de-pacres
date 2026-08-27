@@ -91,13 +91,16 @@ export const UMBRALES = {
    * Liechtenstein vive dentro de Suiza, que en el globo mide ocho píxeles: sin recortarla, seis de
    * radio dejan a Suiza en el 10% de sí misma.
    *
-   * **Un quinto.** Un toque dentro de un país se lo lleva él el 99,1% de las veces y Suiza conserva
-   * el 81%, a cambio de 743 enganches de 928 en los que no tienen forma contra los 762 de no
-   * recortar nada. Es la perilla del precio, y aprieta a los dos lados: a un octavo, Suiza sube al
-   * 92% e Italia —que tiene dentro al Vaticano y a San Marino— del 70% al 89%, y los puntos bajan
-   * a 704.
+   * **Un octavo.** Con él, un toque dentro de un país se lo lleva él el 99,3% de las veces: Suiza
+   * conserva el 92% de su superficie e Italia —que tiene dentro al Vaticano y a San Marino— el
+   * 89%, cuando sin recortar nada se quedarían en el 10% y el 70%. Lo pagan los que no tienen
+   * forma, que bajan de 762 enganches de 928 a 704, y sobre todo Liechtenstein: un píxel de radio
+   * dentro de una Suiza de ocho, lo justo para que su sitio exacto siga siendo suyo.
+   *
+   * Es la perilla del precio y el radio la de lo que se regala, así que se miran juntos: la tabla
+   * del medidor los cruza.
    */
-  mordisco: 5,
+  mordisco: 8,
 };
 
 /** Distancia de un punto a un segmento. Los anillos traen tramos rectos largos —las fronteras de
@@ -134,12 +137,12 @@ function aSegmento(px: number, py: number, ax: number, ay: number, bx: number, b
  * **El punto va antes que el contorno porque si no es inalcanzable.** El de Andorra cae dentro del
  * polígono de España y el de Liechtenstein dentro del de Suiza, así que con el contorno delante hay
  * que clavarles el toque encima: fallando por cinco píxeles, los que no tienen forma se enganchan
- * 505 veces de 928 sin cortesía y 743 con ella.
+ * 505 veces de 928 sin cortesía y 704 con ella.
  *
  * **El radio son seis píxeles: el más pequeño que llega al máximo.** De siete en adelante no se
- * engancha ni uno más —743 de 928 con seis, con siete y con diez—, y por debajo solo se pierde.
- * Quien le pone precio no es el radio sino el mordisco, así que los dos se miran juntos: subir uno
- * cambia lo que conviene en el otro.
+ * engancha ni uno más —704 de 928 con seis, con siete y con diez— y por debajo solo se pierde: con
+ * cinco son 656. Lo que cuesta no lo decide el radio sino el mordisco, así que los dos se miran
+ * juntos: subir uno cambia lo que conviene en el otro.
  *
  * **Los números salen de `npx tsx lib/atlas/globo.medir.ts`** —el globo grande en un móvil, cuatro
  * desvíos por país— y hay que volver a sacarlos al mover un umbral, o este párrafo se queda

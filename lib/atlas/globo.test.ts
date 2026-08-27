@@ -93,12 +93,12 @@ assert.strictEqual((d.match(/M/g) ?? []).length, 1, "solo el trozo visible");
   // En el mar, el punto se lleva el toque aunque la costa quede tres veces más cerca: a la costa
   // se le puede apuntar y al punto no.
   assert.strictEqual(en(10.5, 2), "mar", "el punto gana a la costa que tiene al lado");
-  // Pero la cortesía no puede morder más de un quinto del país que tiene el dedo dentro: el
-  // enano vive en un país de 0,9 px, así que su radio ahí no llega a dos décimas.
+  // Pero la cortesía no puede morder más de un octavo del país que tiene el dedo dentro: el
+  // enano vive en un país de 0,9 px, así que su radio ahí es de una décima.
   assert.strictEqual(en(2.45, 2.2), "chico", "la cortesía se encoge con el país de debajo");
   // Sin ningún punto cerca, manda el vecino de verdad.
   assert.strictEqual(en(0, 14), "grande", "en el mar, el más cercano");
-  // Y con el globo pintado más pequeño, los mismos 5 px de pantalla abarcan menos mundo: el
+  // Y con el globo pintado más pequeño, los mismos píxeles de pantalla abarcan menos mundo: el
   // punto del mar se queda fuera y el toque vuelve a la costa.
   assert.strictEqual(en(10.5, 2, 0.4), "grande", "los umbrales van en píxeles de pantalla, no del dibujo");
   assert.strictEqual(en(-24.9, -24.9), "lejos", "el que no tiene forma engancha por su punto");
