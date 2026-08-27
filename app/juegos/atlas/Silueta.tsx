@@ -1,9 +1,8 @@
 "use client";
 
 import { type Forma } from "@/data/atlas/formas";
-import { CON_RELIEVE } from "@/data/atlas/relieve";
 import { useTema } from "@/app/components/usePersistedTheme";
-import { marcoDeTinta } from "@/lib/atlas/silueta";
+import { marcoDeTinta, rutaDelRelieve } from "@/lib/atlas/silueta";
 
 /**
  * La silueta de un país: la forma, la frontera interior cuando la hay y la línea entre los dos
@@ -22,7 +21,7 @@ export default function Silueta({ id, forma, nombre, ajustada = false, style }: 
   id: string; forma: Forma; nombre: string; ajustada?: boolean; style?: React.CSSProperties;
 }) {
   const tema = useTema();
-  const relieve = tema && CON_RELIEVE.has(id) && `/atlas/relieve/${id}-${tema === "dark" ? "oscuro" : "claro"}.webp`;
+  const relieve = rutaDelRelieve(id, tema);
 
   return (
     <svg
