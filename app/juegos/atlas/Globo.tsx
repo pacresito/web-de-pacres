@@ -3,7 +3,7 @@
 import { useMemo, useRef } from "react";
 import { FORMAS } from "@/data/atlas/formas";
 import { MUNDO } from "@/data/atlas/mundo";
-import { alLimbo, enganche, ortografica, pathDelGlobo, rellenoDelGlobo } from "@/lib/atlas/globo";
+import { alLimbo, enganche, gradosEntre, ortografica, pathDelGlobo, rellenoDelGlobo } from "@/lib/atlas/globo";
 
 // Los países que el mapa de baja resolución no trae. Entran al enganche por su centro, que es el
 // mismo punto con el que ya se dibujan.
@@ -11,6 +11,13 @@ const CON_ANILLO = new Set(MUNDO.map((a) => a.id));
 const PUNTOS = Object.entries(FORMAS)
   .filter(([id]) => !CON_ANILLO.has(id))
   .map(([id, f]) => ({ id, lon: f.lon, lat: f.lat }));
+
+/**
+ * Hasta dónde se marcan esos países, en grados de arco desde el centro del globo. Son unos
+ * 2.200 km, más que los 2.000 que la tarjeta desvía el globo, así que **el entorno de lo que se
+ * está mirando siempre sale marcado**. Más lejos no se marca: ahí no se está apuntando.
+ */
+const RADIO_PUNTOS = 20;
 
 /**
  * El globo de la tarjeta: la Tierra centrada en el país, con él resaltado. Es quien cuenta el
@@ -23,16 +30,20 @@ const PUNTOS = Object.entries(FORMAS)
  * lo desvía a propósito para que la respuesta no caiga en el centro del disco. Quien sabe dónde
  * está cada país es `FORMAS`, y de ahí salen los puntos de los que no tienen contorno.
  *
+ * `puntos` marca los que el mapa no trae, para poder apuntarles: a esta escala no se ven, y saber
+ * dónde está Andorra no sirve de nada si no hay nada que pinchar. Que a veces el punto sea el país
+ * preguntado se acepta —la mayoría de las veces no lo es, y quien califica es quien juega—.
+ *
  * `oculto` lo dibuja como tierra cualquiera, con su costa igual que la de sus vecinos, para el
  * globo en el que se marca el sitio antes de destapar: omitirlo dejaría un hueco justo donde está
  * la respuesta. Con `alMarcar` el toque dentro del disco engancha un país y lo devuelve.
  */
-export default function Globo({ id, lon, lat, r = 74, lado, oculto, marca, alMarcar }: {
+export default function Globo({ id, lon, lat, r = 74, lado, oculto, puntos, marca, alMarcar }: {
   id: string; lon: number; lat: number; r?: number; lado?: string;
-  oculto?: boolean; marca?: string | null; alMarcar?: (id: string) => void;
+  oculto?: boolean; puntos?: boolean; marca?: string | null; alMarcar?: (id: string) => void;
 }) {
   const svg = useRef<SVGSVGElement>(null);
-  const { proy, borde, tierra, relleno, mio, punto, trazo, trazoPunto } = useMemo(() => {
+  const { proy, borde, tierra, relleno, mio, punto, diminutos, trazo, trazoPunto } = useMemo(() => {
     const proy = ortografica(lon, lat, r);
     const borde = alLimbo(lon, lat, r);
     // `null` y no "" para el que no se resalta: la cadena vacía es el id de la tierra que no es de
@@ -52,10 +63,17 @@ export default function Globo({ id, lon, lat, r = 74, lado, oculto, marca, alMar
       // punto es exactamente lo que son. Va por su sitio en `FORMAS`, no por el centro del globo,
       // que es otra cosa desde que la tarjeta lo desvía.
       punto: resaltado && !suyos.length ? proy(FORMAS[resaltado].lon, FORMAS[resaltado].lat) : null,
+      // El resaltado no entra: ya se pinta en acento un poco más abajo, y dos círculos en el
+      // mismo sitio dejan un halo gris asomando por fuera del verde. Dentro del radio no hace
+      // falta comprobar el horizonte: veinte grados caben de sobra en la cara visible.
+      diminutos: puntos
+        ? PUNTOS.filter((p) => p.id !== resaltado && gradosEntre(lon, lat, p.lon, p.lat) <= RADIO_PUNTOS)
+                .map((p) => proy(p.lon, p.lat)!)
+        : [],
       trazo: pathDelGlobo(marcados, proy),
       trazoPunto: marca && !marcados.length ? proy(FORMAS[marca].lon, FORMAS[marca].lat) : null,
     };
-  }, [id, lon, lat, r, oculto, marca]);
+  }, [id, lon, lat, r, oculto, puntos, marca]);
 
   /**
    * Dentro del disco se marca; fuera, el toque sigue subiendo, que ahí es cerrar. Lo que
@@ -90,6 +108,10 @@ export default function Globo({ id, lon, lat, r = 74, lado, oculto, marca, alMar
           entre dos puntos del borde cae siempre por dentro. */}
       <path d={relleno} fill="var(--t-rule2)" />
       <path d={tierra} fill="none" stroke="var(--t-ink4)" strokeWidth={1} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+      {/* Los que no tienen contorno, del gris de en medio: se ven sin gritar, y no se confunden
+          con la marca —que va en tinta llena y es una circunferencia hueca, no un punto—. El radio
+          va a escala del globo, como la costa. */}
+      {diminutos.map((q, i) => <circle key={i} cx={q[0].toFixed(1)} cy={q[1].toFixed(1)} r={r / 100} fill="var(--t-ink3)" />)}
       {/* Trazo además de relleno: un país fino (Chile, Italia) desaparece si solo se rellena. */}
       <path d={mio} fill="var(--t-accent)" stroke="var(--t-accent)" strokeWidth={2.5} strokeLinejoin="round" />
       {punto && <circle cx={punto[0]} cy={punto[1]} r={3.5} fill="var(--t-accent)" />}

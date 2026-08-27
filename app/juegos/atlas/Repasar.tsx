@@ -368,7 +368,7 @@ function Tarjeta({ vista }: { vista: Vista }) {
           es la única razón para seguir mirando. */}
       {lupa && (
         <div className="atlas-lupa" onClick={(e) => { e.stopPropagation(); setLupa(null); }}>
-          <Globo id={pais.id} lon={centro[0]} lat={centro[1]} r={200} lado="min(86vw, 56vh)"
+          <Globo id={pais.id} lon={centro[0]} lat={centro[1]} r={200} lado="min(86vw, 56vh)" puntos
                  oculto={lupa === "marcar"} marca={marca}
                  alMarcar={lupa === "marcar" ? (id) => { setMarca(id); setTimeout(() => setLupa(null), 320); } : undefined} />
           <span style={{ fontFamily: MONO, fontSize: 11, color: "var(--t-ink4)", letterSpacing: "0.14em" }}>

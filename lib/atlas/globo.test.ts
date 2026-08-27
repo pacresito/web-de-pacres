@@ -1,6 +1,6 @@
 // Test de lógica pura: `npx tsx lib/atlas/globo.test.ts`. Fuera del build.
 import assert from "assert";
-import { alLimbo, desviar, enganche, ortografica, pathDelGlobo, rellenoDelGlobo } from "./globo";
+import { alLimbo, desviar, enganche, gradosEntre, ortografica, pathDelGlobo, rellenoDelGlobo } from "./globo";
 
 const R = 100;
 const cerca = (a: number, b: number, msg: string) => assert.ok(Math.abs(a - b) < 0.001, `${msg}: ${a} vs ${b}`);
@@ -100,10 +100,11 @@ assert.strictEqual((d.match(/M/g) ?? []).length, 1, "solo el trozo visible");
 // La desviación del centro del globo: cae siempre dentro del radio pedido, nunca justo encima, y
 // vale igual en el polo y en el antimeridiano, donde las cuentas ingenuas se rompen.
 {
-  const arco = (a: [number, number], b: [number, number]) => {
-    const [l1, f1] = a.map((n) => n * Math.PI / 180), [l2, f2] = b.map((n) => n * Math.PI / 180);
-    return 6371 * Math.acos(Math.min(1, Math.sin(f1) * Math.sin(f2) + Math.cos(f1) * Math.cos(f2) * Math.cos(l2 - l1)));
-  };
+  const arco = (a: [number, number], b: [number, number]) => gradosEntre(a[0], a[1], b[0], b[1]) * (Math.PI / 180) * 6371;
+  // Y el arco en sí: el ecuador entero son 180°, y un punto consigo mismo, cero.
+  cerca(gradosEntre(0, 0, 180, 0), 180, "las antípodas por el ecuador");
+  cerca(gradosEntre(-3.7, 40.4, -3.7, 40.4), 0, "un punto consigo mismo");
+  cerca(gradosEntre(0, 0, 0, 20), 20, "veinte grados de meridiano");
   let enElCentro = 0;
   for (const centro of [[-3.7, 40.4], [179.5, 66], [0, 89], [-179.9, -20]] as [number, number][]) {
     for (let i = 0; i < 400; i++) {

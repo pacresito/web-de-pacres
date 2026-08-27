@@ -206,6 +206,13 @@ export function enganche(
 /** Radio de la Tierra en km, para pasar de distancia a arco. */
 const TIERRA = 6371;
 
+/** Grados de arco entre dos puntos del globo. */
+export function gradosEntre(lonA: number, latA: number, lonB: number, latB: number): number {
+  const f1 = latA * rad, f2 = latB * rad;
+  const cos = Math.sin(f1) * Math.sin(f2) + Math.cos(f1) * Math.cos(f2) * Math.cos((lonB - lonA) * rad);
+  return Math.acos(Math.min(1, Math.max(-1, cos))) / rad;
+}
+
 /**
  * Un punto al azar a menos de `km` del que se le da.
  *
