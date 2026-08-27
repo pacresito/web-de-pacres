@@ -29,7 +29,7 @@ const MARCO: Record<Continente, [number, number, number, number]> = {
   "Asia":              [26, -11, 147, 78],
   // Oceanía se pasa de los 180° a propósito: Samoa, Tonga y las Line de Kiribati están al otro
   // lado del antimeridiano, y con el marco cortado ahí no salían en su propio continente. Por
-  // arriba llega a 12°N porque Micronesia entera —Palaos, Marshall, los Estados Federados— cae
+  // arriba llega a 12°N porque Micronesia entera —Palau, Marshall, los Estados Federados— cae
   // por encima del ecuador, que es donde el marco terminaba.
   "Oceanía":           [110, -48, 205, 12],
   // África llega hasta Cabo Verde por el oeste y hasta Mauricio por el este: son países, no

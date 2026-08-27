@@ -31,7 +31,7 @@ const CALIDAD = 82;
 const MPX_MIN = 120;   // metros por píxel del lienzo de 1000
 // Por debajo de este desnivel no hay nada que enseñar: los Países Bajos salen de un solo color.
 // El corte se eligió mirándolo, y va donde acaba lo plano de verdad y no donde empieza lo que se
-// lee: por encima quedan una docena de países que son solo un rubor —Bielorrusia, Estonia,
+// lee: por encima quedan una docena de países que son solo un rubor —Belarús, Estonia,
 // Lituania—, y un rubor no dice mucho pero tampoco estorba, mientras que un país plano pintado
 // con el degradado entero sí miente.
 const DESNIVEL_MIN = 130; // m

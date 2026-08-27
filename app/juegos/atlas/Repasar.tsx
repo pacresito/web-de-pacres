@@ -249,11 +249,14 @@ function Tarjeta({ vista }: { vista: Vista }) {
           </div>)}
 
         {/* Sin etiqueta: el sitio y el tamaño ya la dicen —la capital va siempre bajo el país y
-            más pequeña—, y en Mónaco, Yibuti o Panamá, donde las dos palabras son la misma, es
-            justo eso lo que las distingue. Tapada se llama sola. */}
+            más pequeña—, y en Mónaco, Djibouti o Singapur, donde las dos palabras son la misma, es
+            justo eso lo que las distingue. Tapada se llama sola. La glosa entre paréntesis solo
+            sale donde la forma local se leería mal en español —Jakarta, Kharṭūm—, y por eso va
+            en pequeño: es la pista de pronunciación, no la respuesta. */}
         {fila("capital",
           <div style={{ fontFamily: MONO, fontSize: "var(--a-capital)", lineHeight: 1.2, color: tinta("capital", "var(--t-ink)"), textAlign: "center" }}>
             {pais.capital}
+            {pais.capitalCastellana && <span style={{ fontSize: "0.62em", color: "var(--t-ink4)" }}> ({pais.capitalCastellana})</span>}
           </div>)}
 
         {fila("bandera",

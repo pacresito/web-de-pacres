@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Minimapa from "./Minimapa";
 import Silueta from "./Silueta";
 import { ORDEN, RECORRIDO } from "@/data/atlas/orden";
@@ -8,6 +8,8 @@ import { FORMAS } from "@/data/atlas/formas";
 import { PAIS_POR_ID } from "@/lib/atlas/paises";
 import { dominio, dominioPais, type Dato, type Dominio } from "@/lib/atlas/srs";
 import { mazoActual, sinMazo, suscribir } from "@/lib/atlas/almacen";
+import { rutaDelRelieve } from "@/lib/atlas/silueta";
+import { useTema } from "@/app/components/usePersistedTheme";
 
 const MONO = "var(--t-mono)";
 
@@ -61,6 +63,32 @@ const I_EMPEZADOS = ORDEN.length;
 const CARACTERES = 15;
 
 /**
+ * Las dos imágenes que la ficha estrena al cambiar de país: la bandera y, si lo tiene, el
+ * relieve. Ninguna viene en el HTML —React monta un nodo nuevo por país, y un nodo nuevo nace
+ * vacío—, así que sin precargarlas la ficha entra a plazos: primero la silueta plana y las
+ * montañas encima un instante después.
+ */
+function imagenes(id: string, tema: string | null) {
+  const relieve = rutaDelRelieve(id, tema);
+  return [`/atlas/banderas/${id}.svg`, ...(relieve ? [relieve] : [])];
+}
+
+/**
+ * Descarga y **decodifica**: `onload` deja todavía el descifrado del webp por hacer, y ese trabajo
+ * cae en el primer fotograma que la pinta. Se resuelve igual si falla — una imagen rota no puede
+ * dejar clavada la ficha.
+ */
+function precargar(url: string) {
+  const im = new Image();
+  im.src = url;
+  return im.decode().catch(() => {});
+}
+
+// Lo que se espera como mucho a las imágenes antes de pasar de país de todas formas. Con el
+// vecino precargado no se llega nunca; es el tope para que una red mala no deje la flecha muerta.
+const ESPERA_MAX = 600;
+
+/**
  * Cuánto encoge el nombre para caber en dos líneas. La ficha reserva dos siempre —así no se
  * mueve nada al pasar de España a Bosnia y Herzegovina— y de los 195 solo la República
  * Democrática del Congo pide una tercera: encogerla es preferible a bajar todo lo que va debajo.
@@ -92,6 +120,7 @@ function km2(n: number) {
  */
 export default function Explorar({ abrirEnEmpezados = false }: { abrirEnEmpezados?: boolean }) {
   const mazo = useSyncExternalStore(suscribir, mazoActual, sinMazo);
+  const tema = useTema();
   const [ci, setCi] = useState(abrirEnEmpezados ? I_EMPEZADOS : 0);
   const [pi, setPi] = useState(0);
   const [abierto, setAbierto] = useState(false);
@@ -118,8 +147,39 @@ export default function Explorar({ abrirEnEmpezados = false }: { abrirEnEmpezado
   const id = lista[Math.min(pi, lista.length - 1)] ?? "";
   const pais = PAIS_POR_ID.get(id);
   const forma = FORMAS[id];
-  const mover = (n: number) => { if (lista.length) setPi((i) => (Math.min(i, lista.length - 1) + n + lista.length) % lista.length); };
-  const irA = (i: number) => { setCi(i); setPi(0); setAbierto(false); };
+
+  /**
+   * Pasar de país no es cambiar el índice: es esperar a que sus imágenes estén decodificadas y
+   * cambiarlo entonces, para que la ficha entre de una pieza. El paso se numera porque quien
+   * pulsa dos veces seguidas no espera a la primera: la descarga que llega tarde se encuentra
+   * con un número que ya no es el suyo y no pinta un país que ya se pasó.
+   */
+  const paso = useRef(0);
+  // Y el índice al que se va se apunta al pedirlo, no al pintarlo: quien pulsa tres veces
+  // seguidas avanza tres, aunque la primera todavía no haya llegado.
+  const objetivo = useRef(0);
+  const irAlPais = (i: number, ids: string[] = lista) => {
+    const mio = ++paso.current;
+    objetivo.current = i;
+    const urls = ids[i] ? imagenes(ids[i], tema) : [];
+    Promise.race([Promise.all(urls.map(precargar)), new Promise((listo) => setTimeout(listo, ESPERA_MAX))])
+      .then(() => { if (paso.current === mio) setPi(i); });
+  };
+  const mover = (n: number) => { if (lista.length) irAlPais((Math.min(objetivo.current, lista.length - 1) + n + lista.length) % lista.length); };
+  // El continente se cambia al momento —lo que se estrena entero no es una ficha que se sustituye
+  // a medias— y su primer país ya espera a lo suyo, con la lista nueva, que `lista` todavía es la
+  // de antes en este render.
+  const irA = (i: number) => { setCi(i); setPi(0); setAbierto(false); irAlPais(0, vistas[i].paises); };
+
+  // Los vecinos, precargados en cuanto la ficha se asienta: son diez kilobytes y se piden una
+  // vez, así que el paso siguiente ya no espera a nada. Los dos, que el recorrido se anda en
+  // ambos sentidos.
+  useEffect(() => {
+    for (const n of [1, -1]) {
+      const vecino = lista[(Math.min(pi, lista.length - 1) + n + lista.length) % lista.length];
+      if (vecino) imagenes(vecino, tema).forEach(precargar);
+    }
+  }, [pi, lista, tema]);
 
   // Las flechas del teclado hacen lo que los dos botones: en escritorio recorrer el continente
   // pulsando a un lado y a otro de la pantalla no es recorrerlo.
@@ -230,7 +290,9 @@ export default function Explorar({ abrirEnEmpezados = false }: { abrirEnEmpezado
 
           {/* Sin etiqueta, como en la tarjeta: el sitio y el tamaño ya la dicen. */}
           {fila("capital",
-            <span style={{ fontFamily: MONO, fontSize: "var(--a-capital)", lineHeight: 1.2, color: "var(--t-ink)" }}>{pais.capital}</span>)}
+            <span style={{ fontFamily: MONO, fontSize: "var(--a-capital)", lineHeight: 1.2, color: "var(--t-ink)" }}>{pais.capital}
+              {pais.capitalCastellana && <span style={{ fontSize: "0.62em", color: "var(--t-ink4)" }}> ({pais.capitalCastellana})</span>}
+            </span>)}
 
           {fila("bandera",
             // eslint-disable-next-line @next/next/no-img-element -- SVG suelto de /public, sin optimización que aportar
