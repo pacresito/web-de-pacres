@@ -28,7 +28,7 @@
 // tilde extranjera sobre una palabra que el español ya escribe a su manera (Brasilia).
 //
 // **`capitalCastellana` es la pista, no una segunda respuesta.** Se glosa entre paréntesis y en
-// pequeño donde la forma local **se leería mal** —la j que suena /y/ (Jakarta, Juba, Abuja) y la
+// pequeño donde la forma local **se leería mal** —la j que suena /y/ (Jakarta, Juba, Abuja, Ljubljana, Skopje) y la
 // kh que suena jota (Kharṭūm)— o donde **no se reconocería sin ayuda** (Kyiv, Muqdisho, Bayrūt,
 // Nawākshūṭ). La que se lee y se reconoce sola no la lleva: Riyāḍ, Ṣanʿāʾ, Tbilisi. Y donde la
 // forma local **es** la castellana tampoco, que ahí no diría nada: Yibuti, Tūnis.
@@ -122,7 +122,7 @@ export const PAISES: Pais[] = [
   { id: "ae", nombre: "Emiratos Árabes Unidos",          oficial: "Emiratos Árabes Unidos",                          capital: "Abu Dhabi",                 continente: "Asia",              subregion: "Asia Occidental",           km2:     83_600 },
   { id: "er", nombre: "Eritrea",                         oficial: "Estado de Eritrea",                               capital: "Asmara",                    continente: "África",            subregion: "África Oriental",           km2:    117_600 },
   { id: "sk", nombre: "Eslovaquia",                      oficial: "República Eslovaca",                              capital: "Bratislava",                continente: "Europa",            subregion: "Europa Oriental",           km2:     49_034 },
-  { id: "si", nombre: "Eslovenia",                       oficial: "República de Eslovenia",                          capital: "Ljubljana",                 continente: "Europa",            subregion: "Europa del Sur",            km2:     20_271 },
+  { id: "si", nombre: "Eslovenia",                       oficial: "República de Eslovenia",                          capital: "Ljubljana",                 continente: "Europa",            subregion: "Europa del Sur",            km2:     20_271, capitalCastellana: "Liubliana" },
   { id: "es", nombre: "España",                          oficial: "Reino de España",                                 capital: "Madrid",                    continente: "Europa",            subregion: "Europa del Sur",            km2:    505_990 },
   { id: "us", nombre: "Estados Unidos",                  oficial: "Estados Unidos de América",                       capital: "Washington D. C.",          continente: "América del Norte", subregion: "Norteamérica",              km2:  9_826_675 },
   { id: "ee", nombre: "Estonia",                         oficial: "República de Estonia",                            capital: "Tallinn",                   continente: "Europa",            subregion: "Europa del Norte",          km2:     45_335 },
@@ -173,7 +173,7 @@ export const PAISES: Pais[] = [
   { id: "lt", nombre: "Lituania",                        oficial: "República de Lituania",                           capital: "Vilnius",                   continente: "Europa",            subregion: "Europa del Norte",          km2:     65_300 },
   { id: "lu", nombre: "Luxemburgo",                      oficial: "Gran Ducado de Luxemburgo",                       capital: "Luxemburgo",                continente: "Europa",            subregion: "Europa Occidental",         km2:      2_593 },
   { id: "lb", nombre: "Líbano",                          oficial: "República Libanesa",                              capital: "Bayrūt",                    continente: "Asia",              subregion: "Asia Occidental",           km2:     10_452, capitalCastellana: "Beirut" },
-  { id: "mk", nombre: "Macedonia del Norte",             oficial: "República de Macedonia del Norte",                capital: "Skopje",                    continente: "Europa",            subregion: "Europa del Sur",            km2:     25_713 },
+  { id: "mk", nombre: "Macedonia del Norte",             oficial: "República de Macedonia del Norte",                capital: "Skopje",                    continente: "Europa",            subregion: "Europa del Sur",            km2:     25_713, capitalCastellana: "Skopie" },
   { id: "mg", nombre: "Madagascar",                      oficial: "República de Madagascar",                         capital: "Antananarivo",              continente: "África",            subregion: "África Oriental",           km2:    587_295 },
   { id: "mw", nombre: "Malawi",                          oficial: "República de Malawi",                             capital: "Lilongwe",                  continente: "África",            subregion: "África Oriental",           km2:    118_484 },
   { id: "my", nombre: "Malaysia",                        oficial: "Malaysia",                                        capital: "Kuala Lumpur",              continente: "Asia",              subregion: "Sudeste Asiático",          km2:    330_803 },
