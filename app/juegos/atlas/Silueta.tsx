@@ -16,21 +16,27 @@ import { marcoDeTinta, rutaDelRelieve } from "@/lib/atlas/silueta";
  * Los países que tienen relieve lo llevan encima del relleno, en una imagen precalculada por
  * scripts/build-atlas-relieve.mts. **El relleno se queda debajo**: mientras la imagen carga, si
  * falla o si el país no tiene, se ve exactamente la silueta de siempre.
+ *
+ * **`forma` es la respuesta y `trazo` es lo que se marcó**, y por eso una va rellena y la otra
+ * solo dibujada: superpuestas, acertar se ve porque encaja —el trazo va centrado en el contorno,
+ * así que deja un reborde oscuro abrazando la figura en vez de desaparecer bajo ella— y fallar se
+ * ve porque son dos figuras distintas. Mientras la ubicación sigue tapada, `forma` viene vacía y
+ * solo se ve lo marcado: enseñar ahí la buena sería la respuesta.
  */
-export default function Silueta({ id, forma, nombre, ajustada = false, style }: {
-  id: string; forma: Forma; nombre: string; ajustada?: boolean; style?: React.CSSProperties;
+export default function Silueta({ id, forma, nombre, trazo, ajustada = false, style }: {
+  id: string; forma: Forma | null; nombre: string; trazo?: Forma | null; ajustada?: boolean; style?: React.CSSProperties;
 }) {
   const tema = useTema();
-  const relieve = rutaDelRelieve(id, tema);
+  const relieve = forma && rutaDelRelieve(id, tema);
 
   return (
     <svg
       // El arrecife entra en la cuenta de la tinta: asoma por fuera de la tierra, y ceñirse solo
       // a ella le cortaría los anillos por los lados.
-      viewBox={ajustada ? marcoDeTinta(forma.d + forma.arrecife) : "0 0 1000 1000"}
+      viewBox={ajustada && forma ? marcoDeTinta(forma.d + forma.arrecife) : "0 0 1000 1000"}
       preserveAspectRatio={ajustada ? "xMinYMid meet" : undefined}
       style={style}
-      aria-label={`Forma de ${nombre}`}
+      aria-label={forma ? `Forma de ${nombre}` : "Forma del país marcado"}
     >
       {/* El coral, debajo de la tierra: en un archipiélago de atolones el anillo es la forma que
           se reconoce y los islotes que lo coronan son el detalle que va encima. Sin relleno y sin
@@ -39,13 +45,13 @@ export default function Silueta({ id, forma, nombre, ajustada = false, style }: 
           trazo solo la salva de desaparecer, mientras que el anillo **es** solo trazo. A tamaño de
           ficha un atolón mide cuatro píxeles, y a un pelo de ancho el anillo no se cierra: se lee
           como suciedad. Los de Tuvalu, que son los más pequeños, marcan el listón. */}
-      {forma.arrecife && <path d={forma.arrecife} fill="none" stroke="var(--t-accent)" strokeWidth={3}
+      {forma?.arrecife && <path d={forma.arrecife} fill="none" stroke="var(--t-accent)" strokeWidth={3}
             strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />}
       {/* Trazo además de relleno, como en el globo y el minimapa: un archipiélago de atolones
           —Maldivas, Tuvalu, las Marshall— relleno a secas se queda en unas motas que no se ven.
           A los grandes, un píxel y medio de contorno no les hace nada. */}
-      <path d={forma.d} fill="var(--t-accent)" fillRule="evenodd"
-            stroke="var(--t-accent)" strokeWidth={1.5} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+      {forma && <path d={forma.d} fill="var(--t-accent)" fillRule="evenodd"
+            stroke="var(--t-accent)" strokeWidth={1.5} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />}
       {/* El relieve va enmascarado en su propio alfa, recortado del mismo path que se dibuja
           aquí: no hace falta recortarlo otra vez con un clipPath, y una máscara sola es una
           máscara que no puede desajustarse de la otra. En el viewBox ceñido de la ficha se
@@ -53,7 +59,7 @@ export default function Silueta({ id, forma, nombre, ajustada = false, style }: 
           Encima, el contorno otra vez y sin relleno: la imagen tapa la mitad interior del trazo
           del path de abajo, y en un archipiélago ese trazo es lo que salva de desaparecer a las
           islas que a este tamaño son motas. */}
-      {relieve && <>
+      {forma && relieve && <>
         {/* `key` por archivo: sin ella React reutiliza el mismo `<image>` de un país al
             siguiente, y un `<image>` al que le cambias el `href` sigue pintando lo anterior
             hasta que descarga lo nuevo — con el relleno de debajo ya cambiado, se ven las dos
@@ -65,10 +71,14 @@ export default function Silueta({ id, forma, nombre, ajustada = false, style }: 
       {/* Frontera interior, cuando la hay: Marruecos y el Sáhara Occidental salen juntos —el
           globo viene de otra fuente y recortar uno los descuadraba— y la línea dice dónde acaba
           uno. */}
-      {forma.linea && <path d={forma.linea} fill="none" stroke="var(--t-paper)" strokeWidth={6} strokeDasharray="18 14" strokeLinecap="round" opacity={0.75} />}
+      {forma?.linea && <path d={forma.linea} fill="none" stroke="var(--t-paper)" strokeWidth={6} strokeDasharray="18 14" strokeLinecap="round" opacity={0.75} />}
       {/* La línea entre los dos paneles de un país partido: dice que sus dos islas están a la
           escala buena pero no a la distancia buena. */}
-      {forma.separador && <path d={forma.separador} fill="none" stroke="var(--t-ink4)" strokeWidth={6} strokeDasharray="18 14" strokeLinecap="round" />}
+      {forma?.separador && <path d={forma.separador} fill="none" stroke="var(--t-ink4)" strokeWidth={6} strokeDasharray="18 14" strokeLinecap="round" />}
+      {/* Lo marcado, encima de todo y solo dibujado: el relleno es de la respuesta, así que los
+          dos lenguajes no pelean y el acierto se lee sin leyenda. */}
+      {trazo && <path d={trazo.d} fill="none" fillRule="evenodd" stroke="var(--t-ink2)" strokeWidth={2}
+            strokeLinejoin="round" vectorEffect="non-scaling-stroke" />}
     </svg>
   );
 }

@@ -333,6 +333,16 @@
 .atlas-globo:active { transform: scale(0.97); }
 .atlas-globo:focus-visible { outline: 2px solid var(--t-accent); outline-offset: 4px; }
 
+/* El hueco de la ubicación es lo único que se pincha estando tapado: abre el globo para marcar
+   el sitio. Botón sin chrome, del ancho de la fila, que el marco punteado ya es toda la caja
+   que hay. */
+.atlas-tapado {
+  display: block; width: 100%; background: none; border: none; padding: 0;
+  cursor: pointer; -webkit-tap-highlight-color: transparent; transition: transform 0.08s;
+}
+.atlas-tapado:active { transform: scale(0.99); }
+.atlas-tapado:focus-visible { outline: 2px solid var(--t-accent); outline-offset: 3px; }
+
 /* El globo grande tapa la pantalla entera, chrome incluida: es una mirada al mundo, no un panel
    dentro de la tarjeta, y lo que se comprueba —si el país estaba donde uno creía— pide todo el
    sitio que haya. Papel en vez de negro, y apenas translúcido: la silueta de debajo asomando

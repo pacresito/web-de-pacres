@@ -6,6 +6,7 @@ import Silueta from "./Silueta";
 import { FORMAS } from "@/data/atlas/formas";
 import { DATOS, NOTAS, type Dato, type Nota } from "@/lib/atlas/srs";
 import { calificarTarjeta, sinVista, suscribir, vistaActual, type Vista } from "@/lib/atlas/almacen";
+import { desviar } from "@/lib/atlas/globo";
 
 const MONO = "var(--t-mono)";
 
@@ -17,6 +18,14 @@ const ETIQUETA: Record<Dato, string> = { nombre: "país", capital: "capital", ba
 const TEXTO: Record<Nota, string> = { fallo: "no", bien: "sí", facil: "fácil" };
 
 const CLASE: Record<Nota, string> = { fallo: "atlas-btn-no", bien: "atlas-btn-si", facil: "atlas-btn-facil" };
+
+/**
+ * Cuánto se desvía del país el centro del globo. Centrado, la respuesta cae siempre en el centro
+ * del disco y marcar ahí acierta sin saber nada; desviado hay que saber hacia dónde cae, que es
+ * lo que se pregunta. Dos mil kilómetros son 18° de arco: bastante para que el país no esté donde
+ * uno mira primero, y poco para que siga cómodamente dentro de la cara visible.
+ */
+const DESVIO_KM = 2000;
 
 /**
  * Cuatro casillas de alto fijo, siempre las mismas: se aprende dónde mira cada una y la tarjeta
@@ -37,8 +46,8 @@ const CARRIL = { reposo: "var(--t-rule2)", espera: "var(--t-rule)", activo: "var
  * En forma de pregunta, no de hueco de letras: una forma o una bandera no se rellenan
  * escribiendo, así que unos cuadraditos no dicen qué se espera de ellos.
  */
-function Tapado({ dato, alto }: { dato: Dato; alto: number }) {
-  return (
+function Tapado({ dato, alto, alTocar }: { dato: Dato; alto: number; alTocar?: () => void }) {
+  const marco = (
     <div
       style={{
         height: alto, display: "flex", alignItems: "center", justifyContent: "center",
@@ -48,6 +57,16 @@ function Tapado({ dato, alto }: { dato: Dato; alto: number }) {
     >
       ¿{dato === "nombre" ? "País" : ETIQUETA[dato][0].toUpperCase() + ETIQUETA[dato].slice(1)}?
     </div>
+  );
+  // El de la ubicación se pincha para marcar el sitio en el globo, y por eso se traga el toque:
+  // los otros tres no tienen nada que responder sin destapar, así que destapan como el resto de
+  // la tarjeta.
+  if (!alTocar) return marco;
+  return (
+    <button type="button" className="atlas-tapado" aria-label="Marcar en el globo dónde está el país"
+            onClick={(e) => { e.stopPropagation(); alTocar(); }}>
+      {marco}
+    </button>
   );
 }
 
@@ -65,8 +84,10 @@ export default function Repasar() {
 
 function Tarjeta({ vista }: { vista: Vista }) {
   const [vistaPintada, setVistaPintada] = useState<Vista | null>(null);
+  const [centro, setCentro] = useState<[number, number]>([0, 0]);
   const [abierta, setAbierta] = useState(false);
-  const [lupa, setLupa] = useState(false);
+  const [lupa, setLupa] = useState<"mirar" | "marcar" | null>(null);
+  const [marca, setMarca] = useState<string | null>(null);
   const [notas, setNotas] = useState<Partial<Record<Dato, Nota>>>({});
   const [saliendo, setSaliendo] = useState(false);
   const [pase, setPase] = useState(0);
@@ -79,7 +100,11 @@ function Tarjeta({ vista }: { vista: Vista }) {
   if (vista !== vistaPintada) {
     setVistaPintada(vista);
     setAbierta(false);
-    setLupa(false);
+    setLupa(null);
+    setMarca(null);
+    // El desvío se sortea al montar la tarjeta y no al pintarla: el globo pequeño y el grande son
+    // el mismo, y volver a entrar a marcar no puede mover el mundo bajo la marca ya puesta.
+    setCentro(desviar(FORMAS[vista.tarjeta!.pais.id].lon, FORMAS[vista.tarjeta!.pais.id].lat, DESVIO_KM));
     setNotas({});
     setPase((n) => n + 1);
   }
@@ -92,7 +117,16 @@ function Tarjeta({ vista }: { vista: Vista }) {
   // La primera vez se ve todo y se califica igual: es el triaje de lo que ya se sabe.
   const aCalificar: Dato[] = primeraVez ? [...DATOS] : tapados;
   const calificando = primeraVez || abierta;
-  const visible = (d: Dato) => primeraVez || abierta || !tapados.includes(d);
+  // Marcado el sitio, la fila de ubicación se pinta entera aunque siga tapada: sin la marca
+  // delante, al destapar no habría con qué compararla y daría igual haber marcado.
+  const visible = (d: Dato) => primeraVez || abierta || !tapados.includes(d) || (d === "lugar" && marca !== null);
+  // Lo que sigue sin verse es el país resaltado, que es justo lo que se acaba de responder.
+  const paisOculto = !primeraVez && !abierta && tapados.includes("lugar");
+  // Y la silueta que se ve es la respuesta que hay puesta: tapada la ubicación, la del país que se
+  // marcó —con sus kilómetros, que son los de la figura que se está mirando—; destapada, la de
+  // verdad con la marcada en trazo encima.
+  const formaMarcada = marca ? FORMAS[marca] : null;
+  const formaVista = paisOculto ? formaMarcada : forma;
   // Se califica un dato cada vez y de arriba abajo: con una sola fila de botones, cuál se está
   // calificando lo tiene que decir la tarjeta, y lo dice el carril verde.
   const activo = calificando ? DATOS.find((d) => aCalificar.includes(d) && !notas[d]) : undefined;
@@ -160,7 +194,7 @@ function Tarjeta({ vista }: { vista: Vista }) {
       // calificar—, que es lo que se quiere hacer justo después de mirar.
       if (lupa) {
         e.preventDefault();
-        setLupa(false);
+        setLupa(null);
         return;
       }
       if (e.key === " ") {
@@ -181,7 +215,7 @@ function Tarjeta({ vista }: { vista: Vista }) {
    * mismo elemento en los cuatro estados, y por eso la barra de abajo no necesita estar pegada
    * al dato que califica: basta con que uno de los cuatro esté verde.
    */
-  const fila = (dato: Dato, contenido: React.ReactNode) => {
+  const fila = (dato: Dato, contenido: React.ReactNode, alTocarHueco?: () => void) => {
     const puesta = notas[dato];
     const alto = primeraVez ? ALTO_PRIMERA[dato] : ALTO[dato][visible(dato) ? 0 : 1];
     const carril = puesta ? CARRIL.hecho
@@ -204,7 +238,7 @@ function Tarjeta({ vista }: { vista: Vista }) {
           // de tarjeta es la primera que acaba— y entran una detrás de otra.
           style={{ minWidth: 0, animationDelay: saliendo ? undefined : `${DATOS.indexOf(dato) * 30}ms` }}
         >
-          {visible(dato) ? contenido : <Tapado dato={dato} alto={alto} />}
+          {visible(dato) ? contenido : <Tapado dato={dato} alto={alto} alTocar={alTocarHueco} />}
         </div>
         <div style={{ fontFamily: MONO, fontSize: 10, color: "var(--a-acc-tx)" }}>
           {puesta && TEXTO[puesta]}
@@ -280,18 +314,23 @@ function Tarjeta({ vista }: { vista: Vista }) {
                 manera de saber cuál se está mirando. El globo no la necesita —ahí el país sale a
                 escala del mundo—, y el pie le roba al lienzo el alto que ocupa. */}
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 7, flexShrink: 0 }}>
-              <Silueta id={pais.id} forma={forma} nombre={pais.nombre} style={{ width: "var(--a-silueta)", height: "var(--a-silueta)" }} />
-              <span style={{ fontFamily: MONO, fontSize: 10, color: "var(--t-ink3)" }}>{forma.ladoKm} km</span>
+              <Silueta id={pais.id} forma={paisOculto ? null : forma} nombre={pais.nombre} trazo={formaMarcada}
+                       style={{ width: "var(--a-silueta)", height: "var(--a-silueta)" }} />
+              <span style={{ fontFamily: MONO, fontSize: 10, color: "var(--t-ink3)" }}>{formaVista?.ladoKm} km</span>
             </div>
             {/* Tocar el globo lo abre grande, que es la comprobación que se quiere hacer justo
                 antes de calificar: el de la tarjeta dice en qué parte del mundo cae el país, pero
                 no si estaba en el sitio que uno creía. Se traga el toque —destapar es tocar donde
-                sea— porque aquí tocar es esto. */}
-            <button type="button" className="atlas-globo" aria-label={`Ver el globo de ${pais.nombre} en grande`}
-                    onClick={(e) => { e.stopPropagation(); setLupa(true); }}>
-              <Globo id={pais.id} lon={forma.lon} lat={forma.lat} lado="var(--a-globo)" />
+                sea— porque aquí tocar es esto.
+
+                Con el país todavía sin destapar, lo que abre es el globo de marcar, y así se
+                rectifica una marca: se entra otra vez y la nueva sustituye a la vieja. */}
+            <button type="button" className="atlas-globo"
+                    aria-label={paisOculto ? "Marcar en el globo dónde está el país" : `Ver el globo de ${pais.nombre} en grande`}
+                    onClick={(e) => { e.stopPropagation(); setLupa(paisOculto ? "marcar" : "mirar"); }}>
+              <Globo id={pais.id} lon={centro[0]} lat={centro[1]} lado="var(--a-globo)" oculto={paisOculto} marca={marca} />
             </button>
-          </div>)}
+          </div>, () => setLupa("marcar"))}
       </div>
 
       {/* La barra no se mueve nunca: misma posición, mismo orden y mismo tamaño en las tres
@@ -321,13 +360,24 @@ function Tarjeta({ vista }: { vista: Vista }) {
           76 px sube también el redondeo de sus coordenadas— y sin un solo dato más. **El nombre
           del país no entra aunque se sepa**: si está tapado, esto sería la respuesta.
 
-          Se cierra tocando donde sea, como se abrió. */}
+          Son dos globos con dos trabajos. El de *mirar* enseña el país y se cierra tocando donde
+          sea, como se abrió. El de *marcar* lo esconde y espera un toque dentro del disco; fuera
+          del disco, y con cualquier tecla, se cierra sin marcar.
+
+          Marcado, se cierra solo tras un instante: lo justo para ver encenderse el enganche, que
+          es la única razón para seguir mirando. */}
       {lupa && (
-        <div className="atlas-lupa" onClick={(e) => { e.stopPropagation(); setLupa(false); }}>
-          <Globo id={pais.id} lon={forma.lon} lat={forma.lat} r={200} lado="min(86vw, 56vh)" />
+        <div className="atlas-lupa" onClick={(e) => { e.stopPropagation(); setLupa(null); }}>
+          <Globo id={pais.id} lon={centro[0]} lat={centro[1]} r={200} lado="min(86vw, 56vh)"
+                 oculto={lupa === "marcar"} marca={marca}
+                 alMarcar={lupa === "marcar" ? (id) => { setMarca(id); setTimeout(() => setLupa(null), 320); } : undefined} />
           <span style={{ fontFamily: MONO, fontSize: 11, color: "var(--t-ink4)", letterSpacing: "0.14em" }}>
-            <span className="atlas-solo-movil">toca para volver</span>
-            <span className="atlas-solo-ancho">una tecla para volver</span>
+            {lupa === "marcar" ? "toca donde creas que está" : (
+              <>
+                <span className="atlas-solo-movil">toca para volver</span>
+                <span className="atlas-solo-ancho">una tecla para volver</span>
+              </>
+            )}
           </span>
         </div>
       )}

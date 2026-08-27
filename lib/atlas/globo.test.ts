@@ -1,6 +1,6 @@
 // Test de lógica pura: `npx tsx lib/atlas/globo.test.ts`. Fuera del build.
 import assert from "assert";
-import { alLimbo, ortografica, pathDelGlobo, rellenoDelGlobo } from "./globo";
+import { alLimbo, desviar, enganche, ortografica, pathDelGlobo, rellenoDelGlobo } from "./globo";
 
 const R = 100;
 const cerca = (a: number, b: number, msg: string) => assert.ok(Math.abs(a - b) < 0.001, `${msg}: ${a} vs ${b}`);
@@ -59,6 +59,67 @@ assert.strictEqual((d.match(/M/g) ?? []).length, 1, "solo el trozo visible");
   // inscrito en el círculo, que rellena media cara visible.
   const antipodas = [[170, -40], [-170, -45], [-175, -35], [170, -40]];
   assert.equal(rellenoDelGlobo([antipodas], enMadrid, borde), "", "lo que no se ve no se pinta");
+}
+
+// El enganche, sobre un mundo de mentira centrado en el golfo de Guinea, donde un grado son 1,75
+// px con R=100 y las cuentas se pueden hacer de cabeza.
+{
+  const proy = enGuinea, borde = alLimbo(0, 0, R);
+  const caja = (lon0: number, lat0: number, ancho: number) =>
+    [[lon0, lat0], [lon0 + ancho, lat0], [lon0 + ancho, lat0 + ancho], [lon0, lat0 + ancho], [lon0, lat0]];
+  const anillos = [
+    { id: "grande", r: caja(-10, -10, 20) },  // 35 px de lado
+    { id: "chico", r: caja(2, 2, 0.5) },      // 0,9 px, y dentro del grande
+    { id: "isla", r: caja(12, 2, 0.5) },      // 0,9 px, y en el mar
+    { id: "", r: caja(28, 28, 4) },           // tierra de nadie: se ve y no se engancha
+    { id: "detras", r: caja(170, -2, 4) },    // al otro lado del horizonte
+  ];
+  const puntos = [{ id: "punto", lon: -25, lat: -25 }, { id: "vecino", lon: -24, lat: -25 }];
+  const en = (lon: number, lat: number, unidad = 1) => enganche(anillos, puntos, proy, borde, proy(lon, lat)!, unidad);
+
+  assert.strictEqual(en(-8, -8), "grande", "dentro del grande y lejos del resto");
+  // De los que contienen el toque gana el pequeño: el grande tiene otros mil píxeles donde
+  // pincharlo y el pequeño no tiene ninguno.
+  assert.strictEqual(en(2.25, 2.25), "chico", "el diminuto gana dentro del grande");
+  // Fuera de todo contorno entra el radio de gracia, y ahí el que no tiene forma se lleva el
+  // toque aunque el grande esté seis veces más cerca: al grande se le puede apuntar.
+  assert.strictEqual(en(10.5, 5), "isla", "el que no tiene forma gana en el mar");
+  // El país sin contorno entra por su centro, con lado cero.
+  assert.strictEqual(en(-24.9, -24.9), "punto", "el que no tiene forma engancha por su punto");
+  assert.strictEqual(en(-24.1, -25), "vecino", "de los que no tienen forma, el más cercano");
+  // Sin nadie cerca a quien no se pueda apuntar, manda el vecino de verdad.
+  assert.strictEqual(en(0, 14), "grande", "en el mar, el más cercano");
+  // El mismo toque con el globo pintado a un tercio: los 10 px de gracia abarcan ahora 30
+  // unidades del dibujo, y el diminuto que quedaba fuera se lleva el enganche.
+  assert.strictEqual(en(0, 14, 3), "chico", "los umbrales van en píxeles de pantalla, no del dibujo");
+  assert.strictEqual(en(30, 30), null, "lejos de todo no engancha, ni la tierra sin país");
+  // Lo escondido tras el horizonte no está: pegarlo al canto lo haría enganchable desde el mar.
+  for (let lon = -20; lon <= 20; lon += 5) assert.notStrictEqual(en(lon, 20), "detras", "no se engancha lo que no se ve");
+}
+
+// La desviación del centro del globo: cae siempre dentro del radio pedido, nunca justo encima, y
+// vale igual en el polo y en el antimeridiano, donde las cuentas ingenuas se rompen.
+{
+  const arco = (a: [number, number], b: [number, number]) => {
+    const [l1, f1] = a.map((n) => n * Math.PI / 180), [l2, f2] = b.map((n) => n * Math.PI / 180);
+    return 6371 * Math.acos(Math.min(1, Math.sin(f1) * Math.sin(f2) + Math.cos(f1) * Math.cos(f2) * Math.cos(l2 - l1)));
+  };
+  let enElCentro = 0;
+  for (const centro of [[-3.7, 40.4], [179.5, 66], [0, 89], [-179.9, -20]] as [number, number][]) {
+    for (let i = 0; i < 400; i++) {
+      const q = desviar(centro[0], centro[1], 2000);
+      assert.ok(q[0] >= -180 && q[0] <= 180 && q[1] >= -90 && q[1] <= 90, `(${q}) no es un punto del mundo`);
+      assert.ok(arco(centro, q) <= 2000.001, `se fue a ${arco(centro, q).toFixed(0)} km`);
+      if (arco(centro, q) < 500) enElCentro++;
+    }
+  }
+  // Repartido por área, un cuarto del radio es un dieciseisavo del disco: si se amontonara en el
+  // centro —que es de lo que se huye— este número se dispararía.
+  assert.ok(enElCentro < 1600 * 0.12, `demasiados en el centro: ${enElCentro} de 1600`);
+  // Sin azar no hay desvío: el punto se queda donde estaba.
+  const quieto = desviar(10, 20, 2000, () => 0);
+  cerca(quieto[0], 10, "sin azar no se mueve la longitud");
+  cerca(quieto[1], 20, "sin azar no se mueve la latitud");
 }
 
 console.log("globo: ok");

@@ -52,8 +52,13 @@ const ibmPlexMono = IBM_Plex_Mono({
 });
 
 // Fuentes del sistema de diseño terminal (cv/lab/designs, TerminalShell, juegos…)
+//
+// **Los tres subconjuntos hacen falta.** Con solo `latin`, todo lo que pase de la Latin-1 —la ā de
+// Riyāḍ, la ṭ de Masqaṭ, la ộ de Hà Nội— se cae a la fuente proporcional del sistema, y en una
+// monoespaciada eso se ve: el acento del Atlas es que cada letra ocupe lo mismo. `latin-ext` trae
+// los macrones y los puntos suscritos; `vietnamese`, las vocales con dos signos.
 const jetbrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
+  subsets: ["latin", "latin-ext", "vietnamese"],
   weight: ["400", "500", "600", "700"],
   variable: "--font-jetbrains-mono",
   display: "swap",

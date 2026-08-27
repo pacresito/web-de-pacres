@@ -8,20 +8,27 @@
 // relieve de un país se queda encajado en un contorno que ya no es el suyo, sin que falle nada.
 // Renombrar no los toca: casan por `id` y del nombre solo escriben su log.
 //
+// **Sin punto suscrito ni semianillos.** La romanización académica marca las consonantes
+// enfáticas con un punto debajo y la hamza y el ain con medio anillo —Riyāḍ, Kharṭūm, Ṣanʿāʾ,
+// ʿAmmān—, y JetBrains Mono no tiene esos glifos: caen a la proporcional del sistema y en una
+// monoespaciada un carácter que mide otra cosa se ve a la legua. Se escriben sin ellos. El macrón
+// sí se queda: ese lo tiene la fuente y además dice cómo se pronuncia, mientras que los otros dos
+// marcan distinciones del árabe que aquí no se pronuncian ni se preguntan.
+//
 // `nombre` es el que se diría en voz alta, y es el único que se pregunta: como la calificación
 // es autoinforme, no hay corrector al que satisfacer y una segunda forma solo añade ruido.
 // **Manda la forma local** —la ortografía oficial del país o su romanización oficial: Beijing,
-// Kyiv, Muqdisho, Toshkent, Nay Pyi Taw, Riyāḍ—, no la convención inglesa, que no es la
+// Kyiv, Muqdisho, Toshkent, Nay Pyi Taw, Riyād—, no la convención inglesa, que no es la
 // forma nativa de nadie. Se queda la castellana cuando **es la que se usa de verdad** (París,
 // Roma, El Cairo, Damasco, Trípoli, Argelia, Costa de Marfil, Uagadugú, La Valeta) y cuando el
 // cambio no acercaría al nombre local, solo lo traduciría al inglés (San Vicente y las
-// Granadinas, Ciudad de Kuwait). **El artículo árabe no viaja** —Riyāḍ y Kharṭūm, no Ar-Riyāḍ ni
-// Al-Kharṭūm—, que en español no se pronuncia y ordena media docena de capitales por la A.
+// Granadinas, Ciudad de Kuwait). **El artículo árabe no viaja** —Riyād y Khartūm, no Ar-Riyād ni
+// Al-Khartūm—, que en español no se pronuncia y ordena media docena de capitales por la A.
 // `oficial` acompaña a `nombre` en la forma elegida —Reino de Bhutan, no de Bután— y solo se
 // muestra en la ficha de explorar.
 //
 // **El diacrítico ajeno entra si ignorarlo deja la palabra bien leída**, porque entonces no
-// estorba a quien no sepa qué marca: Hà Nội, Tehrān, Chișinău, Ṣanʿāʾ y Rīga se leen de corrido
+// estorba a quien no sepa qué marca: Hà Nội, Tehrān, Chișinău, Sanā y Rīga se leen de corrido
 // tapándolos. La letra que cambia de identidad, no: Bakı se lee mal y parece una errata, así que
 // ahí se queda Bakú. **Y la tilde española se conserva** donde la palabra es la misma (Seúl,
 // Trípoli, Dublín, Malí): dice cómo se pronuncia y no es otra forma. Lo que no se importa es la
@@ -29,8 +36,8 @@
 //
 // **`capitalCastellana` es la pista, no una segunda respuesta.** Se glosa entre paréntesis y en
 // pequeño donde la forma local **se leería mal** —la j que suena /y/ (Jakarta, Juba, Abuja, Ljubljana, Skopje) y la
-// kh que suena jota (Kharṭūm)— o donde **no se reconocería sin ayuda** (Kyiv, Muqdisho, Bayrūt,
-// Nawākshūṭ). La que se lee y se reconoce sola no la lleva: Riyāḍ, Ṣanʿāʾ, Tbilisi. Y donde la
+// kh que suena jota (Khartūm)— o donde **no se reconocería sin ayuda** (Kyiv, Muqdisho, Bayrūt,
+// Nawākshūt). La que se lee y se reconoce sola no la lleva: Riyād, Sanā, Tbilisi. Y donde la
 // forma local **es** la castellana tampoco, que ahí no diría nada: Yibuti, Tūnis.
 //
 // **La capital oficial, aunque no sea la de facto:** Porto-Novo y no Cotonú, Yamusukro y no
@@ -73,7 +80,7 @@ export const PAISES: Pais[] = [
   { id: "ad", nombre: "Andorra",                         oficial: "Principado de Andorra",                           capital: "Andorra la Vella",          continente: "Europa",            subregion: "Europa del Sur",            km2:        468 },
   { id: "ao", nombre: "Angola",                          oficial: "República de Angola",                             capital: "Luanda",                    continente: "África",            subregion: "África Central",            km2:  1_246_700 },
   { id: "ag", nombre: "Antigua y Barbuda",               oficial: "Antigua y Barbuda",                               capital: "Saint John's",              continente: "América del Norte", subregion: "Caribe",                    km2:        440 },
-  { id: "sa", nombre: "Arabia Saudí",                    oficial: "Reino de Arabia Saudí",                           capital: "Riyāḍ",                     continente: "Asia",              subregion: "Asia Occidental",           km2:  2_250_000 },
+  { id: "sa", nombre: "Arabia Saudí",                    oficial: "Reino de Arabia Saudí",                           capital: "Riyād",                     continente: "Asia",              subregion: "Asia Occidental",           km2:  2_250_000 },
   { id: "dz", nombre: "Argelia",                         oficial: "República Argelina Democrática y Popular",        capital: "Alger",                     continente: "África",            subregion: "África del Norte",          km2:  2_381_741 },
   { id: "ar", nombre: "Argentina",                       oficial: "República Argentina",                             capital: "Buenos Aires",              continente: "América del Sur",   subregion: "Sudamérica",                km2:  2_780_400 },
   { id: "am", nombre: "Armenia",                         oficial: "República de Armenia",                            capital: "Yerevan",                   continente: "Asia",              subregion: "Asia Occidental",           km2:     29_743 },
@@ -158,7 +165,7 @@ export const PAISES: Pais[] = [
   { id: "it", nombre: "Italia",                          oficial: "República Italiana",                              capital: "Roma",                      continente: "Europa",            subregion: "Europa del Sur",            km2:    302_068 },
   { id: "jm", nombre: "Jamaica",                         oficial: "Jamaica",                                         capital: "Kingston",                  continente: "América del Norte", subregion: "Caribe",                    km2:     10_992 },
   { id: "jp", nombre: "Japón",                           oficial: "Estado del Japón",                                capital: "Tokyo",                     continente: "Asia",              subregion: "Asia Oriental",             km2:    377_972 },
-  { id: "jo", nombre: "Jordania",                        oficial: "Reino Hachemita de Jordania",                     capital: "ʿAmmān",                    continente: "Asia",              subregion: "Asia Occidental",           km2:     89_341 },
+  { id: "jo", nombre: "Jordania",                        oficial: "Reino Hachemita de Jordania",                     capital: "Ammān",                     continente: "Asia",              subregion: "Asia Occidental",           km2:     89_341 },
   { id: "kz", nombre: "Kazajistán",                      oficial: "República de Kazajistán",                         capital: "Astaná",                    continente: "Asia",              subregion: "Asia Central",              km2:  2_724_900 },
   { id: "ke", nombre: "Kenya",                           oficial: "República de Kenya",                              capital: "Nairobi",                   continente: "África",            subregion: "África Oriental",           km2:    581_309 },
   { id: "kg", nombre: "Kirguistán",                      oficial: "República Kirguisa",                              capital: "Bishkek",                   continente: "Asia",              subregion: "Asia Central",              km2:    199_951 },
@@ -182,7 +189,7 @@ export const PAISES: Pais[] = [
   { id: "ml", nombre: "Malí",                            oficial: "República de Malí",                               capital: "Bamako",                    continente: "África",            subregion: "África Occidental",         km2:  1_240_192 },
   { id: "ma", nombre: "Marruecos",                       oficial: "Reino de Marruecos",                              capital: "Rabat",                     continente: "África",            subregion: "África del Norte",          km2:    446_550 },
   { id: "mu", nombre: "Mauricio",                        oficial: "República de Mauricio",                           capital: "Port Louis",                continente: "África",            subregion: "África Oriental",           km2:      2_040 },
-  { id: "mr", nombre: "Mauritania",                      oficial: "República Islámica de Mauritania",                capital: "Nawākshūṭ",                 continente: "África",            subregion: "África Occidental",         km2:  1_030_700, capitalCastellana: "Nuakchot" },
+  { id: "mr", nombre: "Mauritania",                      oficial: "República Islámica de Mauritania",                capital: "Nawākshūt",                 continente: "África",            subregion: "África Occidental",         km2:  1_030_700, capitalCastellana: "Nuakchot" },
   { id: "fm", nombre: "Micronesia",                      oficial: "Estados Federados de Micronesia",                 capital: "Palikir",                   continente: "Oceanía",           subregion: "Micronesia",                km2:        702 },
   { id: "md", nombre: "Moldavia",                        oficial: "República de Moldavia",                           capital: "Chișinău",                  continente: "Europa",            subregion: "Europa Oriental",           km2:     33_844 },
   { id: "mn", nombre: "Mongolia",                        oficial: "Mongolia",                                        capital: "Ulaanbaatar",               continente: "Asia",              subregion: "Asia Oriental",             km2:  1_564_116 },
@@ -199,7 +206,7 @@ export const PAISES: Pais[] = [
   { id: "no", nombre: "Noruega",                         oficial: "Reino de Noruega",                                capital: "Oslo",                      continente: "Europa",            subregion: "Europa del Norte",          km2:    385_207 },
   { id: "nz", nombre: "Nueva Zelanda",                   oficial: "Nueva Zelanda",                                   capital: "Wellington",                continente: "Oceanía",           subregion: "Australia y Nueva Zelanda", km2:    268_021 },
   { id: "ne", nombre: "Níger",                           oficial: "República del Níger",                             capital: "Niamey",                    continente: "África",            subregion: "África Occidental",         km2:  1_267_000 },
-  { id: "om", nombre: "Omán",                            oficial: "Sultanato de Omán",                               capital: "Masqaṭ",                    continente: "Asia",              subregion: "Asia Occidental",           km2:    309_500 },
+  { id: "om", nombre: "Omán",                            oficial: "Sultanato de Omán",                               capital: "Masqat",                    continente: "Asia",              subregion: "Asia Occidental",           km2:    309_500 },
   { id: "pk", nombre: "Pakistán",                        oficial: "República Islámica de Pakistán",                  capital: "Islamabad",                 continente: "Asia",              subregion: "Asia del Sur",              km2:    881_913 },
   { id: "pw", nombre: "Palau",                           oficial: "República de Palau",                              capital: "Ngerulmud",                 continente: "Oceanía",           subregion: "Micronesia",                km2:        466 },
   { id: "ps", nombre: "Palestina",                       oficial: "Estado de Palestina",                             capital: "Ramallah",                  continente: "Asia",              subregion: "Asia Occidental",           km2:      6_020 },
@@ -235,7 +242,7 @@ export const PAISES: Pais[] = [
   { id: "so", nombre: "Somalia",                         oficial: "República Federal de Somalia",                    capital: "Muqdisho",                  continente: "África",            subregion: "África Oriental",           km2:    637_657, capitalCastellana: "Mogadiscio" },
   { id: "lk", nombre: "Sri Lanka",                       oficial: "República Democrática Socialista de Sri Lanka",   capital: "Sri Jayawardenapura Kotte", continente: "Asia",              subregion: "Asia del Sur",              km2:     65_610 },
   { id: "za", nombre: "Sudáfrica",                       oficial: "República de Sudáfrica",                          capital: "Pretoria",                  continente: "África",            subregion: "África Austral",            km2:  1_221_037 },
-  { id: "sd", nombre: "Sudán",                           oficial: "República de Sudán",                              capital: "Kharṭūm",                   continente: "África",            subregion: "África del Norte",          km2:  1_886_068, capitalCastellana: "Jartum" },
+  { id: "sd", nombre: "Sudán",                           oficial: "República de Sudán",                              capital: "Khartūm",                   continente: "África",            subregion: "África del Norte",          km2:  1_886_068, capitalCastellana: "Jartum" },
   { id: "ss", nombre: "Sudán del Sur",                   oficial: "República de Sudán del Sur",                      capital: "Juba",                      continente: "África",            subregion: "África Oriental",           km2:    644_329, capitalCastellana: "Yuba" },
   { id: "se", nombre: "Suecia",                          oficial: "Reino de Suecia",                                 capital: "Estocolmo",                 continente: "Europa",            subregion: "Europa del Norte",          km2:    447_425 },
   { id: "ch", nombre: "Suiza",                           oficial: "Confederación Suiza",                             capital: "Berna",                     continente: "Europa",            subregion: "Europa Occidental",         km2:     41_291 },
@@ -258,7 +265,7 @@ export const PAISES: Pais[] = [
   { id: "vu", nombre: "Vanuatu",                         oficial: "República de Vanuatu",                            capital: "Port Vila",                 continente: "Oceanía",           subregion: "Melanesia",                 km2:     12_190 },
   { id: "ve", nombre: "Venezuela",                       oficial: "República Bolivariana de Venezuela",              capital: "Caracas",                   continente: "América del Sur",   subregion: "Sudamérica",                km2:    912_050 },
   { id: "vn", nombre: "Vietnam",                         oficial: "República Socialista de Vietnam",                 capital: "Hà Nội",                    continente: "Asia",              subregion: "Sudeste Asiático",          km2:    331_690 },
-  { id: "ye", nombre: "Yemen",                           oficial: "República de Yemen",                              capital: "Ṣanʿāʾ",                    continente: "Asia",              subregion: "Asia Occidental",           km2:    455_503 },
+  { id: "ye", nombre: "Yemen",                           oficial: "República de Yemen",                              capital: "Sanā",                      continente: "Asia",              subregion: "Asia Occidental",           km2:    455_503 },
   { id: "dj", nombre: "Yibuti",                          oficial: "República de Yibuti",                             capital: "Yibuti",                    continente: "África",            subregion: "África Oriental",           km2:     23_200 },
   { id: "zm", nombre: "Zambia",                          oficial: "República de Zambia",                             capital: "Lusaka",                    continente: "África",            subregion: "África Oriental",           km2:    752_618 },
   { id: "zw", nombre: "Zimbabwe",                        oficial: "República de Zimbabwe",                           capital: "Harare",                    continente: "África",            subregion: "África Oriental",           km2:    390_757 },
