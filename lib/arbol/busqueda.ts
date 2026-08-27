@@ -5,6 +5,13 @@
 // así que hay gente a la que solo se llega por su familia y «hija de Antonia» tiene que
 // encontrarla. Las dos vías no se mezclan: quien se llama así va antes que quien es hijo de
 // alguien que se llama así.
+//
+// **Y no hay tabla de sinónimos.** La hubo, con veintisiete grupos de nombres que en esta
+// familia eran el mismo —«pepe» con «josé», «paco» con «francisco»—, y se fue entera cuando el
+// documento aprendió a guardar los dos nombres de cada uno. Una equivalencia escrita por
+// nombres vale para todo el que se llame así, y por eso teclear «Paco» sacaba a cuatro
+// Francisco a los que nadie llama Paco: lo que dos nombres tienen en común es de la persona
+// que los lleva y va en su `apodos`. **No volver a abrirla.**
 
 import type { Grafo } from "./grafo";
 import { contextoEntero, SIN_NOMBRE } from "./identidad";
@@ -41,14 +48,7 @@ export function buscar(g: Grafo, consulta: string, { linaje, pasos }: OpcionesBu
     // teclea «José Gerardo» y quien teclea «Pepe» buscan al mismo, y el interruptor de la
     // hoja decide cómo se lee la lista, no a quién se llega.
     const suyo =
-      p.nombre === SIN_NOMBRE
-        ? ""
-        : [
-            p.nombre,
-            ...(p.apodos ?? []),
-            ...[p.nombre, ...(p.apodos ?? [])].flatMap(otrosNombres),
-            ...(linaje.get(id)?.todos ?? []),
-          ].join(" ");
+      p.nombre === SIN_NOMBRE ? "" : [p.nombre, ...(p.apodos ?? []), ...(linaje.get(id)?.todos ?? [])].join(" ");
     if (casan(buscadas, suyo)) salida.push({ id, via: "nombre" });
     else if (casan(buscadas, contextoEntero(g, id).replaceAll(SIN_NOMBRE, ""))) salida.push({ id, via: "familia" });
   }
@@ -85,37 +85,6 @@ function casan(buscadas: string[], texto: string): boolean {
   const suyas = palabras(texto);
   return buscadas.every((b) => suyas.some((s) => s.startsWith(b)));
 }
-
-/**
- * Los nombres que en esta familia son el mismo nombre, **y valen en los dos sentidos**: quien
- * busca «Pilar» quiere a Piluca y a Piluquita, y quien busca «Piluca» quiere a las Pilar.
- *
- * **Van por el nombre entero y no por palabras sueltas.** Con «josé» valiendo como palabra,
- * teclear «Pepe» sacaba también a las tres María José, que de Pepe no tienen nada; y el
- * compuesto se escribe entero —«maría josé»— cuando es él el que tiene otro nombre.
- *
- * **Solo entran los que no son de nadie**, la grafía que valdría igual para quien entre mañana.
- * Lo que una persona se llama de verdad es su `apodos`, y desde que ese campo existe esta tabla
- * ha pasado de veintisiete grupos a uno: en cuanto el corto se escribe al lado del largo, el
- * grupo deja de llevar a nadie nuevo y solo añade a los demás que se llaman igual —«Paco»
- * sacaba a cuatro Francisco a los que nadie llama Paco—. **Lo que queda es el único caso que
- * el dato no cubre:** el corto que aquí lleva alguien sin que se sepa cuál es su largo. El día
- * que se sepa el de Rober, esta tabla se queda vacía y se va con él. Un grupo cuyos nombres no
- * lleve nadie del árbol sobra, y su test lo dice.
- */
-export const IGUALES: string[][] = [
-  ["roberto", "rober"],
-];
-
-/** Por qué otros nombres se llega a quien se llama así. Se arma una vez, al cargar el módulo. */
-const POR_NOMBRE = new Map<string, string[]>();
-for (const grupo of IGUALES) for (const suyo of grupo) POR_NOMBRE.set(suyo, grupo.filter((n) => n !== suyo));
-
-/** Los otros nombres de quien se llama así, ya normalizados: se buscan como si fueran suyos. */
-export const otrosNombres = (nombre: string): string[] => POR_NOMBRE.get(normalizar(nombre)) ?? [];
-
-/** Sin tildes, sin mayúsculas y con un solo espacio: la forma en que se escriben las tablas. */
-const normalizar = (nombre: string): string => palabras(nombre).join(" ");
 
 /** Todo lo que no es letra ni número separa: así «(1902)» es una palabra y el año se busca. */
 const SEPARADOR = /[^\p{L}\p{N}]+/u;

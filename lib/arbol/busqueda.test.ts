@@ -3,7 +3,7 @@
 import assert from "assert";
 import { readFileSync } from "fs";
 import { resolve } from "path";
-import { acortar, buscar, IGUALES, losSinNombre, type Resultado } from "./busqueda";
+import { acortar, buscar, losSinNombre, type Resultado } from "./busqueda";
 import { construirGrafo, pasosDesde } from "./grafo";
 import { contextoEntero, libretaDe, SIN_NOMBRE } from "./identidad";
 import type { ArbolData, Persona, Union } from "./tree";
@@ -87,8 +87,8 @@ const pablos = buscar(real, "Pablo", suyo);
 assert.strictEqual(pablos[0]!.id, POV, "el Centro es el más cercano a sí mismo y encabeza su propio nombre");
 assert.strictEqual(pablos.filter((r) => r.via === "nombre").length, 15, "doce Pablo y tres que lo llevan de segundo");
 
-// Que a cada uno se llega por sus dos nombres, sin mirar por dónde: a casi todos los lleva ya
-// su propio `apodos`, y los que quedan en la tabla de grafías son los que no lo tienen escrito.
+// Que a cada uno se llega por sus dos nombres, y a todos por su propio `apodos`: aquí ya no hay
+// tabla de sinónimos que lleve a nadie, así que esta lista es la que la sustituyó entera.
 const porNombre = (consulta: string) => buscar(real, consulta, suyo).filter((r) => r.via === "nombre").map((r) => r.id);
 for (const [buscado, esperado] of [
   ["Pilar", "p301"], // Piluquita
@@ -100,14 +100,13 @@ for (const [buscado, esperado] of [
   ["María José", "p286"], // Marijose
   ["Mamen", "p47"], // María del Carmen
   ["Marilu", "p143"], // María Luisa
-  ["Rober", "p181"], // el único que sigue en la tabla de grafías
 ] as const) {
   assert.ok(porNombre(buscado).includes(esperado), `buscando «${buscado}» tendría que salir ${esperado}`);
 }
 
 // Y el apodo que lleva escrito una persona no se estira a los que se llaman como ella: «Pepe»
-// saca a los cinco Pepe y a ningún otro José, y «Marijose» solo a la Marijose. Es lo que la
-// tabla de grafías no sabía hacer, y por lo que ha adelgazado al aparecer `apodos`.
+// saca a los cinco Pepe y a ningún otro José, y «Marijose» solo a la Marijose. Es lo que una
+// tabla de grafías no sabe hacer, y por lo que dejó de haberla.
 assert.ok(!porNombre("Pepe").includes("p350"), "«Pepe» no es «María José»");
 assert.deepStrictEqual(porNombre("Marijose"), ["p286"], "«Marijose» es una, no las cuatro María José");
 assert.strictEqual(porNombre("Pepe").length, 5, "los cinco Pepe y ningún José más");
@@ -163,13 +162,6 @@ assert.deepStrictEqual(
   "las dos que lo llevan de nota y las cuatro que lo llevan de nombre, y ninguna Teresa más",
 );
 
-// Ningún grupo de más: uno cuyos nombres no lleve nadie no ayuda a encontrar a nadie.
-for (const grupo of IGUALES) {
-  assert.ok(
-    grupo.some((n: string) => porNombre(n).length > 0),
-    `nadie del árbol se llama de ninguna de estas maneras: ${grupo.join(", ")}`,
-  );
-}
 const cerca = pablos.filter((r) => r.via === "nombre").map((r) => suyo.pasos.get(r.id)!);
 assert.deepStrictEqual(cerca, [...cerca].sort((a, b) => a - b), "ordenados por cercanía a ti, que es el único criterio que siempre existe");
 
