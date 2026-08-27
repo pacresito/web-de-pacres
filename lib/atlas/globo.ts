@@ -127,8 +127,8 @@ function aSegmento(px: number, py: number, ax: number, ay: number, bx: number, b
  * El orden de preferencia:
  * 1. **De los que se dibujan como punto, el más cercano dentro del radio de gracia.** La cortesía
  *    la cobra el que no tiene forma a la que apuntar, y solo él: cuando la cobraba todo lo que
- *    saliera pequeño, Palestina se quedaba con **todos** los toques dentro de Israel y Luxemburgo
- *    con el 92% de los de Bélgica —países que sí se dibujan, y a los que se puede apuntar—.
+ *    saliera pequeño, Palestina se quedaba con los toques de dentro de Israel, y Luxemburgo con
+ *    los de Bélgica —países que sí se dibujan, y a los que se puede apuntar—.
  * 2. **El que contiene el toque**, y el más pequeño de ellos si el mapa los solapa.
  * 3. **El más cercano**, para el toque que cae en el mar o en tierra de nadie —Groenlandia, el
  *    Sáhara Occidental, la Antártida—, que si no dejaría el dedo en el vacío.
