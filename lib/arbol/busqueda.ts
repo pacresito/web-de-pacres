@@ -96,17 +96,14 @@ function casan(buscadas: string[], texto: string): boolean {
  *
  * **Solo entran los que no son de nadie**, la grafía que valdría igual para quien entre mañana.
  * Lo que una persona se llama de verdad es su `apodos`, y desde que ese campo existe esta tabla
- * ha pasado de veintisiete grupos a tres: en cuanto el corto se escribe al lado del largo, el
+ * ha pasado de veintisiete grupos a uno: en cuanto el corto se escribe al lado del largo, el
  * grupo deja de llevar a nadie nuevo y solo añade a los demás que se llaman igual —«Paco»
- * sacaba a cuatro Francisco a los que nadie llama Paco—. **Lo que queda son los dos casos que
- * el dato no cubre:** el corto que aquí lleva alguien sin que se sepa su largo (Marilu, Rober)
- * y el que no lleva nadie, donde teclearlo no tiene otra respuesta que dar (Merche). Cuando se
- * sepa el largo, el grupo se cae solo. Un grupo cuyos nombres no lleve nadie del árbol sobra,
- * y su test lo dice.
+ * sacaba a cuatro Francisco a los que nadie llama Paco—. **Lo que queda es el único caso que
+ * el dato no cubre:** el corto que aquí lleva alguien sin que se sepa cuál es su largo. El día
+ * que se sepa el de Rober, esta tabla se queda vacía y se va con él. Un grupo cuyos nombres no
+ * lleve nadie del árbol sobra, y su test lo dice.
  */
 export const IGUALES: string[][] = [
-  ["maria luisa", "marilu"],
-  ["mercedes", "merche"],
   ["roberto", "rober"],
 ];
 

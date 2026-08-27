@@ -99,7 +99,8 @@ for (const [buscado, esperado] of [
   ["Chon", "p290"], // Ascensión
   ["María José", "p286"], // Marijose
   ["Mamen", "p47"], // María del Carmen
-  ["Marilu", "p488"], // María Luisa
+  ["Marilu", "p143"], // María Luisa
+  ["Rober", "p181"], // el único que sigue en la tabla de grafías
 ] as const) {
   assert.ok(porNombre(buscado).includes(esperado), `buscando «${buscado}» tendría que salir ${esperado}`);
 }
@@ -113,6 +114,7 @@ assert.strictEqual(porNombre("Pepe").length, 5, "los cinco Pepe y ningún José 
 assert.strictEqual(porNombre("Lola").length, 3, "las tres Lola y ninguna Dolores más");
 assert.strictEqual(porNombre("Paco").length, 5, "los cinco Paco y ningún Francisco más");
 assert.strictEqual(porNombre("Piluca").length, 1, "una Piluca, no las cuatro Pilar");
+assert.deepStrictEqual(porNombre("Merche"), [], "nadie de esta familia se llama así");
 // Y al revés sigue funcionando: el largo los saca a todos, que es de lo que va apuntarlo.
 assert.ok(porNombre("Francisco").length >= 7, "«Francisco» saca a los Paco, al Fran y a los suyos");
 
