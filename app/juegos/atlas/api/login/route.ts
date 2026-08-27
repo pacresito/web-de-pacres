@@ -4,9 +4,10 @@
 // Sin clave el juego funciona igual y el progreso se queda en el navegador: eso es deliberado,
 // sirve para prestarle el móvil a alguien sin ensuciar el mazo.
 import { checkRateLimit, clearRateLimit, clientIp } from "@/lib/registro";
+import { prefijo } from "@/lib/keys";
 import { passwordOk, signSession } from "@/lib/atlas/session";
 
-const RATE_PREFIX = process.env.NODE_ENV === "development" ? "atlas:login-dev:" : "atlas:login:";
+const RATE_PREFIX = prefijo("atlas:login");
 const PROD = process.env.NODE_ENV === "production";
 
 // La cookie solo viaja a las rutas del juego: fuera de aquí no hay nada que autorizar.

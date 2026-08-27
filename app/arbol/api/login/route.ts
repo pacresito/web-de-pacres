@@ -1,9 +1,10 @@
 // Login de /arbol: una sola clave (familiar), rate limit por IP (reutiliza el de
 // registros) y cookie firmada. Acertar resetea el contador.
 import { checkRateLimit, clearRateLimit, clientIp } from "@/lib/registro";
+import { prefijo } from "@/lib/keys";
 import { passwordOk, signSession } from "@/lib/arbol/session";
 
-const RATE_PREFIX = process.env.NODE_ENV === "development" ? "arbol:login-dev:" : "arbol:login:";
+const RATE_PREFIX = prefijo("arbol:login");
 const PROD = process.env.NODE_ENV === "production";
 
 export async function POST(request: Request): Promise<Response> {

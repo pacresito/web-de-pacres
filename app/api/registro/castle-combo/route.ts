@@ -1,10 +1,8 @@
 import { handleRegistroGet, handleRegistroPost, computeWinner, isStringArray, isNumberMatrix } from "@/lib/registro";
 import { escapeHtml } from "@/lib/notify";
+import { clave } from "@/lib/keys";
 
-const KEY =
-  process.env.NODE_ENV === "development"
-    ? "registro:castle-combo-dev"
-    : "registro:castle-combo";
+const KEY = clave("registro:castle-combo");
 
 const POSITIONS = [
   "↖️", "⬆️", "↗️",

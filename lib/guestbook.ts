@@ -3,8 +3,9 @@
 // token del enlace «ocultar» del email. El GET público nunca expone el id.
 import { randomUUID } from "crypto";
 import redis from "./redis";
+import { clave } from "./keys";
 
-const KEY = process.env.NODE_ENV === "development" ? "guestbook-dev" : "guestbook";
+const KEY = clave("guestbook");
 
 // Duplicados a propósito en el front (la página es client y no puede importar este
 // módulo, que arrastra ioredis). Si cambian, ajustar también app/guestbook/page.tsx.

@@ -1,5 +1,6 @@
 import { handleRegistroGet, handleRegistroPost, computeWinner, isStringArray, isNumberMatrix } from "@/lib/registro";
 import { escapeHtml } from "@/lib/notify";
+import { clave } from "@/lib/keys";
 import {
   type Animal,
   ANIMALS,
@@ -8,10 +9,7 @@ import {
   computeFinals,
 } from "@/lib/agricola";
 
-const KEY =
-  process.env.NODE_ENV === "development"
-    ? "registro:agricola-dev"
-    : "registro:agricola";
+const KEY = clave("registro:agricola");
 
 interface AgricolaRecord {
   date: string;

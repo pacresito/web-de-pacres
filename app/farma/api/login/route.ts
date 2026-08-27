@@ -2,10 +2,11 @@
 // por IP (reutiliza el de registros) y cookie firmada con el rol. Acertar resetea
 // el contador, como en lib/registro.ts.
 import { checkRateLimit, clearRateLimit, clientIp } from "@/lib/registro";
+import { prefijo } from "@/lib/keys";
 import { comparaSecreto } from "@/lib/secreto";
 import { signSession, type Rol } from "@/lib/farma/session";
 
-const RATE_PREFIX = process.env.NODE_ENV === "development" ? "farma:login-dev:" : "farma:login:";
+const RATE_PREFIX = prefijo("farma:login");
 const PROD = process.env.NODE_ENV === "production";
 
 export async function POST(request: Request): Promise<Response> {

@@ -1,8 +1,9 @@
 import { sendEmail } from "@/lib/notify";
 import { findAll, makeMember, upsertScore, pruneTop, readRanking, VALID_SPEEDS } from "@/lib/ranking";
 import { checkRateLimit, clientIp } from "@/lib/registro";
+import { clave } from "@/lib/keys";
 
-const KEY = process.env.NODE_ENV === "development" ? "espiral:ranking-dev" : "espiral:ranking";
+const KEY = clave("espiral:ranking");
 const TOP = 10;
 
 export async function GET() {
