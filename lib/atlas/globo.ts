@@ -6,39 +6,31 @@
 
 const rad = Math.PI / 180;
 
-/**
- * Proyecta un punto sobre el globo centrado en (lon0, lat0) y radio r. Devuelve null si cae
- * al otro lado del horizonte: en una ortográfica media Tierra no se ve, y dibujarla la
- * plegaría sobre la cara visible.
- */
-export function ortografica(lon0: number, lat0: number, r: number) {
-  const f1 = lat0 * rad, sf1 = Math.sin(f1), cf1 = Math.cos(f1);
-  return (lon: number, lat: number): [number, number] | null => {
-    const f = lat * rad, l = (lon - lon0) * rad;
-    const sf = Math.sin(f), cf = Math.cos(f);
-    if (sf1 * sf + cf1 * cf * Math.cos(l) < 0) return null;
-    return [r * cf * Math.sin(l), -r * (cf1 * sf - sf1 * cf * Math.cos(l))];
-  };
-}
+/** Un punto proyectado: dónde se pinta, y si de verdad se ve. */
+export type Punto = [x: number, y: number, visible: boolean];
+export type Proyeccion = (lon: number, lat: number) => Punto;
 
 /**
- * Lo mismo pero cerrado, para poder rellenar la tierra: el punto que cae al otro lado del
- * horizonte no se suelta, se pega al limbo en su mismo azimut. Así la costa que se ve sigue
- * siendo exacta y lo que se va por detrás bordea el canto del globo, en vez de cortarlo con una
- * cuerda recta por dentro —que es lo que pasa si uno cierra los trozos sin más—.
+ * Proyecta un punto sobre el globo centrado en (lon0, lat0) y radio r.
+ *
+ * **Lo que cae al otro lado del horizonte no se suelta: se pega al limbo en su mismo azimut**, y
+ * viene marcado como no visible. Quien traza una costa se salta esos puntos —en una ortográfica
+ * media Tierra no se ve, y dibujarla la plegaría sobre la cara visible—; quien rellena tierra los
+ * usa tal cual, y así lo que se va por detrás bordea el canto del globo en vez de cortarlo con
+ * una cuerda recta por dentro, que es lo que pasa si uno cierra los trozos sin más.
  *
  * Los anillos vienen muestreados cada pocas décimas de grado, así que dos puntos escondidos
  * seguidos caen casi en el mismo azimut y la línea del borde sale pegada al limbo.
  */
-export function alLimbo(lon0: number, lat0: number, r: number) {
+export function ortografica(lon0: number, lat0: number, r: number): Proyeccion {
   const f1 = lat0 * rad, sf1 = Math.sin(f1), cf1 = Math.cos(f1);
-  return (lon: number, lat: number): [number, number] => {
+  return (lon, lat) => {
     const f = lat * rad, l = (lon - lon0) * rad;
-    const sf = Math.sin(f), cf = Math.cos(f);
-    const x = cf * Math.sin(l), y = -(cf1 * sf - sf1 * cf * Math.cos(l));
-    const detras = sf1 * sf + cf1 * cf * Math.cos(l) < 0;
-    const k = detras ? r / (Math.hypot(x, y) || 1) : r;
-    return [x * k, y * k];
+    const sf = Math.sin(f), cf = Math.cos(f), cl = Math.cos(l);
+    const x = r * cf * Math.sin(l), y = -r * (cf1 * sf - sf1 * cf * cl);
+    if (sf1 * sf + cf1 * cf * cl >= 0) return [x, y, true];
+    const k = r / (Math.hypot(x, y) || 1);
+    return [x * k, y * k, false];
   };
 }
 
@@ -50,11 +42,13 @@ export function alLimbo(lon0: number, lat0: number, r: number) {
  * inscrito en el círculo que rellena media cara visible. Vistas desde Chile hay 373 así —Eurasia
  * entera, África—, y entre todas oscurecían el mar.
  */
-export function rellenoDelGlobo(anillos: number[][][], proy: ReturnType<typeof ortografica>, borde: ReturnType<typeof alLimbo>): string {
+export function rellenoDelGlobo(anillos: number[][][], proy: Proyeccion): string {
   let d = "";
   for (const anillo of anillos) {
-    if (anillo.length < 3 || !anillo.some(([lon, lat]) => proy(lon, lat))) continue;
-    d += "M" + anillo.map(([lon, lat]) => borde(lon, lat).map((n) => n.toFixed(1)).join(",")).join("L") + "Z";
+    if (anillo.length < 3) continue;
+    const pts = anillo.map(([lon, lat]) => proy(lon, lat));
+    if (!pts.some(([, , visible]) => visible)) continue;
+    d += "M" + pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join("L") + "Z";
   }
   return d;
 }
@@ -64,7 +58,7 @@ export function rellenoDelGlobo(anillos: number[][][], proy: ReturnType<typeof o
  * parte en trozos abiertos en vez de cerrarse: cerrarlo dibujaría una cuerda recta a través
  * del océano.
  */
-export function pathDelGlobo(anillos: number[][][], proy: ReturnType<typeof ortografica>): string {
+export function pathDelGlobo(anillos: number[][][], proy: Proyeccion): string {
   let d = "";
   for (const anillo of anillos) {
     let trozo: string[] = [];
@@ -73,8 +67,8 @@ export function pathDelGlobo(anillos: number[][][], proy: ReturnType<typeof orto
       trozo = [];
     };
     for (const [lon, lat] of anillo) {
-      const q = proy(lon, lat);
-      if (q) trozo.push(`${q[0].toFixed(1)},${q[1].toFixed(1)}`);
+      const [x, y, visible] = proy(lon, lat);
+      if (visible) trozo.push(`${x.toFixed(1)},${y.toFixed(1)}`);
       else suelta();
     }
     suelta();
@@ -151,8 +145,7 @@ function aSegmento(px: number, py: number, ax: number, ay: number, bx: number, b
 export function enganche(
   anillos: { id: string; r: number[][] }[],
   puntos: { id: string; lon: number; lat: number }[],
-  proy: ReturnType<typeof ortografica>,
-  borde: ReturnType<typeof alLimbo>,
+  proy: Proyeccion,
   [tx, ty]: [number, number],
   unidad: number,
 ): string | null {
@@ -172,10 +165,10 @@ export function enganche(
   for (const { id, r } of anillos) {
     // Sin `id` es tierra que no es de nadie: se ve, pero no hay país que enganchar.
     if (!id || r.length < 3) continue;
+    const pts = r.map(([lon, lat]) => proy(lon, lat));
     // El que no asoma nada se descarta por lo mismo que no se dibuja: pegado entero al canto es un
     // polígono inscrito en el círculo, y engancharía media cara visible.
-    if (!r.some(([lon, lat]) => proy(lon, lat))) continue;
-    const pts = r.map(([lon, lat]) => borde(lon, lat));
+    if (!pts.some(([, , visible]) => visible)) continue;
     let dentro = false, dist = Infinity;
     let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
     for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
@@ -188,8 +181,8 @@ export function enganche(
   }
 
   for (const { id, lon, lat } of puntos) {
-    const q = proy(lon, lat);
-    if (q) apuntar(id, Math.hypot(q[0] - tx, q[1] - ty), q[0], q[0], q[1], q[1]);
+    const [x, y, visible] = proy(lon, lat);
+    if (visible) apuntar(id, Math.hypot(x - tx, y - ty), x, x, y, y);
   }
 
   const lado = (c: { x0: number; x1: number; y0: number; y1: number }) => Math.max(c.x1 - c.x0, c.y1 - c.y0);
@@ -202,22 +195,21 @@ export function enganche(
     if (c.dist === 0 && l < menor) { menor = l; contenedor = id; }
   }
 
+  /** El más cercano al dedo de entre los `candidatos`, si alguno cae dentro de `tope`. */
+  const masCerca = (candidatos: Iterable<string>, tope: number): string | null => {
+    let elegido: string | null = null;
+    for (const id of candidatos) {
+      const c = cajas.get(id);
+      if (c && c.dist <= tope) { tope = c.dist; elegido = id; }
+    }
+    return elegido;
+  };
+
   // Entre los puntos manda la distancia: son todos igual de impinchables, así que lo único que
   // los ordena es cuál estaba más cerca del dedo. Con el tamaño por delante, el Vaticano le
   // ganaba el suyo a San Marino desde seis píxeles.
-  let min = Math.min(GRACIA * unidad, contenedor ? menor / MORDISCO : Infinity);
-  let elegido: string | null = null;
-  for (const { id } of puntos) {
-    const c = cajas.get(id);
-    if (c && c.dist <= min) { min = c.dist; elegido = id; }
-  }
-  if (elegido) return elegido;
-
-  if (contenedor) return contenedor;
-
-  min = cerca;
-  for (const [id, c] of cajas) if (c.dist <= min) { min = c.dist; elegido = id; }
-  return elegido;
+  const cortesia = Math.min(GRACIA * unidad, contenedor ? menor / MORDISCO : Infinity);
+  return masCerca(puntos.map((p) => p.id), cortesia) ?? contenedor ?? masCerca(cajas.keys(), cerca);
 }
 
 /** Radio de la Tierra en km, para pasar de distancia a arco. */

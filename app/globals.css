@@ -247,6 +247,10 @@
    mantiene aparte — solo cambia el verde de texto, que el oscuro sobre papel negro no se lee, y
    los lavados, que al 5 % sobre negro no existen. */
 .atlas {
+  /* La mono, una vez y para todo el subárbol: el atlas entero es monoespaciado, y el preflight
+     de Tailwind le pasa la fuente heredada también a botones e inputs, que por defecto no la
+     heredan. Solo la declara quien se sale —el porqué del pie, que trae la suya—. */
+  font-family: var(--t-mono);
   --a-wash:   color-mix(in oklab, var(--t-accent) 5%, var(--t-paper));
   --a-wash2:  color-mix(in oklab, var(--t-accent) 9%, var(--t-paper));
   --a-hecho:  color-mix(in oklab, var(--t-accent) 45%, var(--t-paper));
@@ -256,7 +260,6 @@
   --a-lado: 20px; --a-pais: 32px; --a-capital: 20px; --a-globo: 112px; --a-btn: 58px;
   --a-silueta: 120px;
   --a-marca: 22px; --a-marca-gap: 10px; --a-ficha-gap: 30px; --a-bandera: 72px;
-  --a-marca-mapa: 22px; --a-marca-mapa-gap: 10px;
 }
 [data-theme="dark"] .atlas {
   --a-wash:   color-mix(in oklab, var(--t-accent) 12%, var(--t-paper));
@@ -268,14 +271,15 @@
   .atlas {
     --a-lado: 28px; --a-pais: 36px; --a-capital: 21px; --a-btn: 54px;
     --a-marca: 26px; --a-marca-gap: 14px; --a-ficha-gap: 38px; --a-bandera: 84px;
-    /* En la columna de los mapas la marca no alinea con nada: solo tiene que caber, y cada
-       píxel suyo es hueco entre el texto y la silueta. */
-    --a-marca-mapa: 9px; --a-marca-mapa-gap: 12px;
   }
 }
 
 /* Ir al otro modo es un enlace en una esquina, no una pestaña: solo se usa una vez por sesión.
-   Volver al trabajo pesa más que salir de él, y por eso la vuelta va en verde. */
+   Volver al trabajo pesa más que salir de él, y por eso la vuelta va en verde.
+
+   El `cursor` es lo único que hay que decir para que un <button> parezca texto: el fondo, el
+   borde y el relleno ya los quita el preflight, y la fuente la hereda de `.atlas`. */
+.atlas-modo, .atlas-modo-v { cursor: pointer; }
 .atlas-modo   { color: var(--t-ink3); }
 .atlas-modo-v { color: var(--a-acc-tx); }
 .atlas-modo:active, .atlas-modo-v:active { color: var(--t-accent); }
@@ -327,7 +331,7 @@
    hay con ratón; en táctil la da el hundido al tocar, que es la del resto de la tarjeta. */
 .atlas-globo {
   display: flex; align-items: center; flex-shrink: 0; height: var(--a-silueta);
-  background: none; border: none; padding: 0; cursor: zoom-in;
+  cursor: zoom-in;
   -webkit-tap-highlight-color: transparent; transition: transform 0.08s;
 }
 .atlas-globo:active { transform: scale(0.97); }
@@ -337,7 +341,7 @@
    el sitio. Botón sin chrome, del ancho de la fila, que el marco punteado ya es toda la caja
    que hay. */
 .atlas-tapado {
-  display: block; width: 100%; background: none; border: none; padding: 0;
+  display: block; width: 100%;
   cursor: pointer; -webkit-tap-highlight-color: transparent; transition: transform 0.08s;
 }
 .atlas-tapado:active { transform: scale(0.99); }
@@ -354,6 +358,14 @@
   cursor: zoom-out; animation: atlas-lupa 160ms cubic-bezier(0.32, 0.72, 0, 1) both;
 }
 @keyframes atlas-lupa { from { opacity: 0; transform: scale(0.965); } }
+
+/* Cada dato de la ficha, con su marca de dominio abriendo la fila. La de los mapas se aparta de
+   la medida común redefiniendo la variable, no con una rejilla propia: a lo ancho no alinea con
+   nada —solo tiene que caber— y cada píxel suyo es hueco entre el texto y la silueta. */
+.atlas-fila { display: grid; grid-template-columns: var(--a-marca) 1fr; column-gap: var(--a-marca-gap); }
+@media (min-width: 768px) {
+  .atlas-fila-mapa { --a-marca: 9px; --a-marca-gap: 12px; }
+}
 
 /* La ficha de explorar no se ciñe al ancho de la tarjeta: con sitio, los datos a un lado y los
    dos mapas al otro. */
@@ -391,8 +403,7 @@
 }
 .atlas-cont-celda {
   display: flex; align-items: center; gap: 8px; height: 56px; padding: 0 14px;
-  background: none; border: none; cursor: pointer;
-  font-family: var(--t-mono); font-size: 13px; color: var(--t-ink); text-align: left;
+  cursor: pointer; font-size: 13px; color: var(--t-ink); text-align: left;
 }
 .atlas-cont-celda-on { background: var(--a-wash); color: var(--a-acc-tx); font-weight: 500; }
 @media (min-width: 768px) {

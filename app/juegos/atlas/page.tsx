@@ -10,8 +10,6 @@ import { mazoActual, sesionActual, sincronizar, sinMazo, sinSesion, suscribir } 
 
 type Modo = "repasar" | "explorar";
 
-const MONO = "var(--t-mono)";
-
 /**
  * Atlas: el marco y las dos maneras de estar aquí. **Repasar** pregunta y mueve los relojes;
  * **explorar** solo mira, y no toca ninguno.
@@ -57,11 +55,11 @@ export default function Atlas() {
           }}
         >
           {modo === "repasar" ? (
-            <button className="atlas-modo" onClick={() => setElegido("explorar")} style={{ ...enlace, fontSize: 12, letterSpacing: "0.04em" }}>
+            <button className="atlas-modo" onClick={() => setElegido("explorar")} style={{ fontSize: 12, letterSpacing: "0.04em" }}>
               explorar ›
             </button>
           ) : (
-            <button className="atlas-modo-v" onClick={() => setElegido("repasar")} style={{ ...enlace, fontSize: 13, fontWeight: 500, letterSpacing: "0.02em" }}>
+            <button className="atlas-modo-v" onClick={() => setElegido("repasar")} style={{ fontSize: 13, fontWeight: 500, letterSpacing: "0.02em" }}>
               ‹ repasar
             </button>
           )}
@@ -70,7 +68,7 @@ export default function Atlas() {
             onClick={() => setPantallaCompleta((v) => !v)}
             title={pantallaCompleta ? "Salir de pantalla completa" : "Pantalla completa"}
             aria-label={pantallaCompleta ? "Salir de pantalla completa" : "Pantalla completa"}
-            style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex" }}
+            style={{ display: "flex" }}
           >
             <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1">
               {pantallaCompleta
@@ -97,7 +95,3 @@ export default function Atlas() {
     </TerminalShell>
   );
 }
-
-const enlace: React.CSSProperties = {
-  background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: MONO,
-};

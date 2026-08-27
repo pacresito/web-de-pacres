@@ -9,9 +9,8 @@ import { PAIS_POR_ID } from "@/lib/atlas/paises";
 import { dominio, dominioPais, type Dato, type Dominio } from "@/lib/atlas/srs";
 import { mazoActual, sinMazo, suscribir } from "@/lib/atlas/almacen";
 import { rutaDelRelieve } from "@/lib/atlas/silueta";
+import { escalaDelNombre, km2 } from "@/lib/atlas/ficha";
 import { useTema } from "@/app/components/usePersistedTheme";
-
-const MONO = "var(--t-mono)";
 
 const TINTA: Record<Dominio, string> = {
   "sin ver": "transparent",
@@ -57,11 +56,6 @@ const MARCO = new Map(ORDEN.map((g) => [g.continente, g.marco]));
 // primero de los dos.
 const I_EMPEZADOS = ORDEN.length;
 
-// Los caracteres que caben en una línea del nombre a tamaño entero. La fuente es mono y la
-// columna mide lo mismo en móvil y a lo ancho, así que sale una cuenta y no una medición: medir
-// el DOM daría un número que el HTML del server no tiene.
-const CARACTERES = 15;
-
 /**
  * Las dos imágenes que la ficha estrena al cambiar de país: la bandera y, si lo tiene, el
  * relieve. Ninguna viene en el HTML —React monta un nodo nuevo por país, y un nodo nuevo nace
@@ -88,31 +82,8 @@ function precargar(url: string) {
 // vecino precargado no se llega nunca; es el tope para que una red mala no deje la flecha muerta.
 const ESPERA_MAX = 600;
 
-/**
- * Cuánto encoge el nombre para caber en dos líneas. La ficha reserva dos siempre —así no se
- * mueve nada al pasar de España a Bosnia y Herzegovina— y de los 195 solo la República
- * Democrática del Congo pide una tercera: encogerla es preferible a bajar todo lo que va debajo.
- */
-function escalaDelNombre(nombre: string) {
-  const palabras = nombre.split(" ");
-  return [1, 0.85, 0.75, 0.68].find((escala) => {
-    const ancho = Math.floor(CARACTERES / escala);
-    let lineas = 1, largo = 0;
-    for (const palabra of palabras) {
-      if (!largo) largo = palabra.length;
-      else if (largo + 1 + palabra.length <= ancho) largo += 1 + palabra.length;
-      else { lineas++; largo = palabra.length; }
-    }
-    return lineas <= 2;
-  }) ?? 0.55;
-}
-
-// Sin `toLocaleString`: el ICU del server y el del navegador no tienen por qué coincidir, y un
-// número distinto en cada lado es un desajuste de hidratación, que sale como un error ilegible.
-function km2(n: number) {
-  const [entera, decimal] = n.toFixed(n < 10 ? 2 : 0).split(".");
-  return entera.replace(/\B(?=(\d{3})+$)/g, ".") + (decimal ? `,${decimal}` : "");
-}
+// El recorrido es un circuito: pasado el último se vuelve al primero, y al revés.
+const alLado = (lista: string[], desde: number, n: number) => (desde + n + lista.length) % lista.length;
 
 /**
  * La pestaña de explorar: los países de un continente, uno a uno y en el orden del barrido en S
@@ -144,7 +115,8 @@ export default function Explorar({ abrirEnEmpezados = false }: { abrirEnEmpezado
   // Un estado puede no tener ningún país —ninguno aprendido todavía— y puede encoger por debajo
   // del índice actual. Se acota al leer en vez de corregirlo con un efecto: un `setPi` en cascada
   // pintaría antes un país que ya no está en la lista.
-  const id = lista[Math.min(pi, lista.length - 1)] ?? "";
+  const donde = Math.min(pi, lista.length - 1);
+  const id = lista[donde] ?? "";
   const pais = PAIS_POR_ID.get(id);
   const forma = FORMAS[id];
 
@@ -165,7 +137,7 @@ export default function Explorar({ abrirEnEmpezados = false }: { abrirEnEmpezado
     Promise.race([Promise.all(urls.map(precargar)), new Promise((listo) => setTimeout(listo, ESPERA_MAX))])
       .then(() => { if (paso.current === mio) setPi(i); });
   };
-  const mover = (n: number) => { if (lista.length) irAlPais((Math.min(objetivo.current, lista.length - 1) + n + lista.length) % lista.length); };
+  const mover = (n: number) => { if (lista.length) irAlPais(alLado(lista, Math.min(objetivo.current, lista.length - 1), n)); };
   // El continente se cambia al momento —lo que se estrena entero no es una ficha que se sustituye
   // a medias— y su primer país ya espera a lo suyo, con la lista nueva, que `lista` todavía es la
   // de antes en este render.
@@ -176,10 +148,10 @@ export default function Explorar({ abrirEnEmpezados = false }: { abrirEnEmpezado
   // ambos sentidos.
   useEffect(() => {
     for (const n of [1, -1]) {
-      const vecino = lista[(Math.min(pi, lista.length - 1) + n + lista.length) % lista.length];
+      const vecino = lista[alLado(lista, donde, n)];
       if (vecino) imagenes(vecino, tema).forEach(precargar);
     }
-  }, [pi, lista, tema]);
+  }, [donde, lista, tema]);
 
   // Las flechas del teclado hacen lo que los dos botones: en escritorio recorrer el continente
   // pulsando a un lado y a otro de la pantalla no es recorrerlo.
@@ -197,19 +169,14 @@ export default function Explorar({ abrirEnEmpezados = false }: { abrirEnEmpezado
   // La marca abre cada fila, no la cierra: a la izquierda las cuatro forman una columna recta y
   // se leen de un vistazo; al final de cada dato caen donde acabe el texto, cada una en su sitio.
   const fila = (dato: Dato, contenido: React.ReactNode, arriba = 0, mapas = false) => (
-    <div style={{
-      display: "grid",
-      gridTemplateColumns: mapas ? "var(--a-marca-mapa) 1fr" : "var(--a-marca) 1fr",
-      columnGap: mapas ? "var(--a-marca-mapa-gap)" : "var(--a-marca-gap)",
-      alignItems: arriba ? "start" : "center",
-    }}>
+    <div className={`atlas-fila${mapas ? " atlas-fila-mapa" : ""}`} style={{ alignItems: arriba ? "start" : "center" }}>
       <Marca estado={dominio(mazo[id]?.[dato])} arriba={arriba} />
       <div style={{ minWidth: 0 }}>{contenido}</div>
     </div>
   );
 
   const cifras = pais && forma ? (
-    <span style={{ fontFamily: MONO, fontSize: 11, color: "var(--t-ink3)", letterSpacing: "0.04em" }}>
+    <span style={{ fontSize: 11, color: "var(--t-ink3)", letterSpacing: "0.04em" }}>
       {km2(pais.km2)} km² · {forma.ladoKm} km de largo
     </span>
   ) : null;
@@ -222,7 +189,7 @@ export default function Explorar({ abrirEnEmpezados = false }: { abrirEnEmpezado
           del recorrido, de lo lejano a lo cercano, y no se toca para que quepan. */}
       <div className="atlas-cont-fila atlas-lado" style={{ flexShrink: 0 }}>
         <button className="atlas-modo atlas-solo-movil" onClick={() => setAbierto((v) => !v)}
-                style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: MONO, fontSize: 14, color: "var(--t-ink)" }}>
+                style={{ fontSize: 14, color: "var(--t-ink)" }}>
           {vista.nombre} <span style={{ color: "var(--t-ink4)" }}>{abierto ? "▴" : "▾"}</span>
         </button>
         <div className="atlas-solo-ancho">
@@ -230,7 +197,7 @@ export default function Explorar({ abrirEnEmpezados = false }: { abrirEnEmpezado
             {vistas.map((v, i) => (
               <button key={v.nombre} onClick={() => irA(i)}
                       className={i === ci ? "atlas-modo-v" : "atlas-modo"}
-                      style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: MONO, fontSize: 13, fontWeight: i === ci ? 500 : 400, display: "flex", alignItems: "center", gap: 8,
+                      style={{ fontSize: 13, fontWeight: i === ci ? 500 : 400, display: "flex", alignItems: "center", gap: 8,
                                // Los dos estados cierran la tira separados de los continentes: van
                                // en la misma lista porque se eligen igual, pero no son un sitio.
                                marginLeft: i === ORDEN.length ? 12 : undefined }}>
@@ -243,10 +210,10 @@ export default function Explorar({ abrirEnEmpezados = false }: { abrirEnEmpezado
 
         {/* El contador es de sitio, no de deuda: dice por dónde va el recorrido, no cuánto falta
             por estudiar. Da la vuelta al llegar al final — un continente es un circuito. */}
-        <span style={{ fontFamily: MONO, fontSize: 13, color: "var(--t-ink3)", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>
-          <button onClick={() => mover(-1)} className="atlas-modo" style={flecha} aria-label="Anterior">‹</button>
-          {"  "}{lista.length ? Math.min(pi, lista.length - 1) + 1 : 0} / {lista.length}{"  "}
-          <button onClick={() => mover(1)} className="atlas-modo" style={flecha} aria-label="Siguiente">›</button>
+        <span style={{ fontSize: 13, color: "var(--t-ink3)", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>
+          <button onClick={() => mover(-1)} className="atlas-modo" style={{ fontSize: 13 }} aria-label="Anterior">‹</button>
+          {"  "}{lista.length ? donde + 1 : 0} / {lista.length}{"  "}
+          <button onClick={() => mover(1)} className="atlas-modo" style={{ fontSize: 13 }} aria-label="Siguiente">›</button>
         </span>
       </div>
 
@@ -283,14 +250,14 @@ export default function Explorar({ abrirEnEmpezados = false }: { abrirEnEmpezado
           <div style={{ display: "grid", alignContent: "start", height: "calc(var(--a-pais) * 2.3 + 22px)" }}>
             {fila("nombre",
               <>
-                <div style={{ fontFamily: MONO, fontSize: `calc(var(--a-pais) * ${escalaDelNombre(pais.nombre)})`, fontWeight: 500, lineHeight: 1.15, letterSpacing: "-0.03em", color: "var(--t-ink)" }}>{pais.nombre}</div>
-                <div style={{ fontFamily: MONO, fontSize: 11, lineHeight: 1.6, color: "var(--t-ink3)", paddingTop: 4 }}>{pais.oficial}</div>
+                <div style={{ fontSize: `calc(var(--a-pais) * ${escalaDelNombre(pais.nombre)})`, fontWeight: 500, lineHeight: 1.15, letterSpacing: "-0.03em", color: "var(--t-ink)" }}>{pais.nombre}</div>
+                <div style={{ fontSize: 11, lineHeight: 1.6, color: "var(--t-ink3)", paddingTop: 4 }}>{pais.oficial}</div>
               </>, 11)}
           </div>
 
           {/* Sin etiqueta, como en la tarjeta: el sitio y el tamaño ya la dicen. */}
           {fila("capital",
-            <span style={{ fontFamily: MONO, fontSize: "var(--a-capital)", lineHeight: 1.2, color: "var(--t-ink)" }}>{pais.capital}
+            <span style={{ fontSize: "var(--a-capital)", lineHeight: 1.2, color: "var(--t-ink)" }}>{pais.capital}
               {pais.capitalCastellana && <span style={{ fontSize: "0.62em", color: "var(--t-ink4)" }}> ({pais.capitalCastellana})</span>}
             </span>)}
 
@@ -336,7 +303,7 @@ export default function Explorar({ abrirEnEmpezados = false }: { abrirEnEmpezado
         /* Un estado puede no tener todavía ni un país. Se nombra cuál: el contador a 0 dice
            que no hay nada, no de qué no lo hay. */
         <div className="atlas-lado" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
-                                             fontFamily: MONO, fontSize: 13, color: "var(--t-ink3)", textAlign: "center" }}>
+                                             fontSize: 13, color: "var(--t-ink3)", textAlign: "center" }}>
           sin países {vista.nombre} todavía
         </div>
       )}
@@ -349,7 +316,3 @@ export default function Explorar({ abrirEnEmpezados = false }: { abrirEnEmpezado
     </div>
   );
 }
-
-const flecha: React.CSSProperties = {
-  background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: MONO, fontSize: 13,
-};

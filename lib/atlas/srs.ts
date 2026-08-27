@@ -75,9 +75,7 @@ export const dominio = (e: Estado | undefined): Dominio => (!e ? "sin ver" : apr
 
 /**
  * Lo mismo para un país entero, que es por lo que se filtra en explorar. **Aprendido exige los
- * cuatro datos** —el mismo listón que usa `cuenta`, y no otro: dos listones para la misma
- * palabra harían que el filtro y el contador se contradijeran a la vista—; empezado basta con
- * haber visto uno.
+ * cuatro datos**; empezado basta con haber visto uno.
  */
 export function dominioPais(mazo: Mazo, paisId: string): Dominio {
   if (DATOS.every((d) => aprendido(mazo[paisId]?.[d]))) return "aprendido";
@@ -88,6 +86,9 @@ export function dominioPais(mazo: Mazo, paisId: string): Dominio {
  * Cuántos huecos lleva la tarjeta de un país. Va con la madurez, no con la sospecha: cuanto
  * menos se sabe un país, más datos se ven. Examinar de algo que aún no está codificado no
  * enseña, solo frustra; y lo visible es el material de estudio.
+ *
+ * **El tope de tres es lo que deja la pista**: `montar` tapa tantos como diga esto, así que
+ * devolver cuatro sería una tarjeta sin nada por lo que preguntar.
  */
 export function huecos(mazo: Mazo, paisId: string): number {
   const n = DATOS.filter((d) => aprendido(mazo[paisId]?.[d])).length;
@@ -95,8 +96,9 @@ export function huecos(mazo: Mazo, paisId: string): number {
 }
 
 /**
- * Cuántos países se han visto y cuántos están enteros —los cuatro datos aprendidos—. Visto es
- * todo lo que no está «sin ver»: los empezados más los aprendidos.
+ * Cuántos países se han visto y cuántos están enteros. Sale de `dominioPais` y no de su propia
+ * cuenta: el contador y el filtro de explorar dicen «aprendido» de la misma palabra, y con dos
+ * listones separados se contradirían a la vista el día que se moviera uno.
  *
  * Esto **no es el contador de Anki**, que es lo que hay que mirar antes de enseñarlo: aquel
  * cuenta deuda y sube solo mientras no vuelves; este cuenta trabajo hecho y solo sube cuando
@@ -106,9 +108,10 @@ export function huecos(mazo: Mazo, paisId: string): number {
 export function cuenta(mazo: Mazo): { vistos: number; aprendidos: number } {
   let vistos = 0, aprendidos = 0;
   for (const p of PAISES) {
-    if (!DATOS.some((d) => mazo[p.id]?.[d])) continue;
+    const suyo = dominioPais(mazo, p.id);
+    if (suyo === "sin ver") continue;
     vistos++;
-    if (DATOS.every((d) => aprendido(mazo[p.id]?.[d]))) aprendidos++;
+    if (suyo === "aprendido") aprendidos++;
   }
   return { vistos, aprendidos };
 }
@@ -126,7 +129,7 @@ export function montar(mazo: Mazo, pais: Pais, ahora: number): Tarjeta {
   const primeraVez = DATOS.every((d) => !mazo[pais.id]?.[d]);
   if (primeraVez) return { pais, tapados: [], primeraVez };
   const orden = [...DATOS].sort((a, b) => sospecha(mazo[pais.id]?.[b], ahora) - sospecha(mazo[pais.id]?.[a], ahora));
-  return { pais, tapados: orden.slice(0, Math.min(huecos(mazo, pais.id), DATOS.length - 1)), primeraVez };
+  return { pais, tapados: orden.slice(0, huecos(mazo, pais.id)), primeraVez };
 }
 
 /**

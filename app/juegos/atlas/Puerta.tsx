@@ -5,8 +5,6 @@ import { elegirNivel, entrar, nivelActual, salir, suscribir } from "@/lib/atlas/
 import { type Perfil } from "@/lib/atlas/sembrar";
 import { cuenta, type Mazo } from "@/lib/atlas/srs";
 
-const MONO = "var(--t-mono)";
-
 /** Los mazos de salida, con el nombre que tienen para quien juega. `mezcla` no está: reparte los
  *  tres estados entre países y sirve para mirar la interfaz, no para jugar. */
 const NIVELES: { perfil: Perfil; etiqueta: string }[] = [
@@ -97,7 +95,7 @@ export default function ColaDelPrompt({ mazo, identificado }: { mazo: Mazo; iden
       {identificado ? (
         <>
           <Bandera aprendidos={aprendidos} vistos={vistos} />{" "}
-          <button onClick={() => { void salir(); cerrar(); }} className="hover-accent" style={boton}>--salir</button>
+          <button onClick={() => { void salir(); cerrar(); }} className="hover-accent" style={{ cursor: "pointer" }}>--salir</button>
         </>
       ) : (
         <>
@@ -112,7 +110,7 @@ export default function ColaDelPrompt({ mazo, identificado }: { mazo: Mazo; iden
               <button
                 onClick={() => { elegirNivel(perfil); cerrar(); }}
                 className={perfil === nivel ? undefined : "hover-accent"}
-                style={{ ...boton, color: perfil === nivel ? "var(--t-accent)" : undefined }}
+                style={{ cursor: "pointer", color: perfil === nivel ? "var(--t-accent)" : undefined }}
               >
                 {e}
               </button>
@@ -127,16 +125,14 @@ export default function ColaDelPrompt({ mazo, identificado }: { mazo: Mazo; iden
               autoComplete="current-password"
               onChange={(ev) => { setClave(ev.target.value); setError(null); }}
               onKeyDown={(ev) => { if (ev.key === "Escape") cerrar(); }}
-              // Se escribe donde se lee: mismo tipo, mismo tamaño y sin caja, para que teclear la
-              // clave sea seguir escribiendo el comando y no rellenar un formulario.
+              // Se escribe donde se lee: el tipo y el tamaño los hereda del prompt —el preflight
+              // se los pasa también a los inputs, que por defecto no heredan— y lo único que hay
+              // que quitarle es el foco dibujado, para que teclear la clave sea seguir escribiendo
+              // el comando y no rellenar un formulario.
               // El ancho sigue a lo tecleado, que es lo que deja ver cuántos caracteres llevas: fijo,
               // los puntos se cortan y una clave larga parece corta. Con tope, que a partir de ahí se
               // saldría de la caja del prompt y rompería la línea.
-              style={{
-                width: `${Math.min(Math.max(clave.length + 1, 4), 24)}ch`,
-                background: "none", border: "none", outline: "none", padding: 0,
-                fontFamily: MONO, fontSize: "inherit", color: "var(--t-ink)",
-              }}
+              style={{ width: `${Math.min(Math.max(clave.length + 1, 4), 24)}ch`, outline: "none" }}
             />
             {error && <span style={{ color: "var(--t-ink4)" }}> {error.toLowerCase()}</span>}
           </form>
@@ -145,8 +141,3 @@ export default function ColaDelPrompt({ mazo, identificado }: { mazo: Mazo; iden
     </span>
   );
 }
-
-const boton: React.CSSProperties = {
-  background: "none", border: "none", padding: 0, cursor: "pointer",
-  fontFamily: MONO, fontSize: "inherit",
-};

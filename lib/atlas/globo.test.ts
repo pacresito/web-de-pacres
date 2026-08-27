@@ -1,36 +1,39 @@
 // Test de lógica pura: `npx tsx lib/atlas/globo.test.ts`. Fuera del build.
 import assert from "assert";
-import { alLimbo, desviar, enganche, gradosEntre, ortografica, pathDelGlobo, rellenoDelGlobo } from "./globo";
+import { desviar, enganche, gradosEntre, ortografica, pathDelGlobo, rellenoDelGlobo } from "./globo";
 
 const R = 100;
 const cerca = (a: number, b: number, msg: string) => assert.ok(Math.abs(a - b) < 0.001, `${msg}: ${a} vs ${b}`);
+const pos = ([x, y]: [number, number, boolean]): [number, number] => [x, y];
 
 // El centro del globo cae en el centro del círculo.
 const enMadrid = ortografica(-3.7, 40.4, R);
-const c = enMadrid(-3.7, 40.4)!;
+const c = enMadrid(-3.7, 40.4);
 cerca(c[0], 0, "x del centro"); cerca(c[1], 0, "y del centro");
+assert.ok(c[2], "y se ve");
 
 // Un punto al norte sube (la y del SVG crece hacia abajo, y aquí ya va invertida).
-assert.ok(enMadrid(-3.7, 50)![1] < 0, "el norte va arriba");
-assert.ok(enMadrid(-3.7, 30)![1] > 0, "el sur va abajo");
-assert.ok(enMadrid(10, 40.4)![0] > 0, "el este va a la derecha");
+assert.ok(enMadrid(-3.7, 50)[1] < 0, "el norte va arriba");
+assert.ok(enMadrid(-3.7, 30)[1] > 0, "el sur va abajo");
+assert.ok(enMadrid(10, 40.4)[0] > 0, "el este va a la derecha");
 
 // Las antípodas no se ven: media Tierra queda detrás y dibujarla la plegaría sobre la cara
 // visible, que es el error clásico de las ortográficas.
-assert.strictEqual(enMadrid(176.3, -40.4), null);
+assert.strictEqual(enMadrid(176.3, -40.4)[2], false);
 // El horizonte —lo que está a 90° de distancia angular— cae justo sobre la circunferencia.
 // Se comprueba en el ecuador, que es donde 90° de longitud SON 90° de distancia: desde una
 // latitud alta, un cuarto de vuelta de longitud se queda muy corto.
 const enGuinea = ortografica(0, 0, R);
-const borde = enGuinea(90, 0);
-assert.ok(borde && Math.abs(Math.hypot(borde[0], borde[1]) - R) < 0.001, "el horizonte cae en el borde");
-assert.ok(Math.hypot(...enMadrid(86.3, 40.4)!) < R, "a esa latitud, 90° de longitud aún se ven");
+const horizonte = enGuinea(90, 0);
+assert.ok(horizonte[2] && Math.abs(Math.hypot(horizonte[0], horizonte[1]) - R) < 0.001, "el horizonte cae en el borde");
+assert.ok(Math.hypot(...pos(enMadrid(86.3, 40.4))) < R, "a esa latitud, 90° de longitud aún se ven");
 
-// Nada dentro del globo se sale del círculo, mire donde mire.
+// Nada se sale del círculo, mire donde mire: lo de detrás del horizonte, tampoco, que viene ya
+// pegado al canto.
 const enPolo = ortografica(0, 90, R);
 for (let lon = -180; lon <= 180; lon += 17) for (let lat = -90; lat <= 90; lat += 11) {
   const q = enPolo(lon, lat);
-  if (q) assert.ok(Math.hypot(q[0], q[1]) <= R + 1e-9, `(${lon},${lat}) se sale del globo`);
+  assert.ok(Math.hypot(q[0], q[1]) <= R + 1e-9, `(${lon},${lat}) se sale del globo`);
 }
 
 // Un anillo que cruza el horizonte se parte en trozos abiertos: si se cerrara, aparecería una
@@ -43,14 +46,11 @@ assert.strictEqual((d.match(/M/g) ?? []).length, 1, "solo el trozo visible");
 // El relleno cierra los anillos pegando al limbo lo que se va por detrás: la costa que se ve
 // queda igual, y lo escondido no cruza el globo por dentro.
 {
-  const borde = alLimbo(-3.7, 40.4, R);
-  const visible = borde(-3.7, 40.4);
-  cerca(visible[0], 0, "el centro sigue en el centro");
-  const escondido = borde(176.3, -40.4);
+  const escondido = enMadrid(176.3, -40.4);
   cerca(Math.hypot(escondido[0], escondido[1]), R, "lo de detrás se pega al canto");
   // Un anillo que cruza el horizonte sale de una pieza y sin salirse del círculo.
   const anillo = [[-3.7, 40.4], [80, 20], [176.3, -40.4], [-80, 10], [-3.7, 40.4]];
-  const d = rellenoDelGlobo([anillo], enMadrid, borde);
+  const d = rellenoDelGlobo([anillo], enMadrid);
   assert.equal((d.match(/M/g) ?? []).length, 1, "un anillo, un trozo");
   assert.ok(d.endsWith("Z"), "y cerrado");
   const puntos = d.slice(1, -1).split("L").map((par) => par.split(",").map(Number));
@@ -58,13 +58,13 @@ assert.strictEqual((d.match(/M/g) ?? []).length, 1, "solo el trozo visible");
   // Y el anillo que no asoma nada no se dibuja: pegado entero al canto sería un polígono
   // inscrito en el círculo, que rellena media cara visible.
   const antipodas = [[170, -40], [-170, -45], [-175, -35], [170, -40]];
-  assert.equal(rellenoDelGlobo([antipodas], enMadrid, borde), "", "lo que no se ve no se pinta");
+  assert.equal(rellenoDelGlobo([antipodas], enMadrid), "", "lo que no se ve no se pinta");
 }
 
 // El enganche, sobre un mundo de mentira centrado en el golfo de Guinea, donde un grado son 1,75
 // px con R=100 y las cuentas se pueden hacer de cabeza.
 {
-  const proy = enGuinea, borde = alLimbo(0, 0, R);
+  const proy = enGuinea;
   const caja = (lon0: number, lat0: number, ancho: number) =>
     [[lon0, lat0], [lon0 + ancho, lat0], [lon0 + ancho, lat0 + ancho], [lon0, lat0 + ancho], [lon0, lat0]];
   const anillos = [
@@ -81,7 +81,7 @@ assert.strictEqual((d.match(/M/g) ?? []).length, 1, "solo el trozo visible");
     { id: "lejos", lon: -25, lat: -25 },
     { id: "vecino", lon: -24, lat: -25 },
   ];
-  const en = (lon: number, lat: number, unidad = 1) => enganche(anillos, puntos, proy, borde, proy(lon, lat)!, unidad);
+  const en = (lon: number, lat: number, unidad = 1) => enganche(anillos, puntos, proy, pos(proy(lon, lat)), unidad);
 
   assert.strictEqual(en(-8, -8), "grande", "dentro del grande y lejos de todo punto");
   // De los que contienen el toque gana el pequeño: el grande tiene otros mil píxeles donde
@@ -93,8 +93,8 @@ assert.strictEqual((d.match(/M/g) ?? []).length, 1, "solo el trozo visible");
   // En el mar, el punto se lleva el toque aunque la costa quede tres veces más cerca: a la costa
   // se le puede apuntar y al punto no.
   assert.strictEqual(en(10.5, 2), "mar", "el punto gana a la costa que tiene al lado");
-  // Pero la cortesía no puede morder más de un tercio del país que tiene el dedo dentro: el
-  // enano vive en un país de 0,9 px, así que su radio ahí es de tres décimas.
+  // Pero la cortesía no puede morder más de un quinto del país que tiene el dedo dentro: el
+  // enano vive en un país de 0,9 px, así que su radio ahí no llega a dos décimas.
   assert.strictEqual(en(2.45, 2.2), "chico", "la cortesía se encoge con el país de debajo");
   // Sin ningún punto cerca, manda el vecino de verdad.
   assert.strictEqual(en(0, 14), "grande", "en el mar, el más cercano");

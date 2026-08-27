@@ -37,6 +37,9 @@ let identificado = false;
 let sembrado = false;
 /** El nivel de salida que se eligió, para poder enseñarlo. Sin elegir, se empieza de cero. */
 let nivel: Perfil = "vacio";
+// Cuántas veces ha cambiado la tarjeta por algo que hizo quien juega. Lo mira `sincronizar` para
+// no adoptar el mazo del servidor encima de lo que se hizo mientras volaba su petición.
+let pasos = 0;
 const oyentes = new Set<() => void>();
 const notificar = () => oyentes.forEach((a) => a());
 
@@ -81,9 +84,14 @@ export function suscribir(avisar: () => void) {
   return () => { oyentes.delete(avisar); };
 }
 
-export function vistaActual(): Vista {
+/** La primera lectura de cualquiera de los tres es la que abre el mazo: aquí se mira el disco. */
+function asegurar() {
   if (!vista) vista = avanzar((mazo = leerDeDisco()));
-  return vista;
+}
+
+export function vistaActual(): Vista {
+  asegurar();
+  return vista!;
 }
 
 // En el server no hay mazo. Pintar una tarjeta con el mazo vacío y otra distinta al hidratar
@@ -95,7 +103,7 @@ export const sinVista = (): Vista | null => null;
 // bucle de renders—; y en el server, uno vacío y siempre el mismo, por lo mismo.
 const VACIO: Mazo = {};
 export function mazoActual(): Mazo {
-  if (!mazo) vistaActual();
+  asegurar();
   return mazo!;
 }
 export const sinMazo = (): Mazo => VACIO;
@@ -108,7 +116,7 @@ export const sinMazo = (): Mazo => VACIO;
  * mismo volcado, que va en cada carga, y lo que autoriza es la cookie, en el servidor.
  */
 export const sesionActual = () => {
-  if (!mazo) vistaActual();
+  asegurar();
   return identificado;
 };
 export const sinSesion = () => false;
@@ -122,6 +130,7 @@ export function calificarTarjeta(paisId: string, notas: Partial<Record<Dato, Not
     cola.push({ pais: paisId, dato: dato as Dato, nota, ms: ahora });
   }
   mazo = m;
+  pasos++;
   guardar();
   vista = avanzar(m);
   notificar();
@@ -178,6 +187,7 @@ export const nivelActual = (): Perfil => nivel;
 export function elegirNivel(perfil: Perfil) {
   nivel = perfil;
   sembrado = true;
+  pasos++;
   cola = [];
   // Semilla nueva en cada elección: cincuenta países distintos, que es lo que hace que repetir
   // nivel sea un reto nuevo y no la misma partida otra vez.
@@ -193,8 +203,12 @@ export function elegirNivel(perfil: Perfil) {
  */
 export async function sincronizar() {
   if (sembrado) return;
+  // Y solo si en ese rato no se ha tocado nada: una calificación hecha mientras volaba la
+  // petición ya está en el mazo de aquí —y en la cola, camino de Redis—, así que adoptar el
+  // remoto la borraría de la pantalla y cambiaría la tarjeta de debajo del pulgar.
+  const antes = pasos;
   const remoto = await volcar();
-  if (!remoto) return;
+  if (!remoto || pasos !== antes) return;
   mazo = remoto;
   guardar();
   vista = avanzar(remoto);

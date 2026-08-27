@@ -8,8 +8,6 @@ import { DATOS, NOTAS, type Dato, type Nota } from "@/lib/atlas/srs";
 import { calificarTarjeta, sinVista, suscribir, vistaActual, type Vista } from "@/lib/atlas/almacen";
 import { desviar } from "@/lib/atlas/globo";
 
-const MONO = "var(--t-mono)";
-
 // Lo que se lee en la tarjeta. `lugar` se rotula «ubicación»: el identificador no lleva tilde.
 const ETIQUETA: Record<Dato, string> = { nombre: "país", capital: "capital", bandera: "bandera", lugar: "ubicación" };
 
@@ -52,10 +50,10 @@ function Tapado({ dato, alto, alTocar }: { dato: Dato; alto: number; alTocar?: (
       style={{
         height: alto, display: "flex", alignItems: "center", justifyContent: "center",
         border: "1px dashed var(--t-rule)", borderRadius: 2, color: "var(--t-ink3)",
-        fontFamily: MONO, fontSize: 13, letterSpacing: "0.02em",
+        fontSize: 13, letterSpacing: "0.02em",
       }}
     >
-      ¿{dato === "nombre" ? "País" : ETIQUETA[dato][0].toUpperCase() + ETIQUETA[dato].slice(1)}?
+      ¿{ETIQUETA[dato][0].toUpperCase() + ETIQUETA[dato].slice(1)}?
     </div>
   );
   // El de la ubicación se pincha para marcar el sitio en el globo, y por eso se traga el toque:
@@ -240,7 +238,7 @@ function Tarjeta({ vista }: { vista: Vista }) {
         >
           {visible(dato) ? contenido : <Tapado dato={dato} alto={alto} alTocar={alTocarHueco} />}
         </div>
-        <div style={{ fontFamily: MONO, fontSize: 10, color: "var(--a-acc-tx)" }}>
+        <div style={{ fontSize: 10, color: "var(--a-acc-tx)" }}>
           {puesta && TEXTO[puesta]}
         </div>
       </div>
@@ -265,7 +263,7 @@ function Tarjeta({ vista }: { vista: Vista }) {
              vocabulario de la tarjeta antes de que haga falta. */
           <div style={{ display: "flex", gap: 12, paddingBottom: 4 }}>
             <div style={{ width: 2, background: "var(--t-accent)", flexShrink: 0 }} />
-            <p className={saliendo ? "atlas-sale" : "atlas-entra"} style={{ fontFamily: MONO, fontSize: 11.5, lineHeight: 1.75, color: "var(--t-ink2)", margin: 0, textWrap: "pretty" }}>
+            <p className={saliendo ? "atlas-sale" : "atlas-entra"} style={{ fontSize: 11.5, lineHeight: 1.75, color: "var(--t-ink2)", margin: 0, textWrap: "pretty" }}>
               Aquí te calificas tú: mira el dato, decide si lo sabías y sé honesto. Nadie lo comprueba, y
               por eso solo funciona si no te haces trampas.
             </p>
@@ -278,7 +276,7 @@ function Tarjeta({ vista }: { vista: Vista }) {
             que es donde hace falta la etiqueta— y después las dos figuras, de menos a más
             sitio. */}
         {fila("nombre",
-          <div style={{ fontFamily: MONO, fontSize: "var(--a-pais)", fontWeight: 500, letterSpacing: "-0.03em", lineHeight: 1.1, color: tinta("nombre", "var(--t-ink)"), textAlign: "center" }}>
+          <div style={{ fontSize: "var(--a-pais)", fontWeight: 500, letterSpacing: "-0.03em", lineHeight: 1.1, color: tinta("nombre", "var(--t-ink)"), textAlign: "center" }}>
             {pais.nombre}
           </div>)}
 
@@ -288,7 +286,7 @@ function Tarjeta({ vista }: { vista: Vista }) {
             sale donde la forma local se leería mal en español —Jakarta, Kharṭūm—, y por eso va
             en pequeño: es la pista de pronunciación, no la respuesta. */}
         {fila("capital",
-          <div style={{ fontFamily: MONO, fontSize: "var(--a-capital)", lineHeight: 1.2, color: tinta("capital", "var(--t-ink)"), textAlign: "center" }}>
+          <div style={{ fontSize: "var(--a-capital)", lineHeight: 1.2, color: tinta("capital", "var(--t-ink)"), textAlign: "center" }}>
             {pais.capital}
             {pais.capitalCastellana && <span style={{ fontSize: "0.62em", color: "var(--t-ink4)" }}> ({pais.capitalCastellana})</span>}
           </div>)}
@@ -316,7 +314,7 @@ function Tarjeta({ vista }: { vista: Vista }) {
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 7, flexShrink: 0 }}>
               <Silueta id={pais.id} forma={paisOculto ? null : forma} nombre={pais.nombre} trazo={formaMarcada}
                        style={{ width: "var(--a-silueta)", height: "var(--a-silueta)" }} />
-              <span style={{ fontFamily: MONO, fontSize: 10, color: "var(--t-ink3)" }}>{formaVista?.ladoKm} km</span>
+              <span style={{ fontSize: 10, color: "var(--t-ink3)" }}>{formaVista?.ladoKm} km</span>
             </div>
             {/* Tocar el globo lo abre grande, que es la comprobación que se quiere hacer justo
                 antes de calificar: el de la tarjeta dice en qué parte del mundo cae el país, pero
@@ -341,7 +339,7 @@ function Tarjeta({ vista }: { vista: Vista }) {
         <div className="atlas-barra" onClick={(e) => e.stopPropagation()}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, paddingBottom: 11 }}>
             <span style={{ width: 0, height: 0, borderLeft: "5px solid var(--t-accent)", borderTop: "4px solid transparent", borderBottom: "4px solid transparent" }} />
-            <span style={{ fontFamily: MONO, fontSize: 11, fontWeight: 500, color: "var(--t-ink)", letterSpacing: "0.1em" }}>
+            <span style={{ fontSize: 11, fontWeight: 500, color: "var(--t-ink)", letterSpacing: "0.1em" }}>
               {ETIQUETA[enBarra]}
             </span>
           </div>
@@ -371,7 +369,7 @@ function Tarjeta({ vista }: { vista: Vista }) {
           <Globo id={pais.id} lon={centro[0]} lat={centro[1]} r={200} lado="min(86vw, 56vh)" puntos
                  oculto={lupa === "marcar"} marca={marca}
                  alMarcar={lupa === "marcar" ? (id) => { setMarca(id); setTimeout(() => setLupa(null), 320); } : undefined} />
-          <span style={{ fontFamily: MONO, fontSize: 11, color: "var(--t-ink4)", letterSpacing: "0.14em" }}>
+          <span style={{ fontSize: 11, color: "var(--t-ink4)", letterSpacing: "0.14em" }}>
             {lupa === "marcar" ? "toca donde creas que está" : (
               <>
                 <span className="atlas-solo-movil">toca para volver</span>
@@ -383,7 +381,7 @@ function Tarjeta({ vista }: { vista: Vista }) {
       )}
 
       {!calificando && (
-        <div style={{ textAlign: "center", padding: "0 var(--a-lado) 40px", fontFamily: MONO, color: "var(--t-ink4)", letterSpacing: "0.14em" }}>
+        <div style={{ textAlign: "center", padding: "0 var(--a-lado) 40px", color: "var(--t-ink4)", letterSpacing: "0.14em" }}>
           <span className="atlas-solo-movil" style={{ fontSize: 11 }}>toca para destapar</span>
           <span className="atlas-solo-ancho" style={{ fontSize: 10 }}>espacio para destapar</span>
         </div>

@@ -3,7 +3,7 @@
 import { useMemo, useRef } from "react";
 import { FORMAS } from "@/data/atlas/formas";
 import { MUNDO } from "@/data/atlas/mundo";
-import { alLimbo, enganche, gradosEntre, ortografica, pathDelGlobo, rellenoDelGlobo } from "@/lib/atlas/globo";
+import { enganche, gradosEntre, ortografica, pathDelGlobo, rellenoDelGlobo } from "@/lib/atlas/globo";
 
 // Los países que el mapa de baja resolución no trae. Entran al enganche por su centro, que es el
 // mismo punto con el que ya se dibujan.
@@ -18,6 +18,9 @@ const PUNTOS = Object.entries(FORMAS)
  * está mirando siempre sale marcado**. Más lejos no se marca: ahí no se está apuntando.
  */
 const RADIO_PUNTOS = 20;
+
+/** Los anillos de un país, o ninguno si no se pide ninguno. */
+const anillosDe = (quien: string | null) => (quien ? MUNDO.filter((a) => a.id === quien).map((a) => a.r) : []);
 
 /**
  * El globo de la tarjeta: la Tierra centrada en el país, con él resaltado. Es quien cuenta el
@@ -43,24 +46,23 @@ export default function Globo({ id, lon, lat, r = 74, lado, oculto, puntos, marc
   oculto?: boolean; puntos?: boolean; marca?: string | null; alMarcar?: (id: string) => void;
 }) {
   const svg = useRef<SVGSVGElement>(null);
-  const { proy, borde, cercanos, tierra, relleno, mio, punto, diminutos, trazo, trazoPunto } = useMemo(() => {
+  // El mundo entero, que es lo que cuesta: 23.000 puntos por proyectar. Va aparte de la marca
+  // porque marcar no lo cambia —son diez milisegundos por globo, y al marcar hay dos vivos—.
+  const { proy, cercanos, tierra, relleno, mio, punto, diminutos } = useMemo(() => {
     const proy = ortografica(lon, lat, r);
-    const borde = alLimbo(lon, lat, r);
     // `null` y no "" para el que no se resalta: la cadena vacía es el id de la tierra que no es de
     // ningún país, y se llevaría el resaltado entera.
     const resaltado = oculto ? null : id;
-    const anillosDe = (quien: string | null) => (quien ? MUNDO.filter((a) => a.id === quien).map((a) => a.r) : []);
     const suyos = anillosDe(resaltado);
-    const marcados = anillosDe(marca ?? null);
     // Los que se dibujan son los mismos que se pueden enganchar, y por eso salen de aquí: dos
     // listas separadas serían un punto que se ve y no responde, o al revés.
     const cercanos = puntos ? PUNTOS.filter((p) => gradosEntre(lon, lat, p.lon, p.lat) <= RADIO_PUNTOS) : [];
     return {
-      proy, borde, cercanos,
+      proy, cercanos,
       tierra: pathDelGlobo(MUNDO.filter((a) => a.id !== resaltado).map((a) => a.r), proy),
       // La tierra rellena, un punto más oscura que el agua: sin ella el globo es un círculo de
       // un solo tono con rayas, y no se lee cuál de los dos lados de la costa es mar.
-      relleno: rellenoDelGlobo(MUNDO.map((a) => a.r), proy, borde),
+      relleno: rellenoDelGlobo(MUNDO.map((a) => a.r), proy),
       mio: pathDelGlobo(suyos, proy),
       // Los diminutos no están en el mapa de baja resolución del globo, y a esta escala un
       // punto es exactamente lo que son. Va por su sitio en `FORMAS`, no por el centro del globo,
@@ -69,11 +71,17 @@ export default function Globo({ id, lon, lat, r = 74, lado, oculto, puntos, marc
       // El resaltado no se dibuja gris: ya se pinta en acento un poco más abajo, y dos círculos
       // en el mismo sitio dejan un halo asomando por fuera del verde. Dentro del radio no hace
       // falta comprobar el horizonte: veinte grados caben de sobra en la cara visible.
-      diminutos: cercanos.filter((p) => p.id !== resaltado).map((p) => proy(p.lon, p.lat)!),
+      diminutos: cercanos.filter((p) => p.id !== resaltado).map((p) => proy(p.lon, p.lat)),
+    };
+  }, [id, lon, lat, r, oculto, puntos]);
+
+  const { trazo, trazoPunto } = useMemo(() => {
+    const marcados = anillosDe(marca ?? null);
+    return {
       trazo: pathDelGlobo(marcados, proy),
       trazoPunto: marca && !marcados.length ? proy(FORMAS[marca].lon, FORMAS[marca].lat) : null,
     };
-  }, [id, lon, lat, r, oculto, puntos, marca]);
+  }, [proy, marca]);
 
   /**
    * Dentro del disco se marca; fuera, el toque sigue subiendo, que ahí es cerrar. Lo que
@@ -91,7 +99,7 @@ export default function Globo({ id, lon, lat, r = 74, lado, oculto, puntos, marc
     ];
     if (Math.hypot(p[0], p[1]) > r) return;
     e.stopPropagation();
-    const enganchado = enganche(MUNDO, cercanos, proy, borde, p, unidad);
+    const enganchado = enganche(MUNDO, cercanos, proy, p, unidad);
     if (enganchado) alMarcar(enganchado);
   };
 
@@ -114,12 +122,12 @@ export default function Globo({ id, lon, lat, r = 74, lado, oculto, puntos, marc
       {diminutos.map((q, i) => <circle key={i} cx={q[0].toFixed(1)} cy={q[1].toFixed(1)} r={r / 100} fill="var(--t-ink3)" />)}
       {/* Trazo además de relleno: un país fino (Chile, Italia) desaparece si solo se rellena. */}
       <path d={mio} fill="var(--t-accent)" stroke="var(--t-accent)" strokeWidth={2.5} strokeLinejoin="round" />
-      {punto && <circle cx={punto[0]} cy={punto[1]} r={3.5} fill="var(--t-accent)" />}
+      {punto?.[2] && <circle cx={punto[0]} cy={punto[1]} r={3.5} fill="var(--t-accent)" />}
       {/* La marca va encima y es trazo, mientras que la respuesta es relleno: así no pelean, y
           el acierto se lee solo —el contorno cae clavado sobre la forma verde— en vez de
           desaparecer debajo. */}
       <path d={trazo} fill="none" stroke="var(--t-ink)" strokeWidth={2} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-      {trazoPunto && <circle cx={trazoPunto[0]} cy={trazoPunto[1]} r={6} fill="none" stroke="var(--t-ink)" strokeWidth={2} vectorEffect="non-scaling-stroke" />}
+      {trazoPunto?.[2] && <circle cx={trazoPunto[0]} cy={trazoPunto[1]} r={6} fill="none" stroke="var(--t-ink)" strokeWidth={2} vectorEffect="non-scaling-stroke" />}
       <circle r={r} fill="none" stroke="var(--t-rule2)" />
     </svg>
   );

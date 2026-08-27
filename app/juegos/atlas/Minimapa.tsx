@@ -37,8 +37,9 @@ export default function Minimapa({ id, marco, lon, lat }: {
           escala casi todos lo son. */}
       <path d={mio} fill="var(--t-accent)" stroke="var(--t-accent)" strokeWidth={2} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
       {/* Los diminutos no están en el mapa de baja resolución: a esta escala un punto es
-          exactamente lo que son. */}
-      {punto && <circle cx={punto[0]} cy={punto[1]} r={w / 55} fill="var(--t-accent)" />}
+          exactamente lo que son. Redondeado como el resto del dibujo: sale de un coseno, y esos
+          Node y el navegador los calculan distintos en el último bit. */}
+      {punto && <circle cx={+punto[0].toFixed(2)} cy={+punto[1].toFixed(2)} r={+(w / 55).toFixed(2)} fill="var(--t-accent)" />}
     </svg>
   );
 }
