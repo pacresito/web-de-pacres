@@ -85,12 +85,17 @@ export default function Atlas() {
 
       {/* Fuera del <main>, que mide lo que la ventana: dentro le robaría a la tarjeta el alto que
           ocupa, y lo que se usa cuarenta veces al día no paga el sitio de lo que se lee una. */}
-      {!pantallaCompleta && <div className="atlas atlas-lado"><WhyFooter question="¿por qué un test de países?" date="21 de agosto de 2026">
-          Llevo años queriendo aprenderme todos los países del mundo y no lo he conseguido nunca. Lo más
-          cerca que estuve fue con Anki, que va enseñándote cada tarjeta justo antes de que se te olvide y
-          espaciándolas cuando aciertas. Funciona, pero no terminó de engancharme: vuelves después de diez
-          días, te recibe con cuatrocientas pendientes, y cierras. Esta es mi versión, a ver si por fin lo
-          consigo.
+      {!pantallaCompleta && <div className="atlas atlas-lado"><WhyFooter question="¿por qué repasar países?" date="21 de agosto de 2026">
+          <p>
+            Llevo años intentando aprenderme los países del mundo y nunca lo he conseguido. Lo más cerca que
+            estuve fue con Anki, que va enseñándote cada tarjeta justo antes de que se te olvide y
+            espaciándolas cuando aciertas.
+          </p>
+          <p>
+            Anki te castiga por no jugar: vuelves después de diez días y te esperan cuatrocientas
+            pendientes. Aquí es al revés: no jugar también te hace avanzar. Si recuerdas un país después de
+            un mes, vale más y tardará mucho más en volver.
+          </p>
         </WhyFooter></div>}
     </TerminalShell>
   );
