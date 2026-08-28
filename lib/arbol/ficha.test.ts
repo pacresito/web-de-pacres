@@ -35,7 +35,7 @@ const juguete: ArbolData = {
     persona("j2", "Antonia", { sexo: "m", birth: "1905" }),
     persona("j3", "Genoveva", { sexo: "m", birth: "1930" }),
     persona("j4", "Julián", { sexo: "h", birth: "1934" }),
-    persona("j5", "Rosa", { sexo: "m", birth: "1959", nota: "de Italia" }),
+    persona("j5", "Rosa", { sexo: "m", birth: "1959", nota: "de Italia", apodos: ["Rosi"] }),
     persona("j6", "Sin nombre"),
     persona("j7", "Antonio", { sexo: "h", birth: "1980" }),
     persona("j8", "Lucía", { sexo: "m", birth: "1986-03-01" }),
@@ -55,16 +55,17 @@ const libreta = libretaDe(g);
 const relaciones = relacionesDesde(g, "j3");
 const pertenencias = calcularRamas(g, [{ nombre: "Serrano", ancestro: "j1" }]);
 
-const ficha = (id: string, hoy = HOY): Ficha =>
-  fichaDe(g, id, {
-    puntoDeVista: "j3",
-    nombre: "familiar",
-    linaje: apellidosDe(g),
-    hoy,
-    relacion: relaciones.get(id)!,
-    pertenencia: pertenencias.get(id),
-    homonimia: libreta.homonimias.get(id),
-  });
+const opciones = (id: string, hoy = HOY) => ({
+  puntoDeVista: "j3",
+  nombre: "familiar" as const,
+  linaje: apellidosDe(g),
+  hoy,
+  relacion: relaciones.get(id)!,
+  pertenencia: pertenencias.get(id),
+  homonimia: libreta.homonimias.get(id),
+});
+
+const ficha = (id: string, hoy = HOY): Ficha => fichaDe(g, id, opciones(id, hoy));
 
 const valor = (f: Ficha, clave: string) => f.filas.find((x) => x.clave === clave)?.valor;
 
@@ -119,7 +120,7 @@ assert.deepStrictEqual(
 // Las filas: la que no tiene dato no se escribe, y la rama es la única excepción
 assert.strictEqual(valor(ficha("j5"), "Padres"), "Genoveva (1930)", "un solo progenitor documentado no inventa al otro");
 assert.strictEqual(valor(ficha("j1"), "Padres"), undefined, "a quien no le constan padres no se le dice");
-assert.strictEqual(valor(ficha("j3"), "Hijos"), "Rosa (1959), Lucía (1986)");
+assert.strictEqual(valor(ficha("j3"), "Hijos"), "Rosi (1959), Lucía (1986)");
 assert.deepStrictEqual(
   ficha("j3").filas.map((f) => f.clave),
   ["Padres", "Rama", "Hijos", "Edad"],
@@ -183,7 +184,7 @@ assert.strictEqual(
 assert.strictEqual(valor(ficha("j2"), "Hijos"), "Genoveva (1930), Julián (1934)", "y los hijos no, que llevan el de casa");
 assert.strictEqual(
   valor(ficha("j6"), "Unión"),
-  "expareja de Rosa Serrano (1959)",
+  "expareja de Rosi Serrano (1959)",
   "el cónyuge lleva apellido también cuando la unión acabó",
 );
 assert.strictEqual(ficha("j5").nota, "de Italia", "la nota va tal cual y cierra la lista");
@@ -191,7 +192,12 @@ assert.strictEqual(ficha("j1").nota, undefined, "y quien no la tiene no lleva un
 
 // Las ramas
 assert.strictEqual(valor(ficha("j5"), "Rama"), "Serrano");
-assert.strictEqual(valor(ficha("j6"), "Rama"), "entra en Serrano por Rosa", "y quien no la tiene de sangre, por quién entra");
+assert.strictEqual(valor(ficha("j6"), "Rama"), "entra en Serrano por Rosi", "y quien no la tiene de sangre, por quién entra");
+assert.strictEqual(
+  fichaDe(g, "j6", { ...opciones("j6"), nombre: "completo" }).filas.find((x) => x.clave === "Rama")?.valor,
+  "entra en Serrano por Rosa",
+  "y por el nombre que pida el interruptor, como el resto de la app",
+);
 
 // El caso feo
 const anonima = ficha("j6");

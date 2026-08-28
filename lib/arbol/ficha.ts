@@ -129,7 +129,7 @@ function filasDe(g: Grafo, p: Persona, o: OpcionesFicha, esCentro: boolean): Fil
   const filas = [
     ...comoSeLeLlama(p, o.nombre),
     ...conDato("Padres", padres(g, p.id, o.nombre)),
-    ...ramas(g, o.pertenencia),
+    ...ramas(g, o.nombre, o.pertenencia),
     ...conDato("Unión", uniones(g, p.id, o.linaje, o.nombre)),
     ...conDato("Hijos", hijos(g, p.id, o.nombre)),
   ];
@@ -249,10 +249,11 @@ const hijos = (g: Grafo, id: string, modo: ModoNombre): string =>
  * el nombre de quien lo trajo es lo que sitúa a las 139 personas que están en ese caso. Se
  * decía «por matrimonio», que a los que nunca se casaron los casaba de oficio.
  */
-function ramas(g: Grafo, pertenencia?: Pertenencia): Fila[] {
+function ramas(g: Grafo, modo: ModoNombre, pertenencia?: Pertenencia): Fila[] {
   if (!pertenencia) return [{ clave: "Rama", valor: "— no consta", falta: true }];
   const lista = enumerar(pertenencia.ramas);
-  const quien = pertenencia.porMatrimonio && g.personaPorId.get(pertenencia.porMatrimonio)?.nombre;
+  const trajo = pertenencia.porMatrimonio ? g.personaPorId.get(pertenencia.porMatrimonio) : undefined;
+  const quien = trajo && comoSeLlama(trajo, modo);
   return [
     {
       clave: pertenencia.ramas.length > 1 ? "Ramas" : "Rama",

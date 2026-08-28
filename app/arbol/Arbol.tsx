@@ -625,6 +625,9 @@ export default function Arbol({
     if (gente.some((p) => !dentro.has(p))) setOcultarNoConectados(false);
     abrirRamas(unionesHasta(grafo, puntoDeVista, gente));
     setParada("personas");
+    // Y suelta lo señalado: el lienzo solo sabe encender una cosa a la vez, y lo que se acaba
+    // de pedir es mirar a esta gente. Con la fracción puesta, el que llega nace atenuado.
+    setMarcados(null);
     // El panel de búsqueda se esconde —no se borra—: aquí sí es el caso de que no caben los
     // dos, que se ha pedido mirar el lienzo y él tapa media pantalla.
     setBusquedaAbierta(false);
@@ -637,7 +640,6 @@ export default function Arbol({
    */
   function verCaminoEnElArbol(id: string, gente: string[]) {
     traerAlLienzo(gente);
-    setMarcados(null); // el camino es lo que se va a mirar de cerca, y solo cabe uno
     setHoja({ tipo: "camino", id, recogida: true });
     setAEnfocar(id);
   }
@@ -679,6 +681,7 @@ export default function Arbol({
     setOcultarNoConectados(true);
     setFechas(FECHAS_POR_DEFECTO);
     setApellidos(APELLIDOS_POR_DEFECTO);
+    setNombre(NOMBRE_POR_DEFECTO);
     setRepaso(false);
     setParada("personas");
     setVista(CENTRADA);

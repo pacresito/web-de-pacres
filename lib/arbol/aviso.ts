@@ -88,7 +88,7 @@ function* deLaGente(g: Grafo, hoy: Fecha, mañana: Fecha): Generator<Linea> {
       const colas = onomasticaDe(suNombre) === suSanto ? SANTOS : SANTOS.slice(0, -1);
       const texto = mio
         ? `${FIESTAS[suerte(FIESTAS.length)]} ${MIO_SANTO[añoDe(mañana) % MIO_SANTO.length]}`
-        : `${FIESTAS[suerte(FIESTAS.length)]} ${quien} — ${colas[suerte(colas.length)](suNombre, persona.sexo === "m")}`;
+        : `${FIESTAS[suerte(FIESTAS.length)]} ${quien} — ${escapar(colas[suerte(colas.length)](suNombre, persona.sexo === "m"))}`;
       yield { grupo: 2, nombre: mio ? "" : suApodo, texto };
     }
   }
