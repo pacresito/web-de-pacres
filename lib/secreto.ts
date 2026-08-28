@@ -1,5 +1,5 @@
 // Comparación de secretos en tiempo constante. Único sitio donde se compara una clave
-// con la de su variable de entorno: farma, árbol, registros y guestbook pasan por aquí.
+// con la de su variable de entorno: todas pasan por aquí, sin excepción.
 import { timingSafeEqual } from "crypto";
 
 /** `false` si el secreto no está definido o el input no es una cadena. Longitudes
