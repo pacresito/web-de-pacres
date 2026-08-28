@@ -56,3 +56,6 @@ AGENTS.md
 
 # atlas: geojson y teselas de elevación cacheados para no volver a bajarlos en cada corrida
 /.cache-atlas/
+
+# scripts de un rato: viven aquí porque tsx necesita los alias @/ del repo, y de aquí sí se borran
+/.scratch/
