@@ -81,6 +81,10 @@ function Cajon({
       <button
         type="button"
         onClick={() => onPulsar(fraccion)}
+        // **Sin ninguno puesto se apaga el lienzo entero, y así se queda**: no es que un
+        // conjunto vacío se cuele por ser truthy, es que señalar a nadie tiene que
+        // contestar algo. Apagarlo todo dice «de estos no hay uno solo ahí» de un vistazo,
+        // que es justo lo que se está preguntando al pasar por encima de un «0/39».
         onPointerEnter={() => onResaltar(fraccion.puestos)}
         onPointerLeave={() => onResaltar(null)}
         aria-label={llena ? `Replegar ${fraccion.termino}` : `Traer ${fraccion.termino} al árbol`}
