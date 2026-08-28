@@ -7,6 +7,7 @@ import {
   pascua,
   primerDomingoDeMayo,
   proximaVez,
+  sabadoDeLaVirgenDelMar,
   viernesDeDolores,
 } from "./santoral";
 
@@ -37,6 +38,20 @@ for (const año of [2026, 2027, 2028, 2029, 2030, 2031, 2032]) {
   assert.ok(dia >= 1 && dia <= 7, `${año}: el día de la madre se ha ido al ${dia} de mayo`);
   assert.strictEqual(new Date(Date.UTC(año, 4, dia)).getUTCDay(), 0, `${año}: no cae en domingo`);
 }
+
+// El Mar es la patrona de Almería: el sábado anterior al último domingo de agosto, y de
+// verdad sábado. Los años en que agosto acaba en sábado no es el último, que es el error
+// que canta —2024 y 2030 son de esos—.
+assert.strictEqual(sabadoDeLaVirgenDelMar(2026), "08-29");
+assert.strictEqual(sabadoDeLaVirgenDelMar(2024), "08-24", "el último sábado de 2024 fue el 31");
+assert.strictEqual(sabadoDeLaVirgenDelMar(2030), "08-24");
+for (const año of [2026, 2027, 2028, 2029, 2030, 2031, 2032]) {
+  const dia = Number(sabadoDeLaVirgenDelMar(año).slice(3));
+  assert.strictEqual(new Date(Date.UTC(año, 7, dia)).getUTCDay(), 6, `${año}: no cae en sábado`);
+  assert.ok(dia + 8 > 31, `${año}: el domingo de después no es el último de agosto`);
+}
+// Y las María del Mar celebran con ella, que el «María» de delante se cae como siempre.
+assert.strictEqual(onomasticaDe("Mar"), onomasticaDe("María del Mar"));
 
 assert.strictEqual(normalizar("  Ángel   María "), "angel maria");
 
@@ -78,7 +93,7 @@ assert.strictEqual((onomasticaDe("Lola") as (a: number) => string)(2026), "03-27
 assert.strictEqual(onomasticaDe("Lola"), onomasticaDe("María Dolores"));
 
 // Ninguna fecha inventada: todas son un día que existe en el calendario.
-for (const nombre of ["Pilar", "Lucas", "Flora", "Ricardo", "Mercedes", "Montse", "Lola"]) {
+for (const nombre of ["Pilar", "Lucas", "Flora", "Ricardo", "Mercedes", "Montse", "Lola", "Mar"]) {
   const dia = onomasticaDe(nombre)!;
   const fijo = typeof dia === "function" ? dia(2026) : dia;
   assert.match(fijo, /^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/, `${nombre}: ${fijo}`);

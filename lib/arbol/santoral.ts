@@ -171,16 +171,27 @@ export const primerDomingoDeMayo = (año: number): string =>
   `05-${String(1 + ((7 - new Date(Date.UTC(año, 4, 1)).getUTCDay()) % 7)).padStart(2, "0")}`;
 
 /**
- * Las onomásticas que no caen el mismo día cada año porque cuelgan de la Semana Santa.
- * Son las que la familia celebra de verdad: **Lola es del Viernes de Dolores**, no del 15
- * de septiembre en que la liturgia pone a la Virgen de los Dolores, y **el Rocío es del
- * domingo de Pentecostés**, no del lunes de la romería. Cambiar de una a otra es cambiar
- * esta línea. Fuera se quedan las que ni con esto tienen fecha: la Macarena y los
- * Desamparados dependen de la ciudad, no del calendario.
+ * La Virgen del Mar, patrona de Almería: el sábado anterior al último domingo de agosto,
+ * con el que cierra su feria. **No es «el último sábado de agosto»**, que es lo que
+ * parece seis años de cada siete y deja de serlo cuando agosto acaba en sábado: en 2024
+ * la fiesta cayó el 24 y el último sábado fue el 31. Sale siempre entre el 24 y el 30.
+ */
+export const sabadoDeLaVirgenDelMar = (año: number): string =>
+  `08-${30 - new Date(Date.UTC(año, 7, 31)).getUTCDay()}`;
+
+/**
+ * Las onomásticas que no caen el mismo día cada año. Son las que la familia celebra de
+ * verdad: **Lola es del Viernes de Dolores**, no del 15 de septiembre en que la liturgia
+ * pone a la Virgen de los Dolores; **el Rocío es del domingo de Pentecostés**, no del
+ * lunes de la romería; y **el Mar es la de Almería**, que es de donde viene el nombre en
+ * esta casa. Cambiar de una a otra es cambiar esta línea. Fuera se quedan las que ni con
+ * esto tienen fecha: la Macarena y los Desamparados dependen de la ciudad, y aquí no hay
+ * ninguna que los reclame.
  */
 const MOVILES: [DiaDelAño, string[]][] = [
   [viernesDeDolores, ["dolores"]],
   [domingoDePentecostes, ["rocio"]],
+  [sabadoDeLaVirgenDelMar, ["mar"]],
 ];
 
 /**
