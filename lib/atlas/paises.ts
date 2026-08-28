@@ -20,7 +20,7 @@
 // **Manda la forma local** —la ortografía oficial del país o su romanización oficial: Beijing,
 // Kyiv, Muqdisho, Toshkent, Nay Pyi Taw, Riyād—, no la convención inglesa, que no es la
 // forma nativa de nadie. Se queda la castellana cuando **es la que se usa de verdad** (París,
-// Roma, El Cairo, Damasco, Trípoli, Argelia, Costa de Marfil, Uagadugú, La Valeta) y cuando el
+// Roma, El Cairo, Damasco, Trípoli, Argelia, Costa de Marfil, Uagadugú, Katmandú) y cuando el
 // cambio no acercaría al nombre local, solo lo traduciría al inglés (San Vicente y las
 // Granadinas, Ciudad de Kuwait). **El artículo árabe no viaja** —Riyād y Khartūm, no Ar-Riyād ni
 // Al-Khartūm—, que en español no se pronuncia y ordena media docena de capitales por la A.
@@ -37,7 +37,7 @@
 // **`capitalCastellana` es la pista, no una segunda respuesta.** Se glosa entre paréntesis y en
 // pequeño por tres motivos: la letra que **suena distinto** —la j que es /y/ (Jakarta, Juba,
 // Abuja, Ljubljana, Skopje) y la kh que es jota (Kharṭūm)—, el **acento que caería en otra
-// sílaba** al leerla con las reglas del español (Yerevan, Dushanbe, Kathmandu) y el nombre que
+// sílaba** al leerla con las reglas del español (Yerevan, Dushanbe, Nay Pyi Taw) y el nombre que
 // **no se reconocería sin ayuda** (Kyiv, Muqdisho, Nawākshūṭ). La que se lee y se reconoce sola
 // no la lleva: Bayrūt, Tbilisi, Riyāḍ. Y donde la forma local **es** la castellana tampoco, que
 // ahí no diría nada: Yibuti, Túnez.
@@ -202,7 +202,7 @@ export const PAISES: Pais[] = [
   { id: "mc", nombre: "Mónaco",                          oficial: "Principado de Mónaco",                            capital: "Mónaco",                    continente: "Europa",            subregion: "Europa Occidental",         km2:       2.08 },
   { id: "na", nombre: "Namibia",                         oficial: "República de Namibia",                            capital: "Windhoek",                  continente: "África",            subregion: "África Austral",            km2:    825_615 },
   { id: "nr", nombre: "Nauru",                           oficial: "República de Nauru",                              capital: "Yaren",                     continente: "Oceanía",           subregion: "Micronesia",                km2:         21 },
-  { id: "np", nombre: "Nepal",                           oficial: "República Federal Democrática de Nepal",          capital: "Kathmandu",                 continente: "Asia",              subregion: "Asia del Sur",              km2:    147_181, capitalCastellana: "Katmandú" },
+  { id: "np", nombre: "Nepal",                           oficial: "República Federal Democrática de Nepal",          capital: "Katmandú",                  continente: "Asia",              subregion: "Asia del Sur",              km2:    147_181 },
   { id: "ni", nombre: "Nicaragua",                       oficial: "República de Nicaragua",                          capital: "Managua",                   continente: "América del Norte", subregion: "Centroamérica",             km2:    120_340 },
   { id: "ng", nombre: "Nigeria",                         oficial: "República Federal de Nigeria",                    capital: "Abuja",                     continente: "África",            subregion: "África Occidental",         km2:    923_768, capitalCastellana: "Abuya" },
   { id: "no", nombre: "Noruega",                         oficial: "Reino de Noruega",                                capital: "Oslo",                      continente: "Europa",            subregion: "Europa del Norte",          km2:    385_207 },
