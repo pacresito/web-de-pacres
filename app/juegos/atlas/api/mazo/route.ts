@@ -18,11 +18,6 @@ async function leer(): Promise<Mazo> {
   return guardado ? (JSON.parse(guardado) as Mazo) : {};
 }
 
-export async function GET(): Promise<Response> {
-  if (!(await conSesion())) return new Response("No autorizado", { status: 401 });
-  return Response.json({ mazo: await leer() });
-}
-
 export async function POST(request: Request): Promise<Response> {
   if (!(await conSesion())) return new Response("No autorizado", { status: 401 });
 

@@ -7,6 +7,7 @@ import { FORMAS } from "@/data/atlas/formas";
 import { DATOS, NOTAS, type Dato, type Nota } from "@/lib/atlas/srs";
 import { calificarTarjeta, sinVista, suscribir, vistaActual, type Vista } from "@/lib/atlas/almacen";
 import { desviar } from "@/lib/atlas/globo";
+import { rutaDeLaBandera } from "@/lib/atlas/imagenes";
 
 // Lo que se lee en la tarjeta. `lugar` se rotula «ubicación»: el identificador no lleva tilde.
 const ETIQUETA: Record<Dato, string> = { nombre: "país", capital: "capital", bandera: "bandera", lugar: "ubicación" };
@@ -27,12 +28,12 @@ const DESVIO_KM = 2000;
 
 /**
  * Cuatro casillas de alto fijo, siempre las mismas: se aprende dónde mira cada una y la tarjeta
- * no se reordena bajo el pulgar. Un hueco pesa algo más que el dato que tapa, que ahí es donde
- * está la pregunta.
+ * no se reordena bajo el pulgar.
  */
-const ALTO: Record<Dato, [visible: number, tapado: number]> = {
-  nombre: [60, 60], capital: [52, 52], bandera: [104, 104], lugar: [150, 168],
-};
+const ALTO: Record<Dato, number> = { nombre: 60, capital: 52, bandera: 104, lugar: 150 };
+// Taparse solo le cambia el alto a la ubicación: su hueco pesa algo más que las dos figuras que
+// tapa, que ahí es donde está la pregunta. Los otros tres miden lo mismo puestos que quitados.
+const ALTO_TAPADO: Record<Dato, number> = { ...ALTO, lugar: 168 };
 // La primera vez se ve todo y se califica todo: cuatro filas con botones no caben tan holgadas.
 const ALTO_PRIMERA: Record<Dato, number> = { nombre: 58, capital: 48, bandera: 100, lugar: 140 };
 
@@ -77,38 +78,23 @@ function Tapado({ dato, alto, alTocar }: { dato: Dato; alto: number; alTocar?: (
 export default function Repasar() {
   const vista = useSyncExternalStore(suscribir, vistaActual, sinVista);
   if (!vista?.tarjeta) return null;
-  return <Tarjeta vista={vista} />;
+  // `key`: cada tarjeta es un montaje nuevo, y por eso aquí no hay nada que reiniciar al pasar de
+  // una a la siguiente. Es también lo que vuelve a disparar la animación de entrada.
+  return <Tarjeta key={vista.n} tarjeta={vista.tarjeta} estrenando={vista.estrenando} />;
 }
 
-function Tarjeta({ vista }: { vista: Vista }) {
-  const [vistaPintada, setVistaPintada] = useState<Vista | null>(null);
-  const [centro, setCentro] = useState<[number, number]>([0, 0]);
+function Tarjeta({ tarjeta, estrenando }: { tarjeta: NonNullable<Vista["tarjeta"]>; estrenando: boolean }) {
+  // El desvío se sortea al montar la tarjeta y no al pintarla: el globo pequeño y el grande son
+  // el mismo, y volver a entrar a marcar no puede mover el mundo bajo la marca ya puesta.
+  const [centro] = useState<[number, number]>(
+    () => desviar(FORMAS[tarjeta.pais.id].lon, FORMAS[tarjeta.pais.id].lat, DESVIO_KM));
   const [abierta, setAbierta] = useState(false);
   const [lupa, setLupa] = useState<"mirar" | "marcar" | null>(null);
   const [marca, setMarca] = useState<string | null>(null);
   const [notas, setNotas] = useState<Partial<Record<Dato, Nota>>>({});
   const [saliendo, setSaliendo] = useState(false);
-  const [pase, setPase] = useState(0);
   const pendiente = useRef<(() => void) | null>(null);
   const [ultimoActivo, setUltimoActivo] = useState<Dato | undefined>(undefined);
-
-  // Al avanzar de tarjeta se reinicia lo que es de esta: si no, la siguiente aparecería
-  // destapada y con los botones ya pulsados. El contador la remonta, que es lo que vuelve a
-  // disparar la animación de entrada — la clave no puede ser el país, que puede repetirse.
-  if (vista !== vistaPintada) {
-    setVistaPintada(vista);
-    setAbierta(false);
-    setLupa(null);
-    setMarca(null);
-    // El desvío se sortea al montar la tarjeta y no al pintarla: el globo pequeño y el grande son
-    // el mismo, y volver a entrar a marcar no puede mover el mundo bajo la marca ya puesta.
-    setCentro(desviar(FORMAS[vista.tarjeta!.pais.id].lon, FORMAS[vista.tarjeta!.pais.id].lat, DESVIO_KM));
-    setNotas({});
-    setPase((n) => n + 1);
-  }
-
-  const tarjeta = vista.tarjeta!;
-  const estrenando = vista.estrenando;
 
   const { pais, tapados, primeraVez } = tarjeta;
   const forma = FORMAS[pais.id];
@@ -215,7 +201,7 @@ function Tarjeta({ vista }: { vista: Vista }) {
    */
   const fila = (dato: Dato, contenido: React.ReactNode, alTocarHueco?: () => void) => {
     const puesta = notas[dato];
-    const alto = primeraVez ? ALTO_PRIMERA[dato] : ALTO[dato][visible(dato) ? 0 : 1];
+    const alto = primeraVez ? ALTO_PRIMERA[dato] : (visible(dato) ? ALTO : ALTO_TAPADO)[dato];
     const carril = puesta ? CARRIL.hecho
       : dato === activo ? CARRIL.activo
       : calificando && aCalificar.includes(dato) ? CARRIL.espera
@@ -256,7 +242,7 @@ function Tarjeta({ vista }: { vista: Vista }) {
     <div onClick={() => !primeraVez && setAbierta(true)}
          className="atlas-cuerpo"
          style={{ cursor: !primeraVez && !abierta ? "pointer" : "default" }}>
-      <div key={pase} className="atlas-datos" onAnimationEnd={finSalida}
+      <div className="atlas-datos" onAnimationEnd={finSalida}
            style={{ gap: primeraVez ? 20 : calificando ? 22 : 24, paddingLeft: "var(--a-lado)", paddingRight: "var(--a-lado)" }}>
         {estrenando && (
           /* La ayuda usa el mismo carril verde que después marca el dato activo: enseña el
@@ -294,7 +280,7 @@ function Tarjeta({ vista }: { vista: Vista }) {
         {fila("bandera",
           <div style={{ display: "flex", justifyContent: "center" }}>
             {/* eslint-disable-next-line @next/next/no-img-element -- SVG suelto de /public, sin optimización que aportar */}
-            <img key={pais.id} src={`/atlas/banderas/${pais.id}.svg`} alt={`Bandera de ${pais.nombre}`}
+            <img key={pais.id} src={rutaDeLaBandera(pais.id)} alt={`Bandera de ${pais.nombre}`}
                  style={{ width: 144, height: 96, objectFit: "contain", display: "block", opacity: notas.bandera ? 0.55 : 1 }} />
           </div>)}
 

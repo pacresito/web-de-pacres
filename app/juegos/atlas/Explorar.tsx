@@ -8,7 +8,7 @@ import { FORMAS } from "@/data/atlas/formas";
 import { PAIS_POR_ID } from "@/lib/atlas/paises";
 import { dominio, dominioPais, type Dato, type Dominio } from "@/lib/atlas/srs";
 import { mazoActual, sinMazo, suscribir } from "@/lib/atlas/almacen";
-import { rutaDelRelieve } from "@/lib/atlas/silueta";
+import { rutaDeLaBandera, rutaDelRelieve } from "@/lib/atlas/imagenes";
 import { escalaDelNombre, km2 } from "@/lib/atlas/ficha";
 import { useTema } from "@/app/components/usePersistedTheme";
 
@@ -70,7 +70,7 @@ const I_EMPEZADOS = ORDEN.length;
  */
 function imagenes(id: string, tema: string | null) {
   const relieve = rutaDelRelieve(id, tema);
-  return [`/atlas/banderas/${id}.svg`, ...(relieve ? [relieve] : [])];
+  return [rutaDeLaBandera(id), ...(relieve ? [relieve] : [])];
 }
 
 /**
@@ -269,7 +269,7 @@ export default function Explorar({ abrirEnEmpezados = false }: { abrirEnEmpezado
 
           {fila("bandera",
             // eslint-disable-next-line @next/next/no-img-element -- SVG suelto de /public, sin optimización que aportar
-            <img key={id} src={`/atlas/banderas/${id}.svg`} alt={`Bandera de ${pais.nombre}`}
+            <img key={id} src={rutaDeLaBandera(id)} alt={`Bandera de ${pais.nombre}`}
                  // Ancho por el alto, no una caja fija: la marca va pegada a la bandera, y con
                  // caja se queda flotando a la derecha de las que son estrechas.
                  style={{ height: "var(--a-bandera)", width: "auto", maxWidth: 200, display: "block" }} />)}

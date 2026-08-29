@@ -25,6 +25,13 @@ export type Vista = {
   tarjeta: Tarjeta | null;
   /** El mazo vacío es la primerísima vez: se enseña cómo va esto y no vuelve a aparecer. */
   estrenando: boolean;
+  /**
+   * Cuántas tarjetas van servidas. Es la `key` con la que React monta la tarjeta, y montar una
+   * nueva es lo que reinicia lo que era de la anterior —destapada, marcada, calificada a medias—:
+   * sin ella habría que reponer a mano cada estado, y el que se olvidara llegaría puesto a la
+   * siguiente. La clave no puede ser el país, que puede repetirse.
+   */
+  n: number;
 };
 
 let mazo: Mazo | null = null;
@@ -73,10 +80,12 @@ function guardar() {
   } catch {}
 }
 
+let servidas = 0;
+
 function avanzar(m: Mazo): Vista {
   const ahora = Date.now();
   const pais = siguiente(m, RECORRIDO, ahora);
-  return { tarjeta: pais ? montar(m, pais, ahora) : null, estrenando: Object.keys(m).length === 0 };
+  return { tarjeta: pais ? montar(m, pais, ahora) : null, estrenando: Object.keys(m).length === 0, n: ++servidas };
 }
 
 export function suscribir(avisar: () => void) {

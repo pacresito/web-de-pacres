@@ -2,7 +2,8 @@
 
 import { type Forma } from "@/data/atlas/formas";
 import { useTema } from "@/app/components/usePersistedTheme";
-import { marcoDeTinta, rutaDelRelieve } from "@/lib/atlas/silueta";
+import { rutaDelRelieve } from "@/lib/atlas/imagenes";
+import { marcoDeTinta } from "@/lib/atlas/silueta";
 
 /** Media diagonal del rombo de la capital, en unidades del lienzo de 1000. */
 const CAPITAL = 20;

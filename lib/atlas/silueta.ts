@@ -8,8 +8,6 @@
 //
 // Lógica pura: se verifica con `npx tsx lib/atlas/silueta.test.ts`.
 
-import { CON_RELIEVE } from "@/data/atlas/relieve";
-
 /**
  * El viewBox que ciñe el dibujo a lo ancho conservando el alto. **En vertical no se recorta**: la
  * escala la manda el lado largo del lienzo, así que ceñir también arriba y abajo agrandaría las
@@ -26,15 +24,4 @@ export function marcoDeTinta(d: string): string {
     if (x > max) max = x;
   }
   return min > max ? "0 0 1000 1000" : `${min.toFixed(1)} 0 ${(max - min).toFixed(1)} 1000`;
-}
-
-/**
- * La ruta del relieve de un país, o null si no tiene —o si todavía no se sabe el tema, que en el
- * primer render del cliente no está—. Una sola cuenta para quien lo pinta y para quien lo
- * precarga: dos plantillas de la misma ruta se desajustan el día que cambie el nombre del
- * archivo, y el síntoma sería una precarga que no acierta nunca y un 404 que nadie mira.
- */
-export function rutaDelRelieve(id: string, tema: string | null): string | null {
-  if (!tema || !CON_RELIEVE.has(id)) return null;
-  return `/atlas/relieve/${id}-${tema === "dark" ? "oscuro" : "claro"}.webp`;
 }

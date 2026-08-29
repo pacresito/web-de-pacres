@@ -11,7 +11,7 @@
 import { ACIERTOS_APRENDIDO, DATOS, type Mazo } from "./srs";
 import { RECORRIDO } from "@/data/atlas/orden";
 
-export const PERFILES = ["vacio", "facil", "medio", "dominado", "mezcla"] as const;
+const PERFILES = ["vacio", "facil", "medio", "dominado", "mezcla"] as const;
 export type Perfil = (typeof PERFILES)[number];
 
 export const esPerfil = (v: string | null): v is Perfil => !!v && (PERFILES as readonly string[]).includes(v);

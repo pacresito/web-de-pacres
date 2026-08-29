@@ -34,7 +34,7 @@ export const ACIERTOS_APRENDIDO = 5;
 // para separar lo que se está aprendiendo de lo que ya se sabe—. Los dos listones dicen cosas
 // distintas a propósito: aprendido lo firma el trabajo hecho, dominado lo firma el calendario, y
 // el calendario no se puede hacer más deprisa.
-export const VIDA_DOMINADO = 21;
+const VIDA_DOMINADO = 21;
 
 // Vidas de arranque, para la primera vez: ahí no hay `transcurrido` del que tirar.
 const VIDA_INICIAL: Record<Nota, number> = { fallo: 0.01, bien: 1, facil: 4 };
@@ -54,11 +54,6 @@ export function nuevosAciertos(estado: Estado | undefined, nota: Nota): number {
   if (nota === "fallo") return Math.max(0, racha(estado) - CASTIGO);
   return Math.min(racha(estado) + SUMA[nota], ACIERTOS_APRENDIDO);
 }
-
-/** Cuántos aciertos hacen falta para aguantar `vida` días, subiendo la escalera 1, 2, 4, 8… Es
- *  con lo que `sembrar` rellena el contador: un mazo inventado tiene vidas pero no historia. */
-export const aciertosDe = (vida: number) =>
-  Math.max(0, Math.min(ACIERTOS_APRENDIDO, Math.round(Math.log2(vida)) + 1));
 
 /**
  * La vida nueva de un dato tras calificarlo. **Solo el tiempo transcurrido suma.**
