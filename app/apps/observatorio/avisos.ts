@@ -2,12 +2,12 @@
 // Lógica pura, sin red ni secretos — se verifica con `npx tsx avisos.test.ts`.
 //
 // Solo pasos de satélite y salida de Luna: los planetas están horas en el cielo y no admiten
-// un «en veinte minutos».
+// un aviso para salir a mirar ahora.
 
 import { rumbo, type Cielo, type EventoLuna, type EventoSatelite } from "./engine";
 import { partesLocales } from "./marco";
 
-export const AVISO_MINUTOS = 20;
+export const AVISO_MINUTOS = 1;
 
 const SITIO = "https://pacr.es";
 const PIE = `\n${SITIO}/apps/observatorio`;
@@ -32,7 +32,7 @@ function dePaso(paso: EventoSatelite): Aviso {
     sale: paso.visibleDesde - AVISO_MINUTOS * 60_000,
     id: `${paso.nombre.toLowerCase()}-${paso.visibleDesde}`,
     texto:
-      `🛰 <b>${paso.nombre}</b> en ${AVISO_MINUTOS} min — ${hora}, magnitud ${numero(paso.magnitud)}, ` +
+      `🛰 <b>${paso.nombre}</b> — ${hora}, magnitud ${numero(paso.magnitud)}, ` +
       `hasta ${Math.round(paso.altitud)}° sobre el horizonte.${porDonde}${PIE}`,
   };
 }
@@ -42,7 +42,7 @@ function deLuna(luna: EventoLuna): Aviso {
     sale: luna.instante - AVISO_MINUTOS * 60_000,
     id: `luna-${luna.instante}`,
     texto:
-      `🌙 <b>Sale la Luna</b> en ${AVISO_MINUTOS} min — ${luna.hora} por el ${luna.desde}, ` +
+      `🌙 <b>Sale la Luna</b> — ${luna.hora} por el ${luna.desde}, ` +
       `${Math.round(luna.iluminacion * 100)}% iluminada.${PIE}`,
   };
 }

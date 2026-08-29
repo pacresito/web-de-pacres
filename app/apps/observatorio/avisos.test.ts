@@ -37,7 +37,7 @@ const avisos = avisosDeLaNoche(c, AHORA.getTime());
     !avisos.some((a) => c.proximos.some((p) => a.id.endsWith(String(p.visibleDesde)))));
 }
 
-// 2. El reloj: 20 minutos antes de que el objeto empiece a verse, no del tramo reportable
+// 2. El reloj: el aviso sale justo antes de que el objeto empiece a verse, no del tramo reportable
 {
   for (const paso of c.pasos) {
     const aviso = avisos.find((a) => a.id === `${paso.nombre.toLowerCase()}-${paso.visibleDesde}`);
@@ -95,8 +95,10 @@ const avisos = avisosDeLaNoche(c, AHORA.getTime());
 {
   check("todos llevan el enlace al observatorio",
     avisos.every((a) => a.texto.includes("https://pacr.es/apps/observatorio")));
-  check("todos dicen en cuántos minutos",
-    avisos.every((a) => a.texto.includes(`en ${AVISO_MINUTOS} min`)));
+  // El aviso llega con el evento encima: el mensaje da la hora, nunca un plazo que se queda viejo
+  // en la bandeja.
+  check("ninguno anuncia un plazo en minutos",
+    avisos.every((a) => !/\ben \d+ min\b/.test(a.texto)));
   // Telegram corta la notificación mucho antes, pero el mensaje entero debe caber de un vistazo.
   check("ninguno pasa de 200 caracteres",
     avisos.every((a) => a.texto.length <= 200), `máx ${Math.max(0, ...avisos.map((a) => a.texto.length))}`);
