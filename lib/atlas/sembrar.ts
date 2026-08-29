@@ -8,7 +8,7 @@
 //
 // Son relojes inventados, y el algoritmo los corrige solo: un dato que se falla cae a 0,01 días
 // y vuelve en la misma sesión, así que en dos sesiones el mazo se parece a lo que se sabe.
-import { DATOS, type Mazo } from "./srs";
+import { ACIERTOS_APRENDIDO, DATOS, type Mazo } from "./srs";
 import { RECORRIDO } from "@/data/atlas/orden";
 
 export const PERFILES = ["vacio", "facil", "medio", "dominado", "mezcla"] as const;
@@ -64,16 +64,24 @@ export function sembrar(perfil: Perfil, ahora: number, semilla = ""): Mazo {
       const r = revuelto(id, d);
       // "facil" deja todo por asentar —países ya vistos, un hueco por tarjeta—; "medio" asienta
       // la mitad, que es donde la regla de huecos decide; "dominado" los cuatro.
+      //
+      // **En "medio" hay tres bandas y no dos**, porque los dos listones son independientes y su
+      // cruce es lo que no se puede ver esperando: un dato acertado cinco veces esta misma tarde
+      // está aprendido y **no** dominado, y ese verde a media asta no existiría en ningún mazo de
+      // salida si el contador se llenara solo cuando la vida ya pasa de tres semanas. Por lo mismo
+      // el contador no se deduce de la vida: diecisiete días de "facil" no son un país aprendido,
+      // son uno que se acaba de ver.
+      const sabido = estado === "dominado" || (estado === "medio" && r >= 0.4);
       const vida = estado === "dominado" ? 40 + r * 200
         : estado === "facil" ? 2 + r * 15
-        : r < 0.5 ? 2 + r * 10 : 30 + r * 60;
+        : r < 0.6 ? 2 + r * 10 : 30 + r * 60;
       // Cuándo se vio, en fracciones de su propia vida: la mitad del mazo llega vencida y la
       // otra mitad no. Con todo a medio camino no habría nada que repasar y la cola se pondría
       // a meter países nuevos —treinta seguidos, hasta el tope del freno—, que es justo por lo
       // que existe un mazo de salida. Sorteo aparte del de la vida: si no, el que más aguanta
       // sería siempre el más vencido.
       const cuando = revuelto(id, d, "cuando") * 2;
-      mazo[id]![d] = { vida, visto: ahora - cuando * vida * DIA };
+      mazo[id]![d] = { vida, visto: ahora - cuando * vida * DIA, aciertos: sabido ? ACIERTOS_APRENDIDO : 2 };
     }
   });
   return mazo;

@@ -254,6 +254,10 @@
   --a-wash:   color-mix(in oklab, var(--t-accent) 5%, var(--t-paper));
   --a-wash2:  color-mix(in oklab, var(--t-accent) 9%, var(--t-paper));
   --a-hecho:  color-mix(in oklab, var(--t-accent) 45%, var(--t-paper));
+  /* El verde a media asta de la marca de explorar: aprendido pero todavía no dominado. Va más
+     cargado que `--a-hecho` porque compite con el gris del punto de al lado, no con el papel: a
+     nueve píxeles, dos tonos de la misma luminosidad son el mismo tono. */
+  --a-medio:  color-mix(in oklab, var(--t-accent) 62%, var(--t-paper));
   --a-acc-tx: var(--t-accent2);
   /* Lo único que cambia de móvil a escritorio, en un sitio: el resto del dibujo va en el style
      de cada pieza, como en el resto del sitio. */
@@ -265,6 +269,7 @@
   --a-wash:   color-mix(in oklab, var(--t-accent) 12%, var(--t-paper));
   --a-wash2:  color-mix(in oklab, var(--t-accent) 18%, var(--t-paper));
   --a-hecho:  color-mix(in oklab, var(--t-accent) 40%, var(--t-paper));
+  --a-medio:  color-mix(in oklab, var(--t-accent) 60%, var(--t-paper));
   --a-acc-tx: var(--t-accent);
 }
 @media (min-width: 768px) {

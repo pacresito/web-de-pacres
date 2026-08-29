@@ -15,15 +15,21 @@ import { useTema } from "@/app/components/usePersistedTheme";
 const TINTA: Record<Dominio, string> = {
   "sin ver": "transparent",
   empezado: "var(--t-ink4)",
-  aprendido: "var(--t-accent)",
+  aprendido: "var(--a-medio)",
+  dominado: "var(--t-accent)",
 };
 
 /**
- * La marca de dominio de un dato: aro vacío, punto gris, punto verde. No es una nota ni una
- * puntuación —es la vida de ese reloj, mirada sin tocarla—, y va pegada a su dato: agregada por
- * continente sería un porcentaje, que es justo el número que hace abandonar.
+ * La marca de dominio de un dato: aro vacío, punto gris, punto verde apagado, punto verde. No es
+ * una nota ni una puntuación —son sus dos relojes, mirados sin tocarlos—, y va pegada a su dato:
+ * agregada por continente sería un porcentaje, que es justo el número que hace abandonar.
  *
- * Sin leyenda: son tres estados y se aprenden una vez. Lo que se mira cuarenta veces no puede
+ * **Los dos verdes son el mismo verde a dos intensidades** y no dos colores, porque no son dos
+ * cosas: aprendido es dominado a medias. El apagado lo firma el trabajo hecho —cinco aciertos— y
+ * el pleno lo firma además el calendario, que no se puede acelerar; y como el segundo solo llega
+ * pasando por el primero, la marca se llena en vez de cambiar de idea.
+ *
+ * Sin leyenda: son cuatro estados y se aprenden una vez. Lo que se mira cuarenta veces no puede
  * llevar al lado la explicación de lo que es. El nombre queda en el `title`, por si acaso.
  */
 function Marca({ estado, arriba = 0 }: { estado: Dominio; arriba?: number }) {

@@ -1,7 +1,7 @@
 // Test de lógica pura: `npx tsx lib/atlas/sembrar.test.ts`. Fuera del build.
 import assert from "assert";
 import { esPerfil, sembrar, sorteo, SEMBRADOS } from "./sembrar";
-import { huecos, montar, siguiente, VIDA_APRENDIDO } from "./srs";
+import { dominio, huecos, montar, siguiente } from "./srs";
 import { PAISES } from "./paises";
 import { RECORRIDO } from "@/data/atlas/orden";
 
@@ -29,14 +29,20 @@ assert.equal(Object.keys(dom).length, Math.min(SEMBRADOS, PAISES.length));
 
 // "dominado" da tarjetas de tres huecos, que es lo que no se puede ver esperando.
 assert.ok(Object.keys(dom).every((id) => huecos(dom, id) === 3));
-assert.ok(Object.values(dom).every((e) => Object.values(e!).every((s) => s!.vida > VIDA_APRENDIDO)));
+assert.ok(Object.values(dom).every((e) => Object.values(e!).every((s) => dominio(s) === "dominado")));
 
 // "facil" son países ya vistos con nada aprendido: un hueco por tarjeta y ningún examen.
 const fac = sembrar("facil", AHORA);
 assert.ok(Object.keys(fac).every((id) => huecos(fac, id) === 1));
-assert.ok(Object.values(fac).every((e) => Object.values(e!).every((s) => s!.vida <= VIDA_APRENDIDO)));
+assert.ok(Object.values(fac).every((e) => Object.values(e!).every((s) => dominio(s) === "empezado")));
 // Y ya vistos: la primera vez enseña los cuatro datos y no sería más fácil, sería otra cosa.
 assert.ok(PAISES.filter((p) => fac[p.id]).every((p) => !montar(fac, p, AHORA).primeraVez));
+
+// "medio" tiene que dar las tres marcas de un dato visto —empezado, aprendido y dominado—: el
+// cruce de los dos listones es justo lo que no se puede ver esperando, que es para lo que existe.
+const med = sembrar("medio", AHORA);
+const marcas = new Set(Object.values(med).flatMap((e) => Object.values(e!).map((s) => dominio(s))));
+assert.deepStrictEqual([...marcas].sort(), ["aprendido", "dominado", "empezado"]);
 
 // Y "mezcla" reparte los tres estados, para verlos de un tirón.
 const mez = sembrar("mezcla", AHORA);
