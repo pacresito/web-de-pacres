@@ -1,5 +1,7 @@
-// Quién celebra algo en los próximos días, visto desde el punto de vista: los cumpleaños,
-// las onomásticas y los dos días que la familia se felicita entera, de los que viven.
+// Quién celebra algo en los próximos días, de los que viven: los cumpleaños, las onomásticas
+// y los dos días que la familia se felicita entera. Responde dos preguntas distintas y por eso
+// tiene dos entradas: **el panel dice a quién felicitas tú** y se mueve con el punto de vista;
+// **la guirnalda del nodo dice de quién es el día** y no depende de nadie.
 // Puro: `npx tsx lib/arbol/celebraciones.test.ts`.
 
 import { añoDe, conDia, seLeSuponeFallecido, type Fecha } from "./fechas";
@@ -238,3 +240,43 @@ export const anuncio = ({ tipo }: Celebracion): string =>
     : tipo === "onomástica"
       ? "🎉 Es el día de tu nombre"
       : `🎉 Es el ${tipo}`;
+
+/**
+ * Lo que un nodo celebra, que es lo que enciende su guirnalda. **El cumpleaños llega un día
+ * antes** —felicitar a tiempo se prepara la víspera, que es para lo que sirve verlo— y la
+ * onomástica no: es un día que se felicita el día, y anunciarla la víspera la subía de rango.
+ */
+export type Fiesta =
+  /** `faltan`: 0 es hoy y 1 es mañana. */
+  | { tipo: "cumpleaños"; edad: number; faltan: number }
+  | { tipo: "onomástica" };
+
+/**
+ * Quién enciende su guirnalda, **de todo el árbol y sin punto de vista**: el día de uno es
+ * suyo aunque quien mire no sea nadie suyo, y con el Centro en otra rama media familia
+ * cumplía años a oscuras. Es la otra respuesta que da esta casa: el panel dice a quién
+ * felicitas tú —y por eso se mueve contigo—, y el nodo dice de quién es el día, que no
+ * depende de nadie. Aquí el santo lo lleva todo el mundo por lo mismo.
+ *
+ * **Una por nodo, y gana el cumpleaños**, que es el único que trae tarta. La ventana es de
+ * un día a propósito: la marca vive en el lienzo y no en una lista, y treinta días de
+ * guirnaldas encendidas dejan el árbol hecho una feria.
+ */
+export function fiestasDelArbol(g: Grafo, hoy: Fecha): Map<string, Fiesta> {
+  const salida = new Map<string, Fiesta>();
+  for (const [id, persona] of g.personaPorId) {
+    if (!vive(persona, hoy)) continue;
+
+    const nacimiento = persona.birth;
+    if (nacimiento && conDia(nacimiento)) {
+      const { fecha, faltan } = proximaVez(hoy, nacimiento.slice(5));
+      if (faltan <= 1) {
+        salida.set(id, { tipo: "cumpleaños", edad: añoDe(fecha) - añoDe(nacimiento), faltan });
+        continue;
+      }
+    }
+    const suNombre = onomasticaDePersona(persona);
+    if (suNombre && proximaVez(hoy, suNombre).faltan === 0) salida.set(id, { tipo: "onomástica" });
+  }
+  return salida;
+}

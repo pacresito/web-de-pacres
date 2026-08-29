@@ -1,5 +1,6 @@
 "use client";
 
+import type { Fiesta } from "@/lib/arbol/celebraciones";
 import type { Identidad, Pinta } from "@/lib/arbol/identidad";
 import { loQueFalta, type Huecos } from "@/lib/arbol/incompletos";
 import { ALTO_NODO, ANCHO_NODO, type NodoLayout } from "@/lib/arbol/layout";
@@ -18,16 +19,6 @@ const SANGRADO = 9; // el aire entre el borde del nodo y su texto
  * la altura de las mayúsculas.
  */
 const BASE = { conAños: -3, solo: 4 };
-
-/**
- * Lo que un nodo celebra, que es lo que enciende su guirnalda. **El cumpleaños llega un día
- * antes** —felicitar a tiempo se prepara la víspera, que es para lo que sirve verlo— y la
- * onomástica no: es un día que se felicita el día, y anunciarla la víspera la subía de rango.
- */
-export type Fiesta =
-  /** `faltan`: 0 es hoy y 1 es mañana. */
-  | { tipo: "cumpleaños"; edad: number; faltan: number }
-  | { tipo: "onomástica" };
 
 /** Cada trozo de la primera línea, con la clase y la cursiva que le tocan. */
 const PINTAS: Record<Pinta, { clase: string; cursiva?: boolean }> = {

@@ -3,11 +3,13 @@
 import assert from "assert";
 import { readFileSync } from "fs";
 import { resolve } from "path";
+import { conDia } from "./fechas";
 import {
   anuncio,
   esFelicitacion,
   esTuDia,
   felicitacion,
+  fiestasDelArbol,
   loQueViene,
   proximasCelebraciones,
   VENTANA,
@@ -175,6 +177,36 @@ for (const dirigida of ["progenitor", "generico"] as const) {
   const ajena = { ...suya("día del padre", null, 0, dirigida), esPuntoDeVista: false, id: null, nombre: null } as Celebracion;
   assert.ok(!esTuDia(ajena), `${dirigida} no es tu día`);
   assert.ok(esFelicitacion(ajena), "pero se lee como felicitación, no como fila de agenda");
+}
+
+// La guirnalda del nodo la enciende el día de cada uno, no quien mire: barrido del año
+// entero sobre el árbol completo.
+const deLaLista = new Set(laLista(g).keys());
+let ajenos = 0;
+for (let i = 0; i < 365; i++) {
+  const hoy = new Date(Date.UTC(2026, 0, 1 + i)).toISOString().slice(0, 10);
+  for (const [id, f] of fiestasDelArbol(g, hoy)) {
+    assert.ok(!persona(id).death, `${persona(id).nombre} está muerto y sigue encendido`);
+    if (f.tipo === "cumpleaños") {
+      assert.ok(f.faltan === 0 || f.faltan === 1, `${persona(id).nombre}: la tarta se enciende la víspera, no antes`);
+      assert.ok(f.edad >= 0, `${persona(id).nombre}: edad imposible`);
+    }
+    if (!deLaLista.has(id)) ajenos++;
+  }
+  // Y enciende al menos lo que ya encendía el panel de Pablo: la regla se abrió, no cambió.
+  const fiestas = fiestasDelArbol(g, hoy);
+  for (const c of proximasCelebraciones(g, "p25", hoy)) {
+    const cabe = c.tipo === "cumpleaños" ? c.faltan <= 1 : c.tipo === "onomástica" && c.faltan === 0;
+    if (cabe) assert.ok(fiestas.has(c.id!), `${c.nombre} salía en el panel y se ha quedado a oscuras`);
+  }
+}
+assert.ok(ajenos > 0, "solo se enciende la lista de Pablo: la guirnalda sigue dependiendo del Centro");
+
+// El día que uno cumple manda la tarta, aunque ese mismo día sea el de su nombre.
+for (const [id, p] of g.personaPorId) {
+  if (!p.birth || !conDia(p.birth) || p.birth.slice(5) === "02-29") continue;
+  const suya = fiestasDelArbol(g, `2026-${p.birth.slice(5)}`).get(id);
+  if (suya) assert.strictEqual(suya.tipo, "cumpleaños", `a ${p.nombre} el santo le tapa la tarta`);
 }
 
 console.log("celebraciones: ok");

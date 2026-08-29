@@ -23,7 +23,7 @@ import {
 import { caminoEntre, trazosDelCamino } from "@/lib/arbol/camino";
 import { centroRecordado, recordarCentro } from "@/lib/arbol/enlaces";
 import { conDuda, escribirVida, FECHAS_POR_DEFECTO, type ModoFechas } from "@/lib/arbol/fechas";
-import { proximasCelebraciones } from "@/lib/arbol/celebraciones";
+import { fiestasDelArbol, proximasCelebraciones } from "@/lib/arbol/celebraciones";
 import { construirGrafo, pasosDesde, visibles } from "@/lib/arbol/grafo";
 import { fichaDe } from "@/lib/arbol/ficha";
 import { huecosDe, losIncompletos } from "@/lib/arbol/incompletos";
@@ -64,7 +64,7 @@ import Celebraciones, { AvisoCelebraciones } from "./Celebraciones";
 import Esqueleto from "./Esqueleto";
 import Ficha from "./Ficha";
 import Hoja from "./Hoja";
-import Nodo, { ATENUADO, type Fiesta } from "./Nodo";
+import Nodo, { ATENUADO } from "./Nodo";
 import { ContadorRama, GUION, Manija, MasPareja, TrazoDePareja } from "./Piezas";
 import Ramas from "./Ramas";
 import Recuento from "./Recuento";
@@ -339,19 +339,11 @@ export default function Arbol({
       .titulo.map((t) => t.texto)
       .join("");
   /**
-   * Quien celebra algo se lleva la guirnalda en su nodo, con lo que celebra escrito. **Una
-   * por nodo, y gana la primera**: la lista viene ordenada por día y, dentro del día, con el
-   * cumpleaños por delante, así que el santo de hoy solo sale si no hay tarta que anunciar.
+   * Quien celebra algo se lleva la guirnalda en su nodo, con lo que celebra escrito. **No
+   * depende del Centro**, al revés que el panel: quién sale ahí es a quién felicitas tú, y
+   * quién se enciende aquí es de quién es el día.
    */
-  const fiestas = useMemo(() => {
-    const salida = new Map<string, Fiesta>();
-    for (const c of celebraciones) {
-      if (c.id === null || salida.has(c.id)) continue;
-      if (c.tipo === "cumpleaños" && c.faltan <= 1) salida.set(c.id, { tipo: "cumpleaños", edad: c.edad!, faltan: c.faltan });
-      else if (c.tipo === "onomástica" && c.faltan === 0) salida.set(c.id, { tipo: "onomástica" });
-    }
-    return salida;
-  }, [celebraciones]);
+  const fiestas = useMemo(() => fiestasDelArbol(grafo, hoy), [grafo, hoy]);
 
   /**
    * El arranque, que ocurre una vez: el enlace con el que se ha entrado se recuerda para la
