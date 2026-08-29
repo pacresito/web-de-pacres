@@ -74,7 +74,13 @@ const TOL_ALTA = 2.2;
 // grande se queda atrás, y el país sale amputado sin que falte ningún salto. Va país a país
 // porque el precio es que lo que entra estira el lienzo y **encoge todo lo demás**: a Japón le
 // costaría un cuarto del tamaño de sus cuatro islas por traerse Ryukyu, y ahí no compensa.
-export const AJUSTES: Record<string, { cerca?: Cerca; paneles?: [Cerca, Cerca]; tol?: number; arrecife?: boolean; islas?: number; cadena?: boolean }> = {
+//
+// `salto` sube `MAX_KM` solo para un país, y es lo que necesita el que tiene **dos masas de
+// verdad** demasiado lejos la una de la otra. No hay tope general que sirva: subirlo a 600 para
+// todos trae la península malaya, sí, pero también pone a Mauricio en un lienzo diez veces más
+// grande para dibujarle Rodrigues —99 km²— y a las Marshall uno un 40 % mayor por un km². Lo que
+// justifica el salto es cuánta masa entra, no cuánta distancia se salva.
+export const AJUSTES: Record<string, { cerca?: Cerca; paneles?: [Cerca, Cerca]; tol?: number; arrecife?: boolean; islas?: number; cadena?: boolean; salto?: number }> = {
   bs: { cerca: [-77.5, 25.5, 260] },  // el racimo del noroeste: Andros, Gran Bahama, Ábaco
   ca: { cadena: true },
   es: { islas: 60 },                  // Menorca, Ibiza y Formentera, que la regla relativa suelta
@@ -83,6 +89,7 @@ export const AJUSTES: Record<string, { cerca?: Cerca; paneles?: [Cerca, Cerca]; 
   ki: { paneles: [[172.98, 1.35, 30], [-157.4, 1.9, 60]] }, // Tarawa y Kiritimati
   mh: { arrecife: true, cadena: true }, // las dos hileras de atolones, no solo Majuro
   mv: { arrecife: true, cadena: true }, // los atolones, que son lo que se reconoce, y los 871 km
+  my: { salto: 600 },                 // los 554 km entre la península y Borneo: sin esto, medio país
   nr: { tol: 6 },
   pg: { cadena: true },
   ph: { cadena: true },
@@ -101,7 +108,7 @@ export const AJUSTES: Record<string, { cerca?: Cerca; paneles?: [Cerca, Cerca]; 
 // la caja de Malta son 5 km y Gozo está a 6, así que la misma regla que suelta Svalbard —a 650
 // km de Noruega— soltaba media Malta. En absoluto los dos casos caen donde deben.
 const MIN_AREA_REL = 0.002; // frente al polígono mayor
-const MAX_KM = 300;         // del polígono mayor
+const MAX_KM = 300;         // del polígono mayor, salvo que el país traiga su `salto`
 
 const rad = Math.PI / 180;
 export type Anillo = [number, number][];
@@ -209,7 +216,7 @@ function km2De(anillo: Anillo, grados: number): number {
   return grados * 111 * 111 * Math.cos(((c.y0 + c.y1) / 2) * rad);
 }
 
-function polysQueSeQuedan(polys: Poly[], suelo = 0, cadena = false): Poly[] {
+function polysQueSeQuedan(polys: Poly[], suelo = 0, cadena = false, max = MAX_KM): Poly[] {
   if (polys.length === 1) return polys;
   const areas = polys.map((p) => areaRel(p[0]));
   const mayor = areas.indexOf(Math.max(...areas));
@@ -224,8 +231,8 @@ function polysQueSeQuedan(polys: Poly[], suelo = 0, cadena = false): Poly[] {
     for (let i = 0; i < polys.length; i++) {
       if (dentro.has(i) || !pesa(i)) continue;
       const llega = cadena
-        ? [...dentro].some((j) => kmEntre(cajas[j], cajas[i]) <= MAX_KM)
-        : kmEntre(cajas[mayor], cajas[i]) <= MAX_KM;
+        ? [...dentro].some((j) => kmEntre(cajas[j], cajas[i]) <= max)
+        : kmEntre(cajas[mayor], cajas[i]) <= max;
       if (llega) { dentro.add(i); crece = cadena; }
     }
   }
@@ -294,7 +301,7 @@ export async function encuadres(): Promise<Encuadre[]> {
     // los agujeros de una fuente de alta resolución son dársenas y puertos, y en una silueta que
     // se memoriza son manchas blancas sin significado.
     const grupos: Grupo[] = (ajuste?.paneles ?? [null]).map((cerca) => {
-      const polys = polysQueSeQuedan(cerca ? recortar(crudo, cerca, p.nombre) : crudo, ajuste?.islas, ajuste?.cadena);
+      const polys = polysQueSeQuedan(cerca ? recortar(crudo, cerca, p.nombre) : crudo, ajuste?.islas, ajuste?.cadena, ajuste?.salto);
       const anillos = polys.map((poly) => poly[0]);
       const c = caja(anillos);
       const lon0 = (c.x0 + c.x1) / 2, lat0 = (c.y0 + c.y1) / 2;

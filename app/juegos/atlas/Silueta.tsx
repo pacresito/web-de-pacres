@@ -4,6 +4,12 @@ import { type Forma } from "@/data/atlas/formas";
 import { useTema } from "@/app/components/usePersistedTheme";
 import { marcoDeTinta, rutaDelRelieve } from "@/lib/atlas/silueta";
 
+/** Media diagonal del rombo de la capital, en unidades del lienzo de 1000. */
+const CAPITAL = 20;
+
+const rombo = ([x, y]: [number, number]) =>
+  `M${x},${(y - CAPITAL).toFixed(1)}L${(x + CAPITAL).toFixed(1)},${y}L${x},${(y + CAPITAL).toFixed(1)}L${(x - CAPITAL).toFixed(1)},${y}Z`;
+
 /**
  * La silueta de un país: la forma, la frontera interior cuando la hay y la línea entre los dos
  * paneles de un país partido. La misma en la tarjeta y en la ficha, que es de lo que se trata —
@@ -75,6 +81,16 @@ export default function Silueta({ id, forma, nombre, trazo, ajustada = false, st
       {/* La línea entre los dos paneles de un país partido: dice que sus dos islas están a la
           escala buena pero no a la distancia buena. */}
       {forma?.separador && <path d={forma.separador} fill="none" stroke="var(--t-ink4)" strokeWidth={6} strokeDasharray="18 14" strokeLinecap="round" />}
+      {/* La capital, encima del relieve —debajo se la tragan los 164 países que lo tienen— y
+          **sin recortar contra la costa**: hay capitales pegadas a la suya —la de Maldivas queda
+          a una unidad del borde de su islote y la de Indonesia a dos de la de Java—, y ceñirlas
+          dejaría media forma justo donde más falta hace entera. Asomando sobre el papel se
+          sigue leyendo, que para eso va en tinta.
+          Rombo y no punto porque la diagonal no aparece en ninguna otra parte del dibujo —la
+          costa es curva, el separador es recto y horizontal, el relieve es mancha— y a los
+          cuatro píxeles que mide en la tarjeta eso es lo único que separa una marca de una
+          mota. Los tres países que **son** su capital vienen sin ella desde el generador. */}
+      {forma?.capital && <path d={rombo(forma.capital)} fill="var(--t-ink2)" />}
       {/* Lo marcado, encima de todo y solo dibujado: el relleno es de la respuesta, así que los
           dos lenguajes no pelean y el acierto se lee sin leyenda. */}
       {trazo && <path d={trazo.d} fill="none" fillRule="evenodd" stroke="var(--t-ink2)" strokeWidth={2}

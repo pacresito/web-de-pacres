@@ -70,9 +70,15 @@ export type Pais = {
   continente: Continente;
   subregion: string;
   km2: number; // solo para la ficha; el escalón de zoom sale de la forma, no de aquí
-  // Va al final de la fila, y no junto a `capital`, para no abrir una columna que 189 filas
-  // dejarían vacía.
+  // Van al final de la fila, y no junto a `capital`, para no abrir columnas que 189 filas
+  // dejarían vacías.
   capitalCastellana?: string;
+  // Dónde cae la capital, [lon, lat]. Solo para las tres que Natural Earth no trae: el
+  // generador de las siluetas la busca en `ne_10m_populated_places` por el nombre de `capital`,
+  // y ahí no está ni la capital nueva que aún se construye (Ciudad de la Paz), ni la de un país
+  // del que la fuente no lista ninguna ciudad (Yaren), ni la que la fuente sustituye por su
+  // vecina de al lado (Ngerulmud, que sale como Melekeok, a dos kilómetros). Fuente: Wikipedia.
+  capitalLonLat?: [number, number];
 };
 
 export const PAISES: Pais[] = [
@@ -149,7 +155,7 @@ export const PAISES: Pais[] = [
   { id: "gr", nombre: "Grecia",                          oficial: "República Helénica",                              capital: "Atenas",                    continente: "Europa",            subregion: "Europa del Sur",            km2:    131_957 },
   { id: "gt", nombre: "Guatemala",                       oficial: "República de Guatemala",                          capital: "Ciudad de Guatemala",       continente: "América del Norte", subregion: "Centroamérica",             km2:    108_889 },
   { id: "gn", nombre: "Guinea",                          oficial: "República de Guinea",                             capital: "Conakry",                   continente: "África",            subregion: "África Occidental",         km2:    245_857 },
-  { id: "gq", nombre: "Guinea Ecuatorial",               oficial: "República de Guinea Ecuatorial",                  capital: "Ciudad de la Paz",          continente: "África",            subregion: "África Central",            km2:     28_051 },
+  { id: "gq", nombre: "Guinea Ecuatorial",               oficial: "República de Guinea Ecuatorial",                  capital: "Ciudad de la Paz",          continente: "África",            subregion: "África Central",            km2:     28_051, capitalLonLat: [10.822, 1.592] },
   { id: "gw", nombre: "Guinea-Bissau",                   oficial: "República de Guinea-Bissau",                      capital: "Bissau",                    continente: "África",            subregion: "África Occidental",         km2:     36_125 },
   { id: "gy", nombre: "Guyana",                          oficial: "República Cooperativa de Guyana",                 capital: "Georgetown",                continente: "América del Sur",   subregion: "Sudamérica",                km2:    214_970 },
   { id: "ht", nombre: "Haití",                           oficial: "República de Haití",                              capital: "Puerto Príncipe",           continente: "América del Norte", subregion: "Caribe",                    km2:     27_750 },
@@ -201,7 +207,7 @@ export const PAISES: Pais[] = [
   { id: "mx", nombre: "México",                          oficial: "Estados Unidos Mexicanos",                        capital: "Ciudad de México",          continente: "América del Norte", subregion: "Centroamérica",             km2:  1_964_375 },
   { id: "mc", nombre: "Mónaco",                          oficial: "Principado de Mónaco",                            capital: "Mónaco",                    continente: "Europa",            subregion: "Europa Occidental",         km2:       2.08 },
   { id: "na", nombre: "Namibia",                         oficial: "República de Namibia",                            capital: "Windhoek",                  continente: "África",            subregion: "África Austral",            km2:    825_615 },
-  { id: "nr", nombre: "Nauru",                           oficial: "República de Nauru",                              capital: "Yaren",                     continente: "Oceanía",           subregion: "Micronesia",                km2:         21 },
+  { id: "nr", nombre: "Nauru",                           oficial: "República de Nauru",                              capital: "Yaren",                     continente: "Oceanía",           subregion: "Micronesia",                km2:         21, capitalLonLat: [166.921, -0.548] },
   { id: "np", nombre: "Nepal",                           oficial: "República Federal Democrática de Nepal",          capital: "Katmandú",                  continente: "Asia",              subregion: "Asia del Sur",              km2:    147_181 },
   { id: "ni", nombre: "Nicaragua",                       oficial: "República de Nicaragua",                          capital: "Managua",                   continente: "América del Norte", subregion: "Centroamérica",             km2:    120_340 },
   { id: "ng", nombre: "Nigeria",                         oficial: "República Federal de Nigeria",                    capital: "Abuja",                     continente: "África",            subregion: "África Occidental",         km2:    923_768, capitalCastellana: "Abuya" },
@@ -210,7 +216,7 @@ export const PAISES: Pais[] = [
   { id: "ne", nombre: "Níger",                           oficial: "República del Níger",                             capital: "Niamey",                    continente: "África",            subregion: "África Occidental",         km2:  1_267_000 },
   { id: "om", nombre: "Omán",                            oficial: "Sultanato de Omán",                               capital: "Masqat",                    continente: "Asia",              subregion: "Asia Occidental",           km2:    309_500 },
   { id: "pk", nombre: "Pakistán",                        oficial: "República Islámica de Pakistán",                  capital: "Islamabad",                 continente: "Asia",              subregion: "Asia del Sur",              km2:    881_913 },
-  { id: "pw", nombre: "Palau",                           oficial: "República de Palau",                              capital: "Ngerulmud",                 continente: "Oceanía",           subregion: "Micronesia",                km2:        466 },
+  { id: "pw", nombre: "Palau",                           oficial: "República de Palau",                              capital: "Ngerulmud",                 continente: "Oceanía",           subregion: "Micronesia",                km2:        466, capitalLonLat: [134.624, 7.501] },
   { id: "ps", nombre: "Palestina",                       oficial: "Estado de Palestina",                             capital: "Ramallah",                  continente: "Asia",              subregion: "Asia Occidental",           km2:      6_020 },
   { id: "pa", nombre: "Panamá",                          oficial: "República de Panamá",                             capital: "Ciudad de Panamá",          continente: "América del Norte", subregion: "Centroamérica",             km2:     74_177 },
   { id: "pg", nombre: "Papúa Nueva Guinea",              oficial: "Estado Independiente de Papúa Nueva Guinea",      capital: "Puerto Moresby",            continente: "Oceanía",           subregion: "Melanesia",                 km2:    462_840 },

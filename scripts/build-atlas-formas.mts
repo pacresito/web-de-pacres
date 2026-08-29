@@ -5,11 +5,14 @@
 // Qué polígonos entran y cómo se proyectan lo decide scripts/atlas-geo.mts, compartido con el
 // relieve. Aquí queda lo que es de la silueta: el trazado, la frontera interior y el globo.
 //
-// Una decisión vive aquí y no en el render:
+// Dos decisiones viven aquí y no en el render:
 //  - Simplificación por distancia mínima entre puntos YA PROYECTADOS: al medirse en píxeles de
 //    salida, la densidad de detalle es la misma en todos los países.
+//  - La capital sale de aquí ya proyectada al lienzo. Proyectarla en el render sería repetir el
+//    encuadre —qué polígonos entran, dónde cae el centro, con qué escala—, y dos copias de esa
+//    cuenta se separan sin que falle nada: el punto se iría unos píxeles y nadie lo vería.
 import fs from "node:fs";
-import { PAISES, PAIS_POR_ID } from "../lib/atlas/paises";
+import { PAISES, PAIS_POR_ID, type Pais } from "../lib/atlas/paises";
 import {
   BOX, PAD, type Anillo, type Caja, caja, cargar, encuadres, laea, polysDe,
 } from "./atlas-geo.mjs";
@@ -25,7 +28,45 @@ const PASO_GLOBO = 0.35; // grados: paso mínimo de la costa del globo (subpíxe
 // en el paralelo 27°40′N, así que la línea es ese paralelo.
 const FRONTERAS: Record<string, number> = { ma: 27 + 40 / 60 };
 
-type Salida = { id: string; nombre: string; d: string; arrecife: string; linea: string; separador: string; ladoKm: number; lon: number; lat: number; puntos: number };
+// Los tres países que son su propia capital: marcarla no diría nada que la silueta no diga ya,
+// y el punto solo taparía el contorno de alta resolución que estos tienen justamente porque a
+// esta escala no son más que eso.
+const SIN_CAPITAL = new Set(["va", "mc", "sg"]);
+
+// Dónde cae cada capital, en lon/lat. La fuente es la misma que dibuja las formas, pero
+// `ADM0CAP` no vale por sí solo: marca la capital **de facto**, así que da Cotonú por Porto-Novo
+// y Dar es Salaam por Dodoma, mientras que `paises.ts` guarda la oficial. Manda el nombre, y
+// `ADM0CAP` solo decide cuando el nombre no casa —que es siempre por la romanización, Riyadh
+// por Riyād o Tashkent por Toshkent, y entonces la única capital que la fuente marca es la
+// buena—. Las tres que no están en la fuente las trae `capitalLonLat`.
+const ciudades = new Map<string, { p: Record<string, string | number | null>; c: [number, number] }[]>();
+for (const f of (await cargar("ne_10m_populated_places") as unknown as
+     { features: { properties: Record<string, string | number | null>; geometry: { coordinates: [number, number] } }[] }).features) {
+  const iso = String(f.properties.ISO_A2 ?? "").toLowerCase();
+  if (!iso || iso === "-99") continue;
+  if (!ciudades.has(iso)) ciudades.set(iso, []);
+  ciudades.get(iso)!.push({ p: f.properties, c: f.geometry.coordinates });
+}
+
+// Sin tildes, sin guiones y en minúsculas: la fuente escribe Yamoussoukro y Sri Jayawardenepura
+// Kotte donde `paises.ts` escribe Yamusukro y Sri Jayawardenapura Kotte.
+const plano = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z]/g, "");
+
+function capitalDe(q: Pais): [number, number] {
+  if (q.capitalLonLat) return q.capitalLonLat;
+  const lista = ciudades.get(q.id) ?? [];
+  const quiere = [q.capital, q.capitalCastellana].filter(Boolean).map((n) => plano(String(n)));
+  const casa = (x: { p: Record<string, string | number | null> }) =>
+    [x.p.NAME, x.p.NAMEASCII, x.p.NAME_ES, x.p.NAME_EN, x.p.NAMEALT, x.p.LS_NAME]
+      .filter(Boolean).some((n) => quiere.includes(plano(String(n))));
+  const porNombre = lista.find(casa);
+  if (porNombre) return porNombre.c;
+  const marcadas = lista.filter((x) => x.p.ADM0CAP === 1);
+  if (marcadas.length === 1) return marcadas[0].c;
+  throw new Error(`no hay coordenada para ${q.capital} (${q.nombre}): ${marcadas.length} candidatas por ADM0CAP y ninguna por nombre. Ponle capitalLonLat en paises.ts.`);
+}
+
+type Salida = { id: string; nombre: string; d: string; arrecife: string; linea: string; separador: string; capital: [number, number] | null; ladoKm: number; lon: number; lat: number; puntos: number };
 
 /**
  * Douglas-Peucker: se queda con los puntos que se desvían de la cuerda más que `tol`.
@@ -80,9 +121,27 @@ function dentro(punto: [number, number], anillo: Anillo): boolean {
   return d;
 }
 
+/**
+ * Lo que separa un punto del contorno más cercano, en unidades del lienzo. Va con el aviso
+ * porque sin ella los dos fallos que lo disparan se confunden: una capital costera que la
+ * simplificación deja dos unidades fuera del agua no es lo mismo que una que cae en otro sitio
+ * porque su mitad del país no se dibuja.
+ */
+function aLaCosta(p: [number, number], anillos: Anillo[]): number {
+  let min = Infinity;
+  for (const a of anillos) for (let i = 0, j = a.length - 1; i < a.length; j = i++) {
+    const [x1, y1] = a[j], [x2, y2] = a[i];
+    const dx = x2 - x1, dy = y2 - y1, l2 = dx * dx + dy * dy;
+    const t = l2 === 0 ? 0 : Math.max(0, Math.min(1, ((p[0] - x1) * dx + (p[1] - y1) * dy) / l2));
+    min = Math.min(min, Math.hypot(p[0] - (x1 + t * dx), p[1] - (y1 + t * dy)));
+  }
+  return min;
+}
+
 const salida: Salida[] = [];
 for (const { id, nombre, grupos, pinta, tol } of await encuadres()) {
   let d = "", arrecife = "", puntos = 0;
+  const trazados: Anillo[] = [];
   grupos.forEach(({ proy, proyCoral }, i) => {
     const { px, py } = pinta[i];
     const trazo = (a: Anillo) => simplificar(a.map(([x, y]) => [px(x), py(y)] as [number, number]), tol);
@@ -93,6 +152,7 @@ for (const { id, nombre, grupos, pinta, tol } of await encuadres()) {
       const out = trazo(anillo);
       if (out.length < 3) continue;
       d += eme(out) + "Z";
+      trazados.push(out);
       puntos += out.length;
     }
     // El coral va sin `Z`: es la línea del arrecife tal como viene, y cerrarla inventaría el
@@ -118,6 +178,29 @@ for (const { id, nombre, grupos, pinta, tol } of await encuadres()) {
   // a escala.
   const separador = grupos.length === 1 ? "" : `M${BOX / 2},${PAD * BOX}L${BOX / 2},${BOX * (1 - PAD)}`;
 
+  // La capital, proyectada al lienzo. Va en el panel donde cae —no en el mayor— porque Tarawa es
+  // la capital de Kiribati y se dibuja en la mitad pequeña; se elige midiéndola contra la caja
+  // lon/lat de cada grupo, que es lo único que distingue un panel de otro.
+  //
+  // **Se comprueba contra lo trazado y no contra el polígono de la fuente**: la simplificación
+  // adelgaza los atolones hasta dejar la capital en el agua —Tarawa Sur es el caso— y ahí el
+  // punto queda flotando sin que falle nada. El aviso es todo lo que se puede hacer desde aquí:
+  // moverlo sería mentir sobre dónde está.
+  let capital: [number, number] | null = null;
+  const pais = PAIS_POR_ID.get(id)!;
+  if (!SIN_CAPITAL.has(id)) {
+    const [lonCap, latCap] = capitalDe(pais);
+    const lejos = ({ c: b }: (typeof grupos)[number]) =>
+      Math.hypot(Math.max(0, b.x0 - lonCap, lonCap - b.x1), Math.max(0, b.y0 - latCap, latCap - b.y1));
+    const suyo = grupos.reduce((a, b) => (lejos(b) < lejos(a) ? b : a));
+    const pincel = pinta[grupos.indexOf(suyo)];
+    const [kx, ky] = laea(lonCap, latCap, suyo.lon0, suyo.lat0);
+    const punto: [number, number] = [+pincel.px(kx).toFixed(1), +pincel.py(ky).toFixed(1)];
+    if (!trazados.some((anillo) => dentro(punto, anillo)))
+      console.warn(`  aviso  ${id}: ${pais.capital} cae fuera de la silueta, a ${aLaCosta(punto, trazados).toFixed(0)} del contorno`);
+    capital = punto;
+  }
+
   // La frontera interior, si la hay: se recorre el paralelo en pasos finos, se conserva lo que
   // pisa el país y se proyecta igual que el resto. Sale ligeramente curva, como debe.
   let linea = "";
@@ -134,7 +217,7 @@ for (const { id, nombre, grupos, pinta, tol } of await encuadres()) {
     suelta();
   }
 
-  salida.push({ id, nombre, d, arrecife, linea, separador, ladoKm: Math.round(lado), lon: lon0, lat: lat0, puntos });
+  salida.push({ id, nombre, d, arrecife, linea, separador, capital, ladoKm: Math.round(lado), lon: lon0, lat: lat0, puntos });
 }
 
 const ts = `// GENERADO por scripts/build-atlas-formas.mts — no editar a mano.
@@ -145,13 +228,14 @@ export type Forma = {
   arrecife: string; // el coral, a trazar sin rellenar y sin cerrar ("" si el país no lo lleva)
   linea: string;  // frontera interior a marcar dentro de la silueta ("" si no hay)
   separador: string; // la línea entre los dos paneles de un país partido ("" si va de una pieza)
+  capital: [number, number] | null; // dónde marcarla en el lienzo; null en los que son su capital
   ladoKm: number; // lado mayor real, para la ficha
   lon: number;    // centro: dónde se planta el globo y por dónde va el barrido en S
   lat: number;
 };
 
 export const FORMAS: Record<string, Forma> = {
-${salida.map((s) => `  ${s.id}: { d: "${s.d}", arrecife: "${s.arrecife}", linea: "${s.linea}", separador: "${s.separador}", ladoKm: ${s.ladoKm}, lon: ${s.lon.toFixed(3)}, lat: ${s.lat.toFixed(3)} },`).join("\n")}
+${salida.map((s) => `  ${s.id}: { d: "${s.d}", arrecife: "${s.arrecife}", linea: "${s.linea}", separador: "${s.separador}", capital: ${s.capital ? `[${s.capital[0]}, ${s.capital[1]}]` : "null"}, ladoKm: ${s.ladoKm}, lon: ${s.lon.toFixed(3)}, lat: ${s.lat.toFixed(3)} },`).join("\n")}
 };
 `;
 fs.mkdirSync(new URL(".", SALIDA), { recursive: true });
