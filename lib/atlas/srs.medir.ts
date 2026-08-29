@@ -14,7 +14,7 @@ import { RECORRIDO } from "@/data/atlas/orden";
 const T0 = Date.parse("2026-08-28T18:00:00Z");
 const SEGUNDOS_POR_TARJETA = 12; // lo que se tarda en mirar una tarjeta y calificarla
 const TARJETAS = 25;
-const LISTON = 5; // `VIDA_ASENTADO`, que no se exporta
+const LISTON = 4; // `VIDA_ASENTADO`, que no se exporta
 
 type Perillas = { descanso: number; tope: number; liston: number };
 const REALES: Perillas = { descanso: DESCANSO, tope: MAX_EN_EL_AIRE, liston: LISTON };
@@ -140,9 +140,10 @@ for (const [nombre, nota] of GUIONES) {
     console.log(`  ${nombre.padEnd(28)}  ${String(tope).padStart(4)}  ${fila}`);
   }
 }
-console.log("\n  Con el listón en el arranque de «fácil» (4) el freno no existe: marcar fácil asienta el");
-console.log("  país en el acto. Desde 5 se para en el tope exacto, y 5, 6 y 8 dan lo mismo porque la");
-console.log("  escalera de vidas salta de 4 a 8 — el listón real es «más de cuatro».");
+console.log("\n  Con el listón en el arranque de «fácil» —el que está puesto— decir «me lo sé» asienta el");
+console.log("  país en el acto y el freno solo dosifica lo que hay que aprender: el maratón de «bien» se");
+console.log("  para en el tope exacto y el de «fácil» abre lo que quiera. Subirlo un día cierra también");
+console.log("  esa puerta; 5, 6 y 8 dan lo mismo porque la escalera de vidas salta de 4 a 8.");
 
 // ── La copia solo vale si no se separa de la real ────────────────────────────────────────────
 {

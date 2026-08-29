@@ -183,26 +183,26 @@ export function montar(mazo: Mazo, pais: Pais, ahora: number): Tarjeta {
  * adelanta el más sospechoso aunque no llegue a 1: la cola no se acaba nunca.
  *
  * El freno a los nuevos es invisible: mientras haya demasiados países crudos peleando arriba, no
- * entran más. **Lo que regula de verdad es cuántos países puede abrir una sola sesión**: los días
- * normales apenas se roza —frena una tarjeta de cada cien—, pero una tarde maratón se para aquí
- * en seco, y sin él se lleva los 195 de una sentada. Veinte países son ochenta datos venciendo
- * juntos al día siguiente, que es lo que cabe. Las cifras, en `srs.medir.ts`.
+ * entran más. **Lo que dosifica es lo que hay que aprender, y solo eso** — lo que se marca «fácil»
+ * sale del recuento en el acto y pasa de largo. Con veinte, un país acertado a diario tarda cuatro
+ * días en asentarse, así que entran veinte datos nuevos al día: el mismo ritmo que Anki trae por
+ * defecto. Las cifras, en `srs.medir.ts`.
  */
 export const MAX_EN_EL_AIRE = 20;
 
 /**
- * Cuándo deja un dato de estar crudo: cuando aguanta **un día más** de lo que da un «ya me lo sé»
- * de entrada. Es lo único que el freno mira, y va con la vida y no con el contador, porque el
- * contador se llena dando vueltas y dando vueltas se llena en una tarde.
+ * Cuándo deja un dato de estar crudo: cuando aguanta al menos lo que un «ya me lo sé» de entrada.
+ * Es lo único que el freno mira, y va con la vida y no con el contador, porque el contador se
+ * llena dando vueltas y dando vueltas se llena en una tarde.
  *
- * **Ese día de margen es el freno entero.** Con el listón justo en `VIDA_INICIAL.facil`, marcar
- * «fácil» asentaba el país en el acto —nace exactamente ahí— y una tarde maratón abría el mazo
- * completo, los 195, con el tope puesto y sin enterarse. Y no vale pedir un pelo más: un segundo
- * vistazo en la misma sesión suma los segundos transcurridos y cruza un listón que solo esté un
- * pelo por encima. El día entero no lo compra ninguna sesión —desde cuatro solo se llega a cinco
- * dejando pasar ocho horas—, que es justo lo que se le pide.
+ * **Un «fácil» de primera vez nace justo en el listón, así que asienta el país en el acto y el
+ * freno no lo cuenta.** Es deliberado y no un descuido: decir «esto ya me lo sé» es el triaje, y
+ * el freno está para dosificar lo que hay que aprender, no lo que ya se sabe. Quien lo diga de
+ * más lo paga solo —al fallarlo, la vida se desploma y el país vuelve a estar crudo—. Subirlo un
+ * día cerraría esa puerta, a cambio de que marcar «fácil» no sirviera para nada: `srs.medir.ts`
+ * mide las dos.
  */
-const VIDA_ASENTADO = VIDA_INICIAL.facil + 1;
+const VIDA_ASENTADO = VIDA_INICIAL.facil;
 const asentado = (e: Estado | undefined) => !!e && e.vida >= VIDA_ASENTADO;
 
 /**

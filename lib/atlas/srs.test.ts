@@ -140,9 +140,10 @@ assert.ok(MAX_EN_EL_AIRE > 9, "el freno no debe saltar con los diez países de l
   // Y el contador lleno no libera el freno por sí solo: eso se gana esperando, no acertando.
   const sabidos: Mazo = Object.fromEntries(treinta.map((p) => [p.id, { nombre: sabido(2, 0.5) }]));
   assert.ok(treinta.some((p) => p.id === siguiente(sabidos, orden, AHORA)!.id));
-  // Ni lo asienta un «fácil» de primera vez, que nace justo en el arranque: hace falta un día.
+  // Y un «fácil» de primera vez asienta en el acto, que nace justo en el listón: el freno
+  // dosifica lo que hay que aprender, no lo que ya se sabe.
   const recienFaciles: Mazo = Object.fromEntries(treinta.map((p) => [p.id, { nombre: vida(4, 0) }]));
-  assert.ok(treinta.some((p) => p.id === siguiente(recienFaciles, orden, AHORA)!.id));
+  assert.strictEqual(siguiente(recienFaciles, orden, AHORA)!.id, orden[MAX_EN_EL_AIRE]);
 }
 
 // El descanso: lo recién visto no repite habiendo otra cosa que preguntar
