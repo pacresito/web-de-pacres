@@ -128,7 +128,7 @@ function filasDe(g: Grafo, p: Persona, o: OpcionesFicha, esCentro: boolean): Fil
   const { hoy } = o;
   const filas = [
     ...comoSeLeLlama(p, o.nombre),
-    ...conDato("Padres", padres(g, p.id, o.nombre)),
+    ...padres(g, p.id, o.nombre),
     ...ramas(g, o.nombre, o.pertenencia),
     ...conDato("Unión", uniones(g, p.id, o.linaje, o.nombre)),
     ...conDato("Hijos", hijos(g, p.id, o.nombre)),
@@ -213,13 +213,20 @@ function comoSeLeLlama(p: Persona, modo: ModoNombre): Fila[] {
   return filas;
 }
 
-function padres(g: Grafo, id: string, modo: ModoNombre): string {
+/**
+ * De quién viene, con la clave diciendo cuántos son: a quien solo le consta la madre,
+ * encabezar ese nombre suelto con «Padres» le inventa un padre que el documento no da. Sin
+ * sexo manda el masculino, como en el resto del árbol.
+ */
+function padres(g: Grafo, id: string, modo: ModoNombre): Fila[] {
   const union = g.unionPorId.get(g.unionDeHijo.get(id) ?? "");
-  if (!union) return "";
-  return ordenarPareja(union.partners, (x) => g.personaPorId.get(x))
-    .map((x) => nombrar(g, x, modo))
-    .filter((t) => t !== "")
-    .join(" y ");
+  if (!union) return [];
+  const gente = ordenarPareja(union.partners, (x) => g.personaPorId.get(x))
+    .map((x) => g.personaPorId.get(x))
+    .filter((x) => x !== undefined);
+  if (gente.length === 0) return [];
+  const clave = gente.length > 1 ? "Padres" : gente[0].sexo === "m" ? "Madre" : "Padre";
+  return [{ clave, valor: gente.map((x) => nombrar(g, x.id, modo)).join(" y "), falta: false }];
 }
 
 /**

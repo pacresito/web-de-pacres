@@ -118,7 +118,8 @@ assert.deepStrictEqual(
 );
 
 // Las filas: la que no tiene dato no se escribe, y la rama es la única excepción
-assert.strictEqual(valor(ficha("j5"), "Padres"), "Genoveva (1930)", "un solo progenitor documentado no inventa al otro");
+assert.strictEqual(valor(ficha("j5"), "Madre"), "Genoveva (1930)", "un solo progenitor documentado no inventa al otro, ni en la clave");
+assert.strictEqual(valor(ficha("j5"), "Padres"), undefined);
 assert.strictEqual(valor(ficha("j1"), "Padres"), undefined, "a quien no le constan padres no se le dice");
 assert.strictEqual(valor(ficha("j3"), "Hijos"), "Rosi (1959), Lucía (1986)");
 assert.deepStrictEqual(
