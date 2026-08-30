@@ -111,7 +111,7 @@ assert.strictEqual((d.match(/M/g) ?? []).length, 1, "solo el trozo visible");
 // La desviación del centro del globo: cae siempre dentro del radio pedido, nunca justo encima, y
 // vale igual en el polo y en el antimeridiano, donde las cuentas ingenuas se rompen.
 {
-  const arco = (a: [number, number], b: [number, number]) => gradosEntre(a[0], a[1], b[0], b[1]) * (Math.PI / 180) * 6371;
+  const arco = (a: [number, number], b: [number, number]) => gradosEntre(a[0], a[1], b[0], b[1]);
   // Y el arco en sí: el ecuador entero son 180°, y un punto consigo mismo, cero.
   cerca(gradosEntre(0, 0, 180, 0), 180, "las antípodas por el ecuador");
   cerca(gradosEntre(-3.7, 40.4, -3.7, 40.4), 0, "un punto consigo mismo");
@@ -119,17 +119,17 @@ assert.strictEqual((d.match(/M/g) ?? []).length, 1, "solo el trozo visible");
   let enElCentro = 0;
   for (const centro of [[-3.7, 40.4], [179.5, 66], [0, 89], [-179.9, -20]] as [number, number][]) {
     for (let i = 0; i < 400; i++) {
-      const q = desviar(centro[0], centro[1], 2000);
+      const q = desviar(centro[0], centro[1], 20);
       assert.ok(q[0] >= -180 && q[0] <= 180 && q[1] >= -90 && q[1] <= 90, `(${q}) no es un punto del mundo`);
-      assert.ok(arco(centro, q) <= 2000.001, `se fue a ${arco(centro, q).toFixed(0)} km`);
-      if (arco(centro, q) < 500) enElCentro++;
+      assert.ok(arco(centro, q) <= 20.001, `se fue a ${arco(centro, q).toFixed(1)}°`);
+      if (arco(centro, q) < 5) enElCentro++;
     }
   }
   // Repartido por área, un cuarto del radio es un dieciseisavo del disco: si se amontonara en el
   // centro —que es de lo que se huye— este número se dispararía.
   assert.ok(enElCentro < 1600 * 0.12, `demasiados en el centro: ${enElCentro} de 1600`);
   // Sin azar no hay desvío: el punto se queda donde estaba.
-  const quieto = desviar(10, 20, 2000, () => 0);
+  const quieto = desviar(10, 20, 20, () => 0);
   cerca(quieto[0], 10, "sin azar no se mueve la longitud");
   cerca(quieto[1], 20, "sin azar no se mueve la latitud");
 }

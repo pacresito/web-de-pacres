@@ -19,12 +19,11 @@ const TEXTO: Record<Nota, string> = { fallo: "no", bien: "sí", facil: "fácil" 
 const CLASE: Record<Nota, string> = { fallo: "atlas-btn-no", bien: "atlas-btn-si", facil: "atlas-btn-facil" };
 
 /**
- * Cuánto se desvía del país el centro del globo. Centrado, la respuesta cae siempre en el centro
- * del disco y marcar ahí acierta sin saber nada; desviado hay que saber hacia dónde cae, que es
- * lo que se pregunta. Dos mil kilómetros son 18° de arco: bastante para que el país no esté donde
- * uno mira primero, y poco para que siga cómodamente dentro de la cara visible.
+ * Cuánto se desvía del país el centro del globo, en grados de arco —el porqué, en `desviar`—.
+ * Veinte: bastante para que el país no esté donde uno mira primero, y poco para que siga
+ * cómodamente dentro de la cara visible.
  */
-const DESVIO_KM = 2000;
+const DESVIO = 20;
 
 /**
  * Cuatro casillas de alto fijo, siempre las mismas: se aprende dónde mira cada una y la tarjeta
@@ -87,7 +86,7 @@ function Tarjeta({ tarjeta, estrenando }: { tarjeta: NonNullable<Vista["tarjeta"
   // El desvío se sortea al montar la tarjeta y no al pintarla: el globo pequeño y el grande son
   // el mismo, y volver a entrar a marcar no puede mover el mundo bajo la marca ya puesta.
   const [centro] = useState<[number, number]>(
-    () => desviar(FORMAS[tarjeta.pais.id].lon, FORMAS[tarjeta.pais.id].lat, DESVIO_KM));
+    () => desviar(FORMAS[tarjeta.pais.id].lon, FORMAS[tarjeta.pais.id].lat, DESVIO));
   const [abierta, setAbierta] = useState(false);
   const [lupa, setLupa] = useState<"mirar" | "marcar" | null>(null);
   const [marca, setMarca] = useState<string | null>(null);

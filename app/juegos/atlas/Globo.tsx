@@ -13,11 +13,12 @@ const PUNTOS = Object.entries(FORMAS)
   .map(([id, f]) => ({ id, lon: f.lon, lat: f.lat }));
 
 /**
- * Hasta dónde se marcan esos países, en grados de arco desde el centro del globo. Son unos
- * 2.200 km, más que los 2.000 que la tarjeta desvía el globo, así que **el entorno de lo que se
- * está mirando siempre sale marcado**. Más lejos no se marca: ahí no se está apuntando.
+ * Hasta dónde se marcan esos países, en grados de arco desde el centro del globo. **Cincuenta,
+ * media cara visible:** en el Pacífico casi todo país es un punto, y con veinte el globo enseñaba
+ * uno solo y no había dónde apuntar. Más no cabe: cerca del limbo la ortográfica los apila contra
+ * el canto —a 70° se pintan al 94% del radio— y dejan de distinguirse unos de otros.
  */
-const RADIO_PUNTOS = 20;
+const RADIO_PUNTOS = 50;
 
 /** Los anillos de un país, o ninguno si no se pide ninguno. */
 const anillosDe = (quien: string | null) => (quien ? MUNDO.filter((a) => a.id === quien).map((a) => a.r) : []);
@@ -70,7 +71,7 @@ export default function Globo({ id, lon, lat, r = 74, lado, oculto, puntos, marc
       punto: resaltado && !suyos.length ? proy(FORMAS[resaltado].lon, FORMAS[resaltado].lat) : null,
       // El resaltado no se dibuja gris: ya se pinta en acento un poco más abajo, y dos círculos
       // en el mismo sitio dejan un halo asomando por fuera del verde. Dentro del radio no hace
-      // falta comprobar el horizonte: veinte grados caben de sobra en la cara visible.
+      // falta comprobar el horizonte, que está a noventa grados.
       diminutos: cercanos.filter((p) => p.id !== resaltado).map((p) => proy(p.lon, p.lat)),
     };
   }, [id, lon, lat, r, oculto, puntos]);

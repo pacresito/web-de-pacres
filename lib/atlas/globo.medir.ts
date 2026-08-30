@@ -5,8 +5,8 @@
 // mano se quedan viejos en cuanto alguien toca una constante, y nada lo delata.
 //
 // El montaje es el de la lupa en el móvil de Pablo, que es el único sitio donde se marca: globo de
-// radio 200 pintado a 86vw de un Pixel 8a (354 px), y el centro desviado 2.000 km del país
-// preguntado, como lo planta la tarjeta. Determinista: el azar del desvío va con semilla.
+// radio 200 pintado a 86vw de un Pixel 8a (354 px), y el centro desviado 20° del país preguntado,
+// como lo planta la tarjeta. Determinista: el azar del desvío va con semilla.
 import { MUNDO } from "@/data/atlas/mundo";
 import { FORMAS } from "@/data/atlas/formas";
 import { PAISES } from "./paises";
@@ -17,7 +17,7 @@ const LADO_PX = 0.86 * 412;
 /** Unidades del viewBox por píxel de pantalla, que es lo que traduce los umbrales. */
 const UNIDAD = (R * 2 + 2) / LADO_PX;
 // Cuántos desvíos distintos se prueban por país: el globo se planta en un sitio al azar dentro de
-// los 2.000 km, y con uno solo la cifra dice tanto del desvío que tocó como del umbral.
+// los 20°, y con uno solo la cifra dice tanto del desvío que tocó como del umbral.
 const SEMILLAS = 4;
 
 const CON_ANILLO = new Set(MUNDO.map((a) => a.id));
@@ -27,9 +27,9 @@ const PUNTOS = Object.entries(FORMAS)
 
 /** El globo tal como sale para un país, con la semilla `s` decidiendo hacia dónde se desvía. */
 function globoDe(id: string, s: number) {
-  const [lon, lat] = desviar(FORMAS[id].lon, FORMAS[id].lat, 2000, () => (s + 0.5) / SEMILLAS);
+  const [lon, lat] = desviar(FORMAS[id].lon, FORMAS[id].lat, 20, () => (s + 0.5) / SEMILLAS);
   const proy = ortografica(lon, lat, R);
-  return { proy, cercanos: PUNTOS.filter((q) => gradosEntre(lon, lat, q.lon, q.lat) <= 20) };
+  return { proy, cercanos: PUNTOS.filter((q) => gradosEntre(lon, lat, q.lon, q.lat) <= 50) };
 }
 
 /** Un toque a `dpx` píxeles del punto `[x, y]`, en la dirección `a` de ocho. */

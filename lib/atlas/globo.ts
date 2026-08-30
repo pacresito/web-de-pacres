@@ -93,8 +93,8 @@ export const UMBRALES = {
    *
    * **Un octavo.** Con él, un toque dentro de un país se lo lleva él el 99,3% de las veces: Suiza
    * conserva el 92% de su superficie e Italia —que tiene dentro al Vaticano y a San Marino— el
-   * 89%, cuando sin recortar nada se quedarían en el 10% y el 70%. Lo pagan los que no tienen
-   * forma, que bajan de 762 enganches de 928 a 704, y sobre todo Liechtenstein: un píxel de radio
+   * 89%, cuando sin recortar nada se quedarían en el 10% y el 63%. Lo pagan los que no tienen
+   * forma, que bajan de 764 enganches de 928 a 706, y sobre todo Liechtenstein: un píxel de radio
    * dentro de una Suiza de ocho, lo justo para que su sitio exacto siga siendo suyo.
    *
    * Es la perilla del precio y el radio la de lo que se regala, así que se miran juntos: la tabla
@@ -137,11 +137,11 @@ function aSegmento(px: number, py: number, ax: number, ay: number, bx: number, b
  * **El punto va antes que el contorno porque si no es inalcanzable.** El de Andorra cae dentro del
  * polígono de España y el de Liechtenstein dentro del de Suiza, así que con el contorno delante hay
  * que clavarles el toque encima: fallando por cinco píxeles, los que no tienen forma se enganchan
- * 505 veces de 928 sin cortesía y 704 con ella.
+ * 506 veces de 928 sin cortesía y 706 con ella.
  *
  * **El radio son seis píxeles: el más pequeño que llega al máximo.** De siete en adelante no se
- * engancha ni uno más —704 de 928 con seis, con siete y con diez— y por debajo solo se pierde: con
- * cinco son 656. Lo que cuesta no lo decide el radio sino el mordisco, así que los dos se miran
+ * engancha ni uno más —706 de 928 con seis, con siete y con diez— y por debajo solo se pierde: con
+ * cinco son 665. Lo que cuesta no lo decide el radio sino el mordisco, así que los dos se miran
  * juntos: subir uno cambia lo que conviene en el otro.
  *
  * **Los números salen de `npx tsx lib/atlas/globo.medir.ts`** —el globo grande en un móvil, cuatro
@@ -224,9 +224,6 @@ export function enganche(
   return masCerca(puntos.map((p) => p.id), cortesia) ?? contenedor ?? masCerca(cajas.keys(), cerca);
 }
 
-/** Radio de la Tierra en km, para pasar de distancia a arco. */
-const TIERRA = 6371;
-
 /** Grados de arco entre dos puntos del globo. */
 export function gradosEntre(lonA: number, latA: number, lonB: number, latB: number): number {
   const f1 = latA * rad, f2 = latB * rad;
@@ -235,7 +232,7 @@ export function gradosEntre(lonA: number, latA: number, lonB: number, latB: numb
 }
 
 /**
- * Un punto al azar a menos de `km` del que se le da.
+ * Un punto al azar a menos de `grados` de arco del que se le da.
  *
  * Es donde se planta el globo de la tarjeta, y no en el país: centrado, la respuesta cae siempre
  * en el centro del disco y marcar ahí acierta sin saber nada. Desviado, hay que saber en qué
@@ -244,8 +241,8 @@ export function gradosEntre(lonA: number, latA: number, lonB: number, latB: numb
  * La raíz reparte el sorteo **por área**: sin ella se amontonaría cerca del centro, que es de
  * donde se quiere huir.
  */
-export function desviar(lon: number, lat: number, km: number, azar: () => number = Math.random): [number, number] {
-  const d = (km * Math.sqrt(azar())) / TIERRA;
+export function desviar(lon: number, lat: number, grados: number, azar: () => number = Math.random): [number, number] {
+  const d = grados * rad * Math.sqrt(azar());
   const rumbo = azar() * 2 * Math.PI;
   const f1 = lat * rad, sd = Math.sin(d), cd = Math.cos(d);
   const f2 = Math.asin(Math.sin(f1) * cd + Math.cos(f1) * sd * Math.cos(rumbo));
