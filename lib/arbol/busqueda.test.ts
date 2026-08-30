@@ -111,7 +111,7 @@ assert.ok(!porNombre("Pepe").includes("p350"), "«Pepe» no es «María José»"
 assert.deepStrictEqual(porNombre("Marijose"), ["p286"], "«Marijose» es una, no las cuatro María José");
 assert.strictEqual(porNombre("Pepe").length, 5, "los cinco Pepe y ningún José más");
 assert.strictEqual(porNombre("Lola").length, 3, "las tres Lola y ninguna Dolores más");
-assert.strictEqual(porNombre("Paco").length, 5, "los cinco Paco y ningún Francisco más");
+assert.strictEqual(porNombre("Paco").length, 6, "los seis Paco y ningún Francisco más");
 assert.strictEqual(porNombre("Piluca").length, 1, "una Piluca, no las cuatro Pilar");
 assert.deepStrictEqual(porNombre("Merche"), [], "nadie de esta familia se llama así");
 // Y al revés sigue funcionando: el largo los saca a todos, que es de lo que va apuntarlo.
