@@ -83,7 +83,7 @@ assert.deepStrictEqual(
   [...reparto("p25", g.personaPorId.keys())].sort(),
   [
     ["-1 hijos", 3],
-    ["-1 otros sobrinos", 71],
+    ["-1 otros sobrinos", 72],
     ["-1 parejas", 2],
     ["-1 sin parentesco", 18],
     ["-1 sobrinos segundos", 15],

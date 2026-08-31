@@ -258,7 +258,7 @@ for (const pid of ["p25", "p26", "p126", "p131", "p124"]) {
   assert.strictEqual(acotado.nodos.length, visibles(g, pid).size, `${pid} acotado a sus conectados`);
   revisar(acotado, pid, `${pid} acotado`);
 }
-assert.strictEqual(layout("p126", TODAS, true).nodos.length, 372, "desde un hermano se ven 372");
+assert.strictEqual(layout("p126", TODAS, true).nodos.length, 373, "desde un hermano se ven 373");
 // Ni siquiera el hijo llega a todas: las familias dadas de alta que solo atan por un
 // matrimonio lateral no comparten ancestro con nadie, y el interruptor las esconde.
 assert.ok(layout("p26", TODAS, true).nodos.length < data.people.length, "ocultar siempre esconde algo");

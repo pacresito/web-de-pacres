@@ -41,12 +41,12 @@ assert.deepStrictEqual(inicial.lineas, [
   "2 abuelos 4/4 · tíos abuelos 0/10 · parejas 0/10",
   "1 padres 2/2 · tíos 0/8 · tíos segundos 0/39 · parejas 0/45",
   "0 hermanos 1/3 · primos 0/15 · primos segundos 0/75 · parejas 1/55",
-  "-1 hijos 3/3 · sobrinos 0/5 · sobrinos segundos 0/15 · otros sobrinos 0/71 · parejas 0/2 · sin parentesco 0/1",
+  "-1 hijos 3/3 · sobrinos 0/5 · sobrinos segundos 0/15 · otros sobrinos 0/72 · parejas 0/2 · sin parentesco 0/1",
   // Manuela estrena generación, y con ella la fila que no existía.
   "-2 otra sobrina nieta 0/1",
 ]);
 assert.strictEqual(inicial.recuento.puestos, 19, "de arranque hay 19 puestos");
-assert.strictEqual(inicial.recuento.alcanzables, 372, "y 372 alcanzables, los conectados con él");
+assert.strictEqual(inicial.recuento.alcanzables, 373, "y 373 alcanzables, los conectados con él");
 
 // El punto de vista se cuenta entre sus hermanos y su pareja en el cajón de la fila.
 const fila0 = inicial.recuento.filas.find((f) => f.nivel === 0)!;
@@ -80,7 +80,7 @@ assert.deepStrictEqual(panel(estado("p26")).lineas, [
   "3 bisabuelos 6/6 · tíos bisabuelos 0/17 · parejas 0/13",
   "2 abuelos 4/4 · tíos abuelos 0/12 · tíos abuelos segundos 0/48 · parejas 0/56",
   "1 padres 2/2 · tíos 0/4 · tíos segundos 0/20 · otros tíos 0/89 · parejas 0/60",
-  "0 hermanos 1/3 · primos 0/5 · primos segundos 0/21 · primos terceros 0/72 · parejas 0/2 · sin parentesco 0/1",
+  "0 hermanos 1/3 · primos 0/5 · primos segundos 0/21 · primos terceros 0/73 · parejas 0/2 · sin parentesco 0/1",
   "-1 otra sobrina 0/1",
 ]);
 
@@ -127,7 +127,7 @@ for (const fila of inicial.recuento.filas) {
 
 // Desplegarlo todo llena el panel entero
 const todo = panel(estado("p25", true, new Set(g.unionPorId.keys())));
-assert.strictEqual(todo.recuento.puestos, 372, "abriéndolo todo se llega a todos los conectados");
+assert.strictEqual(todo.recuento.puestos, 373, "abriéndolo todo se llega a todos los conectados");
 for (const fila of todo.recuento.filas) {
   for (const fraccion of fila.fracciones) {
     assert.strictEqual(fraccion.puestos.length, fraccion.todos.length, `${fila.nivel} ${fraccion.termino} se queda a medias`);
