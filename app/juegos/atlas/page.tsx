@@ -19,7 +19,6 @@ type Modo = "repasar" | "explorar";
  * dentro de explorar —dos niveles de lo mismo— y le daban al paseo el peso del trabajo.
  */
 export default function Atlas() {
-  const [pantallaCompleta, setPantallaCompleta] = useState(false);
   const identificado = useSyncExternalStore(suscribir, sesionActual, sinSesion);
   const mazo = useSyncExternalStore(suscribir, mazoActual, sinMazo);
 
@@ -29,6 +28,11 @@ export default function Atlas() {
   // ello porque en la primera pintura no se sabe todavía; elegido a mano, manda la elección.
   const [elegido, setElegido] = useState<Modo | null>(null);
   const modo = elegido ?? (identificado ? "explorar" : "repasar");
+
+  // Y con qué chrome, por lo mismo: quien tiene sesión ya sabe dónde está y viene a mirar el
+  // mapa, no la barra del terminal. Se deriva igual que el modo, y el botón manda si se toca.
+  const [maximizado, setMaximizado] = useState<boolean | null>(null);
+  const pantallaCompleta = maximizado ?? identificado;
 
   // Al cargar, y solo al cargar: se vuelca lo calificado sin cobertura y manda lo que diga
   // Redis. A media sesión no, que cambiar de tarjeta porque el otro dispositivo dijo otra cosa
@@ -65,7 +69,7 @@ export default function Atlas() {
           )}
           <button
             className="atlas-modo"
-            onClick={() => setPantallaCompleta((v) => !v)}
+            onClick={() => setMaximizado(!pantallaCompleta)}
             title={pantallaCompleta ? "Salir de pantalla completa" : "Pantalla completa"}
             aria-label={pantallaCompleta ? "Salir de pantalla completa" : "Pantalla completa"}
             style={{ display: "flex" }}
@@ -78,9 +82,7 @@ export default function Atlas() {
           </button>
         </div>
 
-        {/* Aterrizando se abre por «empezados», que es lo que está a medias y a lo que se viene;
-            entrando a mano desde repasar, por el primer continente, que es el paseo. */}
-        {modo === "repasar" ? <Repasar /> : <Explorar abrirEnEmpezados={!elegido} />}
+        {modo === "repasar" ? <Repasar /> : <Explorar />}
       </main>
 
       {/* Fuera del <main>, que mide lo que la ventana: dentro le robaría a la tarjeta el alto que

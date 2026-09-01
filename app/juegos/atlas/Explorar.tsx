@@ -95,13 +95,9 @@ const alLado = (lista: string[], desde: number, n: number) => (desde + n + lista
  * La pestaña de explorar: los países de un continente, uno a uno y en el orden del barrido en S
  * —nunca alfabético, que el alfabeto no enseña geografía—. Solo mira: no toca ningún reloj.
  */
-export default function Explorar({ abrirEnEmpezados = false }: { abrirEnEmpezados?: boolean }) {
+export default function Explorar() {
   const mazo = useSyncExternalStore(suscribir, mazoActual, sinMazo);
   const tema = useTema();
-  const [ci, setCi] = useState(abrirEnEmpezados ? I_EMPEZADOS : 0);
-  const [pi, setPi] = useState(0);
-  const [abierto, setAbierto] = useState(false);
-
   /**
    * Lo que se puede recorrer: los seis continentes y, detrás, los dos estados. Un estado no es un
    * continente, pero se elige en el mismo sitio porque se elige por lo mismo —qué recorrido toca
@@ -115,6 +111,13 @@ export default function Explorar({ abrirEnEmpezados = false }: { abrirEnEmpezado
     ...ORDEN.map((g) => ({ nombre: g.continente.toLowerCase(), paises: g.paises })),
     ...ESTADOS.map((e) => ({ nombre: ETIQUETA[e], paises: RECORRIDO.filter((id) => dominioPais(mazo, id) === e) })),
   ], [mazo]);
+
+  // Se abre por «empezados», que es lo que está a medias y a lo que se viene: nadie entra a
+  // explorar a que le pongan Asia. Sin nada empezado —la primera visita— sí, que un recorrido
+  // vacío no es un paseo.
+  const [ci, setCi] = useState(vistas[I_EMPEZADOS].paises.length ? I_EMPEZADOS : 0);
+  const [pi, setPi] = useState(0);
+  const [abierto, setAbierto] = useState(false);
 
   const vista = vistas[ci];
   const lista = vista.paises;
