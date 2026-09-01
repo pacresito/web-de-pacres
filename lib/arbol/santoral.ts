@@ -289,6 +289,8 @@ const POR_PERSONA: Record<string, DiaDelAño> = {
   p8: "06-25", // Eva Sola celebra en junio y no el 19 de diciembre de las otras tres
   p445: "12-03", // Fran celebra San Francisco Javier, no el Asís que le da su nombre
   p323: "07-16", // en el árbol es María, se llama María Casas y celebra con las Carmen
+  p130: "02-22", // Nora no tiene santo propio; la familia la celebra el 22 de febrero
+  p134: "07-26", // Jara no tiene santo propio; celebra el mismo día que su madre Ana
 };
 
 /** La onomástica de alguien: la suya si la tiene apuntada, y si no la de su nombre. */
