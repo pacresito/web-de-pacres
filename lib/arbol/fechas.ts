@@ -76,6 +76,18 @@ export const seLeSuponeFallecido = (p: { birth?: Fecha; death?: Fecha }, hoy: Fe
   !p.death && p.birth !== undefined && edadEntre(p.birth, hoy) >= EDAD_IMPROBABLE;
 
 /**
+ * Y a quien no le consta el año no se le felicita nada. La regla de arriba necesita una fecha
+ * de la que contar, así que sin ella no se dispara nunca y el árbol lo da por vivo para
+ * siempre. **Frena solo la onomástica** porque es la única que no se cae sola: sale del nombre
+ * y no del documento, de modo que la tiene también quien no trae ni una fecha. Es la misma
+ * cautela de los 99 años —callar no es decir que sigue aquí— aplicada donde aquella no llega.
+ *
+ * **Es de los avisos, no del árbol**: la ficha y la guirnalda dicen de quién es el día, que no
+ * depende de que se sepa cuándo nació ni de quién esté mirando, y ahí la onomástica se queda.
+ */
+export const seSabeCuandoNacio = (p: { birth?: Fecha }): boolean => p.birth !== undefined;
+
+/**
  * La edad que tiene, o la que tenía al morir. `hoy` llega del servidor y no de este
  * proceso: calcularlo aquí lo pondría a discrepar entre el render de Next y la hidratación
  * cada vez que uno de los dos cruzara la medianoche antes que el otro. A quien se le supone

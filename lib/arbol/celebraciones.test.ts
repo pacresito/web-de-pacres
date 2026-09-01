@@ -18,6 +18,7 @@ import {
 } from "./celebraciones";
 import { construirGrafo } from "./grafo";
 import { laLista } from "./lista";
+import { calcularRamas } from "./ramas";
 import { onomasticaDePersona } from "./santoral";
 import type { ArbolData } from "./tree";
 
@@ -92,6 +93,31 @@ for (const [, parentesco] of deSuHermana) {
     `${parentesco} no es familia cercana`,
   );
 }
+
+// Sin año de nacimiento no se felicita el santo. Es lo único que se puede celebrar sin saber
+// cuándo nació —sale del nombre y no del documento—, así que a quien no trae fecha no lo para
+// la regla de los 99 años y el panel se lo felicitaría un siglo después de enterrarlo.
+for (const pov of ["p25", "p84", "p131", "p224"]) {
+  for (const c of proximasCelebraciones(g, pov, "2026-01-01", 366)) {
+    if (c.tipo === "onomástica") assert.ok(persona(c.id!).birth, `${c.nombre} no trae año y se le felicita el santo`);
+  }
+}
+// Y la guirnalda se lo sigue encendiendo, que dice de quién es el día y no a quién felicitar.
+assert.strictEqual(persona("p224").birth, undefined, "Belarmina (p224) era la que no traía fecha");
+assert.deepStrictEqual(fiestasDelArbol(g, "2026-09-17").get("p224"), { tipo: "onomástica" });
+
+// La rama que solo se felicita desde dentro. Desde un Crespo la suya cae a distancia de
+// sobrina, y la familia cercana se la metía entera en el panel: Vicente (p84) es Crespo.
+const pertenencias = calcularRamas(g);
+const deLaRamaAparte = (id: string | null) => id !== null && (pertenencias.get(id)?.ramas.includes("Crespo-León") ?? false);
+assert.ok(!deLaRamaAparte("p84") && pertenencias.get("p84")!.ramas.includes("Crespo"), "p84 era Vicente, el de la rama Crespo");
+const desdeUnCrespo = proximasCelebraciones(g, "p84", "2026-01-01", 366);
+for (const c of desdeUnCrespo) assert.ok(!deLaRamaAparte(c.id), `${c.nombre} es de la rama aparte y sale en el panel de un Crespo`);
+// Y no se ha llevado por delante a los suyos, que es lo que el filtro no puede tocar.
+assert.ok(desdeUnCrespo.some((c) => c.id === "p108"), "Marta, su nieta, sigue cumpliendo años en su panel");
+assert.ok(desdeUnCrespo.filter((c) => c.id !== null).length > 30, "el filtro se ha llevado medio panel");
+// Desde dentro de la rama no se puede fijar aquí: de los 58 solo tres traen año, y ninguno de
+// ellos celebra nada que el panel pueda enseñar.
 
 // Cambiar de punto de vista cambia el panel entero: es de quien mira, no del árbol.
 const desdeSuHijo = proximasCelebraciones(g, "p26", "2026-03-01", 366);

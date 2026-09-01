@@ -4,11 +4,12 @@
 // **la guirnalda del nodo dice de quién es el día** y no depende de nadie.
 // Puro: `npx tsx lib/arbol/celebraciones.test.ts`.
 
-import { añoDe, conDia, seLeSuponeFallecido, type Fecha } from "./fechas";
+import { añoDe, conDia, seLeSuponeFallecido, seSabeCuandoNacio, type Fecha } from "./fechas";
 import { type Grafo } from "./grafo";
 import { laLista, YO, type Entrada } from "./lista";
 import { declinar, parentescos } from "./parentesco";
 import { comoSeLlama } from "./personas";
+import { calcularRamas } from "./ramas";
 import { onomasticaDePersona, primerDomingoDeMayo, proximaVez, type DiaDelAño } from "./santoral";
 
 /** Cuánto se mira hacia delante. Más allá deja de ser un aviso y pasa a ser un listado. */
@@ -91,7 +92,7 @@ export function proximasCelebraciones(g: Grafo, pov: string, hoy: Fecha, ventana
     if (nacimiento && conDia(nacimiento)) {
       cabe("cumpleaños", nacimiento.slice(5), (fecha) => añoDe(fecha) - añoDe(nacimiento));
     }
-    const suNombre = santo ? onomasticaDePersona(persona) : null;
+    const suNombre = santo && seSabeCuandoNacio(persona) ? onomasticaDePersona(persona) : null;
     if (suNombre) cabe("onomástica", suNombre);
   }
 
@@ -164,7 +165,32 @@ function familiaCercana(g: Grafo, pov: string): Map<string, Entrada> {
       }
     }
   }
-  return salida;
+  return sinLaRamaAparte(g, pov, salida);
+}
+
+/**
+ * La rama que solo se felicita desde dentro: sale en el panel de los suyos y en el de nadie
+ * más. Es la parte de la familia con la que ya no hay trato —de ninguno de ellos hay un
+ * teléfono al que preguntarle una fecha—, y el parentesco no lo sabe: de un Crespo, media
+ * Crespo-León es sobrina, así que la regla de la familia cercana se la metía entera en el
+ * panel. **Apartarla no la esconde**: quien quiera lo suyo se centra en uno de ellos y lo
+ * tiene, que es lo que deja aplicar aquí lo que el pedigrí no puede decir.
+ *
+ * **Es del panel y no del árbol**: la guirnalda dice de quién es el día, que no depende de
+ * quién mire, y ahí siguen encendiéndose.
+ */
+const RAMA_APARTE = "Crespo-León";
+
+/**
+ * Fuera los suyos cuando quien mira no es de la rama. Va sobre la familia cercana y no sobre
+ * `laLista`, que es a mano y gana: lo que se escribe uno por uno no lo tacha una regla.
+ */
+function sinLaRamaAparte(g: Grafo, pov: string, gente: Map<string, Entrada>): Map<string, Entrada> {
+  const pertenencias = calcularRamas(g);
+  const suya = (id: string) => pertenencias.get(id)?.ramas.includes(RAMA_APARTE) ?? false;
+  if (suya(pov)) return gente;
+  for (const id of gente.keys()) if (suya(id)) gente.delete(id);
+  return gente;
 }
 
 const vive = (p: { birth?: Fecha; death?: Fecha }, hoy: Fecha): boolean => !p.death && !seLeSuponeFallecido(p, hoy);

@@ -11,7 +11,7 @@
 // La víspera y no el día: un cumpleaños del que uno se entera por la mañana ya llega tarde
 // para comprar nada. Y a las diez, que es la hora en que todavía se puede escribir a alguien.
 
-import { añoDe, conDia, MS_DIA, seLeSuponeFallecido, type Fecha } from "./fechas";
+import { añoDe, conDia, MS_DIA, seLeSuponeFallecido, seSabeCuandoNacio, type Fecha } from "./fechas";
 import { type Grafo } from "./grafo";
 import { laLista, PAREJA, YO } from "./lista";
 import { comoSeLlama } from "./personas";
@@ -79,7 +79,7 @@ function* deLaGente(g: Grafo, hoy: Fecha, mañana: Fecha): Generator<Linea> {
       yield { grupo: 0, nombre: mio ? "" : suApodo, texto };
     }
 
-    const suSanto = santo ? onomasticaDePersona(persona) : null;
+    const suSanto = santo && seSabeCuandoNacio(persona) ? onomasticaDePersona(persona) : null;
     if (suSanto && cae(suSanto)) {
       // La cola que nombra a todos los que se llaman igual solo vale si el día es el de su
       // nombre: hay quien celebra el de otro —una María que celebra San José— y a ese

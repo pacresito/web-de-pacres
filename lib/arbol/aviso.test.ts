@@ -51,6 +51,14 @@ assert.ok(!marzo.texto.includes("tío de Carmen"), "de sus tíos, el cumpleaños
 const mayo = laNoche("2026-05-02")!;
 assert.ok(mayo.texto.includes("🎉 Mañana es el día de la madre. Va por Carmen, y tu madre espera su llamada."), mayo.texto);
 
+// El santo pide año de nacimiento. La víspera de San Miguel se felicita al primo, que nació
+// en 1961, y no al bisabuelo, del que solo consta el nombre: sin fecha, la regla de los 99
+// años no tiene de qué contar y lo habría felicitado un siglo después de enterrarlo.
+const sanMiguel = laNoche("2026-09-28")!;
+assert.strictEqual(g.personaPorId.get("p211")!.birth, undefined, "p211 era el Miguel sin fecha");
+assert.ok(sanMiguel.texto.includes("<b>Miguel</b>, tu primo"), sanMiguel.texto);
+assert.ok(!sanMiguel.texto.includes("tu bisabuelo"), `al bisabuelo sin fecha se le sigue felicitando:\n${sanMiguel.texto}`);
+
 // Los dos días caen una vez al año y una sola, y ninguno se pierde.
 const delAño = dias("2026-01-01", 365).map(laNoche);
 for (const dia of ["día del padre", "día de la madre"]) {
