@@ -96,6 +96,15 @@ export const C_VISION = 7e-7;     // coste de ver: masa · C_VISION · visión²
 export const GIRO = 24;           // tangente del giro máximo por tick = GIRO / masa
 export const EFICIENCIA = 0.6;    // de la masa de la presa; el resto se pierde
 
+/**
+ * Ticks que tarda un bocado en pasar de la espalda a la despensa. **Es la única cifra del motor
+ * elegida por el ojo y no por una magnitud**, y por eso está declarada aparte: vaciarse de golpe
+ * no se veía, y con la carga mediana en un solo bocado cualquier ritmo proporcional sin constante
+ * duraría un tick. No desequilibra nada porque en casa no se caza y solo corre el basal: cuesta
+ * tiempo, no energía.
+ */
+export const TICKS_BOCADO = 5;
+
 export type Rumbo = { hx: number; hy: number; masa: number };
 
 /**
@@ -558,15 +567,19 @@ const enCasa = (c: Config, x: number, y: number): boolean =>
  * bicho raspándola el día entero sin decidir nada, y el rebote no es genético — nadie evoluciona
  * a atravesar un muro.
  *
- * Dos paredes. El borde del mundo, para todos. Y la franja de casa, que **de vacío no se entra**
- * —volver es traer algo— pero sí se sale: al amanecer todo el mundo está dentro de ella, que es
- * donde acabó el día anterior, y encerrarlos ahí sería no dejar salir a nadie nunca.
+ * Dos paredes. La del mundo, que **cada uno tiene a su propio radio**: el cuerpo se para tangente
+ * al borde en vez de centrado en él, que es como se pintaba media población partida por la mitad.
+ * Más adentro no puede ir —probado en la línea media de la franja—: el aro exterior es la sala de
+ * espera donde se hace noche, y cerrarlo hunde los nacimientos a la mitad en el mundo pobre.
+ * Y la franja de casa, que **de vacío no se entra** —volver es traer algo— pero sí se sale: al
+ * amanecer todo el mundo está dentro de ella, que es donde acabó el día anterior, y encerrarlos
+ * ahí sería no dejar salir a nadie nunca.
  */
 function mover(m: Mundo, b: Bicho, v: number) {
   const c = m.cfg;
   const puedeEntrar = b.carga > 0 || enCasa(c, b.x, b.y);
   let x = b.x + b.hx * v, y = b.y + b.hy * v;
-  const lim = puedeEntrar ? 0 : c.casa;
+  const lim = puedeEntrar ? b.radio : c.casa;
   if (x < lim) { x = lim; b.hx = Math.abs(b.hx); }
   else if (x > c.ancho - lim) { x = c.ancho - lim; b.hx = -Math.abs(b.hx); }
   if (y < lim) { y = lim; b.hy = Math.abs(b.hy); }
@@ -614,15 +627,15 @@ export function tick(m: Mundo) {
       if (dx * dx + dy * dy <= r * r) { m.comida.splice(i, 1); b.carga++; break; }
     }
 
-    // **Llegar a casa descarga y suelta.** Se descarga al alcanzar la línea media de la franja, no
-    // al pisarla: parándose en su borde interior la población entera se alinearía sobre la misma
-    // raya, que es donde no está la casa de nadie.
+    // **Llegar a casa descarga y suelta**, bocado a bocado: la carga que se ve encima tiene que
+    // tardar en entrar lo que tarda en desaparecer del dibujo. Se descarga al alcanzar la línea
+    // media de la franja, no al pisarla: parándose en su borde interior la población entera se
+    // alinearía sobre la misma raya, que es donde no está la casa de nadie.
     const [, , d] = haciaCasa(m, b);
     b.aSalvo = d <= c.casa / 2;
-    if (b.aSalvo && b.carga > 0) {
-      b.reserva += b.carga * E_COMIDA;
-      b.carga = 0;
-      m.viajes++;
+    if (b.aSalvo && b.carga > 0 && m.t % TICKS_BOCADO === 0) {
+      b.reserva += E_COMIDA;
+      if (--b.carga === 0) m.viajes++;   // el viaje se cuenta al vaciarse, no al llegar
     }
   }
 
@@ -697,7 +710,11 @@ export function anochecer(m: Mundo) {
       const h = nacer(m, g, b.id, b.gen + 1, [b.x, b.y]);
       const [ux, uy] = unidad(m.azar);
       const d = b.radio + h.radio + 1;
-      h.x = b.x + ux * d; h.y = b.y + uy * d;
+      // Al lado de su madre, pero de este lado del muro: se cría pegada a él, y la cría que cayera
+      // fuera amanecería pintada a medias.
+      const muro = h.radio;
+      h.x = Math.min(Math.max(b.x + ux * d, muro), c.ancho - muro);
+      h.y = Math.min(Math.max(b.y + uy * d, muro), c.alto - muro);
       h.recien = true;
       b.hijos++;
       m.cuenta.nacidos++;
