@@ -58,10 +58,10 @@ export function sig(a: Azar): number {
  * Ruido centrado, media 0 y desviación 0.5 (Irwin-Hall de 3). Sustituye a la gaussiana porque
  * Box-Muller pide `log` y `cos`, y ninguno de los dos está fijado por IEEE.
  */
-const centrado = (a: Azar): number => sig(a) + sig(a) + sig(a) - 1.5;
+export const centrado = (a: Azar): number => sig(a) + sig(a) + sig(a) - 1.5;
 
 /** Vector unitario uniforme, por rechazo en el cuadrado: sin ángulos, sin trigonometría. */
-function unidad(a: Azar): [number, number] {
+export function unidad(a: Azar): [number, number] {
   for (;;) {
     const x = sig(a) * 2 - 1, y = sig(a) * 2 - 1;
     const d2 = x * x + y * y;
@@ -148,31 +148,37 @@ export const CALENTAR = 600;
 //
 // Todas de `costes.medir.ts`, y **se vuelven a sacar cada vez que se mueva una**:
 //
-// · **boca 0,6** (sección `mundo`): es la rodilla. Con 0,5 la depredación causa el 13-15% de las
-//   muertes y con 0,7 el 32-38%, lo mismo que con 0,6 — así que es la boca más pequeña que
-//   enciende el mecanismo. Por debajo de 0,45 no se come nadie a nadie, y media mitad del modelo
-//   (fiereza, audacia, persecución) no la nota ningún genoma.
+// · **boca 0,6** (sección `mundo`): es donde se enciende la depredación. Con 0,5 causa el 10-13%
+//   de las muertes y con 0,6 el 26%; 0,7 solo añade cuatro puntos más. Por debajo de 0,45 no se
+//   come nadie a nadie, y media mitad del modelo —fiereza, audacia, persecución— no la nota
+//   ningún genoma.
+// · **senescencia 4e-8** (columna `%vejez` de esa misma tabla): deja la vejez en el 20-23% de las
+//   muertes, que es lo que hace que el aguante compre algo.
 // · **expMasa 1 y expVision 2** (sección `exponentes`): son los que dice la geometría —coste ∝
 //   masa, coste de ver ∝ área—, y medir confirma que son además los viables: con expMasa 1,5 se
-//   extinguen las cinco semillas, y con 0,75 el empuje no deja de subir (+9% a mitad de partida,
-//   +17% al final, sin señal de asentarse).
-// · **tasa 0,08** (sección `mutacion`): la varianza de la talla se ve en la generación 9 y el
-//   rango intercuartílico se queda en el 22% de la mediana. Con 0,03 tarda 25 generaciones —media
-//   hora de mirar—; con 0,2 se ve en 5, pero un 41% de dispersión ya no deja ver hacia dónde va nada.
-// · **senescencia 4e-8**: deja la vejez en el 19% de las muertes. Con 9e-9 es el 11% y el aguante
-//   no lo selecciona nadie; con 5e-7 sube al 43%, pero tres de cada cinco mundos se extinguen.
-// · **fundador** (secciones `fundador` y `regla1`): la talla vuelve a 4,1-5,2 salga de 3, 4 o 5, y
-//   cualquier talla lejos de ahí extingue el mundo; el empuje baja de 6 a 4,5 y sube de 0,6 a 0,9;
-//   la visión baja de 66 a 38 y sube de 6,6 a 8,5. El fundador está puesto en ese centro para que
-//   la partida no se gaste en el transitorio de llegar hasta él.
+//   extinguen las cinco semillas, y con 0,75 el empuje no deja de subir (+11% a mitad de partida,
+//   +43% al final, sin señal de asentarse) con el censo disparado a 284.
+// · **tasa 0,08** (sección `mutacion`): la varianza de la talla se ve en la generación 8 y el
+//   rango intercuartílico se queda en el 15% de la mediana. Con 0,03 tarda 27 generaciones —media
+//   hora de mirar—; con 0,2 se ve en 4, pero un 25% de dispersión ya no deja ver hacia dónde va nada.
+// · **fundador** (secciones `fundador` y `regla1`): la talla vuelve a 3,8-4,4 salga de 3, 4 o 5.
+//   El empuje y la visión no convergen del todo —el abanico de partida se cierra de ×10 a ×3,8 y
+//   a ×3,3—: se acercan, pero conservan memoria de dónde salieron.
+// · **cien semillas** (sección `cien`): las 100 siguen vivas en la generación 100, a 225 ticks por
+//   generación y censo mediano 168.
 //
-// · **cien semillas** (sección `cien`): 67 de 100 siguen vivas en la generación 100, y las 33 que
-//   se extinguen llegan antes a la generación 82 de mediana — son partidas que acaban, no mundos
-//   que nacen muertos. Van a 245 ticks por generación y censo mediano 46.
+// Y lo que el medidor dice que **no** está bien, todo por la misma razón:
 //
-// Y lo que el medidor dice que **no** está bien: el `aguante` es el gen más flojo del modelo —de 8
-// se queda en 4,8 en cincuenta generaciones—, así que su banda del panel se abrirá más por deriva
-// que por selección. Está medido y no arreglado: subir la vejez hasta que muerda extingue mundos.
+// · El **85-93% de los bichos vivos tiene comida a la vista** en cualquier geometría (columna
+//   `ven%` de la sección `escala`), porque el que no la tiene se muere. Un mundo donde ver no es
+//   una decisión no puede seleccionar ni la visión ni la velocidad, y ahí se queda el test de la
+//   escasez, pasando por un +4%.
+// · Con eso, **el umbral no lo selecciona nadie** (`regla1`: su abanico se cierra de ×3,3 a ×2,7)
+//   y el **aguante** apenas (de ×26,7 a ×15,6): sus bandas del panel se abrirán más por deriva
+//   que por selección.
+// · Y **no se extingue ninguna de las cien semillas**, cuando la extinción tiene que ser un
+//   resultado posible. Las tres cosas se arreglan por el mismo sitio: cuánta comida sostiene el
+//   mundo a la vez (`energia`, `brote`, `vidaComida`), que es calibración y la decide Pablo.
 
 export type Config = {
   ancho: number;
@@ -222,7 +228,10 @@ export const FUNDADOR: Genoma = {
 };
 
 export const CONFIG: Config = {
-  ancho: 900, alto: 640,
+  // Un número entero de celdas de rejilla en cada lado. Con 900 la última columna era 3/5 de
+  // mundo con la misma energía de suelo que las enteras, así que el borde derecho brotaba más
+  // que el resto por aritmética, no por ecología.
+  ancho: 896, alto: 640,
   energia: 42000,
   censoInicial: 24,
   parches: 20, radioParche: 46, reservaParche: 900,
@@ -369,6 +378,20 @@ function rejilla(m: Mundo, rej: Rejilla, pts: { x: number; y: number }[]): Rejil
 
 // ─── Comida: parches que nacen, emiten y se agotan ────────────────────────────
 
+/**
+ * Dónde nace un parche dentro de su celda: uniforme en el trozo de celda donde **el disco entero
+ * cabe en el mundo**. Un parche que asoma por el muro no reparte menos comida — la reparte toda
+ * pegada a la pared, porque el bocado que cae fuera se recorta al borde—, y eso amontona comida
+ * en una línea que nadie ha modelado y a la que la población acaba mudándose.
+ *
+ * Si el radio es mayor que la celda no hay trozo que valga y se sortea en toda la banda: con
+ * parches más anchos que la rejilla, qué celda salió ya dice poco de dónde cae la comida.
+ */
+function centroParche(celda: number, u: number, r: number, largo: number): number {
+  const lo = Math.max(celda * CELDA, r), hi = Math.min(celda * CELDA + CELDA, largo - r);
+  return hi > lo ? lo + u * (hi - lo) : r + u * Math.max(0, largo - 2 * r);
+}
+
 function brotar(m: Mundo) {
   const c = m.cfg;
   while (m.parches.length < c.parches) {
@@ -385,20 +408,33 @@ function brotar(m: Mundo) {
     // El parche bebe de su celda y de las ocho vecinas: la energía de los cadáveres queda
     // repartida en celdas pequeñas, y exigiendo que una sola llegue a un bocado los parches
     // dejaban de nacer para siempre con el suelo aún lleno.
+    //
+    // **Y bebe de las nueve en proporción a lo que cada una tiene, no en orden.** Vaciando la
+    // primera antes de tocar la segunda, el bucle se come siempre el noroeste y deja lleno el
+    // sureste; como la celda del parche se sortea ponderada por energía, el mundo entero se
+    // escoraba hacia la esquina de abajo a la derecha —medido: el 61% de los bichos en el quinto
+    // inferior del mapa—. El orden de un bucle no puede ser un accidente geográfico.
     const cx = celda % m.cols, cy = Math.floor(celda / m.cols);
+    const y0 = Math.max(0, cy - 1), y1 = Math.min(m.filas - 1, cy + 1);
+    const x0 = Math.max(0, cx - 1), x1 = Math.min(m.cols - 1, cx + 1);
+    let vecino = 0;
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) vecino += m.suelo[y * m.cols + x];
     let drenado = 0;
-    for (let y = Math.max(0, cy - 1); y <= Math.min(m.filas - 1, cy + 1); y++) {
-      for (let x = Math.max(0, cx - 1); x <= Math.min(m.cols - 1, cx + 1); x++) {
-        const i = y * m.cols + x;
-        const bebe = Math.min(c.reservaParche - drenado, m.suelo[i]);
-        m.suelo[i] -= bebe;
-        drenado += bebe;
+    if (vecino > 0) {
+      const parte = Math.min(1, c.reservaParche / vecino);
+      for (let y = y0; y <= y1; y++) {
+        for (let x = x0; x <= x1; x++) {
+          const i = y * m.cols + x;
+          const bebe = m.suelo[i] * parte;   // se resta lo mismo que se suma: el balance cierra
+          m.suelo[i] -= bebe;
+          drenado += bebe;
+        }
       }
     }
     if (drenado < E_COMIDA) { m.suelo[celda] += drenado; break; }
     m.parches.push({
-      x: cx * CELDA + sig(m.azar) * CELDA,
-      y: cy * CELDA + sig(m.azar) * CELDA,
+      x: centroParche(cx, sig(m.azar), c.radioParche, c.ancho),
+      y: centroParche(cy, sig(m.azar), c.radioParche, c.alto),
       r: c.radioParche,
       reserva: drenado,
     });
@@ -510,12 +546,15 @@ function decidir(m: Mundo, b: Bicho, rb: Rejilla, rc: Rejilla, radioMax: number)
   girar(b, sx / n, sy / n);
 }
 
+/** Lo que `girar` necesita de un cuerpo: su rumbo y su masa. Cualquier mundo puede tener eso. */
+export type Rumbo = { hx: number; hy: number; masa: number };
+
 /**
  * Gira el rumbo hacia `(dx,dy)` sin pasarse del máximo del tick, que es inverso a la masa: los
  * grandes maniobran mal. El giro se aplica multiplicando por el vector `(c,s)` —una rotación
  * compleja—, así que no hace falta ni un ángulo ni una trigonométrica.
  */
-function girar(b: Bicho, dx: number, dy: number) {
+export function girar(b: Rumbo, dx: number, dy: number) {
   const t = GIRO / b.masa;                  // tangente del giro máximo
   const c = 1 / Math.sqrt(1 + t * t), s = t * c;
   const cos = b.hx * dx + b.hy * dy;
@@ -555,7 +594,7 @@ function comer(m: Mundo, dep: Bicho, presa: Bicho) {
  * Raíz cúbica por Newton desde el radio de ahora: `Math.cbrt` no está fijado por IEEE y el radio
  * entra en todas las relaciones físicas, así que un bit de diferencia partiría la semilla.
  */
-function raizCubica(masa: number, desde: number): number {
+export function raizCubica(masa: number, desde: number): number {
   let r = desde > 0 ? desde : 1;
   for (let i = 0; i < 8; i++) r = (2 * r + masa / (r * r)) / 3;
   return r;

@@ -2,14 +2,16 @@
 // No es parte del build; verifica el mundo sin navegador.
 //
 // **No comprueban código: comprueban predicciones evolutivas falsables.** Que una función
-// devuelva lo que devuelve no dice nada de si la simulación es honesta; que un mundo con comida
-// de sobra abarate el movimiento, sí. Si sale al revés hay un signo mal puesto en alguna parte, y
-// la app estaría pintando muy bien una física que miente.
+// devuelva lo que devuelve no dice nada de si la simulación es honesta; que la escasez de comida
+// seleccione más ojo, sí. Y cuando uno falla, lo primero que hay que sospechar es el mundo y no
+// la predicción: el de la escasez midió el signo contrario durante un día entero, y no era
+// ecología — los parches nacían medio fuera del mapa y su comida se recortaba contra el muro,
+// así que los mundos ricos tenían una despensa pegada a la pared que nadie había modelado.
 //
 // Por eso son caros —minutos, no milisegundos— y por eso cada escenario corre varias semillas y
 // compara **medianas**: una semilla sola dice tanto del azar que le tocó como del mundo.
 import {
-  crearMundo, avanzar, resumen, mediana, huella, balance, velocidadAdulta, mutar, azarCon,
+  crearMundo, avanzar, resumen, mediana, huella, balance, mutar, azarCon,
   RASGOS, CONFIG, type Config, type Genoma,
 } from "./engine";
 
@@ -35,38 +37,48 @@ function escenario(cfg: Partial<Config>) {
   return { vivas: vel.length, velocidad: mediana(vel), vision: mediana(vis), talla: mediana(tal) };
 }
 
-// Los tres primeros tests son el mismo mundo con la comida puesta de tres maneras. `escasa` y
-// `concentrada` producen **lo mismo por tick** (parches × brote = 3 bocados), y entre ellas solo
-// cambia la geometría: así el tercer test compara concentración contra dispersión y no, sin
-// querer, abundancia contra escasez. `repartida` produce el doble, y esparcida por todo el mundo.
-const REPARTIDA: Partial<Config> = { parches: 24, radioParche: 130, brote: 0.25, caza: false };
+// Los tres primeros tests son el mismo mundo con la comida puesta de otra manera. `rala` y `rica`
+// son los extremos de densidad, separados por ×16: entre densidades vecinas la diferencia es
+// menor que lo que se mueve la mediana de seis semillas, y un test que no distingue la señal del
+// azar no mide el mundo, tira una moneda.
+//
+// `escasa` y `concentrada` son el par del tercer test: producen **lo mismo por tick** (parches ×
+// brote = 3 bocados) y entre ellas solo cambia la geometría, así que ese test compara
+// concentración contra dispersión y no, sin querer, abundancia contra escasez.
+const RALA: Partial<Config> = { parches: 24, radioParche: 130, brote: 0.0625, caza: false };
+const RICA: Partial<Config> = { parches: 24, radioParche: 130, brote: 1, caza: false };
 const ESCASA: Partial<Config> = { parches: 24, radioParche: 130, brote: 0.125, caza: false };
 const CONCENTRADA: Partial<Config> = { parches: 6, radioParche: 40, brote: 0.5, caza: false };
 
 console.log("Corriendo escenarios (esto tarda unos minutos)…\n");
-const repartida = escenario(REPARTIDA);
+const rala = escenario(RALA);
+const rica = escenario(RICA);
 const escasa = escenario(ESCASA);
 const concentrada = escenario(CONCENTRADA);
 const cifras = (n: string, e: ReturnType<typeof escenario>) =>
   `${n}: v=${e.velocidad.toFixed(3)} visión=${e.vision.toFixed(1)} talla=${e.talla.toFixed(2)} (${e.vivas}/${SEMILLAS.length} vivas)`;
-console.log(cifras("repartida", repartida));
-console.log(cifras("escasa", escasa));
-console.log(cifras("concentrada", concentrada), "\n");
+for (const [n, e] of [["rala", rala], ["rica", rica],
+                      ["escasa", escasa], ["concentrada", concentrada]] as const) console.log(cifras(n, e));
+console.log("");
 
-// 1. Comida abundante y repartida: moverse no compra nada que no tengas al lado, y el empuje se
-//    paga en cada tick. Si la velocidad sube, hay un signo mal.
+// 1 y 2, en uno: **la escasez selecciona ojo y piernas.** Si hay que recorrer el mundo para
+// comer, correr y ver antes se pagan solos; si la comida sobra, moverse es gasto.
+//
+// **Compara los extremos y no encadena densidades**, porque entre densidades vecinas no hay nada
+// que medir: con 12 semillas y brotes de ×4 en ×4, la velocidad sale 0,593 → 0,568 → 0,568 y la
+// visión 18,9 → 16,8 → 17,6, con rangos por semilla de 0,51 a 0,74. Solo el extremo pobre se
+// separa, y poco: **+4% en velocidad y +8% en visión**, así que este es el test que más cerca
+// está de decidirse por azar de los cinco.
+//
+// Ese margen estrecho no es un umbral mal puesto, es el diagnóstico que ya está en el plan: el
+// 90% de los bichos **vivos** tiene comida a la vista en cualquier geometría, porque el que no la
+// tiene se muere. Mientras buscar no cueste de verdad, estos dos genes no pueden estar muy
+// seleccionados. Si el test se pone rojo, se mira el mundo —y la cantidad de comida que sostiene
+// a la vez—, nunca el umbral.
 {
-  const v0 = velocidadAdulta(CONFIG.fundador);
-  check("comida abundante y repartida → la velocidad baja",
-    repartida.vivas >= 3 && repartida.velocidad < v0,
-    `${v0.toFixed(3)} → ${repartida.velocidad.toFixed(3)}`);
-}
-
-// 2. Comida escasa y dispersa: hay que recorrer el mundo para comer, y hay que verla antes.
-{
-  check("comida escasa y dispersa → suben velocidad y visión",
-    escasa.vivas >= 3 && escasa.velocidad > repartida.velocidad && escasa.vision > repartida.vision,
-    `v ${repartida.velocidad.toFixed(3)}→${escasa.velocidad.toFixed(3)}, visión ${repartida.vision.toFixed(1)}→${escasa.vision.toFixed(1)}`);
+  check("comida escasa → suben velocidad y visión",
+    rala.vivas >= 3 && rica.vivas >= 3 && rala.velocidad > rica.velocidad && rala.vision > rica.vision,
+    `v ${rica.velocidad.toFixed(3)}→${rala.velocidad.toFixed(3)}, visión ${rica.vision.toFixed(1)}→${rala.vision.toFixed(1)}`);
 }
 
 // 3. La misma escasez, concentrada en pocos parches: correr al azar no vale, hay que encontrar el

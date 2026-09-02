@@ -117,19 +117,21 @@ const secciones: Record<string, () => void> = {
   // producción de comida. Todo lo demás sale de una magnitud ya contada; estos tres, no.
   mundo() {
     console.log("\n## Boca, masticar y producción\n");
-    fila(["boca", "mastic", "parch", "brote", "vivas", "censo", "comida", "gen", "comidos", "%muert", "talla", "vision"]);
+    fila(["boca", "mastic", "parch", "brote", "vivas", "censo", "comida", "gen", "comidos", "%pres", "%vejez", "talla", "vision"]);
     for (const boca of [0.5, 0.6, 0.7]) {
       for (const masticar of [0.5, 1]) {
         for (const [parches, brote] of [[12, 0.25], [20, 0.15]] as const) {
           const l = lectura(correr({ boca, masticar, parches, brote }, 12000));
           const muertes = l.hambre + l.viejos + l.comidos;
           fila([boca, masticar, parches, brote, `${l.vivas}/${l.de}`, fmt(l.censo, 0), fmt(l.comida, 0),
-            fmt(l.generacion, 0), fmt(l.comidos, 0), fmt((100 * l.comidos) / muertes, 0), fmt(l.gen("talla")), fmt(l.gen("vision"), 1)]);
+            fmt(l.generacion, 0), fmt(l.comidos, 0), fmt((100 * l.comidos) / muertes, 0),
+            fmt((100 * l.viejos) / muertes, 0), fmt(l.gen("talla")), fmt(l.gen("vision"), 1)]);
         }
       }
     }
-    console.log("\nA leer: '%muert' es qué porcentaje de las muertes las causa otro bicho. En 0, media mitad del");
-    console.log("modelo (fiereza, audacia, persecución) está apagada y ningún genoma la nota.");
+    console.log("\nA leer: '%pres' es qué porcentaje de las muertes las causa otro bicho. En 0, media mitad del");
+    console.log("modelo (fiereza, audacia, persecución) está apagada y ningún genoma la nota. Y '%vejez' es");
+    console.log("lo que se lleva la senescencia: en 0 el aguante no compra nada y deja de ser un gen.");
   },
 
   // ── Los exponentes de coste ─────────────────────────────────────────────────
