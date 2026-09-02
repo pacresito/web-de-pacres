@@ -66,16 +66,21 @@ export const diaYMes = (fecha: Date) => FMT_DIA_MES.format(fecha).replace(".", "
 
 // ── El enlace a un paso ──
 // El aviso al móvil llega con el satélite a punto de salir: su enlace señala el paso que
-// anuncia para que la web abra su carta, y no la portada. Vive aquí porque lo escribe el
-// servidor y lo lee el navegador, y ninguno de los dos debe importar el módulo del otro.
+// anuncia para que la página abra su carta, y no la portada. Vive aquí porque lo escribe el
+// programador de avisos y lo lee la página, y ninguno de los dos importa al otro.
 
 /** «?paso=iss-1753301234000»: el nombre y el arranque del arco visible. */
 export const enlaceDePaso = (nombre: string, visibleDesde: number) =>
   `?paso=${encodeURIComponent(`${nombre.toLowerCase()}-${visibleDesde}`)}`;
 
-/** Lo que señala un `location.search`, o null si no señala ningún paso. */
-export function pasoDelEnlace(busqueda: string): { nombre: string; visibleDesde: number } | null {
-  const valor = new URLSearchParams(busqueda).get("paso");
-  const partes = valor?.match(/^(.+)-(\d+)$/);
+/** Lo que señala el valor de `?paso=`, o null si no señala ningún paso. */
+export function pasoDelEnlace(valor: string | string[] | undefined): { nombre: string; visibleDesde: number } | null {
+  const partes = typeof valor === "string" ? valor.match(/^(.+)-(\d+)$/) : null;
   return partes ? { nombre: partes[1], visibleDesde: +partes[2] } : null;
 }
+
+/**
+ * La hora de un paso se recalcula en cada carga con el TLE del momento, y puede haberse movido
+ * unos segundos desde que se escribió el aviso: el enlace señala el paso, no lo identifica.
+ */
+export const HOLGURA_ENLACE = 5 * 60_000;

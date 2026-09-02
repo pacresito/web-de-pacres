@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import TerminalShell from "../../components/TerminalShell";
 import WhyFooter from "../../components/WhyFooter";
-import { MARCO_INICIO_H, MARCO_MINUTOS, minutosEnMarco, pasoDelEnlace } from "./marco";
+import { MARCO_INICIO_H, MARCO_MINUTOS, minutosEnMarco } from "./marco";
 import type { Cielo, Evento, EventoSatelite, FilaPlaneta, PuntoArco } from "./engine";
 
 const redondo = (n: number) => +n.toFixed(2);
@@ -476,9 +476,6 @@ function Satelites({ cielo, onAbrir }: { cielo: Cielo; onAbrir: (p: EventoSateli
 
 // La carta a pantalla completa
 
-/** Lo que puede haberse movido la hora de un paso entre el aviso y la visita. */
-const HOLGURA_ENLACE = 5 * 60_000;
-
 /** Rumbo en grados desde el norte · "sin-norte" si el móvil no lo da · null si está apagada. */
 type Brujula = number | "sin-norte" | null;
 
@@ -603,22 +600,19 @@ function LineaEstado({ cielo }: { cielo: Cielo }) {
   );
 }
 
-export default function Vista({ cielo, comando }: { cielo: Cielo; comando: string }) {
-  const [abierto, setAbierto] = useState<EventoSatelite | null>(null);
-
-  // El aviso al móvil enlaza el paso que anuncia, y llega con el satélite a punto de salir:
-  // se abre su carta sin pasar por la portada. La hora se recalcula en cada carga con el TLE
-  // del momento, así que el enlace señala el paso, no lo identifica al milisegundo — de ahí
-  // la holgura. Se lee de `window` y no con `useSearchParams` para no envolver la página en
-  // un Suspense por un parámetro que solo se mira al montar.
-  useEffect(() => {
-    const señal = pasoDelEnlace(window.location.search);
-    if (!señal) return;
-    const suyo = cielo.pasos.find((p) => p.nombre.toLowerCase() === señal.nombre
-      && Math.abs(p.visibleDesde - señal.visibleDesde) < HOLGURA_ENLACE);
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- el enlace solo se lee al montar
-    if (suyo) setAbierto(suyo);
-  }, [cielo.pasos]);
+export default function Vista({ cielo, comando, abrir }: {
+  cielo: Cielo; comando: string; abrir: number | null;
+}) {
+  // `abrir` es el paso que señala el enlace del aviso, ya emparejado en el servidor: la carta
+  // sale pintada en el HTML, no montada un segundo después.
+  const [abierto, setAbierto] = useState<EventoSatelite | null>(
+    () => cielo.pasos.find((p) => p.instante === abrir) ?? null,
+  );
+  // Quien llega desde el aviso sale a mirar el cielo, no a leer una web: entra en la carta y
+  // sin el marco del terminal, que aparece al cerrarla. Quien abre una carta desde la página
+  // ya tiene el marco puesto y no se le quita — la carta lo tapa igual.
+  const [sinMarco, setSinMarco] = useState(abrir !== null);
+  const cerrar = () => { setAbierto(null); setSinMarco(false); };
 
   // Con la carta a pantalla completa, la página de detrás no debe moverse.
   useEffect(() => {
@@ -629,7 +623,8 @@ export default function Vista({ cielo, comando }: { cielo: Cielo; comando: strin
   }, [abierto]);
 
   return (
-    <TerminalShell title="observatorio" prompt={{ host: "observatorio", path: "~/apps", command: comando }}>
+    <TerminalShell title="observatorio" prompt={{ host: "observatorio", path: "~/apps", command: comando }}
+      hideChrome={sinMarco}>
       <style>{`
         /* width:100% es necesario, no cosmético: como ítem flex con margin auto, sin él encoge
            al ancho del contenido y el max-width nunca llega a aplicar. */
@@ -782,7 +777,7 @@ export default function Vista({ cielo, comando }: { cielo: Cielo; comando: strin
         </WhyFooter>
       </main>
 
-      {abierto && <PantallaCompleta paso={abierto} onCerrar={() => setAbierto(null)} />}
+      {abierto && <PantallaCompleta paso={abierto} onCerrar={cerrar} />}
     </TerminalShell>
   );
 }

@@ -55,7 +55,11 @@ export default function TerminalShell({
   const [winH, setWinH] = useState<string | null>(null);
   // Nace a 0 y sube tras el prompt. En un preview headless los timers se degradan y el
   // fade no llega nunca: confirmar opacity:1 en el DOM antes de capturar, o forzarla.
-  const [contentVisible, setContentVisible] = useState(variant === "terminal" ? !prompt : false);
+  // Sin marco no hay prompt que esperar: quien monta ya maximizado —el observatorio abierto
+  // desde el aviso— vería su pantalla en blanco el segundo que dura el tecleo.
+  const [contentVisible, setContentVisible] = useState(
+    variant === "terminal" ? !prompt || hideChrome : false,
+  );
   // El tema vive en data-theme de <html> (lo pone el hook); el wrapper hereda los tokens.
   const [theme, setTheme] = usePersistedTheme();
   const cmd = prompt?.command;

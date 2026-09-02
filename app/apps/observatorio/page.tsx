@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ALTITUD_MINIMA, MAGNITUD_MAXIMA, cielo } from "./engine";
+import { HOLGURA_ENLACE, pasoDelEnlace } from "./marco";
 import { cargarSatelites } from "./tle";
 import Vista from "./vista";
 
@@ -23,6 +24,16 @@ export const metadata: Metadata = {
 // vista no tenga que importar el motor —y con él, astronomy-engine— al navegador.
 const COMANDO = `./observatorio --min-altitude=${ALTITUD_MINIMA} --max-magnitude=${MAGNITUD_MAXIMA}`;
 
-export default async function Observatorio() {
-  return <Vista cielo={cielo(await cargarSatelites(), new Date())} comando={COMANDO} />;
+// El paso que señala `?paso=` —el enlace del aviso al móvil—, o null. Se resuelve aquí y no
+// en el navegador para que el HTML llegue ya con la carta puesta: leído al montar, primero se
+// vería el observatorio entero y un segundo después la carta encima.
+export default async function Observatorio({ searchParams }: {
+  searchParams: Promise<{ [clave: string]: string | string[] | undefined }>;
+}) {
+  const c = cielo(await cargarSatelites(), new Date());
+  const señal = pasoDelEnlace((await searchParams).paso);
+  const suyo = señal && c.pasos.find((p) => p.nombre.toLowerCase() === señal.nombre
+    && Math.abs(p.visibleDesde - señal.visibleDesde) < HOLGURA_ENLACE);
+
+  return <Vista cielo={c} comando={COMANDO} abrir={suyo ? suyo.instante : null} />;
 }
