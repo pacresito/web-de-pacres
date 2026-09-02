@@ -93,7 +93,7 @@ function linea(m: Mundo): string {
     ` · comida ${m.comida.length} · tick ${m.t}`;
 }
 
-const PISTA = "Franja = casa · aro = despensa · puntos = bocados que lleva · tono y filo = fiereza · aura = sociabilidad";
+const PISTA = "Franja = casa · aro = despensa y sus vueltas, lo ahorrado · puntos = bocados que lleva · tono y filo = fiereza · aura = sociabilidad";
 
 const ExpandIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

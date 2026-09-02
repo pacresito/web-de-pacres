@@ -234,11 +234,15 @@ export const FUNDADOR: Genoma = {
 // sin traer nada**: hay que hacer varios viajes solo para no perder. Ahí está el que se va pronto
 // a casa y se queda. Medido contra 600 ticks: el hambre pasa del 63% al 75% de las muertes, los
 // viajes por bicho de 2,0 a 3,4, la comida sobrante del 10% al 3% y los días con el suelo limpio
-// del 50% al 67%. Con 300 bocados sobreviven seis de ocho semillas —la extinción tiene que seguir
-// siendo un resultado posible— y el censo se asienta en 66.
+// del 50% al 67%.
+//
+// **La comida del día es la perilla que mueve el mundo entero.** Con 100 bocados sobreviven seis
+// de doce semillas al día 100 —la extinción tiene que seguir siendo un resultado posible— y el
+// censo se asienta en 27. A 70 se extinguen más de la mitad; a 300, el censo se dobla y sobra
+// comida en el suelo la mitad de los días.
 export const CONFIG: Config = {
   ancho: 320, alto: 224,
-  comidas: 300, censoInicial: 30,
+  comidas: 100, censoInicial: 30,
   ticksDia: 1000, capReserva: CAP_RESERVA, casa: 18,
   caza: true, boca: 1.2,
   tasa: 0.08, paso: 0.06,
@@ -654,10 +658,10 @@ export function tick(m: Mundo) {
         // población sois la misma cosa. Con la población clonada (`especie` = 0) eso cubre a los
         // idénticos, que es exactamente lo que hay el primer día.
         if (distancia(a.g, b.g) <= m.especie) continue;
-        // Comerse a otro da **dos cosas distintas**, y esa es la gracia: su cuerpo es energía para
-        // seguir el día —con la eficiencia trófica, el resto se pierde— y su
-        // carga cambia de dueño. Solo la carga cuenta para criar, así que el robo es una manera
-        // de reproducirse y la caza, solo de aguantar hasta casa.
+        // Comerse a otro da **dos cosas distintas**, y esa es la gracia: su cuerpo entra en la
+        // despensa —con la eficiencia trófica, el resto se pierde— y su carga cambia de dueño,
+        // todavía a cuestas y sin canjear. Las dos crían: lo robado nace esta misma noche y lo
+        // cazado, en cuanto quepa. Cazar no es solo aguantar hasta casa.
         if (a.radio >= c.boca * b.radio) { comer(m, a, b); }
         else if (b.radio >= c.boca * a.radio) { comer(m, b, a); break; }
       }

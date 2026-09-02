@@ -327,7 +327,8 @@ export function pintar(ctx: CanvasRenderingContext2D, m: Mundo, p: Paleta, v: Vi
   for (const b of m.bichos) {
     // La despensa llena va con la masa, así que el aro de cada uno se mide contra la suya: un
     // grande a medio gas y un pequeño a medio gas se pintan igual de apagados, que es lo justo.
-    const vigor = Math.max(0, Math.min(1, b.reserva / (c.capReserva * b.masa)));
+    const lleno = b.reserva / (c.capReserva * b.masa);   // despensas llenas: 1 es lleno
+    const vigor = Math.max(0, Math.min(1, lleno));
     if (b.recien && m.noche) {
       if (brote > 0.02) pintarCuerpo(ctx, { ...b, radio: b.radio * brote }, vigor, p);
       if (brote < 1) {
@@ -350,6 +351,25 @@ export function pintar(ctx: CanvasRenderingContext2D, m: Mundo, p: Paleta, v: Vi
       ctx.lineWidth = 1.1;
       ctx.beginPath();
       ctx.arc(b.x, b.y, b.radio + 2.2, -Math.PI / 2, -Math.PI / 2 + TAU * vigor);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+
+    // **La despensa no tiene techo, y sin esto no se veía**: el aro se llenaba y ahí se quedaba,
+    // así que quien llevaba una semana ahorrando se pintaba igual que quien acababa de comer, y su
+    // camada de veintidós parecía salida de la nada. Lo que pasa del lleno da otra vuelta al mismo
+    // aro, en verde y un poco más gorda. **Por duplicaciones**, que el récord medido son cincuenta
+    // y nueve despensas y el aro mide once píxeles: repartido en lineal, la primera vuelta se
+    // comería las otras cincuenta y ocho. Topado en cuatro, que de ahí para arriba ya solo dice
+    // "riquísimo".
+    if (lleno > 1) {
+      const vueltas = Math.min(4, 1 + Math.log2(lleno));
+      const parcial = vueltas % 1;         // 0 en la vuelta justa: se pinta entera, no se borra
+      ctx.strokeStyle = p.comida;
+      ctx.globalAlpha = 0.5;
+      ctx.lineWidth = 1.1 + 0.7 * Math.floor(vueltas - 1);
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.radio + 2.2, -Math.PI / 2, -Math.PI / 2 + TAU * (parcial || 1));
       ctx.stroke();
       ctx.globalAlpha = 1;
     }
