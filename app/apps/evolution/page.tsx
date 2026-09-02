@@ -37,7 +37,7 @@ const HISTORIA = 60;
  */
 const PAUSA_NOCHE = 800;
 
-const SEMILLA_POR_DEFECTO = "brizna";
+const SEMILLA_POR_DEFECTO = "hola";
 
 const ACENTO = (x: string | number) => `<span style="color:var(--t-accent)">${x}</span>`;
 
@@ -91,9 +91,7 @@ function linea(m: Mundo): string {
     const cria = crias === 1 ? "cría" : "crías", madre = madres === 1 ? "madre" : "madres";
     return `anochece · ${ACENTO(`${crias} ${cria}`)} de ${madres} ${madre} · censo ${m.bichos.length}`;
   }
-  let enCasa = 0;
-  for (const b of m.bichos) if (b.aSalvo) enCasa++;
-  return `día ${ACENTO(m.dia)} · censo ${m.bichos.length} · en casa ${enCasa}` +
+  return `día ${ACENTO(m.dia)} · censo ${m.bichos.length} · viajes ${m.viajes}` +
     ` · comida ${m.comida.length} · tick ${m.t}`;
 }
 

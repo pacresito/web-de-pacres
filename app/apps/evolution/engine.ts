@@ -213,16 +213,19 @@ export const FUNDADOR: Genoma = {
   empuje: 2, talla: 4.5, vision: 22, sociabilidad: 0, fiereza: 1, retorno: 1,
 };
 
-// Medido en `costes.medir.ts`. Con el mundo de 896×640 del primer intento no se llegaba al centro
-// y vuelta, y se extinguían las ocho semillas; a la mitad de mundo, viven. Comida y jornada salen
-// del barrido con la despensa acoplada: con 100 bocados y 300 ticks sobreviven cinco de ocho
-// semillas —la extinción tiene que seguir siendo un resultado posible—, el censo se asienta en 77
-// y las muertes se reparten 58% de hambre y 42% de dentellada. Con 60 bocados el hambre se lleva
-// tres cuartos; con 250, el mundo deja de apretar y la talla se dispara.
+// Medido en `costes.medir.ts`, y **el tamaño del mundo lo decide que se coma la comida**. Con
+// 448×320 sobraba la mitad del suelo todos los días y el centro del mapa no lo pisaba nadie: la
+// comida sobrante por bandas del borde al centro iba 35% · 44% · 75% · 95% · **99%**. No era la
+// jornada —alargarla cinco veces dejaba el 51%— sino la geometría: casa está en el perímetro, y
+// pasado cierto radio el viaje de ida y vuelta no lo paga ningún bocado. A 320×224 sobra el 10% y
+// **la mitad de los días el suelo queda limpio**; a 256×176, el 1% y tres de cada cuatro días.
+//
+// Con 300 bocados y jornada de 600 sobreviven seis de ocho semillas —la extinción tiene que seguir
+// siendo un resultado posible— y el censo se asienta en 57.
 export const CONFIG: Config = {
-  ancho: 448, alto: 320,
-  comidas: 100, censoInicial: 30,
-  ticksDia: 300, capReserva: CAP_RESERVA, casa: 24,
+  ancho: 320, alto: 224,
+  comidas: 300, censoInicial: 30,
+  ticksDia: 600, capReserva: CAP_RESERVA, casa: 18,
   caza: true, boca: 1.2,
   tasa: 0.08, paso: 0.06,
   fundador: FUNDADOR,
@@ -236,7 +239,14 @@ export type Bicho = {
   carga: number;
   reserva: number;
   vivo: boolean;
-  /** Ya está en casa con al menos un bocado: por hoy ha terminado. */
+  /**
+   * Está en casa ahora mismo, dentro de la línea media de la franja. **No es «por hoy ha
+   * terminado»**, que es lo que fue un rato: con eso un bicho hacía un solo viaje al día —salía,
+   * cogía uno, volvía y se aparcaba—, así que la cosecha de la población tenía techo pase lo que
+   * pase y **sobraba comida todos los días**: el 51% del suelo sin tocar incluso con la jornada
+   * cinco veces más larga, porque el día se acababa en cuanto estaban todos aparcados. Ahora
+   * llegar a casa descarga y suelta, y lo que limita la cosecha es el reloj y las piernas.
+   */
   aSalvo: boolean;
   /** Crías de esta noche. Vive solo entre el anochecer y el amanecer siguiente: es lo que se pinta. */
   hijos: number;
@@ -262,6 +272,8 @@ export type Mundo = {
   azar: Azar;
   /** Días completos, que aquí son generaciones: todos crían a la vez. */
   dia: number;
+  /** Descargas en casa en lo que va de día. Es la cosecha de la población, y no decide nada. */
+  viajes: number;
   t: number;
   /** Lo que duró el último día. `t` no vale: amanecer lo pone a cero. */
   duracion: number;
@@ -315,7 +327,7 @@ export function crearMundo(semilla: string, cfg: Partial<Config> = {}): Mundo {
   const azar = azarCon(semilla);
   const eva = evaDe(azar, c);
   const m: Mundo = {
-    cfg: c, azar, dia: 0, t: 0, duracion: 0, bichos: [], comida: [], siguienteId: 1,
+    cfg: c, azar, dia: 0, viajes: 0, t: 0, duracion: 0, bichos: [], comida: [], siguienteId: 1,
     noche: false, especie: 0, marcas: [],
     extinto: false, eva, cuenta: { nacidos: 0, hambre: 0, fuera: 0, comidos: 0 },
   };
@@ -397,6 +409,7 @@ function dispersion(m: Mundo): number {
 export function amanecer(m: Mundo) {
   const c = m.cfg;
   m.t = 0;
+  m.viajes = 0;
   m.noche = false;
   m.comida.length = 0;
   m.marcas.length = 0;
@@ -569,7 +582,7 @@ export function tick(m: Mundo) {
   for (const b of m.bichos) if (b.vivo && !b.aSalvo && b.radio > radioMax) radioMax = b.radio;
 
   for (const b of m.bichos) {
-    if (!b.vivo || b.aSalvo) continue;
+    if (!b.vivo) continue;   // el que está en casa **no** se salta: tiene que poder volver a salir
     decidir(m, b, radioMax);
     const v = b.g.empuje / radioCargado(b);
     mover(m, b, v);
@@ -596,13 +609,20 @@ export function tick(m: Mundo) {
       if (dx * dx + dy * dy <= r * r) { m.comida.splice(i, 1); b.carga++; break; }
     }
 
-    // A salvo al llegar a la línea media de la franja, no al pisarla: parándose en su borde
-    // interior la población entera acaba el día alineada sobre la misma raya, que es donde no
-    // está la casa de nadie.
+    // **Llegar a casa descarga y suelta.** Se descarga al alcanzar la línea media de la franja, no
+    // al pisarla: parándose en su borde interior la población entera se alinearía sobre la misma
+    // raya, que es donde no está la casa de nadie.
     const [, , d] = haciaCasa(m, b);
-    if (b.carga > 0 && d <= c.casa / 2) b.aSalvo = true;
+    b.aSalvo = d <= c.casa / 2;
+    if (b.aSalvo && b.carga > 0) {
+      b.reserva += b.carga * E_COMIDA;
+      b.carga = 0;
+      m.viajes++;
+    }
   }
 
+  // **En casa no se caza ni se es cazado.** Es lo que hace de la franja un refugio y no solo una
+  // meta: entrar corriendo es escaparse, y eso lo decide el genoma sin que nadie lo programe.
   if (c.caza) {
     for (let i = 0; i < m.bichos.length; i++) {
       const a = m.bichos[i];
@@ -627,7 +647,8 @@ export function tick(m: Mundo) {
   }
 
   m.bichos = m.bichos.filter((b) => b.vivo);
-  return m.bichos.every((b) => b.aSalvo) || m.t >= c.ticksDia;
+  // El día se acaba cuando se acaba, no cuando todos están en casa: ya nadie «termina» su día.
+  return m.t >= c.ticksDia;
 }
 
 /**
@@ -655,9 +676,8 @@ export function anochecer(m: Mundo) {
   m.duracion = m.t;
   const c = m.cfg;
   for (const b of m.bichos) {
-    if (!b.aSalvo) { m.cuenta.fuera++; continue; }   // pasa la noche fuera; no muere
-    b.reserva += b.carga * E_COMIDA;
-    b.carga = 0;
+    // Quien está en casa ya descargó al llegar, en su propio tick: aquí solo se cría.
+    if (!b.aSalvo) { m.cuenta.fuera++; continue; }   // la noche fuera: ni cría
     const cap = c.capReserva * b.masa;
     // Se mutan los hijos de uno en uno y **se comprueba si caben antes de nacer**: uno grande
     // cuesta más que uno pequeño, así que a la madre le puede sobrar para un hijo cualquiera y no
@@ -708,6 +728,7 @@ export function resumen(m: Mundo) {
   for (const r of RASGOS) medianas[r] = mediana(m.bichos.map((b) => b.g[r]));
   return {
     dia: m.dia, censo: m.bichos.length, extinto: m.extinto, medianas, cuenta: m.cuenta,
+    viajes: m.viajes, comida: m.comida.length,
     velocidad: mediana(m.bichos.map((b) => velocidadAdulta(b.g))),
   };
 }

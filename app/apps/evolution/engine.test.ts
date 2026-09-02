@@ -40,10 +40,10 @@ function escenario(cfg: Partial<Config>) {
   return { vivas, talla: mediana(g.talla), vision: mediana(g.vision), retorno: mediana(g.retorno) };
 }
 
-// Cuatro escenarios y tres perillas, cada una separada por lo suficiente para salir del ruido: la
+// Seis escenarios y tres perillas, cada una separada por lo suficiente para salir del ruido: la
 // comida del día (×5,7), la depredación (encendida o apagada) y la despensa (×3,3). Todos están
-// **dentro de la ventana viable** —de 5 a 9 semillas de 12 llegan al día 150—, que es estrecha y
-// hay que respetarla: con 40 bocados solo sobreviven 3 y una mediana de 3 no es una mediana.
+// **dentro de la ventana viable** —de 7 a 9 semillas de 12 llegan al día 150—, que hay que
+// respetar al elegirlos: una mediana de tres semillas no es una mediana, es una anécdota.
 const POBRE: Partial<Config> = { comidas: 70 };
 const RICO: Partial<Config> = { comidas: 400 };
 const SIN_CAZA: Partial<Config> = { caza: false };

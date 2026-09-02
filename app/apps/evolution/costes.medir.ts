@@ -47,7 +47,7 @@ function correr(cfg: Partial<Config>, dias = DIAS) {
 // ── 1. ¿Se sostiene la población, y con qué cantidad de comida? ───────────────
 console.log("\n## Comida por día: población y supervivencia\n");
 fila(["comidas", "vivas", "censo", "ticks/día", "%presa", "empuje", "talla", "vision", "retorno"]);
-for (const comidas of [25, 50, 100, 200]) {
+for (const comidas of [70, 150, 300, 600]) {
   const r = correr({ comidas });
   fila([comidas, `${r.vivas}/${r.de}`, fmt(r.censo, 0), fmt(r.ticks, 0), fmt(r.presa, 0),
     fmt(mediana(r.genes.empuje)), fmt(mediana(r.genes.talla)), fmt(mediana(r.genes.vision), 1),
@@ -96,14 +96,13 @@ console.log("tiene óptimo; si se pega a un extremo, ahí no hay trade-off que v
 
 // ── 3. ¿La escasez selecciona ojo y piernas? ─────────────────────────────────
 console.log("\n## Escasez contra abundancia\n");
-const pobre = correr({ comidas: 25 }), rico = correr({ comidas: 150 });
+const pobre = correr({ comidas: 70 }), rico = correr({ comidas: 600 });
 fila(["mundo", "censo", "empuje", "vision", "talla", "retorno"]);
 for (const [n, r] of [["pobre", pobre], ["rico", rico]] as const) {
   fila([n, fmt(r.censo, 0), fmt(mediana(r.genes.empuje)), fmt(mediana(r.genes.vision), 1),
     fmt(mediana(r.genes.talla)), fmt(mediana(r.genes.retorno))]);
 }
-const dv = mediana(pobre.genes.empuje) / mediana(rico.genes.empuje) - 1;
-const dvis = mediana(pobre.genes.vision) / mediana(rico.genes.vision) - 1;
-console.log(`\nempuje ${(dv * 100).toFixed(0)}% y visión ${(dvis * 100).toFixed(0)}% más en el mundo pobre.`);
+const dt = mediana(rico.genes.talla) / mediana(pobre.genes.talla) - 1;
+console.log(`\ntalla ${(dt * 100).toFixed(0)}% más en el mundo rico.`);
 console.log("A leer: lo que se mueve con la comida es la talla. Visión y empuje no salen del ruido:");
 console.log("la comida se ve de cerca y el día es corto, así que ni ver lejos ni correr se pagan solos.");
