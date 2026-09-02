@@ -27,6 +27,10 @@ interface Props {
    *  animación de restaurar. */
   destMaximized?: boolean;
   hideChrome?: boolean;
+  /** Marca la barra y el prompt con `ts-marco`, para poder plegarlos por CSS antes de que
+   *  React exista. Solo lo pide el atlas, que abre sin marco a quien entra con sesión: sin
+   *  esto la clase viajaría a las veinte páginas que no la usan. */
+  marcoPlegable?: boolean;
   /** Lo que va detrás del comando, en la misma línea. Atlas cuelga aquí sus banderas y su
    *  puerta. Se pinta cuando el tecleo termina: dentro del comando se reescribiría entero cada
    *  vez que cambiara una cifra. */
@@ -42,6 +46,7 @@ export default function TerminalShell({
   backUrl,
   destMaximized = false,
   hideChrome = false,
+  marcoPlegable = false,
   colaDelPrompt,
   children,
 }: Props) {
@@ -86,8 +91,10 @@ export default function TerminalShell({
     setTimeout(() => router.push(dest), 900);
   };
 
+  const marco = marcoPlegable ? "ts-marco" : undefined;
+
   const chromeBar = (
-    <div style={{
+    <div className={marco} style={{
       background: "var(--t-paper2)",
       borderBottom: "1px solid var(--t-rule)",
       padding: "14px 18px",
@@ -191,7 +198,7 @@ export default function TerminalShell({
           {!hideChrome && chromeBar}
 
           {!hideChrome && prompt && (
-            <div style={{
+            <div className={marco} style={{
               padding: "18px 28px 8px",
               display: "grid",
               gridTemplateColumns: "44px 1fr auto",

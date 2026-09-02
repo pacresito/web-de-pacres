@@ -34,6 +34,11 @@ export default function Atlas() {
   const [maximizado, setMaximizado] = useState<boolean | null>(null);
   const pantallaCompleta = maximizado ?? identificado;
 
+  // El marco lo pliega el CSS hasta aquí (el script de `layout.tsx`); desde que React monta lo
+  // pliega el estado, así que el atributo sobra — y quitarlo es lo que impide que se lleve el
+  // marco de otra página por delante al salir del atlas sin recargar.
+  useEffect(() => { delete document.documentElement.dataset.atlasMax; }, []);
+
   // Al cargar, y solo al cargar: se vuelca lo calificado sin cobertura y manda lo que diga
   // Redis. A media sesión no, que cambiar de tarjeta porque el otro dispositivo dijo otra cosa
   // sería un salto sin explicación.
@@ -45,6 +50,7 @@ export default function Atlas() {
       // Quién teclea lo dice el prompt, como en cualquier terminal: sin sesión, nadie.
       prompt={{ host: "atlas", path: "~/juegos", command: "./atlas", user: identificado ? "pacres" : "anon" }}
       hideChrome={pantallaCompleta}
+      marcoPlegable
       colaDelPrompt={<ColaDelPrompt mazo={mazo} identificado={identificado} />}
     >
       {/* La pantalla mide lo que la ventana: la tarjeta se centra en ella y la barra de
@@ -87,7 +93,7 @@ export default function Atlas() {
 
       {/* Fuera del <main>, que mide lo que la ventana: dentro le robaría a la tarjeta el alto que
           ocupa, y lo que se usa cuarenta veces al día no paga el sitio de lo que se lee una. */}
-      {!pantallaCompleta && <div className="atlas atlas-lado"><WhyFooter question="¿por qué repasar países?" date="21 de agosto de 2026">
+      {!pantallaCompleta && <div className="atlas atlas-lado atlas-porque"><WhyFooter question="¿por qué repasar países?" date="21 de agosto de 2026">
           <p>
             Llevo años intentando aprenderme los países del mundo y nunca lo he conseguido. Lo más cerca que
             estuve fue con Anki, que va enseñándote cada tarjeta justo antes de que se te olvide y

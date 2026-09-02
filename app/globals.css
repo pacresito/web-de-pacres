@@ -419,6 +419,18 @@
 
 /* TerminalShell — chrome bar, navegación y animación de salida */
 
+/* El terminal, plegado antes de que React exista. Quien entra al atlas con sesión lo abre
+   maximizado, pero eso solo se sabe leyendo el navegador: el HTML es el mismo para todos y
+   trae el marco puesto, así que se ve un instante mientras baja el bundle. El atributo lo
+   pone un script que corre antes de pintar y lo quita el atlas en cuanto monta —dura lo que
+   la hidratación, y así no viaja a las demás páginas si se sale de aquí sin recargar—.
+   Se esconde, no se quita: React monta los mismos nodos que el servidor y luego los desmonta
+   por su cuenta, sin desajuste de hidratación ni salto.
+   `!important` porque la barra y el prompt llevan su `display` en el `style` inline, y contra
+   un inline no hay especificidad que valga. */
+[data-atlas-max] .ts-marco,
+[data-atlas-max] .atlas-porque { display: none !important; }
+
 .ts-nav-btn {
   background: none; border: none; cursor: pointer;
   color: var(--t-ink2); padding: 4px;
