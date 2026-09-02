@@ -1,5 +1,5 @@
-// Pintado de evolution en canvas: el mundo entero a escala, el suelo como memoria espacial y
-// cada bicho con su genoma encima. Sin React ni estado propio.
+// Pintado de evolution en canvas: el mundo entero a escala, la franja de casa, la comida del día
+// y cada bicho con su genoma encima. Sin React ni estado propio.
 //
 // **Solo se codifica lo que es gen o estado energético**, y nunca solo con color: azul→naranja
 // es la rampa que sobrevive al daltonismo (verde→rojo es justo la que no), y aun así la fiereza
@@ -10,19 +10,20 @@
 // del otro, que es tamaño angular—, así que un cono frontal dibujaría un mecanismo que no existe.
 // Cuando haya inspector, la visión será un anillo de alcance del bicho que se esté mirando.
 
-import { MARCA, type MundoDia } from "./dia";
-import {
-  CAP_RESERVA, CELDA, E_COMIDA, RADIO_COMIDA, type Mundo,
-} from "./engine";
+import { MARCA, RADIO_COMIDA, type Mundo } from "./engine";
 
 const TAU = Math.PI * 2;
 
+// Las dos proporciones de la silueta, en radios del propio bicho. Aquí arriba y no incrustadas en
+// el trazo porque la leyenda tiene que encajar una fila entera a una sola escala, y para eso
+// necesita saber hasta dónde llega lo que se va a pintar (ver `extensionCuerpo`).
+const COLA = 2.2;   // largo máximo de la estela
+const HALO = 2.4;   // hasta dónde llega el aura del sociable
+
 export type Paleta = {
   fondo: string;
-  /** Energía del suelo: se pinta como tinte, así que va en canales y opacidad aparte. */
-  suelo: [number, number, number];
-  sueloMax: number;
-  parche: string;
+  /** Relleno del disco de visión de la leyenda. Tenue: es alcance, no un cuerpo. */
+  alcance: string;
   comida: string;
   /**
    * Rampa de fiereza, de cuatro paradas. **Interpolar entre dos extremos no vale**: azul y
@@ -46,15 +47,13 @@ export type Paleta = {
 export function paletaDe(tema: "light" | "dark"): Paleta {
   return tema === "dark"
     ? {
-        fondo: "#12100e", suelo: [128, 102, 62], sueloMax: 0.30,
-        parche: "rgba(150,180,120,0.10)", comida: "#6f9440",
+        fondo: "#12100e", alcance: "rgba(150,180,120,0.10)", comida: "#6f9440",
         rampa: [[86, 122, 235], [150, 80, 200], [222, 92, 148], [250, 150, 60]],
         contorno: "rgba(255,255,255,0.55)", halo: [255, 255, 255], tenue: "rgba(255,255,255,0.16)",
         tinta: "#e8e2d6",
       }
     : {
-        fondo: "#efe9dd", suelo: [146, 114, 66], sueloMax: 0.26,
-        parche: "rgba(90,130,60,0.10)", comida: "#8aa762",
+        fondo: "#efe9dd", alcance: "rgba(90,130,60,0.10)", comida: "#8aa762",
         rampa: [[28, 62, 168], [116, 40, 158], [196, 44, 110], [214, 104, 24]],
         contorno: "rgba(0,0,0,0.45)", halo: [0, 0, 0], tenue: "rgba(0,0,0,0.14)",
         tinta: "#2a2622",
@@ -116,9 +115,8 @@ export type Cuerpo = {
  * · tamaño = masa actual · tono y estrechez = fiereza · claridad = reserva
  * · halo = sociabilidad: aura si es positiva (buscar compañía), anillo duro si es negativa (huir de ella)
  *
- * El `vigor` —reserva sobre lo que le cabe, en [0,1]— lo calcula quien llama: cada mundo tiene su
- * idea de depósito lleno (proporcional a la masa en el de energía cerrada, la despensa del
- * amanecer en el de días) y meterla aquí ataría el pintado a una de las dos.
+ * El `vigor` —reserva sobre lo que le cabe, en [0,1]— lo calcula quien llama: pintar una muestra
+ * de leyenda no tiene por qué saber de despensas, y quien pinta el mundo sí.
  */
 export function pintarCuerpo(ctx: CanvasRenderingContext2D, b: Cuerpo, vigor: number, p: Paleta) {
   const fiereza = satFiereza(b.g.fiereza);
@@ -136,7 +134,7 @@ export function pintarCuerpo(ctx: CanvasRenderingContext2D, b: Cuerpo, vigor: nu
   // **Medida en radios, no en píxeles.** La velocidad va con 1/radio, así que en píxeles la cola
   // de un enano rápido crece sin fin: se veía el mundo lleno de tallos más largos que su bicho.
   // Saturada contra el propio cuerpo dice lo mismo —quien corre más, más cola— y nunca se lo come.
-  const largo = b.radio * 2.2 * sat(b.g.empuje / b.radio);
+  const largo = b.radio * COLA * sat(b.g.empuje / b.radio);
   if (largo > 0.5) {
     // Triángulo y no una línea con la punta redonda: a cinco píxeles esa punta es un circulito
     // que parece perseguir al bicho, y lo que tiene que leerse es una cola que se va apagando.
@@ -152,15 +150,15 @@ export function pintarCuerpo(ctx: CanvasRenderingContext2D, b: Cuerpo, vigor: nu
 
   if (soc > 0) {
     const a = Math.min(0.34, satSoc(soc) * 0.5);
-    const halo = ctx.createRadialGradient(0, 0, b.radio * 0.8, 0, 0, b.radio * 2.4);
+    const halo = ctx.createRadialGradient(0, 0, b.radio * 0.8, 0, 0, b.radio * HALO);
     halo.addColorStop(0, `rgba(${p.halo[0]},${p.halo[1]},${p.halo[2]},${a.toFixed(3)})`);
     halo.addColorStop(1, `rgba(${p.halo[0]},${p.halo[1]},${p.halo[2]},0)`);
     ctx.fillStyle = halo;
-    ctx.beginPath(); ctx.arc(0, 0, b.radio * 2.4, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(0, 0, b.radio * HALO, 0, TAU); ctx.fill();
   }
 
   // Anillo del color del fondo antes del cuerpo: son decenas de bichos contra cientos de bocados,
-  // y sin despegarlos del suelo la mirada solo ve la alfombra de comida. No codifica nada — es
+  // y sin despegarlos del fondo la mirada solo ve la alfombra de comida. No codifica nada — es
   // separación, como el filete blanco de un mapa entre dos países del mismo color.
   ctx.strokeStyle = p.fondo;
   ctx.lineWidth = 1.4;
@@ -182,85 +180,96 @@ export function pintarCuerpo(ctx: CanvasRenderingContext2D, b: Cuerpo, vigor: nu
   ctx.restore();
 }
 
-/**
- * Lienzo de un píxel por celda, reutilizado entre fotogramas. Es estado de trabajo, no del
- * mundo: dos partidas distintas lo comparten sin que se note, igual que las rejillas del motor.
- */
-let sueloCv: HTMLCanvasElement | null = null;
+// ─── Muestras de leyenda ──────────────────────────────────────────────────────
+//
+// La leyenda no dibuja bichos: los pide. Todo lo que enseña sale de `pintarCuerpo` y de las
+// constantes del motor, así que el día que cambie la forma del bicho o el alcance de la visión,
+// la leyenda cambia con ellos. Una silueta escrita aparte miente en silencio en cuanto alguien
+// toque el pintado del mundo — y una leyenda que miente es peor que no tenerla.
+
+/** El lienzo, en píxeles CSS `W`×`H` con `dpr` de dispositivo, con el fondo del mundo puesto. */
+function lienzo(ctx: CanvasRenderingContext2D, W: number, H: number, dpr: number, p: Paleta) {
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = p.fondo;
+  ctx.fillRect(0, 0, W, H);
+}
 
 /**
- * El suelo: la energía que hay bajo cada celda. Es la memoria espacial del mundo —donde alguien
- * murió brotará comida—, y se normaliza contra la energía media por celda de esta partida, que
- * es una magnitud del propio mundo y no un número elegido a ojo.
- *
- * Se pinta como una imagen de cols×filas **estirada con el suavizado del navegador**, y no como
- * un rectángulo por celda: la rejilla mide 64 px y pintarla en bloques duros convierte el fondo
- * en un tablero de ajedrez que se lleva la mirada entera. El dato es la mancha, no la celda.
+ * Un bicho suelto, centrado y a la escala que se le diga. `escala` la fija quien pinta la fila
+ * entera y es **la misma para las tres muestras**: si cada celda se ajustara a lo suyo, la fila
+ * de la talla enseñaría tres bichos del mismo tamaño, que es justo lo contrario de lo que dice.
  */
-function pintarSuelo(ctx: CanvasRenderingContext2D, m: Mundo, p: Paleta) {
-  if (!sueloCv) sueloCv = document.createElement("canvas");
-  if (sueloCv.width !== m.cols || sueloCv.height !== m.filas) {
-    sueloCv.width = m.cols; sueloCv.height = m.filas;
-  }
-  const sctx = sueloCv.getContext("2d");
-  if (!sctx) return;
-  const img = sctx.createImageData(m.cols, m.filas);
-  const medio = m.cfg.energia / (m.cols * m.filas);
-  const [sr, sg, sb] = p.suelo;
-  for (let i = 0; i < m.suelo.length; i++) {
-    img.data[i * 4] = sr; img.data[i * 4 + 1] = sg; img.data[i * 4 + 2] = sb;
-    img.data[i * 4 + 3] = Math.round(255 * Math.min(p.sueloMax, (m.suelo[i] / medio) * p.sueloMax));
-  }
-  sctx.putImageData(img, 0, 0);
-  ctx.save();
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = "high";
-  // Borde con borde: `drawImage` ya hace caer el centro del píxel `i` en el centro de su celda,
-  // y correrlo media celda dejaba una franja sin suelo en el lado sur del mundo.
-  ctx.drawImage(sueloCv, 0, 0, m.cols * CELDA, m.filas * CELDA);
-  ctx.restore();
+export function pintarMuestra(
+  ctx: CanvasRenderingContext2D, W: number, H: number, dpr: number, p: Paleta,
+  g: Cuerpo["g"], radio: number, escala: number, vigor = 1,
+) {
+  lienzo(ctx, W, H, dpr, p);
+  const e = escala * dpr;
+  ctx.setTransform(e, 0, 0, e, (W / 2) * dpr, (H / 2) * dpr);
+  pintarCuerpo(ctx, { x: 0, y: 0, hx: 1, hy: 0, radio, g }, vigor, p);
+}
+
+/**
+ * La visión, contra el mundo entero: el rectángulo del mundo a escala, el bicho en el centro y el
+ * disco hasta donde detecta un bocado —`visión · RADIO_COMIDA`, el mismo alcance que usa
+ * `decidir`—. Dos discos: el del fundador y el de la población de ahora, para que se vea si el
+ * gen se ha movido y hacia dónde.
+ *
+ * Es la única forma de contestar la pregunta que importa de este gen, que no es cuánto vale sino
+ * cuánto vale **comparado con el mundo**: si un bicho ve el mundo entero, moverse no es una
+ * decisión; si no ve nada, todo es paseo aleatorio.
+ */
+export function pintarAlcance(
+  ctx: CanvasRenderingContext2D, W: number, H: number, dpr: number, p: Paleta,
+  ancho: number, alto: number, radio: number, visionEva: number, visionHoy: number | null,
+) {
+  lienzo(ctx, W, H, dpr, p);
+  const escala = Math.min((W - 2) / ancho, (H - 2) / alto);
+  const e = escala * dpr;
+  ctx.setTransform(e, 0, 0, e, ((W - ancho * escala) / 2) * dpr, ((H - alto * escala) / 2) * dpr);
+  const fino = 1 / escala;
+
+  ctx.strokeStyle = p.tenue;
+  ctx.lineWidth = fino;
+  ctx.strokeRect(0, 0, ancho, alto);
+
+  const cx = ancho / 2, cy = alto / 2;
+  const disco = (v: number, relleno: boolean, guiones: boolean) => {
+    ctx.beginPath();
+    ctx.arc(cx, cy, v * RADIO_COMIDA, 0, TAU);
+    if (relleno) { ctx.fillStyle = p.alcance; ctx.fill(); }
+    ctx.setLineDash(guiones ? [4 * fino, 4 * fino] : []);
+    ctx.strokeStyle = p.comida;
+    ctx.lineWidth = fino * (guiones ? 1 : 1.6);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  };
+  disco(visionEva, false, true);
+  if (visionHoy !== null) disco(visionHoy, true, false);
+
+  ctx.fillStyle = p.contorno;
+  ctx.beginPath(); ctx.arc(cx, cy, Math.max(radio, 1.5 * fino), 0, TAU); ctx.fill();
+}
+
+/**
+ * Hasta dónde llega, en unidades de mundo, lo que `pintarCuerpo` acaba de dibujar: el cuerpo, su
+ * estela o su aura, lo que sobresalga más. Lo usa la leyenda para encajar las tres muestras de
+ * una fila **a una sola escala** — ajustando cada celda a lo suyo, la fila de la talla enseñaría
+ * tres bichos del mismo tamaño, que es lo contrario de lo que esa fila dice.
+ */
+export function extensionCuerpo(g: Cuerpo["g"], radio: number): number {
+  const cola = radio + radio * COLA * sat(g.empuje / radio);
+  return Math.max(cola, g.sociabilidad > 0 ? radio * HALO : radio);
 }
 
 /**
  * El mundo entero, en un lienzo de `W`×`H` px CSS con `dpr` píxeles de dispositivo por cada uno.
- * El orden es el de las capas: suelo (lo que hubo), parches (lo que va a brotar), comida (lo que
- * hay) y bichos encima.
+ * No hay suelo que pintar —la comida amanece y se acaba, el mundo no recuerda nada—, así que
+ * sobre el cuerpo de cada bicho solo se añade lo que decide la partida: **dónde está casa** (la
+ * franja del perímetro) y **cuánto lleva encima cada uno**, que es de lo que salen los hijos al
+ * anochecer.
  */
-export function pintar(ctx: CanvasRenderingContext2D, m: Mundo, p: Paleta, v: Vista, W: number, H: number, dpr: number) {
-  // El `dpr` entra en las dos transformaciones y no se aplica fuera: aquí se fija la matriz
-  // entera, así que un `scale(dpr)` de quien llama se perdería y el mundo se pintaría en un
-  // cuarto del lienzo en cualquier pantalla retina — sin error, y perfecto en las de dpr 1.
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.fillStyle = p.fondo;
-  ctx.fillRect(0, 0, W, H);
-  const e = v.escala * dpr;
-  ctx.setTransform(e, 0, 0, e, v.ox * dpr, v.oy * dpr);
-
-  pintarSuelo(ctx, m, p);
-
-  ctx.fillStyle = p.parche;
-  for (const q of m.parches) { ctx.beginPath(); ctx.arc(q.x, q.y, q.r, 0, TAU); ctx.fill(); }
-
-  ctx.fillStyle = p.comida;
-  for (const c of m.comida) { ctx.beginPath(); ctx.arc(c.x, c.y, RADIO_COMIDA, 0, TAU); ctx.fill(); }
-
-  for (const b of m.bichos) {
-    pintarCuerpo(ctx, b, Math.max(0, Math.min(1, b.reserva / (b.masa * CAP_RESERVA))), p);
-  }
-
-  // El muro: bordes duros, no toroide. Una línea fina para que se vea que el mundo se acaba ahí.
-  ctx.strokeStyle = p.tenue;
-  ctx.lineWidth = 1 / v.escala;
-  ctx.strokeRect(0, 0, m.cfg.ancho, m.cfg.alto);
-}
-
-/**
- * El mundo por días. No hay suelo ni parches que pintar —la comida amanece y se acaba, el mundo
- * no recuerda nada—, así que lo único que se añade al cuerpo común es lo que aquí decide la
- * partida: **dónde está casa** (la franja del perímetro) y **cuánto lleva encima cada uno**,
- * que es de lo que salen los hijos al anochecer.
- */
-export function pintarDia(ctx: CanvasRenderingContext2D, m: MundoDia, p: Paleta, v: Vista, W: number, H: number, dpr: number, noche = 1) {
+export function pintar(ctx: CanvasRenderingContext2D, m: Mundo, p: Paleta, v: Vista, W: number, H: number, dpr: number, noche = 1) {
   const c = m.cfg;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.fillStyle = p.fondo;
@@ -285,14 +294,14 @@ export function pintarDia(ctx: CanvasRenderingContext2D, m: MundoDia, p: Paleta,
   ctx.fillStyle = p.comida;
   for (const f of m.comida) { ctx.beginPath(); ctx.arc(f.x, f.y, RADIO_COMIDA, 0, TAU); ctx.fill(); }
 
-  // Las muertes, debajo de los vivos. Comido es un anillo que se abre —el zarpazo— y las otras
-  // dos son el cuerpo apagándose y encogiendo, que es lo que se ve cuando alguien se para y ya no
-  // vuelve a moverse. El reloj lo pone el motor en los ticks, salvo las de la noche: ahí el tiempo
-  // está parado y lo que avanza es la propia noche.
+  // Las muertes, debajo de los vivos. Comido es un anillo que se abre —el zarpazo— y el hambre es
+  // el cuerpo apagándose y encogiendo, que es lo que se ve cuando alguien se para y ya no vuelve a
+  // moverse. El que se quedó fuera al anochecer no está aquí: no muere, así que se sigue pintando
+  // vivo donde le pilló la noche.
   const [zr, zg, zb] = p.rampa[p.rampa.length - 1];
   const fondo = canales(p.fondo);
   for (const z of m.marcas) {
-    const k = z.causa === "fuera" ? noche : (m.t - z.t) / MARCA;
+    const k = (m.t - z.t) / MARCA;
     if (k < 0 || k > 1) continue;
     if (z.causa === "comido") {
       ctx.strokeStyle = `rgba(${zr},${zg},${zb},${(1 - k).toFixed(2)})`;
@@ -315,9 +324,10 @@ export function pintarDia(ctx: CanvasRenderingContext2D, m: MundoDia, p: Paleta,
   // tamaño, con el anillo del parto abriéndose a su alrededor. Es lo único que se anima aquí, y se
   // anima porque nacer es justo lo que no se veía.
   const brote = Math.min(1, noche / 0.6);
-  const lleno = c.reservaDia * E_COMIDA;
   for (const b of m.bichos) {
-    const vigor = Math.max(0, Math.min(1, b.reserva / lleno));
+    // La despensa llena va con la masa, así que el aro de cada uno se mide contra la suya: un
+    // grande a medio gas y un pequeño a medio gas se pintan igual de apagados, que es lo justo.
+    const vigor = Math.max(0, Math.min(1, b.reserva / (c.capReserva * b.masa)));
     if (b.recien && m.noche) {
       if (brote > 0.02) pintarCuerpo(ctx, { ...b, radio: b.radio * brote }, vigor, p);
       if (brote < 1) {

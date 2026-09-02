@@ -1,28 +1,31 @@
-// Motor de evolution: bichos que comen, crecen, se reproducen y mutan en un mundo de energía
-// cerrada. Lógica pura, sin React ni canvas — render.ts lo pinta y page.tsx lo conecta.
+// Motor de evolution: bichos que salen de casa cada mañana, buscan comida, se la llevan a cuestas
+// y vuelven antes de que anochezca. El que no vuelve, muere; el que vuelve con uno, vive; cada dos
+// bocados dan un hijo. Lógica pura, sin React ni canvas — render.ts lo pinta y page.tsx lo conecta.
 //
 // Tres promesas que el resto del archivo cumple línea a línea:
 //
-// 1. **Determinismo.** PRNG propio con semilla, paso de tiempo fijo (nunca delta de tiempo real)
+// 1. **Ningún gen mejor cuanto más alto.** Uno sin óptimo interior se clava en el tope en tres
+//    generaciones y la gráfica se queda quieta pareciendo que funciona. Por eso el día se paga:
+//    sin coste de movimiento el empuje no tendría freno.
+// 2. **Ningún coeficiente inventado.** Un acoplamiento entra solo si sale de una magnitud que ya
+//    se está contando: masa, energía, geometría. La fuerza de un músculo va con su sección
+//    —masa^(2/3), o sea radio²—, así que fuerza = empuje·radio² y **velocidad = empuje/radio**;
+//    el giro es inverso a la masa, te ven a distancia proporcional a tu radio (tamaño angular) y
+//    **la comida pesa**, así que el segundo bocado te frena por la misma aritmética que frena a un
+//    bicho grande. No hay tope de carga porque no hace falta. Un coeficiente elegido a mano es una
+//    perilla que se acaba moviendo hasta que la simulación hace algo bonito, y entonces el
+//    resultado es mío.
+// 3. **Determinismo.** PRNG propio con semilla, paso de tiempo fijo (nunca delta de tiempo real)
 //    y orden de actualización explícito. En el tick no entra una sola trigonométrica:
 //    `Math.sin/cos/exp/pow/cbrt` no están fijados por IEEE y un bit de diferencia entre
 //    navegadores parte la promesa de la semilla compartida sin que falle nada. Los rumbos son
 //    vectores unitarios girados por multiplicación, las distancias se comparan al cuadrado, y
 //    solo se usan `+ - * /` y `sqrt`, que sí son exactos por norma.
-// 2. **Ningún coeficiente inventado.** Un acoplamiento entra solo si sale de una magnitud que ya
-//    se está contando: masa, energía, geometría. La fuerza de un músculo va con su sección
-//    —masa^(2/3), o sea radio²—, así que fuerza = empuje·radio² y **velocidad = empuje/radio**;
-//    el giro es inverso a la masa, el hijo cuesta su masa, te ven a distancia proporcional a tu
-//    radio (tamaño angular) y comer cuesta tiempo proporcional a lo comido. Un coeficiente elegido a mano es una perilla que se
-//    acaba moviendo hasta que la simulación hace algo bonito, y entonces el resultado es mío.
-// 3. **Las estrategias malas no se arreglan aquí.** Un bicho que se queda tonto no es un bug, es
-//    un perdedor, y borrarlo es trabajo de la selección. Solo se arregla la indefinición
-//    numérica: vector suma exactamente cero significa mantener el rumbo, nunca un ángulo
-//    indefinido que propague NaN en silencio.
 //
-// Y la regla que decide si un gen está bien modelado: **ninguno puede ser mejor cuanto más alto
-// en todo su rango.** Uno sin óptimo interior se clava en el tope en tres generaciones y la
-// gráfica se queda quieta pareciendo que funciona.
+// Y la cuarta, que no es del modelo sino de quien lo mira: **las estrategias malas no se arreglan
+// aquí.** Un bicho que se queda tonto no es un bug, es un perdedor, y borrarlo es trabajo de la
+// selección. Solo se arregla la indefinición numérica: vector suma exactamente cero significa
+// mantener el rumbo, nunca un ángulo indefinido que propague NaN en silencio.
 //
 // Las cifras de las constantes salen de `costes.medir.ts`, no de la intuición.
 
@@ -72,481 +75,27 @@ export function unidad(a: Azar): [number, number] {
   }
 }
 
-// ─── Genoma ───────────────────────────────────────────────────────────────────
-
-// Los ocho genes. Nombres ASCII sin mutilar tildes: `talla` es el tamaño adulto, `fiereza` la
-// agresión y `aguante` la reparación que frena la senescencia.
-export const RASGOS = [
-  "empuje", "talla", "vision", "sociabilidad", "audacia", "fiereza", "umbral", "aguante",
-] as const;
-export type Rasgo = (typeof RASGOS)[number];
-export type Genoma = Record<Rasgo, number>;
-
-/**
- * Los que llevan signo mutan **aditivo**; el resto, **multiplicativo** (log-normal aproximada).
- * La mutación aditiva sobre un gen acotado en 0 produce el sesgo de recorte que el test de deriva
- * está para cazar, así que solo la usa el gen que de verdad puede ser negativo.
- */
-const CON_SIGNO: Rasgo[] = ["sociabilidad"];
-
-/** Qué paga y qué cobra cada gen. Es la fuente de la tabla de reglas de la app (paso 8). */
-export const TABLA: Record<Rasgo, { paga: string; cobra: string }> = {
-  empuje: { paga: "coste ∝ empuje² · radio (= fuerza × velocidad)", cobra: "velocidad = empuje / radio actual" },
-  talla: { paga: "coste ∝ masa; giras peor; te ven desde más lejos; tus hijos cuestan más", cobra: "reserva ∝ masa; derecho a comerte a otro" },
-  vision: { paga: "coste ∝ visión²", cobra: "detectas a distancia ∝ radio del otro" },
-  sociabilidad: { paga: "competencia", cobra: "peso al centro de masa de los visibles, con signo" },
-  audacia: { paga: "comida no comida", cobra: "peso de repulsión al mayor visible" },
-  fiereza: { paga: "riesgo", cobra: "peso de atracción al menor visible" },
-  umbral: { paga: "oportunidad", cobra: "a cuánta reserva te divides" },
-  aguante: { paga: "metabolismo basal extra", cobra: "frena la senescencia" },
-};
-
-// ─── Constantes del mundo ─────────────────────────────────────────────────────
-
-/** Exponentes admitidos: los que salen con `*` y `sqrt` exactos. `Math.pow` no está fijado. */
-export type Exponente = 0.75 | 1 | 1.5 | 2 | 2.5 | 3;
-
-function pot(x: number, e: Exponente): number {
-  switch (e) {
-    case 0.75: return Math.sqrt(x * Math.sqrt(x));
-    case 1: return x;
-    case 1.5: return x * Math.sqrt(x);
-    case 2: return x * x;
-    case 2.5: return x * x * Math.sqrt(x);
-    case 3: return x * x * x;
-  }
-}
+// ─── Física ───────────────────────────────────────────────────────────────────
 
 /** masa = radio³. Vale igual para un bicho y para un bocado: no hay dos leyes de materia. */
 export const masaDe = (radio: number): number => radio * radio * radio;
 
 export const RADIO_COMIDA = 3;
-/** Un bocado es un cuerpo de radio 2, así que su energía es su masa. */
+/** Un bocado es un cuerpo del radio de la comida, así que su energía es su masa. */
 export const E_COMIDA = masaDe(RADIO_COMIDA);
-export const RADIO_CRIA = 2;
 
-export const CELDA = 64;          // lado de celda de la rejilla espacial y del suelo
-export const CAP_RESERVA = 0.5;   // capacidad de reserva = CAP_RESERVA · masa
-export const C_BASAL = 4e-4;    // metabolismo basal por unidad de masa y tick
-export const C_EMPUJE = 2.5e-3;    // coste de moverse: masa · C_EMPUJE · v²
-export const C_VISION = 7e-7;   // coste de ver: masa · C_VISION · visión²
-export const C_SENESCENCIA = 4e-8; // riesgo de morir de viejo por tick: C · edad² / (1 + aguante)
+/**
+ * Capacidad de la despensa, en múltiplos de la masa: **el cuerpo es el granero**. Va con la masa
+ * porque el gasto también, así que la autonomía en días no depende del tamaño — el grande no
+ * aguanta más ni menos, solo es más lento y come a más gente. La cifra sale de `costes.medir.ts`.
+ */
+export const CAP_RESERVA = 1;
+export const C_BASAL = 4e-4;      // metabolismo basal por unidad de masa y tick
+export const C_EMPUJE = 2.5e-3;   // coste de moverse: masa · C_EMPUJE · v²
+export const C_VISION = 7e-7;     // coste de ver: masa · C_VISION · visión²
 export const GIRO = 24;           // tangente del giro máximo por tick = GIRO / masa
-export const MASTICAR = 0.5;      // ticks inmóvil = MASTICAR · masa de lo comido
-export const EFICIENCIA = 0.6;    // de la masa de la presa; el resto va al suelo
-export const BOCA = 0.6;         // te comes a quien quepa: radio del otro ≤ BOCA · tu radio
-export const BORDE = 4;           // repulsión del muro: fija y no genética, nadie evoluciona a atravesarlo
-export const MARGEN = 48;         // a qué distancia del muro empieza a empujar
-/**
- * Ticks de mundo sin bichos antes de soltarlos. Sin esto la partida empieza sin un solo bocado en
- * el suelo y las primeras generaciones se mueren buscando lo que aún no ha brotado: la mitad de
- * las semillas se extinguía por cómo arranca el mundo, no por cómo son sus bichos.
- */
-export const CALENTAR = 600;
+export const EFICIENCIA = 0.6;    // de la masa de la presa; el resto se pierde
 
-// ─── De dónde salen estas cifras ──────────────────────────────────────────────
-//
-// Todas de `costes.medir.ts`, y **se vuelven a sacar cada vez que se mueva una**:
-//
-// · **boca 0,6** (sección `mundo`): es donde se enciende la depredación. Con 0,5 causa el 10-13%
-//   de las muertes y con 0,6 el 26%; 0,7 solo añade cuatro puntos más. Por debajo de 0,45 no se
-//   come nadie a nadie, y media mitad del modelo —fiereza, audacia, persecución— no la nota
-//   ningún genoma.
-// · **senescencia 4e-8** (columna `%vejez` de esa misma tabla): deja la vejez en el 20-23% de las
-//   muertes, que es lo que hace que el aguante compre algo.
-// · **expMasa 1 y expVision 2** (sección `exponentes`): son los que dice la geometría —coste ∝
-//   masa, coste de ver ∝ área—, y medir confirma que son además los viables: con expMasa 1,5 se
-//   extinguen las cinco semillas, y con 0,75 el empuje no deja de subir (+11% a mitad de partida,
-//   +43% al final, sin señal de asentarse) con el censo disparado a 284.
-// · **tasa 0,08** (sección `mutacion`): la varianza de la talla se ve en la generación 8 y el
-//   rango intercuartílico se queda en el 15% de la mediana. Con 0,03 tarda 27 generaciones —media
-//   hora de mirar—; con 0,2 se ve en 4, pero un 25% de dispersión ya no deja ver hacia dónde va nada.
-// · **fundador** (secciones `fundador` y `regla1`): la talla vuelve a 3,8-4,4 salga de 3, 4 o 5.
-//   El empuje y la visión no convergen del todo —el abanico de partida se cierra de ×10 a ×3,8 y
-//   a ×3,3—: se acercan, pero conservan memoria de dónde salieron.
-// · **cien semillas** (sección `cien`): las 100 siguen vivas en la generación 100, a 225 ticks por
-//   generación y censo mediano 168.
-//
-// Y lo que el medidor dice que **no** está bien, todo por la misma razón:
-//
-// · El **85-93% de los bichos vivos tiene comida a la vista** en cualquier geometría (columna
-//   `ven%` de la sección `escala`), porque el que no la tiene se muere. Un mundo donde ver no es
-//   una decisión no puede seleccionar ni la visión ni la velocidad, y ahí se queda el test de la
-//   escasez, pasando por un +4%.
-// · Con eso, **el umbral no lo selecciona nadie** (`regla1`: su abanico se cierra de ×3,3 a ×2,7)
-//   y el **aguante** apenas (de ×26,7 a ×15,6): sus bandas del panel se abrirán más por deriva
-//   que por selección.
-// · Y **no se extingue ninguna de las cien semillas**, cuando la extinción tiene que ser un
-//   resultado posible. Las tres cosas se arreglan por el mismo sitio: cuánta comida sostiene el
-//   mundo a la vez (`energia`, `brote`, `vidaComida`), que es calibración y la decide Pablo.
-
-export type Config = {
-  ancho: number;
-  alto: number;
-  /** Presupuesto cerrado: toda la energía del mundo, repartida al empezar entre suelo y bichos. */
-  energia: number;
-  censoInicial: number;
-  /** Parches vivos a la vez y su radio: juntos son "abundante y repartida" o "escasa en parches". */
-  parches: number;
-  radioParche: number;
-  reservaParche: number;
-  /** Probabilidad por tick de que un parche suelte un bocado. Es la perilla de clima. */
-  brote: number;
-  /** Ticks que aguanta un bocado antes de pudrirse y volver al suelo. Cierra el ciclo. */
-  vidaComida: number;
-  caza: boolean;
-  /**
-   * Riesgo de morir de viejo por tick: `senescencia · edad² / (1 + aguante)`. En 0 no se muere de
-   * vejez —y entonces el aguante no compra nada, así que deja de ser un gen y pasa a ser ruido en
-   * el panel—. Es un número y no un interruptor porque cuánto pesa la vejez es lo que decide si
-   * el aguante está seleccionado.
-   */
-  senescencia: number;
-  /** Radio del otro que te cabe en la boca, en fracción del tuyo. El umbral de la depredación. */
-  boca: number;
-  /** Ticks inmóvil por unidad de masa comida. Es lo que pone techo a la cosecha de cada bicho. */
-  masticar: number;
-  hambre: boolean;
-  /**
-   * Modo laboratorio del test de deriva: reserva siempre llena, sin muerte —tampoco de vejez, que
-   * el riesgo de morir viejo depende del aguante y eso ya sería selección—, replicación por edad
-   * y censo fijo por sorteo neutral. **Rompe el presupuesto cerrado a propósito**: la comida sale
-   * de la nada, que es justo lo que hace falta para ver mutar sin que nada seleccione.
-   */
-  neutral: number;
-  expMasa: Exponente;
-  expVision: Exponente;
-  /** Mutación: `tasa` es multiplicativa (genes positivos), `paso` aditiva (genes con signo). */
-  tasa: number;
-  paso: number;
-  fundador: Genoma;
-};
-
-/** Fundador viable medido en `costes.medir.ts`; la semilla lo jitterea antes de clonarlo. */
-export const FUNDADOR: Genoma = {
-  empuje: 2, talla: 4.5, vision: 22, sociabilidad: 0, audacia: 1, fiereza: 1, umbral: 0.8, aguante: 1,
-};
-
-export const CONFIG: Config = {
-  // Un número entero de celdas de rejilla en cada lado. Con 900 la última columna era 3/5 de
-  // mundo con la misma energía de suelo que las enteras, así que el borde derecho brotaba más
-  // que el resto por aritmética, no por ecología.
-  ancho: 896, alto: 640,
-  energia: 42000,
-  censoInicial: 24,
-  parches: 20, radioParche: 46, reservaParche: 900,
-  brote: 0.15, vidaComida: 260,
-  caza: true, senescencia: C_SENESCENCIA, boca: BOCA, masticar: MASTICAR, hambre: true, neutral: 0,
-  expMasa: 1, expVision: 2,
-  tasa: 0.08, paso: 0.06,
-  fundador: FUNDADOR,
-};
-
-// ─── Estado ───────────────────────────────────────────────────────────────────
-
-export type Bicho = {
-  id: number;
-  idMadre: number;
-  /** Número de generación: la fundadora es 0. Va desde el primer commit — añadirlo luego es tocar el motor entero. */
-  gen: number;
-  x: number; y: number;
-  /**
-   * Rumbo, siempre unitario. Girarlo es multiplicar por un vector de giro, nunca sumar ángulos.
-   * La velocidad no es estado: sale de `empuje / radio` en cada tick, así que no hay inercia de
-   * traslación — solo de giro, que es la que hace que ver tarde tenga consecuencias.
-   */
-  hx: number; hy: number;
-  radio: number;
-  masa: number;
-  reserva: number;
-  edad: number;
-  mastica: number;
-  hijos: number;
-  vivo: boolean;
-  g: Genoma;
-};
-
-/** Un bocado y el tick en el que se pudre. Sin caducidad, la comida que nadie come es un almacén
- * del que no sale nada: el mundo mete su energía ahí, el suelo se queda sin con qué abrir parches
- * y la partida se muere de estreñimiento con el campo alfombrado de comida. */
-export type Bocado = { x: number; y: number; hasta: number };
-export type Parche = { x: number; y: number; r: number; reserva: number };
-
-export type Mundo = {
-  cfg: Config;
-  azar: Azar;
-  t: number;
-  bichos: Bicho[];
-  comida: Bocado[];
-  parches: Parche[];
-  /** Energía del suelo por celda. Ahí vuelve todo lo que se gasta y todo lo que muere. */
-  suelo: Float64Array;
-  cols: number;
-  filas: number;
-  siguienteId: number;
-  extinto: boolean;
-  /** El genoma fundador de esta partida, ya jittereado por la semilla. Todos descienden de él. */
-  eva: Genoma;
-  /** Generación más alta alcanzada por alguien vivo. */
-  gen: number;
-  /** Quién mata y cuánto se nace. Es lo que el narrador cuenta y lo que el medidor mira. */
-  cuenta: { nacidos: number; hambre: number; viejos: number; comidos: number };
-  /** Rejillas y marcas reutilizadas cada tick. Estado de trabajo, no del mundo. */
-  rejB: Rejilla;
-  rejC: Rejilla;
-  comidos: boolean[];
-};
-
-const celdaDe = (m: Mundo, x: number, y: number): number => {
-  const cx = Math.min(m.cols - 1, Math.max(0, Math.floor(x / CELDA)));
-  const cy = Math.min(m.filas - 1, Math.max(0, Math.floor(y / CELDA)));
-  return cy * m.cols + cx;
-};
-
-/** Devuelve energía al suelo del sitio exacto: el cadáver fertiliza donde cayó. */
-const alSuelo = (m: Mundo, x: number, y: number, e: number) => { m.suelo[celdaDe(m, x, y)] += e; };
-
-export function crearMundo(semilla: string, cfg: Partial<Config> = {}): Mundo {
-  const c: Config = { ...CONFIG, ...cfg };
-  const azar = azarCon(semilla);
-  const cols = Math.max(1, Math.ceil(c.ancho / CELDA));
-  const filas = Math.max(1, Math.ceil(c.alto / CELDA));
-  const m: Mundo = {
-    cfg: c, azar, t: 0, bichos: [], comida: [], parches: [],
-    suelo: new Float64Array(cols * filas), cols, filas,
-    siguienteId: 1, eva: { ...c.fundador }, extinto: false, gen: 0,
-    cuenta: { nacidos: 0, hambre: 0, viejos: 0, comidos: 0 },
-    rejB: rejillaVacia(cols * filas), rejC: rejillaVacia(cols * filas), comidos: [],
-  };
-
-  // La semilla jitterea al fundador: define el mundo *y* quién lo empezó. La población de
-  // partida son clones de ese genoma, para ver divergir lo que empezó idéntico.
-  const eva = m.eva;
-  for (const r of RASGOS) {
-    eva[r] = CON_SIGNO.includes(r)
-      ? eva[r] + centrado(azar) * c.paso * 2
-      : eva[r] * (1 + centrado(azar) * 0.12);
-  }
-
-  let repartida = 0;
-  for (let i = 0; i < c.censoInicial; i++) {
-    const b = nacer(m, { ...eva }, -1, 0, sig(azar) * c.ancho, sig(azar) * c.alto);
-    // Los fundadores arrancan adultos y con la despensa casi llena: si empezaran de crías, la
-    // partida se decidiría antes de que nadie se reproduzca una sola vez.
-    b.radio = b.g.talla;
-    b.masa = masaDe(b.radio);
-    b.reserva = b.masa * CAP_RESERVA * 0.9;
-    repartida += b.masa + b.reserva;
-  }
-  // Todo lo que no está en un cuerpo empieza en el suelo, repartido por igual.
-  const porCelda = Math.max(0, c.energia - repartida) / (cols * filas);
-  m.suelo.fill(porCelda);
-  for (let i = 0; i < CALENTAR; i++) brotar(m); // el mundo existe antes que sus bichos
-  return m;
-}
-
-function nacer(m: Mundo, g: Genoma, idMadre: number, gen: number, x: number, y: number): Bicho {
-  const [hx, hy] = unidad(m.azar);
-  const b: Bicho = {
-    id: m.siguienteId++, idMadre, gen,
-    x, y, hx, hy,
-    radio: RADIO_CRIA, masa: masaDe(RADIO_CRIA), reserva: 0,
-    edad: 0, mastica: 0, hijos: 0, vivo: true, g,
-  };
-  m.bichos.push(b);
-  if (gen > m.gen) m.gen = gen;
-  return b;
-}
-
-// ─── Rejilla espacial ─────────────────────────────────────────────────────────
-
-// Visión y depredación son cuadráticas: a 64 ticks por fotograma, sin rejilla son millones de
-// pares por segundo.
-type Rejilla = number[][];
-
-const rejillaVacia = (n: number): Rejilla => Array.from({ length: n }, () => []);
-
-/**
- * Rellena una rejilla ya reservada. Se reutiliza tick a tick en vez de crearla: a x64 son 3.840
- * rejillas por segundo, y construirlas de cero se lleva más tiempo que consultarlas.
- */
-function rejilla(m: Mundo, rej: Rejilla, pts: { x: number; y: number }[]): Rejilla {
-  for (let i = 0; i < rej.length; i++) rej[i].length = 0;
-  for (let i = 0; i < pts.length; i++) rej[celdaDe(m, pts[i].x, pts[i].y)].push(i);
-  return rej;
-}
-
-// ─── Comida: parches que nacen, emiten y se agotan ────────────────────────────
-
-/**
- * Dónde nace un parche dentro de su celda: uniforme en el trozo de celda donde **el disco entero
- * cabe en el mundo**. Un parche que asoma por el muro no reparte menos comida — la reparte toda
- * pegada a la pared, porque el bocado que cae fuera se recorta al borde—, y eso amontona comida
- * en una línea que nadie ha modelado y a la que la población acaba mudándose.
- *
- * Si el radio es mayor que la celda no hay trozo que valga y se sortea en toda la banda: con
- * parches más anchos que la rejilla, qué celda salió ya dice poco de dónde cae la comida.
- */
-function centroParche(celda: number, u: number, r: number, largo: number): number {
-  const lo = Math.max(celda * CELDA, r), hi = Math.min(celda * CELDA + CELDA, largo - r);
-  return hi > lo ? lo + u * (hi - lo) : r + u * Math.max(0, largo - 2 * r);
-}
-
-function brotar(m: Mundo) {
-  const c = m.cfg;
-  while (m.parches.length < c.parches) {
-    // Sorteo de celda ponderado por suelo: donde hubo una matanza hay energía, y donde hay
-    // energía brota comida. La memoria espacial del mundo sale de aquí sin programar nada más.
-    let total = 0;
-    for (let i = 0; i < m.suelo.length; i++) total += m.suelo[i];
-    if (total < E_COMIDA) break;
-    let r = sig(m.azar) * total, celda = m.suelo.length - 1;
-    for (let i = 0; i < m.suelo.length; i++) {
-      r -= m.suelo[i];
-      if (r <= 0) { celda = i; break; }
-    }
-    // El parche bebe de su celda y de las ocho vecinas: la energía de los cadáveres queda
-    // repartida en celdas pequeñas, y exigiendo que una sola llegue a un bocado los parches
-    // dejaban de nacer para siempre con el suelo aún lleno.
-    //
-    // **Y bebe de las nueve en proporción a lo que cada una tiene, no en orden.** Vaciando la
-    // primera antes de tocar la segunda, el bucle se come siempre el noroeste y deja lleno el
-    // sureste; como la celda del parche se sortea ponderada por energía, el mundo entero se
-    // escoraba hacia la esquina de abajo a la derecha —medido: el 61% de los bichos en el quinto
-    // inferior del mapa—. El orden de un bucle no puede ser un accidente geográfico.
-    const cx = celda % m.cols, cy = Math.floor(celda / m.cols);
-    const y0 = Math.max(0, cy - 1), y1 = Math.min(m.filas - 1, cy + 1);
-    const x0 = Math.max(0, cx - 1), x1 = Math.min(m.cols - 1, cx + 1);
-    let vecino = 0;
-    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) vecino += m.suelo[y * m.cols + x];
-    let drenado = 0;
-    if (vecino > 0) {
-      const parte = Math.min(1, c.reservaParche / vecino);
-      for (let y = y0; y <= y1; y++) {
-        for (let x = x0; x <= x1; x++) {
-          const i = y * m.cols + x;
-          const bebe = m.suelo[i] * parte;   // se resta lo mismo que se suma: el balance cierra
-          m.suelo[i] -= bebe;
-          drenado += bebe;
-        }
-      }
-    }
-    if (drenado < E_COMIDA) { m.suelo[celda] += drenado; break; }
-    m.parches.push({
-      x: centroParche(cx, sig(m.azar), c.radioParche, c.ancho),
-      y: centroParche(cy, sig(m.azar), c.radioParche, c.alto),
-      r: c.radioParche,
-      reserva: drenado,
-    });
-  }
-
-  for (const p of m.parches) {
-    if (p.reserva < E_COMIDA || sig(m.azar) >= c.brote) continue;
-    p.reserva -= E_COMIDA;
-    const [ux, uy] = unidad(m.azar);
-    const d = Math.sqrt(sig(m.azar)) * p.r; // sqrt para que salga uniforme en el disco
-    m.comida.push({
-      x: Math.min(c.ancho, Math.max(0, p.x + ux * d)),
-      y: Math.min(c.alto, Math.max(0, p.y + uy * d)),
-      hasta: m.t + c.vidaComida * (0.5 + sig(m.azar)),
-    });
-  }
-
-  // Lo que nadie se comió se pudre donde estaba y fertiliza ese sitio.
-  for (let i = m.comida.length - 1; i >= 0; i--) {
-    if (m.comida[i].hasta > m.t) continue;
-    alSuelo(m, m.comida[i].x, m.comida[i].y, E_COMIDA);
-    m.comida.splice(i, 1);
-  }
-
-  for (let i = m.parches.length - 1; i >= 0; i--) {
-    const p = m.parches[i];
-    if (p.reserva >= E_COMIDA) continue;
-    alSuelo(m, p.x, p.y, p.reserva); // las migajas vuelven al suelo, no se evaporan
-    m.parches.splice(i, 1);
-  }
-}
-
-// ─── Percepción y rumbo ───────────────────────────────────────────────────────
-
-/**
- * Cinco entradas —comida, mayor, menor, centro de masa de los visibles y borde—, cada una por su
- * peso, y el bicho empuja hacia la suma. No hay arbitraje que programar: "veo comida y un
- * depredador" se resuelve solo y distinto según el genoma. Una pila de `if` pondría techo a la
- * sorpresa, porque todo lo que pudiera pasar lo habría enumerado yo.
- *
- * Mayor y menor pesan por **contraste de masas** `(m₁−m₂)/(m₁+m₂)`, no por masa absoluta: lo que
- * amenaza no es que algo sea grande, es que lo sea comparado contigo. Y acotado en [0,1], que si
- * no la razón de masas aplasta a las otras cuatro entradas y los genes de decisión dejan de competir.
- */
-function decidir(m: Mundo, b: Bicho, rb: Rejilla, rc: Rejilla, radioMax: number) {
-  const g = b.g;
-  let sx = 0, sy = 0;
-
-  // 1. La comida visible más cercana. Se detecta a distancia ∝ su radio: tamaño angular.
-  const alcanceC = g.vision * RADIO_COMIDA;
-  let d2c = alcanceC * alcanceC, cx = 0, cy = 0, hayComida = false;
-  recorrer(m, rc, b.x, b.y, alcanceC, (i) => {
-    const c = m.comida[i];
-    const dx = c.x - b.x, dy = c.y - b.y, d2 = dx * dx + dy * dy;
-    if (d2 < d2c && d2 > 1e-9) { d2c = d2; cx = dx; cy = dy; hayComida = true; }
-  });
-  if (hayComida) {
-    const d = Math.sqrt(d2c);
-    sx += cx / d; sy += cy / d;
-  }
-
-  // 2. Los bichos visibles: el mayor, el menor y el centro de masa.
-  const alcanceB = g.vision * radioMax;
-  let mMayor = 0, xMayor = 0, yMayor = 0, mMenor = Infinity, xMenor = 0, yMenor = 0;
-  let sumM = 0, sumX = 0, sumY = 0;
-  recorrer(m, rb, b.x, b.y, alcanceB, (i) => {
-    const o = m.bichos[i];
-    if (o === b || !o.vivo) return;
-    const dx = o.x - b.x, dy = o.y - b.y, d2 = dx * dx + dy * dy;
-    const alcance = g.vision * o.radio;
-    if (d2 > alcance * alcance) return;
-    sumM += o.masa; sumX += o.masa * dx; sumY += o.masa * dy;
-    if (o.masa > mMayor) { mMayor = o.masa; xMayor = dx; yMayor = dy; }
-    if (o.masa < mMenor) { mMenor = o.masa; xMenor = dx; yMenor = dy; }
-  });
-
-  if (mMayor > b.masa) {
-    const d = Math.sqrt(xMayor * xMayor + yMayor * yMayor);
-    if (d > 1e-6) {
-      const w = g.audacia * ((mMayor - b.masa) / (mMayor + b.masa));
-      sx -= (xMayor / d) * w; sy -= (yMayor / d) * w;
-    }
-  }
-  if (mMenor < b.masa) {
-    const d = Math.sqrt(xMenor * xMenor + yMenor * yMenor);
-    if (d > 1e-6) {
-      const w = g.fiereza * ((b.masa - mMenor) / (b.masa + mMenor));
-      sx += (xMenor / d) * w; sy += (yMenor / d) * w;
-    }
-  }
-  if (sumM > 0) {
-    const dx = sumX / sumM, dy = sumY / sumM;
-    const d = Math.sqrt(dx * dx + dy * dy);
-    if (d > 1e-6) { sx += (dx / d) * g.sociabilidad; sy += (dy / d) * g.sociabilidad; }
-  }
-
-  // 3. El muro empuja hacia dentro. Fijo y no genético.
-  if (b.x < MARGEN) sx += BORDE * (1 - b.x / MARGEN);
-  if (b.y < MARGEN) sy += BORDE * (1 - b.y / MARGEN);
-  const dx1 = m.cfg.ancho - b.x, dy1 = m.cfg.alto - b.y;
-  if (dx1 < MARGEN) sx -= BORDE * (1 - dx1 / MARGEN);
-  if (dy1 < MARGEN) sy -= BORDE * (1 - dy1 / MARGEN);
-
-  // Vector nulo = mantener el rumbo. Es indefinición numérica, no una estrategia mala: sin esto
-  // el ángulo no existe y el NaN se propaga en silencio.
-  const n2 = sx * sx + sy * sy;
-  if (n2 < 1e-12) return;
-  const n = Math.sqrt(n2);
-  girar(b, sx / n, sy / n);
-}
-
-/** Lo que `girar` necesita de un cuerpo: su rumbo y su masa. Cualquier mundo puede tener eso. */
 export type Rumbo = { hx: number; hy: number; masa: number };
 
 /**
@@ -566,30 +115,6 @@ export function girar(b: Rumbo, dx: number, dy: number) {
   b.hx = nx / n; b.hy = ny / n;
 }
 
-/** Recorre los índices de `rej` que caen en las celdas alcanzables a `radio` de `(x,y)`. */
-function recorrer(m: Mundo, rej: Rejilla, x: number, y: number, radio: number, f: (i: number) => void) {
-  const cx0 = Math.max(0, Math.floor((x - radio) / CELDA)), cx1 = Math.min(m.cols - 1, Math.floor((x + radio) / CELDA));
-  const cy0 = Math.max(0, Math.floor((y - radio) / CELDA)), cy1 = Math.min(m.filas - 1, Math.floor((y + radio) / CELDA));
-  for (let cy = cy0; cy <= cy1; cy++) {
-    for (let cx = cx0; cx <= cx1; cx++) {
-      const celda = rej[cy * m.cols + cx];
-      for (let k = 0; k < celda.length; k++) f(celda[k]);
-    }
-  }
-}
-
-// ─── Choques: comer y empujarse ───────────────────────────────────────────────
-
-function comer(m: Mundo, dep: Bicho, presa: Bicho) {
-  const total = presa.masa + presa.reserva;
-  const tomado = total * EFICIENCIA;
-  guardar(m, dep, tomado);
-  alSuelo(m, presa.x, presa.y, total - tomado); // la pérdida trófica no se evapora: cae al suelo
-  dep.mastica += m.cfg.masticar * presa.masa;         // mientras mastica ni se mueve ni escapa
-  presa.vivo = false;
-  m.cuenta.comidos++;
-}
-
 /**
  * Raíz cúbica por Newton desde el radio de ahora: `Math.cbrt` no está fijado por IEEE y el radio
  * entra en todas las relaciones físicas, así que un bit de diferencia partiría la semilla.
@@ -600,216 +125,7 @@ export function raizCubica(masa: number, desde: number): number {
   return r;
 }
 
-/**
- * Mete energía en la reserva, y **lo que no cabe se hace cuerpo**: crecer no es una tasa elegida,
- * es el destino de lo que sobra, y el gen solo fija hasta dónde. Lo que ya no cabe ni en el cuerpo
- * cae al suelo. La despensa va con la masa, así que grande aguanta más sin comer.
- */
-function guardar(m: Mundo, b: Bicho, e: number) {
-  const cap = b.masa * CAP_RESERVA;
-  const hueco = cap - b.reserva;
-  if (e <= hueco) { b.reserva += e; return; }
-  b.reserva = cap;
-  let sobra = e - Math.max(0, hueco);
-  const techo = masaDe(b.g.talla);
-  if (b.masa < techo) {
-    if (b.masa + sobra >= techo) {
-      // Al llegar al techo el radio se clava en la talla exacta, no en lo que devuelva Newton:
-      // ser adulto es una comparación que decide si te reproduces, y no puede depender del
-      // último bit de una raíz.
-      sobra -= techo - b.masa;
-      b.masa = techo; b.radio = b.g.talla;
-    } else {
-      const r = raizCubica(b.masa + sobra, b.radio);
-      const real = masaDe(r);        // la masa que de verdad tiene ese radio, no la pedida
-      sobra -= real - b.masa;        // se paga la construida: así el balance cierra al último bit
-      b.masa = real; b.radio = r;
-    }
-  }
-  if (sobra !== 0) alSuelo(m, b.x, b.y, sobra);
-}
-
-function choques(m: Mundo, rb: Rejilla, rc: Rejilla, comidos: boolean[], radioMax: number) {
-  for (const b of m.bichos) {
-    if (!b.vivo || b.mastica > 0) continue;
-    // Comer del suelo.
-    recorrer(m, rc, b.x, b.y, b.radio + RADIO_COMIDA, (i) => {
-      if (comidos[i] || b.mastica > 0) return;
-      const c = m.comida[i];
-      const dx = c.x - b.x, dy = c.y - b.y, r = b.radio + RADIO_COMIDA;
-      if (dx * dx + dy * dy > r * r) return;
-      comidos[i] = true;
-      guardar(m, b, E_COMIDA);
-      b.mastica += m.cfg.masticar * E_COMIDA;
-    });
-  }
-
-  // Pares: cada uno una vez. Cuerpos sólidos — se empujan sin rebote ni rotación, y cede menos
-  // el de más masa. Con cuerpo, el tamaño ocupa sitio y aglomerarse cuesta.
-  for (let i = 0; i < m.bichos.length; i++) {
-    const a = m.bichos[i];
-    if (!a.vivo) continue;
-    recorrer(m, rb, a.x, a.y, a.radio + radioMax, (j) => {
-      if (j <= i) return;
-      const b = m.bichos[j];
-      if (!a.vivo || !b.vivo) return;
-      const dx = b.x - a.x, dy = b.y - a.y, r = a.radio + b.radio;
-      const d2 = dx * dx + dy * dy;
-      if (d2 > r * r || d2 < 1e-9) return;
-
-      if (m.cfg.caza) {
-        // Te comes a quien te quepa en la boca, que abarca media cara. Es un umbral relativo,
-        // no una curva: por eso la talla puede oscilar en ciclos en vez de asentarse.
-        if (a.mastica === 0 && b.radio <= m.cfg.boca * a.radio) { comer(m, a, b); return; }
-        if (b.mastica === 0 && a.radio <= m.cfg.boca * b.radio) { comer(m, b, a); return; }
-      }
-      const d = Math.sqrt(d2);
-      const solape = (r - d) / 2;
-      const ux = dx / d, uy = dy / d;
-      const total = a.masa + b.masa;
-      const fa = (b.masa / total) * solape, fb = (a.masa / total) * solape;
-      a.x -= ux * fa; a.y -= uy * fa;
-      b.x += ux * fb; b.y += uy * fb;
-    });
-  }
-}
-
-// ─── Tick ─────────────────────────────────────────────────────────────────────
-
-/**
- * Un paso de mundo, en este orden y siempre el mismo: brotar → percibir y moverse → chocar →
- * metabolismo, crecer, criar y morir → limpiar. El orden es parte de la promesa de la semilla.
- */
-export function tick(m: Mundo) {
-  if (m.extinto) return;
-  const c = m.cfg;
-  m.t++;
-
-  if (!c.neutral) brotar(m);
-
-  let radioMax = RADIO_CRIA;
-  for (const b of m.bichos) if (b.radio > radioMax) radioMax = b.radio;
-
-  const rc = rejilla(m, m.rejC, m.comida);
-  const rb = rejilla(m, m.rejB, m.bichos);
-
-  for (const b of m.bichos) {
-    if (b.mastica > 0) { b.mastica--; continue; }
-    decidir(m, b, rb, rc, radioMax);
-    const v = b.g.empuje / b.radio;
-    b.x = Math.min(c.ancho, Math.max(0, b.x + b.hx * v));
-    b.y = Math.min(c.alto, Math.max(0, b.y + b.hy * v));
-  }
-
-  rejilla(m, m.rejB, m.bichos); // se han movido: la rejilla de los choques es otra
-  const comidos = m.comidos;
-  comidos.length = m.comida.length;
-  comidos.fill(false);
-  if (!c.neutral) choques(m, rb, rc, comidos, radioMax);
-
-  // Por índice y hasta la longitud de antes: `nacer` hace push, y un `for...of` alcanzaría a los
-  // recién nacidos en su propio tick de nacimiento — que además podrían criar en cadena.
-  const vivos = m.bichos.length;
-  for (let i = 0; i < vivos; i++) {
-    const b = m.bichos[i];
-    if (!b.vivo) continue;
-    b.edad++;
-
-    // Metabolismo. Todo se paga en la misma moneda y por unidad de masa: basal (con el recargo
-    // del aguante), ver y moverse. El de moverse es la potencia física —fuerza por velocidad,
-    // que con fuerza = empuje·radio² sale masa·v²—, no un número elegido: coste convexo en la
-    // velocidad contra un beneficio lineal (terreno cubierto), que es lo que le da óptimo interior.
-    if (!c.neutral) {
-      const v = b.mastica > 0 ? 0 : b.g.empuje / b.radio;
-      const coste = pot(b.masa, c.expMasa) *
-        (C_BASAL * (1 + b.g.aguante) + C_VISION * pot(b.g.vision, c.expVision) + C_EMPUJE * v * v);
-      b.reserva -= coste;
-      alSuelo(m, b.x, b.y, coste);
-    } else {
-      b.reserva = b.masa * CAP_RESERVA;
-    }
-
-    if (c.hambre && b.reserva < 0) { m.cuenta.hambre++; morir(m, b); continue; }
-
-    // Senescencia: el riesgo crece con la edad, sin corte seco. Una edad máxima fija haría que
-    // los nacidos a rachas murieran a rachas, y saldrían oscilaciones que parecen un ciclo
-    // ecológico y son un efecto de cohorte.
-    if (!c.neutral && sig(m.azar) < c.senescencia * b.edad * b.edad / (1 + b.g.aguante)) {
-      m.cuenta.viejos++; morir(m, b); continue;
-    }
-
-    // Criar. El hijo cuesta su masa más la despensa con la que sale, y nace junto a la madre:
-    // una línea, y el mundo gana estructura de parentesco espacial sin ningún gen de reconocerla.
-    const cap = b.masa * CAP_RESERVA;
-    const masaCria = masaDe(RADIO_CRIA);
-    const dote = masaCria * CAP_RESERVA * 0.5;
-    // En modo laboratorio se replica por edad y gratis: si criar dependiera del umbral genético,
-    // el mundo "sin selección" estaría seleccionando por fecundidad y el test de deriva mentiría.
-    // **Se cría de adulto**, no antes. Sin esto la talla por encima de lo que un bicho llega a
-    // crecer no cuesta nada ni compra nada: es un gen invisible para la selección, y medido sale
-    // que un mundo que arranca con talla 36 se queda en 38 sin que nadie lo baje. Con esto, una
-    // talla que no se alcanza es una estirpe que no tiene hijos, que es la selección más dura que
-    // hay. Y de paso la talla pasa a decidir también *cuándo* se empieza a criar, que es el
-    // trade-off entre pocos hijos caros y muchos baratos.
-    const cria = c.neutral
-      ? b.edad > 0 && b.edad % 40 === 0
-      : b.radio >= b.g.talla && b.reserva >= b.g.umbral * cap && b.reserva >= masaCria + dote;
-    if (cria) {
-      if (!c.neutral) b.reserva -= masaCria + dote;
-      const [ux, uy] = unidad(m.azar);
-      const d = b.radio + RADIO_CRIA + 0.5;
-      const hijo = nacer(m, mutar(m.azar, b.g, c), b.id, b.gen + 1,
-        Math.min(c.ancho, Math.max(0, b.x + ux * d)),
-        Math.min(c.alto, Math.max(0, b.y + uy * d)));
-      hijo.reserva = dote;
-      b.hijos++;
-      m.cuenta.nacidos++;
-    }
-  }
-  for (let i = m.comida.length - 1; i >= 0; i--) if (comidos[i]) m.comida.splice(i, 1);
-  m.bichos = m.bichos.filter((b) => b.vivo);
-
-  if (c.neutral) sorteoNeutral(m);
-
-  if (m.bichos.length === 0) m.extinto = true;
-}
-
-function morir(m: Mundo, b: Bicho) {
-  // La reserva va con su signo: quien muere de hambre debe energía, y esa deuda la paga su masa.
-  // Devolver solo lo positivo crearía energía en cada muerte, y el presupuesto dejaría de cerrar.
-  alSuelo(m, b.x, b.y, b.masa + b.reserva);
-  b.vivo = false;
-}
-
-/** Solo en modo laboratorio: recorta el censo por sorteo uniforme, que no selecciona nada. */
-function sorteoNeutral(m: Mundo) {
-  while (m.bichos.length > m.cfg.neutral) {
-    m.bichos.splice(Math.floor(sig(m.azar) * m.bichos.length), 1);
-  }
-}
-
-/**
- * Multiplicativa en los genes positivos y aditiva en los que llevan signo. Multiplicar o dividir
- * por el mismo factor con la misma probabilidad es log-normal sin `exp`, que no está fijado por
- * IEEE; y sobre un gen acotado en 0 no puede producir el sesgo de recorte de la aditiva.
- */
-export function mutar(a: Azar, g: Genoma, c: Config): Genoma {
-  const h: Genoma = { ...g };
-  for (const r of RASGOS) {
-    const n = centrado(a);
-    if (CON_SIGNO.includes(r)) { h[r] = g[r] + n * c.paso; continue; }
-    const f = 1 + Math.abs(n) * c.tasa;
-    h[r] = n >= 0 ? g[r] * f : g[r] / f;
-    if (h[r] < 1e-6) h[r] = 1e-6;
-  }
-  return h;
-}
-
-export function avanzar(m: Mundo, ticks: number) {
-  for (let i = 0; i < ticks && !m.extinto; i++) tick(m);
-}
-
-// ─── Lectura del mundo ────────────────────────────────────────────────────────
+// ─── Estadística ──────────────────────────────────────────────────────────────
 
 export function mediana(xs: number[]): number {
   if (xs.length === 0) return NaN;
@@ -819,46 +135,599 @@ export function mediana(xs: number[]): number {
 }
 
 /**
- * Velocidad de un adulto con ese genoma. La velocidad realizada de un bicho vivo lee su radio
- * actual —una cría es más rápida que su madre—; esta es la del genoma, que es lo que se compara
- * entre poblaciones.
+ * Cómo está repartido un gen en la población viva: los extremos de verdad —el más y el menos de
+ * todos— y el cuerpo central entre el décimo y el noveno decil, con la mediana dentro. Es lo que
+ * la leyenda necesita para contestar «¿ya son lo más grandes que pueden?»: **no hay tope
+ * genético**, la mutación multiplica y divide sin techo, así que lo único que se puede enseñar es
+ * dónde está hoy la población y cuánto se ha ido de donde salió.
+ *
+ * Con `xs` vacío devuelve `null` y no una banda de `NaN`: quien pinta tiene que decidir qué hacer
+ * cuando no queda nadie, y un `NaN` se cuela hasta el atributo del SVG sin que falle nada.
+ */
+export function banda(xs: number[]): { min: number; lo: number; med: number; hi: number; max: number } | null {
+  if (xs.length === 0) return null;
+  const s = [...xs].sort((a, b) => a - b);
+  const en = (q: number) => s[Math.min(s.length - 1, Math.max(0, Math.round(q * (s.length - 1))))];
+  return { min: s[0], lo: en(0.1), med: mediana(s), hi: en(0.9), max: s[s.length - 1] };
+}
+
+// ─── Genoma y mundo ───────────────────────────────────────────────────────────
+
+/**
+ * Seis genes, **y todos se ven**: tamaño, cola, tono y filo, aura y anillo están en el cuerpo; la
+ * visión, en lo lejos que reacciona; el retorno, en que tuerce a casa en cuanto carga algo. Un gen
+ * que solo existiera en la estadística no se puede mirar, y esto es un juguete para mirar.
+ *
+ * `retorno` es el propio de este mundo: cuánto tira el borde cuando ya llevas comida. Sin ese peso
+ * nadie volvería salvo por azar, y con él puesto a mano sería una regla y no una estrategia.
+ */
+export const RASGOS = [
+  "empuje", "talla", "vision", "sociabilidad", "fiereza", "retorno",
+] as const;
+export type Rasgo = (typeof RASGOS)[number];
+export type Genoma = Record<Rasgo, number>;
+
+/** Qué paga y qué cobra cada gen. Es la fuente de la tabla de reglas y de la leyenda. */
+export const TABLA: Record<Rasgo, { paga: string; cobra: string }> = {
+  empuje: { paga: "coste ∝ empuje² · radio; la despensa del día es la misma para todos", cobra: "velocidad = empuje / radio, y con carga menos" },
+  talla: { paga: "coste ∝ masa con la misma despensa que el pequeño; giras peor", cobra: "derecho a comerte a quien sea un 20% menor" },
+  vision: { paga: "coste ∝ visión²", cobra: "detectas a distancia ∝ radio del otro" },
+  sociabilidad: { paga: "competencia por el mismo bocado", cobra: "peso al centro de masa de los visibles, con signo" },
+  fiereza: { paga: "riesgo, y perseguir no es recoger", cobra: "peso de atracción al menor visible" },
+  retorno: { paga: "volver pronto es dejar de buscar", cobra: "peso hacia casa cuando ya llevas comida" },
+};
+
+export type Config = {
+  ancho: number;
+  alto: number;
+  /** Bocados que amanecen repartidos por el interior. Es el techo de la población. */
+  comidas: number;
+  censoInicial: number;
+  /** Tope de duración del día. El que sigue fuera cuando se acaba, no volvió. */
+  ticksDia: number;
+  /**
+   * Capacidad de la despensa, en múltiplos de la masa. La energía **no se regala cada mañana**:
+   * la de mañana es lo que trajiste hoy, así que quemar se paga y el empuje tiene techo. Cuando
+   * se regalaba, el hambre no mataba nunca —el 42% del tanque bastaba para un día entero—, correr
+   * era gratis y el empuje subía sin freno hasta que un día mataba a toda la población de golpe.
+   */
+  capReserva: number;
+  /**
+   * Ancho de la franja del borde que es casa. **De vacío es pared:** no se entra, aunque desde
+   * dentro siempre se pueda salir. Cargado es refugio, pero no basta con rozarla: se está a salvo
+   * al llegar a su **línea media**, metido en la franja y no parado en su borde interior.
+   */
+  casa: number;
+  caza: boolean;
+  /**
+   * Cuánto mayor hay que ser para comerse a otro, en radios. 1,2 es "un 20% más grande": el
+   * umbral que hace de la talla una carta y no solo lastre.
+   */
+  boca: number;
+  tasa: number;
+  paso: number;
+  fundador: Genoma;
+};
+
+export const FUNDADOR: Genoma = {
+  empuje: 2, talla: 4.5, vision: 22, sociabilidad: 0, fiereza: 1, retorno: 1,
+};
+
+// Medido en `costes.medir.ts`. Con el mundo de 896×640 del primer intento no se llegaba al centro
+// y vuelta, y se extinguían las ocho semillas; a la mitad de mundo, viven. Comida y jornada salen
+// del barrido con la despensa acoplada: con 100 bocados y 300 ticks sobreviven cinco de ocho
+// semillas —la extinción tiene que seguir siendo un resultado posible—, el censo se asienta en 77
+// y las muertes se reparten 58% de hambre y 42% de dentellada. Con 60 bocados el hambre se lleva
+// tres cuartos; con 250, el mundo deja de apretar y la talla se dispara.
+export const CONFIG: Config = {
+  ancho: 448, alto: 320,
+  comidas: 100, censoInicial: 30,
+  ticksDia: 300, capReserva: CAP_RESERVA, casa: 24,
+  caza: true, boca: 1.2,
+  tasa: 0.08, paso: 0.06,
+  fundador: FUNDADOR,
+};
+
+export type Bicho = {
+  id: number; idMadre: number; gen: number;
+  x: number; y: number; hx: number; hy: number;
+  radio: number; masa: number;
+  /** Bocados encima. Pesan: entran en la masa que hay que mover. */
+  carga: number;
+  reserva: number;
+  vivo: boolean;
+  /** Ya está en casa con al menos un bocado: por hoy ha terminado. */
+  aSalvo: boolean;
+  /** Crías de esta noche. Vive solo entre el anochecer y el amanecer siguiente: es lo que se pinta. */
+  hijos: number;
+  /** Nacido en la noche que se está mirando. Se apaga al amanecer, y solo lo usa el pintado. */
+  recien: boolean;
+  g: Genoma;
+};
+
+/**
+ * Una muerte, guardada lo justo para poder pintarla: dónde, cuándo, de qué tamaño era y con qué
+ * tono —la fiereza, que es lo único del genoma que se ve—. Caducan en `MARCA` ticks. Solo hay dos
+ * causas: **al anochecer ya no muere nadie**, así que el que se queda fuera sigue pintándose vivo,
+ * que es lo que es.
+ */
+export type Marca = {
+  x: number; y: number; r: number; t: number;
+  causa: "comido" | "hambre";
+  fiereza: number;
+};
+
+export type Mundo = {
+  cfg: Config;
+  azar: Azar;
+  /** Días completos, que aquí son generaciones: todos crían a la vez. */
+  dia: number;
+  t: number;
+  /** Lo que duró el último día. `t` no vale: amanecer lo pone a cero. */
+  duracion: number;
+  bichos: Bicho[];
+  comida: { x: number; y: number }[];
+  siguienteId: number;
+  /**
+   * El día ya está cerrado y las crías están puestas al lado de su madre: el mundo se queda así,
+   * a la vista, hasta que alguien llame a `amanecer`. Quien mira decide cuánto dura la noche; el
+   * motor no sabe de relojes.
+   */
+  noche: boolean;
+  /**
+   * Hasta dónde llega el parecido de familia hoy: la distancia genética típica de esta población
+   * a su propio centro. Por debajo de ella dos bichos son de los mismos, y **no se comen entre
+   * ellos** por grande que sea uno. Sale del mundo cada mañana, no de un número elegido a ojo.
+   */
+  especie: number;
+  /** Quién ha muerto, dónde y de qué, para que el pintado pueda enseñarlo. No decide nada. */
+  marcas: Marca[];
+  extinto: boolean;
+  eva: Genoma;
+  /** `fuera` son **noches pasadas a la intemperie**, no muertes: al anochecer ya no muere nadie. */
+  cuenta: { nacidos: number; hambre: number; fuera: number; comidos: number };
+};
+
+/** Masa que hay que mover: la propia más la que llevas encima. La comida pesa lo que vale. */
+const masaCargada = (b: Bicho): number => b.masa + b.carga * E_COMIDA;
+const radioCargado = (b: Bicho): number => raizCubica(masaCargada(b), b.radio);
+
+/**
+ * La semilla despeina al fundador: define el mundo *y* quién lo empezó. La población de partida
+ * son clones de ese genoma, para ver divergir lo que empezó idéntico.
+ *
+ * Está fuera de `crearMundo` porque es **lo primero que sale del PRNG**, antes que nada del mundo:
+ * así `evaDe(azarCon(palabra), CONFIG)` devuelve el fundador de esa partida sin sembrarla, que es
+ * lo que necesita la leyenda para enseñar de dónde salió la población.
+ */
+export function evaDe(a: Azar, c: Config): Genoma {
+  const eva = { ...c.fundador };
+  for (const r of RASGOS) {
+    eva[r] = r === "sociabilidad"
+      ? eva[r] + centrado(a) * c.paso * 2
+      : eva[r] * (1 + centrado(a) * 0.12);
+  }
+  return eva;
+}
+
+export function crearMundo(semilla: string, cfg: Partial<Config> = {}): Mundo {
+  const c: Config = { ...CONFIG, ...cfg };
+  const azar = azarCon(semilla);
+  const eva = evaDe(azar, c);
+  const m: Mundo = {
+    cfg: c, azar, dia: 0, t: 0, duracion: 0, bichos: [], comida: [], siguienteId: 1,
+    noche: false, especie: 0, marcas: [],
+    extinto: false, eva, cuenta: { nacidos: 0, hambre: 0, fuera: 0, comidos: 0 },
+  };
+  for (let i = 0; i < c.censoInicial; i++) nacer(m, { ...eva }, -1, 0);
+  amanecer(m);
+  return m;
+}
+
+/**
+ * Un punto al azar en la línea media de la franja de casa: donde se está a salvo y, por tanto,
+ * donde se amanece. Solo la usan los fundadores del primer día — a partir de ahí cada uno amanece
+ * donde acabó y las crías, donde nacieron.
+ */
+function enCasaDelTodo(m: Mundo): [number, number] {
+  const c = m.cfg;
+  const u = sig(m.azar), v = c.casa / 2;
+  const perimetro = 2 * (c.ancho + c.alto);
+  let d = u * perimetro;
+  if (d < c.ancho) return [d, v];
+  d -= c.ancho;
+  if (d < c.alto) return [c.ancho - v, d];
+  d -= c.alto;
+  if (d < c.ancho) return [c.ancho - d, c.alto - v];
+  return [v, d - c.ancho];
+}
+
+/** Nace en la línea de salida, o donde se le diga — una cría nace pegada a su madre, y ahí se ve. */
+function nacer(m: Mundo, g: Genoma, idMadre: number, gen: number, donde?: [number, number]): Bicho {
+  const [x, y] = donde ?? enCasaDelTodo(m);
+  const [hx, hy] = unidad(m.azar);
+  const b: Bicho = {
+    id: m.siguienteId++, idMadre, gen, x, y, hx, hy,
+    // Nace con la despensa llena, y eso **es** lo que cuesta un hijo: se la paga su madre de lo
+    // que trajo. Así una cría grande cuesta más que una pequeña, que es el contrapeso que la talla
+    // no tenía —antes un hijo costaba dos bocados fuera cual fuera su tamaño—.
+    radio: g.talla, masa: masaDe(g.talla), carga: 0, reserva: m.cfg.capReserva * masaDe(g.talla),
+    vivo: true, aSalvo: false, hijos: 0, recien: false, g,
+  };
+  m.bichos.push(b);
+  return b;
+}
+
+/**
+ * Cuánto se diferencian dos genomas: gen a gen, lo que se separan **en proporción a su tamaño**,
+ * promediado. Adimensional a propósito — sin eso la visión, que va en decenas, taparía a la talla
+ * y a la fiereza, que van en unidades, y "parecerse" acabaría queriendo decir "ver parecido".
+ */
+export function distancia(a: Genoma, b: Genoma): number {
+  let s = 0;
+  for (const r of RASGOS) {
+    const d = Math.abs(a[r] - b[r]), suma = Math.abs(a[r]) + Math.abs(b[r]);
+    if (suma > 1e-9) s += d / suma;
+  }
+  return s / RASGOS.length;
+}
+
+/**
+ * Lo lejos que está un bicho corriente del centro de su población, medido con la mediana en los
+ * dos pasos. Es la vara de medir el parecido de familia, y **la pone la propia población**: en un
+ * mundo de clones vale 0 y no se salva nadie por parecido; en uno partido en dos formas de vida
+ * crece, y cada mitad queda protegida de sí misma.
+ */
+function dispersion(m: Mundo): number {
+  if (m.bichos.length < 2) return 0;
+  const centro = {} as Genoma;
+  for (const r of RASGOS) centro[r] = mediana(m.bichos.map((b) => b.g[r]));
+  return mediana(m.bichos.map((b) => distancia(b.g, centro)));
+}
+
+/**
+ * Amanece: la comida se reparte de nuevo por el interior y todos abren los ojos **donde los
+ * cerraron**, con el mismo rumbo y la despensa llena. Nadie se recoloca: el sitio donde llegaste
+ * ayer es tu casa de hoy, y las crías amanecen donde nacieron, al lado de su madre. Un reparto en
+ * la línea de salida cada mañana borraría eso, que es lo único que ata un día con el siguiente.
+ *
+ * **La comida no se acumula de un día para otro** — el mundo no tiene memoria, que es justo lo
+ * que hace que un día no herede nada del anterior salvo dónde acabó cada uno.
+ */
+export function amanecer(m: Mundo) {
+  const c = m.cfg;
+  m.t = 0;
+  m.noche = false;
+  m.comida.length = 0;
+  m.marcas.length = 0;
+  m.especie = dispersion(m);
+  const margen = c.casa + RADIO_COMIDA;
+  for (let i = 0; i < c.comidas; i++) {
+    m.comida.push({
+      x: margen + sig(m.azar) * (c.ancho - 2 * margen),
+      y: margen + sig(m.azar) * (c.alto - 2 * margen),
+    });
+  }
+  for (const b of m.bichos) {
+    b.aSalvo = false;
+    b.hijos = 0;
+    b.recien = false;
+    // **Ni se reparte despensa ni se vacía la carga.** La energía de hoy es la que quedó de ayer,
+    // y el que no llegó a casa amanece donde le pilló la noche, con lo suyo todavía a cuestas.
+    // Quien sí llegó ya lo canjeó al anochecer.
+    //
+    // Se sale de casa mirando al campo. No se le elige el rumbo —trae el de ayer— sino que se le
+    // refleja la componente que apunta al muro: amanecer contra la pared de tu propia casa es
+    // perder la mañana en un rebote, y eso no lo decide ningún gen. Solo a quien está en casa: al
+    // de fuera, la pared que le estorba es otra.
+    if (enCasa(c, b.x, b.y)) {
+      const [dx, dy] = haciaCasa(m, b);
+      if (b.hx * dx + b.hy * dy > 0) { if (dx !== 0) b.hx = -b.hx; else b.hy = -b.hy; }
+    }
+  }
+}
+
+/** Distancia al borde más cercano y hacia dónde está, sin trigonometría. */
+function haciaCasa(m: Mundo, b: Bicho): [number, number, number] {
+  const c = m.cfg;
+  const izq = b.x, der = c.ancho - b.x, arr = b.y, aba = c.alto - b.y;
+  let d = izq, dx = -1, dy = 0;
+  if (der < d) { d = der; dx = 1; dy = 0; }
+  if (arr < d) { d = arr; dx = 0; dy = -1; }
+  if (aba < d) { d = aba; dx = 0; dy = 1; }
+  return [dx, dy, d];
+}
+
+/**
+ * **Decisión por suma de vectores**, nunca una pila de `if`: esa lista fijaría el repertorio de
+ * comportamientos y todo lo que pudiera pasar estaría enumerado de antemano. Cuatro entradas
+ * —comida visible, menor visible, centro de masa de los visibles y borde—, cada una por su peso, y
+ * el bicho empuja hacia la suma. El arbitraje —"llevo uno y veo otro bocado, ¿vuelvo o me
+ * arriesgo?"— no se programa: sale.
+ *
+ * El borde cambia de signo según lleves o no comida: vacío te empuja hacia dentro y es pared,
+ * cargado te llama a casa con el peso de `retorno`. Y el menor pesa por **contraste de masas**,
+ * no por masa absoluta: lo que se persigue no es lo pequeño, es lo pequeño comparado contigo.
+ *
+ * **Aquí ya no hay peso al mayor.** Era `audacia`, y no se veía: un bicho miedoso y uno temerario
+ * se pintaban idénticos. Al quitarlo, apartarse del que te puede comer lo hace la sociabilidad
+ * negativa —que sí se ve, en el anillo duro—, y medir dice que la población la usa: de −0,16 a
+ * −0,44 de mediana en cuanto audacia deja de existir.
+ */
+function decidir(m: Mundo, b: Bicho, radioMax: number) {
+  const g = b.g;
+  let sx = 0, sy = 0;
+
+  const alcanceC = g.vision * RADIO_COMIDA;
+  let d2c = alcanceC * alcanceC, cx = 0, cy = 0, hay = false;
+  for (const c of m.comida) {
+    const dx = c.x - b.x, dy = c.y - b.y, d2 = dx * dx + dy * dy;
+    if (d2 < d2c && d2 > 1e-9) { d2c = d2; cx = dx; cy = dy; hay = true; }
+  }
+  if (hay) { const d = Math.sqrt(d2c); sx += cx / d; sy += cy / d; }
+
+  let mMenor = Infinity, xMenor = 0, yMenor = 0;
+  let sumM = 0, sumX = 0, sumY = 0;
+  const alcanceB = g.vision * radioMax;
+  for (const o of m.bichos) {
+    if (o === b || !o.vivo || o.aSalvo) continue;
+    const dx = o.x - b.x, dy = o.y - b.y, d2 = dx * dx + dy * dy;
+    if (d2 > alcanceB * alcanceB) continue;
+    const alcance = g.vision * o.radio;
+    if (d2 > alcance * alcance) continue;
+    sumM += o.masa; sumX += o.masa * dx; sumY += o.masa * dy;
+    if (o.masa < mMenor) { mMenor = o.masa; xMenor = dx; yMenor = dy; }
+  }
+  if (mMenor < b.masa) {
+    const d = Math.sqrt(xMenor * xMenor + yMenor * yMenor);
+    if (d > 1e-6) {
+      const w = g.fiereza * ((b.masa - mMenor) / (b.masa + mMenor));
+      sx += (xMenor / d) * w; sy += (yMenor / d) * w;
+    }
+  }
+  if (sumM > 0) {
+    const dx = sumX / sumM, dy = sumY / sumM;
+    const d = Math.sqrt(dx * dx + dy * dy);
+    if (d > 1e-6) { sx += (dx / d) * g.sociabilidad; sy += (dy / d) * g.sociabilidad; }
+  }
+
+  const [hx, hy] = haciaCasa(m, b);
+  if (b.carga > 0) { sx += hx * g.retorno; sy += hy * g.retorno; }
+
+  const n2 = sx * sx + sy * sy;
+  if (n2 < 1e-12) return;
+  const n = Math.sqrt(n2);
+  const r = { hx: b.hx, hy: b.hy, masa: masaCargada(b) };
+  girar(r, sx / n, sy / n);   // muta lo que recibe: se le pasa un cuerpo prestado y se leen sus números
+  b.hx = r.hx; b.hy = r.hy;
+}
+
+/**
+ * Multiplicativa en los genes positivos y aditiva en el único que lleva signo. Multiplicar o
+ * dividir por el mismo factor con la misma probabilidad es log-normal sin `exp`, que no está
+ * fijado por IEEE; y sobre un gen acotado en 0 no puede producir el sesgo de recorte que sí
+ * produce la aditiva y que el test de deriva está para cazar.
+ */
+export function mutar(a: Azar, g: Genoma, c: Config): Genoma {
+  const h: Genoma = { ...g };
+  for (const r of RASGOS) {
+    const n = centrado(a);
+    if (r === "sociabilidad") { h[r] = g[r] + n * c.paso; continue; }
+    const f = 1 + Math.abs(n) * c.tasa;
+    h[r] = n >= 0 ? g[r] * f : g[r] / f;
+    if (h[r] < 1e-6) h[r] = 1e-6;
+  }
+  return h;
+}
+
+function comer(m: Mundo, dep: Bicho, presa: Bicho) {
+  dep.reserva += presa.masa * EFICIENCIA;
+  dep.carga += presa.carga;
+  presa.vivo = false;
+  m.marcas.push({ x: presa.x, y: presa.y, r: presa.radio, t: m.t, causa: "comido", fiereza: presa.g.fiereza });
+  m.cuenta.comidos++;
+}
+
+/** Lo que dura en pantalla una muerte del día, en ticks. Solo la mira el pintado. */
+export const MARCA = 14;
+
+/** Si un punto cae en la franja del borde, que es casa. */
+const enCasa = (c: Config, x: number, y: number): boolean =>
+  x < c.casa || y < c.casa || x > c.ancho - c.casa || y > c.alto - c.casa;
+
+/**
+ * Mover y chocar, siempre rebotando y nunca pegándose: un rumbo clavado contra la pared deja al
+ * bicho raspándola el día entero sin decidir nada, y el rebote no es genético — nadie evoluciona
+ * a atravesar un muro.
+ *
+ * Dos paredes. El borde del mundo, para todos. Y la franja de casa, que **de vacío no se entra**
+ * —volver es traer algo— pero sí se sale: al amanecer todo el mundo está dentro de ella, que es
+ * donde acabó el día anterior, y encerrarlos ahí sería no dejar salir a nadie nunca.
+ */
+function mover(m: Mundo, b: Bicho, v: number) {
+  const c = m.cfg;
+  const puedeEntrar = b.carga > 0 || enCasa(c, b.x, b.y);
+  let x = b.x + b.hx * v, y = b.y + b.hy * v;
+  const lim = puedeEntrar ? 0 : c.casa;
+  if (x < lim) { x = lim; b.hx = Math.abs(b.hx); }
+  else if (x > c.ancho - lim) { x = c.ancho - lim; b.hx = -Math.abs(b.hx); }
+  if (y < lim) { y = lim; b.hy = Math.abs(b.hy); }
+  else if (y > c.alto - lim) { y = c.alto - lim; b.hy = -Math.abs(b.hy); }
+  b.x = x; b.y = y;
+}
+
+export function tick(m: Mundo) {
+  // Un mundo extinto no avanza, y eso tiene que estar **aquí** y no en quien llame: la página da
+  // los ticks de uno en uno y `correrDia` de golpe, y si el guardia vive solo en uno de los dos
+  // caminos, los dos dejan de dar el mismo mundo en cuanto alguien sigue llamando tras la
+  // extinción. Lo caza el test de «tick a tick = día de golpe».
+  if (m.extinto) return true;
+  const c = m.cfg;
+  m.t++;
+  if (m.marcas.length) m.marcas = m.marcas.filter((z) => m.t - z.t < MARCA);
+  let radioMax = 1;
+  for (const b of m.bichos) if (b.vivo && !b.aSalvo && b.radio > radioMax) radioMax = b.radio;
+
+  for (const b of m.bichos) {
+    if (!b.vivo || b.aSalvo) continue;
+    decidir(m, b, radioMax);
+    const v = b.g.empuje / radioCargado(b);
+    mover(m, b, v);
+
+    // El día se paga: basal, ver y mover, sobre la masa
+    // que de verdad se está moviendo. Quedarse sin reserva es morir de hambre a media faena.
+    //
+    // Probado y descartado: cobrar el empuje como `v³` —la potencia real contra el arrastre, que
+    // va con el cubo— para ponerle techo a la velocidad. Con la población mezclada el empuje pasa
+    // de acabar en ×1,84 del abanico de partida a ×1,40: sigue sin techo, y a cambio la talla
+    // pierde su óptimo. No compra lo que cuesta, y deja dos modelos hermanos con costes distintos
+    // que ya no se pueden comparar.
+    b.reserva -= masaCargada(b) * (C_BASAL + C_VISION * b.g.vision * b.g.vision + C_EMPUJE * v * v);
+    if (b.reserva <= 0) {
+      b.vivo = false;
+      m.marcas.push({ x: b.x, y: b.y, r: b.radio, t: m.t, causa: "hambre", fiereza: b.g.fiereza });
+      m.cuenta.hambre++;
+      continue;
+    }
+
+    for (let i = m.comida.length - 1; i >= 0; i--) {
+      const f = m.comida[i];
+      const dx = f.x - b.x, dy = f.y - b.y, r = b.radio + RADIO_COMIDA;
+      if (dx * dx + dy * dy <= r * r) { m.comida.splice(i, 1); b.carga++; break; }
+    }
+
+    // A salvo al llegar a la línea media de la franja, no al pisarla: parándose en su borde
+    // interior la población entera acaba el día alineada sobre la misma raya, que es donde no
+    // está la casa de nadie.
+    const [, , d] = haciaCasa(m, b);
+    if (b.carga > 0 && d <= c.casa / 2) b.aSalvo = true;
+  }
+
+  if (c.caza) {
+    for (let i = 0; i < m.bichos.length; i++) {
+      const a = m.bichos[i];
+      if (!a.vivo || a.aSalvo) continue;
+      for (let j = i + 1; j < m.bichos.length; j++) {
+        const b = m.bichos[j];
+        if (!b.vivo || b.aSalvo) continue;
+        const dx = b.x - a.x, dy = b.y - a.y, r = a.radio + b.radio;
+        if (dx * dx + dy * dy > r * r) continue;
+        // De los tuyos no se come, por grande que seas: por debajo de la dispersión de la
+        // población sois la misma cosa. Con la población clonada (`especie` = 0) eso cubre a los
+        // idénticos, que es exactamente lo que hay el primer día.
+        if (distancia(a.g, b.g) <= m.especie) continue;
+        // Comerse a otro da **dos cosas distintas**, y esa es la gracia: su cuerpo es energía para
+        // seguir el día —con la eficiencia trófica, el resto se pierde— y su
+        // carga cambia de dueño. Solo la carga cuenta para criar, así que el robo es una manera
+        // de reproducirse y la caza, solo de aguantar hasta casa.
+        if (a.radio >= c.boca * b.radio) { comer(m, a, b); }
+        else if (b.radio >= c.boca * a.radio) { comer(m, b, a); break; }
+      }
+    }
+  }
+
+  m.bichos = m.bichos.filter((b) => b.vivo);
+  return m.bichos.every((b) => b.aSalvo) || m.t >= c.ticksDia;
+}
+
+/**
+ * Anochece y se hace la cuenta. **Nadie muere aquí.** El que no llegó a casa se queda donde le
+ * pilló la noche, con su carga a cuestas y con lo que le quede de despensa, y mañana lo vuelve a
+ * intentar: un mal día es un día perdido, no una sentencia. Antes sí mataba, y mataba tanto que
+ * era la única causa de muerte del mundo —131 muertes por no llegar y 0 de hambre en una partida
+ * medida—, con dos consecuencias: un fundador solo se moría el primer día en cuatro de cada doce
+ * semillas por la geometría que le tocó, y el empuje subía sin techo porque llegar a casa lo valía
+ * todo, hasta que a empuje 9 la población entera se moría de hambre a la vez.
+ *
+ * Lo que sí pasa al llegar a casa: **la carga entra en la despensa, y criar es lo que no cabe.**
+ * Es la misma idea que gobernaba el crecimiento en la economía anterior, y aquí hace tres cosas de
+ * una vez — le pone precio a la energía quemada, le pone precio al tamaño del hijo (que se lleva
+ * su despensa llena, y la de un grande es mayor) y deja de regalar el tanque cada mañana, que era
+ * lo que hacía gratis correr.
+ *
+ * La despensa **no es un techo, es un umbral**: lo que la pasa espera ahí a ser un hijo, y no se
+ * tira. Recortándolo cada noche —como estuvo un rato— una madre nunca podía ahorrar para criar:
+ * un hijo cuesta más que un bocado, y trayendo uno por día no llegaba nunca. Sin recorte, la
+ * reserva sigue acotada sola —en cuanto pasa de la despensa más un hijo, nace el hijo— y criar
+ * pasa a ser lo que es: varios días de traer más de lo que gastas.
+ */
+export function anochecer(m: Mundo) {
+  m.duracion = m.t;
+  const c = m.cfg;
+  for (const b of m.bichos) {
+    if (!b.aSalvo) { m.cuenta.fuera++; continue; }   // pasa la noche fuera; no muere
+    b.reserva += b.carga * E_COMIDA;
+    b.carga = 0;
+    const cap = c.capReserva * b.masa;
+    // Se mutan los hijos de uno en uno y **se comprueba si caben antes de nacer**: uno grande
+    // cuesta más que uno pequeño, así que a la madre le puede sobrar para un hijo cualquiera y no
+    // para el que le ha salido. Eso es lo que le pone precio a la talla al criar.
+    for (;;) {
+      const sobra = b.reserva - cap;
+      if (sobra <= 0) break;
+      const g = mutar(m.azar, b.g, c);
+      const coste = c.capReserva * masaDe(g.talla);
+      if (coste > sobra) break;
+      b.reserva -= coste;
+      const h = nacer(m, g, b.id, b.gen + 1, [b.x, b.y]);
+      const [ux, uy] = unidad(m.azar);
+      const d = b.radio + h.radio + 1;
+      h.x = b.x + ux * d; h.y = b.y + uy * d;
+      h.recien = true;
+      b.hijos++;
+      m.cuenta.nacidos++;
+    }
+  }
+  m.dia++;
+  m.noche = true;
+  if (m.bichos.length === 0) m.extinto = true;
+}
+
+/** Un día entero: ticks hasta que todos están en casa o se acaba el tiempo, la cuenta y el alba. */
+export function correrDia(m: Mundo) {
+  if (m.extinto) return;
+  for (;;) if (tick(m)) break;
+  anochecer(m);
+  if (!m.extinto) amanecer(m);
+}
+
+/**
+ * Velocidad de un bicho de vacío con ese genoma. La realizada lee la masa que de verdad lleva
+ * encima —cargado se va más lento—; esta es la del genoma, que es lo que se compara entre
+ * poblaciones.
  */
 export const velocidadAdulta = (g: Genoma): number => g.empuje / g.talla;
 
 /**
- * La foto del mundo: censo, generación y **mediana** de cada gen. Nunca la media: si la población
- * se parte en depredadores enormes y presas diminutas, la media dice "mediano, estable" y esconde
+ * La foto del mundo: censo, día y **mediana** de cada gen. Nunca la media: si la población se
+ * parte en cazadores grandes y recolectores diminutos, la media dice "mediano, estable" y esconde
  * justo el resultado que se busca.
  */
 export function resumen(m: Mundo) {
   const medianas = {} as Genoma;
   for (const r of RASGOS) medianas[r] = mediana(m.bichos.map((b) => b.g[r]));
   return {
-    t: m.t,
-    censo: m.bichos.length,
-    gen: m.bichos.length ? Math.max(...m.bichos.map((b) => b.gen)) : m.gen,
-    comida: m.comida.length,
-    extinto: m.extinto,
+    dia: m.dia, censo: m.bichos.length, extinto: m.extinto, medianas, cuenta: m.cuenta,
     velocidad: mediana(m.bichos.map((b) => velocidadAdulta(b.g))),
-    medianas,
   };
 }
 
-/** Toda la energía del mundo. Con presupuesto cerrado, esto no puede cambiar: es el test. */
-export function balance(m: Mundo): number {
-  let e = 0;
-  for (let i = 0; i < m.suelo.length; i++) e += m.suelo[i];
-  for (const p of m.parches) e += p.reserva;
-  e += m.comida.length * E_COMIDA;
-  for (const b of m.bichos) e += b.masa + b.reserva;
-  return e;
-}
+/**
+ * Una copia completa e independiente del mundo, para poder volver a un día anterior. Va por
+ * `structuredClone` y no por una lista de campos a mano: **el mundo entero es dato** —números,
+ * arrays y objetos planos, ni una función ni un `Map`—, y una lista escrita a mano se olvida del
+ * campo que se añada mañana. Olvidarse del estado del PRNG, por ejemplo, no falla: solo hace que
+ * el mundo restaurado se separe del original sin que nadie lo note, y ahí se acaba la promesa de
+ * la semilla. Que no se separa lo comprueba `engine.test.ts`.
+ */
+export const copiar = (m: Mundo): Mundo => structuredClone(m);
 
 /** Estado completo comparable: dos mundos con la misma semilla deben dar la misma cadena. */
 export function huella(m: Mundo): string {
-  const partes = [String(m.t), String(m.bichos.length), String(m.comida.length), balance(m).toFixed(6)];
+  const partes = [String(m.dia), String(m.t), String(m.bichos.length), String(m.comida.length)];
   for (const b of m.bichos) {
-    partes.push(`${b.id}:${b.x.toFixed(9)},${b.y.toFixed(9)},${b.hx.toFixed(9)},${b.radio.toFixed(9)},${b.reserva.toFixed(9)},${b.g.empuje.toFixed(9)}`);
+    partes.push(`${b.id}:${b.x.toFixed(9)},${b.y.toFixed(9)},${b.hx.toFixed(9)},` +
+      `${b.reserva.toFixed(9)},${b.carga},${b.g.empuje.toFixed(9)},${b.g.retorno.toFixed(9)}`);
   }
   return partes.join("|");
 }

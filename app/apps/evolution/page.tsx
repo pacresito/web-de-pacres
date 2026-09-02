@@ -1,122 +1,103 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import TerminalShell from "../../components/TerminalShell";
 import { useTema } from "../../components/usePersistedTheme";
-import { CONFIG_DIA, amanecer, anochecer, crearDia, tickDia } from "./dia";
-import { CONFIG, crearMundo, resumen, tick as tickMundo } from "./engine";
-import { paletaDe, pintar, pintarDia, vistaDe, type Paleta, type Vista } from "./render";
+import { CONFIG, RASGOS, TABLA, amanecer, anochecer, azarCon, banda, copiar, crearMundo, evaDe, tick, type Mundo } from "./engine";
+import Leyenda, { type Perfil } from "./leyenda";
+import { paletaDe, pintar, vistaDe, type Paleta } from "./render";
 
 // Cuántos ticks se intentan por fotograma. Es un objetivo, no una promesa: el bucle corta por
 // presupuesto de tiempo (abajo), así que en un mundo lleno x64 va tan rápido como dé la máquina.
 // Que corte no toca el determinismo — el mundo depende de cuántos ticks ha dado, no de cuándo.
 const VELOCIDADES = [1, 8, 64] as const;
+/**
+ * Ticks por fotograma a ×1. **No es 1**, y por eso está aquí con su porqué: un día son unos 700
+ * ticks, así que a un tick por fotograma se mira el mismo día durante doce segundos. Tres deja el
+ * día en unos cuatro, que es lo que duraba una vuelta completa en la economía que se archivó —y
+ * es lo que se tarda en ver lo que pasa en una sin aburrirse—. El motor no es el límite: un tick
+ * cuesta 0,2 µs, así que en el presupuesto de abajo caben cincuenta mil.
+ */
+const TICKS_BASE = 3;
 const PRESUPUESTO_MS = 12;   // por fotograma, para que la interfaz siga respondiendo a 60 fps
-const SALTO_GEN = 100;       // lo que adelanta el botón de saltar generaciones
-const PAUSA_NOCHE = 1300;    // ms que el mundo por días se queda parado al anochecer, para ver nacer a las crías
+const SALTO_DIAS = 100;      // lo que adelanta el botón de saltar días
+const RETROCESO = 10;        // lo que echa atrás el botón de volver
+/**
+ * Amaneceres guardados: seis retrocesos seguidos. Solo harían falta `RETROCESO`, pero volver una
+ * vez y quedarse sin historia es peor que no poder volver — y cada amanecer es una copia del mundo
+ * entero, que con censos de decenas son kilobytes. Solo con censos de cientos llega a megas, y ahí
+ * lo que manda es cuánto quieres poder deshacer, no la memoria.
+ */
+const HISTORIA = 60;
+/**
+ * Milisegundos que el mundo se queda parado al anochecer, para ver nacer a las crías — **a ×1**.
+ * Las velocidades lo dividen: si no, ×64 adelanta los días a toda prisa y luego se planta 1,3 s en
+ * cada noche, que es donde se iba casi todo el tiempo de mirar. Es reloj de pared, no de mundo,
+ * así que no toca el determinismo: el mundo depende de cuántos ticks ha dado, no de cuándo.
+ */
+const PAUSA_NOCHE = 800;
 
 const SEMILLA_POR_DEFECTO = "brizna";
 
 const ACENTO = (x: string | number) => `<span style="color:var(--t-accent)">${x}</span>`;
 
 /**
- * Un mundo ya sembrado, detrás de la única superficie que esta página necesita: dar un paso de
- * reloj, pintarse y decir cómo va. Lo que hay dentro —qué es un tick, qué cierra un ciclo— se
- * queda en su motor.
+ * El reparto de cada gen en la población viva, para la leyenda: dónde está hoy cada gen. `null` si
+ * no queda nadie vivo — quien pinta tiene que decidir qué hacer con un mundo extinto.
  */
-type Sim = {
-  /** Un paso de reloj. `saltando` avisa de que nadie está mirando: nada de pausas para la galería. */
-  tick(saltando: boolean): void;
-  /** La vuelta completa en curso. Se consulta en cada paso del bucle, así que tiene que ser barato. */
-  ciclo(): number;
-  extinto(): boolean;
-  pintar(ctx: CanvasRenderingContext2D, p: Paleta, v: Vista, W: number, H: number, dpr: number): void;
-  /** La línea de estado, en HTML y una vez por fotograma. */
-  linea(): string;
-};
+function perfilDe(bichos: { g: Record<string, number> }[]): Perfil | null {
+  if (bichos.length === 0) return null;
+  const p: Perfil = {};
+  for (const r of RASGOS) {
+    const b = banda(bichos.map((x) => x.g[r]));
+    if (b) p[r] = b;
+  }
+  return p;
+}
 
 /**
- * **Los dos mundos compiten**: el de energía cerrada —suelo, parches y presupuesto que no crece—
- * y el de días —comida que amanece, casa en el borde y cuenta al anochecer—, y solo se queda uno.
- * Están aquí los dos para poder mirarlos con la misma semilla y decidir viendo, en vez de a ojo
- * y de memoria.
+ * Cuánto lleva corrida la noche en curso, en reloj de pared. Lo lleva la página y no el motor,
+ * que no sabe de milisegundos ni debe: adelantando 100 días no hay nadie mirando.
  */
-type Motor = {
-  /** Va en la URL, así que en ASCII; lo que se lee en el botón es `etiqueta`. */
-  id: string;
-  etiqueta: string;
-  ancho: number;
-  alto: number;
-  /** Cómo se llama su vuelta completa: para el botón de adelantar y para la línea de extinción. */
-  ciclo: { corto: string; frase: string };
-  pista: string;
-  crear(semilla: string): Sim;
-};
+type Noche = { fin: number; dura: number };
 
-const MOTORES: readonly Motor[] = [
-  {
-    id: "cerrado", etiqueta: "cerrado",
-    ancho: CONFIG.ancho, alto: CONFIG.alto,
-    ciclo: { corto: "gen", frase: "la generación" },
-    pista: "Tamaño = masa · tono y filo = fiereza · aura = sociabilidad · claridad = reserva",
-    crear(semilla) {
-      const m = crearMundo(semilla);
-      return {
-        tick: () => { tickMundo(m); },   // aquí no hay pausas que saltarse: el ciclo no para nunca
-        ciclo: () => m.gen,
-        extinto: () => m.extinto,
-        pintar: (ctx, p, v, W, H, dpr) => pintar(ctx, m, p, v, W, H, dpr),
-        linea: () => {
-          const r = resumen(m);
-          return `gen ${ACENTO(r.gen)} · censo ${r.censo} · comida ${r.comida} · tick ${r.t}`;
-        },
-      };
-    },
-  },
-  {
-    id: "dias", etiqueta: "días",
-    ancho: CONFIG_DIA.ancho, alto: CONFIG_DIA.alto,
-    ciclo: { corto: "días", frase: "el día" },
-    pista: "Franja = casa · aro = energía que le queda · puntos = bocados que lleva · tono y filo = fiereza",
-    crear(semilla) {
-      const m = crearDia(semilla);
-      let finNoche = 0;
-      return {
-        // El reloj de la página es siempre el mismo tick; quien sabe cuándo se acaba el ciclo es
-        // el motor, que aquí cierra el día en cuanto están todos en casa o se agota la jornada.
-        // **La noche se queda a la vista un momento** —las crías nacen pegadas a su madre y sin
-        // esa parada no se ven nunca—, y el reloj de esa parada vive aquí y no en el motor, que
-        // no sabe de milisegundos ni debe: adelantando 100 días no hay nadie mirando.
-        tick: (saltando) => {
-          if (m.extinto) return;
-          if (m.noche) {
-            if (!saltando && performance.now() < finNoche) return;
-            amanecer(m);
-            return;
-          }
-          if (tickDia(m)) { anochecer(m); finNoche = performance.now() + PAUSA_NOCHE; }
-        },
-        ciclo: () => m.dia,
-        extinto: () => m.extinto,
-        // Cuánto lleva corrida la noche, para que las crías crezcan en vez de aparecer hechas.
-        pintar: (ctx, p, v, W, H, dpr) => pintarDia(ctx, m, p, v, W, H, dpr,
-          m.noche ? Math.min(1, Math.max(0, 1 - (finNoche - performance.now()) / PAUSA_NOCHE)) : 1),
-        linea: () => {
-          if (m.noche) {
-            let crias = 0, madres = 0;
-            for (const b of m.bichos) if (b.hijos > 0) { crias += b.hijos; madres++; }
-            const cria = crias === 1 ? "cría" : "crías", madre = madres === 1 ? "madre" : "madres";
-            return `anochece · ${ACENTO(`${crias} ${cria}`)} de ${madres} ${madre} · censo ${m.bichos.length}`;
-          }
-          let enCasa = 0;
-          for (const b of m.bichos) if (b.aSalvo) enCasa++;
-          return `día ${ACENTO(m.dia)} · censo ${m.bichos.length} · en casa ${enCasa}` +
-            ` · comida ${m.comida.length} · tick ${m.t}`;
-        },
-      };
-    },
-  },
-];
+/**
+ * Un paso de reloj. El tick es siempre el mismo; quien sabe cuándo se acaba el día es el motor,
+ * que lo cierra en cuanto están todos en casa o se agota la jornada. **La noche se queda a la
+ * vista un momento** —las crías nacen pegadas a su madre y sin esa parada no se ven nunca—, y esa
+ * parada dura menos cuanto más rápido va el mundo, y menos que el propio día: 800 ms contra los
+ * 300 ticks de jornada. `saltando` avisa de que nadie está mirando: ahí no hay pausa que valga.
+ */
+function paso(m: Mundo, saltando: boolean, vel: number, noche: Noche): boolean {
+  if (m.extinto) return false;
+  if (m.noche) {
+    if (!saltando && performance.now() < noche.fin) return false;
+    amanecer(m);
+    return true;   // acaba de empezar un día: es donde se puede volver
+  }
+  if (tick(m)) {
+    anochecer(m);
+    noche.dura = PAUSA_NOCHE / vel;
+    noche.fin = performance.now() + noche.dura;
+  }
+  return false;
+}
+
+/** La línea de estado, en HTML y una vez por fotograma. De noche cuenta lo que se acaba de ver. */
+function linea(m: Mundo): string {
+  if (m.noche) {
+    let crias = 0, madres = 0;
+    for (const b of m.bichos) if (b.hijos > 0) { crias += b.hijos; madres++; }
+    const cria = crias === 1 ? "cría" : "crías", madre = madres === 1 ? "madre" : "madres";
+    return `anochece · ${ACENTO(`${crias} ${cria}`)} de ${madres} ${madre} · censo ${m.bichos.length}`;
+  }
+  let enCasa = 0;
+  for (const b of m.bichos) if (b.aSalvo) enCasa++;
+  return `día ${ACENTO(m.dia)} · censo ${m.bichos.length} · en casa ${enCasa}` +
+    ` · comida ${m.comida.length} · tick ${m.t}`;
+}
+
+const PISTA = "Franja = casa · aro = despensa · puntos = bocados que lleva · tono y filo = fiereza · aura = sociabilidad";
 
 const ExpandIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -134,8 +115,13 @@ const CollapseIcon = () => (
 export default function Evolution() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
-  const simRef = useRef<Sim | null>(null);
-  const motorRef = useRef<Motor>(MOTORES[0]);
+  const mundoRef = useRef<Mundo | null>(null);
+  const nocheRef = useRef<Noche>({ fin: 0, dura: PAUSA_NOCHE });
+  // Los últimos amaneceres, del más viejo al más nuevo. El mundo es determinista, así que volver
+  // atrás también se podría hacer resembrando y corriendo hasta el día que toca — pero eso crece
+  // con la partida y a los doscientos días son segundos de espera. Copiar el mundo es constante.
+  const historiaRef = useRef<Mundo[]>([]);
+  const hayAtrasRef = useRef(false);   // espejo de `historiaRef.length > 0`, para poder pintar el botón
   const rafRef = useRef(0);
   const sizeRef = useRef({ W: 0, H: 0 });
   const dprRef = useRef(1);
@@ -143,18 +129,21 @@ export default function Evolution() {
   const paletaRef = useRef<Paleta>(paletaDe("light"));
   const corriendoRef = useRef(true);
   const velRef = useRef<number>(VELOCIDADES[0]);
-  const saltoRef = useRef(0);          // generación objetivo mientras se adelanta; 0 = no se adelanta
+  const saltoRef = useRef(0);          // día objetivo mientras se adelanta; 0 = no se adelanta
   const repintarRef = useRef(true);    // el mundo cambió sin que corra el reloj: hay que repintar
 
   const [semilla, setSemilla] = useState(SEMILLA_POR_DEFECTO);
   const [texto, setTexto] = useState(SEMILLA_POR_DEFECTO);
   const [corriendo, setCorriendo] = useState(true);
   const [velIdx, setVelIdx] = useState(0);
-  const [motorIdx, setMotorIdx] = useState(0);
   const [saltando, setSaltando] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
+  const [leyenda, setLeyenda] = useState(false);
+  const [hayAtras, setHayAtras] = useState(false);
   const tema = useTema();
-  const motor = MOTORES[motorIdx];
+  // El fundador de la partida en curso, calculado y no guardado: el mundo vive en un ref que no
+  // re-renderiza nada, así que un estado en paralelo solo podría quedarse viejo.
+  const eva = useMemo(() => evaDe(azarCon(semilla), CONFIG), [semilla]);
 
   useEffect(() => { corriendoRef.current = corriendo; }, [corriendo]);
   useEffect(() => { velRef.current = VELOCIDADES[velIdx]; }, [velIdx]);
@@ -172,25 +161,22 @@ export default function Evolution() {
   useEffect(() => {
     if (urlLeidaRef.current) return;
     urlLeidaRef.current = true;
-    const q = new URLSearchParams(window.location.search);
-    const s = q.get("semilla");
-    const i = MOTORES.findIndex((x) => x.id === q.get("motor"));
+    const s = new URLSearchParams(window.location.search).get("semilla");
     // eslint-disable-next-line react-hooks/set-state-in-effect -- init en mount: en el servidor no hay URL que leer
     if (s) { setSemilla(s); setTexto(s); }
-    if (i >= 0) setMotorIdx(i);
   }, []);
 
-  // Sembrar: mundo nuevo, y motor y semilla a la URL sin apilar una entrada de historial por tecla.
-  // Cambiar de motor siembra igual que cambiar de palabra — es el otro mundo, no la otra vista.
+  // Sembrar: mundo nuevo, y la semilla a la URL sin apilar una entrada de historial por tecla.
   useEffect(() => {
-    motorRef.current = motor;
-    simRef.current = motor.crear(semilla);
+    const m = crearMundo(semilla);
+    mundoRef.current = m;
+    historiaRef.current = [];
+    nocheRef.current = { fin: 0, dura: PAUSA_NOCHE };
     repintarRef.current = true;
     const url = new URL(window.location.href);
     url.searchParams.set("semilla", semilla);
-    url.searchParams.set("motor", motor.id);
     window.history.replaceState(null, "", url);
-  }, [semilla, motor]);
+  }, [semilla]);
 
   const sembrar = useCallback(() => {
     const s = texto.trim();
@@ -199,15 +185,50 @@ export default function Evolution() {
     // ninguno, así que el efecto solo tendría un `setState` que no cambia nada.
     saltoRef.current = 0;
     setSaltando(false);
-    if (s === semilla) simRef.current = motor.crear(s); // misma palabra = mismo mundo: reinicia
-    else setSemilla(s);
+    if (s === semilla) {          // misma palabra = mismo mundo: reinicia
+      mundoRef.current = crearMundo(s);
+      historiaRef.current = [];
+      nocheRef.current = { fin: 0, dura: PAUSA_NOCHE };
+    } else setSemilla(s);
     repintarRef.current = true;
-  }, [texto, semilla, motor]);
+  }, [texto, semilla]);
+
+  /**
+   * Volver `RETROCESO` días: se restaura el amanecer guardado más reciente que no pase de ahí, y
+   * **lo que venía después deja de ser historia** — se vuelve a vivir desde ahí, y como el mundo
+   * es determinista se vive igual. Si no hay tanto guardado, se va al más viejo que quede.
+   */
+  const volver = useCallback(() => {
+    const h = historiaRef.current, m = mundoRef.current;
+    if (!m || h.length === 0) return;
+    const objetivo = m.dia - RETROCESO;
+    let i = 0;
+    for (let k = h.length - 1; k >= 0; k--) if (h[k].dia <= objetivo) { i = k; break; }
+    mundoRef.current = copiar(h[i]);
+    h.length = i;
+    saltoRef.current = 0;
+    setSaltando(false);
+    nocheRef.current = { fin: 0, dura: PAUSA_NOCHE };
+    repintarRef.current = true;
+  }, []);
+
+  // La leyenda mira el mundo con su propio reloj: el bucle de pintado vive en refs y no
+  // re-renderiza React, así que preguntarle en cada fotograma sería re-renderizar la página entera
+  // 60 veces por segundo para mover una barra que se mueve en generaciones.
+  const perfil = useCallback(() => (mundoRef.current ? perfilDe(mundoRef.current.bichos) : null), []);
+
+  /** Guarda el amanecer que acaba de ocurrir y tira el más viejo si ya sobran. */
+  const guardar = useCallback((m: Mundo) => {
+    const h = historiaRef.current;
+    h.push(copiar(m));
+    if (h.length > HISTORIA) h.shift();
+  }, []);
+  const cerrarLeyenda = useCallback(() => setLeyenda(false), []);
 
   const saltar = useCallback(() => {
-    const sim = simRef.current;
-    if (!sim || sim.extinto() || saltoRef.current) return;
-    saltoRef.current = sim.ciclo() + SALTO_GEN;
+    const m = mundoRef.current;
+    if (!m || m.extinto || saltoRef.current) return;
+    saltoRef.current = m.dia + SALTO_DIAS;
     setSaltando(true);
   }, []);
 
@@ -220,8 +241,8 @@ export default function Evolution() {
     const resize = () => {
       const libre = { W: caja.clientWidth, H: caja.clientHeight };
       if (libre.W < 2 || libre.H < 2) return;
-      const escala = Math.min(libre.W / motor.ancho, libre.H / motor.alto);
-      const W = Math.round(motor.ancho * escala), H = Math.round(motor.alto * escala);
+      const escala = Math.min(libre.W / CONFIG.ancho, libre.H / CONFIG.alto);
+      const W = Math.round(CONFIG.ancho * escala), H = Math.round(CONFIG.alto * escala);
       if (W === sizeRef.current.W && H === sizeRef.current.H) return;
       const dpr = window.devicePixelRatio || 1;
       dprRef.current = dpr;
@@ -236,29 +257,33 @@ export default function Evolution() {
     const ro = new ResizeObserver(resize);
     ro.observe(caja);
     return () => ro.disconnect();
-  }, [motor]);
+  }, []);
 
   useEffect(() => {
     const loop = () => {
       rafRef.current = requestAnimationFrame(loop);
-      const sim = simRef.current, mot = motorRef.current;
+      const m = mundoRef.current;
       const { W, H } = sizeRef.current;
       const ctx = canvasRef.current?.getContext("2d");
-      if (!sim || !ctx || W === 0) return;
+      if (!m || !ctx || W === 0) return;
 
       const t0 = performance.now();
+      const vel = velRef.current;
       let dados = 0;
 
       if (saltoRef.current) {
-        // Adelantar ciclos sin pintar, pero en trozos dentro del fotograma: correrlos de una vez
+        // Adelantar días sin pintar, pero en trozos dentro del fotograma: correrlos de una vez
         // son segundos de pestaña colgada, y el navegador no distingue eso de un cuelgue.
-        while (sim.ciclo() < saltoRef.current && !sim.extinto() && performance.now() - t0 < PRESUPUESTO_MS) {
-          sim.tick(true); dados++;
+        while (m.dia < saltoRef.current && !m.extinto && performance.now() - t0 < PRESUPUESTO_MS) {
+          if (paso(m, true, vel, nocheRef.current)) guardar(m);
+          dados++;
         }
-        if (sim.ciclo() >= saltoRef.current || sim.extinto()) { saltoRef.current = 0; setSaltando(false); }
-      } else if (corriendoRef.current && !sim.extinto()) {
-        const objetivo = velRef.current;
-        while (dados < objetivo && performance.now() - t0 < PRESUPUESTO_MS) { sim.tick(false); dados++; }
+        if (m.dia >= saltoRef.current || m.extinto) { saltoRef.current = 0; setSaltando(false); }
+      } else if (corriendoRef.current && !m.extinto) {
+        while (dados < vel * TICKS_BASE && performance.now() - t0 < PRESUPUESTO_MS) {
+          if (paso(m, false, vel, nocheRef.current)) guardar(m);
+          dados++;
+        }
       }
 
       // Se repinta cuando el mundo ha cambiado, y también cuando algo de fuera lo pide —el tema,
@@ -266,27 +291,33 @@ export default function Evolution() {
       // con la paleta anterior hasta que alguien le diera al play.
       if (dados || repintarRef.current) {
         repintarRef.current = false;
-        const v = vistaDe(W, H, mot.ancho, mot.alto);
-        sim.pintar(ctx, paletaRef.current, v, W, H, dprRef.current);
+        const v = vistaDe(W, H, CONFIG.ancho, CONFIG.alto);
+        // Cuánto lleva corrida la noche, para que las crías crezcan en vez de aparecer hechas.
+        const noche = m.noche
+          ? Math.min(1, Math.max(0, 1 - (nocheRef.current.fin - performance.now()) / nocheRef.current.dura))
+          : 1;
+        pintar(ctx, m, paletaRef.current, v, W, H, dprRef.current, noche);
       }
 
+      // El botón de volver se pinta desde React y la historia vive en un ref, así que el espejo se
+      // sincroniza aquí —una comparación por fotograma— y no en los cuatro sitios que la tocan.
+      const atras = historiaRef.current.length > 0;
+      if (atras !== hayAtrasRef.current) { hayAtrasRef.current = atras; setHayAtras(atras); }
+
       if (estadoRef.current) {
-        const salto = saltoRef.current
-          ? ` · adelantando… ${ACENTO(`${mot.ciclo.corto} ${sim.ciclo()}/${saltoRef.current}`)}`
-          : "";
-        estadoRef.current.innerHTML = sim.extinto()
-          ? `↳ <span style="color:#e55">extinción</span> en ${mot.ciclo.frase} ${sim.ciclo()}`
-          : `↳ ${sim.linea()}${salto}`;
+        estadoRef.current.innerHTML = m.extinto
+          ? `↳ <span style="color:#e55">extinción</span> en el día ${m.dia}`
+          : `↳ ${linea(m)}${saltoRef.current ? ` · adelantando… ${ACENTO(`día ${m.dia}/${saltoRef.current}`)}` : ""}`;
       }
     };
     rafRef.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(rafRef.current);
-  }, []);
+  }, [guardar]);
 
   return (
     <TerminalShell
       title="evolution"
-      prompt={{ host: "evolution", path: "~/apps", command: `./evolution --mundo=${motor.id} --semilla=${semilla}` }}
+      prompt={{ host: "evolution", path: "~/apps", command: `./evolution --semilla=${semilla}` }}
       hideChrome={fullscreen}
     >
       <style>{`
@@ -316,7 +347,7 @@ export default function Evolution() {
            donde vive CONFIG: en CSS, aspect-ratio cede ante uno de los dos límites y deja el
            lienzo o desbordado —empujando la leyenda fuera del overflow, que es cómo desaparecía
            en pantalla ancha— o con dos franjas muertas. */
-        .sim-box { flex: 1 1 auto; min-height: 0; display: flex; align-items: center; justify-content: center; }
+        .sim-box { flex: 1 1 auto; min-height: 0; display: flex; align-items: center; justify-content: center; position: relative; }
         .sim-canvas { display: block; border-radius: 6px; touch-action: none; }
         .sim-box.fs { position: fixed; inset: 0; z-index: 1000; }
         .sim-box.fs .sim-canvas { border-radius: 0; }
@@ -327,6 +358,55 @@ export default function Evolution() {
         }
         .fs-exit:hover { opacity: 1; }
         .hint-row { padding: 0.55rem 0 0; font-size: 0.7rem; color: var(--muted); font-family: var(--t-mono); }
+
+        /* ── Leyenda ──────────────────────────────────────────────────────────
+           Encima del lienzo y no debajo: el hueco vertical ya se lo reparten el mundo y la barra
+           de controles, y meter aquí ocho filas dejaría el mundo en una rendija. Va dentro de
+           .sim-box para que en pantalla completa —donde la caja es fixed— salga sin otro camino. */
+        .lg-panel {
+          position: absolute; inset: 0; z-index: 5; overflow-y: auto; overscroll-behavior: contain;
+          background: var(--t-paper); border: 1px solid var(--border); border-radius: 6px;
+          font-family: var(--t-mono); padding: 0.9rem 1rem 1.2rem;
+        }
+        .lg-cabecera { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+        .lg-cabecera b { font-size: 0.78rem; letter-spacing: 0.08em; color: var(--t-accent); }
+        .lg-intro { font-size: 0.68rem; line-height: 1.55; color: var(--muted); margin: 0.6rem 0 0; max-width: 62ch; }
+        .lg-aviso b { color: var(--t-ink2); }
+
+        .lg-filas { margin-top: 0.5rem; }
+        .lg-fila { display: flex; gap: 0.8rem; align-items: flex-start; padding: 0.7rem 0; border-top: 1px solid var(--border); }
+        .lg-muestras { flex: 0 0 auto; }
+        .lg-celdas { display: flex; gap: 4px; }
+        .lg-celdas canvas { border-radius: 3px; display: block; }
+        .lg-muestras canvas { border-radius: 3px; display: block; }
+        .lg-pies { display: flex; justify-content: space-between; font-size: 0.58rem; color: var(--t-ink3); padding-top: 3px; }
+        .lg-vacio { width: 170px; font-size: 0.62rem; color: var(--t-ink3); font-style: italic; padding-top: 0.4rem; }
+
+        .lg-datos { flex: 1 1 auto; min-width: 0; }
+        .lg-cab { display: flex; align-items: baseline; justify-content: space-between; gap: 0.6rem; font-size: 0.72rem; }
+        .lg-cab b { color: var(--t-ink); letter-spacing: 0.04em; }
+        .lg-cifra { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+        .lg-flecha { color: var(--t-ink4); }
+        .lg-viaje { color: var(--t-accent); margin-left: 0.5rem; }
+
+        /* La barra: fundador en el centro, ÷8 a la izquierda y ×8 a la derecha. */
+        .lg-eje { position: relative; height: 14px; margin: 0.45rem 0 0.35rem; }
+        .lg-eje::before { content: ""; position: absolute; left: 0; right: 0; top: 6px; height: 1px; background: var(--border); }
+        .lg-eje i { position: absolute; display: block; }
+        .lg-bigote { top: 6px; height: 1px; background: var(--t-ink4); }
+        .lg-tramo { top: 3px; height: 7px; border-radius: 4px; background: color-mix(in srgb, var(--t-accent) 30%, transparent); }
+        .lg-med { top: 1px; width: 5px; height: 11px; margin-left: -2.5px; border-radius: 3px; background: var(--t-accent); }
+        .lg-eva { top: -2px; width: 1px; height: 17px; background: var(--t-ink2); }
+        .lg-tick { top: 3px; width: 1px; height: 7px; background: var(--border); }
+
+        .lg-que { font-size: 0.68rem; line-height: 1.5; color: var(--t-ink); margin: 0.2rem 0 0; }
+        .lg-nota { font-size: 0.62rem; line-height: 1.5; color: var(--t-ink3); margin-top: 0.2rem; }
+        .lg-paga, .lg-cobra { color: var(--t-ink2); }
+
+        @media (max-width: 620px) {
+          .lg-fila { flex-direction: column; gap: 0.4rem; }
+          .lg-datos { width: 100%; }
+        }
 
         @media (max-width: 500px) { .toolbar { gap: 0.25rem; } .ev-btn { padding: 0.4rem 0.55rem; } }
       `}</style>
@@ -357,30 +437,33 @@ export default function Evolution() {
               ×{v}
             </button>
           ))}
-          <button className="ev-btn muted" onClick={saltar} disabled={saltando}>
-            {saltando ? "adelantando…" : `+${SALTO_GEN} ${motor.ciclo.corto}`}
+          <button className="ev-btn muted" onClick={volver} disabled={!hayAtras}>
+            −{RETROCESO} días
           </button>
-          {MOTORES.map((mo, i) => (
-            <button key={mo.id} className={`ev-btn${i === motorIdx ? " on" : ""}`}
-              onClick={() => {
-                if (i === motorIdx) return;
-                saltoRef.current = 0;   // el objetivo era del otro mundo
-                setSaltando(false);
-                setMotorIdx(i);
-              }}>
-              {mo.etiqueta}
-            </button>
-          ))}
+          <button className="ev-btn muted" onClick={saltar} disabled={saltando}>
+            {saltando ? "adelantando…" : `+${SALTO_DIAS} días`}
+          </button>
           <input
             className="ev-semilla" value={texto} spellCheck={false} aria-label="Semilla"
             onChange={(e) => setTexto(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") sembrar(); }}
           />
           <button className="ev-btn muted" onClick={sembrar}>Sembrar</button>
+          <button className={`ev-btn${leyenda ? " on" : ""}`} onClick={() => setLeyenda((v) => !v)}>
+            leyenda
+          </button>
         </div>
 
         <div className={`sim-box${fullscreen ? " fs" : ""}`} ref={wrapRef}>
           <canvas className="sim-canvas" ref={canvasRef} />
+          {leyenda && (
+            <Leyenda
+              rasgos={RASGOS} tabla={TABLA}
+              eva={eva}
+              ancho={CONFIG.ancho} alto={CONFIG.alto}
+              perfil={perfil} paleta={paletaDe(tema ?? "light")} cerrar={cerrarLeyenda}
+            />
+          )}
         </div>
 
         {fullscreen && (
@@ -391,7 +474,7 @@ export default function Evolution() {
 
         {!fullscreen && (
           <div className="hint-row">
-            {motor.pista}
+            {PISTA}
           </div>
         )}
       </main>
