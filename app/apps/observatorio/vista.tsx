@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import TerminalShell from "../../components/TerminalShell";
 import WhyFooter from "../../components/WhyFooter";
-import { MARCO_INICIO_H, MARCO_MINUTOS, minutosEnMarco } from "./marco";
+import { MARCO_INICIO_H, MARCO_MINUTOS, minutosEnMarco, pasoDelEnlace } from "./marco";
 import type { Cielo, Evento, EventoSatelite, FilaPlaneta, PuntoArco } from "./engine";
 
 const redondo = (n: number) => +n.toFixed(2);
@@ -476,6 +476,9 @@ function Satelites({ cielo, onAbrir }: { cielo: Cielo; onAbrir: (p: EventoSateli
 
 // La carta a pantalla completa
 
+/** Lo que puede haberse movido la hora de un paso entre el aviso y la visita. */
+const HOLGURA_ENLACE = 5 * 60_000;
+
 /** Rumbo en grados desde el norte · "sin-norte" si el móvil no lo da · null si está apagada. */
 type Brujula = number | "sin-norte" | null;
 
@@ -525,10 +528,20 @@ function PantallaCompleta({ paso, onCerrar }: { paso: EventoSatelite; onCerrar: 
   const enCurso = ahora !== null && enPaso(paso, ahora);
   const frena = (e: React.MouseEvent) => e.stopPropagation();
 
+  // Se abre esta carta para salir a mirar, y entonces lo que se pregunta es cuánto falta o
+  // cuánto queda —no cuántos minutos dura el paso, que es lo mismo antes que después—. La
+  // duración solo vuelve cuando ya no hay nada que contar.
+  const restante =
+    ahora === null || ahora > paso.visibleHasta
+      ? <span className="obs-mut">{duracion(paso)}</span>
+      : enCurso
+        ? <span className="obs-verde">quedan {cuenta(paso.visibleHasta - ahora)}</span>
+        : <span className="obs-mut">sale en {cuenta(paso.visibleDesde - ahora)}</span>;
+
   return (
     <div className="obs-full" onClick={onCerrar}>
       <div className="obs-full-cab">
-        <span><b>{paso.nombre}</b> <span className="obs-mut">· {paso.hora} · {duracion(paso)}</span></span>
+        <span><b>{paso.nombre}</b> <span className="obs-mut">· {paso.hora} · </span>{restante}</span>
         <button className="obs-cerrar" onClick={onCerrar}>cerrar ✕</button>
       </div>
 
@@ -543,7 +556,7 @@ function PantallaCompleta({ paso, onCerrar }: { paso: EventoSatelite; onCerrar: 
           <span>{enCurso
             ? <><span className="obs-verde">●</span> dónde mirar ahora</>
             : ahora !== null && ahora < paso.visibleDesde
-              ? <>empieza en {cuenta(paso.visibleDesde - ahora)}</>
+              ? <><span className="obs-verde">○</span> por ahí sale, aún sin brillar</>
               : <>el paso ya ha terminado</>}</span>
           {paso.luna && <span><span style={{ color: "#98a2ab" }}>●</span> Luna en {paso.luna.rumbo} · {Math.round(paso.luna.alt)}°</span>}
         </div>
@@ -592,6 +605,20 @@ function LineaEstado({ cielo }: { cielo: Cielo }) {
 
 export default function Vista({ cielo, comando }: { cielo: Cielo; comando: string }) {
   const [abierto, setAbierto] = useState<EventoSatelite | null>(null);
+
+  // El aviso al móvil enlaza el paso que anuncia, y llega con el satélite a punto de salir:
+  // se abre su carta sin pasar por la portada. La hora se recalcula en cada carga con el TLE
+  // del momento, así que el enlace señala el paso, no lo identifica al milisegundo — de ahí
+  // la holgura. Se lee de `window` y no con `useSearchParams` para no envolver la página en
+  // un Suspense por un parámetro que solo se mira al montar.
+  useEffect(() => {
+    const señal = pasoDelEnlace(window.location.search);
+    if (!señal) return;
+    const suyo = cielo.pasos.find((p) => p.nombre.toLowerCase() === señal.nombre
+      && Math.abs(p.visibleDesde - señal.visibleDesde) < HOLGURA_ENLACE);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- el enlace solo se lee al montar
+    if (suyo) setAbierto(suyo);
+  }, [cielo.pasos]);
 
   // Con la carta a pantalla completa, la página de detrás no debe moverse.
   useEffect(() => {
@@ -706,6 +733,10 @@ export default function Vista({ cielo, comando }: { cielo: Cielo; comando: strin
           font-family: var(--t-mono); color: var(--t-ink);
         }
         .obs-full-cab { width: 100%; max-width: 560px; display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: 8px; font-size: 0.95rem; }
+        /* La cuenta atrás crece dentro de la cabecera —"sale en 1m 35s"— y en un móvil estrecho
+           la partía en dos líneas: no se envuelve, se encoge. */
+        .obs-full-cab > span:first-child { white-space: nowrap; }
+        .obs-cerrar { flex: none; }
         .obs-cerrar {
           font: inherit; font-size: 0.75rem; color: var(--t-ink3); background: none;
           border: 1px solid var(--t-rule); border-radius: 7px; padding: 5px 10px; cursor: pointer;
@@ -727,6 +758,8 @@ export default function Vista({ cielo, comando }: { cielo: Cielo; comando: strin
         .obs-paso:active { transform: scale(1.03); }
 
         @media (max-width: 560px) {
+          .obs-full-cab { font-size: 0.75rem; gap: 0.5rem; }
+          .obs-cerrar { font-size: 0.7rem; padding: 5px 8px; }
           .obs-etq { font-size: 0.65rem; gap: 2px; }
           .obs-carta { width: 88px; height: 88px; }
           .obs-paso { flex: 1 1 100%; }

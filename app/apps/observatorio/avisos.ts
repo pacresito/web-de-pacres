@@ -5,12 +5,12 @@
 // un aviso para salir a mirar ahora.
 
 import { rumbo, type Cielo, type EventoLuna, type EventoSatelite } from "./engine";
-import { partesLocales } from "./marco";
+import { enlaceDePaso, partesLocales } from "./marco";
 
 export const AVISO_MINUTOS = 1;
 
-const SITIO = "https://pacr.es";
-const PIE = `\n${SITIO}/apps/observatorio`;
+const OBSERVATORIO = "https://pacr.es/apps/observatorio";
+const PIE = `\n${OBSERVATORIO}`;
 
 /** Un mensaje ya redactado y el instante en que debe salir. El `id` lo fija el evento. */
 export type Aviso = { sale: number; id: string; texto: string };
@@ -33,7 +33,9 @@ function dePaso(paso: EventoSatelite): Aviso {
     id: `${paso.nombre.toLowerCase()}-${paso.visibleDesde}`,
     texto:
       `🛰 <b>${paso.nombre}</b> — ${hora}, magnitud ${numero(paso.magnitud)}, ` +
-      `hasta ${Math.round(paso.altitud)}° sobre el horizonte.${porDonde}${PIE}`,
+      `hasta ${Math.round(paso.altitud)}° sobre el horizonte.${porDonde}` +
+      // El del paso no es el pie común: lleva a su carta, que es lo que se mira al salir.
+      `\n${OBSERVATORIO}${enlaceDePaso(paso.nombre, paso.visibleDesde)}`,
   };
 }
 

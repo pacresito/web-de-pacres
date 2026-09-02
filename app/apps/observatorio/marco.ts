@@ -63,3 +63,19 @@ export const etiquetaDia = (fecha: Date) => FMT_DIA.format(fecha).replace(",", "
 // "12 ago": la fecha de vuelta de lo que esta noche no se ve.
 const FMT_DIA_MES = new Intl.DateTimeFormat("es-ES", { timeZone: TZ, day: "numeric", month: "short" });
 export const diaYMes = (fecha: Date) => FMT_DIA_MES.format(fecha).replace(".", "");
+
+// ── El enlace a un paso ──
+// El aviso al móvil llega con el satélite a punto de salir: su enlace señala el paso que
+// anuncia para que la web abra su carta, y no la portada. Vive aquí porque lo escribe el
+// servidor y lo lee el navegador, y ninguno de los dos debe importar el módulo del otro.
+
+/** «?paso=iss-1753301234000»: el nombre y el arranque del arco visible. */
+export const enlaceDePaso = (nombre: string, visibleDesde: number) =>
+  `?paso=${encodeURIComponent(`${nombre.toLowerCase()}-${visibleDesde}`)}`;
+
+/** Lo que señala un `location.search`, o null si no señala ningún paso. */
+export function pasoDelEnlace(busqueda: string): { nombre: string; visibleDesde: number } | null {
+  const valor = new URLSearchParams(busqueda).get("paso");
+  const partes = valor?.match(/^(.+)-(\d+)$/);
+  return partes ? { nombre: partes[1], visibleDesde: +partes[2] } : null;
+}

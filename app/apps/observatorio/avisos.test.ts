@@ -3,7 +3,7 @@
 // sale cada mensaje y qué dice.
 import { avisosDeLaNoche, AVISO_MINUTOS } from "./avisos";
 import { cielo, type Satelite } from "./engine";
-import { partesLocales } from "./marco";
+import { partesLocales, pasoDelEnlace } from "./marco";
 
 let fails = 0;
 function check(name: string, ok: boolean, detail = "") {
@@ -95,6 +95,15 @@ const avisos = avisosDeLaNoche(c, AHORA.getTime());
 {
   check("todos llevan el enlace al observatorio",
     avisos.every((a) => a.texto.includes("https://pacr.es/apps/observatorio")));
+  // El enlace de un paso abre su carta: si la vuelta no da con el paso que lo escribió, el
+  // aviso deja al que sale a mirar en la portada.
+  check("el enlace de cada paso señala su paso", c.pasos.every((paso) => {
+    const texto = avisos.find((a) => a.id === `${paso.nombre.toLowerCase()}-${paso.visibleDesde}`)?.texto ?? "";
+    const señal = pasoDelEnlace(texto.slice(texto.lastIndexOf("?")));
+    return señal?.nombre === paso.nombre.toLowerCase() && señal.visibleDesde === paso.visibleDesde;
+  }));
+  check("el aviso de la Luna no señala ningún paso",
+    avisos.filter((a) => a.id.startsWith("luna-")).every((a) => pasoDelEnlace(a.texto) === null));
   // El aviso llega con el evento encima: el mensaje da la hora, nunca un plazo que se queda viejo
   // en la bandeja.
   check("ninguno anuncia un plazo en minutos",
