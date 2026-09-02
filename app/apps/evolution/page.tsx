@@ -10,15 +10,13 @@ import { paletaDe, pintar, vistaDe, type Paleta } from "./render";
 // Cuántos ticks se intentan por fotograma. Es un objetivo, no una promesa: el bucle corta por
 // presupuesto de tiempo (abajo), así que en un mundo lleno x64 va tan rápido como dé la máquina.
 // Que corte no toca el determinismo — el mundo depende de cuántos ticks ha dado, no de cuándo.
-const VELOCIDADES = [1, 8, 64] as const;
 /**
- * Ticks por fotograma a ×1. **No es 1**, y por eso está aquí con su porqué: un día son unos 700
- * ticks, así que a un tick por fotograma se mira el mismo día durante doce segundos. Tres deja el
- * día en unos cuatro, que es lo que duraba una vuelta completa en la economía que se archivó —y
- * es lo que se tarda en ver lo que pasa en una sin aburrirse—. El motor no es el límite: un tick
- * cuesta 0,2 µs, así que en el presupuesto de abajo caben cincuenta mil.
+ * Ticks por fotograma. **×1 es un tick por fotograma**, y eso deja el día en unos diecisiete
+ * segundos: es la velocidad de mirar a un bicho concreto e ir siguiéndolo, que es para lo que está
+ * el ×1. Para ver pasar generaciones están las otras dos. El motor no es el límite —un tick cuesta
+ * 0,2 µs, así que en el presupuesto de abajo caben cincuenta mil—: lo es el ojo.
  */
-const TICKS_BASE = 3;
+const VELOCIDADES = [1, 8, 64] as const;
 const PRESUPUESTO_MS = 12;   // por fotograma, para que la interfaz siga respondiendo a 60 fps
 const SALTO_DIAS = 100;      // lo que adelanta el botón de saltar días
 const RETROCESO = 10;        // lo que echa atrás el botón de volver
@@ -35,7 +33,7 @@ const HISTORIA = 60;
  * cada noche, que es donde se iba casi todo el tiempo de mirar. Es reloj de pared, no de mundo,
  * así que no toca el determinismo: el mundo depende de cuántos ticks ha dado, no de cuándo.
  */
-const PAUSA_NOCHE = 800;
+const PAUSA_NOCHE = 1500;
 
 const SEMILLA_POR_DEFECTO = "hola";
 
@@ -65,8 +63,8 @@ type Noche = { fin: number; dura: number };
  * Un paso de reloj. El tick es siempre el mismo; quien sabe cuándo se acaba el día es el motor,
  * que lo cierra en cuanto están todos en casa o se agota la jornada. **La noche se queda a la
  * vista un momento** —las crías nacen pegadas a su madre y sin esa parada no se ven nunca—, y esa
- * parada dura menos cuanto más rápido va el mundo, y menos que el propio día: 800 ms contra los
- * 300 ticks de jornada. `saltando` avisa de que nadie está mirando: ahí no hay pausa que valga.
+ * parada dura menos cuanto más rápido va el mundo: segundo y medio a ×1, dos décimas a ×8.
+ * `saltando` avisa de que nadie está mirando: ahí no hay pausa que valga.
  */
 function paso(m: Mundo, saltando: boolean, vel: number, noche: Noche): boolean {
   if (m.extinto) return false;
@@ -278,7 +276,7 @@ export default function Evolution() {
         }
         if (m.dia >= saltoRef.current || m.extinto) { saltoRef.current = 0; setSaltando(false); }
       } else if (corriendoRef.current && !m.extinto) {
-        while (dados < vel * TICKS_BASE && performance.now() - t0 < PRESUPUESTO_MS) {
+        while (dados < vel && performance.now() - t0 < PRESUPUESTO_MS) {
           if (paso(m, false, vel, nocheRef.current)) guardar(m);
           dados++;
         }

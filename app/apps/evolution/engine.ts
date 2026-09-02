@@ -220,12 +220,17 @@ export const FUNDADOR: Genoma = {
 // pasado cierto radio el viaje de ida y vuelta no lo paga ningún bocado. A 320×224 sobra el 10% y
 // **la mitad de los días el suelo queda limpio**; a 256×176, el 1% y tres de cada cuatro días.
 //
-// Con 300 bocados y jornada de 600 sobreviven seis de ocho semillas —la extinción tiene que seguir
-// siendo un resultado posible— y el censo se asienta en 57.
+// **La jornada es larga a propósito, y no solo para mirarla.** Con 1000 ticks el gasto de un día
+// entero supera la despensa llena de un fundador (112 contra 91), así que **nadie aguanta el día
+// sin traer nada**: hay que hacer varios viajes solo para no perder. Ahí está el que se va pronto
+// a casa y se queda. Medido contra 600 ticks: el hambre pasa del 63% al 75% de las muertes, los
+// viajes por bicho de 2,0 a 3,4, la comida sobrante del 10% al 3% y los días con el suelo limpio
+// del 50% al 67%. Con 300 bocados sobreviven seis de ocho semillas —la extinción tiene que seguir
+// siendo un resultado posible— y el censo se asienta en 66.
 export const CONFIG: Config = {
   ancho: 320, alto: 224,
   comidas: 300, censoInicial: 30,
-  ticksDia: 600, capReserva: CAP_RESERVA, casa: 18,
+  ticksDia: 1000, capReserva: CAP_RESERVA, casa: 18,
   caza: true, boca: 1.2,
   tasa: 0.08, paso: 0.06,
   fundador: FUNDADOR,

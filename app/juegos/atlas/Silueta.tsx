@@ -35,6 +35,9 @@ export default function Silueta({ id, forma, nombre, trazo, ajustada = false, st
 }) {
   const tema = useTema();
   const relieve = forma && rutaDelRelieve(id, tema);
+  // La figura que se está enseñando: tapada la ubicación, `forma` viene vacía y el lienzo es
+  // todo del país marcado. Lo que habla de cómo está dibujada la figura —el separador— es suyo.
+  const figura = forma ?? trazo;
 
   return (
     <svg
@@ -81,7 +84,7 @@ export default function Silueta({ id, forma, nombre, trazo, ajustada = false, st
       {forma?.linea && <path d={forma.linea} fill="none" stroke="var(--t-paper)" strokeWidth={6} strokeDasharray="18 14" strokeLinecap="round" opacity={0.75} />}
       {/* La línea entre los dos paneles de un país partido: dice que sus dos islas están a la
           escala buena pero no a la distancia buena. */}
-      {forma?.separador && <path d={forma.separador} fill="none" stroke="var(--t-ink4)" strokeWidth={6} strokeDasharray="18 14" strokeLinecap="round" />}
+      {figura?.separador && <path d={figura.separador} fill="none" stroke="var(--t-ink4)" strokeWidth={6} strokeDasharray="18 14" strokeLinecap="round" />}
       {/* La capital, encima del relieve —debajo se la tragan los 164 países que lo tienen— y
           **sin recortar contra la costa**: hay capitales pegadas a la suya —la de Maldivas queda
           a una unidad del borde de su islote y la de Indonesia a dos de la de Java—, y ceñirlas
@@ -93,9 +96,17 @@ export default function Silueta({ id, forma, nombre, trazo, ajustada = false, st
           mota. Los tres países que **son** su capital vienen sin ella desde el generador. */}
       {forma?.capital && <path d={rombo(forma.capital)} fill="var(--t-ink2)" />}
       {/* Lo marcado, encima de todo y solo dibujado: el relleno es de la respuesta, así que los
-          dos lenguajes no pelean y el acierto se lee sin leyenda. */}
-      {trazo && <path d={trazo.d} fill="none" fillRule="evenodd" stroke="var(--t-ink2)" strokeWidth={2}
-            strokeLinejoin="round" vectorEffect="non-scaling-stroke" />}
+          dos lenguajes no pelean y el acierto se lee sin leyenda.
+          **Con su arrecife, como la respuesta lleva el suyo**: en los tres países de atolones la
+          tierra es la diezmilésima parte del lienzo, así que un país marcado sin su anillo no es
+          una silueta más pobre, es un puñado de motas. Y mientras la ubicación sigue tapada eso
+          es lo único que hay en el lienzo. */}
+      {trazo && <>
+        {trazo.arrecife && <path d={trazo.arrecife} fill="none" stroke="var(--t-ink2)" strokeWidth={3}
+              strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />}
+        <path d={trazo.d} fill="none" fillRule="evenodd" stroke="var(--t-ink2)" strokeWidth={2}
+              strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+      </>}
     </svg>
   );
 }
