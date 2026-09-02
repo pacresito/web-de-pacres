@@ -518,7 +518,9 @@ function useBrujula(): [Brujula, () => void] {
   return [brujula, activar];
 }
 
-function PantallaCompleta({ paso, onCerrar }: { paso: EventoSatelite; onCerrar: () => void }) {
+function PantallaCompleta({ paso, onCerrar, entra }: {
+  paso: EventoSatelite; onCerrar: () => void; entra: boolean;
+}) {
   const ahora = useAhora(1000);
   const [brujula, activar] = useBrujula();
   const rumbo = typeof brujula === "number" ? brujula : null;
@@ -536,7 +538,7 @@ function PantallaCompleta({ paso, onCerrar }: { paso: EventoSatelite; onCerrar: 
         : <span className="obs-mut">sale en {cuenta(paso.visibleDesde - ahora)}</span>;
 
   return (
-    <div className="obs-full" onClick={onCerrar}>
+    <div className={entra ? "obs-full obs-full-entra" : "obs-full"} onClick={onCerrar}>
       <div className="obs-full-cab">
         <span><b>{paso.nombre}</b> <span className="obs-mut">· {paso.hora} · </span>{restante}</span>
         <button className="obs-cerrar" onClick={onCerrar}>cerrar ✕</button>
@@ -724,9 +726,13 @@ export default function Vista({ cielo, comando, abrir }: {
         .obs-full {
           position: fixed; inset: 0; z-index: 50; background: var(--t-paper);
           display: flex; flex-direction: column; align-items: center; justify-content: center;
-          gap: 4px; padding: 16px; overflow-y: auto; animation: obs-fade 0.18s ease;
+          gap: 4px; padding: 16px; overflow-y: auto;
           font-family: var(--t-mono); color: var(--t-ink);
         }
+        /* La carta que se abre desde la página entra con un fundido. La que trae el enlace del
+           aviso ya está puesta al cargar: fundirla dejaría ver la página por debajo mientras
+           sube, que es justo lo que no se quiere ver. */
+        .obs-full-entra { animation: obs-fade 0.18s ease; }
         .obs-full-cab { width: 100%; max-width: 560px; display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: 8px; font-size: 0.95rem; }
         /* La cuenta atrás crece dentro de la cabecera —"sale en 1m 35s"— y en un móvil estrecho
            la partía en dos líneas: no se envuelve, se encoge. */
@@ -761,7 +767,9 @@ export default function Vista({ cielo, comando, abrir }: {
         }
       `}</style>
 
-      <main className="obs-page">
+      {/* Quien llega desde el aviso no ha venido a la página, y pintarla debajo de la carta es
+          lo que se le veía asomar: se monta cuando cierra. */}
+      {!sinMarco && <main className="obs-page">
         <LineaEstado cielo={cielo} />
         <LineaDeTiempo cielo={cielo} />
         <Satelites cielo={cielo} onAbrir={setAbierto} />
@@ -775,9 +783,9 @@ export default function Vista({ cielo, comando, abrir }: {
           <p>También me gusta enseñar satélites. La estación espacial, por ejemplo, se ve a simple vista, pero solo durante unos minutos y solo si sabes cuándo mirar.</p>
           <p>Las dos cosas tienen el mismo problema: hay que enterarse a tiempo. Así que hice un observatorio que reúne todo eso en un solo sitio.</p>
         </WhyFooter>
-      </main>
+      </main>}
 
-      {abierto && <PantallaCompleta paso={abierto} onCerrar={cerrar} />}
+      {abierto && <PantallaCompleta paso={abierto} onCerrar={cerrar} entra={!sinMarco} />}
     </TerminalShell>
   );
 }
