@@ -131,6 +131,25 @@ export default async function CifrasPage() {
           </div>
         </Seccion>
 
+        <Seccion
+          titulo="Los próximos cumpleaños"
+          pie="De los que el árbol da por vivos y traen el día escrito. No es la lista con la que se avisa al móvil, que esa es de la familia cercana de alguien; esta es del árbol entero."
+        >
+          <ul className="text-[14px]">
+            {c.cumples.map((cumple) => (
+              <li
+                key={cumple.id}
+                className="flex flex-col gap-0.5 border-b border-[var(--line)] py-2 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6"
+              >
+                <span>{cumple.quien}</span>
+                <span className="shrink-0 text-[13px] text-[var(--mut)]">
+                  {cumple.dia} · cumple {cumple.cumple}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Seccion>
+
         <Seccion titulo="Cómo se llama esta familia" pie={`Y ${c.homonimos} personas comparten nombre completo y año con otra: son las que el árbol tiene que numerar.`}>
           <div className="grid gap-8 sm:grid-cols-2">
             <Ranking titulo="Nombres" filas={c.nombres} />
@@ -141,7 +160,7 @@ export default async function CifrasPage() {
         <Seccion titulo="Los extremos">
           <dl className="space-y-3 text-[14px]">
             {c.extremos.map((e) => (
-              <Fila key={e.que} termino={e.que} detalle={e.detalle}>
+              <Fila key={e.que} termino={e.que}>
                 {e.quien}
               </Fila>
             ))}
@@ -221,18 +240,9 @@ const Ranking = ({ titulo, filas }: { titulo: string; filas: { texto: string; cu
   </div>
 );
 
-const Fila = ({ termino, detalle, children }: { termino: string; detalle?: string[]; children: React.ReactNode }) => (
+const Fila = ({ termino, children }: { termino: string; children: React.ReactNode }) => (
   <div className="flex flex-col gap-0.5 border-b border-[var(--line)] pb-3 sm:flex-row sm:justify-between sm:gap-6">
     <dt className="text-[var(--mut)]">{termino}</dt>
-    <dd className="sm:text-right">
-      {children}
-      {detalle && (
-        <ul className="mt-1 text-[13px] text-[var(--mut)]">
-          {detalle.map((quien) => (
-            <li key={quien}>{quien}</li>
-          ))}
-        </ul>
-      )}
-    </dd>
+    <dd className="sm:text-right">{children}</dd>
   </div>
 );

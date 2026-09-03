@@ -6,6 +6,7 @@ import { resolve } from "path";
 import { calcularStats } from "./stats";
 import { ENLACES } from "./enlaces";
 import { construirGrafo, visibles } from "./grafo";
+import { EDAD_IMPROBABLE, seLeSuponeFallecido } from "./fechas";
 import { RAMAS } from "./ramas";
 import type { ArbolData } from "./tree";
 
@@ -54,18 +55,26 @@ for (const lista of [c.nombres, c.apellidos]) {
 }
 
 // Los extremos: uno por récord, ninguno vacío y ninguno repetido
-assert.strictEqual(c.extremos.length, 7, "los siete récords tienen a alguien que los tenga");
+assert.strictEqual(c.extremos.length, 6, "los seis récords tienen a alguien que los tenga");
 for (const e of c.extremos) {
   assert.ok(e.que !== "" && e.quien !== "", `el extremo «${e.que}» no dice nada`);
   assert.ok(!/undefined|NaN/.test(e.quien), `el extremo «${e.que}» sale a medio escribir: ${e.quien}`);
 }
 assert.strictEqual(new Set(c.extremos.map((e) => e.que)).size, c.extremos.length, "cada récord se cuenta una vez");
-// El único que tienen varios a la vez dice cuáles, y son tantos como promete el rótulo.
-const cumples = c.extremos.find((e) => e.que.includes("cumpleaños"))!;
-assert.ok(cumples.detalle, "el día con más cumpleaños dice de quiénes son");
-assert.strictEqual(`${cumples.detalle!.length} personas`, cumples.quien.split(": ")[1], "y son los que cuenta");
-// Con apellido y año: en «Los extremos» no hay columna que diga de qué familia se habla.
-for (const quien of cumples.detalle!) assert.match(quien, /^\S.* \S+ \(\d{4}\)$/, `«${quien}» sale sin apellido o sin año`);
+// Los cumpleaños que vienen: diez, en orden, con los dos apellidos y su año, y de los vivos
+assert.strictEqual(c.cumples.length, 10, "diez, que es lo que cabe en una lista que se lee de un vistazo");
+const muertos = new Set(data.people.filter((p) => p.death || seLeSuponeFallecido(p, HOY)).map((p) => p.id));
+for (const cumple of c.cumples) {
+  assert.match(cumple.quien, /^\S.* \S+ \(\d{4}\)$/, `«${cumple.quien}» sale sin apellido o sin año`);
+  assert.match(cumple.dia, /^\d{1,2} de [a-zé]+$/, `«${cumple.dia}» no es un día`);
+  assert.ok(cumple.cumple > 0 && cumple.cumple < EDAD_IMPROBABLE, `${cumple.quien} cumple ${cumple.cumple}`);
+  assert.ok(!muertos.has(cumple.id), `${cumple.quien} no está para que lo feliciten`);
+}
+// El año que trae cada uno y los que cumple tienen que cuadrar con el año en que cae el día.
+for (const { quien, cumple } of c.cumples) {
+  const nace = Number(quien.match(/\((\d{4})\)$/)![1]);
+  assert.ok([2026, 2027].includes(nace + cumple), `${quien} cumple ${cumple} en ${nace + cumple}`);
+}
 assert.ok(c.vivos > 0 && c.vivos < c.personas, "ni todos ni ninguno");
 
 console.log(

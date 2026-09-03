@@ -15,6 +15,7 @@ import { libretaDe, SIN_NOMBRE } from "./identidad";
 import { calcularLayout } from "./layout";
 import { comoSeLlama, etiquetaDe, type Apellidos } from "./personas";
 import { calcularRamas, RAMAS } from "./ramas";
+import { proximaVez } from "./santoral";
 
 /** Un enlace de los que se reparten, con lo que se ve al abrirlo. */
 export interface Centro {
@@ -75,6 +76,8 @@ export interface Stats {
   apellidos: Repetido[];
   /** Los que comparten nombre completo y año con otro: a quienes el árbol tiene que numerar. */
   homonimos: number;
+  /** Los que vienen, de los que el árbol da por vivos. */
+  cumples: Cumple[];
   /** Los récords del árbol, ya escritos: cada uno con su rótulo y con quién lo tiene. */
   extremos: Extremo[];
 }
@@ -83,11 +86,14 @@ export interface Stats {
 export interface Extremo {
   que: string;
   quien: string;
-  /**
-   * Y quiénes son, cuando el récord lo tiene un grupo. Va escrito debajo y no en un globo al
-   * pasar por encima: son cuatro nombres, y en un móvil no hay puntero que pasar.
-   */
-  detalle?: string[];
+}
+
+/** Uno de los que vienen: quién es, qué día cae y los que hace. */
+export interface Cumple {
+  id: string;
+  quien: string;
+  dia: string;
+  cumple: number;
 }
 
 /** Cuántos de cada cosa, en el orden que las pinta la página. */
@@ -155,6 +161,7 @@ export function calcularStats(g: Grafo, hoy: Fecha): Stats {
     nombres: masRepetidos(gente.filter((p) => p.nombre !== SIN_NOMBRE).map((p) => p.nombre)),
     apellidos: masRepetidos(gente.flatMap((p) => linaje.get(p.id)!.todos)),
     homonimos: homonimias.size,
+    cumples: proximosCumples(g, linaje, hoy),
     extremos: extremosDe(g, linaje),
   };
 }
@@ -167,7 +174,7 @@ export function calcularStats(g: Grafo, hoy: Fecha): Stats {
  */
 function extremosDe(g: Grafo, linaje: Map<string, Apellidos>): Extremo[] {
   const gente = [...g.personaPorId.values()];
-  const nombrar = (id: string) => conApellidoYAño(g, linaje, id);
+  const nombrar = (id: string) => conApellidosYAño(g, linaje, id);
   const elMayor = <T>(cosas: T[], valor: (x: T) => number | null): T | undefined =>
     cosas.reduce<{ x: T; v: number } | undefined>((mejor, x) => {
       const v = valor(x);
@@ -180,15 +187,6 @@ function extremosDe(g: Grafo, linaje: Map<string, Apellidos>): Extremo[] {
   const ultimo = elMayor(gente, (p) => (p.birth ? enOrden(p.birth) : null));
   const longevo = elMayor(gente, (p) => (p.birth && p.death ? edadEntre(p.birth, p.death) : null));
   const año = masRepetidos(gente.filter((p) => p.birth).map((p) => añoDe(p.birth as Fecha).toString()), 1)[0];
-  // El día se cuenta con su gente y no solo con su cifra: es el único récord que tienen varios
-  // a la vez, y decir «4 personas» sin decir cuáles es no haber contestado.
-  const cumples = new Map<string, string[]>();
-  for (const p of gente) {
-    if (!p.birth || !conDia(p.birth)) continue;
-    const cuando = escribirDiaDeMes(p.birth);
-    cumples.set(cuando, [...(cumples.get(cuando) ?? []), p.id]);
-  }
-  const dia = elMayor([...cumples], ([, quienes]) => quienes.length);
 
   const filas: (Extremo | null)[] = [
     familia ? { que: "La familia más numerosa", quien: `${familia.partners.map(nombrar).join(" y ")}: ${familia.children.length} hijos` } : null,
@@ -199,20 +197,38 @@ function extremosDe(g: Grafo, linaje: Map<string, Apellidos>): Extremo[] {
       ? { que: "La vida más larga que consta", quien: `${nombrar(longevo.id)}: ${edadEntre(longevo.birth, longevo.death)} años` }
       : null,
     año ? { que: "El año en que más gente nació", quien: `${año.texto}: ${año.cuantos} nacimientos` } : null,
-    dia
-      ? {
-          que: "El día del año con más cumpleaños",
-          quien: `${dia[0]}: ${dia[1].length} personas`,
-          detalle: [...dia[1]].sort(porNacimiento(g)).map(nombrar),
-        }
-      : null,
   ];
   return filas.filter((f): f is Extremo => f !== null);
 }
 
-/** Del mayor al menor, que es el único orden que una lista de gente trae puesto. */
-const porNacimiento = (g: Grafo) => (a: string, b: string) =>
-  enOrden(g.personaPorId.get(a)!.birth!) - enOrden(g.personaPorId.get(b)!.birth!);
+/**
+ * Los diez que vienen, del árbol entero. **De los que el árbol da por vivos**: felicitar a un
+ * muerto es el error que no se puede arreglar después. Y pide el día escrito —quien solo trae
+ * el año no cumple ningún día en concreto—, que es lo que deja fuera a 200 personas.
+ *
+ * No sale de `celebraciones.ts`, que contesta otra pregunta: aquella lista es a quién felicita
+ * **uno**, se recorta a la familia cercana de quien mira y se acaba a los treinta días. Esta no
+ * mira desde nadie.
+ */
+function proximosCumples(g: Grafo, linaje: Map<string, Apellidos>, hoy: Fecha, cuantos = 10): Cumple[] {
+  const todos = [];
+  for (const p of g.personaPorId.values()) {
+    if (!p.birth || !conDia(p.birth) || p.death || seLeSuponeFallecido(p, hoy)) continue;
+    const { fecha, faltan } = proximaVez(hoy, p.birth.slice(5));
+    todos.push({
+      faltan,
+      id: p.id,
+      quien: conApellidosYAño(g, linaje, p.id, 2),
+      dia: escribirDiaDeMes(fecha),
+      cumple: edadEntre(p.birth, fecha),
+    });
+  }
+  // El mismo día, primero el mayor: es el desempate que no cambia al añadir gente.
+  return todos
+    .sort((a, b) => a.faltan - b.faltan || b.cumple - a.cumple || a.quien.localeCompare(b.quien, "es"))
+    .slice(0, cuantos)
+    .map(({ id, quien, dia, cumple }) => ({ id, quien, dia, cumple }));
+}
 
 /** Una fecha como número, para poder compararlas: `2015-07` cuenta como el 1 de julio. */
 const enOrden = (f: Fecha): number => Number(`${f.slice(0, 4)}${f.slice(5, 7) || "01"}${f.slice(8, 10) || "01"}`);
@@ -229,12 +245,13 @@ function conAño(g: Grafo, id: string): string {
 }
 
 /**
- * Y cómo se nombra donde no hay columna que lo diga: **con su primer apellido**. Los extremos
- * sacan a gente de cualquier rincón del árbol, y ahí «José (1888)» no dice de quién se habla.
+ * Y cómo se nombra donde no hay columna que lo diga: **con su apellido**. Los extremos y los
+ * cumpleaños sacan a gente de cualquier rincón del árbol, y ahí «José (1888)» no dice de quién
+ * se habla. Los dos apellidos solo donde la fila no comparte ancho con nada.
  */
-function conApellidoYAño(g: Grafo, linaje: Map<string, Apellidos>, id: string): string {
+function conApellidosYAño(g: Grafo, linaje: Map<string, Apellidos>, id: string, cuantos: 1 | 2 = 1): string {
   const p = g.personaPorId.get(id)!;
-  const nombre = etiquetaDe(p, 1, linaje.get(id)!, "familiar").texto;
+  const nombre = etiquetaDe(p, cuantos, linaje.get(id)!, "familiar").texto;
   return p.birth ? `${nombre} (${p.birth.slice(0, 4)})` : nombre;
 }
 
