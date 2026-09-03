@@ -18,12 +18,14 @@
 // `nombre` es el que se diría en voz alta, y es el único que se pregunta: como la calificación
 // es autoinforme, no hay corrector al que satisfacer y una segunda forma solo añade ruido.
 // **Manda la forma local** —la ortografía oficial del país o su romanización oficial: Beijing,
-// Kyiv, Muqdisho, Toshkent, Nay Pyi Taw, Riyād—, no la convención inglesa, que no es la
-// forma nativa de nadie. Se queda la castellana cuando **es la que se usa de verdad** (París,
-// Roma, El Cairo, Damasco, Trípoli, Argelia, Costa de Marfil, Uagadugú, Katmandú) y cuando el
-// cambio no acercaría al nombre local, solo lo traduciría al inglés (San Vicente y las
-// Granadinas, Ciudad de Kuwait). **El artículo árabe no viaja** —Riyād y Khartūm, no Ar-Riyād ni
-// Al-Khartūm—, que en español no se pronuncia y ordena media docena de capitales por la A.
+// Kyiv, Muqdisho, Toshkent, Nay Pyi Taw, Riyād—, no la convención extranjera, que no es la
+// forma nativa de nadie: ni la inglesa ni la del antiguo colonizador allí donde su lengua no es
+// oficial (Argel, no Alger; Libreville y Brazzaville sí, que ahí el francés sí lo es). Se queda
+// la castellana cuando **es la que se usa de verdad** (París, Roma, El Cairo, Damasco, Trípoli,
+// Argelia, Costa de Marfil, Uagadugú, Katmandú) y cuando el cambio no acercaría al nombre local,
+// solo lo traduciría al inglés (San Vicente y las Granadinas, Ciudad de Kuwait). **El artículo
+// árabe no viaja** —Riyād y Khartūm, no Ar-Riyād ni Al-Khartūm—, que en español no se pronuncia
+// y ordena media docena de capitales por la A.
 // `oficial` acompaña a `nombre` en la forma elegida —Reino de Bhutan, no de Bután— y solo se
 // muestra en la ficha de explorar.
 //
@@ -89,7 +91,7 @@ export const PAISES: Pais[] = [
   { id: "ao", nombre: "Angola",                          oficial: "República de Angola",                             capital: "Luanda",                    continente: "África",            subregion: "África Central",            km2:  1_246_700 },
   { id: "ag", nombre: "Antigua y Barbuda",               oficial: "Antigua y Barbuda",                               capital: "Saint John's",              continente: "América del Norte", subregion: "Caribe",                    km2:        440 },
   { id: "sa", nombre: "Arabia Saudí",                    oficial: "Reino de Arabia Saudí",                           capital: "Riyād",                     continente: "Asia",              subregion: "Asia Occidental",           km2:  2_250_000 },
-  { id: "dz", nombre: "Argelia",                         oficial: "República Argelina Democrática y Popular",        capital: "Alger",                     continente: "África",            subregion: "África del Norte",          km2:  2_381_741 },
+  { id: "dz", nombre: "Argelia",                         oficial: "República Argelina Democrática y Popular",        capital: "Argel",                     continente: "África",            subregion: "África del Norte",          km2:  2_381_741 },
   { id: "ar", nombre: "Argentina",                       oficial: "República Argentina",                             capital: "Buenos Aires",              continente: "América del Sur",   subregion: "Sudamérica",                km2:  2_780_400 },
   { id: "am", nombre: "Armenia",                         oficial: "República de Armenia",                            capital: "Yerevan",                   continente: "Asia",              subregion: "Asia Occidental",           km2:     29_743, capitalCastellana: "Ereván" },
   { id: "au", nombre: "Australia",                       oficial: "Mancomunidad de Australia",                       capital: "Canberra",                  continente: "Oceanía",           subregion: "Australia y Nueva Zelanda", km2:  7_692_024 },
