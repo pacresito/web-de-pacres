@@ -10,7 +10,7 @@
 // del otro, que es tamaño angular—, así que un cono frontal dibujaría un mecanismo que no existe.
 // Cuando haya inspector, la visión será un anillo de alcance del bicho que se esté mirando.
 
-import { MARCA, RADIO_COMIDA, type Mundo } from "./engine";
+import { CONFIG, MARCA, RADIO_COMIDA, type Mundo } from "./engine";
 
 const TAU = Math.PI * 2;
 
@@ -77,12 +77,18 @@ const sat = (x: number): number => x / (1 + x);
 
 /**
  * La misma saturación, **estirada donde vive la población**. Sin esto casi todo el mundo cae en el
- * mismo punto de la rampa y dos genomas distintos se pintan igual: la fiereza se mueve alrededor
- * de 1, donde `sat` apenas tiene pendiente, y la sociabilidad alrededor de 0, donde le sobra
- * recorrido. Es contraste, no dato: el fundador sigue cayendo en el centro y el mismo gen da
- * siempre el mismo color, así que dos días distintos se pueden comparar.
+ * mismo punto de la rampa y dos genomas distintos se pintan igual: `sat` apenas tiene pendiente
+ * lejos de su codo, y la sociabilidad se mueve alrededor de 0, donde le sobra recorrido. Es
+ * contraste, no dato: el mismo gen da siempre el mismo color, así que dos días se pueden comparar.
+ *
+ * **La fiereza se mide en fundadores, no en unidades**, y por eso divide entre el suyo antes de
+ * elevar: la población vive alrededor de con lo que nació, así que ahí es donde la rampa necesita
+ * su pendiente. Escrito en absoluto, subir el fundador manda a todo el mundo al extremo naranja y
+ * el gen deja de verse justo cuando se ha subido para que se viera — con el fundador en 4 la
+ * población entera caía entre 0,981 y 0,995 de la rampa, y de paso igual de afilada, que la
+ * silueta cuelga de esta misma función.
  */
-const satFiereza = (f: number): number => sat(f * f * f);
+const satFiereza = (f: number): number => sat((f / CONFIG.fundador.fiereza) ** 3);
 const satSoc = (s: number): number => sat(3 * s);
 
 function tono(p: Paleta, fiereza: number, vigor: number, fondo: [number, number, number]): string {
