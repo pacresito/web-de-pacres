@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { sitio } from "./reparto";
 import { extensionCuerpo, pintarAlcance, pintarMuestra, type Paleta } from "./render";
 
 /**
@@ -46,9 +47,10 @@ const QUE_ES: Record<string, string> = {
   retorno: "Las ganas de volver a casa en cuanto lleva comida encima. Solo lo que llega a casa se come y se convierte en hijos — pero volver pronto es dejar de buscar.",
 };
 
-/** El gen mutado va ×f y ÷f cada generación, así que la escala de su barra es multiplicativa. */
-const OCTAVAS = 3;                 // la barra abarca de ÷8 a ×8 del fundador
-const SOC = 1.5;                   // la sociabilidad lleva signo: su barra es lineal, de −1,5 a +1,5
+// La escala de la barra —de ÷4 a ×4 del fundador, y lineal en el gen con signo— es la de
+// `reparto.ts`, que es también la del panel: con una copia aquí el mismo gen se leería con dos
+// varas de medir el día que una de las dos se moviera. Cuánta ventana hace falta lo mide
+// `reparto.medir.ts`, y no es de gusto: es lo que se aleja el gen que más se va.
 const MUESTRAS = [0.5, 1, 2];      // la mitad, el fundador y el doble
 const SOC_MUESTRAS = [-0.6, 0, 0.6];
 
@@ -69,12 +71,6 @@ function conSigno(x: number): string {
 /** Los tres valores que se dibujan en una fila: la mitad, el fundador y el doble. */
 const muestrasDe = (rasgo: string, eva: Record<string, number>): number[] =>
   rasgo === "sociabilidad" ? SOC_MUESTRAS : MUESTRAS.map((k) => eva[rasgo] * k);
-
-/** Dónde cae un valor en la barra de su gen, en [0,1] y recortado a los extremos. */
-function sitio(x: number, eva: number, signo: boolean): number {
-  const t = signo ? 0.5 + x / (2 * SOC) : 0.5 + Math.log2(x / eva) / (2 * OCTAVAS);
-  return Math.min(1, Math.max(0, t));
-}
 
 const pct = (t: number) => `${(t * 100).toFixed(2)}%`;
 
@@ -223,7 +219,7 @@ export default function Leyenda({ rasgos, tabla, eva, ancho, alto, perfil, palet
       </div>
       <p className="lg-intro">
         Cada bicho lleva el genoma puesto. A la izquierda, cómo se ve el gen a la mitad, en el
-        fundador de esta semilla y al doble; a la derecha, la barra de ÷8 a ×8 del fundador con
+        fundador de esta semilla y al doble; a la derecha, la barra de ÷4 a ×4 del fundador con
         dónde está hoy la población.
       </p>
       <p className="lg-intro lg-aviso">

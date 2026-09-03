@@ -176,6 +176,14 @@ export const RASGOS = [
 export type Rasgo = (typeof RASGOS)[number];
 export type Genoma = Record<Rasgo, number>;
 
+/**
+ * El único gen que lleva signo, y lo lleva porque significa dos cosas opuestas: buscar compañía
+ * o esquivarla. Muta sumando —multiplicar no cruza el cero— y se lee alrededor de él, no en
+ * octavas del fundador. Lo pregunta todo el que trate un gen como número: mutarlo, leerlo o
+ * pintarlo.
+ */
+export const signado = (r: Rasgo): boolean => r === "sociabilidad";
+
 /** Qué paga y qué cobra cada gen. Es la fuente de la tabla de reglas y de la leyenda. */
 export const TABLA: Record<Rasgo, { paga: string; cobra: string }> = {
   empuje: { paga: "coste ∝ empuje² · radio; la despensa del día es la misma para todos", cobra: "velocidad = empuje / radio, y con carga menos" },
@@ -549,7 +557,7 @@ export function mutar(a: Azar, g: Genoma, c: Config): Genoma {
   const h: Genoma = { ...g };
   for (const r of RASGOS) {
     const n = centrado(a);
-    if (r === "sociabilidad") { h[r] = g[r] + n * c.paso; continue; }
+    if (signado(r)) { h[r] = g[r] + n * c.paso; continue; }
     const f = 1 + Math.abs(n) * c.tasa;
     h[r] = n >= 0 ? g[r] * f : g[r] / f;
     if (h[r] < 1e-6) h[r] = 1e-6;

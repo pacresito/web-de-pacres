@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import TerminalShell from "../../components/TerminalShell";
+import WhyFooter from "../../components/WhyFooter";
 import { useTema } from "../../components/usePersistedTheme";
 import { CONFIG, RASGOS, TABLA, amanecer, anochecer, azarCon, banda, copiar, crearMundo, evaDe, tick, type Mundo } from "./engine";
 import Leyenda, { type Perfil } from "./leyenda";
@@ -109,6 +110,17 @@ const CollapseIcon = () => (
 );
 
 export default function Evolution() {
+  // El porqué abre debajo del lienzo, y la página está montada para no desplazarse: mientras esté
+  // abierto se le devuelve el desplazamiento al documento, y al cerrarlo se le quita.
+  const [porque, setPorque] = useState(false);
+  useEffect(() => {
+    const raiz = document.documentElement;
+    const soltar = () => { raiz.style.height = ""; raiz.style.overflow = ""; document.body.style.overflow = ""; };
+    if (porque) { raiz.style.height = "auto"; raiz.style.overflow = "auto"; document.body.style.overflow = "auto"; }
+    else soltar();
+    return soltar;
+  }, [porque]);
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const mundoRef = useRef<Mundo | null>(null);
@@ -385,7 +397,7 @@ export default function Evolution() {
         .lg-flecha { color: var(--t-ink4); }
         .lg-viaje { color: var(--t-accent); margin-left: 0.5rem; }
 
-        /* La barra: fundador en el centro, ÷8 a la izquierda y ×8 a la derecha. */
+        /* La barra: fundador en el centro, ÷4 a la izquierda y ×4 a la derecha (la escala, en reparto.ts). */
         .lg-eje { position: relative; height: 14px; margin: 0.45rem 0 0.35rem; }
         .lg-eje::before { content: ""; position: absolute; left: 0; right: 0; top: 6px; height: 1px; background: var(--border); }
         .lg-eje i { position: absolute; display: block; }
@@ -410,8 +422,8 @@ export default function Evolution() {
       <main style={{
         maxWidth: 900, margin: "0 auto",
         padding: `0 clamp(1.25rem, 4vw, 2rem) clamp(1.25rem, 4vw, 2rem)`,
-        height: "100%", minHeight: "100%",
-        overflowX: "hidden", overflowY: "hidden",
+        height: porque ? "auto" : "100%", minHeight: "100%",
+        overflowX: "hidden", overflowY: porque ? "auto" : "hidden",
         display: "flex", flexDirection: "column",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", fontFamily: "var(--t-mono)", paddingTop: "1rem", paddingBottom: "0.6rem" }}>
@@ -469,9 +481,16 @@ export default function Evolution() {
         )}
 
         {!fullscreen && (
-          <div className="hint-row">
-            {PISTA}
-          </div>
+          <>
+            <div className="hint-row">
+              {PISTA}
+            </div>
+            <WhyFooter question="¿Por qué un simulador de evolución?" date="2 de septiembre de 2026" onOpenChange={setPorque} style={{ marginTop: "auto" }}>
+              <p>Que de unas reglas simples salga algo que nadie ha escrito me parece la idea más bonita que tiene la biología. Y es de las que cuesta creerse si no la ves pasar.</p>
+              <p>Aquí nadie decide cómo se comporta un bicho. Solo hay seis números que se heredan con pequeños errores y un mundo en el que solo lo que llega a casa se convierte en hijos. Con eso basta.</p>
+              <p>Al rato la población es otra y hace cosas que yo no programé: cazar, apartarse, volver antes de tiempo. No hay guion — es lo que ha quedado vivo.</p>
+            </WhyFooter>
+          </>
         )}
       </main>
     </TerminalShell>
