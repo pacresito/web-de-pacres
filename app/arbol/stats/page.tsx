@@ -49,24 +49,20 @@ export default async function CifrasPage() {
             <TemaBoton className="cursor-pointer hover:text-[var(--ink)]" />
           </div>
           <h1 className="mt-3 font-[family-name:var(--serif)] text-[34px] leading-tight">Stats del árbol</h1>
-          <p className="mt-1 text-[14px] text-[var(--mut)]">
-            {c.personas} personas y {c.uniones} uniones repartidas en {c.generaciones.length} generaciones.
-          </p>
         </header>
 
         <Seccion titulo="De un vistazo">
-          <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl bg-[var(--line)] sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl bg-[var(--line)] sm:grid-cols-3">
             <Dato n={c.personas} de="personas" />
             <Dato n={c.uniones} de={c.rotas === 1 ? "uniones, una rota" : `uniones, ${c.rotas} rotas`} />
+            <Dato n={c.generaciones.length} de="generaciones" />
             <Dato n={c.vivos} de="a los que el árbol da por vivos" />
             <Dato n={c.falta.conAlgo} de="con algo que preguntar" />
+            <Dato n={c.homonimos} de="comparten nombre completo y año" />
           </div>
         </Seccion>
 
-        <Seccion
-          titulo="Los centros"
-          pie="Cada enlace abre el árbol alrededor de alguien. «Se despliega» es lo que se ve al llegar, sin tocar nada; «alcanza», hasta dónde se puede llegar abriendo contadores."
-        >
+        <Seccion titulo="Los centros">
           <Tabla cabeceras={["Enlace", "Centrado en", "Despliega", "Alcanza"]}>
             {c.centros.map((centro) => (
               <tr key={centro.alias} className="border-t border-[var(--line)]">
@@ -83,12 +79,7 @@ export default async function CifrasPage() {
           </Tabla>
         </Seccion>
 
-        <Seccion
-          titulo="Las ramas"
-          pie={`Suman más que el árbol: ${c.enVarias} personas descienden de más de un antepasado y salen en cada una de sus ramas. ${
-            c.sinRama === 0 ? "Nadie se queda sin ninguna." : `${c.sinRama} se queda${c.sinRama > 1 ? "n" : ""} sin ninguna.`
-          }`}
-        >
+        <Seccion titulo="Las ramas">
           <Tabla cabeceras={["Rama", "La estrena", "Gente", "En dos", "Por preguntar"]}>
             {c.ramas.map((rama) => (
               <tr key={rama.nombre} className="border-t border-[var(--line)]">
@@ -102,7 +93,7 @@ export default async function CifrasPage() {
           </Tabla>
         </Seccion>
 
-        <Seccion titulo="Las generaciones" pie="De la más antigua que consta a la que acaba de estrenarse.">
+        <Seccion titulo="Las generaciones">
           <ul className="space-y-2">
             {c.generaciones.map((gen) => (
               <li key={gen.numero} className="flex items-center gap-3">
@@ -119,10 +110,7 @@ export default async function CifrasPage() {
           </ul>
         </Seccion>
 
-        <Seccion
-          titulo="Lo que falta"
-          pie="Un hueco no es un error: nadie ha hecho nada mal porque un documento de 1950 no diera el día."
-        >
+        <Seccion titulo="Lo que falta">
           <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl bg-[var(--line)] sm:grid-cols-4">
             <Dato n={c.falta.conAlgo} de="con algún hueco" />
             <Dato n={c.falta.sinNingunaFecha} de="sin ninguna fecha" />
@@ -131,10 +119,7 @@ export default async function CifrasPage() {
           </div>
         </Seccion>
 
-        <Seccion
-          titulo="Los próximos cumpleaños"
-          pie="De los que el árbol da por vivos y traen el día escrito. No es la lista con la que se avisa al móvil, que esa es de la familia cercana de alguien; esta es del árbol entero."
-        >
+        <Seccion titulo="Los próximos cumpleaños">
           <ul className="text-[14px]">
             {c.cumples.map((cumple) => (
               <li
@@ -150,7 +135,7 @@ export default async function CifrasPage() {
           </ul>
         </Seccion>
 
-        <Seccion titulo="Cómo se llama esta familia" pie={`Y ${c.homonimos} personas comparten nombre completo y año con otra: son las que el árbol tiene que numerar.`}>
+        <Seccion titulo="Cómo se llama esta familia">
           <div className="grid gap-8 sm:grid-cols-2">
             <Ranking titulo="Nombres" filas={c.nombres} />
             <Ranking titulo="Apellidos" filas={c.apellidos} />
@@ -177,12 +162,11 @@ const Vacio = () => (
   </div>
 );
 
-function Seccion({ titulo, pie, children }: { titulo: string; pie?: string; children: React.ReactNode }) {
+function Seccion({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
     <section className="mb-12">
       <h2 className="mb-4 font-[family-name:var(--serif)] text-[22px]">{titulo}</h2>
       {children}
-      {pie && <p className="mt-3 text-[13px] leading-relaxed text-[var(--mut)]">{pie}</p>}
     </section>
   );
 }

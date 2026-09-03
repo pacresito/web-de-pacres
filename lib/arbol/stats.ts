@@ -60,10 +60,6 @@ export interface Stats {
   vivos: number;
   centros: Centro[];
   ramas: RamaContada[];
-  /** Cuánta gente está en más de una rama: descender de dos no es una ambigüedad que resolver. */
-  enVarias: number;
-  /** Quien no desciende de ningún antepasado de rama ni se casó con quien sí. */
-  sinRama: number;
   generaciones: Generacion[];
   /** Lo que queda por preguntar, que es de lo que va el repaso. */
   falta: {
@@ -149,8 +145,6 @@ export function calcularStats(g: Grafo, hoy: Fecha): Stats {
     vivos: gente.filter((p) => !p.death && !seLeSuponeFallecido(p, hoy)).length,
     centros,
     ramas,
-    enVarias: [...pertenencias.values()].filter((p) => p.ramas.length > 1).length,
-    sinRama: gente.filter((p) => !pertenencias.has(p.id)).length,
     generaciones,
     falta: {
       conAlgo: conHuecos.size,
