@@ -9,6 +9,7 @@ import {
   type Carried, type Sim, type Tool,
 } from "./engine";
 import { render } from "./render";
+import { IconoPantallaCompleta } from "../../components/Iconos";
 
 // Un color por herramienta; borde, fondo y brillo del estado activo se derivan de él. Borrar
 // no pinta ningún elemento: lleva la tinta del tema, porque un neutro fijo solo se lee sobre
@@ -387,17 +388,7 @@ export default function Fluidos() {
               aria-label={fullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
               style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center" }}
             >
-              {fullscreen ? (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/>
-                  <line x1="10" y1="14" x2="3" y2="21"/><line x1="21" y1="3" x2="14" y2="10"/>
-                </svg>
-              ) : (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
-                  <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
-                </svg>
-              )}
+              <IconoPantallaCompleta size={14} salir={fullscreen} />
             </button>
           </div>
         </div>

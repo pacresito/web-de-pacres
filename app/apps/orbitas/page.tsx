@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import TerminalShell from "../../components/TerminalShell";
 import WhyFooter from "../../components/WhyFooter";
+import { IconoPantallaCompleta } from "../../components/Iconos";
 import {
   createWorld, clearWorld, addBody, makeBody, step, pruneEscaped,
   radiusForMass, totalMass, presetSolar, presetBinary, presetCluster,
@@ -78,18 +79,8 @@ function heldMass(elapsedMs: number): number {
 }
 
 // Iconos de pantalla completa (definidos una vez): entrar y salir. Mismo trazo que el resto.
-const ExpandIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
-    <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
-  </svg>
-);
-const CollapseIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/>
-    <line x1="10" y1="14" x2="3" y2="21"/><line x1="21" y1="3" x2="14" y2="10"/>
-  </svg>
-);
+const ExpandIcon = () => <IconoPantallaCompleta size={14} />;
+const CollapseIcon = () => <IconoPantallaCompleta size={16} salir />;
 
 // Icono de distancia (solo pantalla completa): el recuadro de la vista, siempre igual, con
 // la escena dentro encogiéndose conforme la cámara se aleja.

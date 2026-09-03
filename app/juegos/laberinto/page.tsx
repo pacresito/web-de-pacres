@@ -9,6 +9,7 @@ import {
   buildSegs, initMaze, pasoBola, type Seg,
 } from "./engine";
 import { buildStaticLayer } from "./render";
+import { IconoRanking, IconoPantallaCompleta } from "../../components/Iconos";
 
 /** Estado inicial del juego (incluye un laberinto generado). Se llama una sola vez
  *  vía lazy-init del ref: initMaze() es caro (Warnsdorff) y no debe correr por render. */
@@ -690,10 +691,7 @@ export default function Laberinto() {
           aria-label="Ranking"
           style={{ display: "flex", alignItems: "center" }}
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
-            <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
-          </svg>
+          <IconoRanking size={14} />
         </a>
         <button
           className="hover-accent"
@@ -702,17 +700,7 @@ export default function Laberinto() {
           aria-label={fullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
           style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center" }}
         >
-          {fullscreen ? (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/>
-              <line x1="10" y1="14" x2="3" y2="21"/><line x1="21" y1="3" x2="14" y2="10"/>
-            </svg>
-          ) : (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
-              <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
-            </svg>
-          )}
+          <IconoPantallaCompleta size={13} salir={fullscreen} />
         </button>
       </div>
     </div>
@@ -792,10 +780,7 @@ export default function Laberinto() {
               title="Ranking"
               style={{ display: "flex", alignItems: "center" }}
             >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
-                <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
-              </svg>
+              <IconoRanking size={13} />
             </a>
             <button
               className="hover-accent"
@@ -804,17 +789,7 @@ export default function Laberinto() {
               aria-label={fullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
               style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center" }}
             >
-              {fullscreen ? (
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/>
-                  <line x1="10" y1="14" x2="3" y2="21"/><line x1="21" y1="3" x2="14" y2="10"/>
-                </svg>
-              ) : (
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
-                  <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
-                </svg>
-              )}
+              <IconoPantallaCompleta size={13} salir={fullscreen} />
             </button>
           </div>
           <p style={{ fontSize: "0.65rem", color: "var(--t-ink4)", textAlign: "center", lineHeight: 1.4, fontFamily: "var(--t-mono)" }}>

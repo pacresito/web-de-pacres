@@ -7,6 +7,7 @@ import { useTema } from "../../components/usePersistedTheme";
 import { CONFIG, RASGOS, TABLA, amanecer, anochecer, azarCon, banda, copiar, crearMundo, evaDe, tick, type Mundo } from "./engine";
 import Leyenda, { type Perfil } from "./leyenda";
 import { paletaDe, pintar, vistaDe, type Paleta } from "./render";
+import { IconoPantallaCompleta } from "../../components/Iconos";
 
 // Cuántos ticks se intentan por fotograma. Es un objetivo, no una promesa: el bucle corta por
 // presupuesto de tiempo (abajo), así que en un mundo lleno x64 va tan rápido como dé la máquina.
@@ -96,18 +97,8 @@ function linea(m: Mundo): string {
 
 const PISTA = "Franja = casa · aro = despensa y sus vueltas, lo ahorrado · puntos = bocados que lleva · tono y filo = fiereza · aura = sociabilidad";
 
-const ExpandIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
-    <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
-  </svg>
-);
-const CollapseIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/>
-    <line x1="10" y1="14" x2="3" y2="21"/><line x1="21" y1="3" x2="14" y2="10"/>
-  </svg>
-);
+const ExpandIcon = () => <IconoPantallaCompleta size={14} />;
+const CollapseIcon = () => <IconoPantallaCompleta size={16} salir />;
 
 export default function Evolution() {
   // El porqué abre debajo del lienzo, y la página está montada para no desplazarse: mientras esté
