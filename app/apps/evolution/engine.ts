@@ -218,8 +218,14 @@ export type Config = {
   fundador: Genoma;
 };
 
+// `fiereza` sale de medir qué mundo se ve, no de dónde se asienta el gen: fluctúa y cada partida
+// acaba en un sitio, así que el fundador **elige el carácter de todas ellas**. Con 1, 4, 8 y 16 el
+// censo va 29 · 35 · 35 · **16**, la dentellada 0,42 · 1,08 · **1,64** · 0,43 al día y la talla
+// 3,85 · 3,07 · 2,75 · 2,57. En 4 la dentellada se multiplica por 2,6 sin tocar censo ni semillas
+// vivas; en 8 hay el doble, pero la talla se acerca a 2,25, que es donde deja de ser viable; y en 16
+// el mundo se rompe solo — todos persiguen, nadie recoge y la población no da ni para encontrarse.
 export const FUNDADOR: Genoma = {
-  empuje: 2, talla: 4.5, vision: 22, sociabilidad: 0, fiereza: 1, retorno: 1,
+  empuje: 2, talla: 4.5, vision: 22, sociabilidad: 0, fiereza: 4, retorno: 1,
 };
 
 // Medido en `costes.medir.ts`, y **el tamaño del mundo lo decide que se coma la comida**. Con

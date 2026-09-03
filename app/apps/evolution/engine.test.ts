@@ -1,4 +1,4 @@
-// Los cinco tests del motor de evolution — `npx tsx app/apps/evolution/engine.test.ts`.
+// Los tests del motor de evolution — `npx tsx app/apps/evolution/engine.test.ts`.
 // No es parte del build; verifica el mundo sin navegador.
 //
 // **No comprueban código: comprueban predicciones evolutivas falsables.** Que una función
@@ -151,6 +151,42 @@ check("despensa más corta → sube el retorno",
   check("sin nada a la vista → mantiene el rumbo, no NaN",
     Number.isFinite(b.x) && Number.isFinite(b.hx) && Math.abs(b.hy) < 1e-12 && b.hx === 1,
     `rumbo=(${b.hx}, ${b.hy})`);
+}
+
+// 7. **Ningún gen es decorativo.** Se corren dos mundos con la misma semilla cambiando solo el
+//    valor inicial de un gen: la huella al final **tiene que diferir**. Si no difiere, ese gen no
+//    lo lee nadie y sobra del genoma.
+//
+//    Es la vara de medir qué significa que un gen «no haga nada», y distingue dos cosas que se
+//    confunden con facilidad: un gen **decorativo** —cambiarlo deja el mundo bit a bit idéntico— y
+//    uno **sin tendencia**, que sí cambia el mundo aunque la selección no lo empuje a ningún lado.
+//
+//    **El escenario solo vale si los dos mundos llegan vivos.** Las ventanas habitables son
+//    estrechas —el `empuje` vive entre 1 y 2— y un cambio que extinga una de las dos partidas hace
+//    pasar el test por el motivo equivocado: la huella difiere porque el mundo está muerto, no
+//    porque el gen se lea. Por eso se prueba el cambio más pequeño que deje vivas a las dos, y si
+//    ninguno lo consigue el test **falla**: sin escenario válido no hay nada que concluir.
+{
+  const vivo = (m: ReturnType<typeof crearMundo>) => !m.extinto && m.bichos.length >= 5;
+  for (const r of RASGOS) {
+    let veredicto = false, detalle = "ningún cambio deja vivas a las dos partidas";
+    buscar:
+    for (const f of [2, 1.5, 1.25, 1.1]) {
+      for (const s of ["hola", "pablo", "mar"]) {
+        // La sociabilidad es la única con signo y su cero no es una escala: se desplaza, no se escala.
+        const g: Genoma = r === "sociabilidad"
+          ? { ...CONFIG.fundador, [r]: CONFIG.fundador[r] + (f - 1) }
+          : { ...CONFIG.fundador, [r]: CONFIG.fundador[r] * f };
+        const a = crearMundo(s, {}), b = crearMundo(s, { fundador: g });
+        for (let k = 0; k < 60; k++) { correrDia(a); correrDia(b); }
+        if (!vivo(a) || !vivo(b)) continue;
+        veredicto = huella(a) !== huella(b);
+        detalle = `${s} ×${f}: censo ${a.bichos.length} vs ${b.bichos.length}`;
+        break buscar;
+      }
+    }
+    check(`el gen \`${r}\` cambia el mundo`, veredicto, detalle);
+  }
 }
 
 console.log(fallos === 0 ? "\nTodo en orden." : `\n${fallos} fallo(s).`);
