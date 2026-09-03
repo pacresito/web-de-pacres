@@ -76,9 +76,13 @@ export interface BoardState {
   vel: { x: number; y: number };
   segIdx: number;
   gameState: GameState;
+  /** Por dónde ha pasado la bola de verdad, en píxeles. Se dibuja tal cual: derivarlo del
+   *  trazado pintaría el rastro por el centro del canal aunque el giro fuera pegado a la
+   *  pared, que es justo lo que el jugador quiere ver. */
+  trail: { x: number; y: number }[];
 }
 
 export function initBoard(path: typeof PATH_CELLS, origin: { x: number; y: number }, vel: { x: number; y: number }, cell_size: number): BoardState {
   const start = cellToPixel(path[0], origin, cell_size);
-  return { pos: { ...start }, vel: { ...vel }, segIdx: 0, gameState: "idle" };
+  return { pos: { ...start }, vel: { ...vel }, segIdx: 0, gameState: "idle", trail: [] };
 }

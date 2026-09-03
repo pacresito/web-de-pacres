@@ -4,13 +4,21 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "
 import { useRouter } from "next/navigation";
 import TerminalShell from "../../components/TerminalShell";
 import WhyFooter from "../../components/WhyFooter";
+import { useTema } from "../../components/usePersistedTheme";
+import { IconoRanking, IconoPantallaCompleta } from "../../components/Iconos";
+
+// Descuento del panel que envuelve los tableros (padding + junta + aire a los lados), que
+// va por fuera del canvas: sin restarlo el tablero se sale por el lado en vertical.
+const PANEL_H = 97;  // apaisado: 22+22 de marco, 1 de junta, 26+26 de aire
+const PANEL_V = 44;  // vertical: 22+22 de marco
+const AIRE_JUNTA = 53;  // 26 + 1 + 26: lo que separa los dos tableros
 
 function calcSize() {
   const isLandscape = window.innerWidth > window.innerHeight;
   if (isLandscape) {
-    return Math.min(Math.floor((window.innerWidth - 96) / 2), window.innerHeight - 80, 420);
+    return Math.min(Math.floor((window.innerWidth - 96 - PANEL_H) / 2), window.innerHeight - 80, 420);
   }
-  return Math.min(Math.floor(window.innerWidth - 32), Math.floor((window.innerHeight - 120) / 2), 420);
+  return Math.min(Math.floor(window.innerWidth - 32 - PANEL_V), Math.floor((window.innerHeight - 120) / 2), 420);
 }
 
 function useCanvasSize() {
@@ -36,7 +44,7 @@ import {
   calcCell, calcTolerance, calcOrigin, cellToPixel, pointToSegmentDist, initBoard,
   type BoardState, type GameState, type SpeedLevel,
 } from "./engine";
-import { drawBoard } from "./render";
+import { drawBoard, buildSurcoLayer, leerTokens, surcoKey, type Tokens } from "./render";
 
 function useBoard(
   canvasRef: React.RefObject<HTMLCanvasElement | null>,
@@ -44,12 +52,18 @@ function useBoard(
   turnDir: 1 | -1,
   initialVel: { x: number; y: number },
   size: number,
-  speedRef: React.RefObject<SpeedLevel>
+  speedRef: React.RefObject<SpeedLevel>,
+  tema: ReturnType<typeof useTema>
 ) {
   const originRef = useRef({ x: 0, y: 0 });
-  const stateRef = useRef<BoardState>({ pos: { x: 0, y: 0 }, vel: { x: 0, y: 0 }, segIdx: 0, gameState: "idle" });
+  const stateRef = useRef<BoardState>({ pos: { x: 0, y: 0 }, vel: { x: 0, y: 0 }, segIdx: 0, gameState: "idle", trail: [] });
   const animRef = useRef(0);
   const cellRef = useRef(calcCell(size));
+  // Tamaño lógico (px CSS): el canvas tiene el backing store escalado por devicePixelRatio,
+  // así que canvas.width ya no sirve como medida del tablero.
+  const sizeRef = useRef(size);
+  const dprRef = useRef(1);
+  const surcoRef = useRef<{ key: string; layer: HTMLCanvasElement } | null>(null);
   const [gameState, setGameState] = useState<GameState>("idle");
   const [startCount, setStartCount] = useState(0);
   const goalCell = path[path.length - 1];
@@ -68,6 +82,20 @@ function useBoard(
     return pointToSegmentDist(pos, next, next2) < pointToSegmentDist(pos, cur, next) - 2;
   }, [path]);
 
+  /** Pinta el frame actual, reconstruyendo la capa del surco si cambió el tamaño o el tema. */
+  const pintar = useCallback(() => {
+    const canvas = canvasRef.current;
+    const s = sizeRef.current;
+    if (!canvas || !s) return;
+    const ctx = canvas.getContext("2d")!;
+    const C: Tokens = leerTokens(canvas);
+    const key = surcoKey(s, dprRef.current, C);
+    if (!surcoRef.current || surcoRef.current.key !== key) {
+      surcoRef.current = { key, layer: buildSurcoLayer(s, dprRef.current, path, originRef.current, cellRef.current, C) };
+    }
+    drawBoard(ctx, s, originRef.current, stateRef.current, goalCell, cellRef.current, surcoRef.current.layer, C);
+  }, [canvasRef, path, goalCell]);
+
   const lastTimeRef = useRef(0);
   const accumRef = useRef(0);
   const loopRef = useRef<(now: number) => void>(() => {});
@@ -75,12 +103,11 @@ function useBoard(
   const loop = useCallback((now: number) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext("2d")!;
     const s = stateRef.current;
     const cs = cellRef.current;
 
     if (s.gameState !== "playing") {
-      drawBoard(ctx, canvas.width, path, originRef.current, s, goalCell, cs);
+      pintar();
       return;
     }
 
@@ -99,26 +126,29 @@ function useBoard(
       s.pos.x += s.vel.x * mult;
       s.pos.y += s.vel.y * mult;
 
+      const ult = s.trail[s.trail.length - 1];
+      if (!ult || Math.hypot(s.pos.x - ult.x, s.pos.y - ult.y) >= 2) s.trail.push({ x: s.pos.x, y: s.pos.y });
+
       while (s.segIdx < path.length - 2 && isCloserToNext(s.pos, s.segIdx)) s.segIdx++;
 
       const goalPx = cellToPixel(goalCell, originRef.current, cs);
       if (Math.hypot(s.pos.x - goalPx.x, s.pos.y - goalPx.y) < cs / 2) {
         s.gameState = "win"; winSpeedRef.current = runMinSpeedRef.current; setGameState("win");
-        drawBoard(ctx, canvas.width, path, originRef.current, s, goalCell, cs); return;
+        pintar(); return;
       }
 
       const offDist = pointToSegmentDist(s.pos, cellToPixel(path[s.segIdx], originRef.current, cs), cellToPixel(path[s.segIdx + 1], originRef.current, cs));
       if (offDist > calcTolerance(cs)) {
         s.gameState = "dead"; setGameState("dead");
-        drawBoard(ctx, canvas.width, path, originRef.current, s, goalCell, cs); return;
+        pintar(); return;
       }
 
       accumRef.current -= STEP_MS;
     }
 
-    drawBoard(ctx, canvas.width, path, originRef.current, s, goalCell, cs);
+    pintar();
     animRef.current = requestAnimationFrame(loopRef.current);
-  }, [path, goalCell, isCloserToNext, speedRef, canvasRef]);
+  }, [path, goalCell, isCloserToNext, speedRef, canvasRef, pintar]);
   useEffect(() => { loopRef.current = loop; }, [loop]);
 
   function start() {
@@ -144,17 +174,33 @@ function useBoard(
     if (!canvas || size === 0) return;
     const cs = calcCell(size);
     cellRef.current = cs;
-    canvas.width = size;
-    canvas.height = size;
+    sizeRef.current = size;
+    // El backing store va al devicePixelRatio real y el contexto se escala una vez: a 1x los
+    // biseles del surco (un 5% de celda) se comen el subpíxel y el canal deja de leerse
+    // excavado en retina. Tope en 3 para no cuadruplicar el coste en pantallas muy densas.
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    dprRef.current = dpr;
+    canvas.width = Math.round(size * dpr);
+    canvas.height = Math.round(size * dpr);
+    canvas.style.width = `${size}px`;
+    canvas.style.height = `${size}px`;
+    canvas.getContext("2d")!.setTransform(dpr, 0, 0, dpr, 0, 0);
     originRef.current = calcOrigin(size, cs, path);
     if (stateRef.current.gameState === "idle") {
       stateRef.current = initBoard(path, originRef.current, initialVel, cs);
     } else {
+      // La traza guardada está en píxeles del tablero anterior: al redimensionar ya no
+      // describe por dónde pasó la bola, así que se descarta en vez de reescalarse.
       stateRef.current.pos = cellToPixel(path[stateRef.current.segIdx], originRef.current, cs);
+      stateRef.current.trail = [];
     }
-    const ctx = canvas.getContext("2d")!;
-    drawBoard(ctx, size, path, originRef.current, stateRef.current, goalCell, cs);
-  }, [size, path, initialVel, goalCell, canvasRef]);
+    pintar();
+  }, [size, path, initialVel, goalCell, canvasRef, pintar]);
+
+  // El canvas no vira con la cascada: sus colores se pintaron con los tokens de un frame
+  // concreto. Fuera de "playing" no hay bucle que lo rehaga, así que el toggle de tema lo
+  // dejaba con el papel del tema anterior — repintar aquí es lo que lo mete en la cascada.
+  useEffect(() => { pintar(); }, [tema, pintar]);
 
   useEffect(() => {
     if (gameState === "playing") {
@@ -172,11 +218,7 @@ function useBoard(
     winSpeedRef.current = null;
     runMinSpeedRef.current = "fast";
     setGameState("idle");
-    const canvas = canvasRef.current;
-    if (canvas) {
-      const ctx = canvas.getContext("2d")!;
-      drawBoard(ctx, canvas.width, path, originRef.current, stateRef.current, goalCell, cellRef.current);
-    }
+    pintar();
   }
 
   function cheat() {
@@ -187,17 +229,19 @@ function useBoard(
     winSpeedRef.current = runMinSpeedRef.current;
     s.pos = cellToPixel(goalCell, originRef.current, cellRef.current);
     setGameState("win");
-    const canvas = canvasRef.current;
-    if (canvas) {
-      const ctx = canvas.getContext("2d")!;
-      drawBoard(ctx, canvas.width, path, originRef.current, s, goalCell, cellRef.current);
-    }
+    pintar();
   }
 
   return { gameState, press, start, reset, cheat, winSpeedRef };
 }
 
 const MONO = "var(--t-mono)";
+
+const SPEED_COLOR: Record<SpeedLevel, string> = {
+  slow: "#60a5fa",
+  normal: "var(--t-accent)",
+  fast: "#f97316",
+};
 
 const STATE_LABEL: Record<GameState, string> = {
   idle: "idle",
@@ -223,8 +267,9 @@ export default function EspiralPage() {
   }
 
   const size = useCanvasSize();
-  const left = useBoard(canvasL, PATH_CELLS, -1, LEFT_INITIAL_VEL, size, speedRef);
-  const right = useBoard(canvasR, PATH_RIGHT, -1, RIGHT_INITIAL_VEL, size, speedRef);
+  const tema = useTema();
+  const left = useBoard(canvasL, PATH_CELLS, -1, LEFT_INITIAL_VEL, size, speedRef, tema);
+  const right = useBoard(canvasR, PATH_RIGHT, -1, RIGHT_INITIAL_VEL, size, speedRef, tema);
 
   const bothWin = left.gameState === "win" && right.gameState === "win";
   const [firstWin, setFirstWin] = useState<"left" | "right" | null>(null);
@@ -382,19 +427,11 @@ export default function EspiralPage() {
       hideChrome={fullscreen}
     >
       <style>{`
-        .esp-btn {
-          background: none; border: none; cursor: pointer;
-          font-family: var(--t-mono); font-size: 0.75rem;
-          color: var(--t-ink3); padding: 0;
-          transition: color 0.15s;
-        }
-        @media (hover: hover) { .esp-btn:hover { color: var(--t-accent); } }
-
         .esp-input {
-          padding: 0.35rem 0.65rem;
+          padding: 9px 12px;
           border: 1px solid var(--t-rule);
-          border-radius: 4px;
-          font-size: 0.85rem;
+          border-radius: 5px;
+          font-size: 13px;
           outline: none;
           color: var(--t-ink);
           background: var(--t-paper);
@@ -403,103 +440,148 @@ export default function EspiralPage() {
         .esp-input:focus { border-color: var(--t-accent); }
 
         .esp-submit {
-          padding: 0.35rem 0.85rem;
+          padding: 9px 16px;
           background: var(--t-accent);
-          color: #fff;
-          border: none;
-          border-radius: 4px;
-          font-size: 0.85rem;
+          color: var(--t-paper);
+          border: 1px solid var(--t-accent2);
+          border-radius: 5px;
+          font-size: 13px;
+          font-weight: 500;
           font-family: var(--t-mono);
           cursor: pointer;
-          transition: opacity 0.15s;
+          transition: opacity 0.12s ease, background 0.12s ease;
         }
         .esp-submit:disabled { opacity: 0.4; cursor: default; }
+
+        /* Fila de estado */
+        /* Envuelve en estrecho: con los iconos empujados a la derecha, sin wrap la fila
+           los saca del viewport en móvil en vez de bajarlos de línea. */
+        .esp-status { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 18px;
+          font-size: 13px; padding-bottom: 14px; border-bottom: 1px solid var(--t-rule2); }
+        .esp-status-fin { display: flex; align-items: center; gap: 14px; margin-left: auto; }
+        @media (min-width: 640px) { .esp-status { gap: 26px; } }
+        .esp-chip {
+          padding: 2px 8px; border-radius: 4px; font-weight: 500;
+          font-family: inherit; font-size: inherit; cursor: pointer;
+          color: var(--c); background: color-mix(in oklab, var(--c) 10%, var(--t-paper));
+          border: 1px solid color-mix(in oklab, var(--c) 26%, var(--t-paper));
+          transition: color 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+        }
+        .esp-icon { color: var(--t-ink3); display: flex; align-items: center;
+          background: none; border: none; padding: 0; cursor: pointer; transition: color 0.12s ease; }
+        @media (hover: hover) { .esp-icon:hover { color: var(--t-ink2); } }
+        .esp-icon:active { color: var(--t-ink2); }
+
+        /* Los dos tableros como una sola pieza: el panel los envuelve y la junta central
+           marca el eje de simetría. En vertical el eje gira con ellos. */
+        .esp-panel {
+          display: flex; align-items: stretch; justify-content: center;
+          background: var(--t-paper2); border: 1px solid var(--t-rule2);
+          border-radius: 8px; flex-direction: column; padding: 22px;
+        }
+        .esp-junta { background: var(--t-rule); height: 1px; margin: 26px 0; }
+        .esp-mitad { display: flex; flex: 1; justify-content: center; }
+        /* Las etiquetas van fuera del panel: dentro engordaban su marco por arriba y el
+           beige dejaba de tener el mismo ancho por los cuatro lados. */
+        .esp-labels { display: none; justify-content: center; }
+        @media (orientation: landscape) {
+          .esp-panel { flex-direction: row; }
+          .esp-junta { width: 1px; height: auto; margin: 0 26px; }
+          .esp-labels { display: flex; }
+        }
+
+        /* Panel de victoria */
+        .esp-win {
+          width: 520px; max-width: 100%;
+          display: flex; flex-direction: column; gap: 18px;
+          padding: 22px 24px; background: var(--t-accent-bg);
+          border: 1px solid var(--t-accent-soft); border-radius: 8px;
+        }
+        .esp-win-link {
+          background: none; border: none; padding: 0; cursor: pointer;
+          font-family: var(--t-mono); font-size: 12.5px; color: var(--t-accent2);
+          transition: color 0.12s ease;
+        }
+        @media (hover: hover) { .esp-win-link:hover { color: var(--t-accent); text-decoration: underline; } }
+        .esp-win-link:active { color: var(--t-accent); text-decoration: underline; }
+
+        .esp-overlay { animation: esp-fade 0.12s ease; }
+        @keyframes esp-fade { from { opacity: 0 } to { opacity: 1 } }
       `}</style>
 
       {/* game area */}
       <div style={{ padding: fullscreen ? "16px" : "28px", display: "flex", flexDirection: "column", alignItems: "center", gap: "1.5rem", minHeight: fullscreen ? "100%" : undefined, justifyContent: fullscreen ? "center" : undefined }}>
 
         {/* status row + hint */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "1rem", fontFamily: MONO }}>
-          <span style={{ fontSize: "0.75rem", color: "var(--t-ink3)", whiteSpace: "nowrap" }}>
-            ↳ status:{" "}
-            <span style={{ color: left.gameState === "win" ? "var(--t-accent)" : left.gameState === "dead" ? "#e55" : "var(--t-ink2)" }}>
-              {STATE_LABEL[left.gameState]}
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", width: "100%", maxWidth: 960 }}>
+        <div className="esp-status" style={{ fontFamily: MONO }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: "8px", whiteSpace: "nowrap" }}>
+            <span style={{ color: "var(--t-ink4)" }}>↳</span>
+            <span style={{ color: "var(--t-ink3)" }}>status:</span>
+            <span style={{ fontWeight: 500 }}>
+              <span style={{ color: left.gameState === "win" ? "var(--t-accent)" : left.gameState === "dead" ? "#e55" : "var(--t-ink2)" }}>
+                {STATE_LABEL[left.gameState]}
+              </span>
+              <span style={{ color: "var(--t-ink4)" }}>{" / "}</span>
+              <span style={{ color: right.gameState === "win" ? "var(--t-accent)" : right.gameState === "dead" ? "#e55" : "var(--t-ink2)" }}>
+                {STATE_LABEL[right.gameState]}
+              </span>
             </span>
-            {" / "}
-            <span style={{ color: right.gameState === "win" ? "var(--t-accent)" : right.gameState === "dead" ? "#e55" : "var(--t-ink2)" }}>
-              {STATE_LABEL[right.gameState]}
-            </span>
-            <span style={{ marginLeft: "1.5rem" }}>{"speed: "}</span>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <span style={{ color: "var(--t-ink3)" }}>speed:</span>
             <button
-              className="hover-fade"
+              className="esp-chip"
               onClick={cycleSpeed}
-              style={{
-                background: "none", border: "none", padding: 0, cursor: "pointer",
-                fontFamily: "inherit", fontSize: "inherit", transition: "opacity 0.15s",
-                color: speed === "slow" ? "#60a5fa" : speed === "fast" ? "#f97316" : "var(--t-accent)",
-              }}
               title="Cambiar velocidad"
+              style={{ "--c": SPEED_COLOR[speed] } as React.CSSProperties}
             >{speed}</button>
-          </span>
+          </div>
+
           {(elapsed > 0 || left.gameState !== "idle" || right.gameState !== "idle") && !bothWin && (
-            <span style={{ fontSize: "0.75rem", color: "var(--t-ink3)", fontVariantNumeric: "tabular-nums" }}>{elapsed}s</span>
+            <span style={{ color: "var(--t-ink2)", fontVariantNumeric: "tabular-nums" }}>{elapsed}s</span>
           )}
-          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "1rem" }}>
-            <a
-              className="hover-accent"
-              href="/juegos/espiral/ranking"
-              title="Ranking"
-              aria-label="Ranking"
-              style={{ display: "flex", alignItems: "center" }}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
-                <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
-              </svg>
+
+          <div className="esp-status-fin">
+            <a className="esp-icon" href="/juegos/espiral/ranking" title="Ranking" aria-label="Ranking">
+              <IconoRanking />
             </a>
             <button
-              className="esp-btn"
+              className="esp-icon"
               onClick={() => setFullscreen(f => !f)}
               title={fullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
               aria-label={fullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
-              style={{ display: "flex", alignItems: "center" }}
             >
-              {fullscreen ? (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/>
-                  <line x1="10" y1="14" x2="3" y2="21"/><line x1="21" y1="3" x2="14" y2="10"/>
-                </svg>
-              ) : (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
-                  <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
-                </svg>
-              )}
+              <IconoPantallaCompleta salir={fullscreen} />
             </button>
           </div>
         </div>
+
         {elapsed >= 100 && !bothWin && (
-          <span style={{ fontSize: "0.72rem", color: "var(--t-ink4)", fontFamily: MONO, textAlign: "center" }}>
-            ¿Quieres empezar de cero?{" "}
-            <button className="esp-btn" onClick={resetTimer} style={{ fontSize: "0.72rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", fontSize: "12px", color: "var(--t-ink3)", fontFamily: MONO }}>
+            <span>¿Quieres empezar de cero?</span>
+            <button
+              onClick={resetTimer}
+              className="esp-chip"
+              style={{ "--c": "var(--t-accent)", fontSize: "12px" } as React.CSSProperties}
+            >
               Reiniciar cronómetro
             </button>
-          </span>
+          </div>
         )}
         </div>
 
         {/* win panel */}
         {bothWin && (
-          <div style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem" }}>
-            <p style={{ color: "var(--t-accent)", fontSize: "1rem", fontWeight: 600, fontFamily: MONO }}>
+          <div className="esp-win" style={{ fontFamily: MONO }}>
+            <p style={{ color: "var(--t-accent2)", fontSize: "16px", fontWeight: 500 }}>
               ✓ completed in {finalTime?.toFixed(1)}s
             </p>
 
             {!submitted ? (
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.5rem" }}>
-                <form onSubmit={submitScore} style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+              <>
+                <form onSubmit={submitScore} style={{ display: "flex", gap: "10px" }}>
                   <input
                     type="text"
                     value={alias}
@@ -510,46 +592,50 @@ export default function EspiralPage() {
                     data-1p-ignore
                     data-lpignore="true"
                     className="esp-input"
+                    style={{ flex: 1, minWidth: 0 }}
                   />
-                  <button
-                    type="submit"
-                    disabled={submitting || !alias.trim()}
-                    className="esp-submit"
-                  >
+                  <button type="submit" disabled={submitting || !alias.trim()} className="esp-submit">
                     {submitting ? "..." : "$ guardar"}
                   </button>
                 </form>
                 {submitError && (
-                  <span style={{ color: "#e55", fontSize: "0.72rem", fontFamily: MONO }}>
+                  <span style={{ color: "#cc3333", fontSize: "12px" }}>
                     No se pudo guardar. Inténtalo de nuevo.
                   </span>
                 )}
-                <button onClick={replay} className="esp-btn" style={{ fontSize: "0.72rem", marginTop: "0.5rem" }}>
-                  jugar de nuevo
-                </button>
-              </div>
+                <div style={{ borderTop: "1px solid var(--t-accent-soft)", paddingTop: "14px" }}>
+                  <button onClick={replay} className="esp-win-link">jugar de nuevo</button>
+                </div>
+              </>
             ) : (
-              <div style={{ display: "flex", gap: "2.5rem", alignItems: "center" }}>
-                <button onClick={() => router.push("/juegos/espiral/ranking")} className="esp-btn">
-                  ranking
-                </button>
-                <button onClick={replay} className="esp-btn">
-                  jugar de nuevo
-                </button>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", borderTop: "1px solid var(--t-accent-soft)", paddingTop: "14px" }}>
+                <button onClick={replay} className="esp-win-link">jugar de nuevo</button>
+                <span style={{ color: "var(--t-ink4)", fontSize: "12.5px" }}>·</span>
+                <button onClick={() => router.push("/juegos/espiral/ranking")} className="esp-win-link">ranking</button>
               </div>
             )}
           </div>
         )}
 
         {/* boards */}
-        <div className="flex flex-col gap-6 items-center landscape:flex-row landscape:justify-center landscape:items-start">
-          <Board canvasRef={canvasL} gameState={left.gameState} label="←" bothWin={bothWin} isFirst={firstWin === "left"} onPress={() => { if (bothWin) { replay(); } else if (left.gameState !== "win") left.press(); }} monoFont={MONO} />
-          <Board canvasRef={canvasR} gameState={right.gameState} label="→" bothWin={bothWin} isFirst={firstWin === "right"} onPress={() => { if (bothWin) { replay(); } else if (right.gameState !== "win") right.press(); }} monoFont={MONO} />
+        <div className="esp-labels" style={{ gap: AIRE_JUNTA, fontFamily: MONO }}>
+          <span style={{ width: size, textAlign: "center", color: "var(--t-ink3)", fontSize: "12px", letterSpacing: "0.04em" }}>←</span>
+          <span style={{ width: size, textAlign: "center", color: "var(--t-ink3)", fontSize: "12px", letterSpacing: "0.04em" }}>→</span>
+        </div>
+
+        <div className="esp-panel">
+          <div className="esp-mitad">
+            <Board canvasRef={canvasL} gameState={left.gameState} label="←" bothWin={bothWin} isFirst={firstWin === "left"} onPress={() => { if (bothWin) { replay(); } else if (left.gameState !== "win") left.press(); }} monoFont={MONO} />
+          </div>
+          <div className="esp-junta" />
+          <div className="esp-mitad">
+            <Board canvasRef={canvasR} gameState={right.gameState} label="→" bothWin={bothWin} isFirst={firstWin === "right"} onPress={() => { if (bothWin) { replay(); } else if (right.gameState !== "win") right.press(); }} monoFont={MONO} />
+          </div>
         </div>
 
         {/* footer */}
         {!fullscreen && (
-          <WhyFooter question="¿Por qué una espiral?" date="30 de abril de 2026" style={{ marginTop: "auto", width: "100%", paddingTop: "1rem" }}>
+          <WhyFooter question="¿Por qué una espiral?" date="30 de abril de 2026" style={{ marginTop: "auto", width: "100%", maxWidth: 720, paddingTop: "18px", borderTop: "1px solid var(--t-rule2)" }}>
             <p>Este fue el primer experimento de la web. La idea era partir de una estructura mínima y fácil de entender, pero difícil de dominar.</p>
             <p>Me gusta distinguir tres conceptos que se mezclan a menudo.</p>
             <p>Simple se refiere a la cantidad de elementos y reglas: dos espirales, dos pelotas, dos controles. Sencillo describe lo fácil que es entender el objetivo: se comprende de inmediato. Difícil hace referencia a lo que cuesta dominarlo: coordinar ambas acciones a la vez exige atención y precisión.</p>
@@ -573,8 +659,7 @@ function Board({
   monoFont: string;
 }) {
   return (
-    <div className="flex flex-col items-center gap-2">
-      <p style={{ color: "var(--t-ink4)", fontSize: "0.75rem", fontFamily: monoFont }} className="landscape:block hidden">{label}</p>
+    <div className="flex flex-col items-center">
       <div className="relative" onClick={onPress} style={{ cursor: "pointer" }}>
         <canvas
           ref={canvasRef}
@@ -586,23 +671,25 @@ function Board({
         />
         {gameState === "idle" && (
           <Overlay monoFont={monoFont}>
-            <p style={{ color: "var(--t-ink3)", fontSize: "0.8rem" }}>
+            <p style={{ color: "var(--t-ink2)", fontSize: "16px" }}>
               <span style={{ color: "var(--t-accent2)" }}>$</span> toca {label}
             </p>
           </Overlay>
         )}
         {gameState === "dead" && (
           <Overlay monoFont={monoFont}>
-            <p style={{ color: "#cc3333", fontSize: "0.9rem", fontWeight: 600 }}>✗ fuera</p>
-            <p style={{ color: "var(--t-ink3)", fontSize: "0.7rem", marginTop: "0.2rem" }}>toca {label} para reintentar</p>
+            <p style={{ color: "#cc3333", fontSize: "16px", fontWeight: 500 }}>✗ fuera</p>
+            <p style={{ color: "var(--t-ink3)", fontSize: "12px" }}>toca {label} para reintentar</p>
           </Overlay>
         )}
         {gameState === "win" && (
           <Overlay monoFont={monoFont}>
-            <p style={{ color: "var(--t-accent)", fontSize: "1rem", fontWeight: 600 }}>
-              {bothWin ? "✓ listo" : isFirst ? "ya falta poco..." : "✓ listo"}
-            </p>
-            {bothWin && <p style={{ color: "var(--t-ink3)", fontSize: "0.7rem", marginTop: "0.2rem" }}>toca para repetir</p>}
+            {bothWin || !isFirst ? (
+              <p style={{ color: "var(--t-accent2)", fontSize: "16px", fontWeight: 500 }}>✓ listo</p>
+            ) : (
+              <p style={{ color: "var(--t-ink2)", fontSize: "14px" }}>ya falta poco...</p>
+            )}
+            {bothWin && <p style={{ color: "var(--t-ink3)", fontSize: "12px" }}>toca para repetir</p>}
           </Overlay>
         )}
       </div>
@@ -613,9 +700,10 @@ function Board({
 function Overlay({ children, monoFont }: { children: React.ReactNode; monoFont: string }) {
   return (
     <div
-      className="absolute inset-0 flex flex-col items-center justify-center"
+      className="esp-overlay absolute inset-0 flex flex-col items-center justify-center"
       style={{
         borderRadius: "6px",
+        gap: "10px",
         background: "color-mix(in srgb, var(--t-paper) 88%, transparent)",
         backdropFilter: "blur(4px)",
         fontFamily: monoFont,
