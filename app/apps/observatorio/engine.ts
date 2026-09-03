@@ -562,7 +562,11 @@ export function cielo(satelites: Satelite[], ahora: Date, dias = DIAS): Cielo {
   // y lo que ya ha ocurrido sigue en su sitio —te dice qué era esa luz que viste a las diez—.
   // De día, cuando el marco aún no ha abierto, basta con mirar desde un poco antes de ahora.
   const [abre, cierra] = bordesDelMarco(baseDelMarco(ahora));
-  const desde = new Date(Math.min(ahora.getTime() - MARGEN_MINUTOS * 60000, abre));
+  // Y cuadra con la rejilla del muestreo, porque la carta dibuja los puntos que salen de ella:
+  // arrancando en "ahora" la rejilla se corre con el reloj y el arco —con su frontera de
+  // sombra, que es donde se nota— baila unos grados en cada recarga. `abre` ya cae en rejilla.
+  const arranque = Math.min(ahora.getTime() - MARGEN_MINUTOS * 60000, abre);
+  const desde = new Date(Math.floor(arranque / (PASO_SEGUNDOS * 1000)) * PASO_SEGUNDOS * 1000);
   const hasta = new Date(ahora.getTime() + dias * 24 * 3600 * 1000);
 
   const pasosSemana = satelites
