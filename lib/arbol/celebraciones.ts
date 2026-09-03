@@ -193,7 +193,8 @@ function sinLaRamaAparte(g: Grafo, pov: string, gente: Map<string, Entrada>): Ma
   return gente;
 }
 
-const vive = (p: { birth?: Fecha; death?: Fecha }, hoy: Fecha): boolean => !p.death && !seLeSuponeFallecido(p, hoy);
+const vive = (p: { birth?: Fecha; death?: Fecha; vive?: true }, hoy: Fecha): boolean =>
+  !p.death && !seLeSuponeFallecido(p, hoy);
 
 /**
  * Lo que se lee cuando lo que se celebra es del propio punto de vista: la única línea del

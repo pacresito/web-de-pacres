@@ -18,12 +18,18 @@ export interface Persona {
   /**
    * Coloca al hombre encima de cada pareja y dice de quién viene cada apellido. No sale
    * de los Word: lo escribe `scripts/correcciones.py` uno a uno, y solo falta en los
-   * cuatro «Sin nombre».
+   * cuatro que no lo traen.
    */
   sexo?: "h" | "m";
   /** Con la precisión que consta: `"1986"` o `"1986-03-01"`. Solo los Word dan defunción. */
   birth?: string;
   death?: string;
+  /**
+   * Consta que sigue aquí, y por eso la cautela de los 99 años no le aplica —ver
+   * `seLeSuponeFallecido`—. Nunca con `death`, y solo tiene sentido con `birth`: sin fecha
+   * de la que contar, la regla no se dispara y el árbol ya lo da por vivo.
+   */
+  vive?: true;
   /** Qué dato marcaba el docx como dudoso — nunca "esta persona es dudosa". */
   incierto?: "nombre" | "fechas";
   nota?: string;

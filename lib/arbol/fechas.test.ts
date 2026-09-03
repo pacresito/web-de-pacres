@@ -82,4 +82,14 @@ assert.strictEqual(conDuda("† 2016"), "† ¿2016?", "ni de que muriera");
 assert.strictEqual(conDuda("1890 – 1954"), "¿1890 – 1954?", "donde todo es cifra, todo se duda");
 assert.strictEqual(conDuda("46 años"), "¿46 años?");
 
+// `vive` apaga la cautela de los 99 años: la familia tiene centenarios, y suponerlos muertos
+// les quitaba la edad de la ficha, el cumpleaños y el aviso del móvil.
+const centenaria = { birth: "1918-07-16" };
+assert.strictEqual(seLeSuponeFallecido(centenaria, "2026-09-03"), true);
+assert.strictEqual(seLeSuponeFallecido({ ...centenaria, vive: true }, "2026-09-03"), false);
+assert.strictEqual(edadDe({ ...centenaria, vive: true }, "2026-09-03"), 108, "y le devuelve su edad");
+// Con defunción escrita manda la defunción, que `vive` no resucita a nadie (`validar.py` no
+// deja las dos juntas, pero la regla no depende de que nadie las valide).
+assert.strictEqual(edadDe({ ...centenaria, death: "2020-01-01", vive: true }, "2026-09-03"), 101);
+
 console.log("fechas.test.ts OK");

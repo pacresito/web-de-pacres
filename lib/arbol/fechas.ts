@@ -71,9 +71,14 @@ export function edadEntre(desde: Fecha, hasta: Fecha): number {
  */
 export const EDAD_IMPROBABLE = 100;
 
-/** Se le supone fallecido aunque el documento no lo diga: hoy pasaría de lo que se cumple. */
-export const seLeSuponeFallecido = (p: { birth?: Fecha; death?: Fecha }, hoy: Fecha): boolean =>
-  !p.death && p.birth !== undefined && edadEntre(p.birth, hoy) >= EDAD_IMPROBABLE;
+/**
+ * Se le supone fallecido aunque el documento no lo diga: hoy pasaría de lo que se cumple.
+ * **`vive` lo desactiva**, porque la regla es una cautela sobre lo que no se sabe y de esa
+ * persona sí se sabe: la familia tiene centenarios, y suponerlos muertos les quitaba el
+ * cumpleaños, la edad de la ficha y el aviso del móvil.
+ */
+export const seLeSuponeFallecido = (p: { birth?: Fecha; death?: Fecha; vive?: true }, hoy: Fecha): boolean =>
+  !p.death && !p.vive && p.birth !== undefined && edadEntre(p.birth, hoy) >= EDAD_IMPROBABLE;
 
 /**
  * Y a quien no le consta el año no se le felicita nada. La regla de arriba necesita una fecha
@@ -93,7 +98,7 @@ export const seSabeCuandoNacio = (p: { birth?: Fecha }): boolean => p.birth !== 
  * cada vez que uno de los dos cruzara la medianoche antes que el otro. A quien se le supone
  * fallecido no se le da ninguna: la que saldría se cuenta hasta hoy, y hoy ya no está.
  */
-export function edadDe(p: { birth?: Fecha; death?: Fecha }, hoy: Fecha): number | null {
+export function edadDe(p: { birth?: Fecha; death?: Fecha; vive?: true }, hoy: Fecha): number | null {
   if (!p.birth || seLeSuponeFallecido(p, hoy)) return null;
   return edadEntre(p.birth, p.death ?? hoy);
 }
