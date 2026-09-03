@@ -3,7 +3,7 @@
 import assert from "assert";
 import { readFileSync } from "fs";
 import { resolve } from "path";
-import { construirGrafo, parejaDirecta, visibles } from "./grafo";
+import { construirGrafo, descendientes, parejaDirecta, visibles } from "./grafo";
 import { ordenarPareja } from "./personas";
 import { ALTO_CONTADOR, ALTO_NODO, ANCHO_COLUMNA, ANCHO_NODO, calcularLayout, type Layout } from "./layout";
 import type { ArbolData } from "./tree";
@@ -11,8 +11,9 @@ import type { ArbolData } from "./tree";
 const data: ArbolData = JSON.parse(readFileSync(resolve("seed/arbol.json"), "utf-8"));
 const g = construirGrafo(data);
 const TODAS = new Set(g.unionPorId.keys());
-const layout = (pov: string, expandidas = new Set<string>(), ocultar = false, parejas = new Set<string>()) =>
-  calcularLayout(g, { puntoDeVista: pov, expandidas, parejas, ocultarNoConectados: ocultar });
+const VACIO = new Set<string>();
+const layout = (pov: string, expandidas = VACIO, ocultar = false, parejas = VACIO, plegados = VACIO) =>
+  calcularLayout(g, { puntoDeVista: pov, expandidas, parejas, plegados, ocultarNoConectados: ocultar });
 
 /** Nadie repetido, nadie fuera de la columna de su generación, nadie encima de otro. */
 function revisar(l: Layout, pov: string, etiqueta: string): void {
@@ -105,7 +106,30 @@ for (const pid of ["p25", "p26", "p126", "p131"]) {
   const salto = reparto(layout(pid));
   // El tope sube con la familia: el reparto más largo del arranque es el que va de Carmen a
   // sus padres, y se estira cada vez que engorda la columna en la que se empaqueta su bloque.
-  assert.ok(salto < 600, `${pid}: el reparto más largo del arranque mide ${salto.toFixed(0)}px`);
+  assert.ok(salto < 900, `${pid}: el reparto más largo del arranque mide ${salto.toFixed(0)}px`);
+}
+
+// Lo plegado se queda fuera con su descendencia, y su contador lo devuelve
+// Es la única excepción a que centrar en alguien enseñe a todos los suyos, y la deshace un clic.
+{
+  const entero = layout("p271", VACIO, true);
+  const maestre = new Set([...descendientes(g, "p289")]);
+  const podado = layout("p271", VACIO, true, VACIO, new Set(["p289"]));
+  const fuera = podado.nodos.filter((n) => maestre.has(n.id));
+  assert.deepStrictEqual(fuera, [], "la descendencia de un plegado no se pinta");
+  assert.ok(entero.nodos.length - podado.nodos.length > 50, "y era la mitad del árbol de José Velasco");
+  assert.ok(
+    podado.nodos.some((n) => n.id === "p289"),
+    "el plegado sí sale: lo que se pliega es lo suyo, no él",
+  );
+  const suya = [...g.unionPorId.values()].find((u) => u.partners.includes("p289"))!;
+  assert.ok(
+    podado.contadores.some((c) => c.unionId === suya.id && c.sentido === "hijos"),
+    "y sus hijos quedan tras el contador de su unión",
+  );
+  // Abrir ese contador es lo que lo deshace: `expandidas` se aplica después del pliegue.
+  const abierto = layout("p271", new Set([suya.id]), true, VACIO, new Set(["p289"]));
+  assert.ok(abierto.nodos.length > podado.nodos.length, "pulsar el contador trae a los suyos");
 }
 
 // Un desnivel de tres píxeles no es un quiebro, es un defecto

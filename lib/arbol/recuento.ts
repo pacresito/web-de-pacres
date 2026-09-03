@@ -37,12 +37,14 @@ export interface Recuento {
 
 export function calcularRecuento(
   g: Grafo,
-  opciones: { puntoDeVista: string; ocultarNoConectados: boolean },
+  opciones: { puntoDeVista: string; ocultarNoConectados: boolean; plegados?: Set<string> },
   puestos: Set<string>,
 ): Recuento {
-  const { puntoDeVista, ocultarNoConectados } = opciones;
+  const { puntoDeVista, ocultarNoConectados, plegados } = opciones;
   const permitidos = ocultarNoConectados ? visibles(g, puntoDeVista) : null;
-  const camino = caminos(g, nucleoDe(g, puntoDeVista));
+  // El suelo es el mismo que pinta el lienzo, plegados incluidos: contado sin ellos, la
+  // fracción diría que a un Maestre no hay que abrirle nada y pulsarla no lo traería.
+  const camino = caminos(g, nucleoDe(g, puntoDeVista, null, plegados));
 
   interface Celda {
     nivel: number;
@@ -87,8 +89,13 @@ export function calcularRecuento(
 }
 
 /** Qué hay que abrir para traer a esta gente al lienzo, desde lo que ya se ve sin abrir nada. */
-export function unionesHasta(g: Grafo, puntoDeVista: string, gente: string[]): string[] {
-  const camino = caminos(g, nucleoDe(g, puntoDeVista));
+export function unionesHasta(
+  g: Grafo,
+  puntoDeVista: string,
+  gente: string[],
+  plegados?: Set<string>,
+): string[] {
+  const camino = caminos(g, nucleoDe(g, puntoDeVista, null, plegados));
   const uniones = new Set<string>();
   for (const id of gente) for (const union of camino.get(id) ?? []) uniones.add(union);
   return [...uniones];

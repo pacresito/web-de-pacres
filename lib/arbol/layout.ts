@@ -40,6 +40,14 @@ export interface OpcionesLayout {
   expandidas: Set<string>;
   /** Uniones de las que solo se ha pedido la pareja: sus hijos siguen tras su contador. */
   parejas: Set<string>;
+  /**
+   * Gente cuya descendencia no se despliega con la del punto de vista: llega tras el
+   * contador de su unión, como cualquier rama sin abrir. Es la única excepción a que
+   * centrar en alguien enseñe a todos los suyos, y la pone el enlace de entrada —una rama
+   * que se desgaja y tiene enlace propio no tiene por qué abrirse con la de arriba—.
+   * Abrir ese contador la deshace, que `expandidas` se aplica después.
+   */
+  plegados: Set<string>;
   ocultarNoConectados: boolean;
 }
 
@@ -162,16 +170,16 @@ interface Entrante {
 }
 
 export function calcularLayout(g: Grafo, opciones: OpcionesLayout): Layout {
-  const { puntoDeVista, expandidas, parejas, ocultarNoConectados } = opciones;
+  const { puntoDeVista, expandidas, parejas, plegados, ocultarNoConectados } = opciones;
   const genPov = g.generacion.get(puntoDeVista);
   if (genPov === undefined) throw new Error(`Punto de vista desconocido: ${puntoDeVista}.`);
   const nivelDe = (pid: string) => genPov - g.generacion.get(pid)!;
 
   const permitidos = ocultarNoConectados ? visibles(g, puntoDeVista) : null;
-  const mostrados = seleccionar(g, puntoDeVista, expandidas, parejas, permitidos);
+  const mostrados = seleccionar(g, puntoDeVista, expandidas, parejas, plegados, permitidos);
   // Plegar una unión que ya estaría aquí no haría nada.
   const pedido = expandidas.size > 0 || parejas.size > 0;
-  const nucleo = pedido ? nucleoDe(g, puntoDeVista, permitidos) : mostrados;
+  const nucleo = pedido ? nucleoDe(g, puntoDeVista, permitidos, plegados) : mostrados;
 
   // Unidades: una por unión mostrada, más las personas sueltas y los contadores
   const unidades = new Map<string, Unidad>();
@@ -479,8 +487,13 @@ function repartirCarriles(vinculos: Vinculo[]): void {
  * Lo que se ve sin abrir nada: el suelo al que devuelve plegar, y el punto de partida
  * desde el que se cuenta qué uniones hay que abrir para llegar hasta alguien.
  */
-export function nucleoDe(g: Grafo, pov: string, permitidos: Set<string> | null = null): Set<string> {
-  return seleccionar(g, pov, new Set(), new Set(), permitidos);
+export function nucleoDe(
+  g: Grafo,
+  pov: string,
+  permitidos: Set<string> | null = null,
+  plegados: Set<string> = new Set(),
+): Set<string> {
+  return seleccionar(g, pov, new Set(), new Set(), plegados, permitidos);
 }
 
 /**
@@ -495,9 +508,14 @@ function seleccionar(
   pov: string,
   expandidas: Set<string>,
   parejas: Set<string>,
+  plegados: Set<string>,
   permitidos: Set<string> | null,
 ): Set<string> {
-  const dentro = new Set<string>([pov, ...ascendientes(g, pov), ...descendientes(g, pov)]);
+  // Lo plegado se quita antes de traer a las parejas: quitarlo después dejaría a los cónyuges
+  // de los que se van flotando solos, colgados de una unión que ya no está.
+  const abajo = descendientes(g, pov);
+  for (const plegado of plegados) for (const suyo of descendientes(g, plegado)) abajo.delete(suyo);
+  const dentro = new Set<string>([pov, ...ascendientes(g, pov), ...abajo]);
   for (const d of [...dentro]) for (const c of parejaDirecta(g, d)) dentro.add(c);
   for (const pareja of parejaDirecta(g, pov)) for (const a of ascendientes(g, pareja)) dentro.add(a);
 

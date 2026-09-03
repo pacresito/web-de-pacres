@@ -21,15 +21,25 @@ export interface Rama {
   excluye?: string;
 }
 
+/**
+ * **El orden es el que se lee en la ficha de cada uno**, no el de los datos: el apellido que
+ * lleva cada casa primero y el de la mujer detrás, casa por casa, empezando por la de Pablo.
+ * Por eso los Bordallo van antes que los Cardona —Carmen se lee «rama de Bordallo y de
+ * Cardona»— y no al final, que es donde los dejaría el orden en que se escribieron.
+ */
 export const RAMAS: Rama[] = [
-  { nombre: "Castrillo", ancestro: "p81", excluye: "p84" }, // Ambrosio Castrillo González
   { nombre: "Crespo", ancestro: "p84" }, // Vicente Crespo
   { nombre: "Crespo-León", ancestro: "p211", excluye: "p84" }, // Miguel Crespo
+  { nombre: "Castrillo", ancestro: "p81", excluye: "p84" }, // Ambrosio Castrillo González
   { nombre: "Velasco", ancestro: "p271", excluye: "p289" }, // José Velasco Martínez
   { nombre: "Maestre", ancestro: "p289" }, // José Maestre
   // Los Pérez de Catalina, sin lo que salió de casarla con un Velasco: esa línea la cuenta
   // la familia como Velasco y solo como Velasco, igual que la de los Martín con los Cardona.
   { nombre: "Pérez", ancestro: "p466", excluye: "p395" },
+  { nombre: "Bordallo", ancestro: "p498" }, // Alberto Bordallo
+  // Los Oreja de María del Carmen, sin lo que salió de casarla con un Bordallo, igual que
+  // los Martín con los Cardona.
+  { nombre: "Oreja", ancestro: "p510", excluye: "p500" },
   { nombre: "Cardona", ancestro: "p1" }, // José Cardona Torres
   // Juan Martín Cruzán, sin lo que salió de casar a su hija con un Cardona: esa línea la
   // cuenta la familia como Cardona y solo como Cardona.

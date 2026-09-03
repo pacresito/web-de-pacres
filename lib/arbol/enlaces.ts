@@ -24,21 +24,74 @@ export interface Enlace {
    * que cambiara de dueño hacia alguien con año.
    */
   nace: string;
+  /**
+   * Uniones que llegan ya desplegadas, además de lo que trae cualquier Centro. Un Centro
+   * enseña su línea directa y esconde lo colateral tras contadores, y a veces la familia
+   * de al lado es justo lo que el enlace viene a enseñar.
+   */
+  abre?: Apertura[];
+  /**
+   * Y de quién **no** se despliega la descendencia, que llega tras su contador. Es para la
+   * rama que se desgaja y tiene enlace propio: sin esto, entrar por el patriarca de una
+   * abre de golpe las dos.
+   */
+  pliega?: Pliegue[];
+}
+
+/** Una unión que el enlace despliega, con quiénes son: el test comprueba que siguen siéndolo. */
+export interface Apertura {
+  union: string;
+  quienes: string;
+}
+
+/** Y una descendencia que llega plegada, con de quién es. */
+export interface Pliegue {
+  id: string;
+  nombre: string;
 }
 
 export const ENLACES: Enlace[] = [
-  { alias: "Velasco", id: "p395", nombre: "José", nace: "1921" },
   { alias: "Crespo", id: "p84", nombre: "Vicente", nace: "1900" },
+  { alias: "Castrillo", id: "p81", nombre: "Ambrosio", nace: "1883" },
+  // Centrado en el patriarca, con los Maestre plegados: son 68 personas que tienen su propio
+  // enlace, y sin plegarlas la entrada de los Velasco es la de las dos ramas a la vez.
+  { alias: "Velasco", id: "p271", nombre: "José", nace: "1888", pliega: [{ id: "p289", nombre: "José" }] },
   { alias: "Maestre", id: "p289", nombre: "José", nace: "1914" },
   { alias: "Perez", id: "p466", nombre: "Francisco", nace: "1883" },
-  { alias: "Cardona", id: "p21", nombre: "Ángeles", nace: "1955" },
+  // Centrado en José Alberto y no en su padre: es el único que es sangre de las dos casas, y
+  // desde cualquier otro los Oreja son familia política y el filtro los corta. Lo que abre son
+  // las cuatro uniones que un Centro deja en contadores: los hermanos de arriba y los suyos.
+  {
+    alias: "Bordallo",
+    id: "p22",
+    nombre: "José Alberto",
+    nace: "1953",
+    abre: [
+      { union: "u327", quienes: "Alberto Bordallo y Teresa Campos" },
+      { union: "u330", quienes: "José Oreja Elvira y Adoración Vicente Vallejo" },
+      { union: "u331", quienes: "Adoración Oreja Vicente y Jesús Lobato Lobo" },
+      { union: "u332", quienes: "Alberto Bordallo Campos y María del Carmen Oreja Vicente" },
+    ],
+  },
+  { alias: "Cardona", id: "p3", nombre: "José Gerardo", nace: "1912" },
   { alias: "Sala", id: "p442", nombre: "Pepe", nace: "1942" },
-  { alias: "Castrillo", id: "p81", nombre: "Ambrosio", nace: "1883" },
   { alias: "Pablo", id: "p25", nombre: "Pablo", nace: "1986" },
   { alias: "Carmen", id: "p24", nombre: "Carmen", nace: "1989" },
   { alias: "Jara", id: "p134", nombre: "Jara", nace: "2012" },
   { alias: "Nora", id: "p130", nombre: "Nora", nace: "2023" },
 ];
+
+/**
+ * Lo que el enlace enseña de más y de menos, **mientras el Centro sea el suyo**: mudarlo es
+ * mirar desde otro sitio, y ahí manda lo que se haya abierto a mano. Quien entra sin enlace
+ * —por lo que recuerde el dispositivo o por el de casa— entra igual por aquí: el retoque es
+ * de la persona por la que se entra, no de la URL que se tecleó.
+ */
+export const aberturasDe = (id: string | null): string[] =>
+  ENLACES.find((e) => e.id === id)?.abre?.map((a) => a.union) ?? [];
+
+export const pliegueDe = (id: string | null): string[] =>
+  ENLACES.find((e) => e.id === id)?.pliega?.map((p) => p.id) ?? [];
 
 /**
  * A quién centra un `?centro=`. Los alias no distinguen mayúsculas —se teclean de memoria— y lo

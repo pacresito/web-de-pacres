@@ -105,11 +105,11 @@ for (const [buscado, esperado] of [
 }
 
 // Y el apodo que lleva escrito una persona no se estira a los que se llaman como ella: «Pepe»
-// saca a los cinco Pepe y a ningún otro José, y «Marijose» solo a la Marijose. Es lo que una
+// saca a los seis Pepe y a ningún otro José, y «Marijose» solo a la Marijose. Es lo que una
 // tabla de grafías no sabe hacer, y por lo que dejó de haberla.
 assert.ok(!porNombre("Pepe").includes("p350"), "«Pepe» no es «María José»");
 assert.deepStrictEqual(porNombre("Marijose"), ["p286"], "«Marijose» es una, no las cuatro María José");
-assert.strictEqual(porNombre("Pepe").length, 5, "los cinco Pepe y ningún José más");
+assert.strictEqual(porNombre("Pepe").length, 6, "los seis Pepe y ningún José más");
 assert.strictEqual(porNombre("Lola").length, 3, "las tres Lola y ninguna Dolores más");
 assert.strictEqual(porNombre("Paco").length, 6, "los seis Paco y ningún Francisco más");
 assert.strictEqual(porNombre("Piluca").length, 1, "una Piluca, no las cuatro Pilar");

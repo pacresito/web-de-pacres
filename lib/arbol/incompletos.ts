@@ -22,13 +22,6 @@ import { SIN_NOMBRE } from "./identidad";
 import type { Apellidos } from "./personas";
 import type { Persona } from "./tree";
 
-/**
- * Lo que el documento puso donde iba un nombre cuando no lo tenía. **No son nombres**: son el
- * papel que esa persona hacía en la frase de otro —«el marido», «un hijo»—, y en el repaso hay
- * que poder pedirlos como se pide una fecha.
- */
-const NO_ES_NOMBRE = new Set([SIN_NOMBRE, "Marido", "Mujer", "Hijo", "Hija", "Señor", "Señora"]);
-
 /** Un tramo de la línea del repaso: lo que consta, o el hueco que se pide. */
 export interface Trozo {
   texto: string;
@@ -47,7 +40,7 @@ export interface Huecos {
 }
 
 export function huecosDe(p: Persona, apellidos: Apellidos, hoy: Fecha): Huecos | null {
-  const nombre = NO_ES_NOMBRE.has(p.nombre) ? "falta" : p.incierto === "nombre" ? "dudoso" : null;
+  const nombre = p.nombre === SIN_NOMBRE ? "falta" : p.incierto === "nombre" ? "dudoso" : null;
   const apellido = apellidos.todos.length === 0;
   const vida = escribirVida(p, hoy);
   if (!nombre && !apellido && !vida.some((t) => t.falta)) return null;

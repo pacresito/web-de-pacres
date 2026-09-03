@@ -91,6 +91,7 @@ const desplegado = calcularLayout(g, {
   puntoDeVista: "p25",
   expandidas: new Set(g.unionPorId.keys()),
   parejas: new Set(),
+  plegados: new Set(),
   ocultarNoConectados: false,
 });
 const altoPersonas = desplegado.limites.maxY - desplegado.limites.minY;

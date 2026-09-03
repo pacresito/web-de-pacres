@@ -6,7 +6,7 @@ import { verifySession } from "@/lib/arbol/session";
 /**
  * La puerta abierta de par en par, y solo en la máquina de casa. Sirve para poder mirar el
  * árbol en un navegador sin que nadie teclee la clave familiar: la clave se escribe donde se
- * usa, no donde se prueba. **Dos candados, porque esto abierto en producción son 428
+ * usa, no donde se prueba. **Dos candados, porque esto abierto en producción son 501
  * personas a la vista:** el build de Vercel es siempre `production` y no llega ni a mirar la
  * variable, y en local hay que pedirlo a mano en `.env.local`, que no se commitea. Lo que se
  * salta es la puerta, nunca la firma: `session.ts` no se entera de que esto existe.

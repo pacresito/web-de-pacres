@@ -21,7 +21,7 @@ import {
   type Vista,
 } from "@/lib/arbol/camara";
 import { caminoEntre, trazosDelCamino } from "@/lib/arbol/camino";
-import { centroRecordado, recordarCentro } from "@/lib/arbol/enlaces";
+import { aberturasDe, centroRecordado, pliegueDe, recordarCentro } from "@/lib/arbol/enlaces";
 import { conDuda, escribirVida, FECHAS_POR_DEFECTO, type ModoFechas } from "@/lib/arbol/fechas";
 import { fiestasDelArbol, proximasCelebraciones } from "@/lib/arbol/celebraciones";
 import { construirGrafo, pasosDesde, visibles } from "@/lib/arbol/grafo";
@@ -141,7 +141,12 @@ export default function Arbol({
   const [puntoDeVista, setPuntoDeVista] = useState(inicial);
   /** De dónde se vino: el aviso que sale al mudar el Centro es el que ofrece deshacerlo. */
   const [anterior, setAnterior] = useState<string | null>(null);
-  const [abiertas, setAbiertas] = useState<Set<string>>(() => new Set());
+  /**
+   * Lo que se ha abierto a mano, sembrado con lo que el enlace de entrada quiere enseñar de
+   * más. Va aquí y no en un cálculo aparte porque **hay que poder volver a cerrarlo**: si
+   * las uniones del enlace se sumaran en cada render, plegarlas no haría nada.
+   */
+  const [abiertas, setAbiertas] = useState<Set<string>>(() => new Set(aberturasDe(inicial)));
   // Aparte de las abiertas: de estas se ha pedido solo la pareja, no sus hijos.
   const [parejas, setParejas] = useState<Set<string>>(() => new Set());
   const [todoDesplegado, setTodoDesplegado] = useState(false);
@@ -162,7 +167,7 @@ export default function Arbol({
   const [repaso, setRepaso] = useState(false);
   const [busquedaAbierta, setBusquedaAbierta] = useState(false);
   const [consulta, setConsulta] = useState("");
-  /** Las cuatro sin nombre no se pueden teclear: se piden por su salida del callejón. */
+  /** Las trece sin nombre no se pueden teclear: se piden por su salida del callejón. */
   const [sinNombre, setSinNombre] = useState(false);
   /** El cajón del índice que se está leyendo: «tus primos» son quince personas, no un número. */
   const [cajon, setCajon] = useState<{ termino: string; ids: string[] } | null>(null);
@@ -216,9 +221,18 @@ export default function Arbol({
   const huecosDelNodo = (id: string) =>
     repaso ? huecosDe(personaPorId.get(id)!, libreta.linaje.get(id)!, hoy) : null;
 
+  /**
+   * Lo que el enlace de entrada deja plegado, **y solo mientras se mire desde su Centro**:
+   * mudarlo es mirar desde otro sitio, y allí no pinta nada lo que dijera el enlace. Lo
+   * deshace pulsar su contador, como cualquier otra rama sin abrir.
+   */
+  const plegados = useMemo(
+    () => new Set(puntoDeVista === inicial ? pliegueDe(inicial) : []),
+    [puntoDeVista, inicial],
+  );
   const layout = useMemo(
-    () => calcularLayout(grafo, { puntoDeVista, expandidas, parejas, ocultarNoConectados }),
-    [grafo, puntoDeVista, expandidas, parejas, ocultarNoConectados],
+    () => calcularLayout(grafo, { puntoDeVista, expandidas, parejas, plegados, ocultarNoConectados }),
+    [grafo, puntoDeVista, expandidas, parejas, plegados, ocultarNoConectados],
   );
   // El mapa de bloques no depende de lo desplegado: la escala media enseña la familia
   // entera, que es a lo que se aleja quien se aleja.
@@ -229,8 +243,8 @@ export default function Arbol({
   /** Quién está puesto en el lienzo ahora mismo: lo que no esté, hay que abrirlo para verlo. */
   const dibujado = useMemo(() => new Set(layout.nodos.map((n) => n.id)), [layout]);
   const cuentas = useMemo(
-    () => calcularRecuento(grafo, { puntoDeVista, ocultarNoConectados }, dibujado),
-    [grafo, puntoDeVista, ocultarNoConectados, dibujado],
+    () => calcularRecuento(grafo, { puntoDeVista, ocultarNoConectados, plegados }, dibujado),
+    [grafo, puntoDeVista, ocultarNoConectados, plegados, dibujado],
   );
   const celebraciones = useMemo(
     () => proximasCelebraciones(grafo, puntoDeVista, hoy),
@@ -357,6 +371,7 @@ export default function Arbol({
     // eslint-disable-next-line react-hooks/set-state-in-effect -- init en mount, como el tema: el servidor no puede saber lo que recuerda este navegador
     setInicial(recordado);
     setPuntoDeVista(recordado);
+    setAbiertas(new Set(aberturasDe(recordado)));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- se entra una vez; lo que cambie después no es una entrada
   }, []);
 
@@ -496,7 +511,7 @@ export default function Arbol({
   });
 
   /**
-   * Teclear manda sobre las cuatro sin nombre —son una lista aparte, no un resultado— y abre
+   * Teclear manda sobre las trece sin nombre —son una lista aparte, no un resultado— y abre
    * el panel: escribir es pedir la lista, y con el panel recogido no se vería.
    */
   function teclear(texto: string) {
@@ -506,7 +521,7 @@ export default function Arbol({
     setBusquedaAbierta(true);
   }
 
-  /** A las cuatro sin nombre no se llega tecleando, así que se piden y se enseñan aparte. */
+  /** A las trece sin nombre no se llega tecleando, así que se piden y se enseñan aparte. */
   function mostrarSinNombre() {
     setConsulta("");
     setSinNombre(true);
@@ -601,7 +616,7 @@ export default function Arbol({
    */
   function abrirBloque(bloque: Bloque) {
     const gente = [...bloque.hermanos, ...bloque.parejas];
-    abrirRamas(unionesHasta(grafo, puntoDeVista, gente));
+    abrirRamas(unionesHasta(grafo, puntoDeVista, gente, plegados));
     // El salto que nadie ha pedido sí lleva a una altura cómoda: se ha tocado una familia
     // para verla, no para elegir un tamaño.
     setParada("personas");
@@ -615,7 +630,7 @@ export default function Arbol({
     // ramas para llegar a alguien que sigue sin poder salir.
     const dentro = visibles(grafo, puntoDeVista);
     if (gente.some((p) => !dentro.has(p))) setOcultarNoConectados(false);
-    abrirRamas(unionesHasta(grafo, puntoDeVista, gente));
+    abrirRamas(unionesHasta(grafo, puntoDeVista, gente, plegados));
     setParada("personas");
     // Y suelta lo señalado: el lienzo solo sabe encender una cosa a la vez, y lo que se acaba
     // de pedir es mirar a esta gente. Con la fracción puesta, el que llega nace atenuado.
@@ -667,7 +682,8 @@ export default function Arbol({
     setHoja(null);
     setGirando(false);
     setAviso(false);
-    setAbiertas(new Set());
+    // Reiniciar es volver a como se entró, y como se entró es con lo que el enlace abría.
+    setAbiertas(new Set(aberturasDe(inicial)));
     setParejas(new Set());
     setTodoDesplegado(false);
     setOcultarNoConectados(true);
@@ -1098,13 +1114,13 @@ export default function Arbol({
               escondidos={escondidos}
               repaso={repaso}
               setRepaso={setRepaso}
-              // Los que están puestos y no los 381 del árbol: la cifra es lo que se va a
+              // Los que están puestos y no los 290 del árbol: la cifra es lo que se va a
               // encontrar al cerrar la hoja, y el total no cabe en ninguna pantalla.
               incompletos={layout.nodos.filter((n) => conHuecos.has(n.id)).length}
               todoDesplegado={todoDesplegado}
               onDesplegarTodo={() => {
                 setTodoDesplegado(!todoDesplegado);
-                setAbiertas(new Set());
+                setAbiertas(new Set(aberturasDe(inicial)));
                 setParejas(new Set());
               }}
               onReiniciar={() => reiniciar("entrada")}

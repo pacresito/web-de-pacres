@@ -1,8 +1,8 @@
 // El bloque de identidad: las dos líneas con las que una persona aparece en cualquier
 // superficie del árbol. Puro: `npx tsx lib/arbol/identidad.test.ts`.
 //
-// Nadie sale nunca como un nombre suelto. A 55 personas el documento no les da apellido y
-// a 104 ninguna fecha, así que la segunda línea —de quién son— no es contexto: es el
+// Nadie sale nunca como un nombre suelto. A 59 personas el documento no les da apellido y
+// a 140 ninguna fecha, así que la segunda línea —de quién son— no es contexto: es el
 // identificador, y por eso es lo último que se recorta. Cuando no cabe se degrada por
 // peldaños, y el primer progenitor y el cónyuge no están en ninguno: quitarlos deja a esas
 // personas sin nada que las distinga de otra con su mismo nombre.
@@ -92,7 +92,7 @@ export function identidadDe(g: Grafo, id: string, o: OpcionesIdentidad): Identid
 
 /**
  * El nombre manda y el año no se recorta nunca: es el desempate más barato que hay y lo
- * llevan 309 personas. Lo que cede es el apellido, que además se lee subiendo por el árbol.
+ * llevan 361 personas. Lo que cede es el apellido, que además se lee subiendo por el árbol.
  */
 function tituloDe(p: Persona, { linaje, apellidos, fechas, hoy, largos, nombre }: OpcionesIdentidad): Trozo[] {
   const año = añoEscrito(p, fechas, hoy);
@@ -128,7 +128,7 @@ function añoEscrito(p: Persona, modo: ModoFechas, hoy: Fecha): string {
 /**
  * Los peldaños, del texto entero al mínimo que identifica. Se bajan en este orden: primero
  * los años de padres y cónyuge, luego el segundo progenitor y por último la rama, que es
- * lo que menos distingue a una persona de otra —son siete para 416—.
+ * lo que menos distingue a una persona de otra —son doce para 501—.
  */
 const PELDAÑOS = [
   { años: true, ambosPadres: true, rama: true },
@@ -244,8 +244,8 @@ const escribirRamas = (ramas: string[]): string =>
   ramas.length === 1 ? `rama de ${ramas[0]}` : `ramas de ${ramas.slice(0, -1).join(", de ")} y de ${ramas[ramas.length - 1]}`;
 
 /**
- * A los cuatro «Sin nombre» el documento no les da sexo, pero sí cónyuge: casada con un
- * hombre, se escribe en femenino. Sin ninguna de las dos cosas, masculino, que es como la
+ * A las «Sin nombre» que vienen de los documentos no les consta el sexo, pero sí el cónyuge:
+ * casada con un hombre, se escribe en femenino. Sin ninguna de las dos cosas, masculino, que es como la
  * lengua resuelve lo que no sabe.
  */
 export function declinado(g: Grafo, id: string, masculino: string, femenino: string): string {
@@ -264,8 +264,8 @@ function marcasDe(p: Persona, { homonimia }: OpcionesIdentidad): string[] {
   const marcas: string[] = [];
   if (p.incierto) marcas.push("incierto");
   if (homonimia && homonimia.total > 1) {
-    // A los cuatro que no tienen nombre no se les puede decir que comparten el suyo: lo que
-    // comparten es no tenerlo, y es lo único que avisa de que son cuatro y no una repetida.
+    // A quien no tiene nombre no se le puede decir que comparte el suyo: lo que comparten es
+    // no tenerlo, y es lo único que avisa de que son varios y no uno repetido.
     const cuantos = `${homonimia.cual} de ${homonimia.total}`;
     const como = p.nombre === SIN_NOMBRE ? "sin nombre" : `con este nombre${homonimia.conAño ? " y año" : ""}`;
     marcas.push(`${cuantos} ${como}`);
@@ -275,7 +275,7 @@ function marcasDe(p: Persona, { homonimia }: OpcionesIdentidad): string[] {
 
 /**
  * Quiénes comparten nombre completo —con los apellidos ya deducidos del árbol— y año. Con
- * los apellidos reconstruidos son 12 personas; sin reconstruirlos serían 168, que era el
+ * los apellidos reconstruidos son 15 personas; sin reconstruirlos serían 168, que era el
  * problema que el dato crudo aparentaba tener.
  */
 export function homonimias(g: Grafo, linaje: Map<string, Apellidos>): Map<string, Homonimia> {

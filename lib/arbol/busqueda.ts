@@ -55,7 +55,7 @@ export function buscar(g: Grafo, consulta: string, { linaje, pasos }: OpcionesBu
   return ordenar(g, salida, pasos);
 }
 
-/** Las cuatro sin nombre, que es la única forma de llegar a ellas sin recorrer el árbol. */
+/** Las trece sin nombre, que es la única forma de llegar a ellas sin recorrer el árbol. */
 export function losSinNombre(g: Grafo, { pasos }: OpcionesBusqueda): Resultado[] {
   const suyas = [...g.personaPorId.values()]
     .filter((p) => p.nombre === SIN_NOMBRE)

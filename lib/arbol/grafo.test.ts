@@ -42,10 +42,10 @@ for (const gen of g.generacion.values()) {
 assert.deepStrictEqual(
   [...porNivel.entries()].sort((a, b) => a[0] - b[0]),
   [
-    [-4, 12],
-    [-3, 36],
-    [-2, 124],
-    [-1, 183],
+    [-4, 16],
+    [-3, 49],
+    [-2, 132],
+    [-1, 188],
     [0, 115],
     // Manuela, la primera de la generación que viene detrás de la de Lucas.
     [1, 1],

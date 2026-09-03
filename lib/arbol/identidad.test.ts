@@ -180,7 +180,7 @@ const libreta = libretaDe(real);
 
 // Reconstruir los apellidos desde el árbol es lo que desactiva el problema que el dato
 // crudo aparentaba tener (el diseño contaba 168 nombres repetidos, sin mirar el año).
-assert.strictEqual(libreta.homonimias.size, 12, "los homónimos que siguen siendo ambiguos");
+assert.strictEqual(libreta.homonimias.size, 15, "los homónimos que siguen siendo ambiguos");
 const crudos = homonimias(
   real,
   new Map(data.people.map((p) => [p.id, { todos: p.apellidos.slice(0, 2), escritos: p.apellidos.length, nuevos: [] }])),

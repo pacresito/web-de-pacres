@@ -15,10 +15,11 @@ import type { ArbolData } from "./tree";
 const data: ArbolData = JSON.parse(readFileSync(resolve("seed/arbol.json"), "utf-8"));
 const g = construirGrafo(data);
 
-const estado = (pov: string, ocultar = true, expandidas = new Set<string>()) => ({
+const estado = (pov: string, ocultar = true, expandidas = new Set<string>(), plegados = new Set<string>()) => ({
   puntoDeVista: pov,
   expandidas,
   parejas: new Set<string>(),
+  plegados,
   ocultarNoConectados: ocultar,
 });
 
@@ -69,17 +70,17 @@ assert.deepStrictEqual(
 );
 assert.strictEqual(
   sinFiltro.recuento.puestos,
-  27,
-  "el arranque trae 8 más: la ascendencia de su mujer, que no es familia de nadie más",
+  33,
+  "el arranque trae 14 más: la ascendencia de su mujer, que no es familia de nadie más",
 );
 
 // Hay fila mientras quede alguien alcanzable, aunque no haya nadie puesto
 // Desde el hijo, el vocabulario se estira hasta el tope por los dos extremos.
 assert.deepStrictEqual(panel(estado("p26")).lineas, [
-  "4 tatarabuelos 12/12",
-  "3 bisabuelos 6/6 · tíos bisabuelos 0/17 · parejas 0/13",
-  "2 abuelos 4/4 · tíos abuelos 0/12 · tíos abuelos segundos 0/48 · parejas 0/56",
-  "1 padres 2/2 · tíos 0/4 · tíos segundos 0/20 · otros tíos 0/89 · parejas 0/60",
+  "4 tatarabuelos 16/16",
+  "3 bisabuelos 8/8 · tíos bisabuelos 0/25 · parejas 0/16",
+  "2 abuelos 4/4 · tíos abuelos 0/14 · tíos abuelos segundos 0/52 · parejas 0/58",
+  "1 padres 2/2 · tíos 0/4 · tíos segundos 0/25 · otros tíos 0/89 · parejas 0/60",
   "0 hermanos 1/3 · primos 0/5 · primos segundos 0/21 · primos terceros 0/73 · parejas 0/2 · sin parentesco 0/1",
   "-1 otra sobrina 0/1",
 ]);

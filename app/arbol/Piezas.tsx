@@ -82,6 +82,10 @@ export function Manija({ x, y, onPulsar }: { x: number; y: number; onPulsar: () 
   );
 }
 
+/** «+1 hijo», no «+1 hijos»: el contador dice cuántos hay, y con uno la ese sobra. */
+const rotuloDelContador = ({ cantidad, sentido }: Contador): string =>
+  cantidad > 1 ? sentido : sentido === "hijos" ? "hijo" : "padre";
+
 export function ContadorRama({ contador, onAbrir }: { contador: Contador; onAbrir: () => void }) {
   return (
     <g onClick={onAbrir} className="cursor-pointer">
@@ -95,7 +99,7 @@ export function ContadorRama({ contador, onAbrir }: { contador: Contador; onAbri
         strokeDasharray="4 3"
       />
       <text x={contador.x} y={contador.y + 4} textAnchor="middle" fontSize={12} className="pieza-tx">
-        +{contador.cantidad} {contador.sentido}
+        +{contador.cantidad} {rotuloDelContador(contador)}
       </text>
     </g>
   );

@@ -38,11 +38,12 @@ assert.strictEqual(
 assert.strictEqual(linea(quien({ birth: "1975-05-18", incierto: "fechas" }), apellidos(["A"])), "[1975-05-18]");
 assert.strictEqual(linea(quien({ birth: "1937", incierto: "fechas" }), apellidos(["A"])), "[1937-][MM-DD]");
 
-// Lo que se pide del nombre va en su línea, no en la de los años. «Marido» no es un nombre:
-// es el papel que esa persona hacía en la frase de otro.
+// Lo que se pide del nombre va en su línea, no en la de los años. Quien no lo tiene entra como
+// «Sin nombre»: el papel que hacía en la frase de otro —«el marido», «un hijo»— no es un nombre,
+// y el dato ya no guarda ninguno así (lo veta `validar.py`).
 const falta = (p: Persona, a: Apellidos) => loQueFalta(huecosDe(p, a, HOY)!);
 assert.strictEqual(falta(quien({ birth: "1986-03-01" }), apellidos([])), "Falta apellido");
-assert.strictEqual(falta(quien({ nombre: "Marido", birth: "1986-03-01" }), apellidos(["A"])), "Falta nombre");
+assert.strictEqual(falta(quien({ nombre: "Sin nombre", birth: "1986-03-01" }), apellidos(["A"])), "Falta nombre");
 assert.strictEqual(falta(quien({ nombre: "Sin nombre", birth: "1986-03-01" }), apellidos([])), "Falta nombre y apellido");
 assert.strictEqual(loQueFalta(huecosDe(quien({ nombre: "X", incierto: "nombre" }), apellidos(["A", "B"]), HOY)!), null, "lo dudoso no se dice");
 assert.strictEqual(huecosDe(quien({ nombre: "X", incierto: "nombre" }), apellidos(["A", "B"]), HOY)?.nombre, "dudoso");
@@ -74,7 +75,7 @@ assert.ok(conHuecos.size > data.people.length / 2, `solo ${conHuecos.size} de ${
 assert.ok(conHuecos.size < data.people.length, "y alguien está completo, o el repaso no distingue nada");
 assert.strictEqual(conHuecos.has("p25"), false, "Pablo se sabe entero");
 assert.strictEqual(conHuecos.has("p396"), false, "y Catalina, desde que se le sabe el día");
-assert.strictEqual(conHuecos.has("p71"), true, "y el «Marido» de Olga no está entero: le falta el nombre");
+assert.strictEqual(conHuecos.has("p71"), true, "y al marido de Olga, del que solo consta que traía ColaCao, le falta el nombre");
 assert.strictEqual(conHuecos.has("p35"), true, "ni Maruja, nacida en 1921 y sin defunción escrita");
 
 console.log(`incompletos.test.ts OK (${conHuecos.size} de ${data.people.length} con algo que preguntar)`);
