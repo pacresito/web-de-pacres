@@ -51,6 +51,22 @@ export default async function CifrasPage() {
           <h1 className="mt-3 font-[family-name:var(--serif)] text-[34px] leading-tight">Stats del árbol</h1>
         </header>
 
+        <Seccion titulo="Los próximos cumpleaños">
+          <ul className="text-[14px]">
+            {c.cumples.map((cumple) => (
+              <li
+                key={cumple.id}
+                className="flex flex-col gap-0.5 border-b border-[var(--line)] py-2 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6"
+              >
+                <span>{cumple.quien}</span>
+                <span className="shrink-0 text-[13px] text-[var(--mut)]">
+                  {cumple.dia} · cumple {cumple.cumple}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Seccion>
+
         <Seccion titulo="De un vistazo">
           <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl bg-[var(--line)] sm:grid-cols-3">
             <Dato n={c.personas} de="personas" />
@@ -117,22 +133,6 @@ export default async function CifrasPage() {
             <Dato n={c.falta.sinApellido} de="sin ningún apellido" />
             <Dato n={c.falta.sinNombre} de="sin nombre" />
           </div>
-        </Seccion>
-
-        <Seccion titulo="Los próximos cumpleaños">
-          <ul className="text-[14px]">
-            {c.cumples.map((cumple) => (
-              <li
-                key={cumple.id}
-                className="flex flex-col gap-0.5 border-b border-[var(--line)] py-2 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6"
-              >
-                <span>{cumple.quien}</span>
-                <span className="shrink-0 text-[13px] text-[var(--mut)]">
-                  {cumple.dia} · cumple {cumple.cumple}
-                </span>
-              </li>
-            ))}
-          </ul>
         </Seccion>
 
         <Seccion titulo="Cómo se llama esta familia">
