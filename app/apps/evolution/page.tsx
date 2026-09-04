@@ -6,7 +6,7 @@ import WhyFooter from "../../components/WhyFooter";
 import { useTema } from "../../components/usePersistedTheme";
 import { CONFIG, RASGOS, TABLA, amanecer, anochecer, azarCon, banda, copiar, crearMundo, evaDe, tick, type Mundo } from "./engine";
 import Leyenda, { type Perfil } from "./leyenda";
-import { paletaDe, pintar, vistaDe, type Paleta } from "./render";
+import { designFor, paletaDe, pintar, vistaDe, type Design, type Paleta } from "./render";
 import { IconoPantallaCompleta } from "../../components/Iconos";
 
 // Cuántos ticks se intentan por fotograma. Es un objetivo, no una promesa: el bucle corta por
@@ -124,7 +124,8 @@ export default function Evolution() {
   const sizeRef = useRef({ W: 0, H: 0 });
   const dprRef = useRef(1);
   const estadoRef = useRef<HTMLSpanElement>(null);
-  const paletaRef = useRef<Paleta>(paletaDe("light"));
+  const paletaRef = useRef<Paleta>(paletaDe(SEMILLA_POR_DEFECTO, "light"));
+  const disenoRef = useRef<Design>(designFor(SEMILLA_POR_DEFECTO));
   const corriendoRef = useRef(true);
   const velRef = useRef<number>(VELOCIDADES[0]);
   const saltoRef = useRef(0);          // día objetivo mientras se adelanta; 0 = no se adelanta
@@ -145,7 +146,14 @@ export default function Evolution() {
 
   useEffect(() => { corriendoRef.current = corriendo; }, [corriendo]);
   useEffect(() => { velRef.current = VELOCIDADES[velIdx]; }, [velIdx]);
-  useEffect(() => { if (tema) { paletaRef.current = paletaDe(tema); repintarRef.current = true; } }, [tema]);
+  // **La semilla elige el diseño**, así que sembrar cambia de qué están hechos los bichos y el
+  // suelo bajo sus pies. Paleta y diseño viajan juntos: una paleta sin su diseño pinta un cristal
+  // con los colores del papel.
+  useEffect(() => {
+    disenoRef.current = designFor(semilla);
+    paletaRef.current = paletaDe(semilla, tema ?? "light");
+    repintarRef.current = true;
+  }, [semilla, tema]);
 
   // La semilla de la URL manda sobre la de por defecto: un enlace lleva a un mundo concreto, que
   // es de lo que sirve que la semilla sea una palabra. Se lee del `location` y no de
@@ -294,7 +302,7 @@ export default function Evolution() {
         const noche = m.noche
           ? Math.min(1, Math.max(0, 1 - (nocheRef.current.fin - performance.now()) / nocheRef.current.dura))
           : 1;
-        pintar(ctx, m, paletaRef.current, v, W, H, dprRef.current, noche);
+        pintar(ctx, m, disenoRef.current, paletaRef.current, v, W, H, dprRef.current, noche);
       }
 
       // El botón de volver se pinta desde React y la historia vive en un ref, así que el espejo se
@@ -457,8 +465,8 @@ export default function Evolution() {
             <Leyenda
               rasgos={RASGOS} tabla={TABLA}
               eva={eva}
-              ancho={CONFIG.ancho} alto={CONFIG.alto}
-              perfil={perfil} paleta={paletaDe(tema ?? "light")} cerrar={cerrarLeyenda}
+              perfil={perfil} paleta={paletaDe(semilla, tema ?? "light")}
+              diseno={designFor(semilla)} cerrar={cerrarLeyenda}
             />
           )}
         </div>

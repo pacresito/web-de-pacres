@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { sitio } from "./reparto";
-import { VENTANA, extensionCuerpo, pintarAlcance, pintarMuestra, type Paleta } from "./render";
+import { VENTANA, pintarMuestra, posGen, type Design, type Paleta } from "./render";
 import type { Genoma, Rasgo } from "./engine";
 
 /**
@@ -26,13 +25,7 @@ import type { Genoma, Rasgo } from "./engine";
 export type Banda = { min: number; lo: number; med: number; hi: number; max: number };
 export type Perfil = Record<string, Banda>;
 
-/**
- * **Los seis genes se ven en el cuerpo**, así que los seis enseñan bichos. La visión enseña además
- * su disco de alcance contra el mundo entero: el tamaño del ojo dice que ve más, pero solo el disco
- * contesta la pregunta que importa de ese gen —cuánto ve **comparado con el mundo**—, que es lo que
- * separa "moverse es una decisión" de "todo es paseo aleatorio".
- */
-const CON_ALCANCE = "vision";
+/** **Los seis genes se ven en el cuerpo**, así que los seis enseñan bichos y ninguno es un caso aparte. */
 
 /** Qué es cada gen, en una frase y sin fórmulas — la fórmula ya está en `TABLA`, debajo. */
 const QUE_ES: Record<string, string> = {
@@ -44,15 +37,15 @@ const QUE_ES: Record<string, string> = {
   retorno: "Las ganas de volver a casa en cuanto lleva comida encima. Solo lo que llega a casa se come y se convierte en hijos — pero volver pronto es dejar de buscar.",
 };
 
-// La escala de la barra —de ÷4 a ×4 del fundador, y lineal en el gen con signo— es la de
-// `reparto.ts`, que es también la del panel: con una copia aquí el mismo gen se leería con dos
-// varas de medir el día que una de las dos se moviera. Cuánta ventana hace falta lo mide
-// `reparto.medir.ts`, y no es de gusto: es lo que se aleja el gen que más se va.
-/** Los pies de las tres muestras. La de en medio es el fundador de la semilla que se esté viendo. */
-const PIES = ["p01", "fundador", "p99"];
+// La escala de la barra es la de `posGen`: el fundador en el centro y los dos extremos de la
+// ventana cerca de los bordes. **Una sola geometría para los seis genes**, así que dos barras se
+// comparan de un vistazo aunque midan cosas de unidades distintas — y el número que las acompaña
+// deja de ser el dato: lo que se lee es dónde cae respecto a donde nació todo el mundo.
+
+/** Los pies de la fila: los dos extremos, uno a cada lado. El de en medio es el fundador y se ve. */
+const PIES = ["p01", "p99"];
 
 const CELDA = 54;                  // lado de cada muestra de cuerpo, en px CSS
-const MUNDO_W = 170, MUNDO_H = 118;
 
 const num = (x: number) => x.toLocaleString("es-ES", { maximumSignificantDigits: 3 });
 
@@ -75,39 +68,29 @@ const muestrasDe = (rasgo: string, eva: Record<string, number>): number[] =>
 
 const pct = (t: number) => `${(t * 100).toFixed(2)}%`;
 
-function Muestras({ rasgo, eva, hoy, mundo, paleta }: {
-  rasgo: string; eva: Record<string, number>; hoy: Banda | null;
-  mundo: { ancho: number; alto: number }; paleta: Paleta;
+function Muestras({ rasgo, eva, paleta, diseno }: {
+  rasgo: string; eva: Record<string, number>; paleta: Paleta; diseno: Design;
 }) {
   const refs = useRef<(HTMLCanvasElement | null)[]>([]);
-  const alcanceRef = useRef<HTMLCanvasElement | null>(null);
   const valores = muestrasDe(rasgo, eva);
 
   useEffect(() => {
     const dpr = window.devicePixelRatio || 1;
-    if (rasgo === CON_ALCANCE) {
-      const cv = alcanceRef.current;
-      const ctx = cv?.getContext("2d");
-      if (cv && ctx) {
-        cv.width = Math.round(MUNDO_W * dpr); cv.height = Math.round(MUNDO_H * dpr);
-        pintarAlcance(ctx, MUNDO_W, MUNDO_H, dpr, paleta, mundo.ancho, mundo.alto, eva.talla,
-          eva.vision, hoy ? hoy.med : null);
-      }
-    }
     // Una sola escala para las tres, la que hace caber a la que más sobresale.
     const cuerpos = valores.map((v) => ({
+      x: 0, y: 0, hx: 1, hy: 0, carga: 0,
       g: { ...eva, [rasgo]: v } as unknown as Genoma,
       radio: rasgo === "talla" ? v : eva.talla,
     }));
     // La celda es cuadrada, así que la escala la manda la dimensión que más sobresalga de las dos.
-    const alcance = Math.max(...cuerpos.flatMap((c) => extensionCuerpo(c.g, c.radio)));
+    const alcance = Math.max(...cuerpos.flatMap((c) => diseno.extension(c.g, c.radio)));
     const escala = (CELDA / 2 - 3) / alcance;
     cuerpos.forEach((c, i) => {
       const cv = refs.current[i];
       const ctx = cv?.getContext("2d");
       if (!cv || !ctx) return;
       cv.width = cv.height = Math.round(CELDA * dpr);
-      pintarMuestra(ctx, CELDA, CELDA, dpr, paleta, c.g, c.radio, escala);
+      pintarMuestra(ctx, diseno, CELDA, CELDA, dpr, paleta, c, escala);
     });
   });
 
@@ -121,25 +104,17 @@ function Muestras({ rasgo, eva, hoy, mundo, paleta }: {
       <div className="lg-pies">
         {PIES.map((t) => <span key={t}>{t}</span>)}
       </div>
-      {rasgo === CON_ALCANCE && (
-        <>
-          <canvas ref={alcanceRef} style={{ width: MUNDO_W, height: MUNDO_H, marginTop: 6 }} />
-          <div className="lg-pies" style={{ width: MUNDO_W }}>
-            <span>- - - fundador</span><span>hoy ──</span>
-          </div>
-        </>
-      )}
     </div>
   );
 }
 
-function Fila({ rasgo, eva, hoy, tabla, mundo, paleta }: {
+function Fila({ rasgo, eva, hoy, tabla, paleta, diseno }: {
   rasgo: string; eva: Record<string, number>; hoy: Banda | null;
-  tabla: { paga: string; cobra: string }; mundo: { ancho: number; alto: number }; paleta: Paleta;
+  tabla: { paga: string; cobra: string }; paleta: Paleta; diseno: Design;
 }) {
   const signo = rasgo === "sociabilidad";
   const base = eva[rasgo];
-  const donde = (x: number) => sitio(x, base, signo);
+  const donde = (x: number) => posGen(rasgo as Rasgo, x);
   const cifra = signo ? conSigno : num;
   // Cuánto se ha movido la población de donde salió: ×N si el gen multiplica, la diferencia si
   // lleva signo. La razón no vale para un gen que cruza el cero — ahí se dispara sin querer decir nada.
@@ -149,7 +124,7 @@ function Fila({ rasgo, eva, hoy, tabla, mundo, paleta }: {
 
   return (
     <div className="lg-fila">
-      <Muestras rasgo={rasgo} eva={eva} hoy={hoy} mundo={mundo} paleta={paleta} />
+      <Muestras rasgo={rasgo} eva={eva} paleta={paleta} diseno={diseno} />
       <div className="lg-datos">
         <div className="lg-cab">
           <b>{rasgo === "vision" ? "visión" : rasgo}</b>
@@ -180,15 +155,15 @@ function Fila({ rasgo, eva, hoy, tabla, mundo, paleta }: {
   );
 }
 
-export default function Leyenda({ rasgos, tabla, eva, ancho, alto, perfil, paleta, cerrar }: {
+export default function Leyenda({ rasgos, tabla, eva, perfil, paleta, diseno, cerrar }: {
   rasgos: readonly string[];
   tabla: Record<string, { paga: string; cobra: string }>;
   /** El fundador **de esta partida**, ya despeinado por la semilla: de ahí salió todo el mundo. */
   eva: Record<string, number>;
-  ancho: number; alto: number;
   /** Se consulta con reloj propio: el mundo corre en su `requestAnimationFrame` y no re-renderiza React. */
   perfil: () => Perfil | null;
   paleta: Paleta;
+  diseno: Design;
   cerrar: () => void;
 }) {
   const [hoy, setHoy] = useState<Perfil | null>(null);
@@ -202,7 +177,6 @@ export default function Leyenda({ rasgos, tabla, eva, ancho, alto, perfil, palet
     return () => { window.clearInterval(id); window.removeEventListener("keydown", esc); };
   }, [perfil, cerrar]);
 
-  const mundo = { ancho, alto };
 
   return (
     <div className="lg-panel">
@@ -221,7 +195,7 @@ export default function Leyenda({ rasgos, tabla, eva, ancho, alto, perfil, palet
       </p>
       <div className="lg-filas">
         {rasgos.map((r) => (
-          <Fila key={r} rasgo={r} eva={eva} hoy={hoy?.[r] ?? null} tabla={tabla[r]} mundo={mundo} paleta={paleta} />
+          <Fila key={r} rasgo={r} eva={eva} hoy={hoy?.[r] ?? null} tabla={tabla[r]} paleta={paleta} diseno={diseno} />
         ))}
       </div>
     </div>
