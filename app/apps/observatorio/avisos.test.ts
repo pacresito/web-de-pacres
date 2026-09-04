@@ -1,8 +1,8 @@
 // Test de los avisos al móvil — ejecutar con: npx tsx app/apps/observatorio/avisos.test.ts
 // No es parte del build. Comprueba lo que no se ve hasta que suena el teléfono: a qué hora
 // sale cada mensaje y qué dice.
-import { avisosDeLaNoche, AVISO_MINUTOS } from "./avisos";
-import { cielo, type Satelite } from "./engine";
+import { avisosDeLaNoche, AVISO_MINUTOS, type Aviso } from "./avisos";
+import { cielo, type EventoLuna, type EventoSatelite, type Satelite } from "./engine";
 import { partesLocales, pasoDelEnlace } from "./marco";
 
 let fails = 0;
@@ -72,13 +72,13 @@ const avisos = avisosDeLaNoche(c, AHORA.getTime());
 }
 
 // 5. La Luna: no sale dentro del marco todas las noches, así que se busca una que sí
+let conLuna: { cuando: Date; avisos: Aviso[]; luna: EventoLuna } | null = null;
+for (let dia = 0; dia < 30 && !conLuna; dia++) {
+  const cuando = new Date(AHORA.getTime() + dia * 24 * 3600_000);
+  const suCielo = cielo(SATELITES, cuando);
+  if (suCielo.luna) conLuna = { cuando, avisos: avisosDeLaNoche(suCielo, cuando.getTime()), luna: suCielo.luna };
+}
 {
-  let conLuna = null;
-  for (let dia = 0; dia < 30 && !conLuna; dia++) {
-    const cuando = new Date(AHORA.getTime() + dia * 24 * 3600_000);
-    const suCielo = cielo(SATELITES, cuando);
-    if (suCielo.luna) conLuna = { cuando, avisos: avisosDeLaNoche(suCielo, cuando.getTime()), luna: suCielo.luna };
-  }
   check("hay alguna noche con salida de Luna en el marco", !!conLuna);
   if (conLuna) {
     const aviso = conLuna.avisos.find((a) => a.id === `luna-${conLuna.luna.instante}`);
@@ -115,6 +115,37 @@ const avisos = avisosDeLaNoche(c, AHORA.getTime());
   // El parse_mode es HTML: un `<` suelto rompería el envío entero con un 400.
   check("el marcado HTML está balanceado",
     avisos.every((a) => (a.texto.match(/</g) ?? []).length === (a.texto.match(/<\/|<b>/g) ?? []).length));
+}
+
+// 7. Madrid: allí no hay mar sino tejados, así que la Luna calla y solo avisan los pasos altos
+{
+  // Los mismos eventos, corridos a una fecha de Madrid: lo que cambia es la sede, no el cielo.
+  const A_MADRID = 80 * 24 * 3600_000; // del 23 jul a mediados de octubre
+  const base = c.pasos[0];
+  // Dos pasos a distinta altura y a distinta hora, para que cada uno tenga su id.
+  const paso = (altitud: number, minutos: number): EventoSatelite => {
+    const corre = (i: number) => i + A_MADRID + minutos * 60_000;
+    return { ...base, altitud,
+      instante: corre(base.instante), instanteFin: corre(base.instanteFin),
+      visibleDesde: corre(base.visibleDesde), visibleHasta: corre(base.visibleHasta) };
+  };
+  const rasante = paso(29, 0);
+  const alto = paso(31, 20);
+  const luna = conLuna ? { ...conLuna.luna,
+    instante: conLuna.luna.instante + A_MADRID,
+    instanteFin: conLuna.luna.instanteFin + A_MADRID } : null;
+  const enMadrid = avisosDeLaNoche(
+    { ...c, sede: "Madrid", luna, pasos: [rasante, alto] }, AHORA.getTime());
+  const id = (paso: EventoSatelite) => `${paso.nombre.toLowerCase()}-${paso.visibleDesde}`;
+
+  check("en Madrid la Luna no avisa", !!luna && !enMadrid.some((a) => a.id.startsWith("luna-")));
+  check("en Madrid un paso que no llega a 30° no avisa",
+    !enMadrid.some((a) => a.id === id(rasante)));
+  check("en Madrid un paso que pasa de 30° sí avisa", enMadrid.some((a) => a.id === id(alto)));
+  // Y en La Manga no cambia nada: el listón de 30° y el silencio de la Luna son solo de Madrid.
+  const enLaManga = avisosDeLaNoche({ ...c, pasos: [{ ...base, altitud: 16 }] }, AHORA.getTime());
+  check("en La Manga siguen avisando los pasos bajos",
+    enLaManga.some((a) => a.id === `${base.nombre.toLowerCase()}-${base.visibleDesde}`));
 }
 
 console.log("\n— Lo que se enviaría esta noche —");

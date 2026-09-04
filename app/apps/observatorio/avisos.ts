@@ -4,7 +4,8 @@
 // Solo pasos de satélite y salida de Luna: los planetas están horas en el cielo y no admiten
 // un aviso para salir a mirar ahora.
 
-import { rumbo, type Cielo, type EventoLuna, type EventoSatelite } from "./engine";
+import { MADRID, rumbo, sedeParaFecha, type Cielo, type EventoLuna, type EventoSatelite }
+  from "./engine";
 import { enlaceDePaso, partesLocales } from "./marco";
 
 export const AVISO_MINUTOS = 1;
@@ -49,10 +50,19 @@ function deLuna(luna: EventoLuna): Aviso {
   };
 }
 
+// En Madrid el horizonte es de tejados, no el mar de La Manga: la Luna recién salida no se ve
+// desde ningún sitio de la ciudad, y un satélite rasante tampoco. Allí la Luna no se anuncia y
+// los pasos piden una cumbre alta — la altitud mínima general se queda corta entre edificios.
+const ALTITUD_MINIMA_MADRID = 30;
+
+const enMadrid = (instante: number) => sedeParaFecha(new Date(instante)) === MADRID;
+
 /** Lo que hay que programar de esta noche: los avisos que aún no se han pasado de hora. */
 export function avisosDeLaNoche(cielo: Cielo, ahora: number): Aviso[] {
-  const luna = cielo.luna ? [deLuna(cielo.luna)] : [];
-  return [...cielo.pasos.map(dePaso), ...luna]
+  const luna = cielo.luna && !enMadrid(cielo.luna.instante) ? [deLuna(cielo.luna)] : [];
+  const pasos = cielo.pasos.filter(
+    (paso) => !enMadrid(paso.instante) || paso.altitud >= ALTITUD_MINIMA_MADRID);
+  return [...pasos.map(dePaso), ...luna]
     .filter((aviso) => aviso.sale > ahora)
     .sort((a, b) => a.sale - b.sale);
 }

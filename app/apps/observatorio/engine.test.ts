@@ -34,11 +34,11 @@ const HASTA = new Date(AHORA.getTime() + 7 * 24 * 3600 * 1000);
   check("sede: 15 julio → La Manga", sede("2026-07-15T22:00:00Z") === "La Manga");
   check("sede: 20 junio → La Manga (primer día)", sede("2026-06-20T22:00:00Z") === "La Manga");
   check("sede: 19 junio → Madrid (víspera)", sede("2026-06-19T18:00:00Z") === "Madrid");
-  check("sede: 9 sept → La Manga (último día)", sede("2026-09-09T20:00:00Z") === "La Manga");
-  check("sede: 10 sept → Madrid", sede("2026-09-10T20:00:00Z") === "Madrid");
+  check("sede: 5 sept → La Manga (último día)", sede("2026-09-05T20:00:00Z") === "La Manga");
+  check("sede: 6 sept → Madrid", sede("2026-09-06T20:00:00Z") === "Madrid");
   check("sede: 25 dic → La Manga", sede("2026-12-25T21:00:00Z") === "La Manga");
-  check("sede: 5 enero → La Manga", sede("2026-01-05T21:00:00Z") === "La Manga");
-  check("sede: 10 enero → Madrid", sede("2026-01-10T21:00:00Z") === "Madrid");
+  check("sede: 7 enero → La Manga (último día)", sede("2026-01-07T21:00:00Z") === "La Manga");
+  check("sede: 8 enero → Madrid", sede("2026-01-08T21:00:00Z") === "Madrid");
   check("sede: 1 marzo → Madrid", sede("2026-03-01T21:00:00Z") === "Madrid");
 }
 

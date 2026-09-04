@@ -34,15 +34,15 @@ const PRIMERA_HORA_DE_LA_NOCHE = 12;
 export type Sede = { nombre: string; lat: number; lon: number };
 
 const LA_MANGA: Sede = { nombre: "La Manga", lat: 37.66, lon: -0.72 };
-const MADRID: Sede = { nombre: "Madrid", lat: 40.46, lon: -3.69 };
+export const MADRID: Sede = { nombre: "Madrid", lat: 40.46, lon: -3.69 };
 
 /** Dónde estamos esa noche: La Manga en verano y en Navidad, Madrid el resto del año. */
 export function sedeParaFecha(fecha: Date): Sede {
   const { mes, dia } = partesLocales(fecha);
   const mmdd = mes * 100 + dia;
   const enLaManga =
-    (mmdd >= 620 && mmdd <= 909) ||  // 20 jun – 9 sep
-    mmdd >= 1220 || mmdd <= 109;     // 20 dic – 9 ene
+    (mmdd >= 620 && mmdd <= 905) ||  // 20 jun – 5 sep
+    mmdd >= 1220 || mmdd <= 107;     // 20 dic – 7 ene
   return enLaManga ? LA_MANGA : MADRID;
 }
 
