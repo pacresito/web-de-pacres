@@ -36,7 +36,7 @@ const juguete: ArbolData = {
     persona("j3", "Genoveva", { sexo: "m", birth: "1930" }),
     persona("j4", "Julián", { sexo: "h", birth: "1934" }),
     persona("j5", "Rosa", { sexo: "m", birth: "1959", nota: "de Italia", apodos: ["Rosi"] }),
-    persona("j6", "Sin nombre"),
+    persona("j6", "No consta"),
     persona("j7", "Antonio", { sexo: "h", birth: "1980" }),
     persona("j8", "Lucía", { sexo: "m", birth: "1986-03-01" }),
   ],
@@ -174,7 +174,7 @@ assert.strictEqual(valor(ficha("j3"), "Onomástica"), undefined, "Genoveva no es
 assert.strictEqual(valor(ficha("j1"), "Onomástica"), undefined, "al que ya no está no se le felicita nada");
 assert.strictEqual(
   valor(ficha("j5"), "Unión"),
-  "expareja de Sin nombre; pareja de Antonio (1980)",
+  "expareja de No consta; pareja de Antonio (1980)",
   "las dos uniones, en su orden, y lo que fue de cada una en su propio verbo",
 );
 assert.strictEqual(
@@ -202,7 +202,7 @@ assert.strictEqual(
 
 // El caso feo
 const anonima = ficha("j6");
-assert.ok(anonima.aviso?.startsWith("No consta su nombre ni sus fechas"));
+assert.ok(anonima.aviso?.startsWith("Ni su nombre ni sus fechas constan"));
 assert.strictEqual(anonima.sinNombre, true);
 assert.strictEqual(ficha("j5").aviso, undefined, "quien tiene nombre no necesita que se le advierta de nada");
 

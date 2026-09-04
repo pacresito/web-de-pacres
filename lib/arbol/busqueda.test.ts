@@ -66,7 +66,7 @@ assert.deepStrictEqual(
 assert.deepStrictEqual(ids("hija de Tomás"), ["nieta"], "la relación se busca tal como se lee en la segunda línea");
 assert.deepStrictEqual(ids(""), [], "sin consulta no hay resultados: el vacío es el índice, no la lista entera");
 
-assert.deepStrictEqual(ids("Sin nombre"), [], "a quien no tiene nombre no se llega tecleando el que no tiene");
+assert.deepStrictEqual(ids("No consta"), [], "a quien no tiene nombre no se llega tecleando el que no tiene");
 assert.deepStrictEqual(
   losSinNombre(g, o).map((r) => [r.id, r.via]),
   [["nadie", "sin nombre"]],
@@ -174,7 +174,7 @@ assert.strictEqual(new Set(mismos.map((id) => contextoEntero(real, id))).size, 3
 const sinNombre = losSinNombre(real, suyo);
 assert.strictEqual(
   sinNombre.length,
-  data.people.filter((p) => p.nombre === "Sin nombre").length,
+  data.people.filter((p) => p.nombre === "No consta").length,
   "su lista los recoge a todos: es la única forma de llegar a ellos",
 );
 assert.ok(

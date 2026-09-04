@@ -41,8 +41,8 @@ export function buscar(g: Grafo, consulta: string, { linaje, pasos }: OpcionesBu
 
   const salida: Resultado[] = [];
   for (const [id, p] of g.personaPorId) {
-    // «Sin nombre» no es un nombre sino la forma de escribir que el documento no lo daba, así
-    // que no se busca ni en el propio ni en el de la familia: teclearlo devolvía a cuatro
+    // «No consta» no es un nombre sino la forma de escribir que el documento no lo daba, así
+    // que no se busca ni en el propio ni en el de la familia: teclearlo devolvía a trece
     // personas que no se llaman así y a todo el que se casó con una de ellas.
     // **Se busca por los dos nombres**, se esté enseñando el que se esté enseñando: quien
     // teclea «José Gerardo» y quien teclea «Pepe» buscan al mismo, y el interruptor de la

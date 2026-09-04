@@ -83,7 +83,7 @@ assert.strictEqual(onomasticaDe("María"), "09-12");
 assert.strictEqual(onomasticaDe("Juan de Dios"), "03-08");
 
 // Quien no tiene santo no lo tiene: es la mitad de la gracia de la tabla.
-for (const sin of ["Jara", "Nora", "Horacio", "Sin nombre", "Yodelina", "Marido"]) {
+for (const sin of ["Jara", "Nora", "Horacio", "No consta", "Yodelina", "Marido"]) {
   assert.strictEqual(onomasticaDe(sin), null, `${sin} no debería tener onomástica`);
 }
 

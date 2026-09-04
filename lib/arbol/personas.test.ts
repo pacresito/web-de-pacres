@@ -19,7 +19,7 @@ const gente = new Map([
   ["h", persona("Ricardo", [], "h")],
   ["m", persona("Lola", [], "m")],
   ["mujer", persona("Ruth", [], "m")],
-  ["nadie", persona("Sin nombre")],
+  ["nadie", persona("No consta")],
   ["x", persona("Yodelina")],
   ["z", persona("Binta")],
 ]);
@@ -76,7 +76,7 @@ const porId = new Map(data.people.map((p) => [p.id, p]));
 // El sexo lo trae todo el mundo menos quien no tiene ni nombre, y así ninguna pareja
 // queda por colocar: dos del mismo sexo no sabríamos cuál subir.
 assert.ok(
-  data.people.every((p) => p.sexo || p.nombre === "Sin nombre"),
+  data.people.every((p) => p.sexo || p.nombre === "No consta"),
   "sin sexo solo los anónimos: a quien tiene nombre se le decide, no se le adivina",
 );
 const parejas = data.unions.filter((u) => u.partners.length === 2);

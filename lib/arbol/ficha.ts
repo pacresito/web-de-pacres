@@ -116,7 +116,7 @@ function homonimosDe(p: Persona, { homonimia, linaje, nombre }: OpcionesFicha): 
 }
 
 const AVISO_SIN_NADA =
-  "No consta su nombre ni sus fechas. Solo se la puede identificar por su familia, y así aparece en toda la app.";
+  "Ni su nombre ni sus fechas constan en los documentos. Solo se la puede identificar por su familia, y así aparece en toda la app.";
 
 /**
  * De dónde viene y qué hizo con su vida, en ese orden. **Una fila sin dato no se escribe**:

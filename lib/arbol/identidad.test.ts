@@ -33,13 +33,13 @@ const juguete: ArbolData = {
     persona("p3", "Genoveva", { sexo: "m" }),
     persona("p4", "Julián", { sexo: "h", birth: "1934" }),
     persona("p5", "Rosa", { sexo: "m", birth: "1959", nota: "de Italia" }),
-    persona("p6", "Sin nombre"),
+    persona("p6", "No consta"),
     persona("p7", "Antonio", { sexo: "h", birth: "1980", incierto: "fechas" }),
     persona("p8", "Tomás", { sexo: "h" }),
     persona("p9", "Lucas", { sexo: "h" }),
     persona("p10", "Marta", { sexo: "m" }),
     // Un padre del que se sabe que lo es y no cómo se llama, con la madre al lado.
-    persona("p11", "Sin nombre", { sexo: "h" }),
+    persona("p11", "No consta", { sexo: "h" }),
     persona("p12", "Vera", { sexo: "m", birth: "1950" }),
     persona("p13", "Nieto", { sexo: "h" }),
     // Las dos maneras de que una unión acabe: el matrimonio y la pareja.
@@ -85,8 +85,8 @@ assert.strictEqual(contexto("p3", 10, RAMA), "hija de P…", "solo entonces, eli
 assert.strictEqual(contexto("p3", 80), "hija de Pablo (1902) y Antonia (1905)", "sin ramas, la línea se queda en la familia");
 
 // Y cuando hay que quedarse con un solo progenitor, se conserva el que identifica: el que
-// sube en la pareja es «Sin nombre», y decir «hijo de Sin nombre» es no decir nada.
-assert.strictEqual(contexto("p13", 80), "hijo de Sin nombre y Vera (1950)");
+// sube en la pareja es «No consta», y decir «hijo de No consta» es no decir nada.
+assert.strictEqual(contexto("p13", 80), "hijo de No consta y Vera (1950)");
 assert.strictEqual(contexto("p13", 20), "hijo de Vera", "el que nombra se queda, suba o no en la pareja");
 
 // El cónyuge no está en ningún peldaño: en 88 personas es lo único que las identifica
@@ -103,10 +103,10 @@ assert.strictEqual(contexto("p14", 80), "expareja de Gerardo");
 assert.strictEqual(contexto("p16", 80), "expareja de Iván", "el matrimonio roto y la pareja rota se dicen igual");
 assert.strictEqual(contexto("p9", 80), "hijo de Tomás", "un solo progenitor documentado no inventa al otro");
 
-// A los «Sin nombre» los declina su cónyuge, que es lo único que dice de qué sexo son
+// A los «No consta» los declina su cónyuge, que es lo único que dice de qué sexo son
 const anonima = identidadDe(g, "p6", opciones({ apellidos: 0 }));
 assert.strictEqual(anonima.contexto, "hija de Julián (1934) y Rosa (1959) · casada con Antonio (1980)");
-assert.deepStrictEqual(anonima.titulo, [{ texto: "Sin nombre", pinta: "sinNombre" }], "y se pintan aparte");
+assert.deepStrictEqual(anonima.titulo, [{ texto: "No consta", pinta: "sinNombre" }], "y se pintan aparte");
 
 // La primera línea: el nombre manda, el año no se recorta nunca
 assert.deepStrictEqual(identidadDe(g, "p1", opciones()).titulo, [

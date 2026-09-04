@@ -21,7 +21,7 @@ import {
 import type { Persona, Union } from "./tree";
 
 /** Como los registró el documento cuando no dio ninguno: se pinta en cursiva y apagado. */
-export const SIN_NOMBRE = "Sin nombre";
+export const SIN_NOMBRE = "No consta";
 
 /**
  * Cómo se pinta cada trozo de la primera línea. `dudoso` y `sinNombre` van en cursiva,
@@ -193,7 +193,7 @@ function filiacion(g: Grafo, id: string, { años, ambosPadres }: Peldaño, nombr
     .map((p) => g.personaPorId.get(p))
     .filter((p): p is Persona => p !== undefined);
   if (padres.length === 0) return "";
-  // Al quedarse con uno se conserva el que nombra: «hija de Sin nombre» no dice de quién es
+  // Al quedarse con uno se conserva el que nombra: «hija de No consta» no dice de quién es
   // nadie, y quien sí tiene nombre está justo al lado. Solo pasa cuando el que no lo tiene
   // es además el que sube en la pareja, que es el orden con el que se dibuja, no un rango.
   const puestos = ambosPadres ? padres : [padres.find((p) => p.nombre !== SIN_NOMBRE) ?? padres[0]];
@@ -244,7 +244,7 @@ const escribirRamas = (ramas: string[]): string =>
   ramas.length === 1 ? `rama de ${ramas[0]}` : `ramas de ${ramas.slice(0, -1).join(", de ")} y de ${ramas[ramas.length - 1]}`;
 
 /**
- * A las «Sin nombre» que vienen de los documentos no les consta el sexo, pero sí el cónyuge:
+ * A las «No consta» que vienen de los documentos tampoco les consta el sexo, pero sí el cónyuge:
  * casada con un hombre, se escribe en femenino. Sin ninguna de las dos cosas, masculino, que es como la
  * lengua resuelve lo que no sabe.
  */

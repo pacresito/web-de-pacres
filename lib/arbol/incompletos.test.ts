@@ -39,12 +39,12 @@ assert.strictEqual(linea(quien({ birth: "1975-05-18", incierto: "fechas" }), ape
 assert.strictEqual(linea(quien({ birth: "1937", incierto: "fechas" }), apellidos(["A"])), "[1937-][MM-DD]");
 
 // Lo que se pide del nombre va en su línea, no en la de los años. Quien no lo tiene entra como
-// «Sin nombre»: el papel que hacía en la frase de otro —«el marido», «un hijo»— no es un nombre,
+// «No consta»: el papel que hacía en la frase de otro —«el marido», «un hijo»— no es un nombre,
 // y el dato ya no guarda ninguno así (lo veta `validar.py`).
 const falta = (p: Persona, a: Apellidos) => loQueFalta(huecosDe(p, a, HOY)!);
 assert.strictEqual(falta(quien({ birth: "1986-03-01" }), apellidos([])), "Falta apellido");
-assert.strictEqual(falta(quien({ nombre: "Sin nombre", birth: "1986-03-01" }), apellidos(["A"])), "Falta nombre");
-assert.strictEqual(falta(quien({ nombre: "Sin nombre", birth: "1986-03-01" }), apellidos([])), "Falta nombre y apellido");
+assert.strictEqual(falta(quien({ nombre: "No consta", birth: "1986-03-01" }), apellidos(["A"])), "Falta nombre");
+assert.strictEqual(falta(quien({ nombre: "No consta", birth: "1986-03-01" }), apellidos([])), "Falta nombre y apellido");
 assert.strictEqual(loQueFalta(huecosDe(quien({ nombre: "X", incierto: "nombre" }), apellidos(["A", "B"]), HOY)!), null, "lo dudoso no se dice");
 assert.strictEqual(huecosDe(quien({ nombre: "X", incierto: "nombre" }), apellidos(["A", "B"]), HOY)?.nombre, "dudoso");
 assert.strictEqual(linea(quien({ birth: "1986-03-01" }), apellidos([])), "1986-03-01");
