@@ -142,7 +142,7 @@ const salida: Salida[] = [];
 for (const { id, nombre, grupos, pinta, tol } of await encuadres()) {
   let d = "", arrecife = "", puntos = 0;
   const trazados: Anillo[] = [];
-  grupos.forEach(({ proy, proyCoral }, i) => {
+  grupos.forEach(({ proy, proyCoral, proyAnillo }, i) => {
     const { px, py } = pinta[i];
     const trazo = (a: Anillo) => simplificar(a.map(([x, y]) => [px(x), py(y)] as [number, number]), tol);
     // Redondear al pintar: Math.cos/sin no están fijados por IEEE y Node y el navegador
@@ -156,8 +156,9 @@ for (const { id, nombre, grupos, pinta, tol } of await encuadres()) {
       puntos += out.length;
     }
     // El coral va sin `Z`: es la línea del arrecife tal como viene, y cerrarla inventaría el
-    // tramo que la fuente no trae.
-    for (const linea of proyCoral) {
+    // tramo que la fuente no trae. El anillo batimétrico se le junta porque se dibuja igual y en
+    // el mismo sitio: son dos maneras de traer la misma línea, no dos cosas distintas.
+    for (const linea of [...proyCoral, ...proyAnillo]) {
       const out = trazo(linea);
       if (out.length < 2) continue;
       arrecife += eme(out);
@@ -225,7 +226,7 @@ const ts = `// GENERADO por scripts/build-atlas-formas.mts — no editar a mano.
 
 export type Forma = {
   d: string;      // path SVG en un viewBox 0 0 ${BOX} ${BOX}, normalizado
-  arrecife: string; // el coral, a trazar sin rellenar y sin cerrar ("" si el país no lo lleva)
+  arrecife: string; // el coral y la plataforma, a trazar sin rellenar y sin cerrar ("" si no lleva)
   linea: string;  // frontera interior a marcar dentro de la silueta ("" si no hay)
   separador: string; // la línea entre los dos paneles de un país partido ("" si va de una pieza)
   capital: [number, number] | null; // dónde marcarla en el lienzo; null en los que son su capital

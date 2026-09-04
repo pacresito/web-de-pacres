@@ -15,10 +15,9 @@
 import fs from "node:fs";
 import sharp from "sharp";
 import { BOX, encuadres, type Encuadre } from "./atlas-geo.mjs";
+import { teselaTerrarium } from "./atlas-anillo.mjs";
 import { FORMAS } from "../data/atlas/formas";
 
-const TESELAS = process.env.ATLAS_TESELAS ?? ".cache-atlas/teselas";
-const FUENTE = "https://s3.amazonaws.com/elevation-tiles-prod/terrarium";
 const SALIDA = "public/atlas/relieve";
 const LISTA = new URL("../data/atlas/relieve.ts", import.meta.url);
 
@@ -68,27 +67,9 @@ const clamp = (v: number, a: number, b: number) => (v < a ? a : v > b ? b : v);
 // ── Teselas ────────────────────────────────────────────────────────────────────────────────
 // Terrarium: la elevación en metros va empaquetada en el color, R×256 + G + B/256 − 32768.
 type Tesela = Float32Array; // 256×256, en metros
-const enMemoria = new Map<string, Tesela>();
 const LADO_TESELA = 256;
-
-async function tesela(z: number, x: number, y: number): Promise<Tesela> {
-  const clave = `${z}/${x}/${y}`;
-  const ya = enMemoria.get(clave);
-  if (ya) return ya;
-  const archivo = `${TESELAS}/${z}/${x}/${y}.png`;
-  if (!fs.existsSync(archivo)) {
-    const r = await fetch(`${FUENTE}/${clave}.png`);
-    if (!r.ok) throw new Error(`tesela ${clave}: HTTP ${r.status}`);
-    fs.mkdirSync(`${TESELAS}/${z}/${x}`, { recursive: true });
-    fs.writeFileSync(archivo, Buffer.from(await r.arrayBuffer()));
-  }
-  const { data } = await sharp(archivo).removeAlpha().raw().toBuffer({ resolveWithObject: true });
-  const m = new Float32Array(LADO_TESELA * LADO_TESELA);
-  for (let i = 0; i < m.length; i++)
-    m[i] = data[i * 3] * 256 + data[i * 3 + 1] + data[i * 3 + 2] / 256 - 32768;
-  enMemoria.set(clave, m);
-  return m;
-}
+// La descarga la lleva atlas-anillo.mts, que baja las mismas teselas para trazar la plataforma.
+const tesela = teselaTerrarium;
 
 /** Elevación bilineal en (lon, lat) al zoom z. Fuera de rango, nivel del mar. */
 function elevacion(teselas: Map<string, Tesela>, z: number, lon: number, lat: number): number {

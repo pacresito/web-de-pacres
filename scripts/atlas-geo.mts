@@ -15,6 +15,7 @@
 //    distorsión. El tamaño y la ubicación no se pierden: los cuenta el globo que va al lado.
 import fs from "node:fs";
 import { PAISES } from "../lib/atlas/paises";
+import { anilloDelPanel, type Anilla } from "./atlas-anillo.mjs";
 
 const BASE = "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson";
 const GB = "https://www.geoboundaries.org/api/current/gbOpen"; // solo para los diminutos, ver abajo
@@ -75,25 +76,32 @@ const TOL_ALTA = 2.2;
 // porque el precio es que lo que entra estira el lienzo y **encoge todo lo demás**: a Japón le
 // costaría un cuarto del tamaño de sus cuatro islas por traerse Ryukyu, y ahí no compensa.
 //
+// `anillo` traza la plataforma somera del país desde la batimetría, y es para aquel al que el
+// coral de Natural Earth no le llega: de Tarawa trae tres fragmentos que no cierran nada, y de un
+// banco entero no trae nada. Lo dibuja scripts/atlas-anillo.mts, que documenta sus opciones; aquí
+// solo se dice quién lo lleva. **Va país a país como el coral, y por el mismo motivo**: solo manda
+// donde la plataforma ES el país. Palau la lleva por el oeste y Tonga no la lleva, porque a −500 m
+// una isla alta no da un arrecife, da su propio talud.
+//
 // `salto` sube `MAX_KM` solo para un país, y es lo que necesita el que tiene **dos masas de
 // verdad** demasiado lejos la una de la otra. No hay tope general que sirva: subirlo a 600 para
 // todos trae la península malaya, sí, pero también pone a Mauricio en un lienzo diez veces más
 // grande para dibujarle Rodrigues —99 km²— y a las Marshall uno un 40 % mayor por un km². Lo que
 // justifica el salto es cuánta masa entra, no cuánta distancia se salva.
-export const AJUSTES: Record<string, { cerca?: Cerca; paneles?: [Cerca, Cerca]; tol?: number; arrecife?: boolean; islas?: number; cadena?: boolean; salto?: number }> = {
-  bs: { cerca: [-77.5, 25.5, 260] },  // el racimo del noroeste: Andros, Gran Bahama, Ábaco
+export const AJUSTES: Record<string, { cerca?: Cerca; paneles?: [Cerca, Cerca]; tol?: number; arrecife?: boolean; islas?: number; cadena?: boolean; salto?: number; anillo?: Anilla }> = {
+  bs: { cerca: [-77.5, 25.5, 260], anillo: {} },  // el racimo del noroeste, y el borde de su banco
   ca: { cadena: true },
   es: { islas: 60 },                  // Menorca, Ibiza y Formentera, que la regla relativa suelta
-  fm: { paneles: [[151.8, 7.4, 60], [158.2, 6.9, 60]] },   // la laguna de Chuuk y Pohnpei
+  fm: { paneles: [[151.8, 7.4, 60], [158.2, 6.9, 60]], anillo: { paneles: [0], mayor: true } }, // la barrera de Chuuk, y Pohnpei
   id: { cadena: true },               // sin ella no dibuja ni Sumatra ni Papúa
-  ki: { paneles: [[172.98, 1.35, 30], [-157.4, 1.9, 60]] }, // Tarawa y Kiritimati
+  ki: { paneles: [[172.98, 1.35, 30], [-157.4, 1.9, 60]], anillo: { paneles: [0], margen: 3, minKm: 25 } }, // Tarawa y Kiritimati
   mh: { arrecife: true, cadena: true }, // las dos hileras de atolones, no solo Majuro
   mv: { arrecife: true, cadena: true }, // los atolones, que son lo que se reconoce, y los 871 km
   my: { salto: 600 },                 // los 554 km entre la península y Borneo: sin esto, medio país
   nr: { tol: 6 },
   pg: { cadena: true },
   ph: { cadena: true },
-  pw: { cerca: [134.5, 7.5, 60] },    // Babeldaob y Koror, no los arrecifes del suroeste
+  pw: { cerca: [134.5, 7.5, 60], anillo: { oeste: true } }, // Babeldaob y Koror, con su barrera del oeste
   sb: { cadena: true },
   sc: { cerca: [55.5, -4.6, 60] },    // Mahé, Praslin y La Digue
   to: { cerca: [-175.2, -21.2, 60] }, // Tongatapu
@@ -128,7 +136,8 @@ export type Grupo = {
   lat0: number;
   proy: Anillo[];   // los anillos exteriores, en km desde el centro
   proyCoral: Anillo[];
-  b: Caja;          // caja de lo proyectado, tierra y coral
+  proyAnillo: Anillo[]; // la plataforma somera, ya en km: no se proyecta, se calcula ahí
+  b: Caja;          // caja de lo proyectado: tierra, coral y anillo
   area: number;
 };
 
@@ -300,7 +309,8 @@ export async function encuadres(): Promise<Encuadre[]> {
     // Un grupo por panel, o uno solo con todo el país. Solo el anillo exterior de cada polígono:
     // los agujeros de una fuente de alta resolución son dársenas y puertos, y en una silueta que
     // se memoriza son manchas blancas sin significado.
-    const grupos: Grupo[] = (ajuste?.paneles ?? [null]).map((cerca) => {
+    const grupos: Grupo[] = [];
+    for (const [panel, cerca] of (ajuste?.paneles ?? [null]).entries()) {
       const polys = polysQueSeQuedan(cerca ? recortar(crudo, cerca, p.nombre) : crudo, ajuste?.islas, ajuste?.cadena, ajuste?.salto);
       const anillos = polys.map((poly) => poly[0]);
       const c = caja(anillos);
@@ -313,9 +323,15 @@ export async function encuadres(): Promise<Encuadre[]> {
         lat >= c.y0 - MARGEN_ARRECIFE && lat <= c.y1 + MARGEN_ARRECIFE));
       const proyectar = (a: Anillo) => a.map(([lon, lat]) => laea(lon, lat, lon0, lat0)) as Anillo;
       const proy = anillos.map(proyectar), proyCoral = coral.map(proyectar);
-      return { polys, coral, c, lon0, lat0, proy, proyCoral, b: caja([...proy, ...proyCoral]),
-               area: anillos.reduce((n, a) => n + areaRel(a), 0) };
-    });
+      // El anillo se calcula ya en km, y **entra en la caja antes de escalar**: calculado después,
+      // un contorno más ancho que el encuadre saldría cortado por el borde del lienzo.
+      const anilla = ajuste?.anillo;
+      const proyAnillo = !anilla || (anilla.paneles && !anilla.paneles.includes(panel))
+        ? [] : await anilloDelPanel(proy, (x, y) => laeaInv(x, y, lon0, lat0), anilla);
+      grupos.push({ polys, coral, c, lon0, lat0, proy, proyCoral, proyAnillo,
+                    b: caja([...proy, ...proyCoral, ...proyAnillo]),
+                    area: anillos.reduce((n, a) => n + areaRel(a), 0) });
+    }
 
     // Los paneles comparten escala: la que hace caber al que peor lo tiene. El tamaño de uno frente
     // al otro sigue siendo verdad — lo único que se falsea es la distancia, y de eso avisa la línea.
