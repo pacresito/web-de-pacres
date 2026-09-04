@@ -226,16 +226,24 @@ export type Config = {
   fundador: Genoma;
 };
 
-// `fiereza` sale de medir qué mundo se ve, no de dónde se asienta el gen: fluctúa y cada partida
-// acaba en un sitio, así que el fundador **elige el carácter de todas ellas**. Con 1, 4, 8 y 16 el
-// censo va 29 · 35 · 35 · **16**, la dentellada 0,42 · 1,08 · **1,64** · 0,43 al día y la talla
-// 3,85 · 3,07 · 2,75 · 2,57. En 4 la dentellada se multiplica por 2,6 sin tocar censo ni semillas
-// vivas; en 8 hay el doble, pero la talla se acerca a 2,25, que es donde deja de ser viable; y en 16
-// el mundo se rompe solo — todos persiguen, nadie recoge y la población no da ni para encontrarse.
+// **El fundador es el centro exacto de la ventana de lectura de cada gen** —la media geométrica del
+// p01 y el p99 de `VENTANA`, en `render.ts`—, así que **nace liso**: sin dientes, sin brazos, sin
+// patas, sin pinchos y sin pectorales. Todo lo que se le vea encima a un bicho es desviación de
+// aquí, que es lo que hace que el cuerpo cuente una historia en vez de una ficha.
+//
+// Medido en `convergencia.medir.ts` sobre veinte semillas de mil días. Antes salía de
+// elegir el carácter del mundo (`fiereza` en 4) y de dejar los demás donde cayeran, y eso tenía un
+// coste que nadie había mirado: con `retorno` en 1, **nueve de cada veinte semillas se extinguían
+// el día 2**. El corte es limpísimo —todas las muertas por debajo de 1,02 y todas las vivas por
+// encima de 1,03— porque quien no vuelve a casa no llena despensa, no cría nadie y los treinta
+// fundadores mueren de hambre antes del tercer amanecer. El fundador estaba justo en el filo y el
+// ±12% que la semilla le despeina tiraba a la mitad de los mundos por él.
+//
+// Ponerlo en el centro del recorrido es además lo que hace que un gen se pueda ver moverse en las
+// dos direcciones: naciendo en un extremo, la mitad de su rango no se visita nunca.
 export const FUNDADOR: Genoma = {
-  empuje: 2, talla: 4.5, vision: 22, sociabilidad: 0, fiereza: 4, retorno: 1,
+  empuje: 2.0, talla: 3.95, vision: 16.68, sociabilidad: -0.22, fiereza: 2.78, retorno: 1.97,
 };
-
 // Medido en `costes.medir.ts`, y **el tamaño del mundo lo decide que se coma la comida**. Con
 // 448×320 sobraba la mitad del suelo todos los días y el centro del mapa no lo pisaba nadie: la
 // comida sobrante por bandas del borde al centro iba 35% · 44% · 75% · 95% · **99%**. No era la

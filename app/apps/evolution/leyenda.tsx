@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { sitio } from "./reparto";
-import { extensionCuerpo, pintarAlcance, pintarMuestra, type Paleta } from "./render";
+import { VENTANA, extensionCuerpo, pintarAlcance, pintarMuestra, type Paleta } from "./render";
+import type { Genoma, Rasgo } from "./engine";
 
 /**
  * La leyenda del mundo: qué gen es cada cosa que se ve, con qué genoma empezó la partida y dónde
@@ -13,8 +14,9 @@ import { extensionCuerpo, pintarAlcance, pintarMuestra, type Paleta } from "./re
  * mutación multiplica y divide sin techo, así que lo único que frena un gen es lo que cuesta. La
  * pregunta de verdad —«¿ya son lo más grandes que pueden?»— se contesta comparando la población
  * de ahora con el fundador del que salió, y eso es lo que pinta la barra de cada fila. Los tres
- * bichos de la izquierda son la mitad, el fundador y el doble: una vara de medir para el ojo, no
- * un límite del modelo.
+ * bichos de la izquierda son **el p01, el fundador y el p99** de una simulación de veinte mundos:
+ * los dos extremos que llega a dar la población, no un límite del modelo. Por eso el de la
+ * izquierda y el de la derecha son bichos que existen y que se pueden encontrar en el mundo.
  *
  * Todo lo dibujado sale de `render.ts` y de las constantes del motor. Una silueta pintada aquí
  * aparte empezaría a mentir el día que cambie la del mundo, sin que fallara nada.
@@ -24,18 +26,13 @@ import { extensionCuerpo, pintarAlcance, pintarMuestra, type Paleta } from "./re
 export type Banda = { min: number; lo: number; med: number; hi: number; max: number };
 export type Perfil = Record<string, Banda>;
 
-/** Qué genes se ven en el bicho y cómo. Los que no están aquí no tienen silueta. */
-const MUESTRA: Record<string, "cuerpo" | "mundo"> = {
-  talla: "cuerpo", empuje: "cuerpo", fiereza: "cuerpo", sociabilidad: "cuerpo", vision: "mundo",
-};
-
 /**
- * Dónde mirar cuando el cuerpo no lo dibuja. **Ningún gen es invisible** —los que solo existían en
- * la estadística se fueron del modelo—, así que aquí nunca pone "no se ve": pone dónde mirar.
+ * **Los seis genes se ven en el cuerpo**, así que los seis enseñan bichos. La visión enseña además
+ * su disco de alcance contra el mundo entero: el tamaño del ojo dice que ve más, pero solo el disco
+ * contesta la pregunta que importa de ese gen —cuánto ve **comparado con el mundo**—, que es lo que
+ * separa "moverse es una decisión" de "todo es paseo aleatorio".
  */
-const SIN_CUERPO: Record<string, string> = {
-  retorno: "se ve al volver",
-};
+const CON_ALCANCE = "vision";
 
 /** Qué es cada gen, en una frase y sin fórmulas — la fórmula ya está en `TABLA`, debajo. */
 const QUE_ES: Record<string, string> = {
@@ -51,8 +48,8 @@ const QUE_ES: Record<string, string> = {
 // `reparto.ts`, que es también la del panel: con una copia aquí el mismo gen se leería con dos
 // varas de medir el día que una de las dos se moviera. Cuánta ventana hace falta lo mide
 // `reparto.medir.ts`, y no es de gusto: es lo que se aleja el gen que más se va.
-const MUESTRAS = [0.5, 1, 2];      // la mitad, el fundador y el doble
-const SOC_MUESTRAS = [-0.6, 0, 0.6];
+/** Los pies de las tres muestras. La de en medio es el fundador de la semilla que se esté viendo. */
+const PIES = ["p01", "fundador", "p99"];
 
 const CELDA = 54;                  // lado de cada muestra de cuerpo, en px CSS
 const MUNDO_W = 170, MUNDO_H = 118;
@@ -68,9 +65,13 @@ function conSigno(x: number): string {
   return t === "0,00" ? t : (x < 0 ? "−" : "+") + t;
 }
 
-/** Los tres valores que se dibujan en una fila: la mitad, el fundador y el doble. */
+/**
+ * Los tres valores de una fila: los dos extremos de la ventana del gen y el fundador de esta
+ * semilla en medio. La ventana es la misma que usa el cuerpo para dibujarse, así que la muestra de
+ * la izquierda es literalmente el bicho más bajo que se va a ver y la de la derecha, el más alto.
+ */
 const muestrasDe = (rasgo: string, eva: Record<string, number>): number[] =>
-  rasgo === "sociabilidad" ? SOC_MUESTRAS : MUESTRAS.map((k) => eva[rasgo] * k);
+  [VENTANA[rasgo as Rasgo][0], eva[rasgo], VENTANA[rasgo as Rasgo][1]];
 
 const pct = (t: number) => `${(t * 100).toFixed(2)}%`;
 
@@ -79,31 +80,27 @@ function Muestras({ rasgo, eva, hoy, mundo, paleta }: {
   mundo: { ancho: number; alto: number }; paleta: Paleta;
 }) {
   const refs = useRef<(HTMLCanvasElement | null)[]>([]);
-  const modo = MUESTRA[rasgo];
-  const signo = rasgo === "sociabilidad";
+  const alcanceRef = useRef<HTMLCanvasElement | null>(null);
   const valores = muestrasDe(rasgo, eva);
 
   useEffect(() => {
     const dpr = window.devicePixelRatio || 1;
-    if (modo === "mundo") {
-      const cv = refs.current[0];
+    if (rasgo === CON_ALCANCE) {
+      const cv = alcanceRef.current;
       const ctx = cv?.getContext("2d");
-      if (!cv || !ctx) return;
-      cv.width = Math.round(MUNDO_W * dpr); cv.height = Math.round(MUNDO_H * dpr);
-      pintarAlcance(ctx, MUNDO_W, MUNDO_H, dpr, paleta, mundo.ancho, mundo.alto, eva.talla,
-        eva.vision, hoy ? hoy.med : null);
-      return;
+      if (cv && ctx) {
+        cv.width = Math.round(MUNDO_W * dpr); cv.height = Math.round(MUNDO_H * dpr);
+        pintarAlcance(ctx, MUNDO_W, MUNDO_H, dpr, paleta, mundo.ancho, mundo.alto, eva.talla,
+          eva.vision, hoy ? hoy.med : null);
+      }
     }
     // Una sola escala para las tres, la que hace caber a la que más sobresale.
     const cuerpos = valores.map((v) => ({
-      g: {
-        fiereza: rasgo === "fiereza" ? v : eva.fiereza,
-        sociabilidad: signo ? v : eva.sociabilidad,
-        empuje: rasgo === "empuje" ? v : eva.empuje,
-      },
+      g: { ...eva, [rasgo]: v } as unknown as Genoma,
       radio: rasgo === "talla" ? v : eva.talla,
     }));
-    const alcance = Math.max(...cuerpos.map((c) => extensionCuerpo(c.g, c.radio)));
+    // La celda es cuadrada, así que la escala la manda la dimensión que más sobresalga de las dos.
+    const alcance = Math.max(...cuerpos.flatMap((c) => extensionCuerpo(c.g, c.radio)));
     const escala = (CELDA / 2 - 3) / alcance;
     cuerpos.forEach((c, i) => {
       const cv = refs.current[i];
@@ -114,18 +111,6 @@ function Muestras({ rasgo, eva, hoy, mundo, paleta }: {
     });
   });
 
-  if (modo === "mundo") {
-    return (
-      <div className="lg-muestras">
-        <canvas ref={(el) => { refs.current[0] = el; }} style={{ width: MUNDO_W, height: MUNDO_H }} />
-        <div className="lg-pies" style={{ width: MUNDO_W }}>
-          <span>- - - fundador</span><span>hoy ──</span>
-        </div>
-      </div>
-    );
-  }
-  if (!modo) return <div className="lg-muestras lg-vacio">{SIN_CUERPO[rasgo] ?? ""}</div>;
-
   return (
     <div className="lg-muestras">
       <div className="lg-celdas">
@@ -134,8 +119,16 @@ function Muestras({ rasgo, eva, hoy, mundo, paleta }: {
         ))}
       </div>
       <div className="lg-pies">
-        {(signo ? ["−0,6", "0", "+0,6"] : ["÷2", "fundador", "×2"]).map((t) => <span key={t}>{t}</span>)}
+        {PIES.map((t) => <span key={t}>{t}</span>)}
       </div>
+      {rasgo === CON_ALCANCE && (
+        <>
+          <canvas ref={alcanceRef} style={{ width: MUNDO_W, height: MUNDO_H, marginTop: 6 }} />
+          <div className="lg-pies" style={{ width: MUNDO_W }}>
+            <span>- - - fundador</span><span>hoy ──</span>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -218,9 +211,9 @@ export default function Leyenda({ rasgos, tabla, eva, ancho, alto, perfil, palet
         <button className="ev-btn muted" onClick={cerrar}>cerrar</button>
       </div>
       <p className="lg-intro">
-        Cada bicho lleva el genoma puesto. A la izquierda, cómo se ve el gen a la mitad, en el
-        fundador de esta semilla y al doble; a la derecha, la barra de ÷4 a ×4 del fundador con
-        dónde está hoy la población.
+        Cada bicho lleva el genoma puesto. A la izquierda, cómo se ve el gen en el 1% más bajo de
+        la población, en el fundador de esta semilla y en el 1% más alto; a la derecha, la barra de
+        ÷4 a ×4 del fundador con dónde está hoy la población.
       </p>
       <p className="lg-intro lg-aviso">
         <b>No hay tope:</b> la mutación multiplica sin techo, así que ningún gen tiene máximo —

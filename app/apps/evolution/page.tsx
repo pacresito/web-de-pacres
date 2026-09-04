@@ -95,7 +95,6 @@ function linea(m: Mundo): string {
     ` · comida ${m.comida.length} · tick ${m.t}`;
 }
 
-const PISTA = "Franja = casa · aro = despensa y sus vueltas, lo ahorrado · puntos = bocados que lleva · tono y filo = fiereza · aura = sociabilidad";
 
 const ExpandIcon = () => <IconoPantallaCompleta size={14} />;
 const CollapseIcon = () => <IconoPantallaCompleta size={16} salir />;
@@ -356,7 +355,6 @@ export default function Evolution() {
           color: var(--t-accent); transition: opacity 0.15s; opacity: 0.7;
         }
         .fs-exit:hover { opacity: 1; }
-        .hint-row { padding: 0.55rem 0 0; font-size: 0.7rem; color: var(--muted); font-family: var(--t-mono); }
 
         /* ── Leyenda ──────────────────────────────────────────────────────────
            Encima del lienzo y no debajo: el hueco vertical ya se lo reparten el mundo y la barra
@@ -473,9 +471,6 @@ export default function Evolution() {
 
         {!fullscreen && (
           <>
-            <div className="hint-row">
-              {PISTA}
-            </div>
             <WhyFooter question="¿Por qué un simulador de evolución?" date="2 de septiembre de 2026" onOpenChange={setPorque} style={{ marginTop: "auto" }}>
               <p>Que de unas reglas simples salga algo que nadie ha escrito me parece la idea más bonita que tiene la biología. Y es de las que cuesta creerse si no la ves pasar.</p>
               <p>Aquí nadie decide cómo se comporta un bicho. Solo hay seis números que se heredan con pequeños errores y un mundo en el que solo lo que llega a casa se convierte en hijos. Con eso basta.</p>
