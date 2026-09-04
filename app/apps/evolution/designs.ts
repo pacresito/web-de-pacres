@@ -1158,10 +1158,19 @@ export const giroDe = (x: number, y: number) => ((x * 7919 + y * 104729) % 628) 
  */
 export const MARGEN = 0.12;
 
-export function posGen(r: Rasgo, v: number): number {
+/**
+ * Dónde cae un valor **dentro de su ventana**, en 0…1: 0 es el p01 y 1 el p99. Sin recortar, porque
+ * salirse es justo lo que hay que poder ver — un linaje en 1,2 se ha ido más allá del 1% más alto
+ * que llegó a existir en veinte mundos, y eso es una noticia.
+ *
+ * Es el número que la leyenda enseña en tanto por ciento, y el único de este mundo que se entiende
+ * sin saber de qué va: «empujaba como el 50% y ahora como el 63%» dice algo, y «empuje 2,14» no.
+ */
+export function enVentana(r: Rasgo, v: number): number {
   const [lo, hi] = VENTANA[r];
-  const t = r === "sociabilidad"
-    ? (v - lo) / (hi - lo)
-    : Math.log2(v / lo) / Math.log2(hi / lo);
-  return clamp(MARGEN + (1 - 2 * MARGEN) * t, 0, 1);
+  return r === "sociabilidad" ? (v - lo) / (hi - lo) : Math.log2(v / lo) / Math.log2(hi / lo);
+}
+
+export function posGen(r: Rasgo, v: number): number {
+  return clamp(MARGEN + (1 - 2 * MARGEN) * enVentana(r, v), 0, 1);
 }

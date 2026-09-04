@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { VENTANA, pintarMuestra, posGen, type Design, type Paleta } from "./render";
+import { VENTANA, enVentana, pintarMuestra, posGen, type Design, type Paleta } from "./render";
 import type { Genoma, Rasgo } from "./engine";
 
 /**
@@ -42,8 +42,8 @@ const QUE_ES: Record<string, string> = {
 // comparan de un vistazo aunque midan cosas de unidades distintas — y el número que las acompaña
 // deja de ser el dato: lo que se lee es dónde cae respecto a donde nació todo el mundo.
 
-/** Los pies de la fila: los dos extremos, uno a cada lado. El de en medio es el fundador y se ve. */
-const PIES = ["p01", "p99"];
+// Sin pies bajo las muestras: los tres bichos ya son la escala, y la cifra de la derecha dice en
+// qué punto de ella está la población. Un rótulo que repite lo que ya se ve es ruido.
 
 const CELDA = 54;                  // lado de cada muestra de cuerpo, en px CSS
 
@@ -101,9 +101,6 @@ function Muestras({ rasgo, eva, paleta, diseno }: {
           <canvas key={i} ref={(el) => { refs.current[i] = el; }} style={{ width: CELDA, height: CELDA }} />
         ))}
       </div>
-      <div className="lg-pies">
-        {PIES.map((t) => <span key={t}>{t}</span>)}
-      </div>
     </div>
   );
 }
@@ -116,6 +113,11 @@ function Fila({ rasgo, eva, hoy, tabla, paleta, diseno }: {
   const base = eva[rasgo];
   const donde = (x: number) => posGen(rasgo as Rasgo, x);
   const cifra = signo ? conSigno : num;
+  // **El gen se lee en su ventana, no en sus unidades.** «Empuje 2,14» no dice nada sin saber qué
+  // es mucho; «empezó en el 50% y va por el 63%» se entiende sin saber nada. El 0% es el p01 y el
+  // 100% el p99, así que el fundador sale siempre cerca de la mitad y lo que se lee es el viaje.
+  // El valor de verdad sigue estando, en el `title`: para el que quiera el número.
+  const donde100 = (x: number) => `${Math.round(enVentana(rasgo as Rasgo, x) * 100)}%`;
   // Cuánto se ha movido la población de donde salió: ×N si el gen multiplica, la diferencia si
   // lleva signo. La razón no vale para un gen que cruza el cero — ahí se dispara sin querer decir nada.
   const viaje = !hoy ? "—"
@@ -128,8 +130,8 @@ function Fila({ rasgo, eva, hoy, tabla, paleta, diseno }: {
       <div className="lg-datos">
         <div className="lg-cab">
           <b>{rasgo === "vision" ? "visión" : rasgo}</b>
-          <span className="lg-cifra">
-            {cifra(base)} <span className="lg-flecha">→</span> {hoy ? cifra(hoy.med) : "—"}
+          <span className="lg-cifra" title={`${cifra(base)} → ${hoy ? cifra(hoy.med) : "—"}`}>
+            {donde100(base)} <span className="lg-flecha">→</span> {hoy ? donde100(hoy.med) : "—"}
             <b className="lg-viaje">{viaje}</b>
           </span>
         </div>
@@ -185,9 +187,10 @@ export default function Leyenda({ rasgos, tabla, eva, perfil, paleta, diseno, ce
         <button className="ev-btn muted" onClick={cerrar}>cerrar</button>
       </div>
       <p className="lg-intro">
-        Cada bicho lleva el genoma puesto. A la izquierda, cómo se ve el gen en el 1% más bajo de
-        la población, en el fundador de esta semilla y en el 1% más alto; a la derecha, la barra de
-        ÷4 a ×4 del fundador con dónde está hoy la población.
+        Cada bicho lleva el genoma puesto. A la izquierda, cómo se ve el gen en el 1% más bajo que
+        llegó a existir, en el fundador de esta semilla y en el 1% más alto. La cifra es en qué punto
+        de ese recorrido está: el fundador nace cerca del 50% y la barra enseña a dónde ha ido su
+        descendencia.
       </p>
       <p className="lg-intro lg-aviso">
         <b>No hay tope:</b> la mutación multiplica sin techo, así que ningún gen tiene máximo —
