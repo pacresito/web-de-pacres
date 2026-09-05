@@ -258,7 +258,7 @@ export type Config = {
 // Ponerlo en el centro del recorrido es además lo que hace que un gen se pueda ver moverse en las
 // dos direcciones: naciendo en un extremo, la mitad de su rango no se visita nunca.
 export const FUNDADOR: Genoma = {
-  empuje: 2.54, talla: 2.65, vision: 26.16, sociabilidad: -0.07, fiereza: 1.29, retorno: 2.38,
+  empuje: 2.53, talla: 2.42, vision: 28.57, sociabilidad: -0.09, fiereza: 1.33, retorno: 3.27,
 };
 // Medido en `costes.medir.ts`, y **el tamaño del mundo lo decide que se coma la comida**. Con
 // 448×320 sobraba la mitad del suelo todos los días y el centro del mapa no lo pisaba nadie: la
@@ -280,24 +280,31 @@ export const FUNDADOR: Genoma = {
 // medio vacío al alba, lleno al mediodía, vacío otra vez al ocaso.
 //
 // **La comida del día es la perilla que mueve el mundo entero, y por eso la sortea la semilla.**
-// Son tres climas con el mismo motor, medidos a 200 días sobre cincuenta semillas y veinte
-// fundadores: con 50 bocados se extingue una de cada cuatro poblaciones, con 75 una de cada diez y
-// con 100 una de cada cincuenta. 75 sale el doble de veces porque es el clima corriente y los
-// otros dos son el mundo duro y el mundo fácil.
+// Tres climas con el mismo motor y el mismo peso, medidos a 300 días sobre cuarenta y cuatro
+// semillas: con 25 bocados se muere **uno de cada cuatro mundos**, con 40 dos de cuarenta y cuatro
+// y con 55 uno. El censo va casi lineal con la comida: 14 · 19 · 25. Debajo de 25 el clima deja de
+// ser duro y pasa a ser una condena —con 20 se mueren 24 de 44—, y el filo está pegado: 30 mata lo
+// mismo que 25, y 20 el doble.
 //
-// **50 no es «lo mismo con menos comida», es otra ecología.** La escasez selecciona cuerpos
-// diminutos —talla 2,2 contra 3,4— y con todos por debajo del umbral de boca la depredación deja
-// de encontrar a quién comerse: cae del 19% de las muertes al 5%, y sin ese freno la población
-// oscila hasta 449 sobre cincuenta bocados y se desploma a cero. Es el mismo mundo averiado que
-// `caza: false`, al que se llega sin apagar nada — basta con encoger a todos por debajo del filo.
-export const URNA = [50, 75, 75, 100];
-// **El censo inicial es el censo típico**, que es lo que hace que el primer día no sea una rampa:
-// medido en esa misma rejilla, un mundo asentado vive entre 14 y 24 bichos. Empezando muy por
-// encima, los fundadores se estorban sobre el mismo suelo y el mundo arranca con una hambruna
-// suya; muy por debajo, el mundo entero es la suerte de una fundadora.
+// **El clima pobre no es «lo mismo con menos comida», es otra ecología.** Comerse a otro necesita
+// encontrarlo y encontrarlo necesita censo, así que la depredación se apaga sola al bajar la
+// comida: es el 3% de las muertes con 25 bocados, el 8% con 40 y el 12% con 55, y el resto es
+// hambre. En el mundo pobre la `fiereza` no tiene a quién morder, y por eso es ahí un gen casi
+// neutro que cada partida deja donde le cae — el que abre el abanico más ancho entre mundos, de
+// largo. Se llega al mismo sitio que con `caza: false` sin apagar nada.
+export const URNA = [25, 40, 55];
+// **Se empieza con una sola bicha, y el mundo no recuerda con cuántas empezó.** Medido a 100 días
+// sobre treinta y dos semillas, arrancar con 1, 5, 10 o 20 da el mismo censo ya desde el día 10: la
+// comida fija el techo y la población lo alcanza en menos de diez días desde donde sea. Con veinte
+// no se compraba diversidad —eran clones de la misma Eva— sino saltarse el principio, que es la
+// parte que se puede mirar.
+//
+// El precio se paga entero en el clima pobre, donde la fundadora que no cría la primera noche se
+// lleva el mundo: con 25 bocados, tres de cuarenta y cuatro semillas se acaban el día 2; con 40,
+// ninguna.
 export const CONFIG: Config = {
   ancho: 288, alto: 200,
-  comidas: 75, censoInicial: 20,
+  comidas: 40, censoInicial: 1,
   ticksDia: 1000, capReserva: CAP_RESERVA, casa: 18,
   caza: true, boca: 1.2,
   tasa: 0.08, paso: 0.06,

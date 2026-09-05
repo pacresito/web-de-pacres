@@ -27,12 +27,12 @@ export const clamp = (v: number, a: number, b: number) => (v < a ? a : v > b ? b
  * fundador es el punto medio de esta tabla, así que moverlo mueve la tabla y viceversa.
  */
 export const VENTANA: Record<Rasgo, [number, number]> = {
-  empuje: [1.66, 3.89],
-  talla: [2.03, 3.45],
-  vision: [18.02, 37.97],
-  sociabilidad: [-0.39, 0.25],
-  fiereza: [0.41, 4.08],
-  retorno: [1.11, 5.09],
+  empuje: [1.68, 3.80],
+  talla: [1.88, 3.12],
+  vision: [20.10, 40.60],
+  sociabilidad: [-0.51, 0.34],
+  fiereza: [0.53, 3.32],
+  retorno: [1.24, 8.60],
 };
 
 /**
@@ -47,7 +47,7 @@ const n01 = (r: Rasgo, v: number): number => {
 /**
  * La sociabilidad va en la misma vara, y **su cero deja de ser el cero físico para ser el
  * fundador**. Cuesta un matiz —un bicho pintado liso no es "me da igual la compañía", es "igual que
- * su tatarabuela"— y a cambio el gen se ve: su recorrido medido es de −0,39 a +0,25, así que a
+ * su tatarabuela"— y a cambio el gen se ve: su recorrido medido es de −0,51 a +0,34, así que a
  * escala de ±1 la población entera se pintaba idéntica.
  */
 const n01soc = (s: number): number => {

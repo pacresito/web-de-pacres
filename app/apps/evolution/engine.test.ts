@@ -48,7 +48,7 @@ function escenario(cfg: Partial<Config>, dias = DIAS) {
 }
 
 // Seis escenarios y tres perillas, cada una separada por lo suficiente para salir del ruido: la
-// comida del día (×5,7), la depredación (encendida o apagada) y la despensa (×3,3). Todos están
+// comida del día (×5,7), la depredación (encendida o apagada) y la despensa (×2,5). Todos están
 // **dentro de la ventana viable** —diez o más semillas de doce llegan al plazo de su escenario—,
 // que hay que respetar al elegirlos: una mediana de tres semillas no es una mediana, es una
 // anécdota.
@@ -62,18 +62,20 @@ function escenario(cfg: Partial<Config>, dias = DIAS) {
 const POBRE: Partial<Config> = { comidas: 70 };
 const RICO: Partial<Config> = { comidas: 400 };
 const SIN_CAZA: Partial<Config> = { caza: false };
-const DESPENSA_CORTA: Partial<Config> = { capReserva: 0.6 };
-const DESPENSA_LARGA: Partial<Config> = { capReserva: 2 };
+// La despensa se compara **contra la de casa** y no contra una corta: con una sola fundadora, una
+// despensa por debajo de la normal se lleva más de la mitad de las semillas antes del plazo —5 de
+// 12 con 0,6, 8 con 0,8, 11 con 1— y ahí el escenario ya no mide selección, mide quién sobrevivió.
+const DESPENSA_LARGA: Partial<Config> = { capReserva: 2.5 };
 
 console.log("Corriendo escenarios (esto tarda unos minutos)…\n");
 const pobre = escenario(POBRE), rico = escenario(RICO);
 const DIAS_CAZA = 80;
 const sinCaza = escenario(SIN_CAZA, DIAS_CAZA), conCaza = escenario({}, DIAS_CAZA);
-const corta = escenario(DESPENSA_CORTA), larga = escenario(DESPENSA_LARGA);
+const normal = escenario({}), larga = escenario(DESPENSA_LARGA);
 const cifras = (n: string, e: ReturnType<typeof escenario>) =>
   `${n}: talla=${e.talla.toFixed(2)} visión=${e.vision.toFixed(1)} retorno=${e.retorno.toFixed(2)} (${e.vivas}/${SEMILLAS.length} vivas)`;
 for (const [n, e] of [["pobre", pobre], ["rico", rico], ["sin caza", sinCaza], ["con caza", conCaza],
-                      ["despensa corta", corta], ["despensa larga", larga]] as const) console.log(cifras(n, e));
+                      ["despensa normal", normal], ["despensa larga", larga]] as const) console.log(cifras(n, e));
 console.log("");
 
 // 1. **La abundancia hace gigantes.** La despensa va con la masa y un hijo se lleva la suya llena,
@@ -94,15 +96,15 @@ check("sin depredación → baja la talla",
 // 3. **La despensa larga encoge el cuerpo.** Un hijo nace con la suya llena, así que alargarla
 //    encarece a los grandes más que a los pequeños: es la misma cuenta del test 1 leída por el
 //    otro lado, y aísla el precio de la talla del de la comida. Medido en gradiente sobre
-//    veinticuatro semillas, la talla baja monótona con la despensa: 3,02 · 2,88 · 2,56 · 2,41 ·
-//    2,34 de 0,5 a 1,5.
+//    doce semillas, la talla baja monótona con la despensa en todo su recorrido viable: 2,64 ·
+//    2,63 · 2,46 · 2,09 · 1,97 · 1,74 de 0,8 a 2,5.
 //
-//    **Lo que la despensa no mueve es el retorno**, que es lo que este test afirmaba: sobre ese
-//    mismo gradiente da 2,39 · 2,34 · 2,49 · 2,57 · 2,48, ruido puro. Volver a casa lo decide el
-//    sol y no la autonomía — el gen tira porque anochece, no porque se acabe la despensa.
+//    **Lo que la despensa no mueve es el retorno**, que es lo que este test afirmaba antes: sobre
+//    ese mismo gradiente es ruido. Volver a casa lo decide el sol y no la autonomía — el gen tira
+//    porque anochece, no porque se acabe la despensa.
 check("despensa más larga → baja la talla",
-  corta.vivas >= 5 && larga.vivas >= 5 && larga.talla < corta.talla,
-  `talla ${corta.talla.toFixed(2)}→${larga.talla.toFixed(2)}`);
+  normal.vivas >= 5 && larga.vivas >= 5 && larga.talla < normal.talla,
+  `talla ${normal.talla.toFixed(2)}→${larga.talla.toFixed(2)}`);
 
 // 4. **La escasez paga el ojo.** Es el mismo par pobre/rico del test 1 leído en el otro gen, y
 //    solo dice algo desde que la luz existe: con la comida escasa hay que verla de lejos, y el
