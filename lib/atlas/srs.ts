@@ -37,7 +37,12 @@ export const ACIERTOS_APRENDIDO = 5;
 const VIDA_DOMINADO = 21;
 
 // Vidas de arranque, para la primera vez: ahí no hay `transcurrido` del que tirar.
-const VIDA_INICIAL: Record<Nota, number> = { fallo: 0.01, bien: 1, facil: 4 };
+//
+// **La del fallo es además lo que decide cuánto tarda en volver lo fallado**, porque el descanso
+// es su propia vida: minuto y medio son siete u ocho tarjetas, que es volver a verlo dentro de la
+// sesión sin que salga en la de al lado. **Cero no vale**: la sospecha divide por la vida, así que
+// sería infinita, o `NaN` en el instante de calificar, y el ranking dejaría de ordenar nada.
+const VIDA_INICIAL: Record<Nota, number> = { fallo: 0.001, bien: 1, facil: 4 };
 // Por cuánto multiplica la nota la resistencia demostrada, cuando se demuestra entera. Fallar no
 // tiene factor: se atiende antes y no llega a usarse.
 const FACTOR: Record<Exclude<Nota, "fallo">, number> = { bien: 2, facil: 4 };
@@ -179,11 +184,14 @@ export function montar(mazo: Mazo, pais: Pais, ahora: number): Tarjeta {
  *
  * El freno a los nuevos es invisible: mientras haya demasiados países crudos peleando arriba, no
  * entran más. **Lo que dosifica es lo que hay que aprender, y solo eso** — lo que se marca «fácil»
- * sale del recuento en el acto y pasa de largo. Con veinte, un país acertado a diario tarda cuatro
- * días en asentarse, así que entran veinte datos nuevos al día: el mismo ritmo que Anki trae por
- * defecto. Las cifras, en `srs.medir.ts`.
+ * sale del recuento en el acto y pasa de largo.
+ *
+ * **Es el techo de países nuevos de una tarde, y por eso vale su número exacto:** asentar uno pide
+ * cuatro días de vida y eso no se compra contestando, así que una maratón abre hasta llenar el
+ * cupo y ahí se queda. En una sesión corriente no se nota — al día siguiente de no jugar, la cola
+ * de repaso se lleva la sesión entera y no entra ninguno. Las cifras, en `srs.medir.ts`.
  */
-export const MAX_EN_EL_AIRE = 20;
+export const MAX_EN_EL_AIRE = 10;
 
 /**
  * Cuándo deja un dato de estar crudo: cuando aguanta al menos lo que un «ya me lo sé» de entrada.
@@ -201,16 +209,21 @@ const VIDA_ASENTADO = VIDA_INICIAL.facil;
 const asentado = (e: Estado | undefined) => !!e && e.vida >= VIDA_ASENTADO;
 
 /**
- * Cuánto descansa un dato antes de poder volver a salir. **Es tiempo real y no sospecha**, que es
- * lo único que no se puede acelerar contestando rápido: la sospecha es un cociente, así que
- * dentro de una sesión —donde todo lo demás acaba de verse y compite con milésimas— el dato de
- * menos vida gana el ranking una y otra vez y se queda con la sesión entera.
+ * El tope de lo que un dato descansa antes de poder volver a salir. Lo que descansa de verdad es
+ * `min(su vida, esto)`: **nada vuelve antes de agotar la vida que se le predijo, y nada espera
+ * más de un cuarto de hora**. La primera mitad es la definición de la sospecha —llega a 1 cuando
+ * transcurrido iguala a la vida— y la segunda es lo que impide que una sesión se quede sin cola.
  *
- * Tres minutos es lo más largo que aún deja volver a ver lo fallado dentro de la sesión: con
- * cinco ya no vuelve, y sin descanso se la come —sale dieciséis veces de veinticinco tarjetas, y
- * los países distintos de esas tarjetas caen de 24 a 10—. Las cifras salen de `srs.medir.ts`.
+ * Hace falta porque **el ranking es relativo y la sospecha, un cociente**: dentro de una sesión
+ * todo lo demás acaba de verse y compite con milésimas, así que al de menos vida no le hace falta
+ * llegar a 1 para ganar, le basta con ser el máximo. Sin freno, una sesión de cincuenta tarjetas
+ * es cincuenta veces el mismo dato; con un freno plano para todos se va por el otro lado —lo que
+ * dura más que la sesión deja la cola vacía y manda el respaldo, que también es siempre el mismo.
+ *
+ * El cuarto de hora es la vida que tenía un fallo antes de que la suya la gobernara: el número no
+ * se pierde, cambia de puesto. Las cifras salen de `srs.medir.ts`.
  */
-export const DESCANSO = 3 * 60_000;
+export const DESCANSO = 15 * 60_000;
 
 export function siguiente(mazo: Mazo, orden: string[], ahora: number): Pais | null {
   let mejor: { id: string; s: number } | null = null;
@@ -226,7 +239,7 @@ export function siguiente(mazo: Mazo, orden: string[], ahora: number): Pais | nu
       const estado = mazo[p.id]?.[d];
       const s = sospecha(estado, ahora);
       if (!respaldo || s > respaldo.s) respaldo = { id: p.id, s };
-      if (estado && ahora - estado.visto < DESCANSO) continue;
+      if (estado && ahora - estado.visto < Math.min(estado.vida * DIA, DESCANSO)) continue;
       if (!mejor || s > mejor.s) mejor = { id: p.id, s };
     }
   }

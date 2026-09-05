@@ -6,22 +6,33 @@
 // con sospechas de milésimas y el dato de menos vida —el que se acaba de fallar— gana el ranking
 // una vez tras otra. Y la **tarde maratón**, donde deciden los otros dos: cientos de tarjetas
 // seguidas sin que pase un solo día, que es la única manera de abrir el mazo de par en par.
-import { calificar, DATOS, DESCANSO, MAX_EN_EL_AIRE, montar, siguiente, sospecha,
-  type Dato, type Mazo, type Nota } from "./srs";
+import { calificar, DATOS, DESCANSO, MAX_EN_EL_AIRE, montar, nuevosAciertos, siguiente,
+  sospecha, type Dato, type Mazo, type Nota } from "./srs";
 import { PAISES, PAIS_POR_ID } from "./paises";
 import { RECORRIDO } from "@/data/atlas/orden";
 
 const T0 = Date.parse("2026-08-28T18:00:00Z");
 const SEGUNDOS_POR_TARJETA = 12; // lo que se tarda en mirar una tarjeta y calificarla
-const TARJETAS = 25;
-const LISTON = 4; // `VIDA_ASENTADO`, que no se exporta
+const TARJETAS = 50;
+const LISTON = 4;      // `VIDA_ASENTADO`, que no se exporta
+const VIDA_FALLO = 0.001; // `VIDA_INICIAL.fallo`, que tampoco
 
-type Perillas = { descanso: number; tope: number; liston: number };
-const REALES: Perillas = { descanso: DESCANSO, tope: MAX_EN_EL_AIRE, liston: LISTON };
+/** `plano` frena a todos por igual en vez de por `min(vida, descanso)`: sirve para medir la
+ *  diferencia, que es lo que justifica que el freno mire la vida de cada dato. */
+type Perillas = { descanso: number; tope: number; liston: number; vidaFallo: number; plano: boolean };
+const REALES: Perillas = { descanso: DESCANSO, tope: MAX_EN_EL_AIRE, liston: LISTON, vidaFallo: VIDA_FALLO, plano: false };
+const DIA = 86_400_000;
+
+/** `calificar` con la vida de un fallo por fuera; en todo lo demás, la de verdad. */
+function calificarCon(mazo: Mazo, id: string, d: Dato, nota: Nota, ahora: number, vidaFallo: number): Mazo {
+  const previo = mazo[id]?.[d];
+  if (nota !== "fallo") return calificar(mazo, id, d, nota, ahora);
+  return { ...mazo, [id]: { ...mazo[id], [d]: { visto: ahora, vida: vidaFallo, aciertos: nuevosAciertos(previo, nota) } } };
+}
 
 /** `siguiente` con los tres umbrales por fuera. Al final se comprueba que con los valores de
  *  verdad devuelve exactamente lo mismo que la función real, que es lo que la hace válida. */
-function siguienteCon(mazo: Mazo, ahora: number, { descanso, tope, liston }: Perillas): string | null {
+function siguienteCon(mazo: Mazo, ahora: number, { descanso, tope, liston, plano }: Perillas): string | null {
   let mejor: { id: string; s: number } | null = null;
   let respaldo: { id: string; s: number } | null = null;
   let enElAire = 0;
@@ -32,7 +43,8 @@ function siguienteCon(mazo: Mazo, ahora: number, { descanso, tope, liston }: Per
       const estado = mazo[p.id]?.[d];
       const s = sospecha(estado, ahora);
       if (!respaldo || s > respaldo.s) respaldo = { id: p.id, s };
-      if (estado && ahora - estado.visto < descanso) continue;
+      const espera = plano ? descanso : Math.min(estado ? estado.vida * DIA : 0, descanso);
+      if (estado && ahora - estado.visto < espera) continue;
       if (!mejor || s > mejor.s) mejor = { id: p.id, s };
     }
   }
@@ -55,7 +67,7 @@ function jugar(mazo: Mazo, tarjetas: number, perillas: Perillas, nota: (primeraV
     for (const d of (tarjeta.primeraVez ? [...DATOS] : tarjeta.tapados) as Dato[]) {
       const clave = `${id}:${d}`;
       veces.set(clave, (veces.get(clave) ?? 0) + 1);
-      mazo = calificar(mazo, id, d, nota(tarjeta.primeraVez, i), ahora);
+      mazo = calificarCon(mazo, id, d, nota(tarjeta.primeraVez, i), ahora, perillas.vidaFallo);
     }
   }
   return { mazo, paises, veces };
@@ -77,8 +89,7 @@ function mazoEnSesion(): Mazo {
 
 /** Una sesión donde se falla el primer dato que se pregunta —al que se sigue la pista— y, si se
  *  pide, uno de cada `cadaCuantosFallo` datos nuevos. Lo ya visto siempre se acierta. */
-function sesion(descanso: number, cadaCuantosFallo = 0) {
-  const perillas = { ...REALES, descanso };
+function sesion(perillas: Perillas, cadaCuantosFallo = 0) {
   let mazo = mazoEnSesion();
   const veces = new Map<string, number>();
   const paises = new Set<string>();
@@ -99,26 +110,35 @@ function sesion(descanso: number, cadaCuantosFallo = 0) {
       if (clave === objetivo) salio++;
       const falla = clave === objetivo ? i === 0
         : cadaCuantosFallo > 0 && primeraVista && nuevos++ % cadaCuantosFallo === 0;
-      mazo = calificar(mazo, id, d, falla ? "fallo" : "bien", ahora);
+      mazo = calificarCon(mazo, id, d, falla ? "fallo" : "bien", ahora, perillas.vidaFallo);
     }
   }
   return { paises: paises.size, datos: veces.size, salio, max: Math.max(...veces.values()) };
 }
 
-const etiqueta = (ms: number) => (ms === 0 ? "sin descanso" : `${ms / 60_000} min`) + (ms === DESCANSO ? "  ←" : "");
-console.log(`SESIÓN ACTIVA · 35 países en el aire, ${TARJETAS} tarjetas a ${SEGUNDOS_POR_TARJETA} s\n`);
-console.log("Fallando un dato en la primera tarjeta y acertando el resto:");
-console.log("  descanso        veces sale lo fallado   países distintos");
-for (const d of [0, 60_000, 2 * 60_000, 3 * 60_000, 5 * 60_000, 10 * 60_000]) {
-  const r = sesion(d);
-  console.log(`  ${etiqueta(d).padEnd(14)}  ${String(r.salio).padStart(20)}   ${String(r.paises).padStart(16)}`);
+const esLaReal = (p: Perillas) => p.descanso === DESCANSO && !p.plano && p.vidaFallo === VIDA_FALLO;
+function fila(nombre: string, p: Perillas) {
+  const r = sesion(p, 3);
+  console.log(`  ${(nombre + (esLaReal(p) ? "  ←" : "")).padEnd(32)} ${String(r.paises).padStart(6)}   ${String(r.datos).padStart(15)}   ${String(r.max).padStart(17)}   ${String(r.salio).padStart(15)}`);
 }
-console.log("\nY fallando uno de cada cinco, que es lo que decide si la sesión se vuelve un carrusel:");
-console.log("  descanso        países   datos distintos   máx veces un dato");
-for (const d of [0, 60_000, 2 * 60_000, 3 * 60_000, 5 * 60_000, 10 * 60_000]) {
-  const r = sesion(d, 5);
-  console.log(`  ${etiqueta(d).padEnd(14)}  ${String(r.paises).padStart(6)}   ${String(r.datos).padStart(15)}   ${String(r.max).padStart(17)}`);
-}
+const CABECERA = "  reglas                           países   datos distintos   máx veces un dato   sale el fallado";
+
+console.log(`SESIÓN ACTIVA · 35 países en el aire, ${TARJETAS} tarjetas a ${SEGUNDOS_POR_TARJETA} s, fallando una de cada tres\n`);
+console.log("El freno, que es `min(vida del dato, DESCANSO)`:");
+console.log(CABECERA);
+for (const d of [0, 3 * 60_000, DESCANSO, 30 * 60_000])
+  fila(d === 0 ? "sin descanso" : `descanso ${d / 60_000} min`, { ...REALES, descanso: d });
+fila("plano: 15 min a todos por igual", { ...REALES, plano: true });
+console.log("\n  Sin freno, la sesión entera es el mismo dato. Plano se va por el otro lado: lo que dura más");
+console.log("  que la sesión deja la cola vacía y manda el respaldo, que también es siempre el mismo.");
+console.log("  Esperando `min(vida, tope)`, ni una cosa ni la otra.\n");
+
+console.log("Y la vida de un fallo, que es lo único que frena a lo recién fallado:");
+console.log(CABECERA);
+for (const v of [0.0005, VIDA_FALLO, 0.002, 0.01])
+  fila(`vida de fallo ${v} d (${Math.round(v * 86_400)} s)`, { ...REALES, vidaFallo: v });
+console.log("\n  Es también lo que espera un fallo antes de volver, porque su vida es menor que el tope.");
+console.log("  Por debajo de minuto y medio empieza a comerse la sesión; por encima se sale de ella.");
 
 // ── El listón y el tope ─────────────────────────────────────────────────────────────────────
 // Cuántos países abre una tarde de cuatrocientas tarjetas desde cero. Es la escena entera: en el
@@ -132,7 +152,7 @@ const LISTONES = [4, 5, 6, 8];
 console.log(`\n\nTARDE MARATÓN · 400 tarjetas seguidas desde cero · países que se abren\n`);
 console.log("  guion                         tope  " + LISTONES.map((l) => `listón ${l}`.padStart(10)).join(""));
 for (const [nombre, nota] of GUIONES) {
-  for (const tope of [15, 20, 30]) {
+  for (const tope of [MAX_EN_EL_AIRE, 15, 20, 30]) {
     const fila = LISTONES.map((liston) => {
       const marca = liston === LISTON && tope === MAX_EN_EL_AIRE ? "←" : " ";
       return `${jugar({}, 400, { ...REALES, tope, liston }, nota).paises.size}${marca}`.padStart(10);
