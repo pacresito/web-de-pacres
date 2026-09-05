@@ -6,15 +6,43 @@
 // diseño, así que este bucle tiene que servir igual para un pez de papel y para un instrumento de
 // rectas: en cuanto empiece a saber de aletas, el siguiente diseño no cabrá.
 
-import { MARCA, RADIO_COMIDA, edadDe, type Mundo } from "./engine";
+import { MARCA, RADIO_COMIDA, edadDe, luzDe, type Mundo } from "./engine";
 import {
-  azarFijo, clamp, colorCuerpo, designFor, giroDe,
+  azarFijo, clamp, colorCuerpo, designFor, giroDe, mix,
   type Cuerpo, type Design, type Paleta,
 } from "./designs";
 
 export { VENTANA, designFor, enVentana, medidas, posGen, type Cuerpo, type Design, type Paleta } from "./designs";
 
 const TAU = Math.PI * 2;
+
+/**
+ * Lo que queda de luz al ras del suelo, y **el mismo para los cuatro mundos**: el material lo pone
+ * cada diseño, pero el sol es uno. Se multiplica sobre lo pintado —de blanco a mediodía a este al
+ * alba y al ocaso—, que es lo que hace la luz de verdad: apagar en proporción. Un velo opaco
+ * encima, en cambio, arrastra los dos temas hacia el mismo gris y borra de qué está hecho el mundo.
+ *
+ * **Dos, porque el tema oscuro ya vive en el suelo del rango.** Multiplicar conserva las
+ * proporciones, no las distancias, y las suyas son de dos dígitos: con el factor del claro, el
+ * suelo, la rejilla y el grano caen todos dentro del mismo negro y la mitad final del día se pinta
+ * en un rectángulo vacío. Le toca el mismo día con menos recorrido, y lo que lleva el ritmo ahí
+ * son los nidos, que aclaran en vez de apagar.
+ *
+ * Ninguno llega a negro: el mundo se sigue mirando con poca luz — la partida arranca parada en el
+ * tick 0, que es el alba, y las crías nacen de noche.
+ */
+const CREPUSCULO = { light: "#3c4c60", dark: "#aab6c4" };
+
+/**
+ * El hoyo del que duerme: un charco de luz bajo el cuerpo, **encima del velo y debajo del bicho**.
+ * Es lo que evita que el ocaso se lea como un mundo que se vacía —el campo se apaga y la
+ * población entera se queda quieta en la orilla, y sin esto no hay nada que diga que sigue ahí— y
+ * a la vez no le toca al cuerpo ni un canal, que los tiene todos ocupados en decir genes y años.
+ *
+ * Crece con la sombra porque es cuando hace falta: a mediodía se ve a todo el mundo y un charco
+ * por bicho sería un adorno más compitiendo con los que sí dicen algo.
+ */
+const NIDO = 1.6, NIDO_DIA = 0.18, NIDO_NOCHE = 0.46;
 
 /**
  * El mundo tiene tamaño fijo y el lienzo no, así que la vista escala y centra en vez de estirar: la
@@ -104,6 +132,18 @@ export function pintar(
     ctx.restore();
   }
 
+  // **La luz del día, sobre el suelo y sobre la comida y no sobre los bichos.** Es donde de verdad
+  // pasa: lo que el crepúsculo apaga es lo que hay que ver —`vision · luz` es el alcance del ojo,
+  // así que un bocado al ocaso ya no lo ve nadie— y el cuerpo, que es lo que se está mirando, no
+  // puede perder legibilidad tres veces al día.
+  const sombra = 1 - luzDe(m.t, c);
+  if (sombra > 0.01) {
+    ctx.globalCompositeOperation = "multiply";
+    ctx.fillStyle = mix("#ffffff", CREPUSCULO[p.tema], sombra);
+    ctx.fillRect(0, 0, c.ancho, c.alto);
+    ctx.globalCompositeOperation = "source-over";
+  }
+
   // Las muertes, debajo de los vivos. Comido es un anillo que se abre —el zarpazo— y el hambre es
   // el cuerpo apagándose y encogiendo. El que se quedó fuera al anochecer no está aquí: no muere,
   // así que se sigue pintando vivo donde le pilló la noche.
@@ -137,6 +177,12 @@ export function pintar(
   // tamaño, con el anillo del parto abriéndose a su alrededor. Es lo único que se anima aquí, y se
   // anima porque nacer es justo lo que no se veía.
   const brote = Math.min(1, noche / 0.6);
+  ctx.fillStyle = p.hi;
+  ctx.globalAlpha = NIDO_DIA + NIDO_NOCHE * sombra;
+  for (const b of m.bichos) if (b.dormido) {
+    ctx.beginPath(); ctx.arc(b.x, b.y, b.radio * NIDO, 0, TAU); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
   for (const b of m.bichos) {
     // La despensa llena va con la masa, así que el vigor de cada uno se mide contra la suya: un
     // grande a medio gas y un pequeño a medio gas se pintan igual de apagados, que es lo justo.

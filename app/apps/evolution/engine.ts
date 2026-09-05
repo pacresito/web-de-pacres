@@ -330,10 +330,15 @@ export type Bicho = {
    * cinco veces más larga, porque el día se acababa en cuanto estaban todos aparcados. Ahora
    * llegar a casa descarga y suelta, y lo que limita la cosecha es la luz y las piernas.
    *
-   * Quedarse **sí** para cuando además no hay nada que ver: eso es dormir, y no necesita bandera
-   * porque se deduce del sitio y de la luz.
+   * Quedarse **sí** para cuando además no hay nada que ver: eso es dormir, y eso es `dormido`.
    */
   aSalvo: boolean;
+  /**
+   * Está en casa y no ve nada, que es lo que quiere decir dormir aquí. Se deduce del sitio y de la
+   * luz, pero se guarda: recomputarlo al pintar sería repasar la comida y el censo enteros por
+   * fotograma para llegar al número que el tick acaba de sacar. Solo lo usa el pintado.
+   */
+  dormido: boolean;
   /** Crías de esta noche. Vive solo entre el anochecer y el amanecer siguiente: es lo que se pinta. */
   hijos: number;
   /** Nacido en la noche que se está mirando. Se apaga al amanecer, y solo lo usa el pintado. */
@@ -474,7 +479,7 @@ function nacer(m: Mundo, g: Genoma, idMadre: number, gen: number, donde?: [numbe
     // que trajo. Así una cría grande cuesta más que una pequeña, que es el contrapeso que la talla
     // no tenía —antes un hijo costaba dos bocados fuera cual fuera su tamaño—.
     radio: g.talla, masa: masaDe(g.talla), carga: 0, reserva: m.cfg.capReserva * masaDe(g.talla),
-    vivo: true, aSalvo: false, hijos: 0, recien: false, g,
+    vivo: true, aSalvo: false, dormido: false, hijos: 0, recien: false, g,
   };
   m.bichos.push(b);
   return b;
@@ -533,6 +538,7 @@ export function amanecer(m: Mundo) {
   }
   for (const b of m.bichos) {
     b.aSalvo = false;
+    b.dormido = false;
     b.hijos = 0;
     b.recien = false;
     // **Ni se reparte despensa ni se vacía la carga.** La energía de hoy es la que quedó de ayer,
@@ -721,6 +727,7 @@ export function tick(m: Mundo) {
     // el basal pero no el empuje, que es lo que hace que llegar pronto valga la pena.
     const vio = decidir(m, b, radioMax, luz, cae);
     const dormido = b.aSalvo && !vio;
+    b.dormido = dormido;
     const v = dormido ? 0 : b.g.empuje / radioCargado(c, b);
     if (!dormido) mover(m, b, v);
 
