@@ -118,11 +118,6 @@ function Fila({ rasgo, eva, hoy, tabla, paleta, diseno }: {
   // 100% el p99, así que el fundador sale siempre cerca de la mitad y lo que se lee es el viaje.
   // El valor de verdad sigue estando, en el `title`: para el que quiera el número.
   const donde100 = (x: number) => `${Math.round(enVentana(rasgo as Rasgo, x) * 100)}%`;
-  // Cuánto se ha movido la población de donde salió: ×N si el gen multiplica, la diferencia si
-  // lleva signo. La razón no vale para un gen que cruza el cero — ahí se dispara sin querer decir nada.
-  const viaje = !hoy ? "—"
-    : signo ? conSigno(hoy.med - base)
-    : hoy.med >= base ? `×${num(hoy.med / base)}` : `÷${num(base / hoy.med)}`;
 
   return (
     <div className="lg-fila">
@@ -132,7 +127,6 @@ function Fila({ rasgo, eva, hoy, tabla, paleta, diseno }: {
           <b>{rasgo === "vision" ? "visión" : rasgo}</b>
           <span className="lg-cifra" title={`${cifra(base)} → ${hoy ? cifra(hoy.med) : "—"}`}>
             {donde100(base)} <span className="lg-flecha">→</span> {hoy ? donde100(hoy.med) : "—"}
-            <b className="lg-viaje">{viaje}</b>
           </span>
         </div>
         <p className="lg-que">{QUE_ES[rasgo]}</p>

@@ -708,7 +708,10 @@ const protoCuerpo: Design["cuerpo"] = (ctx, b, e, p) => {
     ctx.beginPath(); ctx.rect(ex - er * 1.1, -er * 1.15, er * 2.2, er * 0.95); ctx.fill();
   }
 
-  // talla · el citostoma, de poro a bocaza con peine de cilios
+  // talla · el citostoma, de poro a bocaza con peine de cilios. **Se planta por delante del ojo
+  // aunque sobresalga de la membrana**, igual que la boca del pez y por el mismo motivo: buscándole
+  // sitio dentro del cuerpo, un protozoo grande y rápido acababa con el citostoma encima del ojo —
+  // y aquí es peor que en el pez, porque el ojo es uno y va en el eje, justo donde la boca cruza.
   const mw = Math.min(R * (0.09 + 0.58 * m.ta), W * 0.78);
   let mu = 0.90;
   while (mu > 0.20) {
@@ -716,7 +719,7 @@ const protoCuerpo: Design["cuerpo"] = (ctx, b, e, p) => {
     if (Math.abs(rad(a) * Math.sin(a)) >= mw) break;
     mu -= 0.05;
   }
-  const mx = fr * mu;
+  const mx = Math.min(fr * 1.04, Math.max(fr * mu, ex + er * 1.15 + mw * 0.10));
   const curva = R * (0.05 + 0.42 * m.ta) * (0.30 + 0.80 * m.aleta - 0.40 * m.pincho);
   ctx.strokeStyle = p.maw;
   ctx.lineWidth = Math.max(0.5, R * (0.05 + 0.07 * m.ta));
@@ -745,9 +748,10 @@ const protoExtension: Design["extension"] = (g, R) => {
   const al = R * (0.42 + 1.05 * m.brazo), ll = R * (0.34 + 0.92 * m.pata);
   const spl = m.pincho > 0.02 ? R * (0.18 + 0.72 * m.pincho) : 0;
   const cil = m.aleta > 0.02 ? R * (0.32 + 0.85 * m.aleta) : 0;
+  const mw = Math.min(R * (0.09 + 0.58 * m.ta), k.W * 0.78);
   return [
     Math.max(k.fr * wob + spl + cil * 0.9 + R * 0.2, k.bk * wob + tl + R * 0.2,
-      k.bk + ll + R * 0.7, k.fr + al + R * 0.3),
+      k.bk + ll + R * 0.7, k.fr + al + R * 0.3, k.fr * 1.04 + mw * 0.4),
     Math.max(k.W * wob + spl + cil * 0.7 + R * 0.2, k.W * 0.78 + ll * 0.78 + R * 0.5,
       R * (0.15 + 0.42 * m.vi) + R * 0.2, k.W + al * 0.55 + R * 0.3),
   ];

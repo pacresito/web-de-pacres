@@ -392,7 +392,6 @@ export default function Evolution() {
         .lg-cab b { color: var(--t-ink); letter-spacing: 0.04em; }
         .lg-cifra { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
         .lg-flecha { color: var(--t-ink4); }
-        .lg-viaje { color: var(--t-accent); margin-left: 0.5rem; }
 
         /* La barra: fundador en el centro, ÷4 a la izquierda y ×4 a la derecha (la escala, en reparto.ts). */
         .lg-eje { position: relative; height: 14px; margin: 0.45rem 0 0.35rem; }
