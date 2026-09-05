@@ -91,14 +91,29 @@ check("sin depredación → baja la talla",
   sinCaza.vivas >= 5 && conCaza.vivas >= 5 && sinCaza.talla < conCaza.talla,
   `talla ${conCaza.talla.toFixed(2)}→${sinCaza.talla.toFixed(2)}`);
 
-// 3. **La despensa corta manda a casa.** Con poca autonomía no se puede seguir buscando el
-//    siguiente bocado: hay que canjear lo que llevas antes de quedarte sin. Es el gen propio de
-//    este mundo y esta es la perilla que de verdad lo aprieta.
-check("despensa más corta → sube el retorno",
-  corta.vivas >= 5 && larga.vivas >= 5 && corta.retorno > larga.retorno,
-  `retorno ${larga.retorno.toFixed(2)}→${corta.retorno.toFixed(2)}`);
+// 3. **La despensa larga encoge el cuerpo.** Un hijo nace con la suya llena, así que alargarla
+//    encarece a los grandes más que a los pequeños: es la misma cuenta del test 1 leída por el
+//    otro lado, y aísla el precio de la talla del de la comida. Medido en gradiente sobre
+//    veinticuatro semillas, la talla baja monótona con la despensa: 3,02 · 2,88 · 2,56 · 2,41 ·
+//    2,34 de 0,5 a 1,5.
+//
+//    **Lo que la despensa no mueve es el retorno**, que es lo que este test afirmaba: sobre ese
+//    mismo gradiente da 2,39 · 2,34 · 2,49 · 2,57 · 2,48, ruido puro. Volver a casa lo decide el
+//    sol y no la autonomía — el gen tira porque anochece, no porque se acabe la despensa.
+check("despensa más larga → baja la talla",
+  corta.vivas >= 5 && larga.vivas >= 5 && larga.talla < corta.talla,
+  `talla ${corta.talla.toFixed(2)}→${larga.talla.toFixed(2)}`);
 
-// 4. Sin selección los genes derivan, pero **sin dirección**. Si se van sistemáticamente hacia el
+// 4. **La escasez paga el ojo.** Es el mismo par pobre/rico del test 1 leído en el otro gen, y
+//    solo dice algo desde que la luz existe: con la comida escasa hay que verla de lejos, y el
+//    ojo cuesta lo mismo la vea o no. Monótona en los seis puntos del gradiente —29,7 · 26,4 ·
+//    26,1 · 25,5 · 22,3 · 22,0 de 50 a 600 bocados—, que es lo que la separa del ruido en el que
+//    vivía este gen antes.
+check("comida abundante → baja la visión",
+  pobre.vivas >= 5 && rico.vivas >= 5 && rico.vision < pobre.vision,
+  `visión ${pobre.vision.toFixed(1)}→${rico.vision.toFixed(1)}`);
+
+// 5. Sin selección los genes derivan, pero **sin dirección**. Si se van sistemáticamente hacia el
 //    mismo lado, el sesgo está en la mutación — que es justo lo que la multiplicativa está puesta
 //    para no tener. Cuatrocientos linajes que no compiten entre sí y por tanto no coalescen: la
 //    mediana tiene que quedarse donde estaba. (Dentro de un mundo no valdría: a las doscientas
@@ -122,7 +137,7 @@ check("despensa más corta → sube el retorno",
     Math.abs(desvio) < 0.08, `el más desviado, ${peor}: ${(desvio * 100).toFixed(1)}%`);
 }
 
-// 5. La promesa de la semilla compartida: mismo mundo, mismo día, mismo estado. Se compara la
+// 6. La promesa de la semilla compartida: mismo mundo, mismo día, mismo estado. Se compara la
 //    huella entera —posiciones, rumbos, reservas, carga y genes— y no solo el censo, que
 //    coincidiría por casualidad.
 {
@@ -159,7 +174,7 @@ check("despensa más corta → sube el retorno",
     `día ${rebobinado.dia}, censo ${rebobinado.bichos.length}`);
 }
 
-// 6. La única indefinición numérica que el motor sí arregla: sin nada que ver y lejos del muro, el
+// 7. La única indefinición numérica que el motor sí arregla: sin nada que ver y lejos del muro, el
 //    vector suma es exactamente cero. Eso no es un ángulo indefinido que propague NaN, es mantener
 //    el rumbo. (Que el bicho sea tonto no se arregla; que sea NaN, sí.)
 {
@@ -174,7 +189,7 @@ check("despensa más corta → sube el retorno",
     `rumbo=(${b.hx}, ${b.hy})`);
 }
 
-// 7. **Ningún gen es decorativo.** Se corren dos mundos con la misma semilla cambiando solo el
+// 8. **Ningún gen es decorativo.** Se corren dos mundos con la misma semilla cambiando solo el
 //    valor inicial de un gen: la huella al final **tiene que diferir**. Si no difiere, ese gen no
 //    lo lee nadie y sobra del genoma.
 //

@@ -244,32 +244,40 @@ export type Config = {
 // patas, sin pinchos y sin pectorales. Todo lo que se le vea encima a un bicho es desviación de
 // aquí, que es lo que hace que el cuerpo cuente una historia en vez de una ficha.
 //
-// Medido en `convergencia.medir.ts` sobre veinte semillas de mil días. Antes salía de
-// elegir el carácter del mundo (`fiereza` en 4) y de dejar los demás donde cayeran, y eso tenía un
-// coste que nadie había mirado: con `retorno` en 1, **nueve de cada veinte semillas se extinguían
-// el día 2**. El corte es limpísimo —todas las muertas por debajo de 1,02 y todas las vivas por
-// encima de 1,03— porque quien no vuelve a casa no llena despensa, no cría nadie y los treinta
-// fundadores mueren de hambre antes del tercer amanecer. El fundador estaba justo en el filo y el
-// ±12% que la semilla le despeina tiraba a la mitad de los mundos por él.
+// Medido en `convergencia.medir.ts`, y **la medida se muerde la cola: hay que iterarla**. La
+// ventana sale de dónde acaba la población y dónde acaba la población depende de dónde nace, así
+// que la primera pasada solo acierta el orden de magnitud —movió la `talla` un 29% y la `visión`
+// un 44%—. Se vuelve a poner y se vuelve a medir hasta que el fundador propuesto sea el que ya
+// está: cinco pasadas, y la última mueve todo por debajo del 2%.
+//
+// **Salvo `retorno`, que no se deja clavar más fino que un 10%, y eso también es el resultado.**
+// Es el gen de mayor abanico entre mundos —cinco veces el de partida, contra 1,6 de la talla—, así
+// que su centro es una media de mundos que no se parecen y cada muestreo la mueve. Pedirle más
+// precisión sería inventarla: el ±12% con el que la semilla despeina al fundador ya es mayor.
 //
 // Ponerlo en el centro del recorrido es además lo que hace que un gen se pueda ver moverse en las
 // dos direcciones: naciendo en un extremo, la mitad de su rango no se visita nunca.
 export const FUNDADOR: Genoma = {
-  empuje: 2.0, talla: 3.95, vision: 16.68, sociabilidad: -0.22, fiereza: 2.78, retorno: 1.97,
+  empuje: 2.54, talla: 2.65, vision: 26.16, sociabilidad: -0.07, fiereza: 1.29, retorno: 2.38,
 };
 // Medido en `costes.medir.ts`, y **el tamaño del mundo lo decide que se coma la comida**. Con
 // 448×320 sobraba la mitad del suelo todos los días y el centro del mapa no lo pisaba nadie: la
 // comida sobrante por bandas del borde al centro iba 35% · 44% · 75% · 95% · **99%**. No era la
 // jornada —alargarla cinco veces dejaba el 51%— sino la geometría: casa está en el perímetro, y
-// pasado cierto radio el viaje de ida y vuelta no lo paga ningún bocado. A 320×224 sobra el 10% y
-// **la mitad de los días el suelo queda limpio**; a 256×176, el 1% y tres de cada cuatro días.
+// pasado cierto radio el viaje de ida y vuelta no lo paga ningún bocado.
+//
+// **Y lo vuelve a decidir cada vez que cambia lo que cuesta andar.** Con el granero pesando, los
+// bichos van más lentos y el mismo mapa les queda grande: a 320×224 la comida sobrante se iba al
+// 19% y el suelo solo quedaba limpio una noche de cada nueve. A 288×200 sobra el 3% y queda limpio
+// cuatro de cada diez, con 22 de 24 semillas vivas a 300 días. Encoger más no es gratis: a 256×176
+// no sobra nada, y sin suelo que barrer el excedente se va a la camada — la mayor pasa de 8 a 19.
 //
 // **La jornada es larga a propósito, y no solo para mirarla.** Con 1000 ticks el gasto de un día
-// entero supera la despensa llena de un fundador (112 contra 91), así que **nadie aguanta el día
-// sin traer nada**: hay que hacer varios viajes solo para no perder. Ahí está el que se va pronto
-// a casa y se queda. Medido contra 600 ticks: el hambre pasa del 63% al 75% de las muertes, los
-// viajes por bicho de 2,0 a 3,4, la comida sobrante del 10% al 3% y los días con el suelo limpio
-// del 50% al 67%.
+// de trabajo supera la despensa llena, así que **quien sale no aguanta el día sin traer nada**:
+// hay que hacer varios viajes solo para no perder. Dormido sí se aguanta —el basal solo cuesta
+// `C_BASAL · ticksDia` = 0,4 despensas—, y esa es la salida del que amanece sin nada a la vista:
+// esperar. La jornada también es lo que le da forma al día, porque el sol se reparte sobre ella:
+// medio vacío al alba, lleno al mediodía, vacío otra vez al ocaso.
 //
 // **La comida del día es la perilla que mueve el mundo entero, y por eso la sortea la semilla.**
 // Son tres climas con el mismo motor, medidos a 200 días sobre cincuenta semillas y veinte
@@ -288,7 +296,7 @@ export const URNA = [50, 75, 75, 100];
 // encima, los fundadores se estorban sobre el mismo suelo y el mundo arranca con una hambruna
 // suya; muy por debajo, el mundo entero es la suerte de una fundadora.
 export const CONFIG: Config = {
-  ancho: 320, alto: 224,
+  ancho: 288, alto: 200,
   comidas: 75, censoInicial: 20,
   ticksDia: 1000, capReserva: CAP_RESERVA, casa: 18,
   caza: true, boca: 1.2,
@@ -313,7 +321,10 @@ export type Bicho = {
    * cogía uno, volvía y se aparcaba—, así que la cosecha de la población tenía techo pase lo que
    * pase y **sobraba comida todos los días**: el 51% del suelo sin tocar incluso con la jornada
    * cinco veces más larga, porque el día se acababa en cuanto estaban todos aparcados. Ahora
-   * llegar a casa descarga y suelta, y lo que limita la cosecha es el reloj y las piernas.
+   * llegar a casa descarga y suelta, y lo que limita la cosecha es la luz y las piernas.
+   *
+   * Quedarse **sí** para cuando además no hay nada que ver: eso es dormir, y no necesita bandera
+   * porque se deduce del sitio y de la luz.
    */
   aSalvo: boolean;
   /** Crías de esta noche. Vive solo entre el anochecer y el amanecer siguiente: es lo que se pinta. */
@@ -379,9 +390,16 @@ export type Mundo = {
 export const edadDe = (m: Mundo, b: Bicho): number =>
   Number.isFinite(m.cfg.vida) ? Math.min(1, (m.dia - b.nacido) / m.cfg.vida) : 0;
 
-/** Masa que hay que mover: la propia más la que llevas encima. La comida pesa lo que vale. */
-const masaCargada = (b: Bicho): number => b.masa + b.carga * E_COMIDA;
-const radioCargado = (b: Bicho): number => raizCubica(masaCargada(b), b.radio);
+/**
+ * Masa que hay que mover: la propia, la que llevas encima y **lo que no te cabe dentro**. La
+ * reserva ya está en unidades de masa —descargar un bocado suma `E_COMIDA`, que es la masa de un
+ * bocado—, así que acaparar es cargar: el cuerpo es el granero, y lo que pasa de él se arrastra
+ * por fuera. Es lo que le pone techo a la camada sin escribir ninguno, porque diez hijos son diez
+ * despensas de grasa que hay que llevar a cuestas hasta el anochecer.
+ */
+const masaCargada = (c: Config, b: Bicho): number =>
+  b.masa + b.carga * E_COMIDA + Math.max(0, b.reserva - c.capReserva * b.masa);
+const radioCargado = (c: Config, b: Bicho): number => raizCubica(masaCargada(c, b), b.radio);
 
 /**
  * La semilla despeina al fundador: define el mundo *y* quién lo empezó. La población de partida
@@ -552,11 +570,11 @@ function haciaCasa(m: Mundo, b: Bicho): [number, number, number] {
  * negativa —que sí se ve, en el anillo duro—, y medir dice que la población la usa: de −0,16 a
  * −0,44 de mediana en cuanto audacia deja de existir.
  */
-function decidir(m: Mundo, b: Bicho, radioMax: number) {
+function decidir(m: Mundo, b: Bicho, radioMax: number, luz: number, cae: boolean): boolean {
   const g = b.g;
   let sx = 0, sy = 0;
 
-  const alcanceC = g.vision * RADIO_COMIDA;
+  const alcanceC = g.vision * luz * RADIO_COMIDA;
   let d2c = alcanceC * alcanceC, cx = 0, cy = 0, hay = false;
   for (const c of m.comida) {
     const dx = c.x - b.x, dy = c.y - b.y, d2 = dx * dx + dy * dy;
@@ -566,12 +584,12 @@ function decidir(m: Mundo, b: Bicho, radioMax: number) {
 
   let mMenor = Infinity, xMenor = 0, yMenor = 0;
   let sumM = 0, sumX = 0, sumY = 0;
-  const alcanceB = g.vision * radioMax;
+  const alcanceB = g.vision * luz * radioMax;
   for (const o of m.bichos) {
     if (o === b || !o.vivo || o.aSalvo) continue;
     const dx = o.x - b.x, dy = o.y - b.y, d2 = dx * dx + dy * dy;
     if (d2 > alcanceB * alcanceB) continue;
-    const alcance = g.vision * o.radio;
+    const alcance = g.vision * luz * o.radio;
     if (d2 > alcance * alcance) continue;
     sumM += o.masa; sumX += o.masa * dx; sumY += o.masa * dy;
     if (o.masa < mMenor) { mMenor = o.masa; xMenor = dx; yMenor = dy; }
@@ -589,15 +607,23 @@ function decidir(m: Mundo, b: Bicho, radioMax: number) {
     if (d > 1e-6) { sx += (dx / d) * g.sociabilidad; sy += (dy / d) * g.sociabilidad; }
   }
 
+  // **Dos motivos para volver, un solo gen.** Tira la carga —proporcional, que es lo que la carga
+  // hace: pesar— y tira la oscuridad mientras cae, que es cuando de fuera ya no se saca nada. No
+  // hace falta reloj para lo segundo: basta con que haya menos luz que hace un tick.
   const [hx, hy] = haciaCasa(m, b);
-  if (b.carga > 0) { sx += hx * g.retorno; sy += hy * g.retorno; }
+  const w = g.retorno * (b.carga + (cae ? 1 - luz : 0));
+  if (w > 0) { sx += hx * w; sy += hy * w; }
 
+  // Haber visto algo —un bocado o un bicho— es lo que separa el día de la noche, y lo separa para
+  // cada uno: el que tiene mejor ojo se levanta antes y se acuesta más tarde.
+  const vio = hay || sumM > 0;
   const n2 = sx * sx + sy * sy;
-  if (n2 < 1e-12) return;
+  if (n2 < 1e-12) return vio;
   const n = Math.sqrt(n2);
-  const r = { hx: b.hx, hy: b.hy, masa: masaCargada(b) };
+  const r = { hx: b.hx, hy: b.hy, masa: masaCargada(m.cfg, b) };
   girar(r, sx / n, sy / n);   // muta lo que recibe: se le pasa un cuerpo prestado y se leen sus números
   b.hx = r.hx; b.hy = r.hy;
+  return vio;
 }
 
 /**
@@ -638,25 +664,35 @@ const enCasa = (c: Config, x: number, y: number): boolean =>
  * bicho raspándola el día entero sin decidir nada, y el rebote no es genético — nadie evoluciona
  * a atravesar un muro.
  *
- * Dos paredes. La del mundo, que **cada uno tiene a su propio radio**: el cuerpo se para tangente
- * al borde en vez de centrado en él, que es como se pintaba media población partida por la mitad.
- * Más adentro no puede ir —probado en la línea media de la franja—: el aro exterior es la sala de
- * espera donde se hace noche, y cerrarlo hunde los nacimientos a la mitad en el mundo pobre.
- * Y la franja de casa, que **de vacío no se entra** —volver es traer algo— pero sí se sale: al
- * amanecer todo el mundo está dentro de ella, que es donde acabó el día anterior, y encerrarlos
- * ahí sería no dejar salir a nadie nunca.
+ * Una sola pared, la del mundo, y **cada uno la tiene a su propio radio**: el cuerpo se para
+ * tangente al borde en vez de centrado en él, que es como se pintaba media población partida por
+ * la mitad. Más adentro no puede ir —probado en la línea media de la franja—: el aro exterior es
+ * la sala de espera donde se hace noche, y cerrarlo hunde los nacimientos a la mitad en el mundo
+ * pobre. A casa se entra siempre, se venga cargado o de vacío: quedarse fuera ya no lo castiga
+ * ninguna norma, lo castiga que de noche no se ve nada.
  */
 function mover(m: Mundo, b: Bicho, v: number) {
   const c = m.cfg;
-  const puedeEntrar = b.carga > 0 || enCasa(c, b.x, b.y);
   let x = b.x + b.hx * v, y = b.y + b.hy * v;
-  const lim = puedeEntrar ? b.radio : c.casa;
+  const lim = b.radio;
   if (x < lim) { x = lim; b.hx = Math.abs(b.hx); }
   else if (x > c.ancho - lim) { x = c.ancho - lim; b.hx = -Math.abs(b.hx); }
   if (y < lim) { y = lim; b.hy = Math.abs(b.hy); }
   else if (y > c.alto - lim) { y = c.alto - lim; b.hy = -Math.abs(b.hy); }
   b.x = x; b.y = y;
 }
+
+/**
+ * El sol: cero al alba y al ocaso, uno al mediodía. **Parábola y no seno** porque `Math.sin` no
+ * está fijado por IEEE y la semilla tiene que dar el mismo mundo en Node y en el navegador.
+ *
+ * Es la única magnitud que el mundo ha ganado, y de ella cuelga todo lo demás: la vista alcanza lo
+ * que la luz le deja, así que el crepúsculo no se cosecha y volver a casa deja de ser una lotería.
+ */
+export const luzDe = (t: number, c: Config): number => {
+  const u = t / c.ticksDia;
+  return 4 * u * (1 - u);
+};
 
 export function tick(m: Mundo) {
   // Un mundo extinto no avanza, y eso tiene que estar **aquí** y no en quien llame: la página da
@@ -667,14 +703,19 @@ export function tick(m: Mundo) {
   const c = m.cfg;
   m.t++;
   if (m.marcas.length) m.marcas = m.marcas.filter((z) => m.t - z.t < MARCA);
+  const luz = luzDe(m.t, c), cae = luz < luzDe(m.t - 1, c);
   let radioMax = 1;
   for (const b of m.bichos) if (b.vivo && !b.aSalvo && b.radio > radioMax) radioMax = b.radio;
 
   for (const b of m.bichos) {
     if (!b.vivo) continue;   // el que está en casa **no** se salta: tiene que poder volver a salir
-    decidir(m, b, radioMax);
-    const v = b.g.empuje / radioCargado(b);
-    mover(m, b, v);
+    // **Dormir es no tener a dónde ir**: estás en casa y no ves nada, ni bocado ni bicho. Sale de
+    // la luz y del ojo de cada uno, así que no hay hora de acostarse que fijar — y quieto se paga
+    // el basal pero no el empuje, que es lo que hace que llegar pronto valga la pena.
+    const vio = decidir(m, b, radioMax, luz, cae);
+    const dormido = b.aSalvo && !vio;
+    const v = dormido ? 0 : b.g.empuje / radioCargado(c, b);
+    if (!dormido) mover(m, b, v);
 
     // El día se paga: basal, ver y mover, sobre la masa
     // que de verdad se está moviendo. Quedarse sin reserva es morir de hambre a media faena.
@@ -684,7 +725,7 @@ export function tick(m: Mundo) {
     // de acabar en ×1,84 del abanico de partida a ×1,40: sigue sin techo, y a cambio la talla
     // pierde su óptimo. No compra lo que cuesta, y deja dos modelos hermanos con costes distintos
     // que ya no se pueden comparar.
-    b.reserva -= masaCargada(b) * (C_BASAL + C_VISION * b.g.vision * b.g.vision + C_EMPUJE * v * v);
+    b.reserva -= masaCargada(c, b) * (C_BASAL + C_VISION * b.g.vision * b.g.vision + C_EMPUJE * v * v);
     if (b.reserva <= 0) {
       b.vivo = false;
       m.marcas.push({ x: b.x, y: b.y, r: b.radio, t: m.t, causa: "hambre", edad: edadDe(m, b) });

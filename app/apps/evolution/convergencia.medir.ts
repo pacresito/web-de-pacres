@@ -3,7 +3,7 @@
 // **No es un test: no falla, mide.** Contesta las tres preguntas que deciden cómo se pinta un
 // genoma, y que no se pueden contestar a ojo:
 //
-// 1. **¿Un gen converge o abre abanico?** Veinte mundos arrancan de fundadores que la semilla ya
+// 1. **¿Un gen converge o abre abanico?** Los mundos arrancan de fundadores que la semilla ya
 //    despeina un ±12%, así que la pregunta se contesta comparando dispersiones: si al día mil los
 //    mundos están **más juntos** que sus fundadores, el gen converge y el mundo lo empuja a un
 //    sitio; si están más separados, cada partida se queda con el suyo. La razón entre las dos
@@ -21,10 +21,18 @@
 
 import { RASGOS, banda, correrDia, crearMundo, signado, type Genoma, type Rasgo } from "./engine";
 
+// **Cuarenta y ocho y no veinte**, porque los genes no se dejan fijar igual de bien: `talla` y
+// `visión` acaban en el mismo sitio en todos los mundos, pero `fiereza` y `retorno` abren un
+// abanico de cinco a diez veces el de partida —cada mundo se queda con el suyo— y veinte muestras
+// de ese abanico dan un centro que rebota un tercio de una pasada a la siguiente. Cuesta minutos y
+// se corre cuando cambia la física, no cada día.
 const SEMILLAS = [
   "hola", "pablo", "mar", "brizna", "duna", "carmen", "sal", "raiz",
   "ambar", "liquen", "orilla", "vela", "junco", "greda", "ola", "esparto",
-  "cierzo", "aljibe", "retama", "sirena",
+  "cierzo", "aljibe", "retama", "sirena", "cal", "riz", "tomo", "pino",
+  "sur", "luz", "ave", "grano", "ceniza", "sombra", "pez", "eco",
+  "hilo", "nube", "claudio", "jara", "tomillo", "romero", "salvia", "adelfa",
+  "retamo", "mimbre", "olmo", "fresno", "haya", "tejo", "sauco", "encina",
 ];
 const DIAS = 1000;
 const CORTES = [100, 250, 500, 750, 1000];   // dónde se mira la mediana para ver si aún se mueve
@@ -201,10 +209,10 @@ console.log("que se haya asentado.\n");
 console.log(`## Todos los bichos vivos al día ${DIAS}, por cuantiles — de aquí salen los umbrales\n`);
 const todos = vivas.flatMap((p) => p.finales);
 console.log(`${todos.length} bichos de ${vivas.length} mundos.\n`);
-console.log([col("gen", 13), col("p05"), col("p25"), col("p50"), col("p75"), col("p95")].join(" "));
+console.log([col("gen", 13), col("p01"), col("p25"), col("p50"), col("p75"), col("p99")].join(" "));
 for (const r of RASGOS) {
   const xs = todos.map((g) => g[r]);
-  console.log([r.padEnd(13), ...[0.05, 0.25, 0.5, 0.75, 0.95].map((q) => col(f2(cuantil(xs, q))))].join(" "));
+  console.log([r.padEnd(13), ...[0.01, 0.25, 0.5, 0.75, 0.99].map((q) => col(f2(cuantil(xs, q))))].join(" "));
 }
 console.log("\nA leer: un adorno que quiera marcar al cuarto más fiero se pone en el p75 de la fiereza, y no en");
 console.log("un número redondo. La escala visual de cada gen se centra en su p50 y su medio ancho sale de");
