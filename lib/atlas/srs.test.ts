@@ -181,6 +181,25 @@ assert.strictEqual(siguiente(enElAire, orden, AHORA)!.id, orden[9]); // nueve en
   assert.ok(base.some((p) => p.id === siguiente(todoReciente, orden, AHORA)!.id));
 }
 
+// Estrenar lo decide el mazo entero: mientras algo haya pasado su vida no entra gente nueva, ni
+// aunque los frenos lo tengan apartado y dejen a mano cosas que aún no tocan.
+{
+  const deudor = PAISES[0].id, aMano = PAISES[1].id;
+  // Un dato fallado y ya vencido —lleva más de su minuto y medio— junto a otro que no toca.
+  const mazo: Mazo = {
+    [deudor]: { nombre: { visto: haceDias(1), vida: VIDA_FALLO, aciertos: 0 } },
+    [aMano]: { nombre: vida(30, 1) },
+  };
+  assert.ok(sospecha(mazo[deudor]!.nombre, AHORA) >= 1 && sospecha(mazo[aMano]!.nombre, AHORA) < 1);
+  assert.strictEqual(siguiente(mazo, orden, AHORA)!.id, deudor);
+  // Y con el deudor apartado por el hueco se pregunta otra cosa, pero no se estrena nadie.
+  assert.strictEqual(siguiente(mazo, orden, AHORA, [deudor])!.id, aMano);
+  // Sin deuda vencida sí se estrena: lo que frena es lo que ya tocaba, no lo que se acaba de ver.
+  const alDia: Mazo = { [aMano]: { nombre: vida(30, 1) } };
+  const tras = siguiente(alDia, orden, AHORA)!.id;
+  assert.ok(!DATOS.some((d) => alDia[tras]?.[d]), `estrena uno sin ver, y salió ${tras}`);
+}
+
 // El hueco: un país no repite hasta que han pasado otros, aunque le queden datos por preguntar.
 {
   const dos = PAISES.slice(0, 2).map((p) => p.id);

@@ -52,7 +52,7 @@ function siguienteCon(mazo: Mazo, ahora: number, { descanso, tope, liston, plano
   }
   const elegido = mejor ?? respaldo;
   const nuevo = RECORRIDO.find((id) => !DATOS.some((d) => mazo[id]?.[d]));
-  const cede = (!elegido || elegido.s < 1) && enElAire < tope;
+  const cede = (!respaldo || respaldo.s < 1) && enElAire < tope;
   return (cede && nuevo ? nuevo : elegido?.id ?? nuevo) ?? null;
 }
 

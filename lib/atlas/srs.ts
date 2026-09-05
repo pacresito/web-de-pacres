@@ -238,8 +238,8 @@ export const HUECO = 5;
 /** `recientes` son los últimos países servidos, del más antiguo al más nuevo; los aparta `HUECO`. */
 export function siguiente(mazo: Mazo, orden: string[], ahora: number, recientes: string[] = []): Pais | null {
   let mejor: { id: string; s: number } | null = null;
-  // El mejor sin mirar el descanso, para cuando descansa el mazo entero. Sin él, ahí el descanso
-  // colaría un país nuevo saltándose el freno, que es justo lo que el freno existe para impedir.
+  // El mejor del mazo entero, sin frenos. Sirve para dos cosas: es a quién preguntar cuando los
+  // frenos lo apartan todo, y es **quien decide si hay sitio para un país nuevo**.
   let respaldo: { id: string; s: number } | null = null;
   let enElAire = 0;
   for (const p of PAISES) {
@@ -260,7 +260,12 @@ export function siguiente(mazo: Mazo, orden: string[], ahora: number, recientes:
   }
   const elegido = mejor ?? respaldo;
   const nuevo = orden.find((id) => !DATOS.some((d) => mazo[id]?.[d]));
-  const cedeAlNuevo = (!elegido || elegido.s < 1) && enElAire < MAX_EN_EL_AIRE;
+  // **Estrenar lo decide el mazo entero y no lo que los frenos dejan a mano**: un freno dice
+  // «ahora no», nunca «ya no queda nada», y mirando solo lo disponible se estrena país debiendo
+  // un repaso —basta con que el hueco aparte al país al que se le debe—. Con esto y con que un
+  // fallo venza a los minuto y medio, no se abre nada mientras haya algo que ya tocaba; y hasta
+  // que venza sí, que es lo que deja encadenar estrenos aunque en cada uno se falle algo.
+  const cedeAlNuevo = (!respaldo || respaldo.s < 1) && enElAire < MAX_EN_EL_AIRE;
   const id = cedeAlNuevo && nuevo ? nuevo : elegido?.id ?? nuevo;
   return id ? PAIS_POR_ID.get(id) ?? null : null;
 }
