@@ -197,7 +197,11 @@ export const TABLA: Record<Rasgo, { paga: string; cobra: string }> = {
 export type Config = {
   ancho: number;
   alto: number;
-  /** Bocados que amanecen repartidos por el interior. Es el techo de la población. */
+  /**
+   * Bocados que amanecen repartidos por el interior. Es el techo de la población, y **lo sortea la
+   * semilla** de `URNA`: cada mundo tiene su clima y no se sabe cuál hasta verlo. Fijarlo aquí lo
+   * salta, que es lo que hacen los escenarios que comparan una perilla contra sí misma.
+   */
   comidas: number;
   censoInicial: number;
   /** Tope de duración del día. El que sigue fuera cuando se acaba, no volvió. */
@@ -223,6 +227,15 @@ export type Config = {
   boca: number;
   tasa: number;
   paso: number;
+  /**
+   * Días que vive un bicho, contados desde el primero que sale al campo. `Infinity` es no morirse
+   * de viejo, que es como estuvo el mundo mientras la única muerte natural era el hambre.
+   *
+   * La vejez es lo que le pone plazo a un genoma: sin ella, aguantar sin criar es una estrategia
+   * —el que no gasta en hijos no se extingue nunca— y la selección solo castiga morirse. Con
+   * plazo, no tener hijos es tener cero descendencia con seguridad.
+   */
+  vida: number;
   fundador: Genoma;
 };
 
@@ -258,21 +271,36 @@ export const FUNDADOR: Genoma = {
 // viajes por bicho de 2,0 a 3,4, la comida sobrante del 10% al 3% y los días con el suelo limpio
 // del 50% al 67%.
 //
-// **La comida del día es la perilla que mueve el mundo entero.** Con 100 bocados sobreviven seis
-// de doce semillas al día 100 —la extinción tiene que seguir siendo un resultado posible— y el
-// censo se asienta en 27. A 70 se extinguen más de la mitad; a 300, el censo se dobla y sobra
-// comida en el suelo la mitad de los días.
+// **La comida del día es la perilla que mueve el mundo entero, y por eso la sortea la semilla.**
+// Son tres climas con el mismo motor, medidos a 200 días sobre cincuenta semillas y veinte
+// fundadores: con 50 bocados se extingue una de cada cuatro poblaciones, con 75 una de cada diez y
+// con 100 una de cada cincuenta. 75 sale el doble de veces porque es el clima corriente y los
+// otros dos son el mundo duro y el mundo fácil.
+//
+// **50 no es «lo mismo con menos comida», es otra ecología.** La escasez selecciona cuerpos
+// diminutos —talla 2,2 contra 3,4— y con todos por debajo del umbral de boca la depredación deja
+// de encontrar a quién comerse: cae del 19% de las muertes al 5%, y sin ese freno la población
+// oscila hasta 449 sobre cincuenta bocados y se desploma a cero. Es el mismo mundo averiado que
+// `caza: false`, al que se llega sin apagar nada — basta con encoger a todos por debajo del filo.
+export const URNA = [50, 75, 75, 100];
+// **El censo inicial es el censo típico**, que es lo que hace que el primer día no sea una rampa:
+// medido en esa misma rejilla, un mundo asentado vive entre 14 y 24 bichos. Empezando muy por
+// encima, los fundadores se estorban sobre el mismo suelo y el mundo arranca con una hambruna
+// suya; muy por debajo, el mundo entero es la suerte de una fundadora.
 export const CONFIG: Config = {
   ancho: 320, alto: 224,
-  comidas: 100, censoInicial: 30,
+  comidas: 75, censoInicial: 20,
   ticksDia: 1000, capReserva: CAP_RESERVA, casa: 18,
   caza: true, boca: 1.2,
   tasa: 0.08, paso: 0.06,
+  vida: 10,
   fundador: FUNDADOR,
 };
 
 export type Bicho = {
   id: number; idMadre: number; gen: number;
+  /** El primer día que sale al campo. La edad es `dia - nacido`, y con ella se muere de viejo. */
+  nacido: number;
   x: number; y: number; hx: number; hy: number;
   radio: number; masa: number;
   /** Bocados encima. Pesan: entran en la masa que hay que mover. */
@@ -298,12 +326,13 @@ export type Bicho = {
 /**
  * Una muerte, guardada lo justo para poder pintarla: dónde, cuándo, de qué tamaño era y con qué
  * tono —la fiereza, que es lo único del genoma que se ve—. Caducan en `MARCA` ticks. Solo hay dos
- * causas: **al anochecer ya no muere nadie**, así que el que se queda fuera sigue pintándose vivo,
- * que es lo que es.
+ * causas de día: **al anochecer ya no muere nadie de la jornada**, así que el que se queda fuera
+ * sigue pintándose vivo, que es lo que es. La tercera, la vejez, sí llega de noche — y su marca no
+ * cuenta ticks, porque el reloj del mundo está parado mientras se mira.
  */
 export type Marca = {
   x: number; y: number; r: number; t: number;
-  causa: "comido" | "hambre";
+  causa: "comido" | "hambre" | "vejez";
   fiereza: number;
 };
 
@@ -337,7 +366,7 @@ export type Mundo = {
   extinto: boolean;
   eva: Genoma;
   /** `fuera` son **noches pasadas a la intemperie**, no muertes: al anochecer ya no muere nadie. */
-  cuenta: { nacidos: number; hambre: number; fuera: number; comidos: number };
+  cuenta: { nacidos: number; hambre: number; fuera: number; comidos: number; vejez: number };
 };
 
 /** Masa que hay que mover: la propia más la que llevas encima. La comida pesa lo que vale. */
@@ -365,11 +394,17 @@ export function evaDe(a: Azar, c: Config): Genoma {
 export function crearMundo(semilla: string, cfg: Partial<Config> = {}): Mundo {
   const c: Config = { ...CONFIG, ...cfg };
   const azar = azarCon(semilla);
+  // El clima sale **antes que nadie**: el mundo existe antes que quien lo empieza. Y se saca de la
+  // urna aunque quien llama haya fijado la comida, para tirarlo después: así la semilla da la misma
+  // Eva con el clima sorteado y con el clima puesto a mano, y los escenarios que fijan `comidas`
+  // comparan poblaciones que empezaron idénticas y no dos linajes distintos.
+  const clima = URNA[Math.floor(sig(azar) * URNA.length)];
+  if (cfg.comidas === undefined) c.comidas = clima;
   const eva = evaDe(azar, c);
   const m: Mundo = {
     cfg: c, azar, dia: 0, viajes: 0, t: 0, duracion: 0, bichos: [], comida: [], siguienteId: 1,
     noche: false, especie: 0, marcas: [],
-    extinto: false, eva, cuenta: { nacidos: 0, hambre: 0, fuera: 0, comidos: 0 },
+    extinto: false, eva, cuenta: { nacidos: 0, hambre: 0, fuera: 0, comidos: 0, vejez: 0 },
   };
   for (let i = 0; i < c.censoInicial; i++) nacer(m, { ...eva }, -1, 0);
   amanecer(m);
@@ -399,7 +434,7 @@ function nacer(m: Mundo, g: Genoma, idMadre: number, gen: number, donde?: [numbe
   const [x, y] = donde ?? enCasaDelTodo(m);
   const [hx, hy] = unidad(m.azar);
   const b: Bicho = {
-    id: m.siguienteId++, idMadre, gen, x, y, hx, hy,
+    id: m.siguienteId++, idMadre, gen, nacido: m.dia, x, y, hx, hy,
     // Nace con la despensa llena, y eso **es** lo que cuesta un hijo: se la paga su madre de lo
     // que trajo. Así una cría grande cuesta más que una pequeña, que es el contrapeso que la talla
     // no tenía —antes un hijo costaba dos bocados fuera cual fuera su tamaño—.
@@ -719,7 +754,14 @@ export function tick(m: Mundo) {
 export function anochecer(m: Mundo) {
   m.duracion = m.t;
   const c = m.cfg;
-  for (const b of m.bichos) {
+  // El día se cierra antes de criar para que `nacido` sea el primer día que la cría sale al campo,
+  // y no el que se acaba de terminar sin ella. Con eso la edad es `dia - nacido` en todas partes.
+  m.dia++;
+  // Solo los que ya estaban: `nacer` va metiendo crías en el array y un `for…of` las alcanzaría,
+  // contando como noche a la intemperie a cada recién nacido —que nace en casa, al lado de su madre—.
+  const adultos = m.bichos.length;
+  for (let i = 0; i < adultos; i++) {
+    const b = m.bichos[i];
     // Quien está en casa ya descargó al llegar, en su propio tick: aquí solo se cría.
     if (!b.aSalvo) { m.cuenta.fuera++; continue; }   // la noche fuera: ni cría
     const cap = c.capReserva * b.masa;
@@ -746,7 +788,18 @@ export function anochecer(m: Mundo) {
       m.cuenta.nacidos++;
     }
   }
-  m.dia++;
+  // **La vejez llega después de criar**: la última noche todavía se pone descendencia. Mata al
+  // cerrar el día y no en el campo — cumplir años no es un accidente de la jornada—, así que el
+  // que se murió de viejo se queda a la vista toda la noche, al lado de los que acaban de nacer.
+  if (c.vida < Infinity) {
+    for (const b of m.bichos) {
+      if (m.dia - b.nacido < c.vida) continue;
+      b.vivo = false;
+      m.marcas.push({ x: b.x, y: b.y, r: b.radio, t: m.t, causa: "vejez", fiereza: b.g.fiereza });
+      m.cuenta.vejez++;
+    }
+    m.bichos = m.bichos.filter((b) => b.vivo);
+  }
   m.noche = true;
   if (m.bichos.length === 0) m.extinto = true;
 }

@@ -110,6 +110,15 @@ export function pintar(
   for (const z of m.marcas) {
     const k = (m.t - z.t) / MARCA;
     if (k < 0 || k > 1) continue;
+    if (z.causa === "vejez") {
+      // La vejez mata al cerrar el día, con el reloj del mundo parado: su marca no puede contar
+      // ticks como las otras dos, así que se apaga con la noche — a la vez que crecen las crías.
+      ctx.globalAlpha = (1 - noche) * 0.7;
+      ctx.fillStyle = colorCuerpo(p, medidas({ ...m.eva, fiereza: z.fiereza }).fi, 0);
+      ctx.beginPath(); ctx.arc(z.x, z.y, z.r, 0, TAU); ctx.fill();
+      ctx.globalAlpha = 1;
+      continue;
+    }
     if (z.causa === "comido") {
       ctx.strokeStyle = p.hot;
       ctx.globalAlpha = 1 - k;
