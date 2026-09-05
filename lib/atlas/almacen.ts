@@ -9,7 +9,7 @@
 // vez, al avanzar, y `useSyncExternalStore` lee el resultado sin efectos ni cascadas.
 import { esPerfil, sembrar, type Perfil } from "./sembrar";
 import { RECORRIDO } from "@/data/atlas/orden";
-import { calificar, montar, siguiente, type Dato, type Mazo, type Nota, type Tarjeta } from "./srs";
+import { calificar, HUECO, montar, siguiente, type Dato, type Mazo, type Nota, type Tarjeta } from "./srs";
 
 const CLAVE = "atlas:mazo";
 const CLAVE_COLA = "atlas:cola";
@@ -81,10 +81,14 @@ function guardar() {
 }
 
 let servidas = 0;
+// Los últimos países servidos, para que `siguiente` no repita uno de seguido. Vive en memoria y
+// no en Redis: es de esta sesión y de esta pantalla, y recargar no tiene por qué recordarlo.
+let recientes: string[] = [];
 
 function avanzar(m: Mazo): Vista {
   const ahora = Date.now();
-  const pais = siguiente(m, RECORRIDO, ahora);
+  const pais = siguiente(m, RECORRIDO, ahora, recientes);
+  if (pais) recientes = [...recientes, pais.id].slice(-HUECO);
   return { tarjeta: pais ? montar(m, pais, ahora) : null, estrenando: Object.keys(m).length === 0, n: ++servidas };
 }
 

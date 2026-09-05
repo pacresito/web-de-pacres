@@ -1,6 +1,6 @@
 // Test de lógica pura: `npx tsx lib/atlas/srs.test.ts`. Fuera del build.
 import assert from "assert";
-import { ACIERTOS_APRENDIDO, calificar, cuenta, DATOS, DESCANSO, dominio, dominioPais, huecos, MAX_EN_EL_AIRE, montar, nuevaVida, nuevosAciertos, siguiente, sospecha, type Mazo } from "./srs";
+import { ACIERTOS_APRENDIDO, calificar, cuenta, DATOS, DESCANSO, dominio, dominioPais, HUECO, huecos, MAX_EN_EL_AIRE, montar, nuevaVida, nuevosAciertos, siguiente, sospecha, type Mazo } from "./srs";
 import { PAISES } from "./paises";
 
 const DIA = 86_400_000;
@@ -179,6 +179,20 @@ assert.strictEqual(siguiente(enElAire, orden, AHORA)!.id, orden[9]); // nueve en
   // saltándose el freno.
   const todoReciente: Mazo = Object.fromEntries(base.map((p) => [p.id, { nombre: reciente(20_000, 2) }]));
   assert.ok(base.some((p) => p.id === siguiente(todoReciente, orden, AHORA)!.id));
+}
+
+// El hueco: un país no repite hasta que han pasado otros, aunque le queden datos por preguntar.
+{
+  const dos = PAISES.slice(0, 2).map((p) => p.id);
+  const mazo: Mazo = { [dos[0]]: { nombre: vida(1, 5), capital: vida(1, 4) }, [dos[1]]: { nombre: vida(1, 3) } };
+  // Sin nadie reciente manda el más sospechoso, que tiene dos datos vencidos y volvería a salir.
+  assert.strictEqual(siguiente(mazo, orden, AHORA)!.id, dos[0]);
+  assert.strictEqual(siguiente(mazo, orden, AHORA, [dos[0]])!.id, dos[1]);
+  // Y solo cuentan los últimos `HUECO`: lo de antes ya no aparta a nadie.
+  const viejos = [dos[0], ...PAISES.slice(2, 2 + HUECO).map((p) => p.id)];
+  assert.strictEqual(siguiente(mazo, orden, AHORA, viejos)!.id, dos[0]);
+  // Si el hueco aparta a todo el mazo, manda el respaldo: es preferible repetir a no dar tarjeta.
+  assert.ok(dos.includes(siguiente(mazo, orden, AHORA, dos)!.id));
 }
 
 {

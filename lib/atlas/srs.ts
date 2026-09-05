@@ -225,7 +225,18 @@ const asentado = (e: Estado | undefined) => !!e && e.vida >= VIDA_ASENTADO;
  */
 export const DESCANSO = 15 * 60_000;
 
-export function siguiente(mazo: Mazo, orden: string[], ahora: number): Pais | null {
+/**
+ * Cuántas tarjetas tienen que pasar antes de que un país pueda repetir. El descanso va por dato y
+ * mide tiempo, así que no impide que el mismo país vuelva en la tarjeta de al lado con otro de sus
+ * cuatro: en un mazo de diez países eso son veinte repeticiones seguidas de cincuenta tarjetas.
+ *
+ * Cinco no aprieta ni con el mazo más pequeño que puede haber: en ninguna escena medida deja la
+ * cola vacía, que sería la señal de que el freno se pasa. Las cifras, en `srs.medir.ts`.
+ */
+export const HUECO = 5;
+
+/** `recientes` son los últimos países servidos, del más antiguo al más nuevo; los aparta `HUECO`. */
+export function siguiente(mazo: Mazo, orden: string[], ahora: number, recientes: string[] = []): Pais | null {
   let mejor: { id: string; s: number } | null = null;
   // El mejor sin mirar el descanso, para cuando descansa el mazo entero. Sin él, ahí el descanso
   // colaría un país nuevo saltándose el freno, que es justo lo que el freno existe para impedir.
@@ -235,10 +246,14 @@ export function siguiente(mazo: Mazo, orden: string[], ahora: number): Pais | nu
     const visto = DATOS.some((d) => mazo[p.id]?.[d]);
     if (!visto) continue;
     if (!DATOS.some((d) => asentado(mazo[p.id]?.[d]))) enElAire++;
+    // El país acaba de salir: no compite, pero sigue contando para el respaldo, que es la vía de
+    // escape de todos los frenos de aquí.
+    const acabaDeSalir = recientes.slice(-HUECO).includes(p.id);
     for (const d of DATOS) {
       const estado = mazo[p.id]?.[d];
       const s = sospecha(estado, ahora);
       if (!respaldo || s > respaldo.s) respaldo = { id: p.id, s };
+      if (acabaDeSalir) continue;
       if (estado && ahora - estado.visto < Math.min(estado.vida * DIA, DESCANSO)) continue;
       if (!mejor || s > mejor.s) mejor = { id: p.id, s };
     }
