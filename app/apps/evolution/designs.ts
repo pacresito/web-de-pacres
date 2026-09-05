@@ -72,6 +72,7 @@ const U_ALTO = 0.5 + DESVIO, U_BAJO = 0.5 - DESVIO;
 export type Medidas = {
   ta: number; sp: number; vi: number; fi: number; re: number; so: number;
   /** Miembro prensil, para robar. */ brazo: number;
+  /** Pala de recolector, del que no persigue. */ pala: number;
   /** Patas. Acortan la propulsión principal. */ pata: number;
   /** Púas del insociable. */ pincho: number;
   /** Apéndices del sociable. */ aleta: number;
@@ -84,6 +85,11 @@ export function medidas(g: Genoma): Medidas {
     ta: n01("talla", g.talla), sp: n01("empuje", g.empuje), vi: n01("vision", g.vision),
     fi, re, so,
     brazo: Math.max(0, (fi - U_ALTO) / (1 - U_ALTO)),
+    // El otro lado de la fiereza. **Un gen que solo se viera por arriba no se ve:** con el tono
+    // fuera, sin esto la mitad plácida de la población salía idéntica al fundador y "más manso que
+    // su bisabuela" no se podía leer. Pala y brazo compiten por el mismo frente a propósito —el
+    // manso recoge, el fiero agarra— y nunca coinciden: el gen no puede estar a los dos lados.
+    pala: Math.max(0, (U_BAJO - fi) / U_BAJO),
     pata: Math.max(0, (re - U_ALTO) / (1 - U_ALTO)),
     pincho: Math.max(0, (U_BAJO - so) / U_BAJO),
     aleta: Math.max(0, (so - U_ALTO) / (1 - U_ALTO)),
@@ -97,8 +103,15 @@ export type Paleta = {
   bg: string; bg2: string;
   home: string; homeInk: string;
   food: string;
-  /** Rampa del cuerpo, recorrida por la fiereza. */
+  /** Rampa de referencia del diseño. `mid` es de dónde sale un cuerpo recién nacido. */
   cold: string; mid: string; hot: string;
+  /**
+   * A dónde va el cuerpo al envejecer. **El color del cuerpo es la edad y nada más**: cualquier
+   * otro gen que lo tocara competiría con ella, y un bicho a punto de morir tiene que leerse de un
+   * vistazo entre treinta. Lo que un gen pide es forma —un brazo, una púa, un ojo—, que se puede
+   * mirar de cerca; la edad pide el canal que se ve sin mirar.
+   */
+  vejez: string;
   /** A dónde se apaga un cuerpo sin energía. No es gris: es el fondo tragándoselo. */
   dim: string;
   hi: string; line: string; maw: string;
@@ -119,9 +132,13 @@ export function mix(a: string, b: string, t: number): string {
 }
 export const canales = hexa;
 
-/** El color del cuerpo: la fiereza recorre la rampa y la energía lo apaga hacia el fondo. */
-export const colorCuerpo = (p: Paleta, fi: number, e: number) =>
-  mix(fi < 0.5 ? mix(p.cold, p.mid, fi * 2) : mix(p.mid, p.hot, (fi - 0.5) * 2), p.dim, (1 - e) * 0.42);
+/**
+ * El color del cuerpo: **la edad lo lleva de `mid` a `vejez`** y la energía lo apaga hacia el
+ * fondo. Los dos ejes se distinguen porque no van al mismo sitio —el hambre te acerca al suelo,
+ * los años te acercan a `vejez`— y porque el hambre se recupera comiendo y la edad no vuelve.
+ */
+export const colorCuerpo = (p: Paleta, edad: number, e: number) =>
+  mix(mix(p.mid, p.vejez, clamp(edad, 0, 1)), p.dim, (1 - e) * 0.42);
 
 /** PRNG del pintado, de semilla fija. No toca el del motor: aquí nada decide nada. */
 export function azarFijo(s: number) {
@@ -142,6 +159,8 @@ export type Cuerpo = {
   radio: number;
   /** Bocados encima, que se pintan sobre el cuerpo. */
   carga?: number;
+  /** Lo viejo que es, 0…1. El único canal de color del cuerpo. */
+  edad?: number;
   g: Genoma;
 };
 
@@ -355,7 +374,7 @@ const cruz: Design["comida"] = (ctx, p) => {
 // así que no promete una luz global que este mundo no tiene.
 //
 // · talla → cuerpo y boca, con dientes arriba · empuje → casco, de ladrillo a bala
-// · visión → ojos · fiereza → tono y brazo con mano · sociabilidad → púas o pectorales
+// · visión → ojos · fiereza → pala o brazo con mano · sociabilidad → púas o pectorales
 // · retorno → caudal, y patas que se la comen
 
 const COLA = 2.1;
@@ -373,7 +392,7 @@ function pezCasco(m: Medidas, R: number, e: number) {
 const pezCuerpo: Design["cuerpo"] = (ctx, b, e, p) => {
   const R = b.radio, m = medidas(b.g), k = pezCasco(m, R, e);
   const { fr, bk, W } = k;
-  const bod = colorCuerpo(p, m.fi, e);
+  const bod = colorCuerpo(p, b.edad ?? 0, e);
   const aleta = mix(bod, p.fin, 0.5);
 
   ctx.save();
@@ -486,6 +505,23 @@ const pezCuerpo: Design["cuerpo"] = (ctx, b, e, p) => {
     }
   }
 
+  // fiereza − · la pala, por delante y bajo el morro: una hoja ancha y roma que barre en vez de
+  // agarrar. Va **detrás del cuerpo** en el orden de pintado para que la boca siga siendo lo
+  // primero que se ve — un pez grande y manso lleva las dos cosas y la que manda es la boca.
+  if (m.pala > 0.02) {
+    const pl = R * (0.16 + 0.44 * m.pala), pw = W * (0.60 + 0.40 * m.pala);
+    ctx.fillStyle = mix(bod, p.belly, 0.42);
+    ctx.strokeStyle = mix(bod, p.line, 0.28);
+    ctx.lineWidth = Math.max(0.6, R * 0.085);
+    ctx.beginPath();
+    ctx.moveTo(fr * 0.80, -W * 0.56);
+    ctx.lineTo(fr * 0.80 + pl, -pw);
+    ctx.lineTo(fr * 0.80 + pl, pw);
+    ctx.lineTo(fr * 0.80, W * 0.56);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+  }
+
   ctx.save();
   contorno();
   ctx.clip();
@@ -549,10 +585,12 @@ const pezExtension: Design["extension"] = (g, R) => {
   const pincho = m.pincho > 0.02 ? R * (0.10 + 0.66 * m.pincho) : 0;
   const brazo = R * (0.34 + 0.95 * m.brazo), pata = R * (0.30 + 0.85 * m.pata);
   const fl = R * (0.34 + 0.86 * m.aleta), mw = R * (0.10 + 0.62 * m.ta);
+  const pala = m.pala > 0.02 ? R * (0.16 + 0.44 * m.pala) : 0;
+  const palaW = m.pala > 0.02 ? k.W * (0.60 + 0.40 * m.pala) : 0;
   return [
     Math.max(k.fr * 1.02 + mw * 0.6, cola + pincho, k.bk * 0.52 + pata + R * 0.6,
-      k.fr * 0.28 + brazo + R * 0.5, k.fr + pincho),
-    Math.max(k.W + pincho, k.W + fl * 0.66, k.W * 0.78 + brazo * 0.62 + R * 0.4,
+      k.fr * 0.28 + brazo + R * 0.5, k.fr + pincho, k.fr * 0.80 + pala + R * 0.3),
+    Math.max(k.W + pincho, k.W + fl * 0.66, k.W * 0.78 + brazo * 0.62 + R * 0.4, palaW + R * 0.3,
       k.W * 0.70 + pata * 0.68 + R * 0.4),
   ];
 };
@@ -577,7 +615,7 @@ function protoCasco(m: Medidas, R: number, e: number) {
 const protoCuerpo: Design["cuerpo"] = (ctx, b, e, p) => {
   const R = b.radio, m = medidas(b.g), k = protoCasco(m, R, e);
   const { fr, bk, W } = k;
-  const bod = colorCuerpo(p, m.fi, e), lw = Math.max(0.6, R * 0.10);
+  const bod = colorCuerpo(p, b.edad ?? 0, e), lw = Math.max(0.6, R * 0.10);
 
   ctx.save();
   ctx.translate(b.x, b.y);
@@ -660,6 +698,20 @@ const protoCuerpo: Design["cuerpo"] = (ctx, b, e, p) => {
   ctx.strokeStyle = mix(bod, p.line, 0.45);
   ctx.lineWidth = lw * 0.65;
   ctx.stroke();
+
+  // fiereza − · la pala: un arco romo por delante, del ancho del cuerpo. En un diseño que ya es
+  // todo contorno, se lee por lo que abulta el borde y no por su relleno.
+  if (m.pala > 0.02) {
+    const pl = R * (0.24 + 0.78 * m.pala), th = 0.72;
+    const r0 = rad(0), ry = rad(th) * Math.sin(th);
+    ctx.strokeStyle = mix(bod, p.line, 0.30);
+    ctx.lineWidth = Math.max(0.9, R * 0.16);
+    ctx.lineJoin = "round"; ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(r0 * 0.72, -ry * 1.02);
+    ctx.quadraticCurveTo(r0 + pl, 0, r0 * 0.72, ry * 1.02);
+    ctx.stroke();
+  }
 
   if (m.brazo > 0.02) {
     const al = R * (0.42 + 1.05 * m.brazo), sk = R * (0.09 + 0.16 * m.brazo);
@@ -746,12 +798,13 @@ const protoExtension: Design["extension"] = (g, R) => {
   const wob = 1 + (1 - m.sp) * 0.26;
   const tl = R * (0.9 + 2.0 * m.re) * (1 - 0.62 * m.pata);
   const al = R * (0.42 + 1.05 * m.brazo), ll = R * (0.34 + 0.92 * m.pata);
+  const pala = m.pala > 0.02 ? R * (0.24 + 0.78 * m.pala) : 0;
   const spl = m.pincho > 0.02 ? R * (0.18 + 0.72 * m.pincho) : 0;
   const cil = m.aleta > 0.02 ? R * (0.32 + 0.85 * m.aleta) : 0;
   const mw = Math.min(R * (0.09 + 0.58 * m.ta), k.W * 0.78);
   return [
     Math.max(k.fr * wob + spl + cil * 0.9 + R * 0.2, k.bk * wob + tl + R * 0.2,
-      k.bk + ll + R * 0.7, k.fr + al + R * 0.3, k.fr * 1.04 + mw * 0.4),
+      k.bk + ll + R * 0.7, k.fr + al + R * 0.3, k.fr * 1.04 + mw * 0.4, k.fr + pala + R * 0.3),
     Math.max(k.W * wob + spl + cil * 0.7 + R * 0.2, k.W * 0.78 + ll * 0.78 + R * 0.5,
       R * (0.15 + 0.42 * m.vi) + R * 0.2, k.W + al * 0.55 + R * 0.3),
   ];
@@ -778,7 +831,7 @@ function cristalCasco(m: Medidas, R: number) {
 const cristalCuerpo: Design["cuerpo"] = (ctx, b, e, p) => {
   const R = b.radio, m = medidas(b.g), k = cristalCasco(m, R);
   const { fr, bk, W } = k;
-  const bod = colorCuerpo(p, m.fi, e), lw = Math.max(0.7, R * 0.12);
+  const bod = colorCuerpo(p, b.edad ?? 0, e), lw = Math.max(0.7, R * 0.12);
 
   ctx.save();
   ctx.translate(b.x, b.y);
@@ -858,6 +911,21 @@ const cristalCuerpo: Design["cuerpo"] = (ctx, b, e, p) => {
   ctx.lineWidth = Math.max(0.6, R * (0.05 + 0.19 * m.re));
   ctx.beginPath(); ctx.moveTo(-bk * 0.40, 0); ctx.lineTo(fr * 0.55, 0); ctx.stroke();
 
+  // fiereza − · la pala: una hoja recta por delante, en el idioma de rectas del cristal.
+  if (m.pala > 0.02) {
+    const pl = R * (0.16 + 0.42 * m.pala), pw = W * (0.64 + 0.42 * m.pala);
+    ctx.fillStyle = mix(bod, p.belly, 0.38);
+    ctx.strokeStyle = p.line;
+    ctx.lineWidth = Math.max(0.6, lw * 0.6);
+    ctx.beginPath();
+    ctx.moveTo(fr * 0.74, -W * 0.60);
+    ctx.lineTo(fr * 0.74 + pl, -pw);
+    ctx.lineTo(fr * 0.74 + pl, pw);
+    ctx.lineTo(fr * 0.74, W * 0.60);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+  }
+
   if (m.brazo > 0.02) {
     const aL = R * (0.36 + 1.00 * m.brazo), hw = R * (0.16 + 0.30 * m.brazo);
     for (const sd of [-1, 1]) {
@@ -910,13 +978,17 @@ const cristalExtension: Design["extension"] = (g, R) => {
   const m = medidas(g), k = cristalCasco(m, R);
   const al = R * (0.35 + 2.20 * m.vi), abre = 0.66 - 0.34 * m.vi;
   const aL = R * (0.36 + 1.00 * m.brazo), ll = R * (0.32 + 0.95 * m.pata);
+  const pl2 = m.pala > 0.02 ? R * (0.16 + 0.42 * m.pala) : 0;
+  const pw2 = m.pala > 0.02 ? k.W * (0.64 + 0.42 * m.pala) : 0;
   const spl = m.pincho > 0.02 ? R * (0.20 + 0.70 * m.pincho) : 0;
   const pl = m.aleta > 0.02 ? R * (0.30 + 0.85 * m.aleta) : 0;
   const mo = R * (0.14 + 0.72 * m.ta);
   return [
     Math.max(k.fr + mo + spl + R * 0.2, k.fr * 0.20 + al * Math.cos(abre) + R * 0.3,
-      k.bk + Math.max(spl, ll + R * 0.5, pl + R * 0.4) + R * 0.2, k.fr * 0.30 + aL + R * 0.4),
+      k.bk + Math.max(spl, ll + R * 0.5, pl + R * 0.4) + R * 0.2, k.fr * 0.30 + aL + R * 0.4,
+      k.fr * 0.74 + pl2 + R * 0.3),
     Math.max(k.W + spl + R * 0.2, k.W * 0.48 + al * Math.sin(abre) + R * 0.3, k.W + pl * 0.9 + R * 0.2,
+      pw2 + R * 0.3,
       k.W * 0.70 + ll * 0.75 + R * 0.4, k.W * 0.72 + aL * 0.70 + R * 0.4),
   ];
 };
@@ -933,7 +1005,7 @@ const cristalExtension: Design["extension"] = (g, R) => {
 
 const dialCuerpo: Design["cuerpo"] = (ctx, b, e, p) => {
   const R = b.radio, m = medidas(b.g);
-  const bod = colorCuerpo(p, m.fi, 1);
+  const bod = colorCuerpo(p, b.edad ?? 0, 1);
 
   ctx.save();
   ctx.translate(b.x, b.y);
@@ -1005,6 +1077,19 @@ const dialCuerpo: Design["cuerpo"] = (ctx, b, e, p) => {
     ctx.beginPath(); ctx.moveTo(-R * 0.92, sd * cb); ctx.lineTo(-R * 0.92 + R * 0.30, sd * cb); ctx.stroke();
   }
 
+  // fiereza − · la pala: una barra por delante. **Es el espejo del travesaño de retorno**, que va
+  // detrás: mismo trazo y lado opuesto, así que no se confunden ni con la cuña del empuje.
+  if (m.pala > 0.02) {
+    const pb = R * (0.55 + 1.05 * m.pala), px = R * (0.96 + 0.42 * m.pala);
+    ctx.strokeStyle = p.acc;
+    ctx.lineWidth = Math.max(1.0, R * 0.15);
+    ctx.beginPath(); ctx.moveTo(px, -pb); ctx.lineTo(px, pb); ctx.stroke();
+    ctx.lineWidth = Math.max(0.8, R * 0.11);
+    for (const sd of [-1, 1]) {
+      ctx.beginPath(); ctx.moveTo(px, sd * pb); ctx.lineTo(px - R * 0.28, sd * pb); ctx.stroke();
+    }
+  }
+
   if (m.brazo > 0.02) {
     const aL = R * (0.34 + 0.95 * m.brazo), aw = R * (0.24 + 0.30 * m.brazo);
     ctx.fillStyle = p.jaw;
@@ -1054,12 +1139,15 @@ const dialExtension: Design["extension"] = (g, R) => {
   const m = medidas(g);
   const cuna = R * (0.35 + 1.85 * m.sp), vr = R * (1.30 + 1.90 * m.vi);
   const aL = R * (0.34 + 0.95 * m.brazo), cb = R * (0.30 + 1.95 * m.re);
+  const pb = m.pala > 0.02 ? R * (0.55 + 1.05 * m.pala) : 0;
+  const px = m.pala > 0.02 ? R * (0.96 + 0.42 * m.pala) : 0;
   const spl = m.pincho > 0.02 ? R * (0.20 + 0.70 * m.pincho) : 0;
   const anillo = m.aleta > 0.02 ? R * 1.18 : 0;
   return [
     Math.max(vr + R * 0.2, R * (1.10 + 0.55 * m.ta) + R * 0.2, R + Math.max(spl, cuna - R * 0.14) + R * 0.2,
-      anillo + R * 0.2, R + aL + R * 0.3, R * 1.35 + R * 0.2),
-    Math.max(vr * Math.sin(1.05) + R * 0.2, R + spl + R * 0.2, R * 1.25 + R * 0.2, R + aL + R * 0.3, cb + R * 0.3),
+      anillo + R * 0.2, R + aL + R * 0.3, R * 1.35 + R * 0.2, px + R * 0.3),
+    Math.max(vr * Math.sin(1.05) + R * 0.2, R + spl + R * 0.2, R * 1.25 + R * 0.2, R + aL + R * 0.3,
+      cb + R * 0.3, pb + R * 0.3),
   ];
 };
 
@@ -1078,11 +1166,11 @@ export const DESIGNS: Design[] = [
     // En verde sobre verde el bicho se hunde en el fondo, que es justo lo que la comida ya hace.
     paleta: (tema) => tema === "dark"
       ? { tema, bg: "#0b1a20", bg2: "#0f2329", home: "#15303a", homeInk: "#2f5764", food: "#efa53c",
-          cold: "#69c1ab", mid: "#a8bd7e", hot: "#f0866a", dim: "#39443f", hi: "#f2f7f4",
+          cold: "#69c1ab", mid: "#a8bd7e", hot: "#f0866a", dim: "#39443f", hi: "#f2f7f4", vejez: "#f2f7f4",
           line: "#040e12", maw: "#101816", acc: "#e7c46a", acc2: "#e7c46a", jaw: "#f0866a",
           belly: "#d6e5de", fin: "#3f6b60", tinta: "#cfe6ec" }
       : { tema, bg: "#e8eef0", bg2: "#d3dfe3", home: "#c4d3d7", homeInk: "#8ca5aa", food: "#d9852c",
-          cold: "#2f6b60", mid: "#6f8a58", hot: "#bd4b34", dim: "#9fadb2", hi: "#fbf8ef",
+          cold: "#2f6b60", mid: "#6f8a58", hot: "#bd4b34", dim: "#9fadb2", hi: "#fbf8ef", vejez: "#fbf8ef",
           line: "#17272e", maw: "#232c29", acc: "#dfae48", acc2: "#dfae48", jaw: "#bd4b34",
           belly: "#f2ecda", fin: "#7fb0b8", tinta: "#17272e" },
     cuerpo: pezCuerpo, extension: pezExtension, comida: bacilo, fondo: sueloPapel,
@@ -1094,11 +1182,11 @@ export const DESIGNS: Design[] = [
     // contorno lleno de lóbulos y púas, y un bocado grande le come el borde.
     paleta: (tema) => tema === "dark"
       ? { tema, bg: "#151f1d", bg2: "#1d2a27", home: "#233330", homeInk: "#41564f", food: "#e3a23a",
-          cold: "#82a6c0", mid: "#c69a92", hot: "#e0594a", dim: "#4c454b", hi: "#f6ecdc",
+          cold: "#82a6c0", mid: "#c69a92", hot: "#e0594a", dim: "#4c454b", hi: "#f6ecdc", vejez: "#f6ecdc",
           line: "#d9c9b0", maw: "#0c0a0c", acc: "#d9b06a", acc2: "#e3a23a", jaw: "#e0594a",
           belly: "#d6e5de", fin: "#6c5c48", tinta: "#e8e2d6" }
       : { tema, bg: "#f3eee1", bg2: "#e7dfcc", home: "#ded1b3", homeInk: "#bda87f", food: "#bd7418",
-          cold: "#4d6272", mid: "#6e5560", hot: "#8d2f27", dim: "#a09781", hi: "#faf6ec",
+          cold: "#4d6272", mid: "#6e5560", hot: "#8d2f27", dim: "#a09781", hi: "#faf6ec", vejez: "#faf6ec",
           line: "#3a322c", maw: "#241d19", acc: "#9a7b3c", acc2: "#bd7418", jaw: "#8d2f27",
           belly: "#f2ecda", fin: "#b09a72", tinta: "#3a322c" },
     cuerpo: protoCuerpo, extension: protoExtension, comida: discoCon(0.78), fondo: sueloVineta,
@@ -1108,11 +1196,11 @@ export const DESIGNS: Design[] = [
     nombre: "Cristal",
     paleta: (tema) => tema === "dark"
       ? { tema, bg: "#0e1418", bg2: "#161e24", home: "#1b262d", homeInk: "#3d505b", food: "#48bfae",
-          cold: "#a3c2d2", mid: "#a8c0bd", hot: "#ef7b56", dim: "#3b464d", hi: "#f0fafc",
+          cold: "#a3c2d2", mid: "#a8c0bd", hot: "#ef7b56", dim: "#3b464d", hi: "#f0fafc", vejez: "#f0fafc",
           line: "#0a0f12", maw: "#0a0f12", acc: "#82abbd", acc2: "#e6b346", jaw: "#ef7b56",
           belly: "#dff0f4", fin: "#3d7b8a", tinta: "#cfe6ec" }
       : { tema, bg: "#e7ecef", bg2: "#d4dde3", home: "#c5d0d7", homeInk: "#8ba1ad", food: "#1c6b64",
-          cold: "#38566a", mid: "#4f7080", hot: "#ac3d29", dim: "#9aa8b0", hi: "#ffffff",
+          cold: "#38566a", mid: "#4f7080", hot: "#ac3d29", dim: "#9aa8b0", hi: "#ffffff", vejez: "#ffffff",
           line: "#1b262c", maw: "#1b262c", acc: "#4e7386", acc2: "#c1861a", jaw: "#ac3d29",
           belly: "#eef5f7", fin: "#7fb0b8", tinta: "#1b262c" },
     cuerpo: cristalCuerpo, extension: cristalExtension, comida: triangulo, fondo: sueloMotas,
@@ -1122,11 +1210,11 @@ export const DESIGNS: Design[] = [
     nombre: "Instrumento",
     paleta: (tema) => tema === "dark"
       ? { tema, bg: "#0c0e0d", bg2: "#141817", home: "#171d1b", homeInk: "#3a443f", food: "#63b39c",
-          cold: "#8fada4", mid: "#b39a86", hot: "#dd5f3e", dim: "#39443f", hi: "#f2f7f4",
+          cold: "#8fada4", mid: "#b39a86", hot: "#dd5f3e", dim: "#39443f", hi: "#f2f7f4", vejez: "#f2f7f4",
           line: "#ccd6d0", maw: "#0c0e0d", acc: "#6e7d76", acc2: "#d6a41f", jaw: "#dd5f3e",
           belly: "#d6e5de", fin: "#3f6b60", tinta: "#ccd6d0" }
       : { tema, bg: "#f4f3ee", bg2: "#e6e4d9", home: "#e0ded1", homeInk: "#a29d88", food: "#3f6f5f",
-          cold: "#3d5159", mid: "#6a6f66", hot: "#b03a2b", dim: "#a9a292", hi: "#fbf8ef",
+          cold: "#3d5159", mid: "#6a6f66", hot: "#b03a2b", dim: "#a9a292", hi: "#fbf8ef", vejez: "#fbf8ef",
           line: "#1d1d19", maw: "#1d1d19", acc: "#8d8873", acc2: "#3f6f5f", jaw: "#b03a2b",
           belly: "#f2ecda", fin: "#8bb6a5", tinta: "#1d1d19" },
     cuerpo: dialCuerpo, extension: dialExtension, comida: cruz, fondo: sueloRejilla,

@@ -6,9 +6,9 @@
 // diseño, así que este bucle tiene que servir igual para un pez de papel y para un instrumento de
 // rectas: en cuanto empiece a saber de aletas, el siguiente diseño no cabrá.
 
-import { MARCA, RADIO_COMIDA, type Mundo } from "./engine";
+import { MARCA, RADIO_COMIDA, edadDe, type Mundo } from "./engine";
 import {
-  azarFijo, clamp, colorCuerpo, designFor, giroDe, medidas,
+  azarFijo, clamp, colorCuerpo, designFor, giroDe,
   type Cuerpo, type Design, type Paleta,
 } from "./designs";
 
@@ -114,7 +114,7 @@ export function pintar(
       // La vejez mata al cerrar el día, con el reloj del mundo parado: su marca no puede contar
       // ticks como las otras dos, así que se apaga con la noche — a la vez que crecen las crías.
       ctx.globalAlpha = (1 - noche) * 0.7;
-      ctx.fillStyle = colorCuerpo(p, medidas({ ...m.eva, fiereza: z.fiereza }).fi, 0);
+      ctx.fillStyle = colorCuerpo(p, z.edad, 0);
       ctx.beginPath(); ctx.arc(z.x, z.y, z.r, 0, TAU); ctx.fill();
       ctx.globalAlpha = 1;
       continue;
@@ -128,7 +128,7 @@ export function pintar(
       continue;
     }
     ctx.globalAlpha = (1 - k) * 0.85;
-    ctx.fillStyle = colorCuerpo(p, medidas({ ...m.eva, fiereza: z.fiereza }).fi, 0);
+    ctx.fillStyle = colorCuerpo(p, z.edad, 0);
     ctx.beginPath(); ctx.arc(z.x, z.y, z.r * (1 - 0.65 * k), 0, TAU); ctx.fill();
     ctx.globalAlpha = 1;
   }
@@ -142,8 +142,11 @@ export function pintar(
     // grande a medio gas y un pequeño a medio gas se pintan igual de apagados, que es lo justo.
     const lleno = b.reserva / (c.capReserva * b.masa);
     const vigor = clamp(lleno, 0, 1);
+    // La edad va en el cuerpo y no en el `Bicho`: se deriva del día, así que guardarla obligaría a
+    // repasar la población entera cada amanecer para que no mintiera.
+    const edad = edadDe(m, b);
     if (b.recien && m.noche) {
-      if (brote > 0.02) d.cuerpo(ctx, { ...b, radio: b.radio * brote }, vigor, p);
+      if (brote > 0.02) d.cuerpo(ctx, { ...b, radio: b.radio * brote, edad }, vigor, p);
       if (brote < 1) {
         ctx.strokeStyle = p.acc;
         ctx.globalAlpha = 1 - brote;
@@ -153,7 +156,7 @@ export function pintar(
       }
       continue;
     }
-    d.cuerpo(ctx, b, vigor, p);
+    d.cuerpo(ctx, { ...b, edad }, vigor, p);
 
     // **La despensa no tiene techo, y sin esto no se veía**: quien lleva una semana ahorrando se
     // pintaba igual que quien acaba de comer, y su camada de veintidós parecía salida de la nada.

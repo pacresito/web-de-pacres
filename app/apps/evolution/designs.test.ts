@@ -24,8 +24,8 @@ const cerca = (a: number, b: number, t = 0.02) => Math.abs(a - b) <= t;
   check("el fundador cae en el centro de las seis ventanas", centro.length === 0,
     centro.length ? `fuera: ${centro.join(", ")}` : "los seis en 0,50");
   check("y por tanto nace sin ningún adorno",
-    m.brazo === 0 && m.pata === 0 && m.pincho === 0 && m.aleta === 0,
-    `brazo ${m.brazo} · pata ${m.pata} · pincho ${m.pincho} · aleta ${m.aleta}`);
+    m.brazo === 0 && m.pala === 0 && m.pata === 0 && m.pincho === 0 && m.aleta === 0,
+    `brazo ${m.brazo} · pala ${m.pala} · pata ${m.pata} · pincho ${m.pincho} · aleta ${m.aleta}`);
 }
 
 // 2. La ventana tiene que contener al fundador, o el gen se pintaría pegado a un borde desde el

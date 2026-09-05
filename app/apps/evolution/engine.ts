@@ -333,7 +333,8 @@ export type Bicho = {
 export type Marca = {
   x: number; y: number; r: number; t: number;
   causa: "comido" | "hambre" | "vejez";
-  fiereza: number;
+  /** Lo viejo que era, 0…1. Es lo que le da color al cuerpo, vivo o muerto. */
+  edad: number;
 };
 
 export type Mundo = {
@@ -368,6 +369,15 @@ export type Mundo = {
   /** `fuera` son **noches pasadas a la intemperie**, no muertes: al anochecer ya no muere nadie. */
   cuenta: { nacidos: number; hambre: number; fuera: number; comidos: number; vejez: number };
 };
+
+/**
+ * Lo viejo que es, de 0 —nació hoy— a 1 —hoy se muere—. **Es lo único que el cuerpo pinta con
+ * color**, así que un mundo sin vejez sale entero del color del recién nacido: sin plazo no hay
+ * edad que enseñar, y fingir una repartiendo la rampa por días vividos pintaría de viejo al que
+ * puede vivir para siempre.
+ */
+export const edadDe = (m: Mundo, b: Bicho): number =>
+  Number.isFinite(m.cfg.vida) ? Math.min(1, (m.dia - b.nacido) / m.cfg.vida) : 0;
 
 /** Masa que hay que mover: la propia más la que llevas encima. La comida pesa lo que vale. */
 const masaCargada = (b: Bicho): number => b.masa + b.carga * E_COMIDA;
@@ -612,7 +622,7 @@ function comer(m: Mundo, dep: Bicho, presa: Bicho) {
   dep.reserva += presa.masa * EFICIENCIA;
   dep.carga += presa.carga;
   presa.vivo = false;
-  m.marcas.push({ x: presa.x, y: presa.y, r: presa.radio, t: m.t, causa: "comido", fiereza: presa.g.fiereza });
+  m.marcas.push({ x: presa.x, y: presa.y, r: presa.radio, t: m.t, causa: "comido", edad: edadDe(m, presa) });
   m.cuenta.comidos++;
 }
 
@@ -677,7 +687,7 @@ export function tick(m: Mundo) {
     b.reserva -= masaCargada(b) * (C_BASAL + C_VISION * b.g.vision * b.g.vision + C_EMPUJE * v * v);
     if (b.reserva <= 0) {
       b.vivo = false;
-      m.marcas.push({ x: b.x, y: b.y, r: b.radio, t: m.t, causa: "hambre", fiereza: b.g.fiereza });
+      m.marcas.push({ x: b.x, y: b.y, r: b.radio, t: m.t, causa: "hambre", edad: edadDe(m, b) });
       m.cuenta.hambre++;
       continue;
     }
@@ -795,7 +805,7 @@ export function anochecer(m: Mundo) {
     for (const b of m.bichos) {
       if (m.dia - b.nacido < c.vida) continue;
       b.vivo = false;
-      m.marcas.push({ x: b.x, y: b.y, r: b.radio, t: m.t, causa: "vejez", fiereza: b.g.fiereza });
+      m.marcas.push({ x: b.x, y: b.y, r: b.radio, t: m.t, causa: "vejez", edad: 1 });
       m.cuenta.vejez++;
     }
     m.bichos = m.bichos.filter((b) => b.vivo);
