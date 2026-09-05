@@ -122,7 +122,7 @@ export default function Globo({ id, lon, lat, r = 74, lado, oculto, puntos, marc
           va a escala del globo, como la costa. */}
       {diminutos.map((q, i) => <circle key={i} cx={q[0].toFixed(1)} cy={q[1].toFixed(1)} r={r / 100} fill="var(--t-ink3)" />)}
       {/* Trazo además de relleno: un país fino (Chile, Italia) desaparece si solo se rellena. */}
-      <path d={mio} fill="var(--t-accent)" stroke="var(--t-accent)" strokeWidth={2.5} strokeLinejoin="round" />
+      <path d={mio} fill="var(--t-accent)" fillRule="evenodd" stroke="var(--t-accent)" strokeWidth={2.5} strokeLinejoin="round" />
       {punto?.[2] && <circle cx={punto[0]} cy={punto[1]} r={3.5} fill="var(--t-accent)" />}
       {/* La marca va encima y es trazo, mientras que la respuesta es relleno: así no pelean, y
           el acierto se lee solo —el contorno cae clavado sobre la forma verde— en vez de

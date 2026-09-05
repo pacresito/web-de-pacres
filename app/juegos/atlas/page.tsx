@@ -22,21 +22,19 @@ export default function Atlas() {
   const identificado = useSyncExternalStore(suscribir, sesionActual, sinSesion);
   const mazo = useSyncExternalStore(suscribir, mazoActual, sinMazo);
 
-  // Dónde se aterriza depende de quién entra: con sesión, explorar —quien vuelve un día sí y
-  // otro también entra a ver por dónde va, no a la tarjeta que toque—; sin ella, repasar, que
-  // es la app y lo único que enseña qué es esto. Se deriva en vez de arrancar el estado con
-  // ello porque en la primera pintura no se sabe todavía; elegido a mano, manda la elección.
-  const [elegido, setElegido] = useState<Modo | null>(null);
-  const modo = elegido ?? (identificado ? "explorar" : "repasar");
+  // Se aterriza siempre en repasar, haya sesión o no: es la app, y es lo que hay que hacer hoy.
+  // Explorar es la salida, y a una salida se va queriendo.
+  const [modo, setModo] = useState<Modo>("repasar");
 
-  // Y con qué chrome, por lo mismo: quien tiene sesión ya sabe dónde está y viene a mirar el
-  // mapa, no la barra del terminal. Se deriva igual que el modo, y el botón manda si se toca.
+  // Con qué chrome sí depende de quién entra: quien tiene sesión ya sabe dónde está y no
+  // necesita la barra del terminal. Se deriva en vez de arrancar el estado con ello porque en
+  // la primera pintura no se sabe todavía; tocado el botón, manda la elección.
   const [maximizado, setMaximizado] = useState<boolean | null>(null);
   const pantallaCompleta = maximizado ?? identificado;
 
-  // El marco lo pliega el CSS hasta aquí (el script de `layout.tsx`); desde que React monta lo
-  // pliega el estado, así que el atributo sobra — y quitarlo es lo que impide que se lleve el
-  // marco de otra página por delante al salir del atlas sin recargar.
+  // El marco lo pliega el CSS hasta aquí (el script del `<head>` de `app/layout.tsx`); desde
+  // que React monta lo pliega el estado, así que el atributo sobra — y quitarlo es lo que
+  // impide que se lleve el marco de otra página por delante al salir del atlas sin recargar.
   useEffect(() => { delete document.documentElement.dataset.atlasMax; }, []);
 
   // Al cargar, y solo al cargar: se vuelca lo calificado sin cobertura y manda lo que diga
@@ -65,11 +63,11 @@ export default function Atlas() {
           }}
         >
           {modo === "repasar" ? (
-            <button className="atlas-modo" onClick={() => setElegido("explorar")} style={{ fontSize: 12, letterSpacing: "0.04em" }}>
+            <button className="atlas-modo" onClick={() => setModo("explorar")} style={{ fontSize: 12, letterSpacing: "0.04em" }}>
               explorar ›
             </button>
           ) : (
-            <button className="atlas-modo-v" onClick={() => setElegido("repasar")} style={{ fontSize: 13, fontWeight: 500, letterSpacing: "0.02em" }}>
+            <button className="atlas-modo-v" onClick={() => setModo("repasar")} style={{ fontSize: 13, fontWeight: 500, letterSpacing: "0.02em" }}>
               ‹ repasar
             </button>
           )}

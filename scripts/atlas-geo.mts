@@ -83,12 +83,19 @@ const TOL_ALTA = 2.2;
 // donde la plataforma ES el país. Palau la lleva por el oeste y Tonga no la lleva, porque a −500 m
 // una isla alta no da un arrecife, da su propio talud.
 //
+// `enclave` dibuja además los agujeros del polígono, que por defecto se sueltan: son dársenas,
+// puertos y lagos —geoBoundaries le encuentra 854 a Ruanda—, y en una silueta que se memoriza
+// son manchas blancas sin significado. Va país a país porque solo hay uno al que el agujero le
+// hace la forma: Lesoto ocupa el 2,4 % de Sudáfrica y se reconoce. El del segundo por tamaño no
+// es ni un país —es el cosmódromo de Baikonur, que la fuente le recorta a Kazajistán—, y los
+// enclaves que sí lo son miden lo que San Marino dentro de Italia: una mota.
+//
 // `salto` sube `MAX_KM` solo para un país, y es lo que necesita el que tiene **dos masas de
 // verdad** demasiado lejos la una de la otra. No hay tope general que sirva: subirlo a 600 para
 // todos trae la península malaya, sí, pero también pone a Mauricio en un lienzo diez veces más
 // grande para dibujarle Rodrigues —99 km²— y a las Marshall uno un 40 % mayor por un km². Lo que
 // justifica el salto es cuánta masa entra, no cuánta distancia se salva.
-export const AJUSTES: Record<string, { cerca?: Cerca; paneles?: [Cerca, Cerca]; tol?: number; arrecife?: boolean; islas?: number; cadena?: boolean; salto?: number; anillo?: Anilla }> = {
+export const AJUSTES: Record<string, { cerca?: Cerca; paneles?: [Cerca, Cerca]; tol?: number; arrecife?: boolean; islas?: number; cadena?: boolean; salto?: number; anillo?: Anilla; enclave?: boolean }> = {
   bs: { cerca: [-77.5, 25.5, 260], anillo: {} },  // el racimo del noroeste, y el borde de su banco
   ca: { cadena: true },
   es: { islas: 60 },                  // Menorca, Ibiza y Formentera, que la regla relativa suelta
@@ -107,6 +114,7 @@ export const AJUSTES: Record<string, { cerca?: Cerca; paneles?: [Cerca, Cerca]; 
   to: { cerca: [-175.2, -21.2, 60] }, // Tongatapu
   tv: { arrecife: true, cadena: true }, // los nueve atolones, no solo Funafuti
   vu: { cadena: true },
+  za: { enclave: true },             // Lesoto, que es un agujero en el polígono y en la forma
 };
 
 // Se conserva lo que pesa algo Y cae cerca: Gozo, Baleares, Córcega, Sicilia, Cerdeña. Se
@@ -135,6 +143,7 @@ export type Grupo = {
   lon0: number;     // centro de la proyección
   lat0: number;
   proy: Anillo[];   // los anillos exteriores, en km desde el centro
+  proyHueco: Anillo[]; // los enclaves, a recortar de la silueta (fill-rule evenodd)
   proyCoral: Anillo[];
   proyAnillo: Anillo[]; // la plataforma somera, ya en km: no se proyecta, se calcula ahí
   b: Caja;          // caja de lo proyectado: tierra, coral y anillo
@@ -306,13 +315,13 @@ export async function encuadres(): Promise<Encuadre[]> {
     if (ajuste?.tol) tol = ajuste.tol;
     if (ajuste?.cerca) crudo = recortar(crudo, ajuste.cerca, p.nombre);
 
-    // Un grupo por panel, o uno solo con todo el país. Solo el anillo exterior de cada polígono:
-    // los agujeros de una fuente de alta resolución son dársenas y puertos, y en una silueta que
-    // se memoriza son manchas blancas sin significado.
+    // Un grupo por panel, o uno solo con todo el país. Solo el anillo exterior de cada polígono,
+    // salvo que el país lleve `enclave`.
     const grupos: Grupo[] = [];
     for (const [panel, cerca] of (ajuste?.paneles ?? [null]).entries()) {
       const polys = polysQueSeQuedan(cerca ? recortar(crudo, cerca, p.nombre) : crudo, ajuste?.islas, ajuste?.cadena, ajuste?.salto);
       const anillos = polys.map((poly) => poly[0]);
+      const huecos = ajuste?.enclave ? polys.flatMap((poly) => poly.slice(1)) : [];
       const c = caja(anillos);
       const lon0 = (c.x0 + c.x1) / 2, lat0 = (c.y0 + c.y1) / 2;
       // El coral de la caja del país, ensanchada: el anillo del atolón asoma bastante por fuera del
@@ -323,12 +332,15 @@ export async function encuadres(): Promise<Encuadre[]> {
         lat >= c.y0 - MARGEN_ARRECIFE && lat <= c.y1 + MARGEN_ARRECIFE));
       const proyectar = (a: Anillo) => a.map(([lon, lat]) => laea(lon, lat, lon0, lat0)) as Anillo;
       const proy = anillos.map(proyectar), proyCoral = coral.map(proyectar);
+      // Aparte de `proy` y no dentro: el área del grupo, la caja del encuadre y el trazado de la
+      // plataforma cuentan tierra, y un agujero no lo es.
+      const proyHueco = huecos.map(proyectar);
       // El anillo se calcula ya en km, y **entra en la caja antes de escalar**: calculado después,
       // un contorno más ancho que el encuadre saldría cortado por el borde del lienzo.
       const anilla = ajuste?.anillo;
       const proyAnillo = !anilla || (anilla.paneles && !anilla.paneles.includes(panel))
         ? [] : await anilloDelPanel(proy, (x, y) => laeaInv(x, y, lon0, lat0), anilla);
-      grupos.push({ polys, coral, c, lon0, lat0, proy, proyCoral, proyAnillo,
+      grupos.push({ polys, coral, c, lon0, lat0, proy, proyHueco, proyCoral, proyAnillo,
                     b: caja([...proy, ...proyCoral, ...proyAnillo]),
                     area: anillos.reduce((n, a) => n + areaRel(a), 0) });
     }

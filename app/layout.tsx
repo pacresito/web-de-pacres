@@ -111,6 +111,20 @@ export default function RootLayout({
             __html: `try{var t=localStorage.getItem('pacres-theme');if(t==='dark'||(!t&&matchMedia('(prefers-color-scheme:dark)').matches))document.documentElement.dataset.theme='dark'}catch(e){}`,
           }}
         />
+        {/* Lo mismo para el atlas, que se abre sin marco si hay sesión: sin esto se ve el marco
+            un instante, hasta que llega el bundle y lo pliega. **Vive aquí y no en el layout de
+            la ruta**, aunque solo hable de ella, porque un `<script>` dentro de un layout de
+            ruta React lo vuelve a poner en el DOM al navegar sin recargar —y un script que se
+            reinserta no se ejecuta, así que React avisa por consola de algo que nunca funcionó
+            ahí—. En el `<head>` de la raíz corre donde tiene sentido: al cargar el documento.
+            Navegando sin recargar no hace falta, que ahí React ya está montado y lo decide él.
+            'atlas:sesion' está duplicada con CLAVE_SESION en lib/atlas/almacen.ts, y por lo
+            mismo que la del tema: si cambia, cambia en los dos. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{if(location.pathname.startsWith('/juegos/atlas')&&localStorage.getItem('atlas:sesion')==='1')document.documentElement.dataset.atlasMax='1'}catch(e){}`,
+          }}
+        />
       </head>
       <body className="min-h-full flex flex-col">
         {children}

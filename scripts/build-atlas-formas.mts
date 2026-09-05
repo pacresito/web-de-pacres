@@ -14,7 +14,7 @@
 import fs from "node:fs";
 import { PAISES, PAIS_POR_ID, type Pais } from "../lib/atlas/paises";
 import {
-  BOX, PAD, type Anillo, type Caja, caja, cargar, encuadres, laea, polysDe,
+  AJUSTES, BOX, PAD, type Anillo, type Caja, caja, cargar, encuadres, laea, polysDe,
 } from "./atlas-geo.mjs";
 
 const SALIDA = new URL("../data/atlas/formas.ts", import.meta.url);
@@ -142,13 +142,16 @@ const salida: Salida[] = [];
 for (const { id, nombre, grupos, pinta, tol } of await encuadres()) {
   let d = "", arrecife = "", puntos = 0;
   const trazados: Anillo[] = [];
-  grupos.forEach(({ proy, proyCoral, proyAnillo }, i) => {
+  grupos.forEach(({ proy, proyHueco, proyCoral, proyAnillo }, i) => {
     const { px, py } = pinta[i];
     const trazo = (a: Anillo) => simplificar(a.map(([x, y]) => [px(x), py(y)] as [number, number]), tol);
     // Redondear al pintar: Math.cos/sin no están fijados por IEEE y Node y el navegador
     // discrepan en el último bit, lo que rompe la hidratación con un error ilegible.
     const eme = (a: Anillo) => "M" + a.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join("L");
-    for (const anillo of proy) {
+    // El hueco va en el mismo path que la tierra: lo recorta el `fill-rule: evenodd` con el que
+    // se pinta la silueta, y con ella la máscara del relieve — un contorno solo tendría que
+    // repetirse en las dos.
+    for (const anillo of [...proy, ...proyHueco]) {
       const out = trazo(anillo);
       if (out.length < 3) continue;
       d += eme(out) + "Z";
@@ -252,13 +255,16 @@ const costa: { id: string; r: number[][] }[] = [];
 for (const f of g50.features) {
   const iso = String(f.properties.ISO_A2_EH ?? f.properties.ISO_A2 ?? "").toLowerCase();
   const id = PAIS_POR_ID.has(iso) ? iso : "";
-  for (const poly of polysDe(f.geometry)) {
+  // El agujero del país que lo lleva viaja con su exterior, y el país resaltado se pinta con
+  // `evenodd`: Sudáfrica enseña a Lesoto aquí igual que en la silueta. En el fondo, donde todo
+  // el mundo va en un path, el agujero lo tapa el propio Lesoto, que se dibuja del mismo color.
+  for (const poly of polysDe(f.geometry)) for (const anillo of AJUSTES[id]?.enclave ? poly : [poly[0]]) {
     // Una isla más pequeña que el paso de muestreo no llega a un píxel del globo: son cientos
     // de anillos que solo pesan. Las que son un país entero se pintan como punto, igual que
     // los microestados que 1:50m tampoco trae.
-    const b: Caja = caja([poly[0]]);
+    const b: Caja = caja([anillo]);
     if (Math.max(b.x1 - b.x0, b.y1 - b.y0) < PASO_GLOBO * 2) continue;
-    const r = ralear(poly[0], PASO_GLOBO);
+    const r = ralear(anillo, PASO_GLOBO);
     if (r.length >= 3) costa.push({ id, r: r.map(([lon, lat]) => [+lon.toFixed(1), +lat.toFixed(1)]) });
   }
 }

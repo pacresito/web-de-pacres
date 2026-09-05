@@ -35,7 +35,7 @@ export default function Minimapa({ id, marco, lon, lat }: {
       <path d={fondo} fill="var(--t-rule2)" stroke="var(--t-ink4)" strokeWidth={1} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
       {/* Trazo además de relleno: un país fino se queda en nada si solo se rellena, y a esta
           escala casi todos lo son. */}
-      <path d={mio} fill="var(--t-accent)" stroke="var(--t-accent)" strokeWidth={2} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+      <path d={mio} fill="var(--t-accent)" fillRule="evenodd" stroke="var(--t-accent)" strokeWidth={2} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
       {/* Los diminutos no están en el mapa de baja resolución: a esta escala un punto es
           exactamente lo que son. Redondeado como el resto del dibujo: sale de un coseno, y esos
           Node y el navegador los calculan distintos en el último bit. */}
