@@ -6,7 +6,7 @@
 
 import { MADRID, rumbo, sedeParaFecha, type Cielo, type EventoLuna, type EventoSatelite }
   from "./engine";
-import { enlaceDePaso, partesLocales } from "./marco";
+import { enlaceDePaso, minutosEnMarco, MARCO_INICIO_H, partesLocales } from "./marco";
 
 export const AVISO_MINUTOS = 1;
 
@@ -55,13 +55,24 @@ function deLuna(luna: EventoLuna): Aviso {
 // los pasos piden una cumbre alta — la altitud mínima general se queda corta entre edificios.
 const ALTITUD_MINIMA_MADRID = 30;
 
+// Y Tiangong, que brilla la mitad que la ISS, solo cuando cae temprano. Se cuenta desde que
+// abre el marco y no en horas del reloj: el marco cruza la medianoche, y un paso de las 00:30
+// pasaría por temprano solo porque su hora es un número pequeño.
+const TIANGONG_HASTA = (20 - MARCO_INICIO_H) * 60 + 30;  // 20:30 local
+
 const enMadrid = (instante: number) => sedeParaFecha(new Date(instante)) === MADRID;
+
+/** Si un paso merece sacar a alguien a un patio de Madrid. En La Manga salen todos. */
+function valeEnMadrid(paso: EventoSatelite): boolean {
+  if (paso.altitud < ALTITUD_MINIMA_MADRID) return false;
+  if (paso.nombre !== "Tiangong") return true;
+  return (minutosEnMarco(new Date(paso.visibleDesde)) ?? Infinity) <= TIANGONG_HASTA;
+}
 
 /** Lo que hay que programar de esta noche: los avisos que aún no se han pasado de hora. */
 export function avisosDeLaNoche(cielo: Cielo, ahora: number): Aviso[] {
   const luna = cielo.luna && !enMadrid(cielo.luna.instante) ? [deLuna(cielo.luna)] : [];
-  const pasos = cielo.pasos.filter(
-    (paso) => !enMadrid(paso.instante) || paso.altitud >= ALTITUD_MINIMA_MADRID);
+  const pasos = cielo.pasos.filter((paso) => !enMadrid(paso.instante) || valeEnMadrid(paso));
   return [...pasos.map(dePaso), ...luna]
     .filter((aviso) => aviso.sale > ahora)
     .sort((a, b) => a.sale - b.sale);

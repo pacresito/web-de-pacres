@@ -122,10 +122,11 @@ for (let dia = 0; dia < 30 && !conLuna; dia++) {
   // Los mismos eventos, corridos a una fecha de Madrid: lo que cambia es la sede, no el cielo.
   const A_MADRID = 80 * 24 * 3600_000; // del 23 jul a mediados de octubre
   const base = c.pasos[0];
-  // Dos pasos a distinta altura y a distinta hora, para que cada uno tenga su id.
+  // Dos pasos a distinta altura y a distinta hora, para que cada uno tenga su id. Van como ISS
+  // a propósito: lo que se mide aquí es el listón de altitud, y Tiangong trae el suyo de hora.
   const paso = (altitud: number, minutos: number): EventoSatelite => {
     const corre = (i: number) => i + A_MADRID + minutos * 60_000;
-    return { ...base, altitud,
+    return { ...base, nombre: "ISS", altitud,
       instante: corre(base.instante), instanteFin: corre(base.instanteFin),
       visibleDesde: corre(base.visibleDesde), visibleHasta: corre(base.visibleHasta) };
   };
@@ -146,6 +147,30 @@ for (let dia = 0; dia < 30 && !conLuna; dia++) {
   const enLaManga = avisosDeLaNoche({ ...c, pasos: [{ ...base, altitud: 16 }] }, AHORA.getTime());
   check("en La Manga siguen avisando los pasos bajos",
     enLaManga.some((a) => a.id === `${base.nombre.toLowerCase()}-${base.visibleDesde}`));
+}
+
+// 8. Tiangong en Madrid: solo el paso temprano, y la medianoche no cuenta como temprana
+{
+  // Una noche de Madrid con hora local escrita a mano: lo que se prueba es el corte de las
+  // 20:30, así que el instante manda y no la órbita.
+  const aLas = (hhmm: string) => new Date(`2026-10-15T${hhmm}:00+02:00`).getTime();
+  const sat = (nombre: string, hhmm: string): EventoSatelite => {
+    const t = aLas(hhmm);
+    return { ...c.pasos[0], nombre, altitud: 60,
+      instante: t, instanteFin: t + 4 * 60_000, visibleDesde: t, visibleHasta: t + 5 * 60_000 };
+  };
+  const avisa = (paso: EventoSatelite) =>
+    avisosDeLaNoche({ ...c, sede: "Madrid", luna: null, pasos: [paso] }, AHORA.getTime()).length === 1;
+
+  check("Tiangong a las 20:00 en Madrid avisa", avisa(sat("Tiangong", "20:00")));
+  check("Tiangong a las 20:30 en Madrid avisa (el borde entra)", avisa(sat("Tiangong", "20:30")));
+  check("Tiangong a las 21:11 en Madrid no avisa", !avisa(sat("Tiangong", "21:11")));
+  // El marco cruza la medianoche: comparando horas del reloj, las 00:30 pasarían por tempranas.
+  check("Tiangong a las 00:30 en Madrid no avisa", !avisa(sat("Tiangong", "00:30")));
+  check("la ISS a esas horas sigue avisando en Madrid", avisa(sat("ISS", "23:00")));
+  check("Tiangong tarde sí avisa en La Manga",
+    avisosDeLaNoche({ ...c, luna: null, pasos: [{ ...c.pasos[0], nombre: "Tiangong" }] },
+      AHORA.getTime()).length === 1);
 }
 
 console.log("\n— Lo que se enviaría esta noche —");
