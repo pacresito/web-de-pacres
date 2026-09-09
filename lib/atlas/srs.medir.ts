@@ -15,25 +15,30 @@ const T0 = Date.parse("2026-08-28T18:00:00Z");
 const SEGUNDOS_POR_TARJETA = 12; // lo que se tarda en mirar una tarjeta y calificarla
 const TARJETAS = 50;
 const LISTON = 4;      // `VIDA_ASENTADO`, que no se exporta
-const VIDA_FALLO = 0.001; // `VIDA_INICIAL.fallo`, que tampoco
+const VIDA_OLVIDO = 0.001;  // lo que deja un «no» de algo ya conocido; tampoco se exporta
+const VIDA_ESTRENO = 0.01;  // ni lo que deja el «no» de la primera vez
 
 /** `plano` frena a todos por igual en vez de por `min(vida, descanso)`: sirve para medir la
  *  diferencia, que es lo que justifica que el freno mire la vida de cada dato. */
-type Perillas = { descanso: number; tope: number; liston: number; vidaFallo: number; plano: boolean; hueco: number };
-const REALES: Perillas = { descanso: DESCANSO, tope: MAX_EN_EL_AIRE, liston: LISTON, vidaFallo: VIDA_FALLO, plano: false, hueco: HUECO };
+type Perillas = { descanso: number; tope: number; liston: number; vidaOlvido: number; plano: boolean; hueco: number };
+const REALES: Perillas = { descanso: DESCANSO, tope: MAX_EN_EL_AIRE, liston: LISTON, vidaOlvido: VIDA_OLVIDO, plano: false, hueco: HUECO };
 const DIA = 86_400_000;
 
-/** `calificar` con la vida de un fallo por fuera; en todo lo demás, la de verdad. */
-function calificarCon(mazo: Mazo, id: string, d: Dato, nota: Nota, ahora: number, vidaFallo: number): Mazo {
+/** `calificar` con las dos vidas que deja un «no» por fuera: la del estreno y la del olvido, que
+ *  son las que separan la ronda de estrenos de lo que hay que reaprender hoy. */
+function calificarCon(mazo: Mazo, id: string, d: Dato, nota: Nota, ahora: number,
+                      vidaOlvido: number, vidaEstreno = VIDA_ESTRENO): Mazo {
   const previo = mazo[id]?.[d];
   if (nota !== "fallo") return calificar(mazo, id, d, nota, ahora);
-  return { ...mazo, [id]: { ...mazo[id], [d]: { visto: ahora, vida: vidaFallo, aciertos: nuevosAciertos(previo, nota) } } };
+  const vida = previo ? vidaOlvido : vidaEstreno;
+  return { ...mazo, [id]: { ...mazo[id], [d]: { visto: ahora, vida, aciertos: nuevosAciertos(previo, nota) } } };
 }
 
 /** `siguiente` con los tres umbrales por fuera. Al final se comprueba que con los valores de
  *  verdad devuelve exactamente lo mismo que la función real, que es lo que la hace válida. */
 function siguienteCon(mazo: Mazo, ahora: number, { descanso, tope, liston, plano, hueco }: Perillas, recientes: string[] = []): string | null {
   let mejor: { id: string; s: number } | null = null;
+  let libre: { id: string; s: number } | null = null;
   let respaldo: { id: string; s: number } | null = null;
   let enElAire = 0;
   for (const p of PAISES) {
@@ -45,12 +50,13 @@ function siguienteCon(mazo: Mazo, ahora: number, { descanso, tope, liston, plano
       const s = sospecha(estado, ahora);
       if (!respaldo || s > respaldo.s) respaldo = { id: p.id, s };
       if (acabaDeSalir) continue;
+      if (!libre || s > libre.s) libre = { id: p.id, s };
       const espera = plano ? descanso : Math.min(estado ? estado.vida * DIA : 0, descanso);
       if (estado && ahora - estado.visto < espera) continue;
       if (!mejor || s > mejor.s) mejor = { id: p.id, s };
     }
   }
-  const elegido = mejor ?? respaldo;
+  const elegido = mejor ?? libre ?? respaldo;
   const nuevo = RECORRIDO.find((id) => !DATOS.some((d) => mazo[id]?.[d]));
   const cede = (!respaldo || respaldo.s < 1) && enElAire < tope;
   return (cede && nuevo ? nuevo : elegido?.id ?? nuevo) ?? null;
@@ -71,7 +77,7 @@ function jugar(mazo: Mazo, tarjetas: number, perillas: Perillas, nota: (primeraV
     for (const d of (tarjeta.primeraVez ? [...DATOS] : tarjeta.tapados) as Dato[]) {
       const clave = `${id}:${d}`;
       veces.set(clave, (veces.get(clave) ?? 0) + 1);
-      mazo = calificarCon(mazo, id, d, nota(tarjeta.primeraVez, i), ahora, perillas.vidaFallo);
+      mazo = calificarCon(mazo, id, d, nota(tarjeta.primeraVez, i), ahora, perillas.vidaOlvido);
     }
   }
   return { mazo, paises, veces };
@@ -116,13 +122,13 @@ function sesion(perillas: Perillas, cadaCuantosFallo = 0) {
       if (clave === objetivo) salio++;
       const falla = clave === objetivo ? i === 0
         : cadaCuantosFallo > 0 && primeraVista && nuevos++ % cadaCuantosFallo === 0;
-      mazo = calificarCon(mazo, id, d, falla ? "fallo" : "bien", ahora, perillas.vidaFallo);
+      mazo = calificarCon(mazo, id, d, falla ? "fallo" : "bien", ahora, perillas.vidaOlvido);
     }
   }
   return { paises: paises.size, datos: veces.size, salio, max: Math.max(...veces.values()) };
 }
 
-const esLaReal = (p: Perillas) => p.descanso === DESCANSO && !p.plano && p.vidaFallo === VIDA_FALLO;
+const esLaReal = (p: Perillas) => p.descanso === DESCANSO && !p.plano && p.vidaOlvido === VIDA_OLVIDO;
 function fila(nombre: string, p: Perillas) {
   const r = sesion(p, 3);
   console.log(`  ${(nombre + (esLaReal(p) ? "  ←" : "")).padEnd(32)} ${String(r.paises).padStart(6)}   ${String(r.datos).padStart(15)}   ${String(r.max).padStart(17)}   ${String(r.salio).padStart(15)}`);
@@ -135,14 +141,14 @@ console.log(CABECERA);
 for (const d of [0, 3 * 60_000, DESCANSO, 30 * 60_000])
   fila(d === 0 ? "sin descanso" : `descanso ${d / 60_000} min`, { ...REALES, descanso: d });
 fila("plano: 15 min a todos por igual", { ...REALES, plano: true });
-console.log("\n  Sin freno, la sesión entera es el mismo dato. Plano se va por el otro lado: lo que dura más");
-console.log("  que la sesión deja la cola vacía y manda el respaldo, que también es siempre el mismo.");
-console.log("  Esperando `min(vida, tope)`, ni una cosa ni la otra.\n");
+console.log("\n  Sin freno la sesión se estrecha a la mitad de países y un dato sale nueve veces. Plano se va");
+console.log("  por el otro lado: dura más que la sesión, así que aparta lo fallado en vez de traerlo de");
+console.log("  vuelta —sale una sola vez—. Esperando `min(vida, tope)`, ni una cosa ni la otra.\n");
 
-console.log("Y la vida de un fallo, que es lo único que frena a lo recién fallado:");
+console.log("Y la vida de un olvido, que es lo único que frena a lo que se acaba de fallar:");
 console.log(CABECERA);
-for (const v of [0.0005, VIDA_FALLO, 0.002, 0.01])
-  fila(`vida de fallo ${v} d (${Math.round(v * 86_400)} s)`, { ...REALES, vidaFallo: v });
+for (const v of [0.0005, VIDA_OLVIDO, 0.002, 0.01])
+  fila(`vida de un olvido ${v} d (${Math.round(v * 86_400)} s)`, { ...REALES, vidaOlvido: v });
 console.log("\n  Es también lo que espera un fallo antes de volver, porque su vida es menor que el tope.");
 console.log("  Por debajo de minuto y medio empieza a comerse la sesión; por encima se sale de ella.");
 
@@ -186,6 +192,37 @@ for (const h of [0, 3, HUECO, 8]) {
 console.log("\n  Sin hueco un país se lleva dos tercios de la sesión, y veinte veces es el de al lado: el");
 console.log("  descanso va por dato y le quedan otros tres que preguntar. Y ningún hueco de los medidos");
 console.log("  deja la cola vacía ni con este mazo, que es el más pequeño que puede haber.");
+
+// ── La ronda de estrenos ────────────────────────────────────────────────────────────────────
+// Nada se estrena mientras algo haya pasado su vida, así que lo que dura el «no» de un estreno es
+// lo que dura la ronda. Se mide desde cero, abriendo países y fallando un dato de cada uno.
+function ronda(vidaEstreno: number) {
+  let mazo: Mazo = {}, recientes: string[] = [];
+  const estrenos: number[] = [];
+  for (let i = 0; i < 80; i++) {
+    const ahora = T0 + i * SEGUNDOS_POR_TARJETA * 1000;
+    const id = siguienteCon(mazo, ahora, REALES, recientes);
+    if (!id) break;
+    const tarjeta = montar(mazo, PAIS_POR_ID.get(id)!, ahora);
+    if (tarjeta.primeraVez) estrenos.push(i + 1);
+    recientes = [...recientes, id].slice(-HUECO);
+    // Del estreno se falla el primero de los cuatro; lo demás se acierta.
+    const datos = (tarjeta.primeraVez ? [...DATOS] : tarjeta.tapados) as Dato[];
+    for (const [j, d] of datos.entries())
+      mazo = calificarCon(mazo, id, d, tarjeta.primeraVez && j === 0 ? "fallo" : "bien", ahora,
+                          VIDA_OLVIDO, vidaEstreno);
+  }
+  return estrenos;
+}
+console.log(`\n\nLA RONDA DE ESTRENOS · desde cero, fallando un dato de cada país que se abre\n`);
+console.log("  el «no» de un estreno dura   países abiertos   en qué tarjetas");
+for (const v of [VIDA_OLVIDO, 0.005, VIDA_ESTRENO]) {
+  const e = ronda(v);
+  console.log(`  ${(Math.round(v * 1440) + " min" + (v === VIDA_ESTRENO ? "  ←" : "")).padEnd(28)} ${String(e.length).padStart(15)}   ${e.join(", ")}`);
+}
+console.log("\n  Con el plazo corto la ronda se parte por donde vence el primer «no» —la octava tarjeta— y los");
+console.log("  que faltan esperan a que se repase lo abierto. Con el cuarto de hora caben los del tope");
+console.log("  seguidos, que es como se estrena: de golpe y mirándolos juntos.");
 
 // ── El listón y el tope ─────────────────────────────────────────────────────────────────────
 // Cuántos países abre una tarde de cuatrocientas tarjetas desde cero. Es la escena entera: en el

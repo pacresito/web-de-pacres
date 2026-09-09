@@ -224,7 +224,12 @@ export async function sincronizar() {
   if (!remoto || pasos !== antes) return;
   mazo = remoto;
   guardar();
-  vista = avanzar(remoto);
+  // **La tarjeta servida se queda, remontada con el mazo que manda.** Pedir otra la cambiaría
+  // sola al segundo de abrir —se ve el país de disco y acto seguido otro—, y de paso metería en
+  // `recientes` uno que nadie ha contestado. Es el mismo salto del que se guarda `pasos`.
+  vista = vista?.tarjeta
+    ? { ...vista, tarjeta: montar(remoto, vista.tarjeta.pais, Date.now()) }
+    : avanzar(remoto);
   notificar();
 }
 

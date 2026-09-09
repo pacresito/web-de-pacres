@@ -11,22 +11,25 @@ const haceDias = (n: number) => AHORA - n * DIA;
 // si está aprendido, y hace falta poder moverlos por separado para probar cualquiera de los dos.
 const vida = (v: number, dias: number) => ({ visto: haceDias(dias), vida: v, aciertos: 0 });
 const sabido = (v: number, dias: number) => ({ ...vida(v, dias), aciertos: ACIERTOS_APRENDIDO });
-// Espejo de VIDA_INICIAL.fallo, que no se exporta. Vale escrito a mano: es la que gobierna cuánto
-// insiste una sesión y la que el descanso no frena, así que moverla tiene que hacer fallar esto.
-const VIDA_FALLO = 0.001;
+// Espejos de las dos vidas que deja un «no», que no se exportan. Valen escritas a mano: gobiernan
+// cuánto insiste una sesión y cuánto dura una ronda de estrenos, así que moverlas debe romper esto.
+const VIDA_ESTRENO = 0.01;  // el «no» de la primera vez
+const VIDA_OLVIDO = 0.001;  // el «no» de algo que ya se conocía
 
 // La vida de un dato
 // La primera vez no hay transcurrido del que tirar, así que cada nota arranca en su valor fijo.
 assert.strictEqual(nuevaVida(undefined, "bien", AHORA), 1);
 assert.strictEqual(nuevaVida(undefined, "facil", AHORA), 4);
-assert.strictEqual(nuevaVida(undefined, "fallo", AHORA), VIDA_FALLO);
+assert.strictEqual(nuevaVida(undefined, "fallo", AHORA), VIDA_ESTRENO);
 
 // Acertando a tiempo, la vida se multiplica por su nota.
 assert.strictEqual(nuevaVida(vida(10, 10), "bien", AHORA), 20);
 assert.strictEqual(nuevaVida(vida(10, 10), "facil", AHORA), 40);
 
-// Y fallar la desploma, venga de donde venga: un año de vida no protege de haberlo olvidado.
-assert.strictEqual(nuevaVida(vida(365, 400), "fallo", AHORA), VIDA_FALLO);
+// Y fallar la desploma, venga de donde venga: un año de vida no protege de haberlo olvidado. Un
+// olvido cae más abajo que un estreno, para volver dentro de la sesión en vez de dar paso a otros.
+assert.strictEqual(nuevaVida(vida(365, 400), "fallo", AHORA), VIDA_OLVIDO);
+assert.ok(VIDA_OLVIDO < VIDA_ESTRENO);
 
 // Solo el tiempo transcurrido suma
 // Acertar sin que haya pasado nada no prueba nada y no paga nada: la vida se queda donde estaba.
@@ -35,7 +38,7 @@ assert.strictEqual(nuevaVida(vida(10, 0), "facil", AHORA), 10);
 // La cuenta que motivó la regla: un dato fallado y acertado siete veces en tres minutos se queda
 // en minutos de vida. Multiplicando por la vida previa salían 1,28 días sin haber pasado ninguno.
 {
-  let e = { visto: AHORA, vida: VIDA_FALLO, aciertos: 0 };
+  let e = { visto: AHORA, vida: VIDA_OLVIDO, aciertos: 0 };
   for (let i = 1; i <= 7; i++) {
     const ahora = AHORA + i * 25_000;
     e = { ...e, visto: ahora, vida: nuevaVida(e, "bien", ahora) };
@@ -58,9 +61,12 @@ assert.strictEqual(nuevosAciertos(vida(1, 0), "fallo"), 0); // y no baja de cero
 // Los cuatro estados de un dato, que son los que pinta la marca de explorar. Los dos listones son
 // independientes: uno lo firma el trabajo hecho y el otro el calendario.
 assert.strictEqual(dominio(undefined), "sin ver");
-assert.strictEqual(dominio(vida(100, 0)), "empezado");   // aguanta, pero no se ha demostrado
-assert.strictEqual(dominio(sabido(2, 0)), "aprendido");  // demostrado, pero aún no aguanta
+assert.strictEqual(dominio(vida(2, 0)), "empezado");     // ni una cosa ni la otra
+assert.strictEqual(dominio(sabido(2, 0)), "aprendido");  // el contador, sin que el calendario corra
+assert.strictEqual(dominio(vida(100, 0)), "dominado");   // el calendario basta solo, sin contador
 assert.strictEqual(dominio(sabido(100, 0)), "dominado"); // las dos cosas
+// Y aguantar tres semanas cuenta como aprendido, que es lo que hace que la marca solo se llene.
+assert.strictEqual(dominioPais({ es: Object.fromEntries(DATOS.map((d) => [d, vida(100, 0)])) }, "es"), "aprendido");
 
 // La ausencia como evidencia
 // Un dato con vida de 3 días acertado el día 14 no vale 6: vale 28. Volver tarde no es daño,
@@ -78,8 +84,9 @@ assert.strictEqual(sospecha(vida(10, 30), AHORA), 3);
 assert.ok(sospecha(undefined, AHORA) < sospecha(vida(1000, 0), AHORA));
 
 // Cuántos huecos: los marca el contador, no la vida ni la sospecha
+// Vida corta a propósito, para que lo que se mida aquí sea el contador y no el calendario.
 const conAciertos = (as: Partial<Record<(typeof DATOS)[number], number>>): Mazo => ({
-  es: Object.fromEntries(Object.entries(as).map(([d, a]) => [d, { ...vida(100, 0), aciertos: a as number }])),
+  es: Object.fromEntries(Object.entries(as).map(([d, a]) => [d, { ...vida(2, 0), aciertos: a as number }])),
 });
 const LLENO = ACIERTOS_APRENDIDO;
 // País flojo: un solo hueco y tres datos a la vista, que son el material de estudio.
@@ -89,8 +96,11 @@ assert.strictEqual(huecos(conAciertos({ nombre: LLENO }), "es"), 1);
 assert.strictEqual(huecos(conAciertos({ nombre: LLENO, capital: LLENO }), "es"), 2);
 // Aprendido, tres preguntas y una pista. La proporción estudio:examen se invierte sola.
 assert.strictEqual(huecos(conAciertos({ nombre: LLENO, capital: LLENO, bandera: LLENO, lugar: LLENO }), "es"), 3);
-// Y el umbral es el contador, no la vida: cien días de vida con un acierto de menos no cuenta.
+// Con el contador a medio llenar y sin calendario detrás, la tarjeta sigue enseñando.
 assert.strictEqual(huecos(conAciertos({ nombre: LLENO - 1, capital: LLENO - 1, bandera: LLENO - 1, lugar: LLENO - 1 }), "es"), 1);
+// **La madurez la firma cualquiera de los dos relojes**: aguantar tres semanas abre los huecos
+// igual que llenar el contador, porque el calendario prueba lo mismo y además no se acelera.
+assert.strictEqual(huecos({ es: Object.fromEntries(DATOS.map((d) => [d, vida(100, 0)])) }, "es"), 3);
 
 // El montaje de la tarjeta
 const espana = PAISES.find((p) => p.id === "es")!;
@@ -111,7 +121,7 @@ assert.ok(!t.tapados.includes("lugar"));
 // Calificar solo toca el dato calificado, no la tarjeta entera. Es la razón de que cada dato
 // lleve su propio reloj: acertar la bandera no debe estirar la capital.
 const tras = calificar(aprendido, "es", "nombre", "fallo", AHORA);
-assert.strictEqual(tras.es.nombre!.vida, VIDA_FALLO);
+assert.strictEqual(tras.es.nombre!.vida, VIDA_OLVIDO);
 assert.strictEqual(tras.es.capital!.vida, 100);
 // Y mueve los dos relojes del dato: la vida y el contador.
 assert.strictEqual(tras.es.nombre!.aciertos, ACIERTOS_APRENDIDO - 2);
@@ -159,11 +169,11 @@ assert.strictEqual(siguiente(enElAire, orden, AHORA)!.id, orden[9]); // nueve en
   // La sesión activa: treinta países en el aire —el freno puesto, no entran nuevos— y todos
   // repasados hace un rato, que es cuando la sospecha de todo el mazo se queda en milésimas.
   const base = PAISES.slice(0, MAX_EN_EL_AIRE);
-  const enSesion: Mazo = Object.fromEntries(base.map((p) => [p.id, { nombre: reciente(20 * 60_000, 2) }]));
+  const enSesion: Mazo = Object.fromEntries(base.map((p) => [p.id, { nombre: reciente(40 * 60_000, 2) }]));
   const fallado = base[0].id;
   // Un dato que se acaba de ver: descansa aunque mande en la cola. Y le basta con mandar —no con
   // llegar a 1— porque el ranking es relativo: sin freno saldría en la tarjeta de al lado.
-  const conVivo: Mazo = { ...enSesion, [fallado]: { nombre: reciente(20_000, VIDA_FALLO * 10) } };
+  const conVivo: Mazo = { ...enSesion, [fallado]: { nombre: reciente(20_000, VIDA_OLVIDO * 10) } };
   assert.ok(sospecha(conVivo[fallado]!.nombre, AHORA) > sospecha(enSesion[base[1].id]!.nombre, AHORA));
   assert.notStrictEqual(siguiente(conVivo, orden, AHORA)!.id, fallado);
   // Pasado el descanso vuelve a mandar: reaprender es volver a verlo pronto, no no verlo.
@@ -171,10 +181,20 @@ assert.strictEqual(siguiente(enElAire, orden, AHORA)!.id, orden[9]); // nueve en
   // **Lo que descansa es `min(vida, DESCANSO)`**, así que el crudo espera lo suyo y no el tope: un
   // fallo vuelve a los minuto y medio de su vida —unas tarjetas después, no en la siguiente— y no
   // al cuarto de hora, que lo sacaría de la sesión en la que hay que volver a verlo.
-  const conFallo: Mazo = { ...enSesion, [fallado]: { nombre: reciente(20_000, VIDA_FALLO) } };
+  const conFallo: Mazo = { ...enSesion, [fallado]: { nombre: reciente(20_000, VIDA_OLVIDO) } };
   assert.notStrictEqual(siguiente(conFallo, orden, AHORA)!.id, fallado);
-  assert.strictEqual(siguiente(conFallo, orden, AHORA + VIDA_FALLO * 86_400_000)!.id, fallado);
-  assert.ok(VIDA_FALLO * 86_400_000 < DESCANSO, "el crudo espera su vida, que es menos que el tope");
+  assert.strictEqual(siguiente(conFallo, orden, AHORA + VIDA_OLVIDO * 86_400_000)!.id, fallado);
+  assert.ok(VIDA_OLVIDO * 86_400_000 < DESCANSO, "el crudo espera su vida, que es menos que el tope");
+  // **Los frenos se sueltan de uno en uno, y el hueco el último.** Con el mazo entero descansando
+  // se pregunta por otro que también descansaba antes que repetir el que se acaba de servir: si no,
+  // subir el descanso se pagaría con el mismo país tres veces seguidas.
+  {
+    const todos: Mazo = Object.fromEntries(base.map((p) => [p.id, { nombre: reciente(20_000, 2) }]));
+    const servido = base[0].id;
+    const toca = siguiente(todos, orden, AHORA, [servido])!.id;
+    assert.notStrictEqual(toca, servido);
+    assert.ok(base.some((p) => p.id === toca), "sale otro del mazo, no un país nuevo");
+  }
   // Y si descansa el mazo entero, el descanso cede: repetir es mejor que colar un país nuevo
   // saltándose el freno.
   const todoReciente: Mazo = Object.fromEntries(base.map((p) => [p.id, { nombre: reciente(20_000, 2) }]));
@@ -187,7 +207,7 @@ assert.strictEqual(siguiente(enElAire, orden, AHORA)!.id, orden[9]); // nueve en
   const deudor = PAISES[0].id, aMano = PAISES[1].id;
   // Un dato fallado y ya vencido —lleva más de su minuto y medio— junto a otro que no toca.
   const mazo: Mazo = {
-    [deudor]: { nombre: { visto: haceDias(1), vida: VIDA_FALLO, aciertos: 0 } },
+    [deudor]: { nombre: { visto: haceDias(1), vida: VIDA_OLVIDO, aciertos: 0 } },
     [aMano]: { nombre: vida(30, 1) },
   };
   assert.ok(sospecha(mazo[deudor]!.nombre, AHORA) >= 1 && sospecha(mazo[aMano]!.nombre, AHORA) < 1);

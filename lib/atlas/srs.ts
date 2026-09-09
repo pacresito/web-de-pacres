@@ -38,11 +38,19 @@ const VIDA_DOMINADO = 21;
 
 // Vidas de arranque, para la primera vez: ahí no hay `transcurrido` del que tirar.
 //
-// **La del fallo es además lo que decide cuánto tarda en volver lo fallado**, porque el descanso
-// es su propia vida: minuto y medio son siete u ocho tarjetas, que es volver a verlo dentro de la
-// sesión sin que salga en la de al lado. **Cero no vale**: la sospecha divide por la vida, así que
-// sería infinita, o `NaN` en el instante de calificar, y el ranking dejaría de ordenar nada.
-const VIDA_INICIAL: Record<Nota, number> = { fallo: 0.001, bien: 1, facil: 4 };
+// **El «no» de un estreno vale un cuarto de hora, y es a propósito el más largo de los dos.**
+// Estrenar un país produce fallos por definición, y como nada se estrena mientras algo haya pasado
+// su vida, un plazo corto haría que el primer país abierto cerrase la puerta a los demás: la ronda
+// se parte por la octava tarjeta y los que faltan llegan diez minutos después. Con este, los diez
+// del tope caben seguidos, que es como se estrena — de golpe y mirándolos juntos.
+const VIDA_INICIAL: Record<Nota, number> = { fallo: 0.01, bien: 1, facil: 4 };
+// Y el «no» de algo ya conocido vale minuto y medio: siete u ocho tarjetas, que es volver a verlo
+// dentro de la sesión sin que salga en la de al lado. Olvidar lo que ya sabías es lo que hay que
+// reaprender hoy; no saber un país que acabas de conocer, no.
+//
+// **Cero no vale**: la sospecha divide por la vida, así que sería infinita, o `NaN` en el instante
+// de calificar, y el ranking dejaría de ordenar nada.
+const VIDA_OLVIDO = 0.001;
 // Por cuánto multiplica la nota la resistencia demostrada, cuando se demuestra entera. Fallar no
 // tiene factor: se atiende antes y no llega a usarse.
 const FACTOR: Record<Exclude<Nota, "fallo">, number> = { bien: 2, facil: 4 };
@@ -74,7 +82,7 @@ export function nuevosAciertos(estado: Estado | undefined, nota: Nota): number {
  */
 export function nuevaVida(estado: Estado | undefined, nota: Nota, ahora: number): number {
   if (!estado) return VIDA_INICIAL[nota];
-  if (nota === "fallo") return VIDA_INICIAL.fallo;
+  if (nota === "fallo") return VIDA_OLVIDO;
   const transcurrido = (ahora - estado.visto) / DIA;
   return Math.max(estado.vida, transcurrido) + (FACTOR[nota] - 1) * transcurrido;
 }
@@ -101,8 +109,14 @@ export function sospecha(estado: Estado | undefined, ahora: number): number {
   return (ahora - estado.visto) / DIA / estado.vida;
 }
 
-const aprendido = (e: Estado | undefined) => racha(e) >= ACIERTOS_APRENDIDO;
-const dominado = (e: Estado | undefined) => aprendido(e) && (e?.vida ?? 0) > VIDA_DOMINADO;
+// **Cualquiera de los dos relojes lo firma**, y por eso van con un `o`: son dos maneras de haber
+// llegado, no dos mitades de lo mismo. El contador es trabajo hecho y se gana en una tarde; la
+// vida es calendario y no se acelera, así que aguantar tres semanas ya prueba lo que las cinco
+// vueltas querían probar — y al revés, cinco aciertos valen aunque el calendario no haya corrido.
+const aprendido = (e: Estado | undefined) => racha(e) >= ACIERTOS_APRENDIDO || (e?.vida ?? 0) > VIDA_DOMINADO;
+// Dominado lo firma solo el calendario. No hace falta exigirle además la racha: no la pide para
+// llegar, y la marca se sigue llenando en vez de cambiar de idea porque esto implica lo de arriba.
+const dominado = (e: Estado | undefined) => (e?.vida ?? 0) > VIDA_DOMINADO;
 
 /**
  * Cómo de agarrado está un dato, para la ficha de explorar. Mira el reloj sin tocarlo: explorar
@@ -216,14 +230,16 @@ const asentado = (e: Estado | undefined) => !!e && e.vida >= VIDA_ASENTADO;
  *
  * Hace falta porque **el ranking es relativo y la sospecha, un cociente**: dentro de una sesión
  * todo lo demás acaba de verse y compite con milésimas, así que al de menos vida no le hace falta
- * llegar a 1 para ganar, le basta con ser el máximo. Sin freno, una sesión de cincuenta tarjetas
- * es cincuenta veces el mismo dato; con un freno plano para todos se va por el otro lado —lo que
- * dura más que la sesión deja la cola vacía y manda el respaldo, que también es siempre el mismo.
+ * llegar a 1 para ganar, le basta con ser el máximo. Sin freno la sesión se estrecha a la mitad de
+ * países y un dato sale nueve veces de cincuenta; con un freno plano para todos se va por el otro
+ * lado, porque dura más que la sesión y aparta lo fallado en vez de traerlo de vuelta.
  *
- * El cuarto de hora es la vida que tenía un fallo antes de que la suya la gobernara: el número no
- * se pierde, cambia de puesto. Las cifras salen de `srs.medir.ts`.
+ * **La media hora la fija el «sí»**, que es el único al que este tope llega a frenar: cualquier
+ * acierto deja días de vida, así que espera esto y no lo suyo. Un «no» no llega —minuto y medio el
+ * olvido, un cuarto de hora el estreno— y vuelve dentro de la sesión, que es donde se reaprende.
+ * Las cifras salen de `srs.medir.ts`.
  */
-export const DESCANSO = 15 * 60_000;
+export const DESCANSO = 30 * 60_000;
 
 /**
  * Cuántas tarjetas tienen que pasar antes de que un país pueda repetir. El descanso va por dato y
@@ -238,8 +254,12 @@ export const HUECO = 5;
 /** `recientes` son los últimos países servidos, del más antiguo al más nuevo; los aparta `HUECO`. */
 export function siguiente(mazo: Mazo, orden: string[], ahora: number, recientes: string[] = []): Pais | null {
   let mejor: { id: string; s: number } | null = null;
-  // El mejor del mazo entero, sin frenos. Sirve para dos cosas: es a quién preguntar cuando los
-  // frenos lo apartan todo, y es **quien decide si hay sitio para un país nuevo**.
+  // Los frenos se sueltan de uno en uno, y el hueco es el último: cuando el descanso lo aparta
+  // todo, antes de repetir un país se pregunta por otro que también descansaba. Sin este escalón
+  // el descanso se paga repitiendo, que es lo que el hueco existe para impedir.
+  let libre: { id: string; s: number } | null = null;
+  // Y el del mazo entero, sin freno ninguno: a quién preguntar cuando no queda nadie más, y
+  // **quien decide si hay sitio para un país nuevo**.
   let respaldo: { id: string; s: number } | null = null;
   let enElAire = 0;
   for (const p of PAISES) {
@@ -254,11 +274,12 @@ export function siguiente(mazo: Mazo, orden: string[], ahora: number, recientes:
       const s = sospecha(estado, ahora);
       if (!respaldo || s > respaldo.s) respaldo = { id: p.id, s };
       if (acabaDeSalir) continue;
+      if (!libre || s > libre.s) libre = { id: p.id, s };
       if (estado && ahora - estado.visto < Math.min(estado.vida * DIA, DESCANSO)) continue;
       if (!mejor || s > mejor.s) mejor = { id: p.id, s };
     }
   }
-  const elegido = mejor ?? respaldo;
+  const elegido = mejor ?? libre ?? respaldo;
   const nuevo = orden.find((id) => !DATOS.some((d) => mazo[id]?.[d]));
   // **Estrenar lo decide el mazo entero y no lo que los frenos dejan a mano**: un freno dice
   // «ahora no», nunca «ya no queda nada», y mirando solo lo disponible se estrena país debiendo

@@ -25,9 +25,9 @@ const TINTA: Record<Dominio, string> = {
  * agregada por continente sería un porcentaje, que es justo el número que hace abandonar.
  *
  * **Los dos verdes son el mismo verde a dos intensidades** y no dos colores, porque no son dos
- * cosas: aprendido es dominado a medias. El apagado lo firma el trabajo hecho —cinco aciertos— y
- * el pleno lo firma además el calendario, que no se puede acelerar; y como el segundo solo llega
- * pasando por el primero, la marca se llena en vez de cambiar de idea.
+ * cosas: aprendido es dominado a medias. El apagado lo firma cualquiera de los dos relojes —cinco
+ * aciertos, o tres semanas aguantando— y el pleno solo el calendario, que no se puede acelerar; y
+ * como el pleno implica el apagado, la marca se llena en vez de cambiar de idea.
  *
  * Sin leyenda: son cuatro estados y se aprenden una vez. Lo que se mira cuarenta veces no puede
  * llevar al lado la explicación de lo que es. El nombre queda en el `title`, por si acaso.
