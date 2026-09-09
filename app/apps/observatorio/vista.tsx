@@ -313,14 +313,15 @@ function PistaPlaneta({ fila }: { fila: FilaPlaneta }) {
  * Un instante en la pista: su señal (rombo la Luna, raya verde un satélite) y, al lado, la
  * hora con el detalle que la acompaña —el rumbo por el que sale, el nombre del satélite—.
  */
-function Marca({ evento, clase, detalle }: { evento: Evento; clase: string; detalle: string }) {
+function Marca({ evento, clase, detalle, nivel }:
+  { evento: Evento; clase: string; detalle: string; nivel?: "alto" | "bajo" }) {
   const x = pct(minutosEnMarco(new Date(evento.instante)) ?? 0);
   // Pasada la mitad derecha del eje, el texto se pone a la izquierda de la señal: si no, se sale.
   const alaIzquierda = x > 62;
   return (
     <>
       <span className={clase} style={{ left: `${x}%` }} />
-      <span className="obs-marca-txt" style={alaIzquierda
+      <span className={`obs-marca-txt${nivel ? ` obs-marca-${nivel}` : ""}`} style={alaIzquierda
         ? { right: `${redondo(100 - x)}%`, marginRight: 12, textAlign: "right" }
         : { left: `${x}%`, marginLeft: 12 }}>
         <b>{evento.hora}</b> <span className="obs-mut">{detalle}</span>
@@ -347,11 +348,21 @@ function PistaLuna({ cielo }: { cielo: Cielo }) {
   );
 }
 
+/**
+ * Los pasos de la noche. Con más de uno, los rótulos se reparten en dos alturas alternas, que
+ * si no se pisan: el rótulo mide en píxeles y el eje va en porcentaje, así que si dos caben o
+ * no juntos depende del ancho de la ventana y no se sabe sin medirlo en el navegador. Alternar
+ * no necesita saberlo —dos seguidos nunca comparten línea, estén donde estén— y de paso el
+ * escalón dice cuál va antes cuando las rayas casi se tocan.
+ */
 function PistaSatelites({ pasos }: { pasos: EventoSatelite[] }) {
   if (!pasos.length) return <div className="obs-pista"><span className="obs-sinpasos">sin pasos esta noche</span></div>;
   return (
     <div className="obs-pista">
-      {pasos.map((p) => <Marca key={p.instante} evento={p} clase="obs-raya" detalle={p.nombre} />)}
+      {pasos.map((p, i) => (
+        <Marca key={p.instante} evento={p} clase="obs-raya" detalle={p.nombre}
+          nivel={pasos.length > 1 ? (i % 2 ? "bajo" : "alto") : undefined} />
+      ))}
     </div>
   );
 }
@@ -683,7 +694,13 @@ export default function Vista({ cielo, comando, abrir }: {
         .obs-rombo-luz { background: none; border: 1px solid var(--t-ink3); }
         .obs-raya { width: 3px; height: 16px; border-radius: 1px; background: var(--t-accent); transform: translate(-50%, -50%); }
         .obs-apagada { opacity: 0.45; }
-        .obs-marca-txt { position: absolute; top: 50%; transform: translateY(-50%); font-size: 0.66rem; white-space: nowrap; color: var(--t-ink); }
+        /* Altura de línea al ras: con la de por defecto, dos rótulos escalonados suman más que
+           los 28 px de la pista y asoman por arriba y por abajo, hasta rozar la vía de la Luna. */
+        .obs-marca-txt { position: absolute; top: 50%; transform: translateY(-50%); font-size: 0.66rem; line-height: 1.15; white-space: nowrap; color: var(--t-ink); }
+        /* Las dos alturas del reparto (ver PistaSatelites): los cuartos de la pista, que es lo
+           más separado que caben dos líneas de 0,66rem sin salirse de sus 28 px. */
+        .obs-marca-alto { top: 25%; }
+        .obs-marca-bajo { top: 75%; }
         /* Centrada en la pista, como el "vuelve en unos meses" de las vías fantasma. */
         .obs-sinpasos { position: absolute; top: 50%; left: 0; right: 0; transform: translateY(-50%); text-align: center; font-size: 0.62rem; color: var(--t-ink4); }
 
