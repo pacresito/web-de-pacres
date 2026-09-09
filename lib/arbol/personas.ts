@@ -112,7 +112,7 @@ export function apellidosDe(g: Grafo): Map<string, Apellidos> {
 }
 
 /** El padre y la madre, que es de donde viene cada apellido. */
-function progenitores(g: Grafo, id: string): [string | undefined, string | undefined] {
+export function progenitores(g: Grafo, id: string): [string | undefined, string | undefined] {
   const union = g.unionPorId.get(g.unionDeHijo.get(id) ?? "");
   if (!union) return [undefined, undefined];
   const [uno, otro] = ordenarPareja(union.partners, (p) => g.personaPorId.get(p));

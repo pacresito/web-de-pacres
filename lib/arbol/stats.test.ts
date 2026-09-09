@@ -53,12 +53,29 @@ for (const lista of [c.nombres, c.apellidos]) {
 }
 
 // Los extremos: uno por récord, ninguno vacío y ninguno repetido
-assert.strictEqual(c.extremos.length, 6, "los seis récords tienen a alguien que los tenga");
+assert.strictEqual(c.extremos.length, 5, "los cinco récords tienen a alguien que los tenga");
 for (const e of c.extremos) {
   assert.ok(e.que !== "" && e.quien !== "", `el extremo «${e.que}» no dice nada`);
   assert.ok(!/undefined|NaN/.test(e.quien), `el extremo «${e.que}» sale a medio escribir: ${e.quien}`);
 }
 assert.strictEqual(new Set(c.extremos.map((e) => e.que)).size, c.extremos.length, "cada récord se cuenta una vez");
+
+// Los tatarabuelos de quien más atrás llega: nunca más de dieciséis, que es cuantos tiene
+// cualquiera, y con dos sitios de apellido cada uno de los que el documento llena los que llena
+assert.ok(c.cuarteles !== null, "alguien llega más atrás que los demás");
+assert.ok(c.cuarteles.quienes !== "" && c.cuarteles.ascendientes > 0, "y se sabe quién es y hasta dónde");
+assert.ok(c.cuarteles.tatarabuelos.length <= 16, "nadie tiene diecisiete tatarabuelos");
+for (const t of c.cuarteles.tatarabuelos) {
+  assert.ok(t.quien !== "", "un tatarabuelo sin nadie detrás");
+  assert.ok(t.apellidos.length <= 2, `${t.quien} lleva más de dos apellidos`);
+  assert.ok(t.escritos <= t.apellidos.length, `a ${t.quien} le constan más apellidos de los que tiene`);
+}
+// El apellido con el que empieza quien los tiene es el del primero de la lista, que es el que
+// sube por línea de varón: si el orden de los cuarteles se torciera, dejarían de cuadrar.
+assert.ok(
+  c.cuarteles.quienes.includes(c.cuarteles.tatarabuelos[0].apellidos[0]),
+  `${c.cuarteles.quienes} no lleva el apellido de su primer tatarabuelo`,
+);
 // Los cumpleaños que vienen: diez, en orden, con los dos apellidos y su año, y de los vivos
 assert.strictEqual(c.cumples.length, 10, "diez, que es lo que cabe en una lista que se lee de un vistazo");
 const muertos = new Set(data.people.filter((p) => p.death || seLeSuponeFallecido(p, HOY)).map((p) => p.id));

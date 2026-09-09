@@ -100,6 +100,10 @@ export function ascendientes(g: Grafo, x: string): Set<string> {
   return out;
 }
 
+/** Solo los hijos, de todas sus uniones: el primer escalón de `descendientes`. */
+export const hijosDe = (g: Grafo, x: string): string[] =>
+  (g.unionesDePartner.get(x) ?? []).flatMap((uid) => g.unionPorId.get(uid)!.children);
+
 /** Hijos, nietos… bajando por las uniones de las que cada uno es partner. */
 export function descendientes(g: Grafo, x: string): Set<string> {
   const out = new Set<string>();

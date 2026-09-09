@@ -8,12 +8,12 @@
 // acabarían dando dos cifras, y la de aquí no la vigila nadie.
 
 import { añoDe, conDia, edadEntre, escribirDiaDeMes, seLeSuponeFallecido, type Fecha } from "./fechas";
-import { descendientes, visibles, type Grafo } from "./grafo";
+import { ascendientes, descendientes, hijosDe, visibles, type Grafo } from "./grafo";
 import { aberturasDe, ENLACES, pliegueDe } from "./enlaces";
 import { losIncompletos } from "./incompletos";
 import { libretaDe, SIN_NOMBRE } from "./identidad";
 import { calcularLayout } from "./layout";
-import { comoSeLlama, etiquetaDe, type Apellidos } from "./personas";
+import { comoSeLlama, etiquetaDe, progenitores, type Apellidos } from "./personas";
 import { calcularRamas, RAMAS } from "./ramas";
 import { proximaVez } from "./santoral";
 
@@ -76,12 +76,36 @@ export interface Stats {
   cumples: Cumple[];
   /** Los récords del árbol, ya escritos: cada uno con su rótulo y con quién lo tiene. */
   extremos: Extremo[];
+  /** Quién llega más atrás y hasta dónde. Vacío en un árbol sin una sola filiación. */
+  cuarteles: Cuarteles | null;
 }
 
 /** Una fila de «Los extremos»: el rótulo y lo que se lee al lado. */
 export interface Extremo {
   que: string;
   quien: string;
+}
+
+/**
+ * Los tatarabuelos de quien más ascendientes tiene, que es hasta donde se ha podido reunir
+ * esta familia. **Son los apellidos y no las personas lo que se va a leer**: dieciséis pares
+ * es la lista entera de la que sale cualquiera de los suyos, y por eso se pintan los dos
+ * huecos de cada uno aunque uno esté sin rellenar.
+ */
+export interface Cuarteles {
+  /** Los que empatan arriba, que son hermanos: comparten ascendencia y apellidos. */
+  quienes: string;
+  ascendientes: number;
+  tatarabuelos: Tatarabuelo[];
+}
+
+/** Uno de ellos, con los dos sitios de apellido que tiene toda persona. */
+export interface Tatarabuelo {
+  quien: string;
+  /** Ninguno, uno o dos; el sitio que sobra es el que no consta. */
+  apellidos: string[];
+  /** De ellos, los que traía el documento: los demás se deducen subiendo, y van apagados. */
+  escritos: number;
 }
 
 /** Uno de los que vienen: quién es, qué día cae y los que hace. */
@@ -157,6 +181,7 @@ export function calcularStats(g: Grafo, hoy: Fecha): Stats {
     homonimos: homonimias.size,
     cumples: proximosCumples(g, linaje, hoy),
     extremos: extremosDe(g, linaje),
+    cuarteles: cuartelesDe(g, linaje),
   };
 }
 
@@ -180,19 +205,67 @@ function extremosDe(g: Grafo, linaje: Map<string, Apellidos>): Extremo[] {
   const primero = elMayor(gente, (p) => (p.birth ? -añoDe(p.birth) : null));
   const ultimo = elMayor(gente, (p) => (p.birth ? enOrden(p.birth) : null));
   const longevo = elMayor(gente, (p) => (p.birth && p.death ? edadEntre(p.birth, p.death) : null));
-  const año = masRepetidos(gente.filter((p) => p.birth).map((p) => añoDe(p.birth as Fecha).toString()), 1)[0];
+  // Los nietos son un conjunto y no una suma: dos hermanos que tuvieran descendencia en común
+  // la traerían dos veces, y de una familia numerosa es justo de donde sale esa pareja.
+  const nietos = familia ? new Set(familia.children.flatMap((c) => hijosDe(g, c))).size : 0;
 
   const filas: (Extremo | null)[] = [
-    familia ? { que: "La familia más numerosa", quien: `${familia.partners.map(nombrar).join(" y ")}: ${familia.children.length} hijos` } : null,
+    familia
+      ? {
+          que: "La familia más numerosa",
+          quien: `${familia.partners.map(nombrar).join(" y ")}: ${familia.children.length} hijos y ${nietos} nietos`,
+        }
+      : null,
     prolifico ? { que: "Quien más descendencia deja", quien: `${nombrar(prolifico.id)}: ${descendientes(g, prolifico.id).size} personas` } : null,
     primero ? { que: "El nacimiento más antiguo que consta", quien: nombrar(primero.id) } : null,
     ultimo ? { que: "El último en llegar", quien: nombrar(ultimo.id) } : null,
     longevo && longevo.birth && longevo.death
       ? { que: "La vida más larga que consta", quien: `${nombrar(longevo.id)}: ${edadEntre(longevo.birth, longevo.death)} años` }
       : null,
-    año ? { que: "El año en que más gente nació", quien: `${año.texto}: ${año.cuantos} nacimientos` } : null,
   ];
   return filas.filter((f): f is Extremo => f !== null);
+}
+
+/**
+ * Hasta dónde llega la ascendencia mejor documentada del árbol. **Empatan siempre varios** —
+ * los hermanos tienen los mismos ascendientes—, así que salen todos los que además comparten
+ * la lista entera: dos que empataran sin ser hermanos tendrían tatarabuelos distintos, y
+ * enseñar los de uno de ellos con el nombre de los dos sería atribuir a alguien un abuelo
+ * que no es suyo.
+ */
+function cuartelesDe(g: Grafo, linaje: Map<string, Apellidos>): Cuarteles | null {
+  const gente = [...g.personaPorId.values()];
+  const arriba = new Map(gente.map((p) => [p.id, ascendientes(g, p.id)]));
+  const techo = Math.max(0, ...[...arriba.values()].map((a) => a.size));
+  if (techo === 0) return null;
+
+  const suya = arriba.get(gente.find((p) => arriba.get(p.id)!.size === techo)!.id)!;
+  const juntos = gente.filter((p) => arriba.get(p.id)!.size === techo && [...suya].every((a) => arriba.get(p.id)!.has(a)));
+  const nombres = juntos.map((p) => comoSeLlama(p, "familiar"));
+  const apellidos = linaje.get(juntos[0].id)!.todos.join(" ");
+
+  return {
+    quienes: [nombres.slice(0, -1).join(", "), nombres.at(-1)].filter(Boolean).join(" y ") + (apellidos ? ` ${apellidos}` : ""),
+    ascendientes: techo,
+    tatarabuelos: generacionArriba(g, juntos[0].id, 4).map((id) => ({
+      quien: comoSeLlama(g.personaPorId.get(id)!, "familiar"),
+      apellidos: linaje.get(id)!.todos,
+      escritos: linaje.get(id)!.escritos,
+    })),
+  };
+}
+
+/**
+ * Los de N generaciones arriba, en el orden en que se leen los cuarteles: la línea del padre
+ * entera y después la de la madre. Sube por `progenitores`, que es quien sabe cuál de los dos
+ * es cuál cuando el documento no lo dice.
+ */
+function generacionArriba(g: Grafo, id: string, generaciones: number): string[] {
+  let capa = [id];
+  for (let i = 0; i < generaciones; i++) {
+    capa = capa.flatMap((x) => progenitores(g, x).filter((p): p is string => p !== undefined));
+  }
+  return capa;
 }
 
 /**

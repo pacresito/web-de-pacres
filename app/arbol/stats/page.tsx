@@ -7,7 +7,7 @@
 // lienzo, que es el mismo dato con otra forma.
 
 import Link from "next/link";
-import { calcularStats } from "@/lib/arbol/stats";
+import { calcularStats, type Tatarabuelo } from "@/lib/arbol/stats";
 import { construirGrafo } from "@/lib/arbol/grafo";
 import { KEYS } from "@/lib/arbol/keys";
 import type { ArbolData } from "@/lib/arbol/tree";
@@ -149,7 +149,15 @@ export default async function CifrasPage() {
                 {e.quien}
               </Fila>
             ))}
+            {c.cuarteles && (
+              <Fila termino="Quien más atrás llega">
+                {c.cuarteles.quienes}: {c.cuarteles.ascendientes} ascendientes
+              </Fila>
+            )}
           </dl>
+          {/* Los apellidos no caben en la fila de arriba y no son un récord más: son la lista
+              de la que sale el nombre de cualquiera de esta familia, y se leen de una vez. */}
+          {c.cuarteles && <Cuarteles filas={c.cuarteles.tatarabuelos} />}
         </Seccion>
       </div>
     </div>
@@ -218,6 +226,39 @@ const Ranking = ({ titulo, filas }: { titulo: string; filas: { texto: string; cu
         <li key={f.texto} className="flex items-baseline justify-between gap-3 border-b border-[var(--line)] pb-1.5">
           <span>{f.texto}</span>
           <span className="font-[family-name:var(--mono)] text-[13px] text-[var(--mut)]">{f.cuantos}</span>
+        </li>
+      ))}
+    </ul>
+  </div>
+);
+
+/**
+ * Los dieciséis, con los dos sitios de apellido de cada uno. Se pintan como en el árbol: en
+ * tinta lo que traía el documento y apagado lo que se deduce subiendo. El sitio vacío lleva
+ * signos de pregunta y no la cursiva de lo que no consta: en cursiva, esta fuente separa los
+ * dos signos tanto que dejan de leerse como uno.
+ */
+const Cuarteles = ({ filas }: { filas: Tatarabuelo[] }) => (
+  <div className="mt-7">
+    <h3 className="mb-2 text-[12px] text-[var(--mut)]">Los apellidos de sus {filas.length} tatarabuelos</h3>
+    {/* Dos columnas, y llenándose por filas: vienen en orden genealógico —padre, madre, padre,
+        madre— así que cada fila acaba siendo un matrimonio, él a la izquierda y ella a la
+        derecha. En una sola columna esos ocho pares no se ven. */}
+    <ul className="grid gap-x-8 text-[14px] sm:grid-cols-2">
+      {filas.map((t, i) => (
+        <li key={i} className="flex items-baseline justify-between gap-3 border-b border-[var(--line)] py-1.5">
+          <span className="text-[var(--mut)]">{t.quien}</span>
+          <span className="text-right">
+            {[0, 1].map((sitio) =>
+              t.apellidos[sitio] === undefined ? (
+                <span key={sitio} className="text-[var(--mut)]">{` ¿?`}</span>
+              ) : (
+                <span key={sitio} className={sitio < t.escritos ? "" : "text-[var(--mut)]"}>
+                  {sitio > 0 ? ` ${t.apellidos[sitio]}` : t.apellidos[sitio]}
+                </span>
+              ),
+            )}
+          </span>
         </li>
       ))}
     </ul>
