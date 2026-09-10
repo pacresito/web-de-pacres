@@ -40,6 +40,12 @@ export async function POST(request: Request): Promise<Response> {
     // El reloj lo pone quien calificó —lo de hace tres días sin cobertura es de hace tres
     // días—, pero nunca del futuro: una fecha adelantada infla la vida y no se deshace.
     const cuando = typeof ms === "number" && Number.isFinite(ms) ? Math.min(ms, ahora) : ahora;
+    // **Una calificación ya aplicada se salta.** La cola del navegador no se recorta hasta que
+    // esta ruta contesta, así que una respuesta que se pierde por el camino la reenvía entera con
+    // la siguiente tarjeta — y `calificar` no es idempotente: la vida se queda igual, pero el
+    // contador de aciertos sube otra vez y se regala un «aprendido» que nadie trabajó. El reloj
+    // basta para reconocerla: dos notas del mismo dato no comparten milisegundo.
+    if (mazo[pais]?.[dato as Dato]?.visto === cuando) continue;
     mazo = calificar(mazo, pais, dato as Dato, nota as Nota, cuando);
   }
 

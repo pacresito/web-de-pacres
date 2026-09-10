@@ -93,7 +93,6 @@ function Tarjeta({ tarjeta, estrenando }: { tarjeta: NonNullable<Vista["tarjeta"
   const [notas, setNotas] = useState<Partial<Record<Dato, Nota>>>({});
   const [saliendo, setSaliendo] = useState(false);
   const pendiente = useRef<(() => void) | null>(null);
-  const [ultimoActivo, setUltimoActivo] = useState<Dato | undefined>(undefined);
 
   const { pais, tapados, primeraVez } = tarjeta;
   const forma = FORMAS[pais.id];
@@ -113,11 +112,13 @@ function Tarjeta({ tarjeta, estrenando }: { tarjeta: NonNullable<Vista["tarjeta"
   // Se califica un dato cada vez y de arriba abajo: con una sola fila de botones, cuál se está
   // calificando lo tiene que decir la tarjeta, y lo dice el carril verde.
   const activo = calificando ? DATOS.find((d) => aCalificar.includes(d) && !notas[d]) : undefined;
-  // Mientras la tarjeta sale, la barra se queda con el último dato que apuntó: al calificar el
-  // que la acaba, `activo` se vuelve otro —o ninguno— y la barra parpadearía justo cuando lo
-  // que tiene que hacer es no moverse.
-  if (activo && activo !== ultimoActivo) setUltimoActivo(activo);
-  const enBarra = saliendo ? ultimoActivo : activo;
+  // Mientras la tarjeta sale, la barra se queda con el último dato que se calificó: `activo` ya
+  // apunta al siguiente —o a ninguno— y la barra parpadearía justo cuando lo que tiene que hacer
+  // es no moverse. Sale de las notas y no de un estado guardado porque se califica en el orden de
+  // `DATOS`, así que la última puesta **es** la que apuntaba la barra; guardándolo, el atajo de
+  // fallar el país —que deja datos sin calificar— guardaba el siguiente en vez del último, y la
+  // barra cambiaba de rótulo justo al irse la tarjeta.
+  const enBarra = saliendo ? DATOS.findLast((d) => notas[d]) : activo;
 
   /**
    * Pasar de tarjeta es animar la salida y, al acabarla, calificar. Al revés —calificar y
@@ -137,6 +138,10 @@ function Tarjeta({ tarjeta, estrenando }: { tarjeta: NonNullable<Vista["tarjeta"
   };
 
   const anotar = (dato: Dato, nota: Nota) => {
+    // La tarjeta ya se está yendo: lo que se toque ahora era para la anterior. A las cuatro filas
+    // les quita el toque el `pointer-events` de `.atlas-sale`, pero la barra no se va con ellas
+    // —es el sitio que aprende el pulgar— y se queda viva los 130 ms de la animación.
+    if (saliendo) return;
     const nuevas = { ...notas, [dato]: nota };
     setNotas(nuevas);
     if (dato === "nombre" && nota === "fallo" && tapados.includes("nombre")) return pasar(sinPais);
