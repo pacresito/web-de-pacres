@@ -7,7 +7,7 @@
 // sale de los módulos que ya lo calculan para el lienzo: dos formas de contar lo mismo
 // acabarían dando dos cifras, y la de aquí no la vigila nadie.
 
-import { añoDe, conDia, edadEntre, escribirDiaDeMes, seLeSuponeFallecido, type Fecha } from "./fechas";
+import { conDia, edadEntre, escribirDiaDeMes, seLeSuponeFallecido, type Fecha } from "./fechas";
 import { ascendientes, descendientes, hijosDe, visibles, type Grafo } from "./grafo";
 import { aberturasDe, ENLACES, pliegueDe } from "./enlaces";
 import { losIncompletos } from "./incompletos";
@@ -90,8 +90,9 @@ export interface Extremo {
  * Los tatarabuelos de quien más ascendientes tiene, que es hasta donde se ha podido reunir
  * esta familia. **Son los apellidos y no las personas lo que se va a leer**: puestos en el
  * orden de `generacionArriba`, los dieciséis primeros y detrás los dieciséis segundos son los
- * treinta y dos apellidos de quien los tiene, seguidos. Por eso se pintan los dos sitios de
- * cada uno aunque uno esté sin rellenar: un hueco callado descuadraría la cuenta.
+ * treinta y dos apellidos de quien los tiene, seguidos. Por eso salen los dieciséis sitios y
+ * los dos apellidos de cada uno aunque no se hayan podido llenar: un hueco callado descuadra
+ * la cuenta, y con ella el par de apellidos que le toca a cada uno de los de abajo.
  */
 export interface Cuarteles {
   /** Los que empatan arriba, que son hermanos: comparten ascendencia y apellidos. */
@@ -104,7 +105,8 @@ export interface Cuarteles {
 
 /** Uno de ellos, con los dos sitios de apellido que tiene toda persona. */
 export interface Tatarabuelo {
-  quien: string;
+  /** `null` es el sitio que existe y no se ha podido llenar: sale, y sale vacío. */
+  quien: string | null;
   /** Ninguno, uno o dos; el sitio que sobra es el que no consta. */
   apellidos: string[];
   /** De ellos, los que traía el documento: los demás se deducen subiendo, y van apagados. */
@@ -164,7 +166,6 @@ export function calcularStats(g: Grafo, hoy: Fecha): Stats {
   const niveles = [...porNivel.keys()].sort((a, b) => a - b);
   const generaciones = niveles.map((nivel, i) => ({ numero: i + 1, cuantos: porNivel.get(nivel)! }));
 
-
   return {
     personas: gente.length,
     uniones: g.unionPorId.size,
@@ -205,7 +206,7 @@ function extremosDe(g: Grafo, linaje: Map<string, Apellidos>): Extremo[] {
 
   const familia = elMayor([...g.unionPorId.values()], (u) => u.children.length);
   const prolifico = elMayor(gente, (p) => descendientes(g, p.id).size);
-  const primero = elMayor(gente, (p) => (p.birth ? -añoDe(p.birth) : null));
+  const primero = elMayor(gente, (p) => (p.birth ? -enOrden(p.birth) : null));
   const ultimo = elMayor(gente, (p) => (p.birth ? enOrden(p.birth) : null));
   const longevo = elMayor(gente, (p) => (p.birth && p.death ? edadEntre(p.birth, p.death) : null));
   // Los nietos son un conjunto y no una suma: dos hermanos que tuvieran descendencia en común
@@ -242,7 +243,7 @@ function cuartelesDe(g: Grafo, linaje: Map<string, Apellidos>): Cuarteles | null
   const techo = Math.max(0, ...[...arriba.values()].map((a) => a.size));
   if (techo === 0) return null;
 
-  const suya = arriba.get(gente.find((p) => arriba.get(p.id)!.size === techo)!.id)!;
+  const suya = [...arriba.values()].find((a) => a.size === techo)!;
   const juntos = gente.filter((p) => arriba.get(p.id)!.size === techo && [...suya].every((a) => arriba.get(p.id)!.has(a)));
   const nombres = juntos.map((p) => comoSeLlama(p, "familiar"));
   const enFila = [nombres.slice(0, -1).join(", "), nombres.at(-1)].filter(Boolean).join(" y ");
@@ -252,11 +253,15 @@ function cuartelesDe(g: Grafo, linaje: Map<string, Apellidos>): Cuarteles | null
     quienes: apellidos ? `${enFila} ${apellidos}` : enFila,
     nombres: enFila,
     ascendientes: techo,
-    tatarabuelos: generacionArriba(g, juntos[0].id, 4).map((id) => ({
-      quien: comoSeLlama(g.personaPorId.get(id)!, "familiar"),
-      apellidos: linaje.get(id)!.todos,
-      escritos: linaje.get(id)!.escritos,
-    })),
+    tatarabuelos: generacionArriba(g, juntos[0].id, 4).map((id) =>
+      id === undefined
+        ? { quien: null, apellidos: [], escritos: 0 }
+        : {
+            quien: comoSeLlama(g.personaPorId.get(id)!, "familiar"),
+            apellidos: linaje.get(id)!.todos,
+            escritos: linaje.get(id)!.escritos,
+          },
+    ),
   };
 }
 
@@ -267,23 +272,24 @@ function cuartelesDe(g: Grafo, linaje: Map<string, Apellidos>): Cuarteles | null
  * esta capa son, uno a uno y en este orden, los apellidos de la capa de abajo: los dieciséis
  * de los tatarabuelos son los dieciséis de los ocho bisabuelos.
  *
- * El hueco de un progenitor que no consta viaja con la capa y solo se cae al final: quitarlo
- * antes correría de sitio a todos los que van detrás, y el orden es lo único que hace que la
- * lista se pueda leer como un nombre.
+ * **El hueco del que no consta se queda**, y por eso la capa mide siempre 2^N: es una posición
+ * del árbol y existe la llene alguien o no. Quitarlo correría de sitio a todos los que van
+ * detrás —el noveno pasaría a ser el octavo, y con él la mitad de las mujeres al bloque de los
+ * hombres—, y el orden es lo único que hace que la lista se pueda leer como un nombre.
  */
-function generacionArriba(g: Grafo, id: string, generaciones: number): string[] {
+function generacionArriba(g: Grafo, id: string, generaciones: number): (string | undefined)[] {
   let capa: (string | undefined)[] = [id];
   for (let i = 0; i < generaciones; i++) {
     const arriba = capa.map((x) => (x === undefined ? [undefined, undefined] : progenitores(g, x)));
     capa = [...arriba.map(([padre]) => padre), ...arriba.map(([, madre]) => madre)];
   }
-  return capa.filter((x): x is string => x !== undefined);
+  return capa;
 }
 
 /**
  * Los diez que vienen, del árbol entero. **De los que el árbol da por vivos**: felicitar a un
  * muerto es el error que no se puede arreglar después. Y pide el día escrito —quien solo trae
- * el año no cumple ningún día en concreto—, que es lo que deja fuera a 200 personas.
+ * el año no cumple ningún día en concreto—, que es lo que deja fuera a 250 de los vivos.
  *
  * No sale de `celebraciones.ts`, que contesta otra pregunta: aquella lista es a quién felicita
  * **uno**, se recorta a la familia cercana de quien mira y se acaba a los treinta días. Esta no
@@ -338,11 +344,11 @@ function conApellidosYAño(g: Grafo, linaje: Map<string, Apellidos>, id: string,
  * Los que más se repiten, de más a menos y con el alfabeto para desempatar: sin él el orden
  * lo decidiría el de los datos, y dos cifras iguales bailarían de sitio al añadir gente.
  */
-function masRepetidos(textos: string[], cuantos = CUANTOS_REPETIDOS): Repetido[] {
+function masRepetidos(textos: string[], cuantasFilas = CUANTOS_REPETIDOS): Repetido[] {
   const cuenta = new Map<string, number>();
   for (const texto of textos) cuenta.set(texto, (cuenta.get(texto) ?? 0) + 1);
   return [...cuenta]
     .map(([texto, cuantos]) => ({ texto, cuantos }))
     .sort((a, b) => b.cuantos - a.cuantos || a.texto.localeCompare(b.texto, "es"))
-    .slice(0, cuantos);
+    .slice(0, cuantasFilas);
 }

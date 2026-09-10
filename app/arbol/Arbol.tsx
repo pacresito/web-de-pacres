@@ -144,7 +144,9 @@ export default function Arbol({
   /**
    * Lo que se ha abierto a mano, sembrado con lo que el enlace de entrada quiere enseñar de
    * más. Va aquí y no en un cálculo aparte porque **hay que poder volver a cerrarlo**: si
-   * las uniones del enlace se sumaran en cada render, plegarlas no haría nada.
+   * las uniones del enlace se sumaran en cada render, plegarlas no haría nada. Lo que sí
+   * hace el cálculo es quitarlas al mudarse —`aberturasDeEntrada`—, que es lo que a
+   * `plegados` le sale gratis por no estar aquí.
    */
   const [abiertas, setAbiertas] = useState<Set<string>>(() => new Set(aberturasDe(inicial)));
   // Aparte de las abiertas: de estas se ha pedido solo la pareja, no sus hijos.
@@ -230,6 +232,12 @@ export default function Arbol({
     () => new Set(puntoDeVista === inicial ? pliegueDe(inicial) : []),
     [puntoDeVista, inicial],
   );
+  /**
+   * Y lo que abre, con la misma regla y por lo mismo: es de quien se entra, no de la URL, y
+   * desde otro Centro no enseña nada que a ese le importe. Se pasa el punto de vista al que
+   * se va, que quien vuelve a la entrada sí las quiere puestas.
+   */
+  const aberturasDeEntrada = (pov: string) => new Set(pov === inicial ? aberturasDe(inicial) : []);
   const layout = useMemo(
     () => calcularLayout(grafo, { puntoDeVista, expandidas, parejas, plegados, ocultarNoConectados }),
     [grafo, puntoDeVista, expandidas, parejas, plegados, ocultarNoConectados],
@@ -539,6 +547,11 @@ export default function Arbol({
     setAnterior(puntoDeVista);
     setPuntoDeVista(id);
     setHoja(null);
+    // Y se cae lo que abría el enlace de entrada. Se cae aunque se hubiera tocado a mano:
+    // distinguirlo pediría recordar quién abrió cada unión, y lo que hay en juego es que un
+    // contador vuelva a estar cerrado.
+    const suyas = new Set(aberturasDe(inicial));
+    setAbiertas((previas) => new Set([...previas].filter((union) => !suyas.has(union))));
     // Los señalados eran «tus primos segundos», y desde aquí ya no son tuyos ni segundos.
     setMarcados(null);
     // El giro se enciende aquí, con la mudanza y no después: los colaterales tienen que
@@ -677,13 +690,15 @@ export default function Arbol({
    * estaba mirando.
    */
   function reiniciar(donde: "entrada" | "aqui" = "entrada") {
+    const pov = donde === "entrada" ? inicial : puntoDeVista;
     if (donde === "entrada") setPuntoDeVista(inicial);
     setAnterior(null);
     setHoja(null);
     setGirando(false);
     setAviso(false);
-    // Reiniciar es volver a como se entró, y como se entró es con lo que el enlace abría.
-    setAbiertas(new Set(aberturasDe(inicial)));
+    // Reiniciar es volver a como se entró, y como se entró es con lo que el enlace abría —
+    // salvo que se esté plegando desde otro Centro, que allí el enlace no tiene nada que decir.
+    setAbiertas(aberturasDeEntrada(pov));
     setParejas(new Set());
     setTodoDesplegado(false);
     setOcultarNoConectados(true);
@@ -1114,13 +1129,13 @@ export default function Arbol({
               escondidos={escondidos}
               repaso={repaso}
               setRepaso={setRepaso}
-              // Los que están puestos y no los 290 del árbol: la cifra es lo que se va a
+              // Los que están puestos y no los 286 del árbol: la cifra es lo que se va a
               // encontrar al cerrar la hoja, y el total no cabe en ninguna pantalla.
               incompletos={layout.nodos.filter((n) => conHuecos.has(n.id)).length}
               todoDesplegado={todoDesplegado}
               onDesplegarTodo={() => {
                 setTodoDesplegado(!todoDesplegado);
-                setAbiertas(new Set(aberturasDe(inicial)));
+                setAbiertas(aberturasDeEntrada(puntoDeVista));
                 setParejas(new Set());
               }}
               onReiniciar={() => reiniciar("entrada")}

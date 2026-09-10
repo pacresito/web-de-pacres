@@ -77,6 +77,15 @@ assert.ok(
   c.cuarteles.quienes.endsWith(`${primero.apellidos[0]} ${segundo.apellidos[0]}`),
   `«${c.cuarteles.quienes}» no acaba en «${primero.apellidos[0]} ${segundo.apellidos[0]}», que es por donde empiezan sus tatarabuelos`,
 );
+// Los dieciséis sitios salen siempre, se hayan podido llenar o no: es lo que sostiene que la
+// lista se lea como los treinta y dos apellidos de quien los tiene, y que cada línea de la
+// página sea un matrimonio. Uno que se cayera correría de sitio a la mitad de los de detrás.
+assert.strictEqual(c.cuarteles.tatarabuelos.length, 16, "los tatarabuelos son dieciséis sitios, no los que consten");
+for (const t of c.cuarteles.tatarabuelos) {
+  assert.ok(t.apellidos.length <= 2 && t.escritos <= t.apellidos.length, `${t.quien}: apellidos mal contados`);
+  if (t.quien === null) assert.deepStrictEqual(t.apellidos, [], "el sitio vacío no trae apellidos de nadie");
+}
+
 // Los cumpleaños que vienen: diez, en orden, con los dos apellidos y su año, y de los vivos
 assert.strictEqual(c.cumples.length, 10, "diez, que es lo que cabe en una lista que se lee de un vistazo");
 const muertos = new Set(data.people.filter((p) => p.death || seLeSuponeFallecido(p, HOY)).map((p) => p.id));

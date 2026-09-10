@@ -346,4 +346,28 @@ for (const l of [inicial, conHermanos, layout("p126", TODAS)]) {
   }
 }
 
+// El contador dice de quién es cuando detrás va uno solo: las cinco parejas de una sola
+// persona del árbol son la madre, y sin el sexo el rótulo la llamaba padre.
+const conSexo = { unicos: 0, madres: 0 };
+for (const pov of ["p25", "p26", "p84", "p271", "p466"]) {
+  for (const c of layout(pov, VACIO, true).contadores) {
+    if (c.cantidad !== 1) {
+      assert.strictEqual(c.sexo, undefined, `el contador de ${c.unionId} habla en plural y trae sexo`);
+      continue;
+    }
+    conSexo.unicos++;
+    const union = g.unionPorId.get(c.unionId)!;
+    const detras = c.sentido === "padres" ? union.partners : union.children;
+    // Con dos partners de los que el filtro deja uno, el contador dice el de ese: el test no
+    // rehace el filtro, así que exige que sea el de alguno. Cuando detrás solo puede haber
+    // una persona —la pareja de uno, el hijo único— se le exige la suya y ninguna otra.
+    const suyos = detras.map((id) => g.personaPorId.get(id)?.sexo);
+    if (detras.length === 1) assert.strictEqual(c.sexo, suyos[0], `el contador de ${c.unionId} no es de quien dice`);
+    else assert.ok(suyos.includes(c.sexo), `el contador de ${c.unionId} dice ${c.sexo} y detrás no hay ninguno`);
+    if (c.sexo === "m") conSexo.madres++;
+  }
+}
+assert.ok(conSexo.unicos > 0, "ningún contador de uno solo con el que comprobar el rótulo");
+assert.ok(conSexo.madres > 0, "ninguno de una mujer: es justo el caso que se escribía en masculino");
+
 console.log("layout.test.ts OK");

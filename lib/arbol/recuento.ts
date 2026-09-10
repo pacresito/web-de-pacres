@@ -37,7 +37,7 @@ export interface Recuento {
 
 export function calcularRecuento(
   g: Grafo,
-  opciones: { puntoDeVista: string; ocultarNoConectados: boolean; plegados?: Set<string> },
+  opciones: { puntoDeVista: string; ocultarNoConectados: boolean; plegados: Set<string> },
   puestos: Set<string>,
 ): Recuento {
   const { puntoDeVista, ocultarNoConectados, plegados } = opciones;
@@ -89,12 +89,7 @@ export function calcularRecuento(
 }
 
 /** Qué hay que abrir para traer a esta gente al lienzo, desde lo que ya se ve sin abrir nada. */
-export function unionesHasta(
-  g: Grafo,
-  puntoDeVista: string,
-  gente: string[],
-  plegados?: Set<string>,
-): string[] {
+export function unionesHasta(g: Grafo, puntoDeVista: string, gente: string[], plegados: Set<string>): string[] {
   const camino = caminos(g, nucleoDe(g, puntoDeVista, null, plegados));
   const uniones = new Set<string>();
   for (const id of gente) for (const union of camino.get(id) ?? []) uniones.add(union);

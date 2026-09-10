@@ -7,7 +7,7 @@
 // lienzo, que es el mismo dato con otra forma.
 
 import Link from "next/link";
-import { calcularStats, type Tatarabuelo } from "@/lib/arbol/stats";
+import { calcularStats, type Generacion, type Tatarabuelo } from "@/lib/arbol/stats";
 import { construirGrafo } from "@/lib/arbol/grafo";
 import { KEYS } from "@/lib/arbol/keys";
 import type { ArbolData } from "@/lib/arbol/tree";
@@ -110,25 +110,13 @@ export default async function CifrasPage() {
         </Seccion>
 
         <Seccion titulo="Las generaciones">
-          <ul className="space-y-2">
-            {c.generaciones.map((gen) => (
-              <li key={gen.numero} className="flex items-center gap-3">
-                <span className="w-6 shrink-0 text-right font-[family-name:var(--mono)] text-[12px] text-[var(--mut)]">
-                  {gen.numero}
-                </span>
-                <span
-                  className="h-4 rounded-sm bg-[var(--accb)]"
-                  style={{ width: `${(gen.cuantos / Math.max(...c.generaciones.map((x) => x.cuantos))) * 100}%` }}
-                />
-                <span className="font-[family-name:var(--mono)] text-[12px] text-[var(--mut)]">{gen.cuantos}</span>
-              </li>
-            ))}
-          </ul>
+          <Generaciones filas={c.generaciones} />
         </Seccion>
 
         <Seccion titulo="Lo que falta">
-          <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl bg-[var(--line)] sm:grid-cols-4">
-            <Dato n={c.falta.conAlgo} de="con algún hueco" />
+          {/* «Con algo que preguntar» no se repite aquí: ya está arriba, y la misma cifra dos
+              veces con dos rótulos distintos se lee como dos cosas. Esto es su desglose. */}
+          <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl bg-[var(--line)] sm:grid-cols-3">
             <Dato n={c.falta.sinNingunaFecha} de="sin ninguna fecha" />
             <Dato n={c.falta.sinApellido} de="sin ningún apellido" />
             <Dato n={c.falta.sinNombre} de="sin nombre" />
@@ -218,6 +206,24 @@ const Numero = ({ children, apagado }: { children: React.ReactNode; apagado?: bo
   </td>
 );
 
+/** Barras contra la generación más ancha, que es la que llena la fila. */
+const Generaciones = ({ filas }: { filas: Generacion[] }) => {
+  const mayor = Math.max(...filas.map((x) => x.cuantos));
+  return (
+    <ul className="space-y-2">
+      {filas.map((gen) => (
+        <li key={gen.numero} className="flex items-center gap-3">
+          <span className="w-6 shrink-0 text-right font-[family-name:var(--mono)] text-[12px] text-[var(--mut)]">
+            {gen.numero}
+          </span>
+          <span className="h-4 rounded-sm bg-[var(--accb)]" style={{ width: `${(gen.cuantos / mayor) * 100}%` }} />
+          <span className="font-[family-name:var(--mono)] text-[12px] text-[var(--mut)]">{gen.cuantos}</span>
+        </li>
+      ))}
+    </ul>
+  );
+};
+
 const Ranking = ({ titulo, filas }: { titulo: string; filas: { texto: string; cuantos: number }[] }) => (
   <div>
     <h3 className="mb-2 text-[12px] text-[var(--mut)]">{titulo}</h3>
@@ -261,7 +267,7 @@ const Cuarteles = ({ quienes, filas }: { quienes: string; filas: Tatarabuelo[] }
           <div key={i} className="contents sm:grid sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:gap-x-4">
             {bloque.map((t, j) => (
               <div key={j} className="col-span-3 grid grid-cols-subgrid border-b border-[var(--line)] py-1.5">
-                <span className="truncate text-[var(--mut)]">{t.quien}</span>
+                <span className="truncate text-[var(--mut)]">{t.quien ?? "¿?"}</span>
                 {[0, 1].map((sitio) => (
                   <Apellido key={sitio} texto={t.apellidos[sitio]} escrito={sitio < t.escritos} />
                 ))}

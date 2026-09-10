@@ -122,6 +122,12 @@ export interface Contador {
   unionId: string;
   sentido: "hijos" | "padres";
   cantidad: number;
+  /**
+   * De quién es, cuando detrás hay uno solo: es lo que decide si el contador dice hija o
+   * madre. Va el dato y no el rótulo porque aquí se calcula, y las palabras las pone quien
+   * pinta. Sin sexo no se escribe, y entonces manda el masculino como en el resto del árbol.
+   */
+  sexo?: "h" | "m";
   x: number;
   y: number;
 }
@@ -224,7 +230,12 @@ export function calcularLayout(g: Grafo, opciones: OpcionesLayout): Layout {
       if (ocultos.length === 0) continue;
       const id = `c:${u.id}`;
       const nivel = unidades.get(unidadUnion)!.nivel - 1;
-      const unidad = crearContador(id, nivel, { unionId: u.id, sentido: "hijos", cantidad: ocultos.length });
+      const unidad = crearContador(id, nivel, {
+        unionId: u.id,
+        sentido: "hijos",
+        cantidad: ocultos.length,
+        sexo: sexoDelUnico(g, ocultos),
+      });
       unidades.set(id, unidad);
       contadorDeHijos.set(u.id, unidad);
       continue;
@@ -234,7 +245,12 @@ export function calcularLayout(g: Grafo, opciones: OpcionesLayout): Layout {
     const padres = u.partners.filter(permitido);
     if (padres.length === 0) continue;
     const id = `a:${u.id}`;
-    const unidad = crearContador(id, nivelDe(primerHijo) + 1, { unionId: u.id, sentido: "padres", cantidad: padres.length });
+    const unidad = crearContador(id, nivelDe(primerHijo) + 1, {
+      unionId: u.id,
+      sentido: "padres",
+      cantidad: padres.length,
+      sexo: sexoDelUnico(g, padres),
+    });
     unidades.set(id, unidad);
     const ancla = unidadDePersona.get(primerHijo)!;
     contadorDePadres.set(ancla, [...(contadorDePadres.get(ancla) ?? []), unidad]);
@@ -586,6 +602,10 @@ const recto = (hijo: number, union: number) => Math.abs(hijo - union) < DESNIVEL
 
 const altoDe = (miembros: number) => miembros * ALTO_NODO + (miembros - 1) * SEP_PAREJA;
 const media = (xs: number[]) => xs.reduce((s, x) => s + x, 0) / xs.length;
+
+/** Solo cuando detrás va uno: con dos o más, el contador habla en plural y el sexo no pinta. */
+const sexoDelUnico = (g: Grafo, gente: string[]): "h" | "m" | undefined =>
+  gente.length === 1 ? g.personaPorId.get(gente[0])?.sexo : undefined;
 
 const crearContador = (id: string, nivel: number, contador: Omit<Contador, "x" | "y">): Unidad => ({
   id,

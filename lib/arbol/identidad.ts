@@ -2,7 +2,7 @@
 // superficie del árbol. Puro: `npx tsx lib/arbol/identidad.test.ts`.
 //
 // Nadie sale nunca como un nombre suelto. A 59 personas el documento no les da apellido y
-// a 140 ninguna fecha, así que la segunda línea —de quién son— no es contexto: es el
+// a 137 ninguna fecha, así que la segunda línea —de quién son— no es contexto: es el
 // identificador, y por eso es lo último que se recorta. Cuando no cabe se degrada por
 // peldaños, y el primer progenitor y el cónyuge no están en ninguno: quitarlos deja a esas
 // personas sin nada que las distinga de otra con su mismo nombre.
@@ -275,8 +275,8 @@ function marcasDe(p: Persona, { homonimia }: OpcionesIdentidad): string[] {
 
 /**
  * Quiénes comparten nombre completo —con los apellidos ya deducidos del árbol— y año. Con
- * los apellidos reconstruidos son 15 personas; sin reconstruirlos serían 168, que era el
- * problema que el dato crudo aparentaba tener.
+ * los apellidos reconstruidos son 15 personas; contando solo los que traía el documento
+ * serían 50, que era el problema que el dato crudo aparentaba tener.
  */
 export function homonimias(g: Grafo, linaje: Map<string, Apellidos>): Map<string, Homonimia> {
   const grupos = new Map<string, string[]>();

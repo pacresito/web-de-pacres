@@ -82,9 +82,13 @@ export function Manija({ x, y, onPulsar }: { x: number; y: number; onPulsar: () 
   );
 }
 
-/** «+1 hijo», no «+1 hijos»: el contador dice cuántos hay, y con uno la ese sobra. */
-const rotuloDelContador = ({ cantidad, sentido }: Contador): string =>
-  cantidad > 1 ? sentido : sentido === "hijos" ? "hijo" : "padre";
+/**
+ * «+1 hija», no «+1 hijos»: el contador dice cuántos hay, y con uno la ese sobra y el sexo
+ * ya no se puede callar —de las cinco parejas de una sola persona que hay en el árbol, las
+ * cinco son la madre—. Sin sexo escrito manda el masculino, como en el resto del árbol.
+ */
+const rotuloDelContador = ({ cantidad, sentido, sexo }: Contador): string =>
+  cantidad > 1 ? sentido : sentido === "hijos" ? (sexo === "m" ? "hija" : "hijo") : sexo === "m" ? "madre" : "padre";
 
 export function ContadorRama({ contador, onAbrir }: { contador: Contador; onAbrir: () => void }) {
   return (
