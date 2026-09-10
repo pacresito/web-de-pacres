@@ -1,29 +1,48 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import TerminalShell from "../../components/TerminalShell";
 import WhyFooter from "../../components/WhyFooter";
 import { useTema } from "../../components/usePersistedTheme";
 import { IconoRanking, IconoPantallaCompleta } from "../../components/Iconos";
 
-// Descuento del panel que envuelve los tableros (padding + junta + aire a los lados), que
-// va por fuera del canvas: sin restarlo el tablero se sale por el lado en vertical.
-const PANEL_H = 97;  // apaisado: 22+22 de marco, 1 de junta, 26+26 de aire
-const PANEL_V = 44;  // vertical: 22+22 de marco
+// Descuento del panel que envuelve los tableros, que va por fuera del canvas: sin restarlo
+// el tablero se sale por el lado en vertical.
+const MARCO = 46;  // marco del panel: 22+22 de padding y 1+1 de borde
 const AIRE_JUNTA = 53;  // 26 + 1 + 26: lo que separa los dos tableros
+const MAX_SIZE = 420;
+// Los del área de juego, que la fórmula descuenta: valen aquí y en su style, o el tablero
+// se dimensiona contra un hueco que no es el que deja el layout.
+const PAD_FS = 16;  // padding maximizado (sin maximizar es mayor, ver más abajo)
+const GAP = 24;  // lo que el área de juego deja entre sus bloques
 
-function calcSize() {
-  const isLandscape = window.innerWidth > window.innerHeight;
-  if (isLandscape) {
-    return Math.min(Math.floor((window.innerWidth - 96 - PANEL_H) / 2), window.innerHeight - 80, 420);
+function calcSize(fullscreen: boolean, cabecera: number) {
+  const apaisado = window.innerWidth > window.innerHeight;
+  let ancho: number, alto: number;
+  if (fullscreen) {
+    // Maximizado no puede quedar scroll: el tablero es lo que sobra del viewport tras
+    // descontar todo lo demás. La cabecera va medida y no estimada — la fila de estado
+    // envuelve en pantallas estrechas y el panel de victoria aparece a mitad de partida.
+    ancho = window.innerWidth - 2 * PAD_FS - MARCO - (apaisado ? AIRE_JUNTA : 0);
+    alto = window.innerHeight - 2 * PAD_FS - cabecera - GAP - MARCO - (apaisado ? 0 : AIRE_JUNTA);
+  } else {
+    // Sin maximizar la página scrollea igual —chrome, prompt y footer—, así que el tablero
+    // se queda en su tamaño cómodo en vez de encoger hasta caber en el viewport.
+    ancho = window.innerWidth - (apaisado ? 96 : 32) - MARCO - (apaisado ? AIRE_JUNTA : 0);
+    alto = window.innerHeight - (apaisado ? 80 : 120);
   }
-  return Math.min(Math.floor(window.innerWidth - 32 - PANEL_V), Math.floor((window.innerHeight - 120) / 2), 420);
+  // Apaisados los tableros se reparten el ancho; en vertical, el alto.
+  const porTablero = Math.min(apaisado ? ancho / 2 : ancho, apaisado ? alto : alto / 2);
+  // Un tamaño negativo no es un tablero pequeño: `calcCell` lo arrastra hasta el radio de un
+  // gradiente y el canvas lanza. Sale de un viewport diminuto — la ventana minimizada.
+  return Math.max(0, Math.min(Math.floor(porTablero), MAX_SIZE));
 }
 
-function useCanvasSize() {
+function useCanvasSize(fullscreen: boolean, cabecera: number) {
   // El tamaño depende de `window`, que no existe en el server: useSyncExternalStore
   // devuelve 0 en SSR y el valor real tras hidratar, suscrito a resize/orientación.
+  const leer = useCallback(() => calcSize(fullscreen, cabecera), [fullscreen, cabecera]);
   return useSyncExternalStore(
     (onChange) => {
       window.addEventListener("resize", onChange);
@@ -33,9 +52,23 @@ function useCanvasSize() {
         window.removeEventListener("orientationchange", onChange);
       };
     },
-    calcSize,
+    leer,
     () => 0,
   );
+}
+
+// Alto de todo lo que el área de juego pone encima del panel, medido en cada render: cambia
+// al envolver la fila de estado (resize) y al aparecer un bloque (victoria, aviso del
+// cronómetro), y una lista de dependencias dejaría fuera lo segundo. No se realimenta porque
+// nada de esa cabecera depende del tamaño del tablero.
+function useAltoCabecera(ref: React.RefObject<HTMLDivElement | null>) {
+  const [alto, setAlto] = useState(0);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- medir en cada render es el objetivo
+  useLayoutEffect(() => {
+    const h = ref.current ? Math.ceil(ref.current.getBoundingClientRect().height) : 0;
+    if (h !== alto) setAlto(h);
+  });
+  return alto;
 }
 
 import {
@@ -266,7 +299,9 @@ export default function EspiralPage() {
     setSpeed(s => SPEED_CYCLE[(SPEED_CYCLE.indexOf(s) + 1) % SPEED_CYCLE.length]);
   }
 
-  const size = useCanvasSize();
+  const cabeceraRef = useRef<HTMLDivElement>(null);
+  const cabecera = useAltoCabecera(cabeceraRef);
+  const size = useCanvasSize(fullscreen, cabecera);
   const tema = useTema();
   const left = useBoard(canvasL, PATH_CELLS, -1, LEFT_INITIAL_VEL, size, speedRef, tema);
   const right = useBoard(canvasR, PATH_RIGHT, -1, RIGHT_INITIAL_VEL, size, speedRef, tema);
@@ -510,7 +545,10 @@ export default function EspiralPage() {
       `}</style>
 
       {/* game area */}
-      <div style={{ padding: fullscreen ? "16px" : "28px", display: "flex", flexDirection: "column", alignItems: "center", gap: "1.5rem", minHeight: fullscreen ? "100%" : undefined, justifyContent: fullscreen ? "center" : undefined }}>
+      <div style={{ padding: fullscreen ? `${PAD_FS}px` : "28px", display: "flex", flexDirection: "column", alignItems: "center", gap: `${GAP}px`, minHeight: fullscreen ? "100%" : undefined, justifyContent: fullscreen ? "center" : undefined }}>
+
+        {/* cabecera: lo que va encima del panel, en un bloque para poder medirlo entero */}
+        <div ref={cabeceraRef} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: `${GAP}px`, width: "100%" }}>
 
         {/* status row + hint */}
         <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", width: "100%", maxWidth: 960 }}>
@@ -621,6 +659,8 @@ export default function EspiralPage() {
         <div className="esp-labels" style={{ gap: AIRE_JUNTA, fontFamily: MONO }}>
           <span style={{ width: size, textAlign: "center", color: "var(--t-ink3)", fontSize: "12px", letterSpacing: "0.04em" }}>←</span>
           <span style={{ width: size, textAlign: "center", color: "var(--t-ink3)", fontSize: "12px", letterSpacing: "0.04em" }}>→</span>
+        </div>
+
         </div>
 
         <div className="esp-panel">
