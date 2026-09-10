@@ -251,16 +251,37 @@ export async function entrar(password: string): Promise<string | null> {
   // que si no la sesión se quedaría mirando un mazo de mentira con la cuenta abierta.
   cola = [];
   sembrado = false;
+  // **Haber entrado no lo dice Redis, lo dice la cookie**, que ya está puesta. Esperar al volcado
+  // para creérselo deja el prompt en `anon@` cuando el volcado falla por red, y entonces la clave
+  // buena parece rechazada. Lo que corrige la sincronía de abajo es el mazo, no quién entró.
+  identificado = true;
+  guardar();
+  notificar();
   await sincronizar();
   return null;
 }
 
+/**
+ * Salir devuelve el navegador a la primera visita, mazo incluido. Lo que se estaba jugando era
+ * el de la cuenta —bajado aquí como caché—, y dejarlo puesto enseñaría el progreso a quien coja
+ * el móvil después, con el prompt diciendo `anon@` y contando los países de otro. No se pierde
+ * nada: el bueno está en Redis y volver a entrar lo baja otra vez.
+ *
+ * `pasos` sube como en cualquier cambio de mano: si había una sincronía en el aire, su mazo ya no
+ * puede aterrizar encima de esto.
+ */
 export async function salir() {
   try {
     await fetch(RUTA_LOGIN, { method: "DELETE" });
   } catch {}
   identificado = false;
+  sembrado = false;
   cola = [];
+  nivel = "vacio";
+  recientes = [];
+  mazo = {};
+  pasos++;
   guardar();
+  vista = avanzar(mazo);
   notificar();
 }
