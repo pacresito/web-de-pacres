@@ -15,7 +15,13 @@ export type Dato = (typeof DATOS)[number];
 
 // `aciertos` es la racha sin fallar, y un mazo guardado antes de que existiera lo trae sin
 // definir: cuenta como cero y se rehace solo. Lo absorbe `racha`, que es quien lo lee.
-export type Estado = { visto: number; vida: number; aciertos: number }; // ms epoch · días · racha
+//
+// `fallado` es la última respuesta, y está aquí porque **no se puede deducir de las otras dos**:
+// acertar lo que se acaba de fallar deja la vida igual de corta —solo suma el tiempo transcurrido,
+// que son segundos— y el contador puede estar a cero por los dos caminos. Lo lee el descanso, que
+// dura lo que dure la respuesta. Un mazo guardado antes de que existiera lo trae sin definir y
+// cuenta como acierto, que es el lado que espera de más.
+export type Estado = { visto: number; vida: number; aciertos: number; fallado?: boolean }; // ms epoch · días · racha
 export type Mazo = Record<string, Partial<Record<Dato, Estado>>>; // paisId -> dato -> estado
 // De peor a mejor, que es el orden en que se enseñan y el que valida lo que llega de fuera.
 export const NOTAS = ["fallo", "bien", "facil"] as const;
@@ -93,7 +99,8 @@ export function calificar(mazo: Mazo, paisId: string, dato: Dato, nota: Nota, ah
     ...mazo,
     [paisId]: {
       ...mazo[paisId],
-      [dato]: { visto: ahora, vida: nuevaVida(previo, nota, ahora), aciertos: nuevosAciertos(previo, nota) },
+      [dato]: { visto: ahora, vida: nuevaVida(previo, nota, ahora),
+                aciertos: nuevosAciertos(previo, nota), fallado: nota === "fallo" },
     },
   };
 }
@@ -223,21 +230,20 @@ const VIDA_ASENTADO = VIDA_INICIAL.facil;
 const asentado = (e: Estado | undefined) => !!e && e.vida >= VIDA_ASENTADO;
 
 /**
- * El tope de lo que un dato descansa antes de poder volver a salir. Lo que descansa de verdad es
- * `min(su vida, esto)`: **nada vuelve antes de agotar la vida que se le predijo, y nada espera
- * más de un cuarto de hora**. La primera mitad es la definición de la sospecha —llega a 1 cuando
- * transcurrido iguala a la vida— y la segunda es lo que impide que una sesión se quede sin cola.
+ * Lo que descansa un dato al que se ha dicho que sí. **Lo decide la respuesta, no la vida**: quien
+ * lo acierta lo aparta media hora, y quien lo falla espera solo lo que aguante —minuto y medio el
+ * olvido, un cuarto de hora el estreno—, que es volver a verlo dentro de la sesión.
  *
- * Hace falta porque **el ranking es relativo y la sospecha, un cociente**: dentro de una sesión
- * todo lo demás acaba de verse y compite con milésimas, así que al de menos vida no le hace falta
- * llegar a 1 para ganar, le basta con ser el máximo. Sin freno la sesión se estrecha a la mitad de
- * países y un dato sale nueve veces de cincuenta; con un freno plano para todos se va por el otro
- * lado, porque dura más que la sesión y aparta lo fallado en vez de traerlo de vuelta.
+ * Descansar hace falta porque **el ranking es relativo y la sospecha, un cociente**: dentro de una
+ * sesión todo lo demás acaba de verse y compite con milésimas, así que al de menos vida no le hace
+ * falta llegar a 1 para ganar, le basta con ser el máximo. Sin freno la sesión se estrecha a la
+ * mitad de países y un dato sale nueve veces de cincuenta; con un freno plano para todos se va por
+ * el otro lado, porque dura más que la sesión y aparta lo fallado en vez de traerlo de vuelta.
  *
- * **La media hora la fija el «sí»**, que es el único al que este tope llega a frenar: cualquier
- * acierto deja días de vida, así que espera esto y no lo suyo. Un «no» no llega —minuto y medio el
- * olvido, un cuarto de hora el estreno— y vuelve dentro de la sesión, que es donde se reaprende.
- * Las cifras salen de `srs.medir.ts`.
+ * **Y lo decide la respuesta y no la vida porque no son lo mismo**: acertar algo que se acaba de
+ * fallar deja la vida en minutos —solo suma el tiempo transcurrido—, así que mirándola ese «sí» se
+ * trataba como un «no» y volvía a los tres minutos. Cinco de esos llenan el contador de «aprendido»
+ * en tres cuartos de hora. Las cifras salen de `srs.medir.ts`.
  */
 export const DESCANSO = 30 * 60_000;
 
@@ -275,7 +281,8 @@ export function siguiente(mazo: Mazo, orden: string[], ahora: number, recientes:
       if (!respaldo || s > respaldo.s) respaldo = { id: p.id, s };
       if (acabaDeSalir) continue;
       if (!libre || s > libre.s) libre = { id: p.id, s };
-      if (estado && ahora - estado.visto < Math.min(estado.vida * DIA, DESCANSO)) continue;
+      // Lo fallado espera lo que aguante, que es poco; lo acertado, el tope.
+      if (estado && ahora - estado.visto < (estado.fallado ? estado.vida * DIA : DESCANSO)) continue;
       if (!mejor || s > mejor.s) mejor = { id: p.id, s };
     }
   }

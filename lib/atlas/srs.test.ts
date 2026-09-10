@@ -165,7 +165,7 @@ assert.strictEqual(siguiente(enElAire, orden, AHORA)!.id, orden[9]); // nueve en
 
 // El descanso: lo recién visto no repite habiendo otra cosa que preguntar
 {
-  const reciente = (ms: number, v: number) => ({ visto: AHORA - ms, vida: v, aciertos: 0 });
+  const reciente = (ms: number, v: number, fallado = false) => ({ visto: AHORA - ms, vida: v, aciertos: 0, fallado });
   // La sesión activa: treinta países en el aire —el freno puesto, no entran nuevos— y todos
   // repasados hace un rato, que es cuando la sospecha de todo el mazo se queda en milésimas.
   const base = PAISES.slice(0, MAX_EN_EL_AIRE);
@@ -178,13 +178,21 @@ assert.strictEqual(siguiente(enElAire, orden, AHORA)!.id, orden[9]); // nueve en
   assert.notStrictEqual(siguiente(conVivo, orden, AHORA)!.id, fallado);
   // Pasado el descanso vuelve a mandar: reaprender es volver a verlo pronto, no no verlo.
   assert.strictEqual(siguiente(conVivo, orden, AHORA + DESCANSO)!.id, fallado);
-  // **Lo que descansa es `min(vida, DESCANSO)`**, así que el crudo espera lo suyo y no el tope: un
-  // fallo vuelve a los minuto y medio de su vida —unas tarjetas después, no en la siguiente— y no
-  // al cuarto de hora, que lo sacaría de la sesión en la que hay que volver a verlo.
-  const conFallo: Mazo = { ...enSesion, [fallado]: { nombre: reciente(20_000, VIDA_OLVIDO) } };
+  // **Lo que descansa lo decide la respuesta, no la vida**: el fallado espera lo que aguante, que
+  // es volver a verlo dentro de la sesión, y no el tope, que lo sacaría de ella.
+  const conFallo: Mazo = { ...enSesion, [fallado]: { nombre: reciente(20_000, VIDA_OLVIDO, true) } };
   assert.notStrictEqual(siguiente(conFallo, orden, AHORA)!.id, fallado);
   assert.strictEqual(siguiente(conFallo, orden, AHORA + VIDA_OLVIDO * 86_400_000)!.id, fallado);
-  assert.ok(VIDA_OLVIDO * 86_400_000 < DESCANSO, "el crudo espera su vida, que es menos que el tope");
+  assert.ok(VIDA_OLVIDO * 86_400_000 < DESCANSO, "el fallado espera su vida, que es menos que el tope");
+  // **Y el mismo dato acertado espera el tope, aunque su vida siga siendo de minutos.** Es el caso
+  // que la vida no sabe contar: acertar lo que se acaba de fallar solo le suma segundos, así que
+  // mirándola ese «sí» volvía enseguida, y cinco de esos llenan «aprendido» sin calendario detrás.
+  const acertadoCorto: Mazo = { ...enSesion, [fallado]: { nombre: reciente(20_000, VIDA_OLVIDO) } };
+  assert.notStrictEqual(siguiente(acertadoCorto, orden, AHORA + VIDA_OLVIDO * 86_400_000)!.id, fallado);
+  assert.strictEqual(siguiente(acertadoCorto, orden, AHORA + DESCANSO)!.id, fallado);
+  // Un mazo guardado antes de que el dato dijera su respuesta cuenta como acierto: espera de más.
+  const sinFlag: Mazo = { ...enSesion, [fallado]: { nombre: { visto: AHORA - 20_000, vida: VIDA_OLVIDO, aciertos: 0 } } };
+  assert.notStrictEqual(siguiente(sinFlag, orden, AHORA + VIDA_OLVIDO * 86_400_000)!.id, fallado);
   // **Los frenos se sueltan de uno en uno, y el hueco el último.** Con el mazo entero descansando
   // se pregunta por otro que también descansaba antes que repetir el que se acaba de servir: si no,
   // subir el descanso se pagaría con el mismo país tres veces seguidas.

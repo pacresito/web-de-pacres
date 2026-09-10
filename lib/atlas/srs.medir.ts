@@ -31,7 +31,7 @@ function calificarCon(mazo: Mazo, id: string, d: Dato, nota: Nota, ahora: number
   const previo = mazo[id]?.[d];
   if (nota !== "fallo") return calificar(mazo, id, d, nota, ahora);
   const vida = previo ? vidaOlvido : vidaEstreno;
-  return { ...mazo, [id]: { ...mazo[id], [d]: { visto: ahora, vida, aciertos: nuevosAciertos(previo, nota) } } };
+  return { ...mazo, [id]: { ...mazo[id], [d]: { visto: ahora, vida, aciertos: nuevosAciertos(previo, nota), fallado: true } } };
 }
 
 /** `siguiente` con los tres umbrales por fuera. Al final se comprueba que con los valores de
@@ -51,7 +51,7 @@ function siguienteCon(mazo: Mazo, ahora: number, { descanso, tope, liston, plano
       if (!respaldo || s > respaldo.s) respaldo = { id: p.id, s };
       if (acabaDeSalir) continue;
       if (!libre || s > libre.s) libre = { id: p.id, s };
-      const espera = plano ? descanso : Math.min(estado ? estado.vida * DIA : 0, descanso);
+      const espera = plano ? descanso : estado?.fallado ? estado.vida * DIA : descanso;
       if (estado && ahora - estado.visto < espera) continue;
       if (!mejor || s > mejor.s) mejor = { id: p.id, s };
     }
@@ -91,7 +91,7 @@ function mazoEnSesion(): Mazo {
     mazo[id] = {};
     for (const [j, d] of DATOS.entries()) {
       const vida = 2 + ((i * 7 + j * 3) % 2); // 2..3 días, por debajo del listón
-      mazo[id]![d] = { vida, aciertos: 0, visto: T0 - (3 + ((i * 5 + j * 11) % 35)) * 60_000 };
+      mazo[id]![d] = { vida, aciertos: 0, visto: T0 - (3 + ((i * 5 + j * 11) % 35)) * 60_000, fallado: false };
     }
   });
   return mazo;
@@ -136,21 +136,22 @@ function fila(nombre: string, p: Perillas) {
 const CABECERA = "  reglas                           países   datos distintos   máx veces un dato   sale el fallado";
 
 console.log(`SESIÓN ACTIVA · 35 países en el aire, ${TARJETAS} tarjetas a ${SEGUNDOS_POR_TARJETA} s, fallando una de cada tres\n`);
-console.log("El freno, que es `min(vida del dato, DESCANSO)`:");
+console.log("El freno: lo acertado espera el tope, lo fallado solo lo que aguante.");
 console.log(CABECERA);
-for (const d of [0, 3 * 60_000, DESCANSO, 30 * 60_000])
+for (const d of [0, 3 * 60_000, DESCANSO, 60 * 60_000])
   fila(d === 0 ? "sin descanso" : `descanso ${d / 60_000} min`, { ...REALES, descanso: d });
-fila("plano: 15 min a todos por igual", { ...REALES, plano: true });
-console.log("\n  Sin freno la sesión se estrecha a la mitad de países y un dato sale nueve veces. Plano se va");
-console.log("  por el otro lado: dura más que la sesión, así que aparta lo fallado en vez de traerlo de");
-console.log("  vuelta —sale una sola vez—. Esperando `min(vida, tope)`, ni una cosa ni la otra.\n");
+fila(`plano: ${DESCANSO / 60_000} min también al fallado`, { ...REALES, plano: true });
+console.log("\n  Sin freno la sesión se queda en la mitad de países y un dato sale ocho veces. Y se degenera");
+console.log("  por los dos lados: plano aparta lo fallado en vez de traerlo de vuelta —sale una sola vez—,");
+console.log("  y un tope más largo que la sesión deja la cola sin nadie disponible, con lo que manda el");
+console.log("  escalón de abajo y se repite igual que sin freno. Media hora cae entre las dos cosas.\n");
 
 console.log("Y la vida de un olvido, que es lo único que frena a lo que se acaba de fallar:");
 console.log(CABECERA);
 for (const v of [0.0005, VIDA_OLVIDO, 0.002, 0.01])
   fila(`vida de un olvido ${v} d (${Math.round(v * 86_400)} s)`, { ...REALES, vidaOlvido: v });
-console.log("\n  Es también lo que espera un fallo antes de volver, porque su vida es menor que el tope.");
-console.log("  Por debajo de minuto y medio empieza a comerse la sesión; por encima se sale de ella.");
+console.log("\n  Entre cuarenta segundos y tres minutos apenas cambia nada: ahí el que limita es el hueco, no");
+console.log("  la espera. Lo que sí se nota es pasarse del largo de la sesión, que es dejar de volver.");
 
 // ── El hueco ────────────────────────────────────────────────────────────────────────────────
 // El descanso va por dato, así que no impide que el mismo país vuelva enseguida con otro de sus
