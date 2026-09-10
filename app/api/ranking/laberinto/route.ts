@@ -1,6 +1,6 @@
 import { sendEmail } from "@/lib/notify";
 import { findAll, makeMember, upsertScore, pruneExtremes, readRanking, type RankEntry } from "@/lib/ranking";
-import { checkRateLimit, clientIp } from "@/lib/registro";
+import { checkRateLimit } from "@/lib/registro";
 import { clave } from "@/lib/keys";
 
 const KEY = clave("laberinto:ranking");
@@ -19,7 +19,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  if (!(await checkRateLimit(clientIp(request), "ranking:laberinto"))) {
+  if (!(await checkRateLimit(request, "ranking:laberinto"))) {
     return Response.json({ error: "Demasiados envíos. Espera 30 minutos." }, { status: 429 });
   }
 

@@ -1,7 +1,7 @@
 // Login de /farma: compara la clave con las dos env (admin/user), con rate limit
 // por IP (reutiliza el de registros) y cookie firmada con el rol. Acertar resetea
 // el contador, como en lib/registro.ts.
-import { checkRateLimit, clearRateLimit, clientIp } from "@/lib/registro";
+import { checkRateLimit, clearRateLimit } from "@/lib/registro";
 import { comparaSecreto } from "@/lib/secreto";
 import { signSession, type Rol } from "@/lib/farma/session";
 
@@ -9,8 +9,7 @@ const RATE = "login:farma";
 const PROD = process.env.NODE_ENV === "production";
 
 export async function POST(request: Request): Promise<Response> {
-  const ip = clientIp(request);
-  if (!(await checkRateLimit(ip, RATE))) {
+  if (!(await checkRateLimit(request, RATE))) {
     return Response.json({ error: "Demasiados intentos. Espera 30 minutos." }, { status: 429 });
   }
 
@@ -33,7 +32,7 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ error: "Clave incorrecta" }, { status: 401 });
   }
 
-  await clearRateLimit(ip, RATE);
+  await clearRateLimit(request, RATE);
   const { valor, expira } = signSession(rol);
   const cookie =
     `farma_session=${valor}; Path=/farma; Expires=${expira.toUTCString()}; ` +

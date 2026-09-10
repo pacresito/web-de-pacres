@@ -1,5 +1,5 @@
 import { listAll, setHidden, remove } from "@/lib/guestbook";
-import { checkRateLimit, clearRateLimit, clientIp } from "@/lib/registro";
+import { checkRateLimit, clearRateLimit } from "@/lib/registro";
 import { comparaSecreto } from "@/lib/secreto";
 
 const RATE = "guestbook:moderar";
@@ -15,8 +15,6 @@ const passwordOk = (input: unknown) => comparaSecreto(input, process.env.GUESTBO
  *  - `password` + `action`: el panel ?moderar. Lista todas, oculta/muestra/borra.
  */
 export async function POST(request: Request) {
-  const ip = clientIp(request);
-
   let body;
   try {
     body = await request.json();
@@ -28,7 +26,7 @@ export async function POST(request: Request) {
 
   // Camino 1: enlace del email. Oculta por id/token, sin contraseña.
   if (typeof token === "string" && token.length > 0) {
-    if (!(await checkRateLimit(ip, RATE))) {
+    if (!(await checkRateLimit(request, RATE))) {
       return Response.json({ error: "Demasiados intentos. Espera 30 minutos." }, { status: 429 });
     }
     const ok = await setHidden(token, true);
@@ -37,13 +35,13 @@ export async function POST(request: Request) {
 
   // Camino 2: panel ?moderar. Rate-limit + contraseña (se limpia al acertar, para
   // que moderar varias firmas seguidas no agote el límite).
-  if (!(await checkRateLimit(ip, RATE))) {
+  if (!(await checkRateLimit(request, RATE))) {
     return Response.json({ error: "Demasiados intentos. Espera 30 minutos." }, { status: 429 });
   }
   if (!passwordOk(password)) {
     return Response.json({ error: "Clave incorrecta" }, { status: 401 });
   }
-  await clearRateLimit(ip, RATE);
+  await clearRateLimit(request, RATE);
 
   if (action === "list") {
     return Response.json(await listAll());

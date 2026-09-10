@@ -1,6 +1,6 @@
 import { sendEmail } from "@/lib/notify";
 import { addEntry, listVisible, NAME_MAX, MESSAGE_MAX } from "@/lib/guestbook";
-import { checkRateLimit, clientIp } from "@/lib/registro";
+import { checkRateLimit } from "@/lib/registro";
 
 const SITE = "https://pacr.es";
 
@@ -14,7 +14,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  if (!(await checkRateLimit(clientIp(request), "guestbook"))) {
+  if (!(await checkRateLimit(request, "guestbook"))) {
     return Response.json({ error: "Demasiados envíos. Espera 30 minutos." }, { status: 429 });
   }
 

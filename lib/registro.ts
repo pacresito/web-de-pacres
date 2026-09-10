@@ -3,6 +3,7 @@ import redis from "./redis";
 import { prefijo } from "./keys";
 import { comparaSecreto } from "./secreto";
 import { sendEmail, type SendEmailOptions } from "./notify";
+import { avisarBloqueo } from "./bloqueo";
 
 /** Clave de escritura de los registros de partidas. **Es personal de Pablo, no circula**:
  *  aquí solo se guardan partidas suyas. La moderación del guestbook tiene la suya
@@ -25,15 +26,27 @@ const contador = (nombre: string): string => prefijo(`ratelimit:${nombre}`);
 /** Incrementa el contador por IP y devuelve si sigue dentro del límite.
  *  El SET NX fija la caducidad al crear la clave, en la misma transacción que el INCR:
  *  con un EXPIRE aparte, un fallo entre los dos comandos deja la clave sin TTL y esa IP
- *  bloqueada para siempre. */
-export async function checkRateLimit(ip: string, nombre: string, max = RATE_MAX, ttl = RATE_TTL): Promise<boolean> {
+ *  bloqueada para siempre.
+ *
+ *  **Recibe la petición, no la IP**: además de sacarla de ahí, el aviso de bloqueo cuenta
+ *  quién era —geolocalización, navegador, ruta—, y eso solo está en las cabeceras. */
+export async function checkRateLimit(request: Request, nombre: string, max = RATE_MAX, ttl = RATE_TTL): Promise<boolean> {
+  const ip = clientIp(request);
   const key = contador(nombre) + ip;
   const res = await redis.multi().set(key, 0, "EX", ttl, "NX").incr(key).exec();
-  return Number(res?.[1]?.[1] ?? max + 1) <= max;
+  const intentos = Number(res?.[1]?.[1]);
+
+  // El aviso sale en el intento que cruza el límite y solo en ese: los siguientes son el mismo
+  // bloqueo, y quien insiste mandaría un email por intento. Si Redis no contestó, `intentos` es
+  // NaN: no se avisa (no hay bloqueo que contar, hay un Redis caído) y el `<=` falla cerrado.
+  if (intentos === max + 1) {
+    await avisarBloqueo(request, { nombre, ip, key, intentos, max, ttl, cuando: new Date() });
+  }
+  return intentos <= max;
 }
 
-export async function clearRateLimit(ip: string, nombre: string): Promise<void> {
-  await redis.del(contador(nombre) + ip);
+export async function clearRateLimit(request: Request, nombre: string): Promise<void> {
+  await redis.del(contador(nombre) + clientIp(request));
 }
 
 /** IP del cliente. x-real-ip lo fija Vercel y no es spoofeable; como fallback usamos el
@@ -121,9 +134,7 @@ export async function handleRegistroPost<T extends RegistroBody, R>(
   request: Request,
   config: RegistroPostConfig<T, R>,
 ): Promise<Response> {
-  const ip = clientIp(request);
-
-  if (!(await checkRateLimit(ip, config.rate))) {
+  if (!(await checkRateLimit(request, config.rate))) {
     return Response.json({ error: "Demasiados intentos. Espera 30 minutos." }, { status: 429 });
   }
 
@@ -137,7 +148,7 @@ export async function handleRegistroPost<T extends RegistroBody, R>(
   if (!passwordOk(body.password)) {
     return Response.json({ error: "Clave incorrecta" }, { status: 401 });
   }
-  await clearRateLimit(ip, config.rate);
+  await clearRateLimit(request, config.rate);
 
   for (const field of config.requiredFields) {
     if (body[field] === undefined || body[field] === null) {

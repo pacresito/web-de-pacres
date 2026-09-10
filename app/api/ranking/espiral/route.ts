@@ -1,6 +1,6 @@
 import { sendEmail } from "@/lib/notify";
 import { findAll, makeMember, upsertScore, pruneTop, readRanking, VALID_SPEEDS } from "@/lib/ranking";
-import { checkRateLimit, clientIp } from "@/lib/registro";
+import { checkRateLimit } from "@/lib/registro";
 import { clave } from "@/lib/keys";
 
 const KEY = clave("espiral:ranking");
@@ -11,7 +11,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  if (!(await checkRateLimit(clientIp(request), "ranking:espiral"))) {
+  if (!(await checkRateLimit(request, "ranking:espiral"))) {
     return Response.json({ error: "Demasiados envíos. Espera 30 minutos." }, { status: 429 });
   }
 

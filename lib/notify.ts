@@ -31,13 +31,16 @@ export async function sendEmail({ subject, text, html }: SendEmailOptions): Prom
   if (process.env.NODE_ENV === "development") return;
   try {
     const resend = new Resend(process.env.RESEND_API_KEY);
-    await resend.emails.send({
+    // Resend no lanza cuando rechaza el envío: devuelve el fallo en `error` y un `data` nulo.
+    // Sin mirarlo, un email que no sale se ve exactamente igual que uno que sí.
+    const { error } = await resend.emails.send({
       from: NOTIFY_FROM,
       to: NOTIFY_TO,
       subject,
       text,
       ...(html ? { html } : {}),
     });
+    if (error) console.error(`Resend rechazó (${subject}):`, error);
   } catch (err) {
     console.error(`Resend error (${subject}):`, err);
   }
