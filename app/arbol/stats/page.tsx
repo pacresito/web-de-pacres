@@ -157,7 +157,7 @@ export default async function CifrasPage() {
           </dl>
           {/* Los apellidos no caben en la fila de arriba y no son un récord más: son la lista
               de la que sale el nombre de cualquiera de esta familia, y se leen de una vez. */}
-          {c.cuarteles && <Cuarteles filas={c.cuarteles.tatarabuelos} />}
+          {c.cuarteles && <Cuarteles quienes={c.cuarteles.nombres} filas={c.cuarteles.tatarabuelos} />}
         </Seccion>
       </div>
     </div>
@@ -233,37 +233,53 @@ const Ranking = ({ titulo, filas }: { titulo: string; filas: { texto: string; cu
 );
 
 /**
- * Los dieciséis, con los dos sitios de apellido de cada uno. Se pintan como en el árbol: en
- * tinta lo que traía el documento y apagado lo que se deduce subiendo. El sitio vacío lleva
- * signos de pregunta y no la cursiva de lo que no consta: en cursiva, esta fuente separa los
+ * Los dieciséis, en dos bloques que no son media lista y la otra media: en el orden en que se
+ * leen los apellidos los ocho primeros son ellos y los ocho segundos ellas, así que el de la
+ * izquierda son los maridos, el de la derecha las mujeres y cada línea un matrimonio. **Se
+ * llenan por columnas** —de ahí el `slice`, y no un grid que reparte por filas—, que además es
+ * el orden en que los treinta y dos apellidos se leen seguidos.
+ *
+ * Los dos apellidos van en columna propia y pegados a la derecha, con el nombre apagado en la
+ * otra punta: se viene a leer los apellidos en vertical, y el nombre solo dice de quién es cada
+ * par. En tinta lo que traía el documento y apagado lo que se deduce subiendo; el sitio vacío
+ * lleva signos de pregunta y no la cursiva de lo que no consta, que en esta fuente separa los
  * dos signos tanto que dejan de leerse como uno.
  */
-const Cuarteles = ({ filas }: { filas: Tatarabuelo[] }) => (
-  <div className="mt-7">
-    <h3 className="mb-2 text-[12px] text-[var(--mut)]">Los apellidos de sus {filas.length} tatarabuelos</h3>
-    {/* Dos columnas, y llenándose por filas: vienen en orden genealógico —padre, madre, padre,
-        madre— así que cada fila acaba siendo un matrimonio, él a la izquierda y ella a la
-        derecha. En una sola columna esos ocho pares no se ven. */}
-    <ul className="grid gap-x-8 text-[14px] sm:grid-cols-2">
-      {filas.map((t, i) => (
-        <li key={i} className="flex items-baseline justify-between gap-3 border-b border-[var(--line)] py-1.5">
-          <span className="text-[var(--mut)]">{t.quien}</span>
-          <span className="text-right">
-            {[0, 1].map((sitio) =>
-              t.apellidos[sitio] === undefined ? (
-                <span key={sitio} className="text-[var(--mut)]">{` ¿?`}</span>
-              ) : (
-                <span key={sitio} className={sitio < t.escritos ? "" : "text-[var(--mut)]"}>
-                  {sitio > 0 ? ` ${t.apellidos[sitio]}` : t.apellidos[sitio]}
-                </span>
-              ),
-            )}
-          </span>
-        </li>
-      ))}
-    </ul>
-  </div>
-);
+const Cuarteles = ({ quienes, filas }: { quienes: string; filas: Tatarabuelo[] }) => {
+  const mitad = Math.ceil(filas.length / 2);
+  return (
+    <div className="mt-7">
+      <h3 className="mb-2 text-[12px] text-[var(--mut)]">
+        Los apellidos de los {filas.length} tatarabuelos de {quienes}
+      </h3>
+      {/* En móvil no hay dos bloques sino una lista, y entonces el grid que manda es el de
+          fuera: los bloques se vuelven `contents` para que las dieciséis filas repartan las
+          mismas tres columnas. Cada uno con el suyo, las columnas de arriba no caen donde las
+          de abajo. */}
+      <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-x-4 text-[14px] sm:grid-cols-2 sm:gap-x-10">
+        {[filas.slice(0, mitad), filas.slice(mitad)].map((bloque, i) => (
+          <div key={i} className="contents sm:grid sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:gap-x-4">
+            {bloque.map((t, j) => (
+              <div key={j} className="col-span-3 grid grid-cols-subgrid border-b border-[var(--line)] py-1.5">
+                <span className="truncate text-[var(--mut)]">{t.quien}</span>
+                {[0, 1].map((sitio) => (
+                  <Apellido key={sitio} texto={t.apellidos[sitio]} escrito={sitio < t.escritos} />
+                ))}
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const Apellido = ({ texto, escrito }: { texto?: string; escrito: boolean }) =>
+  texto === undefined ? (
+    <span className="text-[var(--mut)]">¿?</span>
+  ) : (
+    <span className={escrito ? "" : "text-[var(--mut)]"}>{texto}</span>
+  );
 
 const Fila = ({ termino, children }: { termino: string; children: React.ReactNode }) => (
   <div className="flex flex-col gap-0.5 border-b border-[var(--line)] pb-3 sm:flex-row sm:justify-between sm:gap-6">

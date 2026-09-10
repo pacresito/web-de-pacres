@@ -88,13 +88,16 @@ export interface Extremo {
 
 /**
  * Los tatarabuelos de quien más ascendientes tiene, que es hasta donde se ha podido reunir
- * esta familia. **Son los apellidos y no las personas lo que se va a leer**: dieciséis pares
- * es la lista entera de la que sale cualquiera de los suyos, y por eso se pintan los dos
- * huecos de cada uno aunque uno esté sin rellenar.
+ * esta familia. **Son los apellidos y no las personas lo que se va a leer**: puestos en el
+ * orden de `generacionArriba`, los dieciséis primeros y detrás los dieciséis segundos son los
+ * treinta y dos apellidos de quien los tiene, seguidos. Por eso se pintan los dos sitios de
+ * cada uno aunque uno esté sin rellenar: un hueco callado descuadraría la cuenta.
  */
 export interface Cuarteles {
   /** Los que empatan arriba, que son hermanos: comparten ascendencia y apellidos. */
   quienes: string;
+  /** Los mismos sin el apellido, para el rótulo que ya está debajo de la lista que lo dice. */
+  nombres: string;
   ascendientes: number;
   tatarabuelos: Tatarabuelo[];
 }
@@ -242,10 +245,12 @@ function cuartelesDe(g: Grafo, linaje: Map<string, Apellidos>): Cuarteles | null
   const suya = arriba.get(gente.find((p) => arriba.get(p.id)!.size === techo)!.id)!;
   const juntos = gente.filter((p) => arriba.get(p.id)!.size === techo && [...suya].every((a) => arriba.get(p.id)!.has(a)));
   const nombres = juntos.map((p) => comoSeLlama(p, "familiar"));
+  const enFila = [nombres.slice(0, -1).join(", "), nombres.at(-1)].filter(Boolean).join(" y ");
   const apellidos = linaje.get(juntos[0].id)!.todos.join(" ");
 
   return {
-    quienes: [nombres.slice(0, -1).join(", "), nombres.at(-1)].filter(Boolean).join(" y ") + (apellidos ? ` ${apellidos}` : ""),
+    quienes: apellidos ? `${enFila} ${apellidos}` : enFila,
+    nombres: enFila,
     ascendientes: techo,
     tatarabuelos: generacionArriba(g, juntos[0].id, 4).map((id) => ({
       quien: comoSeLlama(g.personaPorId.get(id)!, "familiar"),
@@ -256,16 +261,23 @@ function cuartelesDe(g: Grafo, linaje: Map<string, Apellidos>): Cuarteles | null
 }
 
 /**
- * Los de N generaciones arriba, en el orden en que se leen los cuarteles: la línea del padre
- * entera y después la de la madre. Sube por `progenitores`, que es quien sabe cuál de los dos
- * es cuál cuando el documento no lo dice.
+ * Los de N generaciones arriba, **en el orden en que se leen los apellidos**: al subir un
+ * escalón van primero todos los padres y después todas las madres. Sale así porque el primer
+ * apellido se hereda del padre y el segundo de la madre, y entonces los primeros apellidos de
+ * esta capa son, uno a uno y en este orden, los apellidos de la capa de abajo: los dieciséis
+ * de los tatarabuelos son los dieciséis de los ocho bisabuelos.
+ *
+ * El hueco de un progenitor que no consta viaja con la capa y solo se cae al final: quitarlo
+ * antes correría de sitio a todos los que van detrás, y el orden es lo único que hace que la
+ * lista se pueda leer como un nombre.
  */
 function generacionArriba(g: Grafo, id: string, generaciones: number): string[] {
-  let capa = [id];
+  let capa: (string | undefined)[] = [id];
   for (let i = 0; i < generaciones; i++) {
-    capa = capa.flatMap((x) => progenitores(g, x).filter((p): p is string => p !== undefined));
+    const arriba = capa.map((x) => (x === undefined ? [undefined, undefined] : progenitores(g, x)));
+    capa = [...arriba.map(([padre]) => padre), ...arriba.map(([, madre]) => madre)];
   }
-  return capa;
+  return capa.filter((x): x is string => x !== undefined);
 }
 
 /**

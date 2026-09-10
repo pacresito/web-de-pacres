@@ -70,11 +70,12 @@ for (const t of c.cuarteles.tatarabuelos) {
   assert.ok(t.apellidos.length <= 2, `${t.quien} lleva más de dos apellidos`);
   assert.ok(t.escritos <= t.apellidos.length, `a ${t.quien} le constan más apellidos de los que tiene`);
 }
-// El apellido con el que empieza quien los tiene es el del primero de la lista, que es el que
-// sube por línea de varón: si el orden de los cuarteles se torciera, dejarían de cuadrar.
+// Y van en el orden en que se leen los apellidos, que es lo que hace que la lista valga de
+// algo: los dos primeros son, en ese orden, los dos con los que se nombra a quien los tiene.
+const [primero, segundo] = c.cuarteles.tatarabuelos;
 assert.ok(
-  c.cuarteles.quienes.includes(c.cuarteles.tatarabuelos[0].apellidos[0]),
-  `${c.cuarteles.quienes} no lleva el apellido de su primer tatarabuelo`,
+  c.cuarteles.quienes.endsWith(`${primero.apellidos[0]} ${segundo.apellidos[0]}`),
+  `«${c.cuarteles.quienes}» no acaba en «${primero.apellidos[0]} ${segundo.apellidos[0]}», que es por donde empiezan sus tatarabuelos`,
 );
 // Los cumpleaños que vienen: diez, en orden, con los dos apellidos y su año, y de los vivos
 assert.strictEqual(c.cumples.length, 10, "diez, que es lo que cabe en una lista que se lee de un vistazo");
