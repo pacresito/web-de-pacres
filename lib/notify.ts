@@ -42,7 +42,7 @@ async function alMovil(subject: string, text: string, motivo: unknown): Promise<
   const cuerpo = text.length > TOPE_TELEGRAM ? `${text.slice(0, TOPE_TELEGRAM)}…` : text;
   try {
     await enviarTelegram(
-      `⚠️ <b>Un email no ha salido.</b> Decía esto:\n\n<b>${escapeHtml(subject)}</b>\n\n${escapeHtml(cuerpo)}`,
+      `⚠️ <b>Un email no ha salido</b> ⚠️\nDecía esto:\n\n<b>${escapeHtml(subject)}</b>\n\n${escapeHtml(cuerpo)}`,
     );
   } catch (err) {
     // Los dos canales caídos a la vez. Aquí ya no queda a quién avisar: lo que queda es que
