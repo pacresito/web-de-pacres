@@ -102,9 +102,19 @@ for (const pov of ["p25", "p84", "p131", "p224"]) {
     if (c.tipo === "onomástica") assert.ok(persona(c.id!).birth, `${c.nombre} no trae año y se le felicita el santo`);
   }
 }
-// Y la guirnalda se lo sigue encendiendo, que dice de quién es el día y no a quién felicitar.
+// Y la guirnalda tampoco se lo enciende: encenderlo es contar con que está para que se lo
+// feliciten, que es lo que de esta gente no se sabe.
 assert.strictEqual(persona("p224").birth, undefined, "Belarmina (p224) era la que no traía fecha");
-assert.deepStrictEqual(fiestasDelArbol(g, "2026-09-17").get("p224"), { tipo: "onomástica" });
+assert.strictEqual(fiestasDelArbol(g, "2026-09-17").get("p224"), undefined);
+// El nodo de quien sí la trae sigue encendiéndose por su santo, que es de lo que va la regla:
+// lo que la para es no saber cuándo nació, no tener nombre de santoral.
+const conSuFecha = [...g.personaPorId.values()].find((p) => {
+  const dia = onomasticaDePersona(p);
+  return p.birth !== undefined && !p.death && typeof dia === "string" && p.birth.slice(5) !== dia;
+});
+assert.ok(conSuFecha, "alguien con fecha celebra un santo de día fijo");
+const suDia = onomasticaDePersona(conSuFecha) as string;
+assert.deepStrictEqual(fiestasDelArbol(g, `2026-${suDia}`).get(conSuFecha.id), { tipo: "onomástica" });
 
 // La rama que solo se felicita desde dentro. Desde un Crespo la suya cae a distancia de
 // sobrina, y la familia cercana se la metía entera en el panel: Vicente (p84) es Crespo.

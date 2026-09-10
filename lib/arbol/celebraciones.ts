@@ -283,7 +283,9 @@ export type Fiesta =
  * suyo aunque quien mire no sea nadie suyo, y con el Centro en otra rama media familia
  * cumplía años a oscuras. Es la otra respuesta que da esta casa: el panel dice a quién
  * felicitas tú —y por eso se mueve contigo—, y el nodo dice de quién es el día, que no
- * depende de nadie. Aquí el santo lo lleva todo el mundo por lo mismo.
+ * depende de nadie. El santo, en cambio, se calla igual que en los avisos a quien no trae
+ * fecha de nacimiento: encenderle el nodo es decir que está aquí, y de ese justamente no se
+ * sabe.
  *
  * **Una por nodo, y gana el cumpleaños**, que es el único que trae tarta. La ventana es de
  * un día a propósito: la marca vive en el lienzo y no en una lista, y treinta días de
@@ -302,7 +304,7 @@ export function fiestasDelArbol(g: Grafo, hoy: Fecha): Map<string, Fiesta> {
         continue;
       }
     }
-    const suNombre = onomasticaDePersona(persona);
+    const suNombre = seSabeCuandoNacio(persona) ? onomasticaDePersona(persona) : null;
     if (suNombre && proximaVez(hoy, suNombre).faltan === 0) salida.set(id, { tipo: "onomástica" });
   }
   return salida;

@@ -232,6 +232,9 @@ for (const p of data.people) {
   // cónyuge, y quien no desciende de nadie ni está casado con quien lo haga es Aina y nadie
   // más — su padre no está en el árbol y su madre entró casándose.
   assert.ok(f.filas.some((x) => x.clave.startsWith("Rama") && !x.falta) === (p.id !== "p425"), `${p.id}: la rama no cuadra`);
+  // El santo lo lleva el nombre y no el documento, así que sin esta regla lo anunciaría la
+  // ficha de gente de la que no consta ni el año: sin fecha de la que restar, siguen vivos.
+  if (!p.birth) assert.ok(!f.filas.some((x) => x.clave === "Onomástica"), `${p.id} no trae fecha y su ficha da su santo`);
   if (/^Es (tu pariente lej|de la familia política)/.test(f.relacion.frase)) sinTermino += 1;
 }
 

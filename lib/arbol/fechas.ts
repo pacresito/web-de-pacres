@@ -81,14 +81,16 @@ export const seLeSuponeFallecido = (p: { birth?: Fecha; death?: Fecha; vive?: tr
   !p.death && !p.vive && p.birth !== undefined && edadEntre(p.birth, hoy) >= EDAD_IMPROBABLE;
 
 /**
- * Y a quien no le consta el año no se le felicita nada. La regla de arriba necesita una fecha
+ * Y a quien no le consta el año no se le celebra nada. La regla de arriba necesita una fecha
  * de la que contar, así que sin ella no se dispara nunca y el árbol lo da por vivo para
  * siempre. **Frena solo la onomástica** porque es la única que no se cae sola: sale del nombre
  * y no del documento, de modo que la tiene también quien no trae ni una fecha. Es la misma
  * cautela de los 99 años —callar no es decir que sigue aquí— aplicada donde aquella no llega.
  *
- * **Es de los avisos, no del árbol**: la ficha y la guirnalda dicen de quién es el día, que no
- * depende de que se sepa cuándo nació ni de quién esté mirando, y ahí la onomástica se queda.
+ * **Y la frena en todas partes**, no solo en los avisos. La ficha y la guirnalda dicen de quién
+ * es el día sin depender de quién mire, pero anunciar el santo de alguien es contar con que
+ * está para que se lo feliciten, y de estos es justo lo que no se sabe: sin fecha de la que
+ * restar años, ahí dentro siguen vivos tatarabuelos nacidos antes de que hubiera fotos.
  */
 export const seSabeCuandoNacio = (p: { birth?: Fecha }): boolean => p.birth !== undefined;
 

@@ -4,7 +4,17 @@
 // El orden es invariable porque la ficha se lee de arriba abajo buscando siempre lo mismo:
 // primero qué es esa persona de ti, luego quién es y por último de quién viene.
 
-import { añoDe, conDia, enMs, escribirDiaDeMes, escribirVida, MS_DIA, seLeSuponeFallecido, type Fecha } from "./fechas";
+import {
+  añoDe,
+  conDia,
+  enMs,
+  escribirDiaDeMes,
+  escribirVida,
+  MS_DIA,
+  seLeSuponeFallecido,
+  seSabeCuandoNacio,
+  type Fecha,
+} from "./fechas";
 import { fotosDe, type FotoEnFicha } from "./fotos";
 import type { Grafo } from "./grafo";
 import { identidadDe, SIN_NOMBRE, verboDeUnion, type Homonimia, type Trozo } from "./identidad";
@@ -180,14 +190,14 @@ function cumpleaños(birth: Fecha, hoy: Fecha, tuya: boolean): string {
 }
 
 /**
- * El santo, detrás del cumpleaños y por lo mismo: la lee quien va a felicitar. Sale del
- * nombre y no del documento, así que lo tiene también quien no trae ni una fecha, y por eso
- * mismo no se escribe cuando falta: que un nombre no esté en el santoral no es un hueco del
- * documento sino que no hay tal día. Los que cuelgan de la Semana Santa se resuelven al año
- * en curso, que es el único del que se puede decir cuándo cae.
+ * El santo, detrás del cumpleaños y por lo mismo: la lee quien va a felicitar, así que se
+ * calla en quien no está para que lo feliciten —incluido quien no trae ninguna fecha, que es
+ * de quien no se sabe—. Y no se escribe cuando falta: que un nombre no esté en el santoral no
+ * es un hueco del documento sino que no hay tal día. Los que cuelgan de la Semana Santa se
+ * resuelven al año en curso, que es el único del que se puede decir cuándo cae.
  */
 function onomastica(p: Persona, hoy: Fecha): Fila | null {
-  if (p.death || seLeSuponeFallecido(p, hoy)) return null;
+  if (p.death || seLeSuponeFallecido(p, hoy) || !seSabeCuandoNacio(p)) return null;
   const dia = onomasticaDePersona(p);
   if (!dia) return null;
   const año = añoDe(hoy);
