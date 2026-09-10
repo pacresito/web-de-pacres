@@ -1,4 +1,5 @@
 import { sendEmail } from "@/lib/notify";
+import { emailTerminal } from "@/lib/email-terminal";
 import { findAll, makeMember, upsertScore, pruneExtremes, readRanking, type RankEntry } from "@/lib/ranking";
 import { checkRateLimit } from "@/lib/registro";
 import { clave } from "@/lib/keys";
@@ -59,10 +60,19 @@ export async function POST(request: Request) {
 
   if (stored) {
     await pruneExtremes(KEY, 10);
-    await sendEmail({
-      subject: `${cleanName} ha jugado al Laberinto — ${score} pts`,
-      text: `${cleanName} ha conseguido ${score} puntos en el Laberinto.\n\nVer ranking: https://pacr.es/juegos/laberinto/ranking`,
-    });
+    await sendEmail(
+      emailTerminal(`${cleanName} ha jugado al Laberinto — ${score} pts`, {
+        titulo: "juegos/laberinto",
+        comando: `ranking laberinto --add "${cleanName}" ${score}`,
+        entrada: `${cleanName} ha entrado en el ranking del Laberinto.`,
+        filas: [
+          ["Jugador", cleanName],
+          ["Puntos", `${score}`],
+          ["Tabla", sign === "positive" ? "los mejores" : "los peores"],
+        ],
+        enlaces: [["Ver ranking", "https://pacr.es/juegos/laberinto/ranking"]],
+      }),
+    );
   }
 
   return Response.json(await getRanking());

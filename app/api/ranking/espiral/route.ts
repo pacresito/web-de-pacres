@@ -1,4 +1,5 @@
 import { sendEmail } from "@/lib/notify";
+import { emailTerminal } from "@/lib/email-terminal";
 import { findAll, makeMember, upsertScore, pruneTop, readRanking, VALID_SPEEDS } from "@/lib/ranking";
 import { checkRateLimit } from "@/lib/registro";
 import { clave } from "@/lib/keys";
@@ -48,10 +49,19 @@ export async function POST(request: Request) {
 
   if (stored) {
     await pruneTop(KEY, TOP, true);
-    await sendEmail({
-      subject: `${cleanName} ha jugado al Espiral — ${score.toFixed(1)}s`,
-      text: `${cleanName} ha conseguido ${score.toFixed(1)}s en el juego Espiral (velocidad: ${speed}).\n\nVer ranking: https://pacr.es/juegos/espiral/ranking`,
-    });
+    await sendEmail(
+      emailTerminal(`${cleanName} ha jugado al Espiral — ${score.toFixed(1)}s`, {
+        titulo: "juegos/espiral",
+        comando: `ranking espiral --add "${cleanName}" ${score.toFixed(1)}s`,
+        entrada: `${cleanName} ha entrado en el ranking del Espiral.`,
+        filas: [
+          ["Jugador", cleanName],
+          ["Tiempo", `${score.toFixed(1)}s`],
+          ["Velocidad", speed],
+        ],
+        enlaces: [["Ver ranking", "https://pacr.es/juegos/espiral/ranking"]],
+      }),
+    );
   }
 
   return Response.json(await readRanking(KEY, 0, TOP - 1));

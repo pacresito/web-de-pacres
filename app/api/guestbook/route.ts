@@ -1,4 +1,5 @@
 import { sendEmail } from "@/lib/notify";
+import { emailTerminal } from "@/lib/email-terminal";
 import { addEntry, listVisible, NAME_MAX, MESSAGE_MAX } from "@/lib/guestbook";
 import { checkRateLimit } from "@/lib/registro";
 
@@ -47,13 +48,23 @@ export async function POST(request: Request) {
 
   const entry = await addEntry(cleanName, cleanMessage);
 
-  await sendEmail({
-    subject: `Nueva firma en el guestbook — ${entry.name}`,
-    text:
-      `${entry.name} ha firmado:\n\n"${entry.message}"\n\n` +
-      `Se ha publicado automáticamente. Para ocultarla:\n${SITE}/guestbook?ocultar=${entry.id}\n\n` +
-      `Moderar todas: ${SITE}/guestbook?moderar`,
-  });
+  await sendEmail(
+    emailTerminal(`Nueva firma en el guestbook — ${entry.name}`, {
+      titulo: "guestbook",
+      comando: `guestbook --nueva ${entry.id.slice(0, 8)}`,
+      entrada: "Alguien ha firmado el guestbook. Se ha publicado automáticamente.",
+      filas: [
+        ["Quién", entry.name],
+        ["Cuándo", new Date(entry.ts).toLocaleString("es-ES", { timeZone: "Europe/Madrid", dateStyle: "full", timeStyle: "short" })],
+      ],
+      nota: "Ha escrito:",
+      bloque: entry.message,
+      enlaces: [
+        ["Ocultar esta firma", `${SITE}/guestbook?ocultar=${entry.id}`],
+        ["Moderar todas", `${SITE}/guestbook?moderar`],
+      ],
+    }),
+  );
 
   return Response.json({ ok: true });
 }
