@@ -91,7 +91,7 @@ export const UMBRALES = {
    * Liechtenstein vive dentro de Suiza, que en el globo mide ocho píxeles: sin recortarla, seis de
    * radio dejan a Suiza en el 10% de sí misma.
    *
-   * **Un octavo.** Con él, un toque dentro de un país se lo lleva él el 99,3% de las veces: Suiza
+   * **Un octavo.** Con él, un toque dentro de un país se lo lleva él el 99,0% de las veces: Suiza
    * conserva el 92% de su superficie e Italia —que tiene dentro al Vaticano y a San Marino— el
    * 89%, cuando sin recortar nada se quedarían en el 10% y el 63%. Lo pagan los que no tienen
    * forma, que bajan de 764 enganches de 928 a 706, y sobre todo Liechtenstein: un píxel de radio
