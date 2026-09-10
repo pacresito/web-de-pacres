@@ -26,7 +26,8 @@ export const KEYS = {
   meta: (dev?: boolean) => clave("farma:meta", dev),
   // Histórico de PVP: hash codigo → JSON {denominacion, oldPrice, newPrice, firstSeen, lastSeen, pending}.
   pvp: (dev?: boolean) => clave("farma:pvp", dev),
-  // Pedidos fichados por María: hash pedido → orderedAt (epoch ms del check).
+  // Pedidos fichados por María: hash pedido → orderedAt (epoch ms del check). No renombrar
+  // aunque la etiqueta visible sea "descargados": son datos vivos en prod.
   pedidosHechos: (dev?: boolean) => clave("farma:pedidos-hechos", dev),
   // Borrador de etiquetado de PVP (mutable, admin): blob JSON {tamanos, cantidades,
   // extras} con lo que María prepara en la pantalla PVP y aún no ha impreso/limpiado.
