@@ -5,6 +5,11 @@
 // Qué polígonos entran y cómo se proyectan lo decide scripts/atlas-geo.mts, compartido con el
 // relieve. Aquí queda lo que es de la silueta: el trazado, la frontera interior y el globo.
 //
+// **Tocar lo que sale de aquí obliga a correr detrás `build-atlas-relieve.mts`**, y no solo al
+// añadir o quitar un país: la máscara del relieve se rasteriza del `d` ya escrito en formas.ts,
+// así que hasta mover el redondeo la deja recortada por un contorno que ya no es el que se pinta.
+// No falla nada — el relieve se corre unas décimas dentro de su silueta y nadie lo ve venir.
+//
 // Dos decisiones viven aquí y no en el render:
 //  - Simplificación por distancia mínima entre puntos YA PROYECTADOS: al medirse en píxeles de
 //    salida, la densidad de detalle es la misma en todos los países.
@@ -147,7 +152,12 @@ for (const { id, nombre, grupos, pinta, tol } of await encuadres()) {
     const trazo = (a: Anillo) => simplificar(a.map(([x, y]) => [px(x), py(y)] as [number, number]), tol);
     // Redondear al pintar: Math.cos/sin no están fijados por IEEE y Node y el navegador
     // discrepan en el último bit, lo que rompe la hidratación con un error ilegible.
-    const eme = (a: Anillo) => "M" + a.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join("L");
+    //
+    // **Y se redondea a enteros del lienzo, que es la última cifra que llega a verse.** La silueta
+    // se pinta como mucho a 200 px de lado, así que media unidad es una décima de píxel — y `TOL`
+    // ya le permite apartarse doce veces más que eso al simplificar. El decimal no dibujaba nada y
+    // se llevaba un tercio del archivo, que es el más pesado que baja el navegador en todo el sitio.
+    const eme = (a: Anillo) => "M" + a.map(([x, y]) => `${Math.round(x)},${Math.round(y)}`).join("L");
     // El hueco va en el mismo path que la tierra: lo recorta el `fill-rule: evenodd` con el que
     // se pinta la silueta, y con ella la máscara del relieve — un contorno solo tendría que
     // repetirse en las dos.
@@ -215,7 +225,7 @@ for (const { id, nombre, grupos, pinta, tol } of await encuadres()) {
     for (let lon = c.x0; lon <= c.x1; lon += (c.x1 - c.x0) / 600) {
       if (polys.some((poly) => dentro([lon, paralelo], poly[0]))) {
         const [x, y] = laea(lon, paralelo, lon0, lat0);
-        trozo.push(`${px(x).toFixed(1)},${py(y).toFixed(1)}`);
+        trozo.push(`${Math.round(px(x))},${Math.round(py(y))}`);
       } else suelta();
     }
     suelta();
@@ -228,7 +238,7 @@ const ts = `// GENERADO por scripts/build-atlas-formas.mts — no editar a mano.
 // Fuente: Natural Earth 1:10m. Silueta normalizada en un lienzo ${BOX}×${BOX}.
 
 export type Forma = {
-  d: string;      // path SVG en un viewBox 0 0 ${BOX} ${BOX}, normalizado
+  d: string;      // path SVG en un viewBox 0 0 ${BOX} ${BOX}, normalizado y en enteros
   arrecife: string; // el coral y la plataforma, a trazar sin rellenar y sin cerrar ("" si no lleva)
   linea: string;  // frontera interior a marcar dentro de la silueta ("" si no hay)
   separador: string; // la línea entre los dos paneles de un país partido ("" si va de una pieza)
