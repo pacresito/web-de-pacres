@@ -20,8 +20,10 @@ import { RASGOS, mediana, signado, type Genoma, type Mundo } from "./engine";
  * 0,18 y 0,32. Dos octavas a cada lado dejan sitio a lo primero sin que lo segundo sea una
  * rendija: la población ocupa un 8% de la escala, y con las tres de antes, un 5%.
  *
- * **Y son las mismas dos octavas de la leyenda**, que enseña la foto de hoy donde el panel enseña
- * la historia: con una ventana por sitio el mismo gen se leería con dos varas de medir.
+ * **No es la escala de la leyenda**, que va sobre el recorrido medido del gen —su p01 y su p99— y no
+ * sobre octavas alrededor del fundador de la partida. Son dos varas para el mismo gen, la leyenda
+ * enseñando la foto de hoy y el panel la historia, y de las dos solo puede quedar una: cuál, se
+ * decide al pintar el panel.
  */
 export const OCTAVAS = 2;
 /**

@@ -239,13 +239,16 @@ export type Config = {
   fundador: Genoma;
 };
 
-// **El fundador es el centro exacto de la ventana de lectura de cada gen** —la media geométrica del
-// p01 y el p99 de `VENTANA`, en `render.ts`—, así que **nace liso**: sin dientes, sin brazos, sin
-// patas, sin pinchos y sin pectorales. Todo lo que se le vea encima a un bicho es desviación de
-// aquí, que es lo que hace que el cuerpo cuente una historia en vez de una ficha.
+// **El fundador es el ancla de la escala con la que se pinta cada gen** —`SEMI`, en `designs.ts`, se
+// cuenta en octavas desde aquí—, así que **nace liso**: sin dientes, sin brazos, sin patas, sin
+// pinchos y sin pectorales. Todo lo que se le vea encima a un bicho es desviación de aquí, que es lo
+// que hace que el cuerpo cuente una historia en vez de una ficha.
 //
-// Medido en `convergencia.medir.ts`, y **la medida se muerde la cola: hay que iterarla**. La
-// ventana sale de dónde acaba la población y dónde acaba la población depende de dónde nace, así
+// Y está donde está para caer además **en medio del recorrido medido**, que es lo que la leyenda pone
+// de barra: con el fundador descentrado ahí, media barra no la visitaría nadie.
+//
+// Medido en `convergencia.medir.ts`, y **la medida se muerde la cola: hay que iterarla**. El
+// recorrido sale de dónde acaba la población y dónde acaba la población depende de dónde nace, así
 // que la primera pasada solo acierta el orden de magnitud —movió la `talla` un 29% y la `visión`
 // un 44%—. Se vuelve a poner y se vuelve a medir hasta que el fundador propuesto sea el que ya
 // está: cinco pasadas, y la última mueve todo por debajo del 2%.

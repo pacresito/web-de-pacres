@@ -3,57 +3,95 @@
 //
 // Un diseño no puede inventarse nada: los cuatro comparten el **mismo contrato de genes** —qué gen
 // vive en qué parte, con qué umbral aparece cada órgano y qué estados se leen— y solo cambian el
-// material y el repertorio de formas. Lo que sí es común y no se duplica está aquí arriba: la
-// ventana de lectura, la normalización y los umbrales. Si cada diseño tuviera su escala, dos
-// personas mirando la misma semilla verían genes distintos.
+// material y el repertorio de formas. Lo que sí es común y no se duplica está aquí arriba: el
+// recorrido medido, la escala de pintado, la normalización y los umbrales. Si cada diseño tuviera su
+// escala, dos personas mirando la misma semilla verían genes distintos.
 //
 // Se llama `designs` y no `diseños` porque es un identificador ASCII (regla «Nombres»).
 
-import { RADIO_COMIDA, hashSemilla, type Genoma, type Rasgo } from "./engine";
+import { FUNDADOR, RADIO_COMIDA, RASGOS, hashSemilla, signado, type Genoma, type Rasgo } from "./engine";
 
 const TAU = Math.PI * 2;
 export const clamp = (v: number, a: number, b: number) => (v < a ? a : v > b ? b : v);
 
 /**
- * **La ventana de lectura de cada gen: el p01 y el p99 de una simulación de varios mundos.**
+ * **El recorrido medido de cada gen: el p01 y el p99 de una simulación de varios mundos.** Es lo que
+ * ha llegado a existir, y está aquí para poder decir hasta dónde ha ido un linaje. **No para dibujar
+ * con él:** eso lo hace `SEMI`, debajo, y por eso son dos tablas y no una.
  *
- * No son ÷2 y ×2 del fundador. El fundador no tiene por qué estar donde vive la población —y
- * durante mucho tiempo no lo estuvo—, así que anclar en él dejaba la mitad de cada rango sin
- * visitar y los adornos que cuelgan de un umbral fuera de alcance para siempre. Anclando en la
- * población, un extremo del dibujo lo tiene el 1% de los bichos, que es lo que hace que verlo
+ * Mientras fueron la misma, la cola mandaba en el dibujo. La del `retorno` se mueve de una pasada a
+ * otra —p99 8,60 la anterior, 7,35 esta, y 11,45 si se mira solo el día mil—, así que cuatro bichos
+ * raros decidían con qué escala se pintaba la población entera: los tres cuartos de abajo apretados
+ * en media escala y la otra media para ellos. Separadas, el recorrido puede crecer con lo que
+ * aparezca sin estrechar el dibujo de nadie.
+ *
+ * No son ÷2 y ×2 del fundador. El fundador no tiene por qué estar donde vive la población —y durante
+ * mucho tiempo no lo estuvo—, así que anclar en él dejaba la mitad de cada rango sin visitar.
+ * Anclando en la población, un extremo lo tiene el 1% de los bichos, que es lo que hace que verlo
  * signifique algo.
  *
- * Salen de `convergencia.medir.ts` —20 mundos × 1000 días— y se refrescan corriéndolo otra vez: el
- * fundador es el punto medio de esta tabla, así que moverlo mueve la tabla y viceversa.
+ * Salen de la sección 7 de `convergencia.medir.ts` —48 mundos × 1000 días, 79.000 bichos
+ * muestreados— y se refrescan corriéndolo otra vez.
  */
-export const VENTANA: Record<Rasgo, [number, number]> = {
-  empuje: [1.68, 3.80],
-  talla: [1.88, 3.12],
-  vision: [20.10, 40.60],
-  sociabilidad: [-0.51, 0.34],
-  fiereza: [0.53, 3.32],
-  retorno: [1.24, 8.60],
+export const RECORRIDO: Record<Rasgo, [number, number]> = {
+  empuje: [1.66, 3.78],
+  talla: [1.89, 3.15],
+  vision: [20.23, 41.10],
+  sociabilidad: [-0.65, 0.33],
+  fiereza: [0.36, 4.28],
+  retorno: [1.27, 7.35],
 };
 
 /**
- * De valor de gen a 0…1 dentro de su ventana. **En octavas**, porque los genes mutan multiplicando
- * y la distancia natural entre 1 y 4 es la misma que entre 4 y 16.
+ * **El medio ancho de la escala de pintado, en octavas** —unidades en la sociabilidad—: el radio
+ * alrededor del fundador que deja dentro al 90% de los bichos, **de la misma población de la que
+ * sale `RECORRIDO`**; si fueran dos poblaciones, "la escala recorta la cola" no querría decir nada.
+ * Lo de fuera se recorta, y ese es el precio de que el resto se distinga: **una escala que quepa la
+ * cola convierte a la población en un pegote**.
+ *
+ * Va **centrado en el fundador**, que es lo que le da el 0,5 exacto y por tanto lo que le hace nacer
+ * liso. Y **simétrico**, no un medio ancho por lado: con dos varas, dos bichos igual de raros se
+ * pintarían distinto según de qué lado del fundador cayeran, y lo que el cuerpo tiene que decir es
+ * cuánto se ha ido de donde salió, no en qué percentil vive.
+ *
+ * Lo mide la sección 6 de `convergencia.medir.ts`, que de paso comprueba las dos cosas que la escala
+ * tiene que conseguir. Que el cuerpo de la población quepa ancho: del p25 al p75 ocupa entre el 31%
+ * y el 42% de ella, donde el `retorno` con la tabla compartida se quedaba en el 24%. Y que los
+ * umbrales sigan diciendo algo: los seis que cuelgan de uno —pala, brazo, patas, púas, aletas y lo
+ * que le sale al grande— los lleva del 21% al 31% de los bichos, y ninguno se ha vuelto universal ni
+ * imposible.
  */
-const n01 = (r: Rasgo, v: number): number => {
-  const [lo, hi] = VENTANA[r];
-  return clamp(Math.log2(v / lo) / Math.log2(hi / lo), 0, 1);
+const SEMI: Record<Rasgo, number> = {
+  empuje: 0.42, talla: 0.26, vision: 0.38, sociabilidad: 0.30, fiereza: 1.23, retorno: 0.87,
 };
+
+/**
+ * La escala de pintado hecha extremos, `[lo, hi]`: el cuerpo más bajo y el más alto que se van a
+ * ver, porque de ahí para fuera el dibujo ya no cambia. La usan la leyenda para sus dos muestras y
+ * `designs.test.ts` para apretar los diseños; el cuerpo no la necesita — le basta contar octavas
+ * desde el fundador.
+ */
+export const ESCALA = Object.fromEntries(RASGOS.map((r) => [r, signado(r)
+  ? [FUNDADOR[r] - SEMI[r], FUNDADOR[r] + SEMI[r]]
+  : [FUNDADOR[r] / 2 ** SEMI[r], FUNDADOR[r] * 2 ** SEMI[r]],
+])) as Record<Rasgo, [number, number]>;
+
+/**
+ * De valor de gen a 0…1 en la escala de pintado. **En octavas**, porque los genes mutan
+ * multiplicando y la distancia natural entre 1 y 4 es la misma que entre 4 y 16. Se cuenta desde el
+ * fundador, así que él cae en el 0,5 por construcción y no por suerte.
+ */
+const n01 = (r: Rasgo, v: number): number =>
+  clamp(0.5 + Math.log2(v / FUNDADOR[r]) / (2 * SEMI[r]), 0, 1);
 
 /**
  * La sociabilidad va en la misma vara, y **su cero deja de ser el cero físico para ser el
  * fundador**. Cuesta un matiz —un bicho pintado liso no es "me da igual la compañía", es "igual que
- * su tatarabuela"— y a cambio el gen se ve: su recorrido medido es de −0,51 a +0,34, así que a
+ * su tatarabuela"— y a cambio el gen se ve: su recorrido medido es de −0,65 a +0,33, así que a
  * escala de ±1 la población entera se pintaba idéntica.
  */
-const n01soc = (s: number): number => {
-  const [lo, hi] = VENTANA.sociabilidad;
-  return clamp((s - lo) / (hi - lo), 0, 1);
-};
+const n01soc = (s: number): number =>
+  clamp(0.5 + (s - FUNDADOR.sociabilidad) / (2 * SEMI.sociabilidad), 0, 1);
 
 /**
  * **El fundador nace liso y todo adorno es una desviación de él.** Los umbrales están a la misma
@@ -65,7 +103,7 @@ const n01soc = (s: number): number => {
  * lo que hace que mirar el mundo dos veces con cien días de por medio cuente algo. **Vale para los
  * cuatro diseños**, y un diseño que no lo cumpla está roto: lo comprueba `designs.test.ts`.
  */
-const DESVIO = 0.12;
+export const DESVIO = 0.12;
 const U_ALTO = 0.5 + DESVIO, U_BAJO = 0.5 - DESVIO;
 
 /** Los seis genes normalizados y los cuatro derivados, que es lo único que ve un diseño. */
@@ -1286,29 +1324,32 @@ export const giroDe = (x: number, y: number) => ((x * 7919 + y * 104729) % 628) 
 
 /**
  * Dónde cae un valor en la barra de la leyenda, en 0…1. **El fundador en el centro, el p01 y el p99
- * bastante cerca de los extremos pero no en ellos**: fuera de esa ventana sigue habiendo barra, que
- * es donde se pinta el día que a alguien le dé por bajar del p01 o subir del p99. Sin ese margen,
- * un linaje que se saliera de la ventana se quedaría pegado al borde diciendo lo mismo que otro que
- * apenas la roza.
+ * bastante cerca de los extremos pero no en ellos**: fuera del recorrido medido sigue habiendo
+ * barra, que es donde se pinta el día que a alguien le dé por bajar del p01 o subir del p99. Sin ese
+ * margen, un linaje que se saliera se quedaría pegado al borde diciendo lo mismo que otro que apenas
+ * lo roza.
  *
- * Es una sola escala para los seis genes —cada uno con su ventana, pero la misma geometría—, así
- * que dos barras se comparan de un vistazo aunque midan cosas de unidades distintas.
+ * Es una sola geometría para los seis genes —cada uno con su recorrido—, así que dos barras se
+ * comparan de un vistazo aunque midan cosas de unidades distintas.
  */
 export const MARGEN = 0.12;
 
 /**
- * Dónde cae un valor **dentro de su ventana**, en 0…1: 0 es el p01 y 1 el p99. Sin recortar, porque
- * salirse es justo lo que hay que poder ver — un linaje en 1,2 se ha ido más allá del 1% más alto
- * que llegó a existir en veinte mundos, y eso es una noticia.
+ * Dónde cae un valor **dentro del recorrido medido**, en 0…1: 0 es el p01 y 1 el p99. Sin recortar,
+ * porque salirse es justo lo que hay que poder ver — un linaje en 1,2 se ha ido más allá del 1% más
+ * alto que llegó a existir en cuarenta y ocho mundos, y eso es una noticia.
+ *
+ * **No es la escala con la que se dibuja el cuerpo**, que recorta antes a propósito: aquí el
+ * recorrido cabe entero porque de lo que se está hablando es de cuánto ha viajado un linaje.
  *
  * Es el número que la leyenda enseña en tanto por ciento, y el único de este mundo que se entiende
  * sin saber de qué va: «empujaba como el 50% y ahora como el 63%» dice algo, y «empuje 2,14» no.
  */
-export function enVentana(r: Rasgo, v: number): number {
-  const [lo, hi] = VENTANA[r];
-  return r === "sociabilidad" ? (v - lo) / (hi - lo) : Math.log2(v / lo) / Math.log2(hi / lo);
+export function enRecorrido(r: Rasgo, v: number): number {
+  const [lo, hi] = RECORRIDO[r];
+  return signado(r) ? (v - lo) / (hi - lo) : Math.log2(v / lo) / Math.log2(hi / lo);
 }
 
 export function posGen(r: Rasgo, v: number): number {
-  return clamp(MARGEN + (1 - 2 * MARGEN) * enVentana(r, v), 0, 1);
+  return clamp(MARGEN + (1 - 2 * MARGEN) * enRecorrido(r, v), 0, 1);
 }

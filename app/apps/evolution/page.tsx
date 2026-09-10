@@ -382,10 +382,16 @@ export default function Evolution() {
         .lg-fila { display: flex; gap: 0.8rem; align-items: flex-start; padding: 0.7rem 0; border-top: 1px solid var(--border); }
         .lg-muestras { flex: 0 0 auto; }
         .lg-celdas { display: flex; gap: 4px; }
-        .lg-celdas canvas { border-radius: 3px; display: block; }
-        .lg-muestras canvas { border-radius: 3px; display: block; }
-        .lg-pies { display: flex; justify-content: space-between; font-size: 0.58rem; color: var(--t-ink3); padding-top: 3px; }
-        .lg-vacio { width: 170px; font-size: 0.62rem; color: var(--t-ink3); font-style: italic; padding-top: 0.4rem; }
+        .lg-celdas canvas, .lg-paso canvas { border-radius: 3px; display: block; }
+
+        /* La edad va en tira propia y detrás de los seis genes, porque no es un gen: no tiene
+           recorrido, ni fundador, ni banda de población que enseñar. Y aquí sí hay cifra debajo de
+           cada cuerpo —el día **es** el dato—, donde en una fila de gen los tres bichos ya son la
+           escala y un rótulo solo repetiría lo que se ve. */
+        .lg-edad { padding: 0.8rem 0 0.2rem; border-top: 1px solid var(--border); }
+        .lg-tira { display: flex; gap: 4px; margin-top: 0.5rem; }
+        .lg-paso { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+        .lg-paso span { font-size: 0.58rem; color: var(--t-ink3); font-variant-numeric: tabular-nums; }
 
         .lg-datos { flex: 1 1 auto; min-width: 0; }
         .lg-cab { display: flex; align-items: baseline; justify-content: space-between; gap: 0.6rem; font-size: 0.72rem; }
@@ -393,7 +399,8 @@ export default function Evolution() {
         .lg-cifra { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
         .lg-flecha { color: var(--t-ink4); }
 
-        /* La barra: fundador en el centro, ÷4 a la izquierda y ×4 a la derecha (la escala, en reparto.ts). */
+        /* La barra: el recorrido medido del gen —su p01 y su p99—, con el fundador cerca del centro
+           y margen fuera para el linaje que se salga. La geometría es posGen, en designs.ts. */
         .lg-eje { position: relative; height: 14px; margin: 0.45rem 0 0.35rem; }
         .lg-eje::before { content: ""; position: absolute; left: 0; right: 0; top: 6px; height: 1px; background: var(--border); }
         .lg-eje i { position: absolute; display: block; }

@@ -19,7 +19,8 @@
 // Un mundo extinto no cuenta para el centro ni para la dispersión: promediar con él mete el sesgo
 // de que los que se mueren pronto se mueren de una cosa concreta.
 
-import { RASGOS, banda, correrDia, crearMundo, signado, type Genoma, type Rasgo } from "./engine";
+import { FUNDADOR, RASGOS, banda, correrDia, crearMundo, signado, type Genoma, type Rasgo } from "./engine";
+import { DESVIO } from "./designs";
 
 // **Cuarenta y ocho y no veinte**, porque los genes no se dejan fijar igual de bien: `talla` y
 // `visión` acaban en el mismo sitio en todos los mundos, pero `fiereza` y `retorno` abren un
@@ -215,27 +216,45 @@ for (const r of RASGOS) {
   console.log([r.padEnd(13), ...[0.01, 0.25, 0.5, 0.75, 0.99].map((q) => col(f2(cuantil(xs, q))))].join(" "));
 }
 console.log("\nA leer: un adorno que quiera marcar al cuarto más fiero se pone en el p75 de la fiereza, y no en");
-console.log("un número redondo. La escala visual de cada gen se centra en su p50 y su medio ancho sale de");
-console.log("cuánto se quiera enseñar: hasta el p05/p95 llena la escala con el 90% de la población.\n");
+console.log("un número redondo. Y son cuantiles del **recorrido**: la escala con la que se pinta es otra cosa, y");
+console.log("sale de la sección siguiente.\n");
 
-// ── 6. La escala visual que proponen estas cifras ────────────────────────────
-console.log("## Propuesta de escala visual, centrada en la población y no en el fundador\n");
-console.log([col("gen", 13), col("centro"), col("±oct"), col("÷ extremo"), col("× extremo")].join(" "));
+// ── 6. La escala de pintado que proponen estas cifras ────────────────────────
+//
+// **No es el recorrido de arriba, y por eso va aparte.** El recorrido tiene que caber entero, que es
+// lo único que contesta «¿hasta dónde ha llegado este linaje?»; la escala de pintado tiene que
+// gastar sus dos mitades donde vive la gente. Con una sola tabla para las dos cosas, el gen de cola
+// larga se pinta al revés de como se reparte: tres cuartos de la población apretados en media escala
+// y la otra media para cuatro raros.
+//
+// Va **centrada en el fundador y no en el p50**: los umbrales de los adornos están a ±`DESVIO` del
+// centro, así que un centro que no sea el fundador le pone dientes el primer día. El medio ancho es
+// el radio que deja dentro al 90% de los bichos muestreados —**los mismos de la sección 7**, que es
+// de donde sale el recorrido: dos tablas de la misma población, o «recortar la cola» no significa
+// nada— —simétrico por construcción, así que una cola larga
+// por un lado no estira también el otro— y lo de fuera se recorta: pasado el borde el cuerpo deja de
+// cambiar, que es lo que cuesta ver bien el resto.
+console.log("## Propuesta de escala de pintado, centrada en el fundador\n");
+console.log([col("gen", 13), col("fundador"), col("±oct"), col("÷ extremo"), col("× extremo"),
+  col("sale−"), col("sale+"), col("p25"), col("p50"), col("p75"), col("adorno−"), col("adorno+")].join(" "));
 for (const r of RASGOS) {
-  const xs = todos.map((g) => g[r]);
-  const c = cuantil(xs, 0.5);
-  // Medio ancho que deja el 90% de los bichos dentro y todavía margen para el abanico entre mundos.
-  const fines = vivas.map((p) => p.cortes[r][CORTES.length - 1]!);
-  const semi = Math.max(
-    Math.abs(esc(r, cuantil(xs, 0.05), c)), Math.abs(esc(r, cuantil(xs, 0.95), c)),
-    disp(fines.map((x) => esc(r, x, c))) * 1.5,
-  );
-  console.log([r.padEnd(13), col(f2(c)), col(f2(semi)), col(f2(desesc(r, -semi, c))), col(f2(desesc(r, semi, c)))].join(" "));
+  const F = FUNDADOR[r];
+  const ds = muestra[r].map((v) => esc(r, v, F));
+  const semi = cuantil(ds.map(Math.abs), 0.9);
+  const t = (d: number) => Math.min(1, Math.max(0, 0.5 + d / (2 * semi)));
+  const frac = (f: (d: number) => boolean) => (100 * ds.filter(f).length) / ds.length;
+  console.log([r.padEnd(13), col(f2(F)), col(f2(semi)), col(f2(desesc(r, -semi, F))), col(f2(desesc(r, semi, F))),
+    col(frac((d) => d < -semi).toFixed(0) + "%"), col(frac((d) => d > semi).toFixed(0) + "%"),
+    ...[0.25, 0.5, 0.75].map((q) => col(t(esc(r, cuantil(muestra[r], q), F)).toFixed(2))),
+    col(frac((d) => t(d) < 0.5 - DESVIO).toFixed(0) + "%"),
+    col(frac((d) => t(d) > 0.5 + DESVIO).toFixed(0) + "%")].join(" "));
 }
-console.log("\nA leer: es una propuesta, no un veredicto — el medio ancho sale de que quepan el 90% de los bichos");
-console.log("y vez y media el abanico entre mundos, lo que sea mayor. Un gen que converja pedirá una escala");
-console.log("estrecha, y no pasa nada porque no sea la misma que la de al lado: lo que tiene que coincidir es");
-console.log("la escala de un gen entre la leyenda y el panel, no la de dos genes distintos.");
+console.log("\nA leer: **±oct** es el medio ancho propuesto, y **sale−/sale+** qué recorta cada lado — suman el");
+console.log("10% por construcción, así que lo que dicen es de qué lado está la cola. **p25 · p50 · p75** son los");
+console.log("cuartiles ya en la escala, de 0 a 1: un p50 lejos del 0,50 es un fundador que no vive donde vive la");
+console.log("población, y unos cuartiles que caben en un tercio de la escala son escala de sobra. **adorno−** y");
+console.log("**adorno+**, la fracción de bichos que cruza cada umbral: los que se pintan con pala o con brazo, con");
+console.log("pincho o con aleta. Uno que pase de la mitad es un adorno que ha dejado de decir nada.");
 
 // ── 7. El fundador que proponen los extremos ────────────────────────────────
 //
