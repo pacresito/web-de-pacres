@@ -6,7 +6,11 @@
 // invertido y espejado, para que las dos manos hagan el movimiento simétrico.
 
 export function calcCell(size: number) { return Math.floor(size / 12); }
-export function calcTolerance(cell: number) { return Math.floor(cell * 0.36); }
+/** Hasta dónde puede alejarse del eje del camino el centro de la bola: la mitad de lo que
+ *  separa dos vueltas, o sea el centro de la pared. Es lo más laxo que se puede ser sin que
+ *  el centro llegue a asomar al canal vecino, y deja jugar pegado a la pared — que el canal
+ *  se pinte más estrecho que la celda es cosa del relieve, no del recorrido. */
+export function calcTolerance(cell: number) { return cell / 2; }
 
 export const SPEED = 1.0;
 export const SPEED_MULTIPLIERS = { slow: 1.0, normal: 1.5, fast: 2.0 } as const;
@@ -67,6 +71,22 @@ export function pointToSegmentDist(
   if (lenSq === 0) return Math.hypot(p.x - a.x, p.y - a.y);
   const t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / lenSq));
   return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
+}
+
+/** Distancia de la bola al camino: la menor al segmento en curso y al siguiente. Medir solo
+ *  contra el que curse convierte en desvío lateral el trozo de celda que la bola lleve de
+ *  adelanto —`segIdx` avanza con histéresis, así que siempre lleva algo—, y esa hipotenusa
+ *  mata en plena recta a quien va pegado a la pared sin haberse acercado más a ella. */
+export function distToPath(
+  pos: { x: number; y: number },
+  path: { x: number; y: number }[],
+  segIdx: number,
+  origin: { x: number; y: number },
+  cell_size: number
+) {
+  const d = (i: number) => pointToSegmentDist(
+    pos, cellToPixel(path[i], origin, cell_size), cellToPixel(path[i + 1], origin, cell_size));
+  return segIdx + 2 < path.length ? Math.min(d(segIdx), d(segIdx + 1)) : d(segIdx);
 }
 
 export type GameState = "idle" | "playing" | "dead" | "win";

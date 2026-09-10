@@ -25,7 +25,7 @@ function calcSize(fullscreen: boolean, cabecera: number) {
     // descontar todo lo demás. La cabecera va medida y no estimada — la fila de estado
     // envuelve en pantallas estrechas y el panel de victoria aparece a mitad de partida.
     ancho = window.innerWidth - 2 * PAD_FS - MARCO - (apaisado ? AIRE_JUNTA : 0);
-    alto = window.innerHeight - 2 * PAD_FS - cabecera - GAP - MARCO - (apaisado ? 0 : AIRE_JUNTA);
+    alto = window.innerHeight - 2 * PAD_FS - (cabecera ? cabecera + GAP : 0) - MARCO - (apaisado ? 0 : AIRE_JUNTA);
   } else {
     // Sin maximizar la página scrollea igual —chrome, prompt y footer—, así que el tablero
     // se queda en su tamaño cómodo en vez de encoger hasta caber en el viewport.
@@ -39,22 +39,29 @@ function calcSize(fullscreen: boolean, cabecera: number) {
   return Math.max(0, Math.min(Math.floor(porTablero), MAX_SIZE));
 }
 
+function suscribirViewport(onChange: () => void) {
+  window.addEventListener("resize", onChange);
+  window.addEventListener("orientationchange", onChange);
+  return () => {
+    window.removeEventListener("resize", onChange);
+    window.removeEventListener("orientationchange", onChange);
+  };
+}
+
 function useCanvasSize(fullscreen: boolean, cabecera: number) {
   // El tamaño depende de `window`, que no existe en el server: useSyncExternalStore
   // devuelve 0 en SSR y el valor real tras hidratar, suscrito a resize/orientación.
   const leer = useCallback(() => calcSize(fullscreen, cabecera), [fullscreen, cabecera]);
-  return useSyncExternalStore(
-    (onChange) => {
-      window.addEventListener("resize", onChange);
-      window.addEventListener("orientationchange", onChange);
-      return () => {
-        window.removeEventListener("resize", onChange);
-        window.removeEventListener("orientationchange", onChange);
-      };
-    },
-    leer,
-    () => 0,
-  );
+  return useSyncExternalStore(suscribirViewport, leer, () => 0);
+}
+
+/** Si la fila de estado se queda al maximizar. Solo si no cuesta tablero: donde el espacio
+ *  aprieta —el móvil— maximizar es quedarse con el juego y salir por el ✕. Se pregunta con
+ *  la cabecera a 0 para que la respuesta no dependa de si está puesta, que si no se muerde
+ *  la cola: quitarla agranda el tablero, y un tablero al tope la devolvería. */
+function useMandosArriba(fullscreen: boolean) {
+  const leer = useCallback(() => !fullscreen || calcSize(true, 0) >= MAX_SIZE, [fullscreen]);
+  return useSyncExternalStore(suscribirViewport, leer, () => true);
 }
 
 // Alto de todo lo que el área de juego pone encima del panel, medido en cada render: cambia
@@ -74,7 +81,7 @@ function useAltoCabecera(ref: React.RefObject<HTMLDivElement | null>) {
 import {
   SPEED_MULTIPLIERS, SPEED_ORDER, PATH_CELLS, PATH_RIGHT,
   LEFT_INITIAL_VEL, RIGHT_INITIAL_VEL,
-  calcCell, calcTolerance, calcOrigin, cellToPixel, pointToSegmentDist, initBoard,
+  calcCell, calcTolerance, calcOrigin, cellToPixel, pointToSegmentDist, distToPath, initBoard,
   type BoardState, type GameState, type SpeedLevel,
 } from "./engine";
 import { drawBoard, buildSurcoLayer, leerTokens, surcoKey, type Tokens } from "./render";
@@ -170,8 +177,7 @@ function useBoard(
         pintar(); return;
       }
 
-      const offDist = pointToSegmentDist(s.pos, cellToPixel(path[s.segIdx], originRef.current, cs), cellToPixel(path[s.segIdx + 1], originRef.current, cs));
-      if (offDist > calcTolerance(cs)) {
+      if (distToPath(s.pos, path, s.segIdx, originRef.current, cs) > calcTolerance(cs)) {
         s.gameState = "dead"; setGameState("dead");
         pintar(); return;
       }
@@ -301,6 +307,7 @@ export default function EspiralPage() {
 
   const cabeceraRef = useRef<HTMLDivElement>(null);
   const cabecera = useAltoCabecera(cabeceraRef);
+  const mandosArriba = useMandosArriba(fullscreen);
   const size = useCanvasSize(fullscreen, cabecera);
   const tema = useTema();
   const left = useBoard(canvasL, PATH_CELLS, -1, LEFT_INITIAL_VEL, size, speedRef, tema);
@@ -540,17 +547,33 @@ export default function EspiralPage() {
         @media (hover: hover) { .esp-win-link:hover { color: var(--t-accent); text-decoration: underline; } }
         .esp-win-link:active { color: var(--t-accent); text-decoration: underline; }
 
+        /* La salida cuando maximizar se ha llevado la fila de estado. Flota en la esquina
+           para no robarle alto al tablero; el padding le da dedo sin agrandar el icono. */
+        .esp-salir { position: absolute; top: 0; right: 0; padding: 10px; z-index: 2; }
+
         .esp-overlay { animation: esp-fade 0.12s ease; }
         @keyframes esp-fade { from { opacity: 0 } to { opacity: 1 } }
       `}</style>
 
       {/* game area */}
-      <div style={{ padding: fullscreen ? `${PAD_FS}px` : "28px", display: "flex", flexDirection: "column", alignItems: "center", gap: `${GAP}px`, minHeight: fullscreen ? "100%" : undefined, justifyContent: fullscreen ? "center" : undefined }}>
+      <div style={{ position: "relative", padding: fullscreen ? `${PAD_FS}px` : "28px", display: "flex", flexDirection: "column", alignItems: "center", gap: cabecera ? `${GAP}px` : 0, minHeight: fullscreen ? "100%" : undefined, justifyContent: fullscreen ? "center" : undefined }}>
+
+        {!mandosArriba && (
+          <button
+            className="esp-icon esp-salir"
+            onClick={() => setFullscreen(false)}
+            title="Salir de pantalla completa"
+            aria-label="Salir de pantalla completa"
+          >
+            <IconoPantallaCompleta salir />
+          </button>
+        )}
 
         {/* cabecera: lo que va encima del panel, en un bloque para poder medirlo entero */}
         <div ref={cabeceraRef} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: `${GAP}px`, width: "100%" }}>
 
         {/* status row + hint */}
+        {mandosArriba && (
         <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", width: "100%", maxWidth: 960 }}>
         <div className="esp-status" style={{ fontFamily: MONO }}>
           <div style={{ display: "flex", alignItems: "baseline", gap: "8px", whiteSpace: "nowrap" }}>
@@ -609,6 +632,7 @@ export default function EspiralPage() {
           </div>
         )}
         </div>
+        )}
 
         {/* win panel */}
         {bothWin && (
@@ -655,11 +679,14 @@ export default function EspiralPage() {
           </div>
         )}
 
-        {/* boards */}
+        {/* boards. Las etiquetas se van con la fila de estado: apaisado cuestan alto, que es
+            justo lo escaso, y el overlay de cada tablero ya dice qué mano lo gobierna. */}
+        {mandosArriba && (
         <div className="esp-labels" style={{ gap: AIRE_JUNTA, fontFamily: MONO }}>
           <span style={{ width: size, textAlign: "center", color: "var(--t-ink3)", fontSize: "12px", letterSpacing: "0.04em" }}>←</span>
           <span style={{ width: size, textAlign: "center", color: "var(--t-ink3)", fontSize: "12px", letterSpacing: "0.04em" }}>→</span>
         </div>
+        )}
 
         </div>
 

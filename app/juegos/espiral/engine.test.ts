@@ -7,7 +7,7 @@ import {
   PATH_CELLS, PATH_RIGHT, SPEED, SPEED_MULTIPLIERS, SPEED_ORDER,
   LEFT_INITIAL_VEL, RIGHT_INITIAL_VEL,
   buildPath, calcCell, calcTolerance, calcOrigin, cellToPixel, initBoard, pathCenter,
-  pointToSegmentDist,
+  pointToSegmentDist, distToPath,
 } from "./engine";
 
 let fails = 0;
@@ -101,6 +101,52 @@ test("sobre el segmento la distancia es 0", pointToSegmentDist({ x: 5, y: 0 }, a
 test("en perpendicular mide la separación", pointToSegmentDist({ x: 5, y: 3 }, a, b) === 3);
 test("más allá del extremo mide al extremo", pointToSegmentDist({ x: 14, y: 3 }, a, b) === 5);
 test("un segmento degenerado mide al punto", pointToSegmentDist({ x: 3, y: 4 }, a, a) === 5);
+
+// Salirse: lo que mide el motor tiene que ser el desvío lateral y nada más
+
+test(
+  "la tolerancia llega al centro de la pared y no la pasa",
+  [12, 24, 35, 48].every((c) => calcTolerance(c) * 2 === c),
+);
+
+// Regresión: yendo recto con un desvío por debajo de la tolerancia no se sale nadie. Medido
+// solo contra el segmento en curso, el adelanto que la bola lleva dentro de la celda se
+// sumaba al desvío como hipotenusa y mataba en plena recta a quien iba pegado a la pared.
+const recta = (() => {
+  const cell = calcCell(292);
+  const org = calcOrigin(292, cell, PATH_CELLS);
+  const px = (i: number) => cellToPixel(PATH_CELLS[i], org, cell);
+  // El tramo recto más largo del trazado, que es donde el error se acumulaba.
+  let mejor = { ini: 0, len: 0 }, ini = 0;
+  for (let i = 1; i < PATH_CELLS.length - 1; i++) {
+    const o = PATH_CELLS[ini], a = PATH_CELLS[i], b = PATH_CELLS[i + 1];
+    if ((a.x - o.x) * (b.y - a.y) !== (a.y - o.y) * (b.x - a.x)) {
+      if (i - ini > mejor.len) mejor = { ini, len: i - ini };
+      ini = i;
+    }
+  }
+  const a = px(mejor.ini), b = px(mejor.ini + mejor.len);
+  const dir = { x: Math.sign(b.x - a.x), y: Math.sign(b.y - a.y) };
+  const perp = { x: -dir.y, y: dir.x };
+  const lat = calcTolerance(cell) - 0.5;  // pegado a la pared, pero dentro
+  const pos = { x: a.x + perp.x * lat, y: a.y + perp.y * lat };
+  let segIdx = mejor.ini, peor = 0;
+  for (let paso = 0; paso < Math.hypot(b.x - a.x, b.y - a.y); paso++) {
+    pos.x += dir.x; pos.y += dir.y;
+    while (
+      segIdx < PATH_CELLS.length - 2 &&
+      pointToSegmentDist(pos, px(segIdx + 1), px(Math.min(segIdx + 2, PATH_CELLS.length - 1))) <
+        pointToSegmentDist(pos, px(segIdx), px(segIdx + 1)) - 2
+    ) segIdx++;
+    peor = Math.max(peor, distToPath(pos, PATH_CELLS, segIdx, org, cell));
+  }
+  return { peor, tol: calcTolerance(cell), lat };
+})();
+test(
+  "en recta, pegado a la pared, el desvío medido no crece",
+  recta.peor <= recta.tol,
+  `desvío ${recta.lat} · peor medida ${recta.peor.toFixed(2)} · tolerancia ${recta.tol}`,
+);
 
 const tablero = initBoard(PATH_CELLS, origen, LEFT_INITIAL_VEL, calcCell(420));
 test("initBoard empieza en la primera celda del trazado",
