@@ -140,6 +140,34 @@ export const canales = hexa;
 export const colorCuerpo = (p: Paleta, edad: number, e: number) =>
   mix(mix(p.mid, p.vejez, clamp(edad, 0, 1)), p.dim, (1 - e) * 0.42);
 
+/**
+ * Cuánto del viaje del cuerpo hace lo que le cuelga. **Envejecer es del bicho entero, no de su
+ * piel:** el Instrumento y el Cristal son casi todo apéndice —cuña, arco de visión, púas, quilla,
+ * manos, boca—, y con la edad pintada solo en el relleno llegaban a los diez días igual que
+ * nacieron. A medias y no del todo, que en blanco un apéndice deja de decir qué gen es.
+ */
+const CANAS = 0.45;
+
+/**
+ * La paleta que ve un cuerpo de esa edad: la del mundo con sus tonos de bicho ya encanecidos.
+ *
+ * **Va por la paleta y no por cada dibujo** para que no se pueda olvidar: un diseño pinta con los
+ * tonos que le den, así que uno nuevo envejece sin escribir una línea y a uno viejo no se le queda
+ * una pieza joven sin que falle nada. Los del mundo —suelo, casa, comida, tinta— no entran: son la
+ * escena, no el bicho. La rampa tampoco: `mid`, `vejez` y `dim` **son** de dónde y a dónde va el
+ * cuerpo, y moverlas es mover la regla con la que se mide.
+ */
+export function envejecer(p: Paleta, edad: number): Paleta {
+  const t = clamp(edad, 0, 1) * CANAS;
+  if (t < 0.01) return p;
+  const c = (x: string) => mix(x, p.vejez, t);
+  return {
+    ...p,
+    line: c(p.line), maw: c(p.maw), acc: c(p.acc), acc2: c(p.acc2),
+    jaw: c(p.jaw), belly: c(p.belly), fin: c(p.fin), hi: c(p.hi),
+  };
+}
+
 /** PRNG del pintado, de semilla fija. No toca el del motor: aquí nada decide nada. */
 export function azarFijo(s: number) {
   return () => {
@@ -1003,6 +1031,9 @@ const cristalExtension: Design["extension"] = (g, R) => {
 // **Contrapartida conocida:** con treinta a la vez, los arcos de visión y los anillos de
 // sociabilidad se superponen y no se sabe qué arco es de quién.
 
+/** Cuánto se apaga la parte vacía del aforo respecto al cuerpo. Ver `dialCuerpo`. */
+const VACIO = 0.86;
+
 const dialCuerpo: Design["cuerpo"] = (ctx, b, e, p) => {
   const R = b.radio, m = medidas(b.g);
   const bod = colorCuerpo(p, b.edad ?? 0, 1);
@@ -1047,9 +1078,24 @@ const dialCuerpo: Design["cuerpo"] = (ctx, b, e, p) => {
     }
   }
 
-  // cuerpo · el aforo: la energía es un sector, así que se cuenta en vez de estimarse
+  // cuerpo · el aforo: la energía es un sector, así que se cuenta en vez de estimarse.
+  //
+  // **El vacío sale del cuerpo, no del suelo.** Con `bg2` fijo, el sector se leía de maravilla en
+  // un recién nacido y desaparecía en un viejo: la rampa de la edad acaba en `vejez`, que en claro
+  // es el mismo tono que el fondo, así que a los diez días un lleno y un vacío se pintaban igual
+  // —medido: `#fbf8ef` contra `#e6e4d9`— y la energía dejaba de leerse justo en los bichos que más
+  // se miran. Saliendo de `bod` los dos tonos viajan juntos y su distancia no depende de la edad.
+  //
+  // **Y al suelo de la paleta, no a `dim`.** La rampa de la edad sube de `mid` a `vejez`, así que
+  // cualquier ancla que le quede en medio la cruza y el aforo se apaga un día concreto de la vida:
+  // con `dim` el agujero solo se mudaba del último día al quinto, donde está media población
+  // —Δluma 14 sobre 45 y 73 en los extremos—. `maw` es el negro de cada diseño y la rampa nunca
+  // baja hasta él, así que la distancia no se anula en ningún punto.
+  //
+  // Se llena de luz, que es como se leía ya en tema oscuro: antes el claro decía lo contrario que
+  // el oscuro con el mismo dibujo.
   disco();
-  ctx.fillStyle = p.bg2;
+  ctx.fillStyle = mix(bod, p.maw, VACIO);
   ctx.fill();
   ctx.save();
   disco();

@@ -8,7 +8,7 @@
 
 import { MARCA, RADIO_COMIDA, edadDe, luzDe, type Mundo } from "./engine";
 import {
-  azarFijo, clamp, colorCuerpo, designFor, giroDe, mix,
+  azarFijo, clamp, colorCuerpo, designFor, envejecer, giroDe, mix,
   type Cuerpo, type Design, type Paleta,
 } from "./designs";
 
@@ -105,7 +105,7 @@ export function pintarMuestra(
   ctx.fillRect(0, 0, W, H);
   const e = escala * dpr;
   ctx.setTransform(e, 0, 0, e, (W / 2) * dpr, (H / 2) * dpr);
-  d.cuerpo(ctx, { ...b, x: 0, y: 0, hx: 1, hy: 0 }, vigor, p);
+  d.cuerpo(ctx, { ...b, x: 0, y: 0, hx: 1, hy: 0 }, vigor, envejecer(p, b.edad ?? 0));
 }
 
 /**
@@ -176,6 +176,16 @@ export function pintar(
   // Una cría no aparece hecha: durante la primera parte de la noche crece desde nada hasta su
   // tamaño, con el anillo del parto abriéndose a su alrededor. Es lo único que se anima aquí, y se
   // anima porque nacer es justo lo que no se veía.
+  // Las paletas encanecidas se reparten dentro del cuadro: la edad solo toma `vida + 1` valores, así
+  // que un mundo de treinta bichos pide once y no treinta. Muere con el cuadro — una caché que le
+  // sobreviviera habría que invalidarla al cambiar de tema y de diseño, y no vale lo que cuesta.
+  const canas = new Map<number, Paleta>();
+  const paletaCon = (edad: number): Paleta => {
+    let q = canas.get(edad);
+    if (!q) canas.set(edad, (q = envejecer(p, edad)));
+    return q;
+  };
+
   const brote = Math.min(1, noche / 0.6);
   ctx.fillStyle = p.hi;
   ctx.globalAlpha = NIDO_DIA + NIDO_NOCHE * sombra;
@@ -192,7 +202,7 @@ export function pintar(
     // repasar la población entera cada amanecer para que no mintiera.
     const edad = edadDe(m, b);
     if (b.recien && m.noche) {
-      if (brote > 0.02) d.cuerpo(ctx, { ...b, radio: b.radio * brote, edad }, vigor, p);
+      if (brote > 0.02) d.cuerpo(ctx, { ...b, radio: b.radio * brote, edad }, vigor, paletaCon(edad));
       if (brote < 1) {
         ctx.strokeStyle = p.acc;
         ctx.globalAlpha = 1 - brote;
@@ -202,7 +212,7 @@ export function pintar(
       }
       continue;
     }
-    d.cuerpo(ctx, { ...b, edad }, vigor, p);
+    d.cuerpo(ctx, { ...b, edad }, vigor, paletaCon(edad));
 
     // **La despensa no tiene techo, y sin esto no se veía**: quien lleva una semana ahorrando se
     // pintaba igual que quien acaba de comer, y su camada de veintidós parecía salida de la nada.
