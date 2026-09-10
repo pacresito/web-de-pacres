@@ -165,6 +165,7 @@ export type Encuadre = {
   pinta: Pincel[];  // uno por grupo, en el mismo orden
   escala: number;   // px del lienzo por km, la misma para todos los paneles
   tol: number;      // la simplificación que le toca a este país
+  costura: Anillo[]; // en lon/lat: la frontera interior que deja cada pieza de ANEXOS
 };
 
 const cargarLocal = (nombre: string) => CACHE && `${CACHE}/${nombre}`;
@@ -278,6 +279,102 @@ export function laeaInv(x: number, y: number, lon0: number, lat0: number): [numb
   return [lon, lat / rad];
 }
 
+// Lo que Natural Earth dibuja como país aparte y `paises.ts` no reconoce como tal. Esas piezas
+// llevan ISO `-99`, así que el mapa por ISO las suelta y el país que las contiene sale amputado:
+// sin esto Somalia se dibuja sin Somalilandia, que es el tercio del noroeste, y la silueta que se
+// memoriza no es la suya. Se anexan por `ADM0_A3`, lo único que identifica a una pieza sin ISO.
+//
+// Anexar deja dentro una frontera que la silueta ya no dibuja, y ahí sí manda decir que existe:
+// la marca la línea interior, la misma que lleva el Sáhara Occidental. No hace falta describirla
+// —sale de `costuraDe`—, y por eso la anexión no lleva más configuración que el código de la pieza.
+export const ANEXOS: Record<string, string[]> = { so: ["SOL"] };
+
+const clave = (p: [number, number]) => `${p[0]},${p[1]}`;
+
+/**
+ * Los tramos del anillo de una pieza anexada que el país ya tenía: su frontera con él.
+ *
+ * Se casa por vértice exacto y no por cercanía porque Natural Earth corta las dos piezas de la
+ * misma línea —la frontera es literalmente los mismos puntos en las dos—, así que una tolerancia
+ * solo serviría para pegar además tramos de costa que se rozan. El anillo se recorre en ciclo:
+ * el tramo compartido puede cruzar el punto de cierre, y partido ahí saldrían dos líneas con una
+ * muesca en medio.
+ */
+function costuraDe(anillo: Anillo, vertices: Set<string>): Anillo[] {
+  const abierto = anillo.slice(0, -1); // el último repite el primero: en un ciclo estorba
+  const n = abierto.length;
+  const toca = abierto.map((p) => vertices.has(clave(p)));
+  if (toca.every((t) => t)) return [anillo];
+  const tramos: Anillo[] = [];
+  for (let i = 0; i < n; i++) {
+    if (!toca[i] || toca[(i - 1 + n) % n]) continue; // solo desde donde arranca un tramo
+    const tramo: Anillo = [];
+    for (let j = i; toca[j % n] && tramo.length < n; j++) tramo.push(abierto[j % n]);
+    if (tramo.length > 1) tramos.push(tramo);
+  }
+  return tramos;
+}
+
+/**
+ * El contorno de la unión de dos anillos que comparten un tramo de frontera: de cada uno se
+ * recorre lo que NO es la frontera, y los dos arcos se empalman por sus extremos.
+ *
+ * Poner los dos anillos en el mismo path y rellenarlos no vale: la silueta parece entera, pero
+ * en cuanto se traza en vez de rellenarse —el contorno del globo, la ubicación, el país
+ * marcado— la frontera compartida sale como una raya maciza cruzando el país. Y no falla nada.
+ */
+function unir(host: Anillo, pieza: Anillo, tramo: Anillo): Anillo {
+  const dentro = new Set(tramo.slice(1, -1).map(clave));
+  const extremos = [clave(tramo[0]), clave(tramo[tramo.length - 1])];
+  // Podados los puntos interiores del tramo, sus dos extremos quedan seguidos en los dos
+  // anillos, y el paso que va de uno a otro es la frontera entera. El arco de fuera es la vuelta
+  // completa menos ese paso, así que empieza donde la frontera sale y acaba donde entra.
+  const arco = (anillo: Anillo): Anillo => {
+    const a = anillo.slice(0, -1).filter((q) => !dentro.has(clave(q)));
+    const i = a.findIndex((q, k) => extremos.includes(clave(q)) && extremos.includes(clave(a[(k + 1) % a.length])));
+    if (i < 0) throw new Error("el tramo no sale seguido en el anillo: la frontera no es una sola");
+    return [...a.slice(i + 1), ...a.slice(0, i + 1)];
+  };
+  // Los dos anillos recorren la frontera al revés el uno del otro —están a cada lado—, así que
+  // uno acaba donde el otro empieza y empalman sin dar la vuelta a nada.
+  const a = arco(host), b = arco(pieza);
+  if (clave(a[a.length - 1]) !== clave(b[0])) throw new Error("los arcos no empalman: los anillos giran en el mismo sentido");
+  return [...a, ...b.slice(1)];
+}
+
+/** Las piezas de Natural Earth por `ADM0_A3`: lo único que identifica a la que no tiene ISO. */
+export function porAdm0A3(piezas: Pieza[]): Map<string, Pieza> {
+  const m = new Map<string, Pieza>();
+  for (const f of piezas) {
+    const a3 = String(f.properties.ADM0_A3 ?? "");
+    if (a3 && !m.has(a3)) m.set(a3, f);
+  }
+  return m;
+}
+
+/**
+ * Cose a un país las piezas que `ANEXOS` le da, y devuelve de paso las fronteras que quedan
+ * dentro. La usan los dos mapas —la silueta a 1:10m y la costa del globo a 1:50m—, porque el
+ * problema es el mismo en los dos y la fuente corta las piezas por los mismos puntos en ambos.
+ */
+export function anexar(crudo: Poly[], id: string, porA3: Map<string, Pieza>, nombre: string):
+    { polys: Poly[]; costura: Anillo[] } {
+  const polys = [...crudo];
+  const costura: Anillo[] = [];
+  for (const a3 of ANEXOS[id] ?? []) {
+    const trozo = porA3.get(a3);
+    if (!trozo) throw new Error(`Natural Earth no trae ${a3}, que ${nombre} anexa`);
+    for (const pieza of polysDe(trozo.geometry)) {
+      const i = polys.findIndex((poly) => costuraDe(pieza[0], new Set(poly[0].map(clave))).length === 1);
+      if (i < 0) throw new Error(`${a3} no comparte un solo tramo de frontera con ${nombre}: la unión no daría un anillo`);
+      const tramo = costuraDe(pieza[0], new Set(polys[i][0].map(clave)))[0];
+      costura.push(tramo);
+      polys[i] = [unir(polys[i][0], pieza[0], tramo), ...polys[i].slice(1), ...pieza.slice(1)];
+    }
+  }
+  return { polys, costura };
+}
+
 /** Todos los países, con sus polígonos elegidos y proyectados y su sitio en el lienzo. */
 export async function encuadres(): Promise<Encuadre[]> {
   const g10 = await cargar("ne_10m_admin_0_countries");
@@ -286,6 +383,7 @@ export async function encuadres(): Promise<Encuadre[]> {
     const iso = String(f.properties.ISO_A2_EH ?? f.properties.ISO_A2 ?? "").toLowerCase();
     if (iso && iso !== "-99" && !porIso.has(iso)) porIso.set(iso, f);
   }
+  const porA3 = porAdm0A3(g10.features);
 
   // El coral, para los países que lo piden en AJUSTES: líneas sueltas en lon/lat, no polígonos —
   // un arrecife no encierra nada, es el borde de lo que asoma.
@@ -299,7 +397,8 @@ export async function encuadres(): Promise<Encuadre[]> {
     if (feat.properties.NAME_ES !== p.nombre)
       console.warn(`  aviso  ${p.id}: NAME_ES="${feat.properties.NAME_ES}" y paises.ts dice "${p.nombre}"`);
 
-    let crudo = polysDe(feat.geometry);
+    const { polys: anexado, costura } = anexar(polysDe(feat.geometry), p.id, porA3, p.nombre);
+    let crudo = anexado;
     let tol = TOL;
     const puntosNE = crudo.reduce((n, poly) => n + poly.flat().length, 0);
     if (puntosNE < MIN_PUNTOS) {
@@ -362,7 +461,7 @@ export async function encuadres(): Promise<Encuadre[]> {
       };
     });
 
-    salida.push({ id: p.id, nombre: p.nombre, grupos, pinta, escala, tol });
+    salida.push({ id: p.id, nombre: p.nombre, grupos, pinta, escala, tol, costura });
   }
   return salida;
 }

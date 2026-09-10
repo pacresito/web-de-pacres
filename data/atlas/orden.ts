@@ -20,7 +20,7 @@ export const ORDEN: { continente: Continente; marco: Marco; paises: string[] }[]
   ] },
   { continente: "Oceanía", marco: [110, -48, 205, 12], paises: ["pw", "fm", "nr", "mh", "tv", "ki", "ws", "to", "fj", "vu", "sb", "pg", "au", "nz"] },
   { continente: "África", marco: [-26, -36, 60, 38], paises: [
-    "ma", "dz", "tn", "ly", "eg", "er", "sd", "td", "ne", "ml", "mr", "sn", "gm", "cv", "gw", "sl", "gn", "lr",
+    "ma", "dz", "tn", "ly", "eg", "er", "sd", "td", "ne", "ml", "mr", "sn", "gm", "cv", "gw", "gn", "sl", "lr",
     "ci", "bf", "gh", "tg", "bj", "ng", "cm", "cf", "ss", "et", "dj", "so", "sc", "ke", "ug", "bi", "rw", "cd",
     "cg", "ga", "gq", "st", "ao", "zm", "mw", "tz", "km", "mu", "mg", "mz", "sz", "zw", "bw", "na", "za", "ls",
   ] },

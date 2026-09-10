@@ -19,7 +19,8 @@
 import fs from "node:fs";
 import { PAISES, PAIS_POR_ID, type Pais } from "../lib/atlas/paises";
 import {
-  AJUSTES, BOX, PAD, type Anillo, type Caja, caja, cargar, encuadres, laea, polysDe,
+  AJUSTES, ANEXOS, BOX, PAD, type Anillo, anexar, type Caja, caja, cargar, encuadres, laea,
+  polysDe, porAdm0A3,
 } from "./atlas-geo.mjs";
 
 const SALIDA = new URL("../data/atlas/formas.ts", import.meta.url);
@@ -144,7 +145,7 @@ function aLaCosta(p: [number, number], anillos: Anillo[]): number {
 }
 
 const salida: Salida[] = [];
-for (const { id, nombre, grupos, pinta, tol } of await encuadres()) {
+for (const { id, nombre, grupos, pinta, tol, costura } of await encuadres()) {
   let d = "", arrecife = "", puntos = 0;
   const trazados: Anillo[] = [];
   grupos.forEach(({ proy, proyHueco, proyCoral, proyAnillo }, i) => {
@@ -231,6 +232,17 @@ for (const { id, nombre, grupos, pinta, tol } of await encuadres()) {
     suelta();
   }
 
+  // Y la que deja una pieza anexada, que ya viene trazada de la fuente: se proyecta y se
+  // simplifica como el contorno, con la misma `tol`, o la línea se despegaría de la costa en los
+  // dos cabos donde la frontera muere contra ella.
+  for (const tramo of costura) {
+    const out = simplificar(tramo.map(([lon, lat]) => {
+      const [x, y] = laea(lon, lat, lon0, lat0);
+      return [px(x), py(y)] as [number, number];
+    }), tol);
+    if (out.length > 1) linea += "M" + out.map(([x, y]) => `${Math.round(x)},${Math.round(y)}`).join("L");
+  }
+
   salida.push({ id, nombre, d, arrecife, linea, separador, capital, ladoKm: Math.round(lado), lon: lon0, lat: lat0, puntos });
 }
 
@@ -262,13 +274,21 @@ const g50 = await cargar("ne_50m_admin_0_countries");
 // repetir su contorno en formas.ts. Los que 1:110m no trae —los diminutos— se pintan como punto
 // desde su lon/lat, que es exactamente lo que son a esta escala.
 const costa: { id: string; r: number[][] }[] = [];
+// Lo que `ANEXOS` cose en la silueta hay que coserlo también aquí, y no basta con etiquetar la
+// pieza con el país: el globo traza la costa anillo a anillo, así que dos anillos pegados dibujan
+// por dentro del país la frontera que la silueta ya no tiene. Cosidos, la pieza deja de ser un
+// anillo suyo, y por eso se salta al recorrer la fuente.
+const porA3 = porAdm0A3(g50.features);
+const anexadas = new Set(Object.values(ANEXOS).flat());
 for (const f of g50.features) {
+  if (anexadas.has(String(f.properties.ADM0_A3 ?? ""))) continue;
   const iso = String(f.properties.ISO_A2_EH ?? f.properties.ISO_A2 ?? "").toLowerCase();
   const id = PAIS_POR_ID.has(iso) ? iso : "";
   // El agujero del país que lo lleva viaja con su exterior, y el país resaltado se pinta con
   // `evenodd`: Sudáfrica enseña a Lesoto aquí igual que en la silueta. En el fondo, donde todo
   // el mundo va en un path, el agujero lo tapa el propio Lesoto, que se dibuja del mismo color.
-  for (const poly of polysDe(f.geometry)) for (const anillo of AJUSTES[id]?.enclave ? poly : [poly[0]]) {
+  const { polys } = anexar(polysDe(f.geometry), id, porA3, id);
+  for (const poly of polys) for (const anillo of AJUSTES[id]?.enclave ? poly : [poly[0]]) {
     // Una isla más pequeña que el paso de muestreo no llega a un píxel del globo: son cientos
     // de anillos que solo pesan. Las que son un país entero se pintan como punto, igual que
     // los microestados que 1:50m tampoco trae.
