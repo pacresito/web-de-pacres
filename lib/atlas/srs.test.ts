@@ -118,6 +118,25 @@ assert.strictEqual(t.primeraVez, false);
 assert.deepStrictEqual(t.tapados, ["nombre", "capital", "bandera"]);
 assert.ok(!t.tapados.includes("lugar"));
 
+// **Lo que descansa no se tapa, aunque encabece la sospecha.** Un país vuelve por un dato vencido
+// y se llevaba por delante el que se acababa de acertar, que va primero justo porque acertar lo
+// recién fallado deja la vida corta y la sospecha alta.
+{
+  // La capital se falló y se acertó hace veinte segundos: vida de minutos, y por eso la sospecha
+  // más alta del país. Los otros tres aguantan cien días y se vieron esta semana.
+  const recienAcertado = { visto: AHORA - 20_000, vida: VIDA_OLVIDO * 3, aciertos: 1, fallado: false };
+  const mazo: Mazo = { es: { nombre: sabido(100, 1), capital: recienAcertado, bandera: sabido(100, 2), lugar: sabido(100, 3) } };
+  assert.ok(DATOS.every((d) => d === "capital" || sospecha(recienAcertado, AHORA) > sospecha(mazo.es![d], AHORA)),
+    "encabeza la sospecha del país");
+  assert.ok(!montar(mazo, espana, AHORA).tapados.includes("capital"), "y aun así no se pregunta");
+  // Pasado su descanso vuelve al primer puesto, que es donde su sospecha lo pone.
+  assert.strictEqual(montar(mazo, espana, AHORA + DESCANSO).tapados[0], "capital");
+  // Detrás y no fuera: si todos descansan hay que preguntar por alguno, que el país ya está
+  // elegido y una tarjeta sin nada tapado no es una tarjeta.
+  const todos: Mazo = { es: Object.fromEntries(DATOS.map((d) => [d, recienAcertado])) };
+  assert.strictEqual(montar(todos, espana, AHORA).tapados.length, huecos(todos, "es"));
+}
+
 // Calificar solo toca el dato calificado, no la tarjeta entera. Es la razón de que cada dato
 // lleve su propio reloj: acertar la bandera no debe estirar la capital.
 const tras = calificar(aprendido, "es", "nombre", "fallo", AHORA);

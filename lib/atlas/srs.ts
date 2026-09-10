@@ -194,7 +194,17 @@ export type Tarjeta = { pais: Pais; tapados: Dato[]; primeraVez: boolean };
 export function montar(mazo: Mazo, pais: Pais, ahora: number): Tarjeta {
   const primeraVez = DATOS.every((d) => !mazo[pais.id]?.[d]);
   if (primeraVez) return { pais, tapados: [], primeraVez };
-  const orden = [...DATOS].sort((a, b) => sospecha(mazo[pais.id]?.[b], ahora) - sospecha(mazo[pais.id]?.[a], ahora));
+  // **Los que descansan van detrás, no fuera.** El descanso decide qué país sale, pero si aquí no
+  // se mirara, un país que vuelve por un dato vencido se llevaría por delante el que acabas de
+  // acertar —y es el primero de la lista, porque acertar lo recién fallado deja la vida corta y
+  // la sospecha alta—. Detrás y no fuera porque el país ya está elegido: si todos descansan hay
+  // que preguntar por alguno igual, y una tarjeta sin nada tapado no es una tarjeta.
+  //
+  // El dato sin ver cae con ellos, que es donde estaba: preguntar por lo que no se ha presentado
+  // no enseña, y su sospecha de −1 lo deja el último de todos.
+  const preguntable = (d: Dato) => { const e = mazo[pais.id]?.[d]; return !!e && !descansando(e, ahora); };
+  const orden = [...DATOS].sort((a, b) =>
+    Number(preguntable(b)) - Number(preguntable(a)) || sospecha(mazo[pais.id]?.[b], ahora) - sospecha(mazo[pais.id]?.[a], ahora));
   return { pais, tapados: orden.slice(0, huecos(mazo, pais.id)), primeraVez };
 }
 
@@ -247,6 +257,10 @@ const asentado = (e: Estado | undefined) => !!e && e.vida >= VIDA_ASENTADO;
  */
 export const DESCANSO = 30 * 60_000;
 
+/** Si un dato aún no puede volver a salir: lo fallado espera lo que aguante, lo acertado el tope. */
+const descansando = (e: Estado | undefined, ahora: number) =>
+  !!e && ahora - e.visto < (e.fallado ? e.vida * DIA : DESCANSO);
+
 /**
  * Cuántas tarjetas tienen que pasar antes de que un país pueda repetir. El descanso va por dato y
  * mide tiempo, así que no impide que el mismo país vuelva en la tarjeta de al lado con otro de sus
@@ -281,8 +295,7 @@ export function siguiente(mazo: Mazo, orden: string[], ahora: number, recientes:
       if (!respaldo || s > respaldo.s) respaldo = { id: p.id, s };
       if (acabaDeSalir) continue;
       if (!libre || s > libre.s) libre = { id: p.id, s };
-      // Lo fallado espera lo que aguante, que es poco; lo acertado, el tope.
-      if (estado && ahora - estado.visto < (estado.fallado ? estado.vida * DIA : DESCANSO)) continue;
+      if (descansando(estado, ahora)) continue;
       if (!mejor || s > mejor.s) mejor = { id: p.id, s };
     }
   }
