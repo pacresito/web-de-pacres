@@ -21,7 +21,11 @@ export interface Persona {
    * cuatro que no lo traen.
    */
   sexo?: "h" | "m";
-  /** Con la precisión que consta: `"1986"` o `"1986-03-01"`. Solo los Word dan defunción. */
+  /**
+   * Con la precisión que consta, y son tres: `"1944"`, `"2015-07"` y `"1986-03-01"`. El mes
+   * sin día existe porque de un fallecimiento se recuerda «en julio» antes que el día, y
+   * redondearlo al año tira lo único que quedaba. Solo los Word dan defunción.
+   */
   birth?: string;
   death?: string;
   /**
@@ -30,7 +34,10 @@ export interface Persona {
    * de la que contar, la regla no se dispara y el árbol ya lo da por vivo.
    */
   vive?: true;
-  /** Qué dato marcaba el docx como dudoso — nunca "esta persona es dudosa". */
+  /**
+   * Qué dato marcaba el docx como dudoso — nunca "esta persona es dudosa". Uno solo, y el
+   * de fechas las duda todas: no señala cuál de las dos.
+   */
   incierto?: "nombre" | "fechas";
   nota?: string;
   fuentes: string[];
