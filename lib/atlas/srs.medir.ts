@@ -1,11 +1,16 @@
 // El medidor de los tres umbrales de la cola: `DESCANSO`, el listón que asienta un dato y
 // `MAX_EN_EL_AIRE`. Fuera del build, como los tests: `npx tsx lib/atlas/srs.medir.ts`.
 //
-// Los tres se eligieron sobre dos escenas que no se parecen en nada. La **sesión activa**, donde
+// Los tres se eligieron sobre escenas que no se parecen en nada. La **sesión activa**, donde
 // decide el descanso: el freno puesto y el mazo entero repasado hace un rato, así que todo compite
 // con sospechas de milésimas y el dato de menos vida —el que se acaba de fallar— gana el ranking
-// una vez tras otra. Y la **tarde maratón**, donde deciden los otros dos: cientos de tarjetas
-// seguidas sin que pase un solo día, que es la única manera de abrir el mazo de par en par.
+// una vez tras otra. El **mazo rodado**, que es la misma pregunta cuando ya hay cientos de datos
+// vistos y la mayoría se vio hace días. Y la **tarde maratón**, donde deciden los otros dos:
+// cientos de tarjetas seguidas sin que pase un solo día, que es la única manera de abrir el mazo
+// de par en par.
+//
+// **Las dos primeras contestan distinto y las dos hacen falta**: lo que el descanso puede apartar
+// depende de cuánto haya para preguntar, así que el mismo número es bueno en una y malo en la otra.
 import { calificar, DATOS, DESCANSO, HUECO, MAX_EN_EL_AIRE, montar, nuevosAciertos, siguiente,
   sospecha, type Dato, type Mazo, type Nota } from "./srs";
 import { PAISES, PAIS_POR_ID } from "./paises";
@@ -138,13 +143,16 @@ const CABECERA = "  reglas                           países   datos distintos  
 console.log(`SESIÓN ACTIVA · 35 países en el aire, ${TARJETAS} tarjetas a ${SEGUNDOS_POR_TARJETA} s, fallando una de cada tres\n`);
 console.log("El freno: lo acertado espera el tope, lo fallado solo lo que aguante.");
 console.log(CABECERA);
-for (const d of [0, 3 * 60_000, DESCANSO, 60 * 60_000])
+for (const d of [0, 3 * 60_000, 30 * 60_000, 45 * 60_000, DESCANSO])
   fila(d === 0 ? "sin descanso" : `descanso ${d / 60_000} min`, { ...REALES, descanso: d });
 fila(`plano: ${DESCANSO / 60_000} min también al fallado`, { ...REALES, plano: true });
 console.log("\n  Sin freno la sesión se queda en la mitad de países y un dato sale ocho veces. Y se degenera");
-console.log("  por los dos lados: plano aparta lo fallado en vez de traerlo de vuelta —sale una sola vez—,");
-console.log("  y un tope más largo que la sesión deja la cola sin nadie disponible, con lo que manda el");
-console.log("  escalón de abajo y se repite igual que sin freno. Media hora cae entre las dos cosas.\n");
+console.log("  por los dos lados: plano aparta lo fallado en vez de traerlo de vuelta, y un tope más largo");
+console.log("  que la sesión deja la cola sin nadie disponible, con lo que manda el escalón de abajo —que");
+console.log("  no mira el descanso— y se repite igual que sin freno. Aquí el mazo entero se vio hace entre");
+console.log("  3 y 38 minutos, así que ese acantilado cae entre la media hora y los tres cuartos: pasado");
+console.log("  él, plano y por respuesta dan lo mismo, que es la señal de que ya no manda ninguno.");
+console.log("  Es la escena del arranque; con el mazo rodado, más abajo, el mismo número va al revés.\n");
 
 console.log("Y la vida de un olvido, que es lo único que frena a lo que se acaba de fallar:");
 console.log(CABECERA);
@@ -152,6 +160,50 @@ for (const v of [0.0005, VIDA_OLVIDO, 0.002, 0.01])
   fila(`vida de un olvido ${v} d (${Math.round(v * 86_400)} s)`, { ...REALES, vidaOlvido: v });
 console.log("\n  Entre cuarenta segundos y tres minutos apenas cambia nada: ahí el que limita es el hueco, no");
 console.log("  la espera. Lo que sí se nota es pasarse del largo de la sesión, que es dejar de volver.");
+
+// ── El mazo rodado ──────────────────────────────────────────────────────────────────────────
+/**
+ * Un mazo ya andado: `paises` con los cuatro datos asentados, vidas de uno a noventa días y
+ * vistos entre cero y 1,4 vidas atrás, así que parte llega vencido y parte no.
+ *
+ * Es la otra mitad de la pregunta del descanso. En la sesión activa todo lo que hay se acaba de
+ * ver, así que apartarlo una hora deja la cola sin nadie; aquí hay cientos de datos que no se han
+ * tocado hoy, y entonces apartar más reparte más. **Lo que decide no es el reloj, es cuánto queda
+ * por preguntar**, y eso lo dice el tamaño del mazo y no el valor del umbral.
+ */
+function mazoRodado(paises: number): Mazo {
+  // Determinista: el mismo tamaño da siempre el mismo mazo, así que una fila se puede repetir.
+  const az = (...partes: string[]) => {
+    let h = 2166136261;
+    for (const c of partes.join("·")) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); }
+    h ^= h >>> 16;
+    return (h >>> 0) / 4294967296;
+  };
+  const mazo: Mazo = {};
+  for (const id of RECORRIDO.slice(0, paises)) {
+    mazo[id] = {};
+    for (const d of DATOS) {
+      const vida = 1 + az(id, d) * 89;
+      mazo[id]![d] = { vida, aciertos: 3, visto: T0 - az(id, d, "cuando") * 1.4 * vida * DIA, fallado: false };
+    }
+  }
+  return mazo;
+}
+
+const TARJETAS_LARGAS = 200;
+console.log(`\nMAZO RODADO · ${TARJETAS_LARGAS} tarjetas seguidas (${(TARJETAS_LARGAS * SEGUNDOS_POR_TARJETA) / 60} min), fallando una de cada tres\n`);
+console.log("  países vistos   descanso   países   datos distintos   máx veces un dato");
+for (const paises of [10, 20, 35, 60, 100, 150]) {
+  for (const d of [30 * 60_000, DESCANSO]) {
+    const r = jugar(mazoRodado(paises), TARJETAS_LARGAS, { ...REALES, descanso: d }, (_, i) => (i % 3 === 0 ? "fallo" : "bien"));
+    const marca = d === DESCANSO ? "  ←" : "   ";
+    console.log(`  ${String(paises).padStart(13)}   ${String(d / 60_000).padStart(3)} min${marca}   ${String(r.paises.size).padStart(6)}   ${String(r.veces.size).padStart(15)}   ${String(Math.max(...r.veces.values())).padStart(17)}`);
+  }
+}
+console.log("\n  Con veinte países el descanso largo aprieta, como en la sesión activa: no hay material");
+console.log("  suficiente y el escalón de abajo acaba mandando. De sesenta en adelante se da la vuelta —");
+console.log("  hay de sobra que preguntar, así que apartar más lejos lo recién acertado reparte la sesión");
+console.log("  entre más países y no entre menos. El umbral no se elige contra el reloj: contra el mazo.");
 
 // ── El hueco ────────────────────────────────────────────────────────────────────────────────
 // El descanso va por dato, así que no impide que el mismo país vuelva enseguida con otro de sus

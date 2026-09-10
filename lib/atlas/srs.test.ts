@@ -187,8 +187,18 @@ assert.strictEqual(siguiente(enElAire, orden, AHORA)!.id, orden[9]); // nueve en
   const reciente = (ms: number, v: number, fallado = false) => ({ visto: AHORA - ms, vida: v, aciertos: 0, fallado });
   // La sesión activa: treinta países en el aire —el freno puesto, no entran nuevos— y todos
   // repasados hace un rato, que es cuando la sospecha de todo el mazo se queda en milésimas.
+  //
+  // «Un rato» va medido **contra el descanso** y no en minutos fijos: lo que se prueba es que lo
+  // que descansa cede el turno a quien puede salir, así que el mazo tiene que poder salir. Con un
+  // número escrito a mano, subir el descanso por encima de él no rompe la regla — deja la escena
+  // sin sentido, y el test pasaría a comprobar otra cosa sin decirlo.
+  //
+  // La vida son tres días por dos razones que se tocan: por debajo del listón, para que los diez
+  // cuenten como en el aire y el freno no cuele un país nuevo; y bastante para que su sospecha
+  // quede por debajo de la del dato recién visto, que es lo que el primer `assert` exige. Si un
+  // descanso mucho más largo rompe ese equilibrio, es ese `assert` el que lo dice.
   const base = PAISES.slice(0, MAX_EN_EL_AIRE);
-  const enSesion: Mazo = Object.fromEntries(base.map((p) => [p.id, { nombre: reciente(40 * 60_000, 2) }]));
+  const enSesion: Mazo = Object.fromEntries(base.map((p) => [p.id, { nombre: reciente(DESCANSO + 10 * 60_000, 3) }]));
   const fallado = base[0].id;
   // Un dato que se acaba de ver: descansa aunque mande en la cola. Y le basta con mandar —no con
   // llegar a 1— porque el ranking es relativo: sin freno saldría en la tarjeta de al lado.

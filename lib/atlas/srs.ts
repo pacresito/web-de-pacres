@@ -241,7 +241,7 @@ const asentado = (e: Estado | undefined) => !!e && e.vida >= VIDA_ASENTADO;
 
 /**
  * Lo que descansa un dato al que se ha dicho que sí. **Lo decide la respuesta, no la vida**: quien
- * lo acierta lo aparta media hora, y quien lo falla espera solo lo que aguante —minuto y medio el
+ * lo acierta lo aparta una hora, y quien lo falla espera solo lo que aguante —minuto y medio el
  * olvido, un cuarto de hora el estreno—, que es volver a verlo dentro de la sesión.
  *
  * Descansar hace falta porque **el ranking es relativo y la sospecha, un cociente**: dentro de una
@@ -250,12 +250,20 @@ const asentado = (e: Estado | undefined) => !!e && e.vida >= VIDA_ASENTADO;
  * mitad de países y un dato sale nueve veces de cincuenta; con un freno plano para todos se va por
  * el otro lado, porque dura más que la sesión y aparta lo fallado en vez de traerlo de vuelta.
  *
+ * **Cuánto vale una hora depende del mazo, no del reloj**, y por eso el medidor trae dos escenas.
+ * Cuando el descanso llega a apartar todo lo que hay, `siguiente` cae al escalón de abajo, que no
+ * lo mira, y vuelve a mandar el de menos vida —el que se acaba de responder—: con veinte países
+ * empezados, una hora reparte peor que media. Con cien ya vistos se da la vuelta, porque queda de
+ * sobra que preguntar y apartar más lejos reparte la sesión entre más países: 114 de 150 contra
+ * los 94 de la media hora. **Se elige para el mazo rodado, que es donde se juega de verdad**, y lo
+ * que paga es el arranque, donde de todas formas casi todo está sin ver y no hay nada que apartar.
+ *
  * **Y lo decide la respuesta y no la vida porque no son lo mismo**: acertar algo que se acaba de
  * fallar deja la vida en minutos —solo suma el tiempo transcurrido—, así que mirándola ese «sí» se
  * trataba como un «no» y volvía a los tres minutos. Cinco de esos llenan el contador de «aprendido»
  * en tres cuartos de hora. Las cifras salen de `srs.medir.ts`.
  */
-export const DESCANSO = 30 * 60_000;
+export const DESCANSO = 60 * 60_000;
 
 /** Si un dato aún no puede volver a salir: lo fallado espera lo que aguante, lo acertado el tope. */
 const descansando = (e: Estado | undefined, ahora: number) =>
