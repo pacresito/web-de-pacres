@@ -273,39 +273,60 @@ const g50 = await cargar("ne_50m_admin_0_countries");
 // Cada anillo lleva el país al que pertenece, así el globo resalta el suyo sin que haya que
 // repetir su contorno en formas.ts. Los que 1:110m no trae —los diminutos— se pintan como punto
 // desde su lon/lat, que es exactamente lo que son a esta escala.
-const costa: { id: string; r: number[][] }[] = [];
+const costa: { id: string; r: number[][]; territorio?: 1 }[] = [];
 // Lo que `ANEXOS` cose en la silueta hay que coserlo también aquí, y no basta con etiquetar la
 // pieza con el país: el globo traza la costa anillo a anillo, así que dos anillos pegados dibujan
 // por dentro del país la frontera que la silueta ya no tiene. Cosidos, la pieza deja de ser un
 // anillo suyo, y por eso se salta al recorrer la fuente.
 const porA3 = porAdm0A3(g50.features);
 const anexadas = new Set(Object.values(ANEXOS).flat());
+// **Un territorio también es de alguien.** Groenlandia, la Polinesia o Puerto Rico son países
+// aparte en la fuente y no están en `paises.ts`, así que sin esto son tierra de nadie: se pintan,
+// pero no se resaltan con su país ni responden al toque del globo. El dueño sale de `SOVEREIGNT`,
+// que la propia fuente trae, mirando qué país de Atlas se declara soberano de sí mismo.
+//
+// Va **marcado** y no como un anillo más del país, porque es suyo pero no es él: el globo cuenta
+// el tamaño del país, y Groenlandia en el mismo verde que Dinamarca dice que mide cincuenta veces
+// lo que mide. `paises.ts` sigue dando su superficie y `formas.ts` su forma, las dos sin
+// territorios.
+const soberanoDe = new Map<string, string>();
+for (const f of g50.features) {
+  const iso = String(f.properties.ISO_A2_EH ?? f.properties.ISO_A2 ?? "").toLowerCase();
+  if (PAIS_POR_ID.has(iso)) soberanoDe.set(String(f.properties.SOVEREIGNT ?? ""), iso);
+}
 for (const f of g50.features) {
   if (anexadas.has(String(f.properties.ADM0_A3 ?? ""))) continue;
   const iso = String(f.properties.ISO_A2_EH ?? f.properties.ISO_A2 ?? "").toLowerCase();
-  const id = PAIS_POR_ID.has(iso) ? iso : "";
+  const propio = PAIS_POR_ID.has(iso);
+  const id = propio ? iso : (soberanoDe.get(String(f.properties.SOVEREIGNT ?? "")) ?? "");
   // El agujero del país que lo lleva viaja con su exterior, y el país resaltado se pinta con
   // `evenodd`: Sudáfrica enseña a Lesoto aquí igual que en la silueta. En el fondo, donde todo
   // el mundo va en un path, el agujero lo tapa el propio Lesoto, que se dibuja del mismo color.
-  const { polys } = anexar(polysDe(f.geometry), id, porA3, id);
-  for (const poly of polys) for (const anillo of AJUSTES[id]?.enclave ? poly : [poly[0]]) {
+  // Los ajustes son del país, así que solo se le aplican a su propia pieza.
+  const { polys } = anexar(polysDe(f.geometry), propio ? id : "", porA3, id);
+  for (const poly of polys) for (const anillo of propio && AJUSTES[id]?.enclave ? poly : [poly[0]]) {
     // Una isla más pequeña que el paso de muestreo no llega a un píxel del globo: son cientos
     // de anillos que solo pesan. Las que son un país entero se pintan como punto, igual que
     // los microestados que 1:50m tampoco trae.
     const b: Caja = caja([anillo]);
     if (Math.max(b.x1 - b.x0, b.y1 - b.y0) < PASO_GLOBO * 2) continue;
     const r = ralear(anillo, PASO_GLOBO);
-    if (r.length >= 3) costa.push({ id, r: r.map(([lon, lat]) => [+lon.toFixed(1), +lat.toFixed(1)]) });
+    // La marca solo tiene sentido con dueño: la Antártida o Taiwán no son el territorio de nadie.
+    if (r.length >= 3) costa.push({ id, r: r.map(([lon, lat]) => [+lon.toFixed(1), +lat.toFixed(1)]),
+                                   ...(!propio && id ? { territorio: 1 as const } : {}) });
   }
 }
-const conAnillo = new Set(costa.filter((c) => c.id).map((c) => c.id));
+// El país que solo asoma por un territorio sigue necesitando su punto: lo que cuenta es tener
+// anillo **propio**.
+const conAnillo = new Set(costa.filter((c) => c.id && !c.territorio).map((c) => c.id));
 const soloPunto = PAISES.filter((p) => !conAnillo.has(p.id)).map((p) => p.nombre);
 
 fs.writeFileSync(SALIDA_MUNDO, `// GENERADO por scripts/build-atlas-formas.mts — no editar a mano.
 // Fuente: Natural Earth 1:50m. Costa del mundo en lon/lat; la ortográfica se hace en el render.
-// \`id\` es el país de Atlas al que pertenece el anillo, o "" si no es ninguno.
+// \`id\` es el país de Atlas al que pertenece el anillo, o "" si no es ninguno. \`territorio\` marca
+// el que es suyo sin ser él —Groenlandia de Dinamarca—: se resalta con el país, en otro tono.
 
-export const MUNDO: { id: string; r: number[][] }[] = ${JSON.stringify(costa)};
+export const MUNDO: { id: string; r: number[][]; territorio?: 1 }[] = ${JSON.stringify(costa)};
 `);
 
 for (const s of salida.sort((a, b) => b.ladoKm - a.ladoKm))

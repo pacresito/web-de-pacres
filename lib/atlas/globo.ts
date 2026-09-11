@@ -130,8 +130,9 @@ function aSegmento(px: number, py: number, ax: number, ay: number, bx: number, b
  *    saliera pequeño, Palestina se quedaba con los toques de dentro de Israel, y Luxemburgo con
  *    los de Bélgica —países que sí se dibujan, y a los que se puede apuntar—.
  * 2. **El que contiene el toque**, y el más pequeño de ellos si el mapa los solapa.
- * 3. **El más cercano**, para el toque que cae en el mar o en tierra de nadie —Groenlandia, el
- *    Sáhara Occidental, la Antártida—, que si no dejaría el dedo en el vacío.
+ * 3. **El más cercano**, para el toque que cae en el mar o en tierra de nadie —la Antártida,
+ *    Taiwán, el glaciar de Siachen—, que si no dejaría el dedo en el vacío. Es poca: un territorio
+ *    engancha a su soberano, así que Groenlandia devuelve Dinamarca.
  * 4. Nada: el toque no engancha y se vuelve a intentar.
  *
  * **El punto va antes que el contorno porque si no es inalcanzable.** El de Andorra cae dentro del

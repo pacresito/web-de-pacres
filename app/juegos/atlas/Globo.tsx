@@ -23,6 +23,12 @@ const RADIO_PUNTOS = 50;
 /** Los anillos de un país, o ninguno si no se pide ninguno. */
 const anillosDe = (quien: string | null) => (quien ? MUNDO.filter((a) => a.id === quien).map((a) => a.r) : []);
 
+/** Lo que es del país sin ser él: Groenlandia de Dinamarca, la Polinesia de Francia. */
+const territoriosDe = (quien: string | null) =>
+  (quien ? MUNDO.filter((a) => a.id === quien && a.territorio).map((a) => a.r) : []);
+const propiosDe = (quien: string | null) =>
+  (quien ? MUNDO.filter((a) => a.id === quien && !a.territorio).map((a) => a.r) : []);
+
 /**
  * El globo de la tarjeta: la Tierra centrada en el país, con él resaltado. Es quien cuenta el
  * tamaño y la ubicación, que la silueta ya no dice porque va normalizada.
@@ -49,12 +55,12 @@ export default function Globo({ id, lon, lat, r = 74, lado, oculto, puntos, marc
   const svg = useRef<SVGSVGElement>(null);
   // El mundo entero, que es lo que cuesta: 23.000 puntos por proyectar. Va aparte de la marca
   // porque marcar no lo cambia —son diez milisegundos por globo, y al marcar hay dos vivos—.
-  const { proy, cercanos, tierra, relleno, mio, punto, diminutos } = useMemo(() => {
+  const { proy, cercanos, tierra, relleno, mio, suyoLejos, punto, diminutos } = useMemo(() => {
     const proy = ortografica(lon, lat, r);
     // `null` y no "" para el que no se resalta: la cadena vacía es el id de la tierra que no es de
     // ningún país, y se llevaría el resaltado entera.
     const resaltado = oculto ? null : id;
-    const suyos = anillosDe(resaltado);
+    const suyos = propiosDe(resaltado);
     // Los que se dibujan son los mismos que se pueden enganchar, y por eso salen de aquí: dos
     // listas separadas serían un punto que se ve y no responde, o al revés.
     const cercanos = puntos ? PUNTOS.filter((p) => gradosEntre(lon, lat, p.lon, p.lat) <= RADIO_PUNTOS) : [];
@@ -65,6 +71,9 @@ export default function Globo({ id, lon, lat, r = 74, lado, oculto, puntos, marc
       // un solo tono con rayas, y no se lee cuál de los dos lados de la costa es mar.
       relleno: rellenoDelGlobo(MUNDO.map((a) => a.r), proy),
       mio: pathDelGlobo(suyos, proy),
+      // Aparte del país y en otro tono: el globo es quien cuenta cuánto mide, y Groenlandia en el
+      // mismo verde que Dinamarca la haría cincuenta veces más grande de lo que es.
+      suyoLejos: pathDelGlobo(territoriosDe(resaltado), proy),
       // Los diminutos no están en el mapa de baja resolución del globo, y a esta escala un
       // punto es exactamente lo que son. Va por su sitio en `FORMAS`, no por el centro del globo,
       // que es otra cosa desde que la tarjeta lo desvía.
@@ -121,6 +130,10 @@ export default function Globo({ id, lon, lat, r = 74, lado, oculto, puntos, marc
           con la marca —que va en tinta llena y es una circunferencia hueca, no un punto—. El radio
           va a escala del globo, como la costa. */}
       {diminutos.map((q, i) => <circle key={i} cx={q[0].toFixed(1)} cy={q[1].toFixed(1)} r={r / 100} fill="var(--t-ink3)" />)}
+      {/* Lo que es suyo sin ser él, en acento a medio gas: se lee que es del país y no se
+          confunde con él, que es exactamente lo que hay que entender de Groenlandia. Debajo del
+          país, para que un territorio grande no le tape su propio contorno. */}
+      <path d={suyoLejos} fill="var(--t-accent)" fillOpacity={0.3} fillRule="evenodd" stroke="var(--t-accent)" strokeWidth={1.5} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
       {/* Trazo además de relleno: un país fino (Chile, Italia) desaparece si solo se rellena. */}
       <path d={mio} fill="var(--t-accent)" fillRule="evenodd" stroke="var(--t-accent)" strokeWidth={2.5} strokeLinejoin="round" />
       {punto?.[2] && <circle cx={punto[0]} cy={punto[1]} r={3.5} fill="var(--t-accent)" />}

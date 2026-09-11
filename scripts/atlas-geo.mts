@@ -279,15 +279,37 @@ export function laeaInv(x: number, y: number, lon0: number, lat0: number): [numb
   return [lon, lat / rad];
 }
 
-// Lo que Natural Earth dibuja como país aparte y `paises.ts` no reconoce como tal. Esas piezas
-// llevan ISO `-99`, así que el mapa por ISO las suelta y el país que las contiene sale amputado:
-// sin esto Somalia se dibuja sin Somalilandia, que es el tercio del noroeste, y la silueta que se
-// memoriza no es la suya. Se anexan por `ADM0_A3`, lo único que identifica a una pieza sin ISO.
+// Lo que Natural Earth dibuja como país aparte y `paises.ts` no reconoce como tal: tierra que cae
+// dentro de las fronteras del país y que el mapa por ISO suelta —esas piezas llevan ISO `-99`—,
+// así que el país sale amputado y la silueta que se memoriza no es la suya. Se anexan por
+// `ADM0_A3`, lo único que identifica a una pieza sin ISO.
 //
-// Anexar deja dentro una frontera que la silueta ya no dibuja, y ahí sí manda decir que existe:
-// la marca la línea interior, la misma que lleva el Sáhara Occidental. No hace falta describirla
-// —sale de `costuraDe`—, y por eso la anexión no lleva más configuración que el código de la pieza.
-export const ANEXOS: Record<string, string[]> = { so: ["SOL"] };
+// **Quién entra lo decide la lista de `paises.ts`, no el reconocimiento internacional**: son los
+// 193 de la ONU más el Vaticano y Palestina, y lo que no está en ella va con el Estado que la ONU
+// dice. Por eso Kosovo entra en Serbia y el norte de Chipre en Chipre, y por eso Taiwán se queda
+// fuera: no toca tierra con nadie, y coserlo por mar no lo cose este algoritmo.
+//
+// Anexar deja dentro una frontera que la silueta ya no dibuja, y ahí sí manda decir que existe: la
+// marca la línea interior. No hace falta describirla —sale de `costuraDe`—, y por eso la anexión no
+// lleva más configuración que el código de la pieza.
+//
+// **El orden manda:** cada pieza se cose contra lo ya cosido, así que la que no toca al país va
+// detrás de la que se lo acerca.
+export const ANEXOS: Record<string, string[]> = {
+  cy: ["CNM", "CYN"], // sin ellas Chipre es solo el sur de la isla; el norte no toca el sur, la zona búfer está en medio
+  ma: ["SAH"],        // la franja que la fuente da aparte: la mitad occidental del Sáhara ya viene dentro de Marruecos
+  rs: ["KOS"],
+  so: ["SOL"],        // Somalilandia, el tercio del noroeste
+};
+
+// La pieza que una de las dos escalas no dibuja. A 1:50m no hay zona búfer —el norte de Chipre pega
+// directo al sur—, y exigirla ahí abortaría el globo. Lo demás sigue siendo error: que la fuente
+// deje de traer una pieza es justo lo que hay que oír.
+const OPCIONAL = new Set(["CNM"]);
+
+// La pieza cuya frontera interior no se marca. La de la franja del Sáhara es el muro de arena, que
+// no es frontera de nada; dónde empieza el Sáhara ya lo dice el paralelo de `FRONTERAS`.
+const SIN_COSTURA = new Set(["SAH"]);
 
 const clave = (p: [number, number]) => `${p[0]},${p[1]}`;
 
@@ -363,12 +385,15 @@ export function anexar(crudo: Poly[], id: string, porA3: Map<string, Pieza>, nom
   const costura: Anillo[] = [];
   for (const a3 of ANEXOS[id] ?? []) {
     const trozo = porA3.get(a3);
-    if (!trozo) throw new Error(`Natural Earth no trae ${a3}, que ${nombre} anexa`);
+    if (!trozo) {
+      if (OPCIONAL.has(a3)) continue;
+      throw new Error(`Natural Earth no trae ${a3}, que ${nombre} anexa`);
+    }
     for (const pieza of polysDe(trozo.geometry)) {
       const i = polys.findIndex((poly) => costuraDe(pieza[0], new Set(poly[0].map(clave))).length === 1);
       if (i < 0) throw new Error(`${a3} no comparte un solo tramo de frontera con ${nombre}: la unión no daría un anillo`);
       const tramo = costuraDe(pieza[0], new Set(polys[i][0].map(clave)))[0];
-      costura.push(tramo);
+      if (!SIN_COSTURA.has(a3)) costura.push(tramo);
       polys[i] = [unir(polys[i][0], pieza[0], tramo), ...polys[i].slice(1), ...pieza.slice(1)];
     }
   }

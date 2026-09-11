@@ -19,7 +19,11 @@ export default function Minimapa({ id, marco, lon, lat }: {
   // El fondo es el mundo entero y solo depende del marco: mientras no se cambie de continente,
   // pasar de país no lo recorre otra vez. El país va encima, así que no hay que descontarlo.
   const fondo = useMemo(() => pathDelPlano(MUNDO.map((a) => a.r), marco), [marco]);
-  const mio = useMemo(() => pathDelPlano(MUNDO.filter((a) => a.id === id).map((a) => a.r), marco), [marco, id]);
+  const mio = useMemo(() => pathDelPlano(MUNDO.filter((a) => a.id === id && !a.territorio).map((a) => a.r), marco), [marco, id]);
+  // Lo que es del país sin ser él, en otro tono: aquí el mapa dice quiénes son sus vecinos, y que
+  // Groenlandia sea danesa es de lo más que hay que aprender de Dinamarca. Su tamaño lo cuenta el
+  // globo de la tarjeta, que por eso lo pinta igual de flojo.
+  const suyoLejos = useMemo(() => pathDelPlano(MUNDO.filter((a) => a.id === id && a.territorio).map((a) => a.r), marco), [marco, id]);
   const punto = mio ? null : xy(lon, lat);
 
   // Va sin fondo ni marco: el globo de la tarjeta sí lleva su círculo de papel, pero un círculo
@@ -33,6 +37,7 @@ export default function Minimapa({ id, marco, lon, lat }: {
   return (
     <svg viewBox={`0 0 ${w.toFixed(2)} ${h}`} preserveAspectRatio="xMinYMid meet" style={{ width: "100%", aspectRatio: 1 }} aria-hidden>
       <path d={fondo} fill="var(--t-rule2)" stroke="var(--t-ink4)" strokeWidth={1} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+      <path d={suyoLejos} fill="var(--t-accent)" fillOpacity={0.3} fillRule="evenodd" stroke="var(--t-accent)" strokeWidth={1} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
       {/* Trazo además de relleno: un país fino se queda en nada si solo se rellena, y a esta
           escala casi todos lo son. */}
       <path d={mio} fill="var(--t-accent)" fillRule="evenodd" stroke="var(--t-accent)" strokeWidth={2} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
