@@ -371,6 +371,11 @@
 }
 @keyframes atlas-lupa { from { opacity: 0; transform: scale(0.965); } }
 
+/* El marco del globo de marcar, que es quien recorta lo que se sale al acercarlo. `touch-action`
+   le quita al navegador el pellizco y el doble toque: dentro del marco el zoom es el del globo,
+   que se va solo al cerrarse la lupa —el nativo se quedaría puesto sobre la tarjeta siguiente—. */
+.atlas-zoom { overflow: hidden; touch-action: none; flex-shrink: 0; }
+
 /* Cada dato de la ficha, con su marca de dominio abriendo la fila. La de los mapas se aparta de
    la medida común redefiniendo la variable, no con una rejilla propia: a lo ancho no alinea con
    nada —solo tiene que caber— y cada píxel suyo es hueco entre el texto y la silueta. */

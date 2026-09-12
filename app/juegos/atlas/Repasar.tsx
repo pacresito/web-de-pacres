@@ -360,7 +360,15 @@ function Tarjeta({ tarjeta, estrenando }: { tarjeta: NonNullable<Vista["tarjeta"
                  oculto={lupa === "marcar"} marca={marca}
                  alMarcar={lupa === "marcar" ? (id) => { setMarca(id); setTimeout(() => setLupa(null), 320); } : undefined} />
           <span style={{ fontSize: 11, color: "var(--t-ink4)", letterSpacing: "0.14em" }}>
-            {lupa === "marcar" ? "toca donde creas que está" : (
+            {lupa === "marcar" ? (
+              <>
+                toca donde creas que está
+                {/* El zoom del globo no se ve hasta que se usa, y sin decirlo se pellizca la
+                    página. */}
+                <span className="atlas-solo-movil"> · pellizca para acercar</span>
+                <span className="atlas-solo-ancho"> · rueda para acercar</span>
+              </>
+            ) : (
               <>
                 <span className="atlas-solo-movil">toca para volver</span>
                 <span className="atlas-solo-ancho">una tecla para volver</span>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useState } from "react";
 import { FORMAS } from "@/data/atlas/formas";
 import { MUNDO } from "@/data/atlas/mundo";
 import { enganche, gradosEntre, ortografica, pathDelGlobo, rellenoDelGlobo } from "@/lib/atlas/globo";
@@ -19,6 +19,19 @@ const PUNTOS = Object.entries(FORMAS)
  * el canto —a 70° se pintan al 94% del radio— y dejan de distinguirse unos de otros.
  */
 const RADIO_PUNTOS = 50;
+
+/**
+ * Cuánto se puede acercar el globo de marcar. Seis: a ese aumento Andorra mide lo que el dedo,
+ * que es de lo que se trata, y más deja la costa como una escalera —el dibujo va a radio fijo—.
+ */
+const ZOOM_MAX = 6;
+
+/**
+ * Cuánto se arrastra antes de que un toque deje de serlo, en píxeles de pantalla. Diez, que es
+ * el margen con el que Android da un toque por quieto: por debajo, el pulgar que se mueve al
+ * levantarse deja de marcar y parece que el globo no responde.
+ */
+const ARRASTRE = 10;
 
 /** Los anillos de un país, o ninguno si no se pide ninguno. */
 const anillosDe = (quien: string | null) => (quien ? MUNDO.filter((a) => a.id === quien).map((a) => a.r) : []);
@@ -94,11 +107,104 @@ export default function Globo({ id, lon, lat, r = 74, lado, oculto, puntos, marc
   }, [proy, marca]);
 
   /**
+   * El zoom del globo de marcar: pellizcar con dos dedos —rueda en escritorio— acerca, y
+   * arrastrar mueve. Es nuestro y no el del navegador porque el nativo no se puede devolver a 1
+   * desde JS: se quedaría puesto sobre la tarjeta siguiente. Este se va solo, que es estado del
+   * componente y la lupa se desmonta al marcar.
+   *
+   * El enganche no se entera de nada: `tocar` mide el disco con `getBoundingClientRect`, que ya
+   * viene escalado, así que al acercar el umbral en píxeles de pantalla encoge con él y la
+   * puntería mejora sola.
+   */
+  const marco = useRef<HTMLDivElement>(null);
+  const [z, setZ] = useState({ k: 1, x: 0, y: 0 });
+  // El mismo estado en un ref: los gestos lo leen y lo escriben varias veces por fotograma, y
+  // desde el render llegaría siempre uno tarde.
+  const actual = useRef({ k: 1, x: 0, y: 0 });
+  const dedos = useRef(new Map<number, { x: number; y: number }>());
+  const inicio = useRef({ k: 1, x: 0, y: 0, px: 0, py: 0, d: 0 });
+  // Un gesto se come el clic que viene detrás: al soltar un pellizco no se marca país.
+  const movido = useRef(false);
+
+  /** Dónde cae el puntero respecto al centro del marco, que es el origen de la transformación. */
+  const donde = (e: { clientX: number; clientY: number }) => {
+    const c = marco.current!.getBoundingClientRect();
+    return { x: e.clientX - c.left - c.width / 2, y: e.clientY - c.top - c.height / 2 };
+  };
+
+  /**
+   * El globo no se sale del marco: a escala k sobresale la mitad de lo que crece, y de ahí no
+   * pasa. Con k = 1 el tope es cero, así que arrastrar sin acercar no mueve nada.
+   */
+  const aplicar = (k: number, x: number, y: number) => {
+    const tope = ((k - 1) * marco.current!.getBoundingClientRect().width) / 2;
+    const nuevo = { k, x: Math.min(tope, Math.max(-tope, x)), y: Math.min(tope, Math.max(-tope, y)) };
+    actual.current = nuevo;
+    setZ(nuevo);
+  };
+
+  /** El punto del dibujo que hay bajo el foco se queda bajo el foco: es lo que hace natural el gesto. */
+  const hacia = (k: number, fx: number, fy: number) => {
+    const i = inicio.current;
+    aplicar(k, fx - (i.px - i.x) * (k / i.k), fy - (i.py - i.y) * (k / i.k));
+  };
+
+  /** Se rearma con cada dedo que entra o sale: el gesto sigue desde donde está, sin saltos. */
+  const arrancar = () => {
+    const ps = [...dedos.current.values()];
+    if (!ps.length) return;
+    const b = ps[1] ?? ps[0];
+    inicio.current = {
+      ...actual.current,
+      px: (ps[0].x + b.x) / 2, py: (ps[0].y + b.y) / 2,
+      d: Math.hypot(ps[0].x - b.x, ps[0].y - b.y),
+    };
+  };
+
+  const abajo = (e: React.PointerEvent) => {
+    if (!dedos.current.size) movido.current = false;
+    dedos.current.set(e.pointerId, donde(e));
+    e.currentTarget.setPointerCapture(e.pointerId);
+    arrancar();
+  };
+
+  const mover = (e: React.PointerEvent) => {
+    if (!dedos.current.has(e.pointerId)) return;
+    dedos.current.set(e.pointerId, donde(e));
+    const ps = [...dedos.current.values()];
+    const i = inicio.current;
+    const b = ps[1] ?? ps[0];
+    const f = { x: (ps[0].x + b.x) / 2, y: (ps[0].y + b.y) / 2 };
+    const k = ps.length > 1 && i.d > 0
+      ? Math.min(ZOOM_MAX, Math.max(1, (i.k * Math.hypot(ps[0].x - b.x, ps[0].y - b.y)) / i.d))
+      : i.k;
+    // Un dedo sin acercar no arrastra —el tope lo deja en el sitio— y por eso tampoco deja de ser
+    // un toque: a nadie se le pide el pulso de no moverse seis píxeles.
+    if (ps.length > 1 || (i.k > 1 && Math.hypot(f.x - i.px, f.y - i.py) > ARRASTRE)) movido.current = true;
+    if (!movido.current) return;
+    hacia(k, f.x, f.y);
+  };
+
+  const arriba = (e: React.PointerEvent) => {
+    if (dedos.current.delete(e.pointerId)) arrancar();
+  };
+
+  const rueda = (e: React.WheelEvent) => {
+    const f = donde(e);
+    dedos.current.clear();
+    inicio.current = { ...actual.current, px: f.x, py: f.y, d: 0 };
+    hacia(Math.min(ZOOM_MAX, Math.max(1, actual.current.k * Math.exp(-e.deltaY / 400))), f.x, f.y);
+  };
+
+  /**
    * Dentro del disco se marca; fuera, el toque sigue subiendo, que ahí es cerrar. Lo que
    * distingue un toque de otro es dónde cae, así que vale igual con dedo y con ratón.
    */
   const tocar = (e: React.MouseEvent<SVGSVGElement>) => {
     if (!alMarcar || !svg.current) return;
+    // El clic con el que acaba un pellizco no marca, pero tampoco cierra la lupa: quien acaba de
+    // acercar el globo está apuntando, no saliendo.
+    if (movido.current) return e.stopPropagation();
     const caja = svg.current.getBoundingClientRect();
     // Cuántas unidades del dibujo mide un píxel de pantalla: el globo se calcula a radio fijo y
     // se pinta al tamaño que quepa, y los umbrales del enganche van en píxeles del de verdad.
@@ -117,9 +223,12 @@ export default function Globo({ id, lon, lat, r = 74, lado, oculto, puntos, marc
   // radio adelgazaría la costa hasta perderla. Los trazos no escalan, para que a 52 px sigan
   // midiendo un píxel.
   const d = r * 2 + 2;
-  return (
+  const globo = (
     <svg ref={svg} onClick={tocar} width={d} height={d} viewBox={`${-r - 1} ${-r - 1} ${d} ${d}`}
-         style={{ ...(lado && { width: lado, height: lado, flexShrink: 0 }), ...(alMarcar && { cursor: "crosshair" }) }}
+         style={alMarcar
+           ? { width: "100%", height: "100%", cursor: "crosshair", transformOrigin: "center",
+               transform: `translate(${z.x.toFixed(1)}px, ${z.y.toFixed(1)}px) scale(${z.k.toFixed(3)})` }
+           : { ...(lado && { width: lado, height: lado, flexShrink: 0 }) }}
          aria-hidden>
       <circle r={r} fill="var(--t-paper2)" stroke="var(--t-rule)" />
       {/* No hace falta recortar por el círculo: lo escondido va pegado al canto y la cuerda
@@ -144,5 +253,16 @@ export default function Globo({ id, lon, lat, r = 74, lado, oculto, puntos, marc
       {trazoPunto?.[2] && <circle cx={trazoPunto[0]} cy={trazoPunto[1]} r={6} fill="none" stroke="var(--t-ink)" strokeWidth={2} vectorEffect="non-scaling-stroke" />}
       <circle r={r} fill="none" stroke="var(--t-rule2)" />
     </svg>
+  );
+
+  if (!alMarcar) return globo;
+  // El marco recorta lo que se sale al acercar y se queda con los gestos, que si no se los lleva
+  // el navegador: dentro de él, pellizcar es acercar el globo y no la página.
+  return (
+    <div ref={marco} className="atlas-zoom" style={{ width: lado, height: lado }}
+         onPointerDown={abajo} onPointerMove={mover} onPointerUp={arriba} onPointerCancel={arriba}
+         onWheel={rueda}>
+      {globo}
+    </div>
   );
 }
