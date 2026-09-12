@@ -190,7 +190,7 @@ export const TABLA: Record<Rasgo, { paga: string; cobra: string }> = {
   talla: { paga: "coste ∝ masa con la misma despensa que el pequeño; giras peor", cobra: "derecho a comerte a quien sea un 20% menor" },
   vision: { paga: "coste ∝ visión²", cobra: "detectas a distancia ∝ radio del otro" },
   sociabilidad: { paga: "competencia por el mismo bocado", cobra: "peso al centro de masa de los visibles, con signo" },
-  fiereza: { paga: "riesgo, perseguir no es recoger y comer deja quieto un segundo", cobra: "peso de atracción al menor visible" },
+  fiereza: { paga: "riesgo, perseguir no es recoger y comer deja quieto dos segundos", cobra: "peso de atracción al menor visible" },
   retorno: { paga: "volver pronto es dejar de buscar", cobra: "peso hacia casa cuando ya llevas comida" },
 };
 
@@ -229,7 +229,8 @@ export type Config = {
    * Lo que se tarda en comerse a otro, en ticks. **Es la segunda cifra elegida por el ojo y no por
    * una magnitud** —la primera es `TICKS_BOCADO`—: la presa no da para medirla, porque su masa
    * comida vale menos que un bocado del suelo y cualquier ritmo proporcional duraría un tick. Sale
-   * de que se vea: a ×1 el tick es un fotograma, así que 60 es el segundo que dura la dentellada.
+   * de que se vea: a ×1 el tick es un fotograma, así que 120 son los dos segundos que dura la
+   * dentellada — y duran eso y no la mitad porque medir dijo que salía gratis.
    *
    * **Y no es solo pintado: es lo que cazar cuesta de jornada.** Mordiendo no se decide ni se anda,
    * ni el que muerde ni el mordido, así que la caza se paga en el único recurso que aquí no se
@@ -331,7 +332,7 @@ export const CONFIG: Config = {
   ancho: 288, alto: 200,
   comidas: 40, censoInicial: 1,
   ticksDia: 1000, capReserva: CAP_RESERVA, casa: 18,
-  caza: true, boca: 1.2, ticksPresa: 60,
+  caza: true, boca: 1.2, ticksPresa: 120,
   tasa: 0.08, paso: 0.06,
   vida: 10,
   fundador: FUNDADOR,

@@ -45,13 +45,16 @@ const CREPUSCULO = { light: "#3c4c60", dark: "#aab6c4" };
 const NIDO = 1.6, NIDO_DIA = 0.18, NIDO_NOCHE = 0.46;
 
 /**
- * La dentellada, en fracciones del bocado: lo que la presa tarda en llegar a la boca desde donde
- * la alcanzaron, lo que se la zarandea y cuándo empieza a hundirse. **El motor solo dice quién
- * tiene a quién y cuánto falta** —la presa no se mueve del sitio donde la mordieron—, así que la
- * pose entera se calcula aquí: mover el cuerpo desde el motor sería meterle una coreografía al
- * mundo y romper la semilla a cambio de nada.
+ * La dentellada: lo que la presa tarda en llegar a la boca desde donde la alcanzaron y cuándo
+ * empieza a hundirse, en fracciones del bocado — y el `ciclo`, **en ticks y no en fracciones**,
+ * que es lo que le da al forcejeo la misma cadencia dure lo que dure la dentellada. En fracciones,
+ * doblar `ticksPresa` dejaba el zarandeo a la mitad de rápido.
+ *
+ * **El motor solo dice quién tiene a quién y cuánto falta** —la presa no se mueve del sitio donde
+ * la mordieron—, así que la pose entera se calcula aquí: mover el cuerpo desde el motor sería
+ * meterle una coreografía al mundo y romper la semilla a cambio de nada.
  */
-const BOCA = { entrada: 0.18, trago: 0.72, vaivenes: 5 };
+const BOCA = { entrada: 0.18, trago: 0.72, ciclo: 12 };
 
 /**
  * El mundo tiene tamaño fijo y el lienzo no, así que la vista escala y centra en vez de estirar: la
@@ -288,7 +291,7 @@ export function pintar(
    */
   const mordisco = (dep: Bicho) => {
     const k = c.ticksPresa > 0 ? 1 - dep.restan / c.ticksPresa : 1;
-    return { k, sacudon: Math.sin(k * TAU * BOCA.vaivenes) * (1 - k) };
+    return { k, sacudon: Math.sin((TAU * k * c.ticksPresa) / BOCA.ciclo) * (1 - k) };
   };
 
   for (const b of m.bichos) {
