@@ -344,10 +344,29 @@ export type Bicho = {
   dormido: boolean;
   /** Crías de esta noche. Vive solo entre el anochecer y el amanecer siguiente: es lo que se pinta. */
   hijos: number;
+  /**
+   * Crías de toda su vida. No la usa el mundo —`hijos` es la camada que se pinta— sino el panel
+   * que se abre al pulsarlo: es lo único que contesta para qué sirvió este bicho, y no se puede
+   * recontar después porque los hijos que se le murieron no dejan rastro en ningún sitio.
+   */
+  crias: number;
+  /**
+   * De qué se murió, o `null` mientras viva. Va aquí y no en la marca porque **la marca caduca**
+   * —dura los ticks que dura su animación— y esto tiene que seguir contestando cuando alguien
+   * mire la ficha del que acaba de desaparecerle de la pantalla. El mundo no lo lee nadie.
+   */
+  muerte: Muerte | null;
   /** Nacido en la noche que se está mirando. Se apaga al amanecer, y solo lo usa el pintado. */
   recien: boolean;
   g: Genoma;
 };
+
+/**
+ * De qué se muere aquí, y no hay una cuarta: **quedarse fuera al anochecer no mata**, solo cuesta
+ * la noche. Lo comparten el bicho y su marca, que cuentan la misma muerte para dos sitios
+ * distintos —el panel y el lienzo— y no pueden discrepar.
+ */
+export type Muerte = "comido" | "hambre" | "vejez";
 
 /**
  * Una muerte, guardada lo justo para poder pintarla: dónde, cuándo, de qué tamaño era y con qué
@@ -358,7 +377,7 @@ export type Bicho = {
  */
 export type Marca = {
   x: number; y: number; r: number; t: number;
-  causa: "comido" | "hambre" | "vejez";
+  causa: Muerte;
   /** Lo viejo que era, 0…1. Es lo que le da color al cuerpo, vivo o muerto. */
   edad: number;
 };
@@ -482,7 +501,7 @@ function nacer(m: Mundo, g: Genoma, idMadre: number, gen: number, donde?: [numbe
     // que trajo. Así una cría grande cuesta más que una pequeña, que es el contrapeso que la talla
     // no tenía —antes un hijo costaba dos bocados fuera cual fuera su tamaño—.
     radio: g.talla, masa: masaDe(g.talla), carga: 0, reserva: m.cfg.capReserva * masaDe(g.talla),
-    vivo: true, aSalvo: false, dormido: false, hijos: 0, recien: false, g,
+    vivo: true, aSalvo: false, dormido: false, hijos: 0, crias: 0, muerte: null, recien: false, g,
   };
   m.bichos.push(b);
   return b;
@@ -664,6 +683,7 @@ function comer(m: Mundo, dep: Bicho, presa: Bicho) {
   dep.reserva += presa.masa * EFICIENCIA;
   dep.carga += presa.carga;
   presa.vivo = false;
+  presa.muerte = "comido";
   m.marcas.push({ x: presa.x, y: presa.y, r: presa.radio, t: m.t, causa: "comido", edad: edadDe(m, presa) });
   m.cuenta.comidos++;
 }
@@ -745,6 +765,7 @@ export function tick(m: Mundo) {
     b.reserva -= masaCargada(c, b) * (C_BASAL + C_VISION * b.g.vision * b.g.vision + C_EMPUJE * v * v);
     if (b.reserva <= 0) {
       b.vivo = false;
+      b.muerte = "hambre";
       m.marcas.push({ x: b.x, y: b.y, r: b.radio, t: m.t, causa: "hambre", edad: edadDe(m, b) });
       m.cuenta.hambre++;
       continue;
@@ -853,6 +874,7 @@ export function anochecer(m: Mundo) {
       h.y = Math.min(Math.max(b.y + uy * d, muro), c.alto - muro);
       h.recien = true;
       b.hijos++;
+      b.crias++;
       m.cuenta.nacidos++;
     }
   }
@@ -863,6 +885,7 @@ export function anochecer(m: Mundo) {
     for (const b of m.bichos) {
       if (m.dia - b.nacido < c.vida) continue;
       b.vivo = false;
+      b.muerte = "vejez";
       m.marcas.push({ x: b.x, y: b.y, r: b.radio, t: m.t, causa: "vejez", edad: 1 });
       m.cuenta.vejez++;
     }

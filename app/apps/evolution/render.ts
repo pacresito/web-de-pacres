@@ -6,9 +6,9 @@
 // diseño, así que este bucle tiene que servir igual para un pez de papel y para un instrumento de
 // rectas: en cuanto empiece a saber de aletas, el siguiente diseño no cabrá.
 
-import { MARCA, RADIO_COMIDA, edadDe, luzDe, type Mundo } from "./engine";
+import { MARCA, RADIO_COMIDA, edadDe, luzDe, type Bicho, type Mundo } from "./engine";
 import {
-  azarFijo, clamp, colorCuerpo, designFor, envejecer, giroDe, mix,
+  RECORRIDO, azarFijo, clamp, colorCuerpo, designFor, envejecer, giroDe, mix,
   type Cuerpo, type Design, type Paleta,
 } from "./designs";
 
@@ -54,6 +54,41 @@ export type Vista = { escala: number; ox: number; oy: number };
 export function vistaDe(W: number, H: number, ancho: number, alto: number): Vista {
   const escala = Math.min(W / ancho, H / alto);
   return { escala, ox: (W - ancho * escala) / 2, oy: (H - alto * escala) / 2 };
+}
+
+/**
+ * Diámetro por debajo del cual un cuerpo pierde sus miembros —púas, dientes, antenas—, en píxeles
+ * CSS. Es la medida del handoff de las criaturas, y es justo lo que el inspector está para enseñar.
+ */
+const CUERPO_LEGIBLE = 14;
+
+/**
+ * Píxeles CSS por unidad de mundo a los que la cámara sigue a un bicho: los que le dan ese
+ * diámetro **al más pequeño de la ventana medida**, el p01 de la talla.
+ *
+ * Anclada ahí y no en la talla de cada cual, es una sola escala para toda la partida —y el suelo
+ * se cuece una vez, que a sesenta veces por segundo son mil quinientas figuras—. Y anclada en el
+ * p01 y no en la talla media, el que se queda sin miembros no es la mitad pequeña de la población,
+ * que es precisamente la que hay que mirar de cerca para distinguirla.
+ */
+export const ESCALA_SEGUIR = CUERPO_LEGIBLE / (2 * RECORRIDO.talla[0]);
+
+/**
+ * La vista siguiendo a un bicho: el mundo a `ESCALA_SEGUIR`, él en el centro y la cámara frenada
+ * en los bordes, que fuera del mundo no hay nada que enseñar.
+ *
+ * **Nunca aleja.** Si el lienzo ya daba de sobra, seguir a alguien no mueve la cámara: acercarse
+ * cuando no hace falta solo quita de la vista lo que pasa alrededor, que en este mundo es la mitad
+ * de lo que explica al que se está mirando.
+ */
+export function vistaSobre(W: number, H: number, ancho: number, alto: number, x: number, y: number): Vista {
+  if (Math.min(W / ancho, H / alto) >= ESCALA_SEGUIR) return vistaDe(W, H, ancho, alto);
+  const e = ESCALA_SEGUIR;
+  return {
+    escala: e,
+    ox: clamp(W / 2 - x * e, W - ancho * e, 0),
+    oy: clamp(H / 2 - y * e, H - alto * e, 0),
+  };
 }
 
 /** La paleta de una partida: la del diseño que le toque a su semilla. */
@@ -114,7 +149,7 @@ export function pintarMuestra(
  */
 export function pintar(
   ctx: CanvasRenderingContext2D, m: Mundo, d: Design, p: Paleta, v: Vista,
-  W: number, H: number, dpr: number, noche = 1,
+  W: number, H: number, dpr: number, noche = 1, sel: Bicho | null = null,
 ) {
   const c = m.cfg;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -193,6 +228,45 @@ export function pintar(
     ctx.beginPath(); ctx.arc(b.x, b.y, b.radio * NIDO, 0, TAU); ctx.fill();
   }
   ctx.globalAlpha = 1;
+
+  // **Lo que alcanza a ver el que se está mirando, y solo él.** Un anillo por bicho con treinta a
+  // la vez es una maraña donde no se sabe de quién es cada arco; uno solo se lee, y es el único
+  // gen cuyo número no cabe en el cuerpo — la visión no es un órgano de tres píxeles, es media
+  // pantalla de radio. El radio es el del motor, `visión · luz · radio del otro`, con el bocado de
+  // vara: así encoge con el sol a la vez que el bicho deja de reaccionar a lo que tiene delante,
+  // y al anochecer no queda nada que pintar porque no queda nada que ver.
+  //
+  // Los dos aros van **debajo de los cuerpos y por fuera de lo dibujado**: pegados al disco
+  // taparían justo las púas y los dientes que el panel se ha abierto a mirar.
+  if (sel) {
+    ctx.save();
+    const alcance = sel.g.vision * (1 - sombra) * RADIO_COMIDA;
+    if (alcance > 1) {
+      ctx.strokeStyle = p.acc2;
+      ctx.globalAlpha = 0.65;
+      ctx.lineWidth = 0.55;
+      ctx.setLineDash([2.5, 2.5]);
+      ctx.beginPath(); ctx.arc(sel.x, sel.y, alcance, 0, TAU); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    // **Cuatro esquinas y no un aro.** Un aro alrededor del cuerpo ya significa otra cosa —la
+    // despensa que rebosa, y del color del acento—, y dos aros del mismo color a dos píxeles el
+    // uno del otro no dicen dos cosas: dicen una borrosa. Las esquinas son de quien mira y no del
+    // bicho, y por eso se quedan rectas mientras el cuerpo gira.
+    const [ex, ey] = d.extension(sel.g, sel.radio);
+    const rad = Math.max(ex, ey) + 2, brazo = rad * 0.5;
+    ctx.strokeStyle = p.tinta;
+    ctx.lineWidth = 0.65;
+    ctx.lineCap = "round";
+    for (const sx of [-1, 1]) for (const sy of [-1, 1]) {
+      const x = sel.x + sx * rad, y = sel.y + sy * rad;
+      ctx.beginPath();
+      ctx.moveTo(x - sx * brazo, y); ctx.lineTo(x, y); ctx.lineTo(x, y - sy * brazo);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   for (const b of m.bichos) {
     // La despensa llena va con la masa, así que el vigor de cada uno se mide contra la suya: un
     // grande a medio gas y un pequeño a medio gas se pintan igual de apagados, que es lo justo.
