@@ -45,6 +45,15 @@ const CREPUSCULO = { light: "#3c4c60", dark: "#aab6c4" };
 const NIDO = 1.6, NIDO_DIA = 0.18, NIDO_NOCHE = 0.46;
 
 /**
+ * La dentellada, en fracciones del bocado: lo que la presa tarda en llegar a la boca desde donde
+ * la alcanzaron, lo que se la zarandea y cuándo empieza a hundirse. **El motor solo dice quién
+ * tiene a quién y cuánto falta** —la presa no se mueve del sitio donde la mordieron—, así que la
+ * pose entera se calcula aquí: mover el cuerpo desde el motor sería meterle una coreografía al
+ * mundo y romper la semilla a cambio de nada.
+ */
+const BOCA = { entrada: 0.18, trago: 0.72, vaivenes: 5 };
+
+/**
  * El mundo tiene tamaño fijo y el lienzo no, así que la vista escala y centra en vez de estirar: la
  * semilla promete el mismo mundo en cualquier pantalla, y un mundo que midiera lo que mide la
  * ventana daría partidas distintas en el móvil y en el portátil.
@@ -267,7 +276,23 @@ export function pintar(
     ctx.restore();
   }
 
+  // Quién tiene a quién en la boca, indexado por la presa: la dentellada se pinta desde ella —es
+  // la que se mueve— y en el mundo el puntero va al revés.
+  const bocas = new Map<number, Bicho>();
+  for (const b of m.bichos) if (b.muerde) bocas.set(b.muerde, b);
+
+  /**
+   * En qué punto va la dentellada, 0 al morder y 1 al tragar. El sacudón es el mismo para los dos
+   * cuerpos —un solo vaivén que se va apagando—, que es lo que hace que se lea como un forcejeo y
+   * no como dos animaciones a la vez.
+   */
+  const mordisco = (dep: Bicho) => {
+    const k = c.ticksPresa > 0 ? 1 - dep.restan / c.ticksPresa : 1;
+    return { k, sacudon: Math.sin(k * TAU * BOCA.vaivenes) * (1 - k) };
+  };
+
   for (const b of m.bichos) {
+    if (b.preso) continue;   // la presa va encima de todo, al final: se pinta con su verdugo
     // La despensa llena va con la masa, así que el vigor de cada uno se mide contra la suya: un
     // grande a medio gas y un pequeño a medio gas se pintan igual de apagados, que es lo justo.
     const lleno = b.reserva / (c.capReserva * b.masa);
@@ -286,7 +311,13 @@ export function pintar(
       }
       continue;
     }
-    d.cuerpo(ctx, { ...b, edad }, vigor, paletaCon(edad));
+    if (b.muerde) {
+      // El que muerde también se mueve, aunque el motor lo tenga anclado: el tirón va en su propio
+      // rumbo, que es hacia la presa, y es lo que enseña quién está zarandeando a quién.
+      const { sacudon } = mordisco(b);
+      const tiron = sacudon * b.radio * 0.12;
+      d.cuerpo(ctx, { ...b, x: b.x + b.hx * tiron, y: b.y + b.hy * tiron, edad }, vigor, paletaCon(edad));
+    } else d.cuerpo(ctx, { ...b, edad }, vigor, paletaCon(edad));
 
     // **La despensa no tiene techo, y sin esto no se veía**: quien lleva una semana ahorrando se
     // pintaba igual que quien acaba de comer, y su camada de veintidós parecía salida de la nada.
@@ -305,6 +336,33 @@ export function pintar(
       ctx.stroke();
       ctx.globalAlpha = 1;
     }
+  }
+
+  // **La presa, encima de todo y en la boca del otro.** Tres tramos: llega desde donde la
+  // alcanzaron, se la zarandea atravesada —de ahí que su rumbo sea el perpendicular al de su
+  // verdugo, y no el suyo— y al final se hunde y encoge hasta que el motor la mata y deja el
+  // anillo del zarpazo. Se pinta al final porque debajo del cuerpo grande no se vería el forcejeo,
+  // que es justo lo que había que poder mirar.
+  for (const b of m.bichos) {
+    const dep = b.preso ? bocas.get(b.id) : undefined;
+    if (!dep) continue;
+    const { k, sacudon } = mordisco(dep);
+    const trago = Math.max(0, (k - BOCA.trago) / (1 - BOCA.trago));
+    const entrada = Math.min(1, k / BOCA.entrada);
+    // La boca es el borde del cuerpo en su rumbo; tragar es que ese punto se venga al centro.
+    const hueco = (dep.radio + b.radio * 0.3) * (1 - 0.7 * trago);
+    const px = -dep.hy, py = dep.hx;   // el través, que es donde se zarandea y hacia donde mira
+    const vaiven = sacudon * b.radio * 0.4 * (1 - trago);
+    const bx = dep.x + dep.hx * hueco + px * vaiven, by = dep.y + dep.hy * hueco + py * vaiven;
+    const x = b.x + (bx - b.x) * entrada, y = b.y + (by - b.y) * entrada;
+    // Atravesada: el rumbo pintado es el través del verdugo, balanceándose con el mismo vaivén.
+    const g = sacudon * 0.45 * (1 - trago);
+    const hx = px + dep.hx * g, hy = py + dep.hy * g;
+    const norma = Math.sqrt(hx * hx + hy * hy);
+    const edad = edadDe(m, b);
+    const vigor = clamp(b.reserva / (c.capReserva * b.masa), 0, 1);
+    d.cuerpo(ctx, { ...b, x, y, hx: hx / norma, hy: hy / norma, radio: b.radio * (1 - 0.5 * trago), edad },
+      vigor, paletaCon(edad));
   }
 
   // De noche, lo único que se escribe encima del mundo: cuántas crías ha puesto cada madre, al lado

@@ -227,5 +227,68 @@ check("comida abundante → baja la visión",
   }
 }
 
+// 9. **La dentellada.** Comerse a otro dura `ticksPresa`, y en ese rato la presa está viva y en la
+//    boca de alguien: es el único estado del mundo que dura más de un tick y que se puede
+//    interrumpir. Lo que hay que garantizar es que **no mata antes de tiempo** y que **matar al
+//    que muerde suelta a quien tenía cogido** — sin eso, escaparse no existiría y la franja de
+//    casa dejaría de ser refugio a medio bocado.
+{
+  const m = crearMundo("hola");
+  for (let d = 0; d < 30 && !m.extinto; d++) correrDia(m);
+  let dep = null, presa = null;
+  for (let i = 0; i < 400000 && !m.extinto && !dep; i++) {
+    if (tick(m)) { anochecer(m); if (!m.extinto) amanecer(m); continue; }
+    for (const b of m.bichos) if (b.muerde && b.restan === CONFIG.ticksPresa - 1) {
+      dep = b; presa = m.bichos.find((o) => o.id === b.muerde) ?? null;
+    }
+  }
+  if (!dep || !presa) check("la dentellada dura y no mata al morder", false, "sin dentellada en 400.000 ticks");
+  else {
+    // Se sigue el mundo tick a tick con la copia por delante: mientras quede dentellada, la presa
+    // tiene que estar en el censo, y en el tick en que se acaba tiene que desaparecer de él.
+    const vivos = copiar(m);
+    const idPresa = presa.id, idDep = dep.id;
+    const quedan = dep.restan;   // el tick del mordisco ya se ha cobrado el suyo
+    let viva = 0;
+    for (let k = 0; k < quedan - 1; k++) {
+      tick(vivos);
+      if (vivos.bichos.some((b) => b.id === idPresa)) viva++;
+    }
+    tick(vivos);
+    const comida = !vivos.bichos.some((b) => b.id === idPresa);
+    check("la presa vive hasta el último tick de la dentellada, y ahí se la come",
+      viva === quedan - 1 && comida, `viva ${viva}/${quedan - 1} ticks`);
+
+    // Y matar al depredador a media dentellada la suelta: el mordisco interrumpido no mata.
+    const suelto = copiar(m);
+    const verdugo = suelto.bichos.find((b) => b.id === idDep)!;
+    verdugo.reserva = 0;                     // el hambre lo mata en su propio tick
+    tick(suelto);
+    const libre = suelto.bichos.find((b) => b.id === idPresa);
+    check("muerto el que muerde, la presa queda viva y libre",
+      !!libre && libre.preso === 0 && !suelto.bichos.some((b) => b.id === idDep),
+      libre ? `presa ${libre.id} viva` : "la presa murió con él");
+  }
+}
+
+// 10. **Rebobinar es revivir**, que es lo único que puede hacer un motor irreversible: la página
+//     mira un tick anterior reconstruyéndolo desde el amanecer de su día. Aquí se comprueba que
+//     eso da el mundo que hubo, y no uno parecido — un estado que no saliera de `copiar` ni del
+//     tick partiría la marcha atrás sin que fallara nada.
+{
+  const m = crearMundo("pablo");
+  for (let d = 0; d < 20; d++) correrDia(m);
+  const alba = copiar(m);
+  const enMedio: string[] = [];
+  for (let k = 0; k < 600; k++) { tick(m); if (k >= 590) enMedio.push(huella(m)); }
+  let bien = true;
+  for (let i = 0; i < enMedio.length; i++) {
+    const w = copiar(alba);
+    for (let k = 0; k <= 590 + i; k++) tick(w);
+    if (huella(w) !== enMedio[i]) bien = false;
+  }
+  check("revivir el día desde su amanecer da el tick que hubo", bien, `${enMedio.length} ticks comprobados`);
+}
+
 console.log(fallos === 0 ? "\nTodo en orden." : `\n${fallos} fallo(s).`);
 process.exit(fallos ? 1 : 0);

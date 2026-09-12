@@ -24,7 +24,16 @@ import { IconoPantallaCompleta } from "../../components/Iconos";
  * el ×1. Para ver pasar generaciones están las otras dos. El motor no es el límite —un tick cuesta
  * 0,2 µs, así que en el presupuesto de abajo caben cincuenta mil—: lo es el ojo.
  */
-const VELOCIDADES = [1, 8, 64] as const;
+const VELOCIDADES = [-1, 1, 8, 64] as const;
+const NORMAL = VELOCIDADES.indexOf(1);
+/**
+ * Cada cuántos ticks se guarda un hito del día que se está rebobinando. **El motor no va hacia
+ * atrás**: ir a un tick anterior es volver a vivir el día desde su amanecer, y con el censo lleno
+ * eso son siete milisegundos —medio fotograma— por cada tick que se desanda. Con los hitos, cada
+ * fotograma revive un tramo y no un día: dos décimas de milisegundo. Los guarda la primera pasada,
+ * que es la que ya está reviviendo el día entero, y se tiran al cambiar de día.
+ */
+const TRAMO = 25;
 const PRESUPUESTO_MS = 12;   // por fotograma, para que la interfaz siga respondiendo a 60 fps
 const SALTO_DIAS = 100;      // lo que adelanta el botón de saltar días
 const RETROCESO = 10;        // lo que echa atrás el botón de volver
@@ -174,14 +183,20 @@ export default function Evolution() {
   const paletaRef = useRef<Paleta>(paletaDe(SEMILLA_POR_DEFECTO, "light"));
   const disenoRef = useRef<Design>(designFor(SEMILLA_POR_DEFECTO));
   const corriendoRef = useRef(true);
-  const velRef = useRef<number>(VELOCIDADES[0]);
+  const velRef = useRef<number>(VELOCIDADES[NORMAL]);
+  /**
+   * Los hitos del día que se rebobina, uno cada `TRAMO` ticks desde su amanecer. Es caché y no
+   * estado: se tira entera en cuanto el mundo cambia por cualquier otro camino —sembrar, volver,
+   * adelantar—, porque un hito del día 12 de otra partida es el día 12 de otro mundo.
+   */
+  const rebRef = useRef<{ dia: number; hitos: Mundo[] } | null>(null);
   const saltoRef = useRef(0);          // día objetivo mientras se adelanta; 0 = no se adelanta
   const repintarRef = useRef(true);    // el mundo cambió sin que corra el reloj: hay que repintar
 
   const [semilla, setSemilla] = useState(SEMILLA_POR_DEFECTO);
   const [texto, setTexto] = useState(SEMILLA_POR_DEFECTO);
   const [corriendo, setCorriendo] = useState(true);
-  const [velIdx, setVelIdx] = useState(0);
+  const [velIdx, setVelIdx] = useState(NORMAL);
   const [saltando, setSaltando] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   /**
@@ -234,6 +249,7 @@ export default function Evolution() {
     const m = crearMundo(semilla);
     mundoRef.current = m;
     historiaRef.current = [];
+    rebRef.current = null;
     repartoRef.current = crearHistoria();
     cronicaRef.current = crearDiario();
     ultimoRef.current = null;
@@ -270,6 +286,7 @@ export default function Evolution() {
     if (s === semilla) {          // misma palabra = mismo mundo: reinicia
       mundoRef.current = crearMundo(s);
       historiaRef.current = [];
+      rebRef.current = null;
       repartoRef.current = crearHistoria();
       cronicaRef.current = crearDiario();
       ultimoRef.current = null;
@@ -292,6 +309,7 @@ export default function Evolution() {
     for (let k = h.length - 1; k >= 0; k--) if (h[k].dia <= objetivo) { i = k; break; }
     const vuelto = copiar(h[i]);
     mundoRef.current = vuelto;
+    rebRef.current = null;
     h.length = i;
     // El diario se corta aquí y no en el próximo amanecer: en pausa no hay amanecer que llegue, y
     // el panel se quedaría enseñando los días que el mundo acaba de deshacer.
@@ -302,6 +320,56 @@ export default function Evolution() {
     nocheRef.current = { fin: 0, dura: PAUSA_NOCHE };
     repintarRef.current = true;
   }, []);
+
+  /**
+   * El mundo del día `dia` en el tick `t`, revivido desde el amanecer guardado de ese día. Es la
+   * única forma de mirar hacia atrás: **el motor no es reversible** —un tick tira comida, mata y
+   * gasta el azar— y guardar una copia por tick serían trece megas por día. Como el mundo es
+   * determinista, revivirlo da exactamente el que hubo.
+   *
+   * Los hitos hacen que eso salga por fotograma: sin ellos cada tick que se desanda revive el día
+   * entero, y con el censo lleno son siete milisegundos.
+   */
+  const estadoEn = useCallback((dia: number, t: number): Mundo | null => {
+    let reb = rebRef.current;
+    if (!reb || reb.dia !== dia) {
+      const base = historiaRef.current.find((h) => h.dia === dia);
+      if (!base) return null;                       // fuera de la historia guardada: hasta aquí
+      reb = rebRef.current = { dia, hitos: [copiar(base)] };
+    }
+    const i = Math.min(Math.floor(t / TRAMO), reb.hitos.length - 1);
+    const w = copiar(reb.hitos[i]);
+    for (let k = i * TRAMO; k < t; ) {
+      tick(w);
+      if (++k % TRAMO === 0 && reb.hitos.length === k / TRAMO) reb.hitos.push(copiar(w));
+    }
+    return w;
+  }, []);
+
+  /**
+   * Un tick hacia atrás, que son tres saltos distintos y los tres acaban en revivir un día hasta
+   * un tick: dentro del día es el tick anterior; en el amanecer, la noche de la que se viene —el
+   * día entero de antes, más su cierre—; y en la noche, el último tick de ese día.
+   *
+   * **La historia no se toca**: los amaneceres que quedan por delante siguen siendo los de este
+   * mundo, así que tirar hacia delante otra vez no tiene nada que reconstruir. El diario sí se
+   * corta, que es lo único que se lee sin abrir un panel y cantaría un día que todavía no ha
+   * pasado.
+   */
+  const atrasar = useCallback((): Mundo | null => {
+    const m = mundoRef.current;
+    if (!m) return null;
+    const w = m.noche ? estadoEn(m.dia - 1, m.duracion)
+      : m.t > 0 ? estadoEn(m.dia, m.t - 1)
+      : estadoEn(m.dia - 1, CONFIG.ticksDia);
+    if (!w) return null;
+    if (!m.noche && m.t === 0) anochecer(w);
+    mundoRef.current = w;
+    olvidar(cronicaRef.current, w.noche ? w.dia : w.dia + 1);
+    ultimoRef.current = cronicaRef.current.eventos[cronicaRef.current.eventos.length - 1] ?? null;
+    nocheRef.current = { fin: 0, dura: PAUSA_NOCHE };
+    return w;
+  }, [estadoEn]);
 
   /**
    * La tira mira el mundo con su propio reloj: el bucle de pintado vive en refs y no re-renderiza
@@ -317,8 +385,13 @@ export default function Evolution() {
    */
   const guardar = useCallback((m: Mundo) => {
     const h = historiaRef.current;
-    h.push(copiar(m));
-    if (h.length > HISTORIA) h.shift();
+    // Rebobinar y volver a tirar hacia delante revive días que ya estaban guardados, y el mundo es
+    // determinista: el amanecer que saldría de apuntarlos otra vez es el que ya está. Los otros dos
+    // sí se llaman siempre — los dos cortan solos el futuro que ya no va a ocurrir y lo reescriben.
+    if (!h.length || h[h.length - 1].dia < m.dia) {
+      h.push(copiar(m));
+      if (h.length > HISTORIA) h.shift();
+    }
     registrar(repartoRef.current, m);
     const ev = narrar(cronicaRef.current, m, evaRef.current);
     if (ev) ultimoRef.current = ev;
@@ -393,7 +466,7 @@ export default function Evolution() {
   useEffect(() => {
     const loop = () => {
       rafRef.current = requestAnimationFrame(loop);
-      const m = mundoRef.current;
+      let m = mundoRef.current;
       const { W, H } = sizeRef.current;
       const ctx = canvasRef.current?.getContext("2d");
       if (!m || !ctx || W === 0) return;
@@ -410,6 +483,15 @@ export default function Evolution() {
           dados++;
         }
         if (m.dia >= saltoRef.current || m.extinto) { saltoRef.current = 0; setSaltando(false); }
+      } else if (corriendoRef.current && vel < 0) {
+        // Hacia atrás **aunque el mundo esté extinto**: es justo cuando apetece volver a ver qué
+        // pasó. Se acaba donde se acaba la historia guardada, y ahí se para solo.
+        for (let k = 0; k < -vel; k++) {
+          const w = atrasar();
+          if (!w) { setCorriendo(false); break; }
+          m = w;
+          dados++;
+        }
       } else if (corriendoRef.current && !m.extinto) {
         while (dados < vel && performance.now() - t0 < PRESUPUESTO_MS) {
           if (paso(m, false, vel, nocheRef.current)) guardar(m);
@@ -481,7 +563,7 @@ export default function Evolution() {
     };
     rafRef.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(rafRef.current);
-  }, [guardar]);
+  }, [guardar, atrasar]);
 
   // Los mismos botones sirven a la barra de abajo y a la que flota en pantalla completa: un
   // segundo juego de JSX se quedaría a medias el día que se añada un control.
@@ -492,7 +574,7 @@ export default function Evolution() {
         </button>
         {VELOCIDADES.map((v, i) => (
           <button key={v} className={`ev-btn${i === velIdx ? " on" : ""}`} onClick={() => setVelIdx(i)}>
-            ×{v}
+            ×{v < 0 ? `−${-v}` : v}
           </button>
         ))}
         <button className="ev-btn muted" onClick={volver} disabled={!hayAtras}>

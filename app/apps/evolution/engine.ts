@@ -190,7 +190,7 @@ export const TABLA: Record<Rasgo, { paga: string; cobra: string }> = {
   talla: { paga: "coste ∝ masa con la misma despensa que el pequeño; giras peor", cobra: "derecho a comerte a quien sea un 20% menor" },
   vision: { paga: "coste ∝ visión²", cobra: "detectas a distancia ∝ radio del otro" },
   sociabilidad: { paga: "competencia por el mismo bocado", cobra: "peso al centro de masa de los visibles, con signo" },
-  fiereza: { paga: "riesgo, y perseguir no es recoger", cobra: "peso de atracción al menor visible" },
+  fiereza: { paga: "riesgo, perseguir no es recoger y comer deja quieto un segundo", cobra: "peso de atracción al menor visible" },
   retorno: { paga: "volver pronto es dejar de buscar", cobra: "peso hacia casa cuando ya llevas comida" },
 };
 
@@ -225,6 +225,23 @@ export type Config = {
    * umbral que hace de la talla una carta y no solo lastre.
    */
   boca: number;
+  /**
+   * Lo que se tarda en comerse a otro, en ticks. **Es la segunda cifra elegida por el ojo y no por
+   * una magnitud** —la primera es `TICKS_BOCADO`—: la presa no da para medirla, porque su masa
+   * comida vale menos que un bocado del suelo y cualquier ritmo proporcional duraría un tick. Sale
+   * de que se vea: a ×1 el tick es un fotograma, así que 60 es el segundo que dura la dentellada.
+   *
+   * **Y no es solo pintado: es lo que cazar cuesta de jornada.** Mordiendo no se decide ni se anda,
+   * ni el que muerde ni el mordido, así que la caza se paga en el único recurso que aquí no se
+   * puede ahorrar, que es la luz que queda. En 0 se come en el tick del contacto, que es como
+   * estuvo el mundo hasta que la depredación se pudo mirar.
+   *
+   * **Y la ecología no lo nota, que es lo que había que medir**: entre 0 y 120 ticks, sobre
+   * veinticuatro semillas a 200 días, el censo va de 20 a 21, las presas al día de 0,44 a 0,37 y
+   * la parte de muertes por diente del 7,6% al 6,9% — ruido de semilla, y las extinciones las
+   * mismas. Sale de `dentellada.medir.ts`, que es quien compara los dos mundos.
+   */
+  ticksPresa: number;
   tasa: number;
   paso: number;
   /**
@@ -309,7 +326,7 @@ export const CONFIG: Config = {
   ancho: 288, alto: 200,
   comidas: 40, censoInicial: 1,
   ticksDia: 1000, capReserva: CAP_RESERVA, casa: 18,
-  caza: true, boca: 1.2,
+  caza: true, boca: 1.2, ticksPresa: 60,
   tasa: 0.08, paso: 0.06,
   vida: 10,
   fundador: FUNDADOR,
@@ -323,6 +340,18 @@ export type Bicho = {
   radio: number; masa: number;
   /** Bocados encima. Pesan: entran en la masa que hay que mover. */
   carga: number;
+  /**
+   * A quién tiene en la boca, o 0. Mientras dure —`restan` ticks— ni decide ni se mueve: se le
+   * paga el basal y la vista, como al que está quieto, pero no el empuje.
+   */
+  muerde: number;
+  restan: number;
+  /**
+   * Quién lo tiene a él en la boca, o 0. **Preso no se vive el tick**: no decide, no anda, no paga
+   * y no recoge. Un segundo de basal no mueve ninguna cuenta, y a cambio no hay que resolver en
+   * otro sitio qué pasa si te mueres de hambre mientras te comen.
+   */
+  preso: number;
   reserva: number;
   vivo: boolean;
   /**
@@ -501,6 +530,7 @@ function nacer(m: Mundo, g: Genoma, idMadre: number, gen: number, donde?: [numbe
     // que trajo. Así una cría grande cuesta más que una pequeña, que es el contrapeso que la talla
     // no tenía —antes un hijo costaba dos bocados fuera cual fuera su tamaño—.
     radio: g.talla, masa: masaDe(g.talla), carga: 0, reserva: m.cfg.capReserva * masaDe(g.talla),
+    muerde: 0, restan: 0, preso: 0,
     vivo: true, aSalvo: false, dormido: false, hijos: 0, crias: 0, muerte: null, recien: false, g,
   };
   m.bichos.push(b);
@@ -686,6 +716,38 @@ function comer(m: Mundo, dep: Bicho, presa: Bicho) {
   presa.muerte = "comido";
   m.marcas.push({ x: presa.x, y: presa.y, r: presa.radio, t: m.t, causa: "comido", edad: edadDe(m, presa) });
   m.cuenta.comidos++;
+  dep.muerde = 0; dep.restan = 0;
+  // Al que se traga le puede quedar alguien a medio comer en su propia boca: se suelta, que quien
+  // muere aquí es la presa y no su preso.
+  if (presa.muerde) soltar(m, presa);
+}
+
+/** A quién tiene en la boca, o `null` si ya no está en el censo. */
+const presaDe = (m: Mundo, b: Bicho): Bicho | null => m.bichos.find((o) => o.id === b.muerde) ?? null;
+
+/**
+ * Suelta la presa viva y donde está. **Un mordisco interrumpido no mata**: eso es lo que hace que
+ * escaparse exista —matar al que muerde libera a quien tenía en la boca— y lo que deja la promesa
+ * de casa intacta, porque la noche cae sobre bocados a medias que nadie se ha comido.
+ */
+function soltar(m: Mundo, dep: Bicho) {
+  const p = presaDe(m, dep);
+  if (p) p.preso = 0;
+  dep.muerde = 0; dep.restan = 0;
+}
+
+/**
+ * Le mete la presa en la boca: ni se la come todavía ni la mata. Se encara de golpe hacia ella
+ * —el mordisco ya ha ocurrido, y el cuerpo tiene que enseñar de quién es la boca— con el vector
+ * normalizado, que no pide trigonometría.
+ */
+function morder(m: Mundo, dep: Bicho, presa: Bicho) {
+  dep.muerde = presa.id;
+  dep.restan = m.cfg.ticksPresa;
+  presa.preso = dep.id;
+  const dx = presa.x - dep.x, dy = presa.y - dep.y;
+  const d = Math.sqrt(dx * dx + dy * dy);
+  if (d > 1e-6) { dep.hx = dx / d; dep.hy = dy / d; }
 }
 
 /** Lo que dura en pantalla una muerte del día, en ticks. Solo la mira el pintado. */
@@ -745,14 +807,18 @@ export function tick(m: Mundo) {
 
   for (const b of m.bichos) {
     if (!b.vivo) continue;   // el que está en casa **no** se salta: tiene que poder volver a salir
+    if (b.preso) continue;   // en la boca de otro no se vive el tick
     // **Dormir es no tener a dónde ir**: estás en casa y no ves nada, ni bocado ni bicho. Sale de
     // la luz y del ojo de cada uno, así que no hay hora de acostarse que fijar — y quieto se paga
     // el basal pero no el empuje, que es lo que hace que llegar pronto valga la pena.
-    const vio = decidir(m, b, radioMax, luz, cae);
+    // Morder ancla: mientras la presa esté en la boca no se decide ni se anda, y eso es lo que
+    // cazar cuesta además de perseguir — un segundo de la única cosa que aquí no se puede
+    // ahorrar, que es la luz que queda. Se sigue pagando el basal y la vista, como al que espera.
+    const vio = b.muerde ? false : decidir(m, b, radioMax, luz, cae);
     const dormido = b.aSalvo && !vio;
     b.dormido = dormido;
-    const v = dormido ? 0 : b.g.empuje / radioCargado(c, b);
-    if (!dormido) mover(m, b, v);
+    const v = dormido || b.muerde ? 0 : b.g.empuje / radioCargado(c, b);
+    if (v > 0) mover(m, b, v);
 
     // El día se paga: basal, ver y mover, sobre la masa
     // que de verdad se está moviendo. Quedarse sin reserva es morir de hambre a media faena.
@@ -766,12 +832,13 @@ export function tick(m: Mundo) {
     if (b.reserva <= 0) {
       b.vivo = false;
       b.muerte = "hambre";
+      if (b.muerde) soltar(m, b);
       m.marcas.push({ x: b.x, y: b.y, r: b.radio, t: m.t, causa: "hambre", edad: edadDe(m, b) });
       m.cuenta.hambre++;
       continue;
     }
 
-    for (let i = m.comida.length - 1; i >= 0; i--) {
+    for (let i = m.comida.length - 1; i >= 0 && !b.muerde; i--) {
       const f = m.comida[i];
       const dx = f.x - b.x, dy = f.y - b.y, r = b.radio + RADIO_COMIDA;
       if (dx * dx + dy * dy <= r * r) { m.comida.splice(i, 1); b.carga++; break; }
@@ -794,10 +861,12 @@ export function tick(m: Mundo) {
   if (c.caza) {
     for (let i = 0; i < m.bichos.length; i++) {
       const a = m.bichos[i];
-      if (!a.vivo || a.aSalvo) continue;
+      // El que ya está en una boca no choca con nadie más; el que muerde sí, y por el lado malo:
+      // sigue siendo comestible para un tercero mayor, y perderlo suelta a quien tenía cogido.
+      if (!a.vivo || a.aSalvo || a.preso) continue;
       for (let j = i + 1; j < m.bichos.length; j++) {
         const b = m.bichos[j];
-        if (!b.vivo || b.aSalvo) continue;
+        if (!b.vivo || b.aSalvo || b.preso) continue;
         const dx = b.x - a.x, dy = b.y - a.y, r = a.radio + b.radio;
         if (dx * dx + dy * dy > r * r) continue;
         // De los tuyos no se come, por grande que seas: por debajo de la dispersión de la
@@ -808,10 +877,21 @@ export function tick(m: Mundo) {
         // despensa —con la eficiencia trófica, el resto se pierde— y su carga cambia de dueño,
         // todavía a cuestas y sin canjear. Las dos crían: lo robado nace esta misma noche y lo
         // cazado, en cuanto quepa. Cazar no es solo aguantar hasta casa.
-        if (a.radio >= c.boca * b.radio) { comer(m, a, b); }
-        else if (b.radio >= c.boca * a.radio) { comer(m, b, a); break; }
+        const dentellada = c.ticksPresa > 0 ? morder : comer;
+        if (!a.muerde && a.radio >= c.boca * b.radio) { dentellada(m, a, b); }
+        else if (!b.muerde && b.radio >= c.boca * a.radio) { dentellada(m, b, a); break; }
       }
     }
+  }
+
+  // La dentellada corre aquí, después de la caza, así que **el tick del mordisco es el primero de
+  // los `ticksPresa`**: al que muerde ya le ha costado su tick, y la cuenta que se ve en `restan`
+  // es la que queda.
+  for (const b of m.bichos) {
+    if (!b.vivo || !b.muerde || --b.restan > 0) continue;
+    const presa = presaDe(m, b);
+    if (presa) comer(m, b, presa);
+    else { b.muerde = 0; b.restan = 0; }
   }
 
   m.bichos = m.bichos.filter((b) => b.vivo);
@@ -843,6 +923,9 @@ export function tick(m: Mundo) {
 export function anochecer(m: Mundo) {
   m.duracion = m.t;
   const c = m.cfg;
+  // Un bocado a medias no cruza la noche: se suelta, como el que interrumpe cualquier otra cosa.
+  // Los dos se quedan donde estaban, y el que se llevó el susto amanece vivo y con lo suyo.
+  for (const b of m.bichos) if (b.muerde) soltar(m, b);
   // El día se cierra antes de criar para que `nacido` sea el primer día que la cría sale al campo,
   // y no el que se acaba de terminar sin ella. Con eso la edad es `dia - nacido` en todas partes.
   m.dia++;
@@ -940,7 +1023,8 @@ export function huella(m: Mundo): string {
   const partes = [String(m.dia), String(m.t), String(m.bichos.length), String(m.comida.length)];
   for (const b of m.bichos) {
     partes.push(`${b.id}:${b.x.toFixed(9)},${b.y.toFixed(9)},${b.hx.toFixed(9)},` +
-      `${b.reserva.toFixed(9)},${b.carga},${b.g.empuje.toFixed(9)},${b.g.retorno.toFixed(9)}`);
+      `${b.reserva.toFixed(9)},${b.carga},${b.muerde},${b.preso},` +
+      `${b.g.empuje.toFixed(9)},${b.g.retorno.toFixed(9)}`);
   }
   return partes.join("|");
 }
