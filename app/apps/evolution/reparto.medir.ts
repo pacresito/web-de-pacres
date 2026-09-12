@@ -8,7 +8,8 @@
 //
 // 1. ¿Se ven las seis bandas distintas entre sí? Es lo que decide si el panel cuenta seis cosas o
 //    una repetida seis veces, y es lo único que no se puede saber sin mirarlas.
-// 2. ¿Cuánta ventana pide cada gen? Fija `OCTAVAS` y `SOC`. Hay que caber dos cosas que tiran en
+// 2. ¿Cabe cada gen en la ventana que tiene? La fija `RECORRIDO` en `designs.ts` —el p01 y el p99
+//    medidos— y la comparten la tira, la leyenda y esto. Hay que caber dos cosas que tiran en
 //    sentidos opuestos: **lejos**, hasta dónde se va la población del fundador —si no cabe, la
 //    banda se apelmaza contra la pared y deja de decir dónde está—, y **grosor**, lo ancha que es
 //    en un día — si sobra ventana, el cuerpo de la población es una rendija.
@@ -17,7 +18,14 @@
 //    tiene que aguantarlo: la población se desploma antes de recuperarse.
 
 import { RASGOS, banda, correrDia, crearMundo, signado } from "./engine";
-import { BINS, OCTAVAS, SOC, columnas, crearHistoria, registrar, type Historia } from "./reparto";
+import { RECORRIDO } from "./designs";
+import { BINS, columnas, crearHistoria, registrar, type Historia } from "./reparto";
+
+/** Lo que abarca la ventana de cada gen, en sus propias unidades: octavas, o unidades si lleva signo. */
+const VENTANA = Object.fromEntries(RASGOS.map((r) => {
+  const [lo, hi] = RECORRIDO[r];
+  return [r, signado(r) ? hi - lo : Math.log2(hi / lo)];
+})) as Record<(typeof RASGOS)[number], number>;
 
 const SEMILLAS = ["hola", "pablo", "mar", "brizna", "duna"];
 const DIAS = 1000;
@@ -37,12 +45,14 @@ const col = (x: string | number, n = 9) => String(x).padStart(n);
 // minutos para las mismas cifras.
 type Medida = { grosor: number; lejos: number };
 const historias: Historia[] = [];
+const evas: Record<string, number>[] = [];
 const medidas: Record<string, Medida[]> = {};
 for (const r of RASGOS) medidas[r] = [];
 
 for (const s of SEMILLAS) {
   const m = crearMundo(s);
-  const h = crearHistoria(m.eva);
+  const h = crearHistoria();
+  evas.push({ ...m.eva });
   const eva = { ...m.eva };
   const lejos: Record<string, number> = {}, grosores: Record<string, number[]> = {};
   for (const r of RASGOS) { lejos[r] = 0; grosores[r] = []; }
@@ -89,12 +99,12 @@ function pintarBanda(h: Historia, gen: number): string[] {
 
 const h0 = historias[0];
 console.log(`\n## Las seis bandas — semilla "${SEMILLAS[0]}", ${h0.dias.length * h0.paso} días\n`);
-console.log(`Arriba ×${2 ** OCTAVAS} del fundador, en medio el fundador, abajo ÷${2 ** OCTAVAS}`);
-console.log(`(y en la sociabilidad, de +${SOC} a −${SOC}). A lo ancho, la partida entera.\n`);
+console.log("Arriba, lo más alto que ese gen llega a dar; abajo, lo más bajo — la ventana de `RECORRIDO`,");
+console.log("la misma que pintan la tira y la leyenda. A lo ancho, la partida entera.\n");
 for (let i = 0; i < RASGOS.length; i++) {
   const r = RASGOS[i], fin = h0.dias[h0.dias.length - 1].med[i];
-  console.log(`${r}  ${h0.eva[r].toFixed(2)} → ${fin.toFixed(2)}`);
-  const marca = (k: number) => k === 0 ? `×${2 ** OCTAVAS}` : k === (ALTO >> 1) ? "ev" : k === ALTO - 1 ? `÷${2 ** OCTAVAS}` : "  ";
+  console.log(`${r}  ${evas[0][r].toFixed(2)} → ${fin.toFixed(2)}`);
+  const marca = (k: number) => k === 0 ? "hi" : k === (ALTO >> 1) ? "  " : k === ALTO - 1 ? "lo" : "  ";
   pintarBanda(h0, i).forEach((f, k) => console.log(`  ${marca(k).padStart(2)} │${f}│`));
   console.log("");
 }
@@ -107,12 +117,12 @@ console.log([col("gen", 13), col("grosor"), col("lejos"), col("peor"), col("% es
 for (const r of RASGOS) {
   const ms = medidas[r];
   if (!ms.length) continue;
-  const ventana = signado(r) ? 2 * SOC : 2 * OCTAVAS;
+  const ventana = VENTANA[r];
   console.log([r.padEnd(13), col(med(ms.map((x) => x.grosor)).toFixed(2)),
     col(med(ms.map((x) => x.lejos)).toFixed(2)), col(Math.max(...ms.map((x) => x.lejos)).toFixed(2)),
     col(((100 * med(ms.map((x) => x.grosor))) / ventana).toFixed(0))].join(" "));
 }
-console.log(`\nA leer: la ventana es de ±${OCTAVAS} octavas (±${SOC} en la sociabilidad), así que **peor** tiene que caber`);
+console.log(`\nA leer: la ventana es la de cada gen (de ${Math.min(...Object.values(VENTANA)).toFixed(1)} a ${Math.max(...Object.values(VENTANA)).toFixed(1)}), así que **peor** tiene que caber`);
 console.log(`con margen —lo que la pase se apelmaza contra la pared— y **% escala** dice qué parte de la banda`);
 console.log("ocupa el cuerpo de la población. Por debajo del 5% es una rendija; por encima del 30%, no queda");
 console.log("sitio para que el gen se mueva.\n");
@@ -123,7 +133,7 @@ console.log([col("gen", 13), ...[BINS / 4, BINS / 2, BINS, BINS * 2].map((b) => 
 for (const r of RASGOS) {
   const ms = medidas[r];
   if (!ms.length) continue;
-  const parte = med(ms.map((x) => x.grosor)) / (signado(r) ? 2 * SOC : 2 * OCTAVAS);
+  const parte = med(ms.map((x) => x.grosor)) / VENTANA[r];
   console.log([r.padEnd(13), ...[BINS / 4, BINS / 2, BINS, BINS * 2].map((b) => col((parte * b).toFixed(1)))].join(" "));
 }
 console.log(`\nA leer: por debajo de tres franjas no hay forma que enseñar —una población partida en dos se ve`);

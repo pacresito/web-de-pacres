@@ -4,9 +4,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import TerminalShell from "../../components/TerminalShell";
 import WhyFooter from "../../components/WhyFooter";
 import { useTema } from "../../components/usePersistedTheme";
-import { CONFIG, RASGOS, TABLA, amanecer, anochecer, azarCon, banda, copiar, crearMundo, evaDe, tick, type Mundo } from "./engine";
-import Leyenda, { type Perfil } from "./leyenda";
+import { CONFIG, RASGOS, TABLA, amanecer, anochecer, azarCon, copiar, crearMundo, evaDe, tick, type Mundo } from "./engine";
+import Leyenda from "./leyenda";
+import Tira from "./tira";
+import Estratos from "./estratos";
 import { designFor, paletaDe, pintar, vistaDe, type Design, type Paleta } from "./render";
+import { crearHistoria, registrar, type Historia } from "./reparto";
 import { IconoPantallaCompleta } from "../../components/Iconos";
 
 // Cuántos ticks se intentan por fotograma. Es un objetivo, no una promesa: el bucle corta por
@@ -40,20 +43,6 @@ const PAUSA_NOCHE = 1500;
 const SEMILLA_POR_DEFECTO = "hola";
 
 const ACENTO = (x: string | number) => `<span style="color:var(--t-accent)">${x}</span>`;
-
-/**
- * El reparto de cada gen en la población viva, para la leyenda: dónde está hoy cada gen. `null` si
- * no queda nadie vivo — quien pinta tiene que decidir qué hacer con un mundo extinto.
- */
-function perfilDe(bichos: { g: Record<string, number> }[]): Perfil | null {
-  if (bichos.length === 0) return null;
-  const p: Perfil = {};
-  for (const r of RASGOS) {
-    const b = banda(bichos.map((x) => x.g[r]));
-    if (b) p[r] = b;
-  }
-  return p;
-}
 
 /**
  * Cuánto lleva corrida la noche en curso, en reloj de pared. Lo lleva la página y no el motor,
@@ -119,11 +108,22 @@ export default function Evolution() {
   // atrás también se podría hacer resembrando y corriendo hasta el día que toca — pero eso crece
   // con la partida y a los doscientos días son segundos de espera. Copiar el mundo es constante.
   const historiaRef = useRef<Mundo[]>([]);
+  /**
+   * El reparto de cada día, que es lo que mira el panel de estratos. **Se registra en el bucle y no
+   * al abrirlo**: rehacerlo al abrir exigiría revivir la partida entera, y lo que cuesta guardarlo
+   * es kilobyte y medio por día. Sobrevive a volver atrás sin ayuda —`registrar` corta el futuro
+   * que ya no va a ocurrir—, así que aquí no hay nada que deshacer.
+   */
+  const repartoRef = useRef<Historia>(crearHistoria());
   const hayAtrasRef = useRef(false);   // espejo de `historiaRef.length > 0`, para poder pintar el botón
   const rafRef = useRef(0);
   const sizeRef = useRef({ W: 0, H: 0 });
   const dprRef = useRef(1);
+  // Dos sitios donde sale la línea de estado —la de la página y la de la barra que flota en
+  // pantalla completa—, y las dos se escriben en el mismo sitio del bucle: sin esto, en pantalla
+  // completa no hay ni día ni censo, que es lo único que dice si la partida avanza.
   const estadoRef = useRef<HTMLSpanElement>(null);
+  const estadoFsRef = useRef<HTMLSpanElement>(null);
   const paletaRef = useRef<Paleta>(paletaDe(SEMILLA_POR_DEFECTO, "light"));
   const disenoRef = useRef<Design>(designFor(SEMILLA_POR_DEFECTO));
   const corriendoRef = useRef(true);
@@ -138,6 +138,18 @@ export default function Evolution() {
   const [saltando, setSaltando] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const [leyenda, setLeyenda] = useState(false);
+  /**
+   * La tira empieza plegada, y **es una decisión medida, no una preferencia**: el mundo se limita
+   * siempre por el alto —es más ancho que alto y la página no se desplaza—, así que los 245 px que
+   * ocupa se le quitan al lienzo por los dos lados a la vez. Medido en 1280×900: con ella abierta
+   * el mundo cae a 516×358 y un bicho mide 8,6 px, por debajo de los 14 en los que el diseño pierde
+   * miembros y púas; plegada son 817×567 y 13,6 px. Una tira que vuelve ilegible al bicho que está
+   * explicando se contradice, y por eso se abre cuando se la pide.
+   *
+   * **En pantalla completa no pasa:** ahí flota sobre un mundo de 1280×889 y el bicho mide 21 px.
+   */
+  const [poblacion, setPoblacion] = useState(false);
+  const [partida, setPartida] = useState(false);
   const [hayAtras, setHayAtras] = useState(false);
   const tema = useTema();
   // El fundador de la partida en curso, calculado y no guardado: el mundo vive en un ref que no
@@ -177,6 +189,7 @@ export default function Evolution() {
     const m = crearMundo(semilla);
     mundoRef.current = m;
     historiaRef.current = [];
+    repartoRef.current = crearHistoria();
     nocheRef.current = { fin: 0, dura: PAUSA_NOCHE };
     repintarRef.current = true;
     const url = new URL(window.location.href);
@@ -194,6 +207,7 @@ export default function Evolution() {
     if (s === semilla) {          // misma palabra = mismo mundo: reinicia
       mundoRef.current = crearMundo(s);
       historiaRef.current = [];
+      repartoRef.current = crearHistoria();
       nocheRef.current = { fin: 0, dura: PAUSA_NOCHE };
     } else setSemilla(s);
     repintarRef.current = true;
@@ -218,18 +232,28 @@ export default function Evolution() {
     repintarRef.current = true;
   }, []);
 
-  // La leyenda mira el mundo con su propio reloj: el bucle de pintado vive en refs y no
-  // re-renderiza React, así que preguntarle en cada fotograma sería re-renderizar la página entera
-  // 60 veces por segundo para mover una barra que se mueve en generaciones.
-  const perfil = useCallback(() => (mundoRef.current ? perfilDe(mundoRef.current.bichos) : null), []);
+  /**
+   * La tira mira el mundo con su propio reloj: el bucle de pintado vive en refs y no re-renderiza
+   * React, así que preguntarle en cada fotograma sería re-renderizar la página entera 60 veces por
+   * segundo para mover unos bichos que se mueven en generaciones.
+   */
+  const mundoVivo = useCallback(() => mundoRef.current, []);
 
-  /** Guarda el amanecer que acaba de ocurrir y tira el más viejo si ya sobran. */
+  /**
+   * Guarda el amanecer que acaba de ocurrir —para poder volver— y el reparto del día que se acaba
+   * de cerrar. Los dos en el mismo sitio porque los dos ocurren en el mismo momento, que es el
+   * único en el que el día anterior ya está contado y el siguiente no ha empezado.
+   */
   const guardar = useCallback((m: Mundo) => {
     const h = historiaRef.current;
     h.push(copiar(m));
     if (h.length > HISTORIA) h.shift();
+    registrar(repartoRef.current, m);
   }, []);
   const cerrarLeyenda = useCallback(() => setLeyenda(false), []);
+  const cerrarPartida = useCallback(() => setPartida(false), []);
+  const reparto = useCallback(() => repartoRef.current, []);
+  const diaDe = useCallback(() => mundoRef.current?.dia ?? 0, []);
 
   const saltar = useCallback(() => {
     const m = mundoRef.current;
@@ -310,15 +334,53 @@ export default function Evolution() {
       const atras = historiaRef.current.length > 0;
       if (atras !== hayAtrasRef.current) { hayAtrasRef.current = atras; setHayAtras(atras); }
 
-      if (estadoRef.current) {
-        estadoRef.current.innerHTML = m.extinto
-          ? `↳ <span style="color:#e55">extinción</span> en el día ${m.dia}`
-          : `↳ ${linea(m)}${saltoRef.current ? ` · adelantando… ${ACENTO(`día ${m.dia}/${saltoRef.current}`)}` : ""}`;
-      }
+      const texto = m.extinto
+        ? `↳ <span style="color:#e55">extinción</span> en el día ${m.dia}`
+        : `↳ ${linea(m)}${saltoRef.current ? ` · adelantando… ${ACENTO(`día ${m.dia}/${saltoRef.current}`)}` : ""}`;
+      for (const el of [estadoRef.current, estadoFsRef.current]) if (el) el.innerHTML = texto;
     };
     rafRef.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(rafRef.current);
   }, [guardar]);
+
+  // Los mismos botones sirven a la barra de abajo y a la que flota en pantalla completa: un
+  // segundo juego de JSX se quedaría a medias el día que se añada un control.
+  const controles = (
+    <>
+        <button className="ev-btn" onClick={() => setCorriendo((c) => !c)}>
+          {corriendo ? "Pausa" : "Seguir"}
+        </button>
+        {VELOCIDADES.map((v, i) => (
+          <button key={v} className={`ev-btn${i === velIdx ? " on" : ""}`} onClick={() => setVelIdx(i)}>
+            ×{v}
+          </button>
+        ))}
+        <button className="ev-btn muted" onClick={volver} disabled={!hayAtras}>
+          −{RETROCESO} días
+        </button>
+        <button className="ev-btn muted" onClick={saltar} disabled={saltando}>
+          {saltando ? "adelantando…" : `+${SALTO_DIAS} días`}
+        </button>
+        <input
+          className="ev-semilla" value={texto} spellCheck={false} aria-label="Semilla"
+          onChange={(e) => setTexto(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") sembrar(); }}
+        />
+        <button className="ev-btn muted" onClick={sembrar}>Sembrar</button>
+        <button className={`ev-btn${leyenda ? " on" : ""}`} onClick={() => setLeyenda((v) => !v)}>
+          leyenda
+        </button>
+        <button className={`ev-btn${poblacion ? " on" : ""}`} onClick={() => setPoblacion((v) => !v)}>
+          población
+        </button>
+        <button className={`ev-btn${partida ? " on" : ""}`} onClick={() => setPartida((v) => !v)}>
+          la partida
+        </button>
+    </>
+  );
+
+  /** Lo que la tira necesita, en un sitio: se pinta en dos y los dos tienen que decir lo mismo. */
+  const tira = { mundo: mundoVivo, eva, paleta: paletaDe(semilla, tema ?? "light"), diseno: designFor(semilla) };
 
   return (
     <TerminalShell
@@ -345,7 +407,7 @@ export default function Evolution() {
         .ev-semilla {
           padding: 0.4rem 0.6rem; border-radius: 4px; border: 1px solid var(--border);
           font-family: var(--t-mono); font-size: 0.72rem; color: var(--t-ink);
-          background: transparent; width: 8.5rem;
+          background: transparent; width: 6.5rem;
         }
         .ev-semilla:focus { outline: none; border-color: var(--t-accent); }
 
@@ -355,14 +417,92 @@ export default function Evolution() {
            en pantalla ancha— o con dos franjas muertas. */
         .sim-box { flex: 1 1 auto; min-height: 0; display: flex; align-items: center; justify-content: center; position: relative; }
         .sim-canvas { display: block; border-radius: 6px; touch-action: none; }
-        .sim-box.fs { position: fixed; inset: 0; z-index: 1000; }
-        .sim-box.fs .sim-canvas { border-radius: 0; }
+        /* **En pantalla completa nada flota sobre el mundo.** La escena entera —controles, lienzo y
+           tira— toma la ventana y se reparte el alto igual que en la página, así que el mundo crece
+           por lo que se le ha quitado a los márgenes y no hay una capa tapando la franja de casa.
+           La leyenda sigue siendo un panel encima, que para eso se abre y se cierra. */
+        .escena { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+        .escena.fs {
+          position: fixed; inset: 0; z-index: 1000; background: var(--t-paper);
+          padding: 0 clamp(0.75rem, 2vw, 1.5rem) 0.75rem;
+        }
+        .escena.fs .toolbar { justify-content: center; }
+        .escena.fs .sim-canvas { border-radius: 0; }
+        .ev-estado-fs {
+          flex-basis: 100%; text-align: center; font-size: 0.66rem; color: var(--t-ink3);
+          font-variant-numeric: tabular-nums;
+        }
         .fs-exit {
           position: fixed; top: 14px; right: 16px; z-index: 1001;
           background: none; border: none; cursor: pointer; padding: 6px; display: flex;
           color: var(--t-accent); transition: opacity 0.15s; opacity: 0.7;
         }
         .fs-exit:hover { opacity: 1; }
+
+        /* ── Tira de población ────────────────────────────────────────────────
+           Debajo del mundo y en el flujo, no encima: es lo que está siempre, así que taparlo
+           sería taparse a sí misma. El alto que se lleva se lo quita al lienzo, que es flex. */
+        .tr-panel { flex: 0 0 auto; border-top: 1px solid var(--border); padding: 0.4rem 0 0.15rem; }
+        .tr-cab { display: flex; align-items: baseline; gap: 0.6rem; font-size: 0.6rem; padding-bottom: 0.25rem; }
+        .tr-cab b { color: var(--t-ink); letter-spacing: 0.07em; }
+        .tr-cab span { color: var(--muted); }
+        .tr-fila {
+          display: grid; grid-template-columns: 168px 1fr; gap: 0.6rem; align-items: center;
+          border-top: 1px solid var(--t-rule2); padding: 1px 0; cursor: pointer;
+        }
+        .tr-fila.on { background: color-mix(in srgb, var(--t-accent) 5%, transparent); }
+        .tr-et { display: flex; align-items: baseline; gap: 0.4rem; min-width: 0; line-height: 1.2; }
+        .tr-et b { font-size: 0.64rem; letter-spacing: 0.05em; color: var(--t-ink2); }
+        .tr-fila.on .tr-et b { color: var(--t-ink); }
+        .tr-cifra { font-size: 0.6rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+        .tr-cifra i { font-style: normal; color: var(--t-ink2); }
+        .tr-eje {
+          display: flex; justify-content: space-between; font-size: 0.58rem; color: var(--t-ink3);
+          padding: 0.2rem 0 0; margin-left: calc(168px + 0.6rem);
+        }
+
+        .tr-eva { color: var(--t-ink2); }
+        .tr-eje i { font-style: normal; }
+        @media (max-width: 500px) {
+          .tr-cab span { display: none; }   /* la pista se come dos líneas y el sitio es del mundo */
+          .tr-eje i { display: none; }   /* «lo más bajo» ya se entiende y cabe en una línea */
+          .tr-fila { grid-template-columns: 96px 1fr; gap: 0.4rem; }
+          .tr-et { flex-direction: column; align-items: flex-start; gap: 0; }
+          .tr-eje { margin-left: calc(96px + 0.4rem); }
+        }
+
+        /* ── Estratos: toda la partida ────────────────────────────────────────
+           Encima del lienzo como la leyenda y por lo mismo: seis franjas legibles no caben en lo
+           que le sobra a la página, que ya se reparten el mundo y la tira. */
+        .es-panel {
+          position: absolute; inset: 0; z-index: 5; overflow-y: auto; overscroll-behavior: contain;
+          background: var(--t-paper); padding: 0.65rem 1rem 0.6rem;
+        }
+        .es-cabecera { display: flex; align-items: center; gap: 0.8rem; padding-bottom: 0.35rem; }
+        .es-cabecera b { font-size: 0.78rem; letter-spacing: 0.08em; color: var(--t-accent); }
+        .es-rango { font-size: 0.66rem; color: var(--muted); font-variant-numeric: tabular-nums; margin-right: auto; }
+        .es-fila {
+          display: grid; grid-template-columns: 96px 1fr; gap: 0.6rem; align-items: center;
+          border-top: 1px solid var(--t-rule2); padding: 3px 0; position: relative;
+        }
+        .es-et b { font-size: 0.66rem; letter-spacing: 0.05em; color: var(--t-ink2); }
+        .es-lienzo { display: block; width: 100%; height: var(--es-alto); }
+        .es-nada {
+          position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+          font-size: 0.62rem; color: var(--t-ink4);
+        }
+        .es-pie {
+          display: flex; gap: 0.6rem; font-size: 0.6rem; color: var(--t-ink3);
+          padding-top: 0.25rem; margin-left: calc(96px + 0.6rem);
+          font-variant-numeric: tabular-nums;
+        }
+        .es-marcas { flex: 1 1 auto; display: flex; justify-content: space-between; }
+        .es-perfil { flex: 0 0 27px; text-align: right; }
+        @media (max-width: 500px) {
+          .es-fila { grid-template-columns: 76px 1fr; gap: 0.4rem; }
+          .es-lienzo { height: var(--es-alto-movil); }
+          .es-pie { margin-left: calc(76px + 0.4rem); }
+        }
 
         /* ── Leyenda ──────────────────────────────────────────────────────────
            Encima del lienzo y no debajo: el hueco vertical ya se lo reparten el mundo y la barra
@@ -397,18 +537,9 @@ export default function Evolution() {
         .lg-cab { display: flex; align-items: baseline; justify-content: space-between; gap: 0.6rem; font-size: 0.72rem; }
         .lg-cab b { color: var(--t-ink); letter-spacing: 0.04em; }
         .lg-cifra { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
-        .lg-flecha { color: var(--t-ink4); }
 
         /* La barra: el recorrido medido del gen —su p01 y su p99—, con el fundador cerca del centro
            y margen fuera para el linaje que se salga. La geometría es posGen, en designs.ts. */
-        .lg-eje { position: relative; height: 14px; margin: 0.45rem 0 0.35rem; }
-        .lg-eje::before { content: ""; position: absolute; left: 0; right: 0; top: 6px; height: 1px; background: var(--border); }
-        .lg-eje i { position: absolute; display: block; }
-        .lg-bigote { top: 6px; height: 1px; background: var(--t-ink4); }
-        .lg-tramo { top: 3px; height: 7px; border-radius: 4px; background: color-mix(in srgb, var(--t-accent) 30%, transparent); }
-        .lg-med { top: 1px; width: 5px; height: 11px; margin-left: -2.5px; border-radius: 3px; background: var(--t-accent); }
-        .lg-eva { top: -2px; width: 1px; height: 17px; background: var(--t-ink2); }
-        .lg-tick { top: 3px; width: 1px; height: 7px; background: var(--border); }
 
         .lg-que { font-size: 0.68rem; line-height: 1.5; color: var(--t-ink); margin: 0.2rem 0 0; }
         .lg-nota { font-size: 0.62rem; line-height: 1.5; color: var(--t-ink3); margin-top: 0.2rem; }
@@ -439,43 +570,30 @@ export default function Evolution() {
           </button>
         </div>
 
-        <div className="toolbar">
-          <button className="ev-btn" onClick={() => setCorriendo((c) => !c)}>
-            {corriendo ? "Pausa" : "Seguir"}
-          </button>
-          {VELOCIDADES.map((v, i) => (
-            <button key={v} className={`ev-btn${i === velIdx ? " on" : ""}`} onClick={() => setVelIdx(i)}>
-              ×{v}
-            </button>
-          ))}
-          <button className="ev-btn muted" onClick={volver} disabled={!hayAtras}>
-            −{RETROCESO} días
-          </button>
-          <button className="ev-btn muted" onClick={saltar} disabled={saltando}>
-            {saltando ? "adelantando…" : `+${SALTO_DIAS} días`}
-          </button>
-          <input
-            className="ev-semilla" value={texto} spellCheck={false} aria-label="Semilla"
-            onChange={(e) => setTexto(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") sembrar(); }}
-          />
-          <button className="ev-btn muted" onClick={sembrar}>Sembrar</button>
-          <button className={`ev-btn${leyenda ? " on" : ""}`} onClick={() => setLeyenda((v) => !v)}>
-            leyenda
-          </button>
+        <div className={`escena${fullscreen ? " fs" : ""}`}>
+          <div className="toolbar">
+            {controles}
+            {fullscreen && <span ref={estadoFsRef} className="ev-estado-fs" />}
+          </div>
+
+          <div className="sim-box" ref={wrapRef}>
+            <canvas className="sim-canvas" ref={canvasRef} />
+            {partida && (
+              <Estratos historia={reparto} eva={eva} dia={diaDe} cerrar={cerrarPartida} />
+            )}
+            {leyenda && (
+              <Leyenda
+                rasgos={RASGOS} tabla={TABLA}
+                eva={eva}
+                paleta={paletaDe(semilla, tema ?? "light")}
+                diseno={designFor(semilla)} cerrar={cerrarLeyenda}
+              />
+            )}
+          </div>
+
+          {poblacion && <Tira {...tira} />}
         </div>
 
-        <div className={`sim-box${fullscreen ? " fs" : ""}`} ref={wrapRef}>
-          <canvas className="sim-canvas" ref={canvasRef} />
-          {leyenda && (
-            <Leyenda
-              rasgos={RASGOS} tabla={TABLA}
-              eva={eva}
-              perfil={perfil} paleta={paletaDe(semilla, tema ?? "light")}
-              diseno={designFor(semilla)} cerrar={cerrarLeyenda}
-            />
-          )}
-        </div>
 
         {fullscreen && (
           <button className="fs-exit" onClick={() => setFullscreen(false)} title="Salir de pantalla completa" aria-label="Salir de pantalla completa">

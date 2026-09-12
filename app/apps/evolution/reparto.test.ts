@@ -21,7 +21,7 @@ const DIAS = 60;
 /** Corre una partida registrando cada amanecer, que es donde la página llamará. */
 function partida(dias: number) {
   const m = crearMundo(SEMILLA);
-  const h = crearHistoria(m.eva);
+  const h = crearHistoria();
   for (let d = 0; d < dias && !m.extinto; d++) { correrDia(m); registrar(h, m); }
   return { m, h };
 }

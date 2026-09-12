@@ -253,3 +253,275 @@ export function pintar(
 
 /** Sin uso fuera de aquí, pero el mundo lo necesita para saber cuánto ocupa un bocado. */
 export { RADIO_COMIDA, azarFijo };
+
+// ─── La tira de población ─────────────────────────────────────────────────────
+
+/**
+ * Los colores de la interfaz, que **no son los del mundo**: la tira es cromo de la página y vive
+ * en el papel del tema terminal, mientras que los cuerpos que pinta encima llevan la paleta de su
+ * partida. Se leen del CSS una vez por repintado en vez de escribirse aquí, que es lo que hace que
+ * el tema oscuro no necesite una segunda tabla.
+ */
+export type Tinta = { papel: string; linea: string; linea2: string; ink: string; ink3: string; ink4: string; acento: string };
+
+/** Lo que hace falta para pintar la fila de un gen. */
+export type Fila = {
+  /** Dónde cae en el eje cada bicho vivo, ya en 0…1, y el cuerpo que le corresponde. */
+  cuerpos: { t: number; c: Cuerpo }[];
+  /** El fundador y la mediana de hoy, en el mismo 0…1. */
+  eva: number;
+  med: number | null;
+  /** El recorrido medido del gen en otros mundos, en el mismo 0…1, o `null` si el eje ya es ese
+   *  recorrido — ahí la banda saldría igual en las seis filas y no diría nada. */
+  recorrido: [number, number] | null;
+  /** Px por unidad de mundo. **Una sola para la fila**: si cada cuerpo se ajustara a su celda,
+   *  la fila de la talla enseñaría a todo el mundo del mismo tamaño. */
+  escala: number;
+  /** Con el enjambre entero o con dos muestras: la fila que se mira y las cinco que no. */
+  enjambre: boolean;
+};
+
+const CRESTA = 96;   // puntos de la curva de fondo; más son subpíxeles en una fila de 600 px
+
+/**
+ * La curva de la población, suavizada. **Es el mismo bulto que el enjambre**, no un segundo dato:
+ * está para que la fila siga diciendo algo cuando el censo es de cinco bichos y el enjambre es una
+ * anécdota, y para que el hueco de una población partida en dos se vea también en la fila pequeña.
+ */
+function cresta(ts: number[]): number[] {
+  const h = new Float64Array(CRESTA);
+  for (const t of ts) h[Math.min(CRESTA - 1, Math.floor(t * CRESTA))]++;
+  // Tres pasadas de media móvil de ±2: menos deja los dientes del censo y más se come el valle
+  // que separa dos montones, que es justo lo que la curva tiene que enseñar.
+  const v = Array.from(h);
+  for (let k = 0; k < 3; k++) {
+    const w = v.slice();
+    for (let i = 0; i < CRESTA; i++) {
+      let s = 0, n = 0;
+      for (let j = Math.max(0, i - 2); j <= Math.min(CRESTA - 1, i + 2); j++) { s += w[j]; n++; }
+      v[i] = s / n;
+    }
+  }
+  const max = Math.max(...v);
+  return max > 0 ? v.map((x) => x / max) : v;
+}
+
+/**
+ * Una fila de la tira: la banda del recorrido, la curva de la población, las dos verticales y los
+ * bichos encima. **Los bichos son los del mundo** —los pinta el diseño de la partida—, que es lo
+ * que hace que el que se mira aquí y el que anda por el lienzo sean el mismo animal.
+ */
+export function pintarFila(
+  ctx: CanvasRenderingContext2D, W: number, H: number, dpr: number,
+  d: Design, p: Paleta, t: Tinta, f: Fila,
+) {
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = t.papel;
+  ctx.fillRect(0, 0, W, H);
+
+  const x = (u: number) => u * W;
+
+  // La banda del recorrido medido va sin cifra ni etiqueta a propósito: es contexto —hasta dónde
+  // llega este gen en otros mundos—, y numerarla sería una segunda vara sobre el mismo eje.
+  if (f.recorrido) {
+    ctx.fillStyle = t.linea2;
+    ctx.fillRect(x(f.recorrido[0]), 0, x(f.recorrido[1] - f.recorrido[0]), H);
+  }
+
+  const ys = cresta(f.cuerpos.map((c) => c.t));
+  ctx.beginPath();
+  for (let i = 0; i < CRESTA; i++) {
+    const px = +((i + 0.5) / CRESTA * W).toFixed(2), py = +(H - 1 - ys[i] * (H - 4)).toFixed(2);
+    if (i === 0) ctx.moveTo(0, py); else ctx.lineTo(px, py);
+  }
+  ctx.strokeStyle = t.ink4;
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  const vertical = (u: number, color: string, ancho: number, alfa = 1) => {
+    ctx.globalAlpha = alfa;
+    ctx.fillStyle = color;
+    ctx.fillRect(Math.round(x(u)) - ancho / 2, 0, ancho, H);
+    ctx.globalAlpha = 1;
+  };
+  // El fundador va debajo de los cuerpos: es la referencia quieta, y no pasa nada porque un bicho
+  // se le ponga delante. La mediana va encima, al final — es lo que se viene a mirar, y en la fila
+  // del enjambre el montón se la comía entera.
+  vertical(f.eva, t.ink4, 1);
+
+  const muestras = f.enjambre ? f.cuerpos : extremos(f.cuerpos);
+  colocar(muestras, W, H, d, f.escala).forEach(({ c, cx, cy, escala }) => {
+    // El lienzo ya está en píxeles CSS por el `setTransform` de arriba, así que aquí no se vuelve
+    // a multiplicar por `dpr`: hacerlo colocaba a toda la población fuera del borde derecho.
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(escala, escala);
+    d.cuerpo(ctx, { ...c, x: 0, y: 0, hx: 1, hy: 0 }, 1, envejecer(p, c.edad ?? 0));
+    ctx.restore();
+  });
+
+  if (f.med !== null) vertical(f.med, t.ink, 2, 0.82);
+}
+
+/**
+ * Las dos muestras de una fila que no se mira: **el más flojo y el más fuerte de la población de
+ * hoy**, no dos valores inventados. Con censo de uno sale uno solo, que es lo correcto — el primer
+ * día del mundo hay una bicha y enseñar dos sería mentir sobre el censo.
+ */
+function extremos(cs: { t: number; c: Cuerpo }[]): { t: number; c: Cuerpo }[] {
+  if (cs.length <= 2) return cs;
+  const s = [...cs].sort((a, b) => a.t - b.t);
+  return [s[0], s[s.length - 1]];
+}
+
+/**
+ * Dónde se pinta cada cuerpo. Se ordenan por el eje y cada uno busca **el primer nivel libre desde
+ * abajo**, así que el montón crece donde se amontonan y el hueco de una población partida en dos
+ * se queda vacío hasta arriba. Apilar por densidad calculada daría la misma silueta sin decir qué
+ * bicho es cada bulto.
+ */
+function colocar(cs: { t: number; c: Cuerpo }[], W: number, H: number, d: Design, escala: number) {
+  const orden = [...cs].sort((a, b) => a.t - b.t);
+  const niveles: number[] = [];
+  const puestos = orden.map(({ t, c }) => {
+    const ancho = Math.max(...d.extension(c.g, c.radio)) * 2 * escala;
+    const cx = Math.min(W - ancho / 2, Math.max(ancho / 2, t * W));
+    let n = 0;
+    while (n < niveles.length && niveles[n] > cx - ancho / 2) n++;
+    niveles[n] = cx + ancho / 2 + 0.8;
+    return { c, cx, n, ancho, escala };
+  });
+
+  // **El montón se aprieta hasta caber, no se corta por arriba.** Cuántos niveles hacen falta no se
+  // sabe hasta haberlos repartido —depende de lo junta que esté la población ese día—, así que el
+  // paso vertical se decide después: con sitio de sobra los cuerpos no se tocan, y en el día que
+  // treinta caigan en la misma franja se solapan, que es lo que hace un montón de verdad.
+  const pisos = Math.max(...puestos.map((p) => p.n)) + 1;
+  const alto = Math.max(...puestos.map((p) => p.ancho));
+  const paso = pisos <= 1 ? 0 : Math.min(alto * 0.62, (H - 2 - alto) / (pisos - 1));
+  return puestos.map((p) => ({ ...p, cy: H - 2 - p.ancho / 2 - p.n * paso }));
+}
+
+// ─── Los estratos: la partida entera ──────────────────────────────────────────
+
+/** Lo que hace falta para pintar la franja de un gen a lo largo del tiempo. */
+export type Estrato = {
+  /** Una columna por trozo de partida, cada una con sus `bins` fracciones que suman 1. */
+  columnas: Float64Array[];
+  /** La mediana de cada columna, ya en 0…1 de la escala del gen. */
+  medianas: number[];
+  /** El reparto de hoy, para el perfil de la derecha. */
+  hoy: Float64Array;
+  /** El fundador de la partida, en el mismo 0…1. */
+  eva: number;
+};
+
+/** Ancho del perfil de hoy, pegado al borde derecho, y el aire que lo separa del mapa. */
+const PERFIL = 22, AIRE = 5;
+
+/**
+ * Franjas a cada lado que se promedian antes de pintar. **Sin esto el mapa sale rayado**: con
+ * veinte bichos repartidos en ciento veintiocho franjas, cada bicho es una raya negra suelta con
+ * hueco a los lados, y lo que se lee es el censo y no la forma. Con ±3 la banda es continua y el
+ * valle que separa dos montones —lo único que el panel está para enseñar— sigue estando.
+ */
+const SUAVE = 3;
+
+/** Un histograma suavizado y normalizado a su propio máximo, en 0…1. */
+function alisar(c: Float64Array): Float64Array {
+  const n = c.length, v = new Float64Array(n);
+  for (let i = 0; i < n; i++) {
+    let suma = 0, cuenta = 0;
+    for (let j = Math.max(0, i - SUAVE); j <= Math.min(n - 1, i + SUAVE); j++) { suma += c[j]; cuenta++; }
+    v[i] = suma / cuenta;
+  }
+  let tope = 0;
+  for (const x of v) if (x > tope) tope = x;
+  if (tope > 0) for (let i = 0; i < n; i++) v[i] /= tope;
+  return v;
+}
+
+/**
+ * La franja de un gen: el tiempo a lo ancho, la escala del gen a lo alto y **la población como
+ * tinta** —cuanto más oscuro, más gente en esa franja ese día—. Encima, la mediana en el tiempo y
+ * la horizontal del fundador; a la derecha, el reparto de hoy de pie.
+ *
+ * **Cada columna se normaliza con su propio máximo** y no con el de la partida: si no, los primeros
+ * días —cuando la población es de tres bichos y todos caen en la misma franja— salen negros y el
+ * resto de la partida, gris claro. Lo que se lee aquí es la forma del reparto en cada momento, no
+ * cuánta gente había: eso lo dice el censo.
+ */
+export function pintarEstrato(
+  ctx: CanvasRenderingContext2D, W: number, H: number, dpr: number, t: Tinta, e: Estrato,
+) {
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = t.papel;
+  ctx.fillRect(0, 0, W, H);
+
+  const mapa = Math.max(20, W - PERFIL - AIRE);
+  const T = e.columnas.length;
+  if (T === 0) return;
+
+  const tinta = rgb(t.ink);
+  const img = ctx.createImageData(Math.round(mapa * dpr), Math.round(H * dpr));
+  const px = img.data, iw = img.width, ih = img.height;
+  // Se alisa una vez por columna de datos y no una por columna de píxeles: con la partida
+  // comprimida a mil columnas, lo segundo es alisar mil veces lo mismo.
+  const alisadas = e.columnas.map(alisar);
+  for (let x = 0; x < iw; x++) {
+    const col = alisadas[Math.min(T - 1, Math.floor((x / iw) * T))];
+    for (let y = 0; y < ih; y++) {
+      // La escala del gen sube: la franja de arriba es el valor alto, como en cualquier eje.
+      const bin = Math.min(col.length - 1, Math.max(0, Math.floor((1 - (y + 0.5) / ih) * col.length)));
+      const a = Math.pow(col[bin], 0.85) * 0.95;
+      if (a <= 0.01) continue;
+      const o = (y * iw + x) * 4;
+      px[o] = tinta[0]; px[o + 1] = tinta[1]; px[o + 2] = tinta[2]; px[o + 3] = a * 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+
+  const y = (u: number) => +(H * (1 - u)).toFixed(2);
+
+  ctx.save();
+  ctx.setLineDash([2, 3]);
+  ctx.strokeStyle = t.ink4;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, y(e.eva) + 0.5);
+  ctx.lineTo(W, y(e.eva) + 0.5);
+  ctx.stroke();
+  ctx.restore();
+
+  // La mediana lleva un trazo del papel por debajo: sobre el negro de una franja llena, una línea
+  // fina de color se pierde entera y es la única curva que hay que poder seguir de un vistazo.
+  const linea = () => {
+    ctx.beginPath();
+    e.medianas.forEach((m, i) => {
+      const cx = T === 1 ? mapa / 2 : (i / (T - 1)) * mapa;
+      if (i) ctx.lineTo(cx, y(m)); else ctx.moveTo(cx, y(m));
+    });
+    ctx.stroke();
+  };
+  ctx.lineJoin = "round";
+  ctx.globalAlpha = 0.7; ctx.strokeStyle = t.papel; ctx.lineWidth = 3; linea();
+  ctx.globalAlpha = 1; ctx.strokeStyle = t.acento; ctx.lineWidth = 1.4; linea();
+
+  const hoy = alisar(e.hoy);
+  ctx.fillStyle = t.ink3;
+  for (let k = 0; k < H; k++) {
+    const bin = Math.min(hoy.length - 1, Math.max(0, Math.floor((1 - (k + 0.5) / H) * hoy.length)));
+    ctx.fillRect(W - PERFIL, k, Math.max(0.4, hoy[bin] * PERFIL), 1);
+  }
+  ctx.strokeStyle = t.linea;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(mapa + 0.5, 0);
+  ctx.lineTo(mapa + 0.5, H);
+  ctx.stroke();
+}
+
+/** `#rrggbb` a sus tres canales. Los tokens del tema vienen así del CSS. */
+function rgb(h: string): [number, number, number] {
+  return [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+}

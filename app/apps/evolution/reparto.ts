@@ -1,46 +1,26 @@
 /**
- * Cómo se lee un gen: dónde cae un valor en su escala y cómo se reparte la población en ella,
- * hoy y en toda la partida. **La escala vive aquí y no en cada sitio que la pinta**: la leyenda
- * enseña la banda de ahora y el panel la enseña en el tiempo, y con dos varas de medir el mismo
- * gen se leería en dos sitios con dos reglas distintas.
+ * Cómo se reparte la población en la escala de cada gen, día a día y en toda la partida. Es lo que
+ * mira el panel de estratos: la tira cuenta qué hay hoy y esto cuenta cuándo pasó.
  *
- * La escala es la del propio gen, no una común: **multiplicativa alrededor del fundador** en los
- * cinco que mutan multiplicando y lineal alrededor del cero en el que lleva signo. No hay máximo
- * ni mínimo genético que enseñar —la mutación multiplica y divide sin techo—, así que lo único
- * que se puede leer es la distancia a lo que salió, y las franjas de los extremos son abiertas:
- * la de abajo dice «÷8 o menos», no «÷8».
+ * No hay máximo ni mínimo genético que enseñar —la mutación multiplica y divide sin techo—, así
+ * que las franjas de los extremos son abiertas: la de abajo dice «esto o menos», no «esto».
  */
 
-import { RASGOS, mediana, signado, type Genoma, type Mundo } from "./engine";
+import { RASGOS, mediana, type Mundo, type Rasgo } from "./engine";
+import { posGen } from "./designs";
 
 /**
- * La escala abarca de ÷4 a ×4 del fundador, y las dos cifras salen de medir la partida entera:
- * a mil días el gen que más se va —el `retorno`— llega a 1,3 octavas del fundador y a 1,5 en la
- * peor semilla, mientras que el cuerpo de la población (del décimo al noveno decil) mide entre
- * 0,18 y 0,32. Dos octavas a cada lado dejan sitio a lo primero sin que lo segundo sea una
- * rendija: la población ocupa un 8% de la escala, y con las tres de antes, un 5%.
+ * Dónde cae un valor en la escala de su gen, en [0,1]. **Es la misma `posGen` con la que se pintan
+ * la tira y la leyenda, y ese es todo el punto**: la historia se cuenta en la vara en la que se
+ * mira el presente, o el mismo gen se leería en dos sitios con dos reglas distintas y quien los
+ * mirara seguidos sacaría una conclusión falsa.
  *
- * **No es la escala de la leyenda**, que va sobre el recorrido medido del gen —su p01 y su p99— y no
- * sobre octavas alrededor del fundador de la partida. Son dos varas para el mismo gen, la leyenda
- * enseñando la foto de hoy y el panel la historia, y de las dos solo puede quedar una: cuál, se
- * decide al pintar el panel.
+ * Aquí vivieron unas octavas propias —±2 alrededor del fundador de la partida— y se fueron al
+ * pintarlas: la población real se mueve tres décimas de octava, así que en esa ventana caía entera
+ * en el 10% central y una población partida en dos no se distinguía de una ancha. La de `posGen`
+ * está medida para lo contrario, que el cuerpo de la población ocupe un tercio de la barra.
  */
-export const OCTAVAS = 2;
-/**
- * La sociabilidad lleva signo, así que su escala es lineal y va de −1 a +1. Medido igual: a mil
- * días llega a 0,41 del cero y a 0,64 en la peor semilla, con un cuerpo de 0,16 — el mismo 8% de
- * la escala que los otros cinco, que es lo que hace que las seis bandas se puedan comparar.
- */
-export const SOC = 1;
-
-/**
- * Dónde cae un valor en la escala de su gen, en [0,1] y recortado a los extremos. Pregunta por el
- * signo y no por el gen: lo que cambia la escala es que el gen cruce el cero, no cuál sea.
- */
-export function sitio(x: number, eva: number, signo: boolean): number {
-  const t = signo ? 0.5 + x / (2 * SOC) : 0.5 + Math.log2(x / eva) / (2 * OCTAVAS);
-  return Math.min(1, Math.max(0, t));
-}
+export const sitio = (r: Rasgo, x: number): number => posGen(r, x);
 
 /**
  * Franjas en que se parte la escala para contar la población. Ciento veintiocho son treinta y dos
@@ -77,9 +57,9 @@ export type Dia = {
  * ha vuelto. `paso` es cada cuántos días se guarda uno: 1 hasta `MAX_DIAS`, y de ahí para arriba
  * se dobla.
  */
-export type Historia = { eva: Genoma; paso: number; dias: Dia[] };
+export type Historia = { paso: number; dias: Dia[] };
 
-export const crearHistoria = (eva: Genoma): Historia => ({ eva, paso: 1, dias: [] });
+export const crearHistoria = (): Historia => ({ paso: 1, dias: [] });
 
 /**
  * Guarda el reparto del día que acaba de cerrarse, crías incluidas. Se llama al amanecer, que es
@@ -97,11 +77,11 @@ export function registrar(h: Historia, m: Mundo) {
   const cuentas = new Uint16Array(RASGOS.length * BINS);
   const med = new Float64Array(RASGOS.length);
   for (let i = 0; i < RASGOS.length; i++) {
-    const r = RASGOS[i], eva = h.eva[r], signo = signado(r);
+    const r = RASGOS[i];
     const xs: number[] = [];
     for (const b of m.bichos) {
       xs.push(b.g[r]);
-      cuentas[i * BINS + Math.min(BINS - 1, Math.floor(sitio(b.g[r], eva, signo) * BINS))]++;
+      cuentas[i * BINS + Math.min(BINS - 1, Math.floor(sitio(r, b.g[r]) * BINS))]++;
     }
     med[i] = mediana(xs);
   }
