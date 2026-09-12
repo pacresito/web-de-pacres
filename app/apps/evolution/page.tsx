@@ -6,10 +6,12 @@ import WhyFooter from "../../components/WhyFooter";
 import { useTema } from "../../components/usePersistedTheme";
 import { CONFIG, RASGOS, TABLA, amanecer, anochecer, azarCon, copiar, crearMundo, evaDe, tick, type Mundo } from "./engine";
 import Leyenda from "./leyenda";
+import Diario from "./diario";
 import Tira from "./tira";
 import Estratos from "./estratos";
 import { designFor, paletaDe, pintar, vistaDe, type Design, type Paleta } from "./render";
 import { crearHistoria, registrar, type Historia } from "./reparto";
+import { crearDiario, narrar, olvidar, type Diario as Cronica, type Evento } from "./narrador";
 import { IconoPantallaCompleta } from "../../components/Iconos";
 
 // Cuántos ticks se intentan por fotograma. Es un objetivo, no una promesa: el bucle corta por
@@ -41,6 +43,14 @@ const HISTORIA = 60;
 const PAUSA_NOCHE = 1500;
 
 const SEMILLA_POR_DEFECTO = "hola";
+
+/**
+ * Lo que se puede tener abierto, que es una cosa o ninguna. `poblacion` es la tira de debajo del
+ * mundo y las otras dos son paneles encima, pero las cuatro compiten por el mismo alto: el del
+ * lienzo. La cuarta —el diario— no tiene botón aquí porque su carril está siempre a la vista.
+ */
+type Vista = "leyenda" | "poblacion" | "partida" | "diario" | null;
+const VISTAS: [Vista, string][] = [["leyenda", "leyenda"], ["poblacion", "población"], ["partida", "la partida"]];
 
 const ACENTO = (x: string | number) => `<span style="color:var(--t-accent)">${x}</span>`;
 
@@ -115,6 +125,13 @@ export default function Evolution() {
    * que ya no va a ocurrir—, así que aquí no hay nada que deshacer.
    */
   const repartoRef = useRef<Historia>(crearHistoria());
+  /**
+   * El diario de la partida y la última línea que escribió. Va con el reparto —se narra en el
+   * mismo amanecer en que se registra— y se corta solo al volver atrás: lo único que hay que
+   * hacerle desde aquí es tirarlo cuando se siembra otro mundo.
+   */
+  const cronicaRef = useRef<Cronica>(crearDiario());
+  const ultimoRef = useRef<Evento | null>(null);
   const hayAtrasRef = useRef(false);   // espejo de `historiaRef.length > 0`, para poder pintar el botón
   const rafRef = useRef(0);
   const sizeRef = useRef({ W: 0, H: 0 });
@@ -124,6 +141,11 @@ export default function Evolution() {
   // completa no hay ni día ni censo, que es lo único que dice si la partida avanza.
   const estadoRef = useRef<HTMLSpanElement>(null);
   const estadoFsRef = useRef<HTMLSpanElement>(null);
+  // La última línea del diario, escrita desde el bucle y solo cuando cambia: es texto que se
+  // queda quieto días enteros. El sello arranca con un valor que ningún evento puede tener, para
+  // que la primera vuelta escriba el carril aunque todavía no haya pasado nada.
+  const ultimoElRef = useRef<HTMLSpanElement>(null);
+  const ultimoPintadoRef = useRef("?");
   const paletaRef = useRef<Paleta>(paletaDe(SEMILLA_POR_DEFECTO, "light"));
   const disenoRef = useRef<Design>(designFor(SEMILLA_POR_DEFECTO));
   const corriendoRef = useRef(true);
@@ -137,24 +159,21 @@ export default function Evolution() {
   const [velIdx, setVelIdx] = useState(0);
   const [saltando, setSaltando] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
-  const [leyenda, setLeyenda] = useState(false);
   /**
-   * La tira empieza plegada, y **es una decisión medida, no una preferencia**: el mundo se limita
-   * siempre por el alto —es más ancho que alto y la página no se desplaza—, así que los 245 px que
-   * ocupa se le quitan al lienzo por los dos lados a la vez. Medido en 1280×900: con ella abierta
-   * el mundo cae a 516×358 y un bicho mide 8,6 px, por debajo de los 14 en los que el diseño pierde
-   * miembros y púas; plegada son 817×567 y 13,6 px. Una tira que vuelve ilegible al bicho que está
-   * explicando se contradice, y por eso se abre cuando se la pide.
-   *
-   * **En pantalla completa no pasa:** ahí flota sobre un mundo de 1280×889 y el bicho mide 21 px.
+   * **Lo que está abierto, que es uno o ninguno.** Los tres paneles se pintan sobre el mismo
+   * lienzo y la tira le quita el alto a ese mismo lienzo, así que abrirlos a la vez es repartirse
+   * un sitio que no da para dos: con la tira abierta un bicho de la leyenda mide ocho píxeles y
+   * pierde las púas que esa misma leyenda está explicando. Uno cada vez, y cerrar es abrir otro.
    */
-  const [poblacion, setPoblacion] = useState(false);
-  const [partida, setPartida] = useState(false);
+  const [vista, setVista] = useState<Vista>(null);
   const [hayAtras, setHayAtras] = useState(false);
   const tema = useTema();
   // El fundador de la partida en curso, calculado y no guardado: el mundo vive en un ref que no
   // re-renderiza nada, así que un estado en paralelo solo podría quedarse viejo.
   const eva = useMemo(() => evaDe(azarCon(semilla), CONFIG), [semilla]);
+
+  const evaRef = useRef(eva);
+  useEffect(() => { evaRef.current = eva; }, [eva]);
 
   useEffect(() => { corriendoRef.current = corriendo; }, [corriendo]);
   useEffect(() => { velRef.current = VELOCIDADES[velIdx]; }, [velIdx]);
@@ -190,6 +209,9 @@ export default function Evolution() {
     mundoRef.current = m;
     historiaRef.current = [];
     repartoRef.current = crearHistoria();
+    cronicaRef.current = crearDiario();
+    ultimoRef.current = null;
+    ultimoPintadoRef.current = "?";
     nocheRef.current = { fin: 0, dura: PAUSA_NOCHE };
     repintarRef.current = true;
     const url = new URL(window.location.href);
@@ -208,6 +230,9 @@ export default function Evolution() {
       mundoRef.current = crearMundo(s);
       historiaRef.current = [];
       repartoRef.current = crearHistoria();
+      cronicaRef.current = crearDiario();
+      ultimoRef.current = null;
+    ultimoPintadoRef.current = "?";
       nocheRef.current = { fin: 0, dura: PAUSA_NOCHE };
     } else setSemilla(s);
     repintarRef.current = true;
@@ -224,8 +249,13 @@ export default function Evolution() {
     const objetivo = m.dia - RETROCESO;
     let i = 0;
     for (let k = h.length - 1; k >= 0; k--) if (h[k].dia <= objetivo) { i = k; break; }
-    mundoRef.current = copiar(h[i]);
+    const vuelto = copiar(h[i]);
+    mundoRef.current = vuelto;
     h.length = i;
+    // El diario se corta aquí y no en el próximo amanecer: en pausa no hay amanecer que llegue, y
+    // el panel se quedaría enseñando los días que el mundo acaba de deshacer.
+    olvidar(cronicaRef.current, vuelto.dia + 1);
+    ultimoRef.current = cronicaRef.current.eventos[cronicaRef.current.eventos.length - 1] ?? null;
     saltoRef.current = 0;
     setSaltando(false);
     nocheRef.current = { fin: 0, dura: PAUSA_NOCHE };
@@ -249,9 +279,13 @@ export default function Evolution() {
     h.push(copiar(m));
     if (h.length > HISTORIA) h.shift();
     registrar(repartoRef.current, m);
+    const ev = narrar(cronicaRef.current, m, evaRef.current);
+    if (ev) ultimoRef.current = ev;
   }, []);
-  const cerrarLeyenda = useCallback(() => setLeyenda(false), []);
-  const cerrarPartida = useCallback(() => setPartida(false), []);
+  const cerrar = useCallback(() => setVista(null), []);
+  const abrir = useCallback((v: Vista) => setVista((x) => (x === v ? null : v)), []);
+  const cronicaDe = useCallback(() => cronicaRef.current, []);
+  const climaDe = useCallback(() => mundoRef.current?.cfg.comidas ?? 0, []);
   const reparto = useCallback(() => repartoRef.current, []);
   const diaDe = useCallback(() => mundoRef.current?.dia ?? 0, []);
 
@@ -316,6 +350,15 @@ export default function Evolution() {
         }
       }
 
+      // **La extinción se narra aquí y no en `guardar`**: el día que se muere el último no amanece,
+      // y `guardar` cuelga del amanecer. Corre una sola vez porque en cuanto el mundo está extinto
+      // ya no se dan pasos, y vuelve a correr si se retrocede y se revive — el diario habrá
+      // olvidado su línea al volver atrás, así que no se duplica.
+      if (dados && m.extinto) {
+        const fin = narrar(cronicaRef.current, m, evaRef.current);
+        if (fin) ultimoRef.current = fin;
+      }
+
       // Se repinta cuando el mundo ha cambiado, y también cuando algo de fuera lo pide —el tema,
       // un cambio de tamaño—: en pausa no hay ticks y sin esa segunda razón el lienzo se quedaría
       // con la paleta anterior hasta que alguien le diera al play.
@@ -338,6 +381,17 @@ export default function Evolution() {
         ? `↳ <span style="color:#e55">extinción</span> en el día ${m.dia}`
         : `↳ ${linea(m)}${saltoRef.current ? ` · adelantando… ${ACENTO(`día ${m.dia}/${saltoRef.current}`)}` : ""}`;
       for (const el of [estadoRef.current, estadoFsRef.current]) if (el) el.innerHTML = texto;
+
+      const ev = ultimoRef.current;
+      const sello = ev ? `${ev.dia}·${ev.clave}` : "";
+      if (sello !== ultimoPintadoRef.current) {
+        ultimoPintadoRef.current = sello;
+        if (ultimoElRef.current) {
+          ultimoElRef.current.textContent = ev
+            ? `día ${ev.dia} · ${ev.texto}`
+            : `el clima de esta partida · ${m.cfg.comidas} bocados al día`;
+        }
+      }
     };
     rafRef.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(rafRef.current);
@@ -367,15 +421,11 @@ export default function Evolution() {
           onKeyDown={(e) => { if (e.key === "Enter") sembrar(); }}
         />
         <button className="ev-btn muted" onClick={sembrar}>Sembrar</button>
-        <button className={`ev-btn${leyenda ? " on" : ""}`} onClick={() => setLeyenda((v) => !v)}>
-          leyenda
-        </button>
-        <button className={`ev-btn${poblacion ? " on" : ""}`} onClick={() => setPoblacion((v) => !v)}>
-          población
-        </button>
-        <button className={`ev-btn${partida ? " on" : ""}`} onClick={() => setPartida((v) => !v)}>
-          la partida
-        </button>
+        {VISTAS.map(([v, nombre]) => (
+          <button key={v} className={`ev-btn${vista === v ? " on" : ""}`} onClick={() => abrir(v)}>
+            {nombre}
+          </button>
+        ))}
     </>
   );
 
@@ -432,6 +482,29 @@ export default function Evolution() {
           flex-basis: 100%; text-align: center; font-size: 0.66rem; color: var(--t-ink3);
           font-variant-numeric: tabular-nums;
         }
+        /* En una sola línea: lo que cabe se lee y lo que no, se corta. Envolviendo, la fila pasa
+           a dos renglones en cuanto el tick llega a cuatro cifras, y esos renglones se los quita
+           al mundo un día sí y otro también. */
+        .ev-estado {
+          display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+          font-size: 0.75rem; color: var(--t-ink3); font-variant-numeric: tabular-nums;
+        }
+
+        /* El carril del diario: una línea bajo el mundo, siempre. Entera es el acceso al panel —
+           un renglón de 20 px no tiene sitio para un botón aparte, y lo que se quiere pulsar es
+           la línea que se acaba de leer. */
+        .dr-carril {
+          flex: 0 0 auto; width: 100%; display: flex; align-items: baseline; gap: 0.6rem;
+          border-top: 1px solid var(--border); padding: 0.35rem 0 0.1rem; cursor: pointer;
+          font-family: var(--t-mono); font-size: 0.66rem; color: var(--t-accent); text-align: left;
+        }
+        .dr-viva {
+          flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis;
+          white-space: nowrap; font-variant-numeric: tabular-nums;
+        }
+        .dr-abrir { flex: 0 0 auto; color: var(--muted); }
+        .dr-carril:hover .dr-abrir, .dr-carril:active .dr-abrir { color: var(--t-accent); }
+
         .fs-exit {
           position: fixed; top: 14px; right: 16px; z-index: 1001;
           background: none; border: none; cursor: pointer; padding: 6px; display: flex;
@@ -504,6 +577,29 @@ export default function Evolution() {
           .es-pie { margin-left: calc(76px + 0.4rem); }
         }
 
+        /* ── Diario ───────────────────────────────────────────────────────────
+           Encima del lienzo como los estratos, y la cabecera pegada arriba: una partida larga se
+           lee desplazándose, y sin eso se pierde de vista hasta qué día llega lo que se está
+           leyendo. */
+        .dr-panel {
+          position: absolute; inset: 0; z-index: 5; overflow-y: auto; overscroll-behavior: contain;
+          background: var(--t-paper); padding: 0 1rem 0.8rem; font-family: var(--t-mono);
+        }
+        /* El relleno de arriba lo pone la cabecera y no el panel: con él en el panel, lo pegado
+           arriba se pega por debajo de ese relleno y las líneas se ven pasar por encima. */
+        .dr-cabecera {
+          display: flex; align-items: center; gap: 0.8rem; padding: 0.65rem 0 0.45rem;
+          position: sticky; top: 0; background: var(--t-paper); z-index: 1;
+        }
+        .dr-cabecera b { font-size: 0.78rem; letter-spacing: 0.08em; color: var(--t-accent); }
+        .dr-rango { font-size: 0.66rem; color: var(--muted); font-variant-numeric: tabular-nums; margin-right: auto; }
+        .dr-linea {
+          font-size: 0.68rem; line-height: 1.75; color: var(--t-ink2);
+          border-top: 1px solid var(--t-rule2);
+        }
+        .dr-linea b { color: var(--t-accent); font-weight: 600; font-variant-numeric: tabular-nums; }
+        .dr-nada { font-size: 0.66rem; color: var(--t-ink3); padding-top: 0.6rem; }
+
         /* ── Leyenda ──────────────────────────────────────────────────────────
            Encima del lienzo y no debajo: el hueco vertical ya se lo reparten el mundo y la barra
            de controles, y meter aquí ocho filas dejaría el mundo en una rendija. Va dentro de
@@ -562,7 +658,7 @@ export default function Evolution() {
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", fontFamily: "var(--t-mono)", paddingTop: "1rem", paddingBottom: "0.6rem" }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <span ref={estadoRef} style={{ fontSize: "0.75rem", color: "var(--t-ink3)", fontVariantNumeric: "tabular-nums" }} />
+            <span ref={estadoRef} className="ev-estado" />
           </div>
           <button className="hover-accent" onClick={() => setFullscreen(true)} title="Pantalla completa" aria-label="Pantalla completa"
             style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center" }}>
@@ -578,20 +674,29 @@ export default function Evolution() {
 
           <div className="sim-box" ref={wrapRef}>
             <canvas className="sim-canvas" ref={canvasRef} />
-            {partida && (
-              <Estratos historia={reparto} eva={eva} dia={diaDe} cerrar={cerrarPartida} />
+            {vista === "partida" && (
+              <Estratos historia={reparto} eva={eva} dia={diaDe} cerrar={cerrar} />
             )}
-            {leyenda && (
+            {vista === "diario" && <Diario diario={cronicaDe} dia={diaDe} clima={climaDe} cerrar={cerrar} />}
+            {vista === "leyenda" && (
               <Leyenda
                 rasgos={RASGOS} tabla={TABLA}
                 eva={eva}
                 paleta={paletaDe(semilla, tema ?? "light")}
-                diseno={designFor(semilla)} cerrar={cerrarLeyenda}
+                diseno={designFor(semilla)} cerrar={cerrar}
               />
             )}
           </div>
 
-          {poblacion && <Tira {...tira} />}
+          {/* El diario, siempre a la vista y en una línea: el mundo es lo que se está mirando, así
+              que lo que cuenta lo que acaba de pasar tiene que estar pegado a él y no en una barra
+              de arriba. Pegado al lienzo y encima de la tira, que es lo que se abre y se cierra. */}
+          <button className="dr-carril" onClick={() => abrir("diario")} title="Abrir el diario de la partida">
+            <span ref={ultimoElRef} className="dr-viva" />
+            <span className="dr-abrir">el diario ›</span>
+          </button>
+
+          {vista === "poblacion" && <Tira {...tira} />}
         </div>
 
 
