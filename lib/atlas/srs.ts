@@ -182,6 +182,31 @@ export function cuenta(mazo: Mazo): { vistos: number; aprendidos: number } {
   return { vistos, aprendidos };
 }
 
+/**
+ * La tanda que ya se lleva hoy: la centena de datos **superada** en las últimas doce horas, o 0
+ * mientras no se llegue a la primera. Lo enseña la cabecera de repasar, y su único trabajo es
+ * ofrecer un sitio donde parar — no frena la cola, que quien decide cuándo ha tenido bastante es
+ * quien juega.
+ *
+ * Cuenta datos distintos y no respuestas: el mazo guarda un solo `visto` por dato, así que
+ * repetir uno en la misma tarde cuenta una vez. Es lo que se puede contar sin inventar un
+ * registro aparte —y con el mazo en Redis, lo único que suma lo hecho desde los dos dispositivos.
+ *
+ * Doce horas y no el día natural: a la una de la madrugada se sigue en la sesión de las once, y
+ * un contador que se pusiera a cero a medianoche diría que se empieza de nuevo justo donde más
+ * falta hace decir lo contrario.
+ */
+export const TANDA = 100;
+const VENTANA = 12 * 3_600_000;
+export function tanda(mazo: Mazo, ahora: number): number {
+  let n = 0;
+  for (const p of PAISES) for (const d of DATOS) {
+    const visto = mazo[p.id]?.[d]?.visto;
+    if (visto !== undefined && ahora - visto < VENTANA) n++;
+  }
+  return Math.max(0, Math.floor((n - 1) / TANDA) * TANDA);
+}
+
 export type Tarjeta = { pais: Pais; tapados: Dato[]; primeraVez: boolean };
 
 /**
@@ -209,8 +234,9 @@ export function montar(mazo: Mazo, pais: Pais, ahora: number): Tarjeta {
 }
 
 /**
- * El país que toca. Manda el dato de más sospecha de toda la cola; si nada ha superado su
- * propia vida, entra uno nuevo en el orden del barrido geográfico. Agotados los 195, se
+ * El país que toca. Manda el dato de más sospecha de toda la cola; si nada de lo que se puede
+ * preguntar ha superado su propia vida, entra uno nuevo en el orden del barrido geográfico.
+ * Agotados los 195, se
  * adelanta el más sospechoso aunque no llegue a 1: la cola no se acaba nunca.
  *
  * El freno a los nuevos es invisible: mientras haya demasiados países crudos peleando arriba, no
@@ -225,18 +251,21 @@ export function montar(mazo: Mazo, pais: Pais, ahora: number): Tarjeta {
 export const MAX_EN_EL_AIRE = 10;
 
 /**
- * Cuándo deja un dato de estar crudo: cuando aguanta al menos lo que un «ya me lo sé» de entrada.
- * Es lo único que el freno mira, y va con la vida y no con el contador, porque el contador se
- * llena dando vueltas y dando vueltas se llena en una tarde.
+ * Cuándo deja un dato de estar crudo: cuando aguanta tres días. Es lo único que el freno mira, y
+ * va con la vida y no con el contador, porque el contador se llena dando vueltas y dando vueltas
+ * se llena en una tarde.
  *
- * **Un «fácil» de primera vez nace justo en el listón, así que asienta el país en el acto y el
- * freno no lo cuenta.** Es deliberado y no un descuido: decir «esto ya me lo sé» es el triaje, y
+ * **Por debajo del «fácil» de entrada, que vale cuatro días, y por eso decir «esto ya me lo sé»
+ * asienta el país en el acto y el freno no lo cuenta.** Es deliberado: ese «fácil» es el triaje, y
  * el freno está para dosificar lo que hay que aprender, no lo que ya se sabe. Quien lo diga de
- * más lo paga solo —al fallarlo, la vida se desploma y el país vuelve a estar crudo—. Subirlo un
- * día cerraría esa puerta, a cambio de que marcar «fácil» no sirviera para nada: `srs.medir.ts`
- * mide las dos.
+ * más lo paga solo —al fallarlo, la vida se desploma y el país vuelve a estar crudo—. Subirlo por
+ * encima de los cuatro cerraría esa puerta, a cambio de que marcar «fácil» no sirviera para nada:
+ * `srs.medir.ts` mide las dos.
+ *
+ * Lo exportan el medidor y el test, que fabrican mazos a un lado y a otro del listón: escrito a
+ * mano en cada uno, moverlo aquí les deja las escenas midiendo otra cosa sin decirlo.
  */
-const VIDA_ASENTADO = VIDA_INICIAL.facil;
+export const VIDA_ASENTADO = 3;
 const asentado = (e: Estado | undefined) => !!e && e.vida >= VIDA_ASENTADO;
 
 /**
@@ -286,9 +315,11 @@ export function siguiente(mazo: Mazo, orden: string[], ahora: number, recientes:
   // todo, antes de repetir un país se pregunta por otro que también descansaba. Sin este escalón
   // el descanso se paga repitiendo, que es lo que el hueco existe para impedir.
   let libre: { id: string; s: number } | null = null;
-  // Y el del mazo entero, sin freno ninguno: a quién preguntar cuando no queda nadie más, y
-  // **quien decide si hay sitio para un país nuevo**.
+  // Y el del mazo entero, sin freno ninguno: a quién preguntar cuando no queda nadie más.
   let respaldo: { id: string; s: number } | null = null;
+  // La deuda de repaso —lo más sospechoso de lo que se puede preguntar ahora— y quien decide si
+  // hay sitio para un país nuevo. Sin nada que preguntar vale cero, que es lo que abre la puerta.
+  let deuda = 0;
   let enElAire = 0;
   for (const p of PAISES) {
     const visto = DATOS.some((d) => mazo[p.id]?.[d]);
@@ -300,21 +331,29 @@ export function siguiente(mazo: Mazo, orden: string[], ahora: number, recientes:
     for (const d of DATOS) {
       const estado = mazo[p.id]?.[d];
       const s = sospecha(estado, ahora);
+      const descansa = descansando(estado, ahora);
       if (!respaldo || s > respaldo.s) respaldo = { id: p.id, s };
+      // La deuda no mira el hueco: apartar un país de la tarjeta de al lado no salda lo que debe.
+      if (!descansa && s > deuda) deuda = s;
       if (acabaDeSalir) continue;
       if (!libre || s > libre.s) libre = { id: p.id, s };
-      if (descansando(estado, ahora)) continue;
+      if (descansa) continue;
       if (!mejor || s > mejor.s) mejor = { id: p.id, s };
     }
   }
   const elegido = mejor ?? libre ?? respaldo;
   const nuevo = orden.find((id) => !DATOS.some((d) => mazo[id]?.[d]));
-  // **Estrenar lo decide el mazo entero y no lo que los frenos dejan a mano**: un freno dice
-  // «ahora no», nunca «ya no queda nada», y mirando solo lo disponible se estrena país debiendo
-  // un repaso —basta con que el hueco aparte al país al que se le debe—. Con esto y con que un
-  // fallo venza a los minuto y medio, no se abre nada mientras haya algo que ya tocaba; y hasta
-  // que venza sí, que es lo que deja encadenar estrenos aunque en cada uno se falle algo.
-  const cedeAlNuevo = (!respaldo || respaldo.s < 1) && enElAire < MAX_EN_EL_AIRE;
+  // **Estrenar lo decide lo que se puede preguntar ahora, no el mazo entero.** El hueco no
+  // cuenta, que un freno dice «ahora no» y no «ya no queda nada»: mirando solo lo que deja a
+  // mano se estrena país debiendo un repaso, basta con que aparte al país al que se le debe.
+  //
+  // El descanso va al revés, porque lo que aparta **no se puede atender** — y aparta justo lo
+  // de sospecha más alta: acertar lo recién fallado deja la vida en minutos, así que ese dato
+  // pasa la hora de descanso subiendo hasta sospecha 10 sin manera de bajarla. Contándolo, un
+  // solo fallo cierra los estrenos del resto de la sesión. Lo que sí cierra la puerta es lo que
+  // ya tocaba y se puede preguntar; y hasta que el fallo venza —minuto y medio— se encadenan
+  // estrenos aunque en cada uno se falle algo.
+  const cedeAlNuevo = deuda < 1 && enElAire < MAX_EN_EL_AIRE;
   const id = cedeAlNuevo && nuevo ? nuevo : elegido?.id ?? nuevo;
   return id ? PAIS_POR_ID.get(id) ?? null : null;
 }

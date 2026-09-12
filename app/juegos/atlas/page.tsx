@@ -6,7 +6,8 @@ import WhyFooter from "../../components/WhyFooter";
 import Repasar from "./Repasar";
 import Explorar from "./Explorar";
 import ColaDelPrompt from "./Puerta";
-import { mazoActual, sesionActual, sincronizar, sinMazo, sinSesion, suscribir } from "@/lib/atlas/almacen";
+import { mazoActual, sesionActual, sincronizar, sinMazo, sinSesion, sinVista, suscribir, vistaActual } from "@/lib/atlas/almacen";
+import { TANDA } from "@/lib/atlas/srs";
 
 type Modo = "repasar" | "explorar";
 
@@ -31,6 +32,11 @@ export default function Atlas() {
   // la primera pintura no se sabe todavía; tocado el botón, manda la elección.
   const [maximizado, setMaximizado] = useState<boolean | null>(null);
   const pantallaCompleta = maximizado ?? identificado;
+
+  // Cuántos datos van hoy, redondeado a la centena de abajo. Lo cuenta el almacén al servir cada
+  // tarjeta, que es donde se mira el reloj: en el server no hay vista, así que ahí no hay aviso
+  // que desajustar al hidratar.
+  const hoy = useSyncExternalStore(suscribir, vistaActual, sinVista)?.tanda ?? 0;
 
   // El marco lo pliega el CSS hasta aquí (el script del `<head>` de `app/layout.tsx`); desde
   // que React monta lo pliega el estado, así que el atributo sobra — y quitarlo es lo que
@@ -63,9 +69,24 @@ export default function Atlas() {
           }}
         >
           {modo === "repasar" ? (
-            <button className="atlas-modo" onClick={() => setModo("explorar")} style={{ fontSize: 12, letterSpacing: "0.04em" }}>
-              explorar ›
-            </button>
+            <>
+              {/* Lo que se lleva hoy, y a partir de la segunda centena la invitación a parar. Va
+                  en la cabecera y no en la tarjeta: es de la sesión, no de lo que se pregunta, y
+                  ahí no le quita alto a lo que se usa. El `margin` lo empuja a su lado sin tocar
+                  el reparto de la fila, que es de los botones. */}
+              {hoy > 0 && (
+                /* Envuelve en dos líneas antes que empujar: en un móvil estrecho el aviso entero
+                   y los botones no caben en la misma, y de las dos cosas la que no puede partirse
+                   es el control. Dos renglones de 11 px caben de sobra en los 44 de la fila. */
+                <span style={{ fontSize: 11, color: "var(--t-ink3)", marginRight: "auto", letterSpacing: "0.02em", lineHeight: 1.3 }}>
+                  Ya llevas más de {hoy} hoy
+                  {hoy > TANDA && <>. <span style={{ color: "var(--t-accent)" }}>Descansa</span></>}
+                </span>
+              )}
+              <button className="atlas-modo" onClick={() => setModo("explorar")} style={{ fontSize: 12, letterSpacing: "0.04em", whiteSpace: "nowrap" }}>
+                explorar ›
+              </button>
+            </>
           ) : (
             <button className="atlas-modo-v" onClick={() => setModo("repasar")} style={{ fontSize: 13, fontWeight: 500, letterSpacing: "0.02em" }}>
               ‹ repasar

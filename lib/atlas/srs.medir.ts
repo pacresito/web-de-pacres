@@ -12,14 +12,14 @@
 // **Las dos primeras contestan distinto y las dos hacen falta**: lo que el descanso puede apartar
 // depende de cuánto haya para preguntar, así que el mismo número es bueno en una y malo en la otra.
 import { calificar, DATOS, DESCANSO, HUECO, MAX_EN_EL_AIRE, montar, nuevosAciertos, siguiente,
-  sospecha, type Dato, type Mazo, type Nota } from "./srs";
+  sospecha, VIDA_ASENTADO, type Dato, type Mazo, type Nota } from "./srs";
 import { PAISES, PAIS_POR_ID } from "./paises";
 import { RECORRIDO } from "@/data/atlas/orden";
 
 const T0 = Date.parse("2026-08-28T18:00:00Z");
 const SEGUNDOS_POR_TARJETA = 12; // lo que se tarda en mirar una tarjeta y calificarla
 const TARJETAS = 50;
-const LISTON = 4;      // `VIDA_ASENTADO`, que no se exporta
+const LISTON = VIDA_ASENTADO;
 const VIDA_OLVIDO = 0.001;  // lo que deja un «no» de algo ya conocido; tampoco se exporta
 const VIDA_ESTRENO = 0.01;  // ni lo que deja el «no» de la primera vez
 
@@ -45,6 +45,7 @@ function siguienteCon(mazo: Mazo, ahora: number, { descanso, tope, liston, plano
   let mejor: { id: string; s: number } | null = null;
   let libre: { id: string; s: number } | null = null;
   let respaldo: { id: string; s: number } | null = null;
+  let deuda = 0;
   let enElAire = 0;
   for (const p of PAISES) {
     if (!DATOS.some((d) => mazo[p.id]?.[d])) continue;
@@ -53,17 +54,19 @@ function siguienteCon(mazo: Mazo, ahora: number, { descanso, tope, liston, plano
     for (const d of DATOS) {
       const estado = mazo[p.id]?.[d];
       const s = sospecha(estado, ahora);
+      const espera = plano ? descanso : estado?.fallado ? estado.vida * DIA : descanso;
+      const descansa = !!estado && ahora - estado.visto < espera;
       if (!respaldo || s > respaldo.s) respaldo = { id: p.id, s };
+      if (!descansa && s > deuda) deuda = s;
       if (acabaDeSalir) continue;
       if (!libre || s > libre.s) libre = { id: p.id, s };
-      const espera = plano ? descanso : estado?.fallado ? estado.vida * DIA : descanso;
-      if (estado && ahora - estado.visto < espera) continue;
+      if (descansa) continue;
       if (!mejor || s > mejor.s) mejor = { id: p.id, s };
     }
   }
   const elegido = mejor ?? libre ?? respaldo;
   const nuevo = RECORRIDO.find((id) => !DATOS.some((d) => mazo[id]?.[d]));
-  const cede = (!respaldo || respaldo.s < 1) && enElAire < tope;
+  const cede = deuda < 1 && enElAire < tope;
   return (cede && nuevo ? nuevo : elegido?.id ?? nuevo) ?? null;
 }
 
@@ -95,7 +98,9 @@ function mazoEnSesion(): Mazo {
   RECORRIDO.slice(0, 35).forEach((id, i) => {
     mazo[id] = {};
     for (const [j, d] of DATOS.entries()) {
-      const vida = 2 + ((i * 7 + j * 3) % 2); // 2..3 días, por debajo del listón
+      // Por debajo del listón, que es lo que deja los treinta y cinco en el aire. Va derivado de
+      // él: escrito a mano, moverlo dejaría la escena midiendo un mazo medio asentado.
+      const vida = LISTON - 1 + ((i * 7 + j * 3) % 2) * 0.5; // 2..2,5 días con el listón en 3
       mazo[id]![d] = { vida, aciertos: 0, visto: T0 - (3 + ((i * 5 + j * 11) % 35)) * 60_000, fallado: false };
     }
   });
@@ -211,7 +216,10 @@ console.log("  entre más países y no entre menos. El umbral no se elige contra
 function novato(): Mazo {
   const mazo: Mazo = {};
   RECORRIDO.slice(0, 10).forEach((id, i) => {
-    mazo[id] = { nombre: { vida: 1 + (i % 3), aciertos: 0, visto: T0 - (5 + i * 3) * 60_000 } };
+    // Tres vidas escalonadas y las tres por debajo del listón, que es lo que mantiene a los diez
+    // en el aire: asentado alguno entrarían países nuevos y esto dejaría de medir un mazo de diez.
+    const vida = LISTON - 1 - (i % 3) * 0.5; // 2 · 1,5 · 1 con el listón en 3
+    mazo[id] = { nombre: { vida, aciertos: 0, visto: T0 - (5 + i * 3) * 60_000 } };
   });
   return mazo;
 }
@@ -285,7 +293,7 @@ const GUIONES: [string, (primeraVez: boolean, i: number) => Nota][] = [
   ["«fácil» a uno de cada tres", (_p, i) => (i % 3 === 0 ? "facil" : "bien")],
   ["todo «bien»", () => "bien"],
 ];
-const LISTONES = [4, 5, 6, 8];
+const LISTONES = [3, 4, 5, 6, 8];
 console.log(`\n\nTARDE MARATÓN · 400 tarjetas seguidas desde cero · países que se abren\n`);
 console.log("  guion                         tope  " + LISTONES.map((l) => `listón ${l}`.padStart(10)).join(""));
 for (const [nombre, nota] of GUIONES) {
@@ -297,10 +305,10 @@ for (const [nombre, nota] of GUIONES) {
     console.log(`  ${nombre.padEnd(28)}  ${String(tope).padStart(4)}  ${fila}`);
   }
 }
-console.log("\n  Con el listón en el arranque de «fácil» —el que está puesto— decir «me lo sé» asienta el");
-console.log("  país en el acto y el freno solo dosifica lo que hay que aprender: el maratón de «bien» se");
-console.log("  para en el tope exacto y el de «fácil» abre lo que quiera. Subirlo un día cierra también");
-console.log("  esa puerta; 5, 6 y 8 dan lo mismo porque la escalera de vidas salta de 4 a 8.");
+console.log("\n  Con el listón por debajo del «fácil» de entrada —3 y 4 dan lo mismo— decir «me lo sé»");
+console.log("  asienta el país en el acto y el freno solo dosifica lo que hay que aprender: el maratón de");
+console.log("  «bien» se para en el tope exacto y el de «fácil» abre lo que quiera. De 5 en adelante esa");
+console.log("  puerta se cierra, y 5, 6 y 8 dan lo mismo porque la escalera de vidas salta de 4 a 8.");
 
 // ── La copia solo vale si no se separa de la real ────────────────────────────────────────────
 {

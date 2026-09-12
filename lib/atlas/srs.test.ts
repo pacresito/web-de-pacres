@@ -1,6 +1,6 @@
 // Test de lógica pura: `npx tsx lib/atlas/srs.test.ts`. Fuera del build.
 import assert from "assert";
-import { ACIERTOS_APRENDIDO, calificar, cuenta, DATOS, DESCANSO, dominio, dominioPais, HUECO, huecos, MAX_EN_EL_AIRE, montar, nuevaVida, nuevosAciertos, siguiente, sospecha, type Mazo } from "./srs";
+import { ACIERTOS_APRENDIDO, calificar, cuenta, DATOS, DESCANSO, dominio, dominioPais, HUECO, huecos, MAX_EN_EL_AIRE, montar, nuevaVida, nuevosAciertos, siguiente, sospecha, tanda, TANDA, VIDA_ASENTADO, type Mazo } from "./srs";
 import { PAISES } from "./paises";
 
 const DIA = 86_400_000;
@@ -176,10 +176,15 @@ assert.strictEqual(siguiente(enElAire, orden, AHORA)!.id, orden[9]); // nueve en
   // Y el contador lleno no libera el freno por sí solo: eso se gana esperando, no acertando.
   const sabidos: Mazo = Object.fromEntries(treinta.map((p) => [p.id, { nombre: sabido(2, 0.5) }]));
   assert.ok(treinta.some((p) => p.id === siguiente(sabidos, orden, AHORA)!.id));
-  // Y un «fácil» de primera vez asienta en el acto, que nace justo en el listón: el freno
+  // Y un «fácil» de primera vez asienta en el acto, que nace por encima del listón: el freno
   // dosifica lo que hay que aprender, no lo que ya se sabe.
   const recienFaciles: Mazo = Object.fromEntries(treinta.map((p) => [p.id, { nombre: vida(4, 0) }]));
   assert.strictEqual(siguiente(recienFaciles, orden, AHORA)!.id, orden[MAX_EN_EL_AIRE]);
+  // El borde exacto del listón: con la vida justa en él ya no se cuenta, y un pelo por debajo sí.
+  const justo: Mazo = Object.fromEntries(treinta.map((p) => [p.id, { nombre: vida(VIDA_ASENTADO, 0.5) }]));
+  const casi: Mazo = Object.fromEntries(treinta.map((p) => [p.id, { nombre: vida(VIDA_ASENTADO - 0.1, 0.5) }]));
+  assert.strictEqual(siguiente(justo, orden, AHORA)!.id, orden[MAX_EN_EL_AIRE]);
+  assert.ok(treinta.some((p) => p.id === siguiente(casi, orden, AHORA)!.id));
 }
 
 // El descanso: lo recién visto no repite habiendo otra cosa que preguntar
@@ -193,18 +198,22 @@ assert.strictEqual(siguiente(enElAire, orden, AHORA)!.id, orden[9]); // nueve en
   // número escrito a mano, subir el descanso por encima de él no rompe la regla — deja la escena
   // sin sentido, y el test pasaría a comprobar otra cosa sin decirlo.
   //
-  // La vida son tres días por dos razones que se tocan: por debajo del listón, para que los diez
-  // cuenten como en el aire y el freno no cuele un país nuevo; y bastante para que su sospecha
-  // quede por debajo de la del dato recién visto, que es lo que el primer `assert` exige. Si un
-  // descanso mucho más largo rompe ese equilibrio, es ese `assert` el que lo dice.
+  // La vida va medio día por debajo del listón, y las dos mitades de esa frase cuentan: por
+  // debajo, para que los diez cuenten como en el aire y el freno no cuele un país nuevo —lo
+  // exige el `assert` de que sale otro del mazo—; y por poco, para que su sospecha quede por
+  // debajo de la del dato recién visto, que es lo que exige el `assert` de antes. Entre los dos
+  // dejan una ventana estrecha: si moviendo el listón o el descanso la escena deja de tener
+  // sentido, es uno de esos dos el que lo dice.
   const base = PAISES.slice(0, MAX_EN_EL_AIRE);
-  const enSesion: Mazo = Object.fromEntries(base.map((p) => [p.id, { nombre: reciente(DESCANSO + 10 * 60_000, 3) }]));
+  const enSesion: Mazo = Object.fromEntries(base.map((p) => [p.id, { nombre: reciente(DESCANSO + 10 * 60_000, VIDA_ASENTADO - 0.5) }]));
   const fallado = base[0].id;
   // Un dato que se acaba de ver: descansa aunque mande en la cola. Y le basta con mandar —no con
   // llegar a 1— porque el ranking es relativo: sin freno saldría en la tarjeta de al lado.
   const conVivo: Mazo = { ...enSesion, [fallado]: { nombre: reciente(20_000, VIDA_OLVIDO * 10) } };
   assert.ok(sospecha(conVivo[fallado]!.nombre, AHORA) > sospecha(enSesion[base[1].id]!.nombre, AHORA));
-  assert.notStrictEqual(siguiente(conVivo, orden, AHORA)!.id, fallado);
+  const enLugarDelVivo = siguiente(conVivo, orden, AHORA)!.id;
+  assert.notStrictEqual(enLugarDelVivo, fallado);
+  assert.ok(base.some((p) => p.id === enLugarDelVivo), "y sale otro del mazo: el freno de nuevos sigue puesto");
   // Pasado el descanso vuelve a mandar: reaprender es volver a verlo pronto, no no verlo.
   assert.strictEqual(siguiente(conVivo, orden, AHORA + DESCANSO)!.id, fallado);
   // **Lo que descansa lo decide la respuesta, no la vida**: el fallado espera lo que aguante, que
@@ -238,8 +247,8 @@ assert.strictEqual(siguiente(enElAire, orden, AHORA)!.id, orden[9]); // nueve en
   assert.ok(base.some((p) => p.id === siguiente(todoReciente, orden, AHORA)!.id));
 }
 
-// Estrenar lo decide el mazo entero: mientras algo haya pasado su vida no entra gente nueva, ni
-// aunque los frenos lo tengan apartado y dejen a mano cosas que aún no tocan.
+// Estrenar lo decide lo que se puede preguntar: mientras algo que ya tocaba siga a mano no entra
+// gente nueva, ni aunque el hueco lo tenga apartado y deje a mano cosas que aún no tocan.
 {
   const deudor = PAISES[0].id, aMano = PAISES[1].id;
   // Un dato fallado y ya vencido —lleva más de su minuto y medio— junto a otro que no toca.
@@ -255,6 +264,36 @@ assert.strictEqual(siguiente(enElAire, orden, AHORA)!.id, orden[9]); // nueve en
   const alDia: Mazo = { [aMano]: { nombre: vida(30, 1) } };
   const tras = siguiente(alDia, orden, AHORA)!.id;
   assert.ok(!DATOS.some((d) => alDia[tras]?.[d]), `estrena uno sin ver, y salió ${tras}`);
+
+  // **Y lo que descansa no es deuda, por alta que tenga la sospecha.** Un dato fallado y acertado
+  // acto seguido se queda con vida de minutos y apartado una hora, así que sube a sospecha de dos
+  // cifras sin que se pueda atender: contándolo, un solo fallo cerraba los estrenos de la tarde.
+  const enDescanso: Mazo = { [deudor]: { nombre: { visto: AHORA - 20 * 60_000, vida: VIDA_OLVIDO * 3, aciertos: 1, fallado: false } } };
+  assert.ok(sospecha(enDescanso[deudor]!.nombre, AHORA) > 1, "encabeza la cola de sobra");
+  const conDescanso = siguiente(enDescanso, orden, AHORA)!.id;
+  assert.ok(!DATOS.some((d) => enDescanso[conDescanso]?.[d]), `estrena igual, y salió ${conDescanso}`);
+  // Acabado el descanso ya se puede preguntar, y entonces sí cierra la puerta.
+  assert.strictEqual(siguiente(enDescanso, orden, AHORA + DESCANSO)!.id, deudor);
+}
+
+// El aviso de parar: la centena de datos superada en las últimas doce horas
+{
+  // Los datos se reparten de cuatro en cuatro, que es como se llenan los países de verdad.
+  const conDatos = (n: number, hace = 0): Mazo => {
+    const m: Mazo = {};
+    for (let i = 0; i < n; i++) {
+      const p = PAISES[Math.floor(i / DATOS.length)].id;
+      m[p] = { ...m[p], [DATOS[i % DATOS.length]]: { visto: AHORA - hace, vida: 1, aciertos: 0 } };
+    }
+    return m;
+  };
+  assert.strictEqual(tanda(conDatos(TANDA - 1), AHORA), 0);
+  assert.strictEqual(tanda(conDatos(TANDA), AHORA), 0); // cien no son «más de cien»
+  assert.strictEqual(tanda(conDatos(TANDA + 1), AHORA), TANDA);
+  assert.strictEqual(tanda(conDatos(2 * TANDA + 1), AHORA), 2 * TANDA);
+  // Lo de ayer no cuenta: lo que mide es la sesión de hoy, no el tamaño del mazo.
+  assert.strictEqual(tanda(conDatos(3 * TANDA, 13 * 3_600_000), AHORA), 0);
+  assert.strictEqual(tanda({}, AHORA), 0);
 }
 
 // El hueco: un país no repite hasta que han pasado otros, aunque le queden datos por preguntar.

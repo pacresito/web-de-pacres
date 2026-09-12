@@ -9,7 +9,7 @@
 // vez, al avanzar, y `useSyncExternalStore` lee el resultado sin efectos ni cascadas.
 import { esPerfil, sembrar, type Perfil } from "./sembrar";
 import { RECORRIDO } from "@/data/atlas/orden";
-import { calificar, HUECO, montar, siguiente, type Dato, type Mazo, type Nota, type Tarjeta } from "./srs";
+import { calificar, HUECO, montar, siguiente, tanda, type Dato, type Mazo, type Nota, type Tarjeta } from "./srs";
 
 const CLAVE = "atlas:mazo";
 const CLAVE_COLA = "atlas:cola";
@@ -25,6 +25,9 @@ export type Vista = {
   tarjeta: Tarjeta | null;
   /** El mazo vacío es la primerísima vez: se enseña cómo va esto y no vuelve a aparecer. */
   estrenando: boolean;
+  /** La centena de datos que ya se lleva hoy, o 0 si no llega a la primera. Sale de aquí y no
+   *  del render porque se mide contra el reloj, que en un render es impuro. */
+  tanda: number;
   /**
    * Cuántas tarjetas van servidas. Es la `key` con la que React monta la tarjeta, y montar una
    * nueva es lo que reinicia lo que era de la anterior —destapada, marcada, calificada a medias—:
@@ -89,7 +92,8 @@ function avanzar(m: Mazo): Vista {
   const ahora = Date.now();
   const pais = siguiente(m, RECORRIDO, ahora, recientes);
   if (pais) recientes = [...recientes, pais.id].slice(-HUECO);
-  return { tarjeta: pais ? montar(m, pais, ahora) : null, estrenando: Object.keys(m).length === 0, n: ++servidas };
+  return { tarjeta: pais ? montar(m, pais, ahora) : null, estrenando: Object.keys(m).length === 0,
+           tanda: tanda(m, ahora), n: ++servidas };
 }
 
 export function suscribir(avisar: () => void) {
@@ -227,8 +231,11 @@ export async function sincronizar() {
   // **La tarjeta servida se queda, remontada con el mazo que manda.** Pedir otra la cambiaría
   // sola al segundo de abrir —se ve el país de disco y acto seguido otro—, y de paso metería en
   // `recientes` uno que nadie ha contestado. Es el mismo salto del que se guarda `pasos`.
+  const ahora = Date.now();
   vista = vista?.tarjeta
-    ? { ...vista, tarjeta: montar(remoto, vista.tarjeta.pais, Date.now()) }
+    // La tanda se rehace con el mazo que manda: lo respondido hoy incluye lo del otro dispositivo,
+    // y quedándose con la del mazo de disco el aviso saldría contando media sesión.
+    ? { ...vista, tarjeta: montar(remoto, vista.tarjeta.pais, ahora), tanda: tanda(remoto, ahora) }
     : avanzar(remoto);
   notificar();
 }
