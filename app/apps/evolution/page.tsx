@@ -10,10 +10,11 @@ import Diario from "./diario";
 import Tira from "./tira";
 import Estratos from "./estratos";
 import Inspector from "./inspector";
+import Reglas from "./reglas";
 import { designFor, paletaDe, pintar, vistaDe, vistaSobre, type Design, type Paleta, type Vista as Camara } from "./render";
 import { crearHistoria, registrar, type Historia } from "./reparto";
 import { crearDiario, narrar, olvidar, type Diario as Cronica, type Evento } from "./narrador";
-import { IconoPantallaCompleta } from "../../components/Iconos";
+import { IconoInfo, IconoPantallaCompleta } from "../../components/Iconos";
 
 // Cuántos ticks se intentan por fotograma. Es un objetivo, no una promesa: el bucle corta por
 // presupuesto de tiempo (abajo), así que en un mundo lleno x64 va tan rápido como dé la máquina.
@@ -56,11 +57,11 @@ const SEMILLA_POR_DEFECTO = "hola";
 
 /**
  * Lo que se puede tener abierto, que es una cosa o ninguna. `poblacion` y `bicho` van debajo del
- * mundo y las otras tres son paneles encima, pero las cinco compiten por el mismo alto: el del
- * lienzo. Dos no tienen botón aquí porque se abren desde donde se miran: el diario desde su
- * carril, que está siempre a la vista, y el bicho pulsándolo en el mundo.
+ * mundo y las otras son paneles encima, pero todas compiten por el mismo alto: el del lienzo. Tres
+ * no tienen botón de texto porque se abren desde donde se miran: el diario desde su carril, que
+ * está siempre a la vista, el bicho pulsándolo en el mundo y las reglas desde su icono.
  */
-type Vista = "leyenda" | "poblacion" | "partida" | "diario" | "bicho" | null;
+type Vista = "leyenda" | "poblacion" | "partida" | "diario" | "bicho" | "reglas" | null;
 const VISTAS: [Vista, string][] = [["leyenda", "leyenda"], ["poblacion", "población"], ["partida", "la partida"]];
 
 /**
@@ -594,6 +595,12 @@ export default function Evolution() {
             {nombre}
           </button>
         ))}
+        {/* Las reglas van en la barra y no en la cabecera de la página: en pantalla completa la
+            cabecera no está, y unas reglas que solo se abren desde fuera del mundo no se abren. */}
+        <button className={`ev-btn icono${vista === "reglas" ? " on" : ""}`} onClick={() => abrir("reglas")}
+          title="Las reglas del mundo" aria-label="Las reglas del mundo">
+          <IconoInfo size={14} />
+        </button>
     </>
   );
 
@@ -621,6 +628,8 @@ export default function Evolution() {
         .ev-btn:hover { border-color: rgba(0,184,122,0.4); background: rgba(0,184,122,0.04); }
         .ev-btn.on { border-color: var(--t-accent); color: var(--t-accent); }
         .ev-btn.muted { color: var(--muted); }
+        .ev-btn.icono { display: inline-flex; align-items: center; padding: 0.4rem 0.55rem; color: var(--muted); }
+        .ev-btn.icono.on { color: var(--t-accent); }
         .ev-btn:disabled { opacity: 0.45; cursor: default; }
         .ev-semilla {
           padding: 0.4rem 0.6rem; border-radius: 4px; border: 1px solid var(--border);
@@ -874,16 +883,120 @@ export default function Evolution() {
         .lg-nota { font-size: 0.62rem; line-height: 1.5; color: var(--t-ink3); margin-top: 0.2rem; }
         .lg-paga, .lg-cobra { color: var(--t-ink2); }
 
+        /* ── Las reglas ───────────────────────────────────────────────────────
+           Encima del lienzo, como la leyenda: es lectura, y lo que se lee no compite con el mundo
+           por el sitio — se abre, se lee y se cierra. */
+        .rg-panel {
+          position: absolute; inset: 0; z-index: 5; overflow-y: auto; overscroll-behavior: contain;
+          background: var(--t-paper); border: 1px solid var(--border); border-radius: 6px;
+          font-family: var(--t-mono); padding: 0.9rem 1rem 1.2rem;
+        }
+        .rg-cabecera { display: flex; align-items: baseline; gap: 0.8rem; }
+        .rg-cabecera b { font-size: 0.78rem; letter-spacing: 0.08em; color: var(--t-accent); }
+        .rg-cabecera .rg-nota { font-size: 0.62rem; color: var(--t-ink4); }
+        /* El hueco lo pone el botón y no la nota, que en móvil se esconde. */
+        .rg-cabecera button { margin-left: auto; }
+        .rg-intro { font-size: 0.68rem; line-height: 1.55; color: var(--muted); margin: 0.6rem 0 0; max-width: 62ch; }
+        .rg-seccion { margin-top: 0.9rem; }
+        .rg-titulo {
+          font-size: 0.66rem; font-weight: 600; letter-spacing: 0.09em; color: var(--t-ink2);
+          border-bottom: 1px solid var(--border); padding-bottom: 0.25rem;
+        }
+        /* Tres pistas y las tres con minmax(0, …): el valor es lo único que no puede partirse, y
+           la nota es la que cede. En flex, la nota más larga fijaría el ancho de la tabla. */
+        .rg-fila {
+          display: grid; grid-template-columns: minmax(0, 8.5rem) minmax(0, 12rem) minmax(0, 1fr);
+          gap: 0.2rem 0.9rem; align-items: baseline;
+          border-top: 1px solid var(--t-rule2); padding: 0.3rem 0; font-size: 0.66rem;
+        }
+        .rg-fila:first-of-type { border-top: none; }
+        .rg-que { color: var(--t-ink); font-weight: 600; letter-spacing: 0.03em; }
+        .rg-cuanto { color: var(--t-accent); font-variant-numeric: tabular-nums; }
+        .rg-porque { color: var(--t-ink3); line-height: 1.45; }
+
         @media (max-width: 620px) {
           .lg-fila { flex-direction: column; gap: 0.4rem; }
           .lg-datos { width: 100%; }
+          /* Apiladas: tres columnas en 375 px dejan la nota en una columna de cuatro letras. */
+          .rg-fila { grid-template-columns: minmax(0, 1fr) minmax(0, auto); }
+          .rg-porque { grid-column: 1 / -1; }
+          .rg-cabecera .rg-nota { display: none; }   /* parte el título en dos y no dice nada nuevo */
         }
 
         @media (max-width: 500px) { .toolbar { gap: 0.25rem; } .ev-btn { padding: 0.4rem 0.55rem; } }
+
+        /* ── Móvil: el cajón ──────────────────────────────────────────────────
+           **En vertical el mundo lo limita el ancho, nunca el alto**, así que quitarle filas a la
+           página no le da un píxel más de lienzo: lo que sobra es alto, y de eso hay medio
+           teléfono. De ahí las dos cosas de aquí abajo y ninguna otra.
+
+           El lienzo se come el relleno lateral de la página —un sangrado negativo, que el JS mide
+           la caja y no la ventana—, que es el único sitio de donde sale ancho.
+
+           Y el panel, que en escritorio es una capa sobre el lienzo, aquí sube desde abajo: encima
+           taparía justo lo que se está mirando dejando media pantalla en blanco debajo. Suben los
+           cinco por igual —los tres que se abren sobre el mundo y los dos que en escritorio van en
+           el flujo—, porque en un teléfono la diferencia entre «encima» y «debajo» no existe: solo
+           hay un sitio libre. Sin fondo que oscurezca el mundo: el mundo sigue corriendo ahí
+           arriba, y el que trae el inspector es el que se está siguiendo. Se cierran por su
+           botón, que todos lo llevan. */
+        @media (max-width: 640px) {
+          .sim-box { margin-inline: calc(clamp(1.25rem, 4vw, 2rem) * -1); }
+          /* En pantalla completa el relleno que hay que devolver es el de la escena, que es otro:
+             con el de la página el lienzo se sale ocho píxeles por cada lado. */
+          .escena.fs .sim-box { margin-inline: calc(clamp(0.75rem, 2vw, 1.5rem) * -1); }
+          /* Arriba del todo y no centrado en lo que sobra: lo que sobra es por donde sube el
+             cajón, y un mundo centrado se lleva la mitad debajo de él. */
+          .sim-canvas { border-radius: 0; top: 0; transform: translateX(-50%); }
+
+          /* Una fila y se desliza: apilados son cuatro renglones de botones, y los dos que se usan
+             a ráfagas —seguir y la velocidad— acaban lejos del pulgar. La máscara de la derecha es
+             lo que dice que la fila sigue. */
+          /* **Y con min-width 0**, o la fila que no envuelve pasa a ser el ancho mínimo de la
+             página entera —ochocientos píxeles en una ventana de 375— y el lienzo se mide contra
+             una caja que no existe. El overflow no salva: quien decide es el mínimo automático. */
+          .toolbar {
+            flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; min-width: 0;
+            justify-content: flex-start;
+            mask-image: linear-gradient(to right, #000 92%, transparent);
+          }
+          /* **Maximizado no se desliza: se envuelve.** El lienzo no crece por estrechar la barra
+             —lo limita el ancho—, así que aquí, donde el alto no se lo quita a nadie, salen todos
+             los botones a la vez y la línea de estado se queda con su renglón. */
+          .escena.fs .toolbar {
+            flex-wrap: wrap; overflow-x: visible; mask-image: none; justify-content: flex-start;
+            padding-right: 2.2rem;   /* el aspa de salir flota en esa esquina */
+          }
+          .toolbar::-webkit-scrollbar { display: none; }
+          .toolbar > * { flex: 0 0 auto; }
+
+          .lg-panel, .dr-panel, .es-panel, .tr-panel, .in-panel, .rg-panel {
+            position: fixed; inset: auto 0 0 0; z-index: 1002;
+            max-height: 76dvh; overflow-y: auto; overscroll-behavior: contain;
+            background: var(--t-paper); border: 1px solid var(--border); border-bottom: none;
+            border-radius: 14px 14px 0 0; box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.28);
+            padding: 0 1rem 1rem; animation: cj-subir 0.22s ease-out;
+          }
+          /* El asa, que es lo que lo hace un cajón y no una tarjeta que ha aparecido. **El hueco de
+             arriba lo pone ella y nunca el panel:** un relleno de arriba en quien se desplaza deja una
+             franja por la que se ve pasar el texto por encima de la cabecera pegada. */
+          .lg-panel::before, .dr-panel::before, .es-panel::before,
+          .tr-panel::before, .in-panel::before, .rg-panel::before {
+            content: ""; display: block; width: 36px; height: 4px; margin: 0.55rem auto 0.5rem;
+            border-radius: 2px; background: var(--t-rule);
+          }
+          @keyframes cj-subir { from { transform: translateY(100%); } }
+        }
       `}</style>
 
+      {/* **El ancho, dicho y no deducido.** El shell mete esto en una columna flex, y un ancho
+          automático ahí lo decide lo más ancho que haya dentro —la fila de controles que en móvil
+          no envuelve—: la página entera se va a 800 px en una ventana de 375 y el lienzo se mide
+          contra una caja que no cabe. Ni `overflow: hidden` ni `min-width: 0` lo evitan: el
+          primero recorta lo que sobra, que es el mundo, y el segundo no llega, que quien se
+          ensancha es el shell. */}
       <main style={{
-        maxWidth: 900, margin: "0 auto",
+        width: "100%", maxWidth: 900, margin: "0 auto",
         padding: `0 clamp(1.25rem, 4vw, 2rem) clamp(1.25rem, 4vw, 2rem)`,
         height: porque ? "auto" : "100%", minHeight: "100%",
         overflowX: "hidden", overflowY: porque ? "auto" : "hidden",
@@ -912,6 +1025,7 @@ export default function Evolution() {
               <Estratos historia={reparto} eva={eva} dia={diaDe} cerrar={cerrar} />
             )}
             {vista === "diario" && <Diario diario={cronicaDe} dia={diaDe} clima={climaDe} cerrar={cerrar} />}
+            {vista === "reglas" && <Reglas clima={climaDe} cerrar={cerrar} />}
             {vista === "leyenda" && (
               <Leyenda
                 rasgos={RASGOS} tabla={TABLA}
