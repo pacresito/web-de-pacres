@@ -289,6 +289,15 @@ const anexadas = new Set(Object.values(ANEXOS).flat());
 // el tamaño del país, y Groenlandia en el mismo verde que Dinamarca dice que mide cincuenta veces
 // lo que mide. `paises.ts` sigue dando su superficie y `formas.ts` su forma, las dos sin
 // territorios.
+//
+// **Quién es territorio lo dice la fuente, y lo dice bien: es el estatus, no la distancia.** La
+// feature de Francia trae dentro sus cinco departamentos de ultramar —la Guayana entre ellos, que
+// es Francia y es la UE— y deja fuera las colectividades; la de Estados Unidos trae Alaska y Hawái
+// y deja fuera Puerto Rico; Groenlandia y las Feroe salen aparte porque son países del Reino con
+// autogobierno, como Aruba y Curazao del neerlandés. Por eso la marca **no** se pone midiendo qué
+// suelta la silueta: con los 300 km de `MAX_KM`, Alaska, Hawái y Canarias pasarían por territorio
+// ajeno sin serlo. Que la Guayana se resalte en pleno y Nueva Caledonia en flojo es la diferencia
+// entre un departamento y una colectividad, no un descuido que haya que igualar.
 const soberanoDe = new Map<string, string>();
 for (const f of g50.features) {
   const iso = String(f.properties.ISO_A2_EH ?? f.properties.ISO_A2 ?? "").toLowerCase();
