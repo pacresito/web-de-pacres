@@ -236,10 +236,15 @@ export type Config = {
    * puede ahorrar, que es la luz que queda. En 0 se come en el tick del contacto, que es como
    * estuvo el mundo hasta que la depredación se pudo mirar.
    *
-   * **Y la ecología no lo nota, que es lo que había que medir**: entre 0 y 120 ticks, sobre
-   * veinticuatro semillas a 200 días, el censo va de 20 a 21, las presas al día de 0,44 a 0,37 y
-   * la parte de muertes por diente del 7,6% al 6,9% — ruido de semilla, y las extinciones las
-   * mismas. Sale de `dentellada.medir.ts`, que es quien compara los dos mundos.
+   * **Y la ecología no lo nota, que es lo que había que medir.** En el clima rico —el que más caza,
+   * con la depredación en el 11% de las muertes—, entre 0 y 240 ticks el censo se queda en 24-25,
+   * las presas al día van de 0,81 a 0,76 y las muertes por diente del 10,9% al 10,1%. Emparejando
+   * por semilla, los signos se reparten mitad y mitad: es el caos de cada partida, no la regla.
+   *
+   * **Y se ve por qué**: la población se pasa en una boca el 0,42% de su vida a 60 ticks y el 0,78%
+   * a 120. Un bicho caza tan poco —tiene a alguien comestible delante el 0,9% de su vida— que
+   * doblar lo que tarda es doblar casi nada. A 240 asoma algo —0,76 presas al día contra 0,81— y
+   * sigue dentro del ruido. Todo de `dentellada.medir.ts`.
    */
   ticksPresa: number;
   tasa: number;
