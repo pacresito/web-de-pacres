@@ -56,12 +56,16 @@ const PAUSA_NOCHE = 1500;
 const SEMILLA_POR_DEFECTO = "hola";
 
 /**
- * Lo que se puede tener abierto, que es una cosa o ninguna. `poblacion` y `bicho` van debajo del
- * mundo y las otras son paneles encima, pero todas compiten por el mismo alto: el del lienzo. Tres
- * no tienen botón de texto porque se abren desde donde se miran: el diario desde su carril, que
- * está siempre a la vista, el bicho pulsándolo en el mundo y las reglas desde su icono.
+ * Lo que se puede tener abierto, que es una cosa o ninguna. `poblacion` va debajo del mundo y las
+ * otras son paneles encima, pero todas compiten por el mismo alto: el del lienzo. Dos no tienen
+ * botón de texto porque se abren desde donde se miran: el diario desde su carril, que está siempre
+ * a la vista, y las reglas desde su icono.
+ *
+ * **El bicho no es una vista**, aunque su panel viva donde ellas: no se abre, se marca — y lo
+ * marcado dura lo que dure la marca, no lo que dure un panel. Cuelga de `sel` y se pinta siempre
+ * que el mundo se vea, que es donde la marca significa algo.
  */
-type Vista = "leyenda" | "poblacion" | "partida" | "diario" | "bicho" | "reglas" | null;
+type Vista = "leyenda" | "poblacion" | "partida" | "diario" | "reglas" | null;
 const VISTAS: [Vista, string][] = [["leyenda", "leyenda"], ["poblacion", "población"], ["partida", "la partida"]];
 
 /**
@@ -262,17 +266,22 @@ export default function Evolution() {
     window.history.replaceState(null, "", url);
   }, [semilla]);
 
-  /**
-   * Elegir bicho, o soltar al que hubiera con `0`. **La selección vive exactamente lo que su
-   * panel**: una cámara persiguiendo a alguien mientras se mira otra cosa es un mundo que se
-   * mueve solo, así que cerrar suelta y abrir cualquier otra vista también.
-   */
-  const elegir = useCallback((id: number) => {
+  /** Marcar bicho, o soltar al que hubiera con `0`. Solo la marca: quién se mira no cambia. */
+  const marcar = useCallback((id: number) => {
     selRef.current = id;
     setSel(id);
-    setVista(id ? "bicho" : null);
     repintarRef.current = true;
   }, []);
+
+  /**
+   * Marcar al que se pulsa, o soltarlo si ya lo estaba. **Pulsar dos veces suelta** en los dos
+   * sitios donde se pulsa un bicho —el mundo y la tira—, porque en los dos sigue ahí después de
+   * pulsarlo: si el gesto no se pudiera deshacer donde se hizo, soltar obligaría a buscar la
+   * aspa del panel.
+   */
+  const alternar = useCallback((id: number) => {
+    marcar(id === selRef.current ? 0 : id);
+  }, [marcar]);
 
   const sembrar = useCallback(() => {
     const s = texto.trim();
@@ -283,7 +292,7 @@ export default function Evolution() {
     setSaltando(false);
     // El bicho que se estaba mirando no sobrevive a sembrar: el mundo nuevo reparte los mismos
     // ids entre otros bichos, así que dejarlo puesto sería seguir a un desconocido.
-    if (selRef.current) elegir(0);
+    if (selRef.current) marcar(0);
     if (s === semilla) {          // misma palabra = mismo mundo: reinicia
       mundoRef.current = crearMundo(s);
       historiaRef.current = [];
@@ -295,7 +304,7 @@ export default function Evolution() {
       nocheRef.current = { fin: 0, dura: PAUSA_NOCHE };
     } else setSemilla(s);
     repintarRef.current = true;
-  }, [texto, semilla, elegir]);
+  }, [texto, semilla, marcar]);
 
   /**
    * Volver `RETROCESO` días: se restaura el amanecer guardado más reciente que no pase de ahí, y
@@ -397,16 +406,14 @@ export default function Evolution() {
     const ev = narrar(cronicaRef.current, m, evaRef.current);
     if (ev) ultimoRef.current = ev;
   }, []);
-  const cerrar = useCallback(() => elegir(0), [elegir]);
-  const abrir = useCallback((v: Vista) => {
-    selRef.current = 0;
-    setSel(0);
-    repintarRef.current = true;
-    setVista((x) => (x === v ? null : v));
-  }, []);
+  /** Cerrar el panel que esté abierto. **No suelta al bicho marcado**: la marca es del mundo, y el
+   *  mundo sigue ahí cuando el panel se va. */
+  const cerrar = useCallback(() => setVista(null), []);
+  const soltar = useCallback(() => marcar(0), [marcar]);
+  const abrir = useCallback((v: Vista) => setVista((x) => (x === v ? null : v)), []);
 
   /**
-   * Un clic en el lienzo elige al bicho que se haya pulsado, o suelta al que había si se pulsa el
+   * Un clic en el lienzo marca al bicho que se haya pulsado, o suelta al que había si se pulsa el
    * suelo. Gana el más cercano y no el primero que se encuentre: en un montón de treinta, el
    * primero del censo es el más viejo, no el que está debajo del dedo.
    */
@@ -423,8 +430,8 @@ export default function Evolution() {
       if (d2 > alcance * alcance) continue;
       if (!mejor || d2 < cerca) { mejor = b; cerca = d2; }
     }
-    elegir(mejor ? mejor.id : 0);
-  }, [elegir]);
+    alternar(mejor ? mejor.id : 0);
+  }, [alternar]);
   const cronicaDe = useCallback(() => cronicaRef.current, []);
   const climaDe = useCallback(() => mundoRef.current?.cfg.comidas ?? 0, []);
   const reparto = useCallback(() => repartoRef.current, []);
@@ -605,7 +612,10 @@ export default function Evolution() {
   );
 
   /** Lo que la tira necesita, en un sitio: se pinta en dos y los dos tienen que decir lo mismo. */
-  const tira = { mundo: mundoVivo, eva, paleta: paletaDe(semilla, tema ?? "light"), diseno: designFor(semilla) };
+  const tira = {
+    mundo: mundoVivo, eva, paleta: paletaDe(semilla, tema ?? "light"), diseno: designFor(semilla),
+    sel, marcar: alternar,
+  };
 
   return (
     <TerminalShell
@@ -714,6 +724,10 @@ export default function Evolution() {
         /* ── Tira de población ────────────────────────────────────────────────
            Debajo del mundo y en el flujo, no encima: es lo que está siempre, así que taparlo
            sería taparse a sí misma. El alto que se lleva se lo quita al lienzo, que es flex. */
+        /* Lo que va bajo el mundo, junto: la ficha del marcado y la tira. **Dice su ancho**, que
+           en una columna flex el automático lo decide lo más ancho que lleve dentro y se lleva la
+           página con él. */
+        .cajon { flex: 0 0 auto; width: 100%; }
         .tr-panel { flex: 0 0 auto; border-top: 1px solid var(--border); padding: 0.4rem 0 0.15rem; }
         .tr-cab { display: flex; align-items: baseline; gap: 0.6rem; font-size: 0.6rem; padding-bottom: 0.25rem; }
         .tr-cab b { color: var(--t-ink); letter-spacing: 0.07em; }
@@ -970,7 +984,7 @@ export default function Evolution() {
           .toolbar::-webkit-scrollbar { display: none; }
           .toolbar > * { flex: 0 0 auto; }
 
-          .lg-panel, .dr-panel, .es-panel, .tr-panel, .in-panel, .rg-panel {
+          .lg-panel, .dr-panel, .es-panel, .cajon, .rg-panel {
             position: fixed; inset: auto 0 0 0; z-index: 1002;
             max-height: 76dvh; overflow-y: auto; overscroll-behavior: contain;
             background: var(--t-paper); border: 1px solid var(--border); border-bottom: none;
@@ -981,10 +995,12 @@ export default function Evolution() {
              arriba lo pone ella y nunca el panel:** un relleno de arriba en quien se desplaza deja una
              franja por la que se ve pasar el texto por encima de la cabecera pegada. */
           .lg-panel::before, .dr-panel::before, .es-panel::before,
-          .tr-panel::before, .in-panel::before, .rg-panel::before {
+          .cajon::before, .rg-panel::before {
             content: ""; display: block; width: 36px; height: 4px; margin: 0.55rem auto 0.5rem;
             border-radius: 2px; background: var(--t-rule);
           }
+          /* Dentro del cajón la línea de arriba sobra: quien lo separa del mundo es el cajón. */
+          .cajon > :first-child { border-top: none; }
           @keyframes cj-subir { from { transform: translateY(100%); } }
         }
       `}</style>
@@ -1044,10 +1060,22 @@ export default function Evolution() {
             <span className="dr-abrir">el diario ›</span>
           </button>
 
-          {vista === "bicho" && sel > 0 && (
-            <Inspector mundo={mundoVivo} id={sel} eva={eva} cerrar={cerrar} />
+          {/* Lo que vive bajo el mundo, en un cajón: **en el móvil los dos son una sola hoja**, y
+              dos hojas ancladas al mismo borde se pisan. En escritorio el cajón no se ve — cada
+              panel se sigue separando con su propia línea.
+
+              La ficha del marcado se pinta **siempre que el mundo se vea**: los otros paneles tapan
+              el lienzo, y con la marca escondida su ficha habla de algo que no está. Con la tira
+              puesta va en corto —los genes los está contando ella, y mejor, que ahí se ven contra
+              toda la población— y así las dos caben sin dejar al mundo en un renglón. */}
+          {(vista === "poblacion" || (sel > 0 && vista === null)) && (
+            <div className="cajon">
+              {sel > 0 && (vista === null || vista === "poblacion") && (
+                <Inspector mundo={mundoVivo} id={sel} eva={eva} cerrar={soltar} genes={vista === null} />
+              )}
+              {vista === "poblacion" && <Tira {...tira} />}
+            </div>
           )}
-          {vista === "poblacion" && <Tira {...tira} />}
         </div>
 
 

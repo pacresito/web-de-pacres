@@ -156,6 +156,30 @@ export function pintarMuestra(
 }
 
 /**
+ * La marca de quien se está mirando: **cuatro esquinas y no un aro**. Un aro alrededor del cuerpo
+ * ya significa otra cosa —la despensa que rebosa—, y dos aros del mismo color a dos píxeles el uno
+ * del otro no dicen dos cosas: dicen una borrosa. Las esquinas son de quien mira y no del bicho, y
+ * por eso se quedan rectas mientras el cuerpo gira.
+ *
+ * La usan el mundo y la tira, y por eso vive suelta: el bicho marcado es el mismo en los dos, así
+ * que dos marcas distintas obligarían a averiguar que lo son.
+ */
+function esquinas(
+  ctx: CanvasRenderingContext2D, x: number, y: number, rad: number, color: string, grosor: number,
+) {
+  const brazo = rad * 0.5;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = grosor;
+  ctx.lineCap = "round";
+  for (const sx of [-1, 1]) for (const sy of [-1, 1]) {
+    const px = x + sx * rad, py = y + sy * rad;
+    ctx.beginPath();
+    ctx.moveTo(px - sx * brazo, py); ctx.lineTo(px, py); ctx.lineTo(px, py - sy * brazo);
+    ctx.stroke();
+  }
+}
+
+/**
  * El mundo entero, en un lienzo de `W`×`H` px CSS con `dpr` píxeles de dispositivo por cada uno.
  * El suelo y la casa vienen cocidos; encima solo lo que decide la partida.
  */
@@ -261,21 +285,8 @@ export function pintar(
       ctx.beginPath(); ctx.arc(sel.x, sel.y, alcance, 0, TAU); ctx.stroke();
       ctx.setLineDash([]);
     }
-    // **Cuatro esquinas y no un aro.** Un aro alrededor del cuerpo ya significa otra cosa —la
-    // despensa que rebosa, y del color del acento—, y dos aros del mismo color a dos píxeles el
-    // uno del otro no dicen dos cosas: dicen una borrosa. Las esquinas son de quien mira y no del
-    // bicho, y por eso se quedan rectas mientras el cuerpo gira.
     const [ex, ey] = d.extension(sel.g, sel.radio);
-    const rad = Math.max(ex, ey) + 2, brazo = rad * 0.5;
-    ctx.strokeStyle = p.tinta;
-    ctx.lineWidth = 0.65;
-    ctx.lineCap = "round";
-    for (const sx of [-1, 1]) for (const sy of [-1, 1]) {
-      const x = sel.x + sx * rad, y = sel.y + sy * rad;
-      ctx.beginPath();
-      ctx.moveTo(x - sx * brazo, y); ctx.lineTo(x, y); ctx.lineTo(x, y - sy * brazo);
-      ctx.stroke();
-    }
+    esquinas(ctx, sel.x, sel.y, Math.max(ex, ey) + 2, p.tinta, 0.65);
     ctx.restore();
   }
 
@@ -406,8 +417,10 @@ export type Tinta = { papel: string; linea: string; linea2: string; ink: string;
 
 /** Lo que hace falta para pintar la fila de un gen. */
 export type Fila = {
-  /** Dónde cae en el eje cada bicho vivo, ya en 0…1, y el cuerpo que le corresponde. */
-  cuerpos: { t: number; c: Cuerpo }[];
+  /** Dónde cae en el eje cada bicho vivo, ya en 0…1, y el cuerpo que le corresponde. Con el id
+   *  del bicho: aquí no se pinta una población, se pinta a cada uno, y al que se pulsa hay que
+   *  saber señalarlo en el mundo. */
+  cuerpos: Muestra[];
   /** El fundador y la mediana de hoy, en el mismo 0…1. */
   eva: number;
   med: number | null;
@@ -419,7 +432,18 @@ export type Fila = {
   escala: number;
   /** Con el enjambre entero o con dos muestras: la fila que se mira y las cinco que no. */
   enjambre: boolean;
+  /** Quién va marcado, por id, o `0`. Lleva las mismas esquinas que en el mundo — es el mismo
+   *  bicho y la misma marca, que es lo que hace que pulsarlo aquí se entienda allí. */
+  sel: number;
 };
+
+/** Un bicho vivo colocado en el eje de un gen. */
+export type Muestra = { id: number; t: number; c: Cuerpo };
+
+/** Dónde ha quedado pintado cada cuerpo de una fila, en px CSS: es con lo que se sabe a quién se
+ *  ha pulsado. El montón se apila según lo junta que esté la población, así que esto no se puede
+ *  recalcular fuera — sale de pintar. */
+export type Puesto = { id: number; cx: number; cy: number; ancho: number };
 
 const CRESTA = 96;   // puntos de la curva de fondo; más son subpíxeles en una fila de 600 px
 
@@ -454,7 +478,7 @@ function cresta(ts: number[]): number[] {
 export function pintarFila(
   ctx: CanvasRenderingContext2D, W: number, H: number, dpr: number,
   d: Design, p: Paleta, t: Tinta, f: Fila,
-) {
+): Puesto[] {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.fillStyle = t.papel;
   ctx.fillRect(0, 0, W, H);
@@ -490,7 +514,8 @@ export function pintarFila(
   vertical(f.eva, t.ink4, 1);
 
   const muestras = f.enjambre ? f.cuerpos : extremos(f.cuerpos);
-  colocar(muestras, W, H, d, f.escala).forEach(({ c, cx, cy, escala }) => {
+  const puestos = colocar(muestras, W, H, d, f.escala);
+  puestos.forEach(({ c, cx, cy, escala }) => {
     // El lienzo ya está en píxeles CSS por el `setTransform` de arriba, así que aquí no se vuelve
     // a multiplicar por `dpr`: hacerlo colocaba a toda la población fuera del borde derecho.
     ctx.save();
@@ -500,7 +525,18 @@ export function pintarFila(
     ctx.restore();
   });
 
+  // El marcado, después de todos: en el montón el de al lado se le pinta encima, y una marca medio
+  // tapada señala a dos bichos a la vez.
+  //
+  // **Solo en la fila abierta**, que es donde está la población entera. En una cerrada el bicho
+  // marcado sale si resulta ser uno de los dos extremos y no sale si no lo es, así que la marca se
+  // enciende y se apaga sin querer decir nada — y en veintidós píxeles de alto no cabe entera.
+  const marcado = f.enjambre ? puestos.find((q) => q.id === f.sel) : undefined;
+  if (marcado) esquinas(ctx, marcado.cx, marcado.cy, marcado.ancho / 2 + 2.5, t.ink, 1);
+
   if (f.med !== null) vertical(f.med, t.ink, 2, 0.82);
+
+  return puestos.map(({ id, cx, cy, ancho }) => ({ id, cx, cy, ancho }));
 }
 
 /**
@@ -508,7 +544,7 @@ export function pintarFila(
  * hoy**, no dos valores inventados. Con censo de uno sale uno solo, que es lo correcto — el primer
  * día del mundo hay una bicha y enseñar dos sería mentir sobre el censo.
  */
-function extremos(cs: { t: number; c: Cuerpo }[]): { t: number; c: Cuerpo }[] {
+function extremos(cs: Muestra[]): Muestra[] {
   if (cs.length <= 2) return cs;
   const s = [...cs].sort((a, b) => a.t - b.t);
   return [s[0], s[s.length - 1]];
@@ -520,16 +556,16 @@ function extremos(cs: { t: number; c: Cuerpo }[]): { t: number; c: Cuerpo }[] {
  * se queda vacío hasta arriba. Apilar por densidad calculada daría la misma silueta sin decir qué
  * bicho es cada bulto.
  */
-function colocar(cs: { t: number; c: Cuerpo }[], W: number, H: number, d: Design, escala: number) {
+function colocar(cs: Muestra[], W: number, H: number, d: Design, escala: number) {
   const orden = [...cs].sort((a, b) => a.t - b.t);
   const niveles: number[] = [];
-  const puestos = orden.map(({ t, c }) => {
+  const puestos = orden.map(({ id, t, c }) => {
     const ancho = Math.max(...d.extension(c.g, c.radio)) * 2 * escala;
     const cx = Math.min(W - ancho / 2, Math.max(ancho / 2, t * W));
     let n = 0;
     while (n < niveles.length && niveles[n] > cx - ancho / 2) n++;
     niveles[n] = cx + ancho / 2 + 0.8;
-    return { c, cx, n, ancho, escala };
+    return { id, c, cx, n, ancho, escala };
   });
 
   // **El montón se aprieta hasta caber, no se corta por arriba.** Cuántos niveles hacen falta no se

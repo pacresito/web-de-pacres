@@ -61,11 +61,14 @@ function fichar(m: Mundo, b: Bicho): Ficha {
 /** La despensa pasa de llena sin techo, así que por encima del 100% se cuenta en veces. */
 const despensaDe = (d: number) => (d > 1 ? `×${num(d)}` : `${Math.round(d * 100)}%`);
 
-export default function Inspector({ mundo, id, eva, cerrar }: {
+export default function Inspector({ mundo, id, eva, cerrar, genes = true }: {
   mundo: () => Mundo | null;
   id: number;
   eva: Genoma;
   cerrar: () => void;
+  /** Con las seis barras o solo la línea de arriba. **Sin ellas con la tira puesta**: ahí los seis
+   *  genes ya están, y contra toda la población en vez de contra el fundador solo. */
+  genes?: boolean;
 }) {
   /**
    * La última ficha, y **se deja de refrescar en cuanto el bicho no está**: seguir leyéndola del
@@ -136,7 +139,7 @@ export default function Inspector({ mundo, id, eva, cerrar }: {
       {/* Los seis genes en la misma vara que la leyenda y la tira —el recorrido medido, vía
           `posGen`—, para que «63%» quiera decir lo mismo en los tres sitios. La marca del
           fundador va en cada barra: sin ella el tanto por ciento no dice de dónde salió. */}
-      <div className="in-genes">
+      {genes && <div className="in-genes">
         {RASGOS.map((r) => (
           <div key={r} className="in-gen" title={`${NOMBRE[r] ?? r} ${num(f.g[r])}`}>
             <div className="in-gen-cab">
@@ -149,7 +152,7 @@ export default function Inspector({ mundo, id, eva, cerrar }: {
             </div>
           </div>
         ))}
-      </div>
+      </div>}
     </div>
   );
 }
