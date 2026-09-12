@@ -8,7 +8,7 @@
 
 import { MARCA, RADIO_COMIDA, edadDe, luzDe, type Bicho, type Mundo } from "./engine";
 import {
-  RECORRIDO, azarFijo, clamp, colorCuerpo, designFor, envejecer, giroDe, mix,
+  RECORRIDO, azarFijo, clamp, colorCuerpo, designFor, enrojecer, envejecer, giroDe, mix,
   type Cuerpo, type Design, type Paleta,
 } from "./designs";
 
@@ -361,8 +361,13 @@ export function pintar(
     const norma = Math.sqrt(hx * hx + hy * hy);
     const edad = edadDe(m, b);
     const vigor = clamp(b.reserva / (c.capReserva * b.masa), 0, 1);
+    // Y va poniéndose del color del zarpazo según se la comen: el forcejeo dura un segundo entre
+    // treinta cuerpos que se mueven, y la pose sola no lo saca de la escena. **Satura donde empieza
+    // a hundirse**, no al final: el rojo entero tiene que verse un rato, y el último tramo ya
+    // cuenta lo suyo encogiendo.
+    const rojo = Math.min(1, k / BOCA.trago);
     d.cuerpo(ctx, { ...b, x, y, hx: hx / norma, hy: hy / norma, radio: b.radio * (1 - 0.5 * trago), edad },
-      vigor, paletaCon(edad));
+      vigor, enrojecer(paletaCon(edad), rojo));
   }
 
   // De noche, lo único que se escribe encima del mundo: cuántas crías ha puesto cada madre, al lado

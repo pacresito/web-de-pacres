@@ -206,6 +206,37 @@ export function envejecer(p: Paleta, edad: number): Paleta {
   };
 }
 
+/**
+ * Hasta dónde llega el rojo del que se están comiendo. **Casi entero y no del todo**: en 1 el
+ * cuerpo se vuelve una mancha plana del color del zarpazo y deja de ser un bicho justo cuando hay
+ * que ver que es uno.
+ */
+const SANGRE = 0.9;
+
+/**
+ * La paleta de quien se está comiendo otro: **el bicho entero virando a `hot`**, que es el color
+ * con el que ya se pinta el zarpazo — así el cuerpo y el anillo que lo remata cuentan lo mismo, y
+ * sale bien en las cuatro paletas y en los dos temas sin escribir un rojo en ningún sitio.
+ *
+ * Va por la paleta y no por cada dibujo, como `envejecer`, y a diferencia de ella **tiñe también
+ * la rampa del cuerpo** (`mid`, `vejez`, `dim`): teñir solo la piel deja al bicho de su color con
+ * los apéndices rojos, que se lee como otra especie y no como el que se está muriendo.
+ *
+ * Pisa el canal de la edad mientras dura el bocado, y es el único sitio donde eso vale: al que se
+ * están comiendo no hay que poder leerle los años.
+ */
+export function enrojecer(p: Paleta, k: number): Paleta {
+  const t = clamp(k, 0, 1) * SANGRE;
+  if (t < 0.01) return p;
+  const c = (x: string) => mix(x, p.hot, t);
+  return {
+    ...p,
+    mid: c(p.mid), vejez: c(p.vejez), dim: c(p.dim),
+    line: c(p.line), maw: c(p.maw), acc: c(p.acc), acc2: c(p.acc2),
+    jaw: c(p.jaw), belly: c(p.belly), fin: c(p.fin), hi: c(p.hi),
+  };
+}
+
 /** PRNG del pintado, de semilla fija. No toca el del motor: aquí nada decide nada. */
 export function azarFijo(s: number) {
   return () => {
