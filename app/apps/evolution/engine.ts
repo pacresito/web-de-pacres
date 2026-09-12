@@ -238,14 +238,13 @@ export type Config = {
    * estuvo el mundo hasta que la depredación se pudo mirar.
    *
    * **Y la ecología no lo nota, que es lo que había que medir.** En el clima rico —el que más caza,
-   * con la depredación en el 11% de las muertes—, entre 0 y 240 ticks el censo se queda en 24-25,
-   * las presas al día van de 0,81 a 0,76 y las muertes por diente del 10,9% al 10,1%. Emparejando
+   * con la depredación en el 11% de las muertes—, entre 0 y 240 ticks el censo se queda en 23-25,
+   * las presas al día van de 0,81 a 0,75 y las muertes por diente del 10,9% al 10,6%. Emparejando
    * por semilla, los signos se reparten mitad y mitad: es el caos de cada partida, no la regla.
    *
-   * **Y se ve por qué**: la población se pasa en una boca el 0,42% de su vida a 60 ticks y el 0,78%
-   * a 120. Un bicho caza tan poco —tiene a alguien comestible delante el 0,9% de su vida— que
-   * doblar lo que tarda es doblar casi nada. A 240 asoma algo —0,76 presas al día contra 0,81— y
-   * sigue dentro del ruido. Todo de `dentellada.medir.ts`.
+   * **Y se ve por qué**: la población se pasa en una boca el 0,43% de su vida a 60 ticks y el 0,79%
+   * a 120. Un bicho caza tan poco que doblar lo que tarda es doblar casi nada. A 240 asoma algo
+   * —0,75 presas al día contra 0,81— y sigue dentro del ruido. Todo de `dentellada.medir.ts`.
    */
   ticksPresa: number;
   tasa: number;
@@ -656,8 +655,16 @@ function decidir(m: Mundo, b: Bicho, radioMax: number, luz: number, cae: boolean
   let mMenor = Infinity, xMenor = 0, yMenor = 0;
   let sumM = 0, sumX = 0, sumY = 0;
   const alcanceB = g.vision * luz * radioMax;
+  // **El que está en una boca no está en el mundo**, ni para perseguirlo ni para acompañarse de él.
+  // Es el mismo trato que le da el resto del tick —no decide, no anda, no paga— y sobre todo es el
+  // que ya tiene la comida: un bocado recién recogido desaparece del suelo, y nadie sigue yendo a
+  // por él. Dejarlo visible lo convertía en un cebo quieto e intocable —la fiereza apunta al menor
+  // que se ve, y la caza salta a los presos—, con los de alrededor orbitándolo hasta que su verdugo
+  // terminaba: **el 2% de la vida de la población, y el 4% en el clima rico**. Y no es una mala
+  // estrategia que la selección pueda corregir, porque ningún gen puede leer si la presa que ve
+  // está libre o en boca ajena.
   for (const o of m.bichos) {
-    if (o === b || !o.vivo || o.aSalvo) continue;
+    if (o === b || !o.vivo || o.aSalvo || o.preso) continue;
     const dx = o.x - b.x, dy = o.y - b.y, d2 = dx * dx + dy * dy;
     if (d2 > alcanceB * alcanceB) continue;
     const alcance = g.vision * luz * o.radio;
