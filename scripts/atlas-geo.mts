@@ -293,6 +293,9 @@ export function laeaInv(x: number, y: number, lon0: number, lat0: number): [numb
 // marca la línea interior. No hace falta describirla —sale de `costuraDe`—, y por eso la anexión no
 // lleva más configuración que el código de la pieza.
 //
+// **Anexar no siempre cambia la silueta:** el país al que la fuente da pocos puntos la saca de
+// geoBoundaries (`MIN_PUNTOS`), y ahí la pieza cosida solo aporta su frontera interior y el globo.
+//
 // **El orden manda:** cada pieza se cose contra lo ya cosido, así que la que no toca al país va
 // detrás de la que se lo acerca.
 export const ANEXOS: Record<string, string[]> = {
