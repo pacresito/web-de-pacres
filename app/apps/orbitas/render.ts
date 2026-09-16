@@ -1,7 +1,7 @@
 // Pintado de Órbitas en canvas: fondo negro cosmos, color por temperatura estelar,
 // estelas por desvanecido y los overlays del gesto y del radar. Sin React ni estado propio.
 
-import type { Body, View } from "./engine";
+import { VEL_SCALE, type Body, type View } from "./engine";
 
 const TAU = Math.PI * 2;
 
@@ -172,15 +172,17 @@ export function drawExplosion(
   ctx.restore();
 }
 
-// Preview del gesto de creación: bola-fantasma latiendo en el origen + flecha de
-// lanzamiento en la dirección de tirachinas (origen − puntero = velocidad inicial).
+// Preview del gesto de creación: bola-fantasma latiendo en el origen, el anillo de la zona
+// muerta y la flecha de lanzamiento. La flecha mide la velocidad ya resuelta, no el arrastre:
+// así se ve dónde empieza a empujar y dónde deja de crecer por el tope.
 // Como en la flecha-radar, los trazos se dividen por `zoom` para no adelgazar al alejarse.
 export function drawDragPreview(
   ctx: CanvasRenderingContext2D,
   origin: { x: number; y: number },
-  pointer: { x: number; y: number },
+  vel: { vx: number; vy: number },
   mass: number,
   radius: number,
+  deadzone: number,
   zoom = 1,
 ) {
   const [r, g, bl] = massToColor(mass);
@@ -192,8 +194,16 @@ export function drawDragPreview(
   ctx.lineWidth = 1 / zoom;
   ctx.beginPath(); ctx.arc(origin.x, origin.y, radius, 0, TAU); ctx.stroke();
 
-  // flecha de lanzamiento (dirección y módulo = origen − puntero)
-  const lvx = origin.x - pointer.x, lvy = origin.y - pointer.y;
+  // anillo de la zona muerta: soltar dentro deja el cuerpo quieto
+  ctx.save();
+  ctx.setLineDash([4 / zoom, 4 / zoom]);
+  ctx.strokeStyle = "rgba(255,255,255,0.25)";
+  ctx.lineWidth = 1 / zoom;
+  ctx.beginPath(); ctx.arc(origin.x, origin.y, deadzone, 0, TAU); ctx.stroke();
+  ctx.restore();
+
+  // flecha de lanzamiento (dirección y módulo = velocidad de salida)
+  const lvx = vel.vx / VEL_SCALE, lvy = vel.vy / VEL_SCALE;
   const len = Math.hypot(lvx, lvy);
   if (len < 4 / zoom) return;
   const tipX = origin.x + lvx, tipY = origin.y + lvy;

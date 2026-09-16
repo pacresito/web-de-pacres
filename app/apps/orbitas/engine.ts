@@ -150,6 +150,58 @@ export function pruneEscaped(world: World, view: View) {
   });
 }
 
+// El gesto de creación: mantener pulsado elige la masa, arrastrar la velocidad. Lógica pura;
+// page.tsx solo le pasa el tiempo que lleva pulsado y los dos puntos del puntero.
+
+export const MASS_MIN = 4;     // masa al tocar (pulsación instantánea)
+export const MASS_MAX = 6000;  // masa máxima manteniendo pulsado (suficiente para otro sol)
+const MASS_TAU = 470;          // ms en multiplicar/dividir la masa por e (ritmo exponencial)
+const MASS_RAMP = MASS_TAU * Math.log(MASS_MAX / MASS_MIN); // tiempo de mín↔máx (~3.4 s)
+const MASS_HOLD = 200;         // pausa en cada extremo antes de invertir
+const MASS_CYCLE = 2 * MASS_RAMP + 2 * MASS_HOLD;
+
+// Masa mientras se mantiene pulsado: sube exponencial de mín a máx, espera, baja a mín,
+// espera, y repite. Un toque = ligera; mantener deja elegir cualquier tamaño (hasta un sol).
+export function heldMass(elapsedMs: number): number {
+  const t = elapsedMs % MASS_CYCLE;
+  if (t < MASS_RAMP) return Math.min(MASS_MAX, MASS_MIN * Math.exp(t / MASS_TAU));          // sube
+  if (t < MASS_RAMP + MASS_HOLD) return MASS_MAX;                                           // pausa arriba
+  if (t < 2 * MASS_RAMP + MASS_HOLD)                                                        // baja
+    return Math.max(MASS_MIN, MASS_MAX * Math.exp(-(t - MASS_RAMP - MASS_HOLD) / MASS_TAU));
+  return MASS_MIN;                                                                          // pausa abajo
+}
+
+export const VEL_SCALE = 0.05; // px de arrastre → velocidad inicial
+const DRAG_DEAD_PX = 44;       // radio de la zona muerta del arrastre, en px de pantalla
+
+// Velocidad máxima de lanzamiento: la que deja justo ligado a un cuerpo que nace pegado a un
+// astro de ESCAPE_REF_MASS y sale disparado en línea recta — se frena al borde y vuelve. De la
+// conservación de energía, v² = 2·G·M·(1/r₀ − 1/r_max), con r₀ la suma de radios al nacer (más
+// cerca se fusionan al instante) y r_max una diagonal de pantalla. El tope apenas depende de
+// r_max, que es 20× mayor que r₀: es casi la velocidad de escape, así que por encima de él todo
+// lo lanzado se pierde y el gesto deja de significar nada.
+const ESCAPE_REF_MASS = 20000;
+const ESCAPE_REF_SPAN = 1400;
+export const MAX_SPEED = Math.sqrt(2 * G * ESCAPE_REF_MASS *
+  (1 / (radiusForMass(ESCAPE_REF_MASS) + radiusForMass(MASS_MIN)) - 1 / ESCAPE_REF_SPAN));
+
+// Zona muerta del arrastre: soltar dentro de ella crea el cuerpo quieto. Sirve para dos cosas —
+// poner un astro inmóvil sin acertar al píxel de origen, y en táctil dar sitio al dedo, que tapa
+// justo lo que se está apuntando. Nunca menor que el propio cuerpo más un margen: el anillo que
+// la dibuja tiene que verse por fuera de la bola, que puede ser enorme.
+export function deadzoneFor(radius: number, zoom: number): number {
+  return Math.max(DRAG_DEAD_PX, radius * zoom + 10) / zoom;
+}
+
+// Tirachinas: la velocidad va en el sentido origen − puntero, con el módulo que sobra de la zona
+// muerta (así crece desde cero al salir de ella, sin salto) y limitado a MAX_SPEED.
+export function launchVelocity(dragX: number, dragY: number, deadzone: number): { vx: number; vy: number } {
+  const d = Math.hypot(dragX, dragY);
+  if (d <= deadzone) return { vx: 0, vy: 0 };
+  const speed = Math.min((d - deadzone) * VEL_SCALE, MAX_SPEED);
+  return { vx: (dragX / d) * speed, vy: (dragY / d) * speed };
+}
+
 // Métricas (línea de estado + tests)
 
 export function totalMass(world: World): number {
@@ -221,17 +273,21 @@ export function presetBinary(W: number, H: number): World {
 
 // Cúmulo: una nube de cuerpecillos con velocidades pequeñas al azar. La gravedad los junta:
 // se cruzan, se lanzan unos a otros y se fusionan en cascada. Aleatorio (varía cada vez).
-export function presetCluster(W: number, H: number): World {
+// Único preset que se reparte por la vista y no por el lienzo: la nube llena siempre lo que se
+// ve, así que alejar la cámara la esparce de verdad en vez de encogerla — y a cambio tarda más
+// en colapsar, que la gravedad cae con el cuadrado de la distancia. Elipse y no disco: en una
+// pantalla apaisada el disco deja vacíos los lados.
+export function presetCluster(W: number, H: number, zoom = 1): World {
   const world = createWorld();
-  const cx = W / 2, cy = H / 2;
-  const R = Math.min(W, H) * 0.46;
+  const cx = W / 2, cy = H / 2;                     // centro de la vista, sea cual sea el zoom
+  const rx = (W / zoom) * 0.46, ry = (H / zoom) * 0.46;
   const N = 16;
   for (let i = 0; i < N; i++) {
-    const ang = Math.random() * Math.PI * 2;
-    const rad = R * Math.sqrt(Math.random()); // reparto uniforme en el disco
+    const ang = Math.random() * TAU;
+    const rad = Math.sqrt(Math.random()); // uniforme en el disco → uniforme en la elipse
     addBody(world, makeBody(
-      cx + Math.cos(ang) * rad,
-      cy + Math.sin(ang) * rad,
+      cx + Math.cos(ang) * rad * rx,
+      cy + Math.sin(ang) * rad * ry,
       (Math.random() - 0.5),
       (Math.random() - 0.5),
       6 + Math.random() * (PRESET_MAX_MASS.cluster - 6),

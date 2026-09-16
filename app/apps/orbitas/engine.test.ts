@@ -2,7 +2,8 @@
 // No es parte del build; verifica la física pura sin navegador.
 import {
   createWorld, addBody, makeBody, step, merge, detectCollisions,
-  totalMass, totalMomentum, presetSolar, presetThreeBody, G,
+  totalMass, totalMomentum, presetSolar, presetThreeBody, presetCluster, G,
+  launchVelocity, deadzoneFor, radiusForMass, MAX_SPEED, MASS_MIN,
 } from "./engine";
 
 let fails = 0;
@@ -134,6 +135,73 @@ function check(name: string, ok: boolean, detail = "") {
   check("tres cuerpos: órbita acotada y sin fusión",
     world.bodies.length === 3 && maxDist < Math.min(W, H) * 0.6,
     `cuerpos=${world.bodies.length} maxDist=${maxDist.toFixed(0)}`);
+}
+
+// 8. Gesto de lanzamiento: zona muerta y tope de velocidad
+{
+  const dead = deadzoneFor(radiusForMass(MASS_MIN), 1);
+  const quieto = launchVelocity(dead - 1, 0, dead);
+  check("lanzamiento: dentro de la zona muerta sale quieto", quieto.vx === 0 && quieto.vy === 0);
+
+  const justo = launchVelocity(dead + 1, 0, dead);
+  check("lanzamiento: al salir de la zona muerta la velocidad nace en cero",
+    justo.vx > 0 && justo.vx < 0.1, `vx=${justo.vx.toFixed(3)}`);
+
+  const enorme = launchVelocity(-9000, 9000, dead);
+  const mod = Math.hypot(enorme.vx, enorme.vy);
+  check("lanzamiento: el módulo nunca pasa del tope", Math.abs(mod - MAX_SPEED) < 1e-9,
+    `|v|=${mod.toFixed(2)} tope=${MAX_SPEED.toFixed(2)}`);
+  check("lanzamiento: el tope conserva la dirección del arrastre",
+    Math.abs(enorme.vx + enorme.vy) < 1e-9);
+}
+
+// 9. El tope es justo la frontera: a velocidad máxima, un cuerpo que nace pegado a un astro de
+// 20000 se aleja, se para y vuelve; un 15% por encima ya escapa. Es lo que define MAX_SPEED.
+{
+  const REF = 20000;
+  const r0 = radiusForMass(REF) + radiusForMass(MASS_MIN); // pegado, sin llegar a fusionarse
+  const vuelo = (v: number) => {
+    const world = createWorld();
+    addBody(world, makeBody(0, 0, 0, 0, REF, true));
+    addBody(world, makeBody(r0, 0, v, 0, MASS_MIN));
+    let rMax = 0, volvio = false;
+    for (let s = 0; s < 40000; s++) {
+      step(world, 1);
+      if (world.bodies.length < 2) { volvio = true; break; } // ha vuelto hasta fundirse con él
+      const r = Math.hypot(world.bodies[1].x, world.bodies[1].y);
+      if (r > rMax) rMax = r; else if (rMax > r0 * 2) volvio = true;
+    }
+    return { rMax, volvio };
+  };
+
+  const ligado = vuelo(MAX_SPEED);
+  check("tope: a velocidad máxima el cuerpo se frena y vuelve", ligado.volvio,
+    `rMax=${ligado.rMax.toFixed(0)}`);
+  check("tope: y lo hace cerca del borde de la pantalla, no a medio camino",
+    ligado.rMax > 700 && ligado.rMax < 2600, `rMax=${ligado.rMax.toFixed(0)}`);
+
+  const libre = vuelo(MAX_SPEED * 1.15);
+  check("tope: un 15% por encima ya escapa", !libre.volvio, `rMax=${libre.rMax.toFixed(0)}`);
+}
+
+// 10. Cúmulo: se reparte por la vista, así que alejar la cámara lo esparce
+{
+  const W = 900, H = 500;
+  const extent = (zoom: number) => {
+    const world = presetCluster(W, H, zoom);
+    let dx = 0, dy = 0;
+    for (const b of world.bodies) {
+      dx = Math.max(dx, Math.abs(b.x - W / 2));
+      dy = Math.max(dy, Math.abs(b.y - H / 2));
+    }
+    return { dx, dy };
+  };
+  const cerca = extent(1), lejos = extent(0.25);
+  check("cúmulo: a zoom 1 cabe en el lienzo", cerca.dx <= W * 0.46 && cerca.dy <= H * 0.46,
+    `dx=${cerca.dx.toFixed(0)} dy=${cerca.dy.toFixed(0)}`);
+  check("cúmulo: alejando la cámara se esparce en la misma proporción",
+    lejos.dx <= (W / 0.25) * 0.46 && lejos.dx > W * 0.46,
+    `dx=${lejos.dx.toFixed(0)} (límite ${((W / 0.25) * 0.46).toFixed(0)})`);
 }
 
 console.log(fails === 0 ? "\nTODO OK" : `\n${fails} FALLO(S)`);

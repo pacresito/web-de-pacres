@@ -7,7 +7,7 @@ import { IconoPantallaCompleta } from "../../components/Iconos";
 import {
   createWorld, clearWorld, addBody, makeBody, step, pruneEscaped,
   radiusForMass, totalMass, presetSolar, presetBinary, presetCluster,
-  presetThreeBody, PRESET_MAX_MASS,
+  presetThreeBody, PRESET_MAX_MASS, heldMass, deadzoneFor, launchVelocity,
   type World, type View,
 } from "./engine";
 import {
@@ -21,7 +21,7 @@ import {
 // un puñado del cúmulo — pintados con el mismo color que su botón.
 type PresetDef = {
   label: string;
-  build: (W: number, H: number) => World;
+  build: (W: number, H: number, zoom: number) => World;
   maxMass: number;
   dots: { cx: number; cy: number; r: number }[];
 };
@@ -38,8 +38,9 @@ const PRESETS: PresetDef[] = [
 ];
 
 // Distancia de cámara. La física no cambia en absoluto: el mundo se sigue midiendo en px CSS
-// del lienzo y los presets se construyen con ese mismo tamaño; alejarse solo dibuja todo más
-// pequeño y deja ver el espacio de alrededor (por donde escapan los cuerpos).
+// del lienzo; alejarse solo dibuja todo más pequeño y deja ver el espacio de alrededor (por
+// donde escapan los cuerpos). Los presets se construyen con el tamaño del lienzo — salvo el
+// cúmulo, que llena la vista y por tanto nace más esparcido cuanto más lejos esté la cámara.
 // `dotR` es el radio del círculo del icono en viewBox 24×24: se encoge igual que la escena.
 const ZOOM_LEVELS = [
   { label: "Cerca",     zoom: 1,    dotR: 6 },
@@ -57,26 +58,6 @@ function viewFor(W: number, H: number, zoom: number): View {
 type Explosion = { x: number; y: number; r: number; color: [number, number, number]; start: number };
 const EXPLOSION_MS = 480;
 const HIT_PAD = 6; // margen extra para acertar al pinchar estrellas pequeñas
-
-// Gesto de creación
-const MASS_MIN = 4;        // masa al tocar (pulsación instantánea)
-const MASS_MAX = 6000;     // masa máxima manteniendo pulsado (suficiente para otro sol)
-const MASS_TAU = 470;      // ms en multiplicar/dividir la masa por e (ritmo exponencial)
-const MASS_RAMP = MASS_TAU * Math.log(MASS_MAX / MASS_MIN); // tiempo de mín↔máx (~3.4 s)
-const MASS_HOLD = 200;     // pausa en cada extremo antes de invertir
-const MASS_CYCLE = 2 * MASS_RAMP + 2 * MASS_HOLD;
-const VEL_SCALE = 0.05;    // (origen − puntero) px → velocidad inicial
-
-// Masa mientras se mantiene pulsado: sube exponencial de mín a máx, espera, baja a mín,
-// espera, y repite. Un toque = ligera; mantener deja elegir cualquier tamaño (hasta un sol).
-function heldMass(elapsedMs: number): number {
-  const t = elapsedMs % MASS_CYCLE;
-  if (t < MASS_RAMP) return Math.min(MASS_MAX, MASS_MIN * Math.exp(t / MASS_TAU));          // sube
-  if (t < MASS_RAMP + MASS_HOLD) return MASS_MAX;                                           // pausa arriba
-  if (t < 2 * MASS_RAMP + MASS_HOLD)                                                        // baja
-    return Math.max(MASS_MIN, MASS_MAX * Math.exp(-(t - MASS_RAMP - MASS_HOLD) / MASS_TAU));
-  return MASS_MIN;                                                                          // pausa abajo
-}
 
 // Iconos de pantalla completa (definidos una vez): entrar y salir. Mismo trazo que el resto.
 const ExpandIcon = () => <IconoPantallaCompleta size={14} />;
@@ -138,12 +119,21 @@ export default function Orbitas() {
     ctx.fillRect(0, 0, canvasRef.current.width, canvasRef.current.height);
   }, [zoomIdx]);
 
-  const loadPreset = useCallback((build: (W: number, H: number) => World) => {
+  const loadPreset = useCallback((build: PresetDef["build"]) => {
     const { W, H } = sizeRef.current;
-    if (W > 0 && H > 0) worldRef.current = build(W, H);
+    if (W > 0 && H > 0) worldRef.current = build(W, H, zoomRef.current);
   }, []);
 
   const clearAll = useCallback(() => clearWorld(worldRef.current), []);
+
+  // Estado del gesto en curso: masa según lo que lleve pulsado y velocidad del tirachinas.
+  const gestureAt = useCallback((nowMs: number) => {
+    const mass = heldMass(nowMs - pressTsRef.current);
+    const radius = radiusForMass(mass);
+    const deadzone = deadzoneFor(radius, zoomRef.current);
+    const origin = originRef.current, pointer = pointerRef.current;
+    return { mass, radius, deadzone, vel: launchVelocity(origin.x - pointer.x, origin.y - pointer.y, deadzone) };
+  }, []);
 
   const cycleZoom = useCallback(() => setZoomIdx(i => (i + 1) % ZOOM_LEVELS.length), []);
 
@@ -215,8 +205,8 @@ export default function Orbitas() {
       }
 
       if (creatingRef.current) {
-        const mass = heldMass(now - pressTsRef.current);
-        drawDragPreview(ctx, originRef.current, pointerRef.current, mass, radiusForMass(mass), zoom);
+        const { mass, radius, deadzone, vel } = gestureAt(now);
+        drawDragPreview(ctx, originRef.current, vel, mass, radius, deadzone, zoom);
       }
 
       if (++frameRef.current % 15 === 0 && statsLabelRef.current) {
@@ -232,7 +222,7 @@ export default function Orbitas() {
     };
     rafRef.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(rafRef.current);
-  }, []);
+  }, [gestureAt]);
 
   // Entrada unificada ratón + táctil vía Pointer Events, deshaciendo el zoom: px CSS del
   // lienzo → unidades del mundo (a zoom 1 es la identidad).
@@ -293,11 +283,8 @@ export default function Orbitas() {
       if (!creatingRef.current) return;
       creatingRef.current = false;
       const origin = originRef.current;
-      const mass = heldMass(performance.now() - pressTsRef.current);
-      // Tirachinas: arrastrar "hacia atrás" lanza en sentido contrario
-      const vx = (origin.x - pointerRef.current.x) * VEL_SCALE;
-      const vy = (origin.y - pointerRef.current.y) * VEL_SCALE;
-      addBody(worldRef.current, makeBody(origin.x, origin.y, vx, vy, mass));
+      const { mass, vel } = gestureAt(performance.now());
+      addBody(worldRef.current, makeBody(origin.x, origin.y, vel.vx, vel.vy, mass));
     };
 
     canvas.addEventListener("pointerdown", onDown);
@@ -310,7 +297,7 @@ export default function Orbitas() {
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onUp);
     };
-  }, [getPos]);
+  }, [getPos, gestureAt]);
 
   return (
     <TerminalShell
@@ -446,7 +433,7 @@ export default function Orbitas() {
         {!fullscreen && (
           <>
             <div className="hint-row">
-              Mantén pulsado para crear un cuerpo · arrastra para lanzarlo
+              Mantén pulsado para crear un cuerpo · arrastra fuera del círculo para lanzarlo
             </div>
             <WhyFooter question="¿Por qué un simulador de gravedad?" date="14 de junio de 2026" onOpenChange={setWhyOpen} style={{ marginTop: "auto" }}>
               <p>De pequeño me pasaba horas con un simulador de gravedad: lanzabas cuerpos al espacio y los veías orbitar, chocar o perderse para siempre.</p>
