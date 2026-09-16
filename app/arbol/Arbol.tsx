@@ -22,7 +22,8 @@ import {
 } from "@/lib/arbol/camara";
 import { caminoEntre, trazosDelCamino } from "@/lib/arbol/camino";
 import { aberturasDe, centroRecordado, pliegueDe, recordarCentro } from "@/lib/arbol/enlaces";
-import { conDuda, escribirVida, FECHAS_POR_DEFECTO, type ModoFechas } from "@/lib/arbol/fechas";
+import { añoDe, conDuda, escribirVida, FECHAS_POR_DEFECTO, type ModoFechas } from "@/lib/arbol/fechas";
+import { fotoDe } from "@/lib/arbol/fotos";
 import { fiestasDelArbol, proximasCelebraciones } from "@/lib/arbol/celebraciones";
 import { construirGrafo, pasosDesde, visibles } from "@/lib/arbol/grafo";
 import { fichaDe } from "@/lib/arbol/ficha";
@@ -44,6 +45,7 @@ import {
   type ModoNombre,
 } from "@/lib/arbol/personas";
 import { calcularRamas, ramaVisible, repartoDeRamas } from "@/lib/arbol/ramas";
+import { retratadosEn } from "@/lib/arbol/retratados";
 import {
   ALTO_NODO,
   ANCHO_COLUMNA,
@@ -53,6 +55,7 @@ import {
 import { calcularRecuento, unionesHasta, type Fraccion } from "@/lib/arbol/recuento";
 import { alturaDe, bajada, entreBordes, hastaElAncla } from "@/lib/arbol/trazos";
 import type { ArbolData } from "@/lib/arbol/tree";
+import Ampliada from "./Ampliada";
 import AvisoDeMudanza from "./AvisoDeMudanza";
 import BarraDeAbajo from "./BarraDeAbajo";
 import Bloques from "./Bloques";
@@ -210,6 +213,12 @@ export default function Arbol({
     [todoDesplegado, abiertas, grafo],
   );
   const libreta = useMemo(() => libretaDe(grafo), [grafo]);
+  /**
+   * La foto abierta a pantalla completa. **No es una hoja**: no se lee, se mira, y por eso
+   * tapa el árbol entero y no deja la ficha asomando por un lado. Se guarda desde qué ficha
+   * se abrió para rotular esa cara entera desde el principio.
+   */
+  const [ampliada, setAmpliada] = useState<{ clave: string; desde: string } | null>(null);
   /** A quién le queda algo por preguntar: lo enciende el repaso y lo cuenta «Qué se ve». */
   const conHuecos = useMemo(() => losIncompletos(grafo, libreta.linaje, hoy), [grafo, libreta, hoy]);
   // Un solo apellido: el repaso ya avisa del que falta, y con dos el nodo se llenaba de
@@ -360,6 +369,16 @@ export default function Arbol({
     escribirlo(id, { fechas: "ocultar", apellidos: 1, largos: { titulo: LARGO_BARRA, contexto: 0 } })
       .titulo.map((t) => t.texto)
       .join("");
+  /**
+   * Cómo se titula la foto abierta. **La de varios se titula por sí misma** —«La Venta de La
+   * Paloma»— y la de uno, por él: abierta entera deja de estar dentro de su ficha, y sin
+   * titular sería una foto de nadie.
+   */
+  const tituloDeFoto = (clave: string, desde: string) => {
+    const f = fotoDe(clave);
+    if (!f) return "";
+    return `${f.titulo ?? conApellido(desde)} · ${añoDe(f.tomada)}`;
+  };
   /**
    * Quien celebra algo se lleva la guirnalda en su nodo, con lo que celebra escrito. **No
    * depende del Centro**, al revés que el panel: quién sale ahí es a quién felicitas tú, y
@@ -1108,6 +1127,22 @@ export default function Arbol({
         />
       )}
 
+      {ampliada && (
+        <Ampliada
+          url={datosDeFicha(ampliada.desde).fotos.find((f) => f.clave === ampliada.clave)!.url}
+          titulo={tituloDeFoto(ampliada.clave, ampliada.desde)}
+          gente={retratadosEn(grafo, ampliada.clave, { nombre, linaje: libreta.linaje })}
+          mirando={ampliada.desde}
+          onPersona={(id) => {
+            setAmpliada(null);
+            // Se sale a su ficha con la foto puesta, que es de donde se venía: cambia la cara
+            // del marco y no lo que se estaba mirando.
+            setHoja({ tipo: "foto", id, clave: ampliada.clave });
+          }}
+          onCerrar={() => setAmpliada(null)}
+        />
+      )}
+
       {hoja && !recogida && (
         <Hoja
           contenido={"id" in hoja ? `${hoja.tipo}:${hoja.id}` : hoja.tipo}
@@ -1157,6 +1192,7 @@ export default function Arbol({
               datos={datosDeFicha(hoja.id)}
               clave={hoja.clave}
               onFoto={(clave) => setHoja({ tipo: "foto", id: hoja.id, clave })}
+              onAmpliar={(clave) => setAmpliada({ clave, desde: hoja.id })}
             />
           ) : (
             <Ficha

@@ -3,7 +3,7 @@
 import assert from "assert";
 import { readFileSync } from "fs";
 import { resolve } from "path";
-import { claveDeFoto, FOTOS, fotosDe, nombreDeArchivo, rotuloDeFoto, type Foto } from "./fotos";
+import { claveDeFoto, encuadreDe, FOTOS, fotosDe, nombreDeArchivo, rotuloDeFoto, type Foto } from "./fotos";
 import { construirGrafo } from "./grafo";
 import { comoSeLlama } from "./personas";
 import type { ArbolData } from "./tree";
@@ -15,18 +15,38 @@ const g = construirGrafo(data);
 // Es lo único que las protege: los ids del árbol cuentan apariciones y no gente, y uno que
 // cambiara de dueño colgaría la cara de alguien de la ficha de otro sin que fallara nada.
 for (const f of FOTOS) {
-  const p = g.personaPorId.get(f.id);
-  assert.ok(p, `${f.nombre} (${f.id}) ya no está en el árbol`);
-  assert.strictEqual(comoSeLlama(p, "familiar"), f.nombre, `${f.id} ya no es ${f.nombre}`);
+  for (const quien of f.gente) {
+    const p = g.personaPorId.get(quien.id);
+    assert.ok(p, `${quien.nombre} (${quien.id}) ya no está en el árbol`);
+    assert.strictEqual(comoSeLlama(p, "familiar"), quien.nombre, `${quien.id} ya no es ${quien.nombre}`);
+  }
+  // Y nadie sale dos veces en la misma foto: sería la misma cara en dos recuadros, y la
+  // ficha enseñaría uno de ellos sin decir cuál.
+  const ids = f.gente.map((q) => q.id);
+  assert.strictEqual(new Set(ids).size, ids.length, `${claveDeFoto(f)} repite a alguien`);
 }
 
-// Y ninguna pisa a otra: la clave sale del dueño y del año, así que dos fotos del mismo año
-// del mismo dueño se sobrescribirían en el blob. El día que pase, hay que desempatar con el mes.
+// Y ninguna pisa a otra: la clave sale de la foto y del año, así que dos del mismo año del
+// mismo dueño se sobrescribirían en el blob. El día que pase, hay que desempatar con el mes.
 const claves = FOTOS.map(claveDeFoto);
 assert.strictEqual(new Set(claves).size, claves.length, `dos fotos comparten clave: ${claves.join(", ")}`);
 
+// El recuadro, ya en CSS
+// Sin recuadro no hay estilo que poner: el marco la centra él con `object-fit`, que no
+// necesita saber cuánto mide la foto.
+assert.strictEqual(encuadreDe(undefined), undefined);
+// La mitad izquierda de una foto: se estira al doble del marco y no se desplaza.
+assert.deepStrictEqual(encuadreDe({ x: 0, y: 0, lado: 0.5 }), { width: "200%", left: "0%", top: "0%" });
+// Y un recuadro que empieza a un cuarto del ancho se va fuera del marco esa misma distancia,
+// ya medida en el marco: un cuarto de foto es media anchura de marco cuando el lado es 0.5.
+assert.deepStrictEqual(encuadreDe({ x: 0.25, y: 0.1, lado: 0.5 }), {
+  width: "200%",
+  left: "-50%",
+  top: "-20%",
+});
+
 // El rótulo del link
-const foto = (tomada: string): Foto => ({ id: "j1", nombre: "Juguete", tomada });
+const foto = (tomada: string): Foto => ({ tomada, gente: [{ id: "j1", nombre: "Juguete" }] });
 
 assert.strictEqual(rotuloDeFoto(foto("2009"), "1989"), "con 20 años");
 assert.strictEqual(rotuloDeFoto(foto("1990"), "1989"), "con 1 año");
@@ -59,24 +79,45 @@ assert.strictEqual(
 
 // Lo que le llega a la ficha, ya resuelto y en orden
 const inventadas: Foto[] = [
-  { id: "j1", nombre: "Juguete", tomada: "2009" },
-  { id: "j1", nombre: "Juguete", tomada: "1989" },
-  { id: "j2", nombre: "Otro", tomada: "1999" },
+  foto("2009"),
+  foto("1989"),
+  { tomada: "1999", gente: [{ id: "j2", nombre: "Otro" }] },
+  // La de varios: sale en las de los dos, con la misma clave y un recuadro para cada uno.
+  {
+    titulo: "La Venta de La Paloma",
+    tomada: "1999",
+    gente: [
+      { id: "j1", nombre: "Juguete", recuadro: { x: 0.1, y: 0.2, lado: 0.25 } },
+      { id: "j2", nombre: "Otro" },
+    ],
+  },
 ];
 FOTOS.push(...inventadas);
 
 const suyas = fotosDe("j1", quien);
 assert.deepStrictEqual(
   suyas.map((f) => f.rotulo),
-  ["de bebé", "con 20 años"],
+  ["de bebé", "con 10 años", "con 20 años"],
   "las suyas y solo las suyas, de la más joven a la más vieja",
 );
-assert.strictEqual(suyas[1].clave, "j1-2009");
+assert.strictEqual(suyas[2].clave, "j1-2009");
+// La de varios no se llama por nadie: lleva su título, y es la misma para los dos.
+assert.strictEqual(suyas[1].clave, "la-venta-de-la-paloma-1999");
+assert.strictEqual(fotosDe("j2", quien).at(-1)!.clave, "la-venta-de-la-paloma-1999");
+assert.strictEqual(suyas[1].cuantos, 2, "la ficha sabe que hay a quien reconocer");
+// Y cada uno la ve por su recuadro; quien no tiene, por el centro.
+assert.deepStrictEqual(suyas[1].encuadre, { width: "400%", left: "-40%", top: "-80%" });
+assert.strictEqual(fotosDe("j2", quien).at(-1)!.encuadre, undefined);
+// La descarga de una de varios se llama por la foto: lo que se lleva es la familia entera.
+assert.ok(
+  decodeURIComponent(suyas[1].url).endsWith("/La Venta de La Paloma, 1999.jpg"),
+  suyas[1].url,
+);
 // El nombre viaja en la URL porque es lo único que respetan por igual el «guardar imagen»
 // del móvil y el clic derecho del escritorio.
 assert.ok(
-  decodeURIComponent(suyas[1].url).endsWith("/Pablo Crespo García (1989) - Foto con 20 años (tomada en 2009).jpg"),
-  suyas[1].url,
+  decodeURIComponent(suyas[2].url).endsWith("/Pablo Crespo García (1989) - Foto con 20 años (tomada en 2009).jpg"),
+  suyas[2].url,
 );
 assert.deepStrictEqual(fotosDe("j3", quien), [], "quien no tiene fotos no tiene campo");
 

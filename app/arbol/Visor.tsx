@@ -5,9 +5,12 @@
 // venido a hacer aquí es mirar una cara.
 //
 // **El marco es cuadrado aunque la foto no lo sea**, y el recorte es solo de pantalla: quien
-// la descargue se lleva el archivo entero. Y **se monta vacío**: el cuadrado gris se dibuja
-// en el primer fotograma y la foto entra fundiéndose cuando llega, así que la apertura no
-// espera a la red. Un indicador de carga dentro de un marco que ya está dibujado es ruido
+// la descargue se lleva el archivo entero. Qué trozo se enseña lo dice el recuadro de la
+// foto —y si no lo lleva, su centro—, y **tocarlo la abre entera**: sin icono ni lupa, que
+// una foto que se agranda al tocarla es lo que hace cualquier foto de cualquier pantalla.
+// Y **se monta vacío**: el cuadrado gris se dibuja en el
+// primer fotograma y la foto entra fundiéndose cuando llega, así que la apertura no espera
+// a la red. Un indicador de carga dentro de un marco que ya está dibujado es ruido
 // —con la foto en caché ni se vería—.
 
 import { useState } from "react";
@@ -19,11 +22,13 @@ export default function Visor({
   datos,
   clave,
   onFoto,
+  onAmpliar,
 }: {
   datos: Ficha;
   /** Cuál de las suyas se está mirando. */
   clave: string;
   onFoto: (clave: string) => void;
+  onAmpliar: (clave: string) => void;
 }) {
   const [cargadas, setCargadas] = useState<ReadonlySet<string>>(() => new Set());
   const actual = datos.fotos.find((f) => f.clave === clave) ?? datos.fotos[0];
@@ -42,7 +47,12 @@ export default function Visor({
       </p>
       <p className="mt-1 font-[family-name:var(--mono)] text-[12.5px] text-[var(--mut)]">{datos.datos}</p>
 
-      <div className="relative mt-3.5 aspect-square w-full overflow-hidden rounded-[14px] bg-[var(--soft)]">
+      <button
+        type="button"
+        onClick={() => onAmpliar(actual.clave)}
+        aria-label={actual.cuantos > 1 ? "Ver la foto entera y quién sale" : "Ver la foto entera"}
+        className="relative mt-3.5 block aspect-square w-full cursor-zoom-in overflow-hidden rounded-[14px] bg-[var(--soft)]"
+      >
         {montadas.map((f) => (
           // next/image no vale aquí: optimiza pidiendo la imagen desde el servidor, y esta
           // sale de una ruta con cookie que ese fetch no lleva. Además ya viene al tamaño.
@@ -52,12 +62,15 @@ export default function Visor({
             src={f.url}
             alt={`Foto ${f.rotulo}`}
             onLoad={() => setCargadas((s) => new Set(s).add(f.clave))}
-            className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${
-              cargadas.has(f.clave) ? "opacity-100" : "opacity-0"
-            } ${f.clave === clave ? "z-[2]" : "z-[1]"}`}
+            style={f.encuadre}
+            className={`absolute transition-opacity duration-300 ${
+              f.encuadre ? "max-w-none" : "inset-0 h-full w-full object-cover"
+            } ${cargadas.has(f.clave) ? "opacity-100" : "opacity-0"} ${
+              f.clave === clave ? "z-[2]" : "z-[1]"
+            }`}
           />
         ))}
-      </div>
+      </button>
 
       {/* Con una sola foto queda su rótulo a secas, que es lo que hay que decir cuando no
           hay elección; con tres, en cuál de ellas se está. */}
