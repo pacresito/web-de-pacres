@@ -35,12 +35,12 @@ export function avisoDeVispera(g: Grafo, hoy: Fecha): Aviso | null {
   );
   if (lineas.length === 0) return null;
 
-  // «Mañana» y nada más: la fecha de un mensaje que llega la víspera y solo habla de la
-  // víspera no añade nada, y el enlace al árbol tampoco —quien quiera mirarlo lo tiene.
+  // Sin titular, sin fecha y sin enlace al árbol: cada línea ya dice «mañana» al hablar, y un
+  // mensaje que siempre llega la víspera no necesita que se lo anuncien encima.
   return {
     sale: aLasDiez(hoy),
     id: `arbol-${mañana}`,
-    texto: ["<b>Mañana</b>", "", ...lineas.map((l) => l.texto)].join("\n"),
+    texto: lineas.map((l) => l.texto).join("\n"),
   };
 }
 

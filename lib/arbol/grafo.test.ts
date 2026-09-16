@@ -42,10 +42,10 @@ for (const gen of g.generacion.values()) {
 assert.deepStrictEqual(
   [...porNivel.entries()].sort((a, b) => a[0] - b[0]),
   [
-    [-4, 16],
+    [-4, 17],
     [-3, 49],
-    [-2, 132],
-    [-1, 188],
+    [-2, 134],
+    [-1, 190],
     [0, 115],
     // Manuela, la primera de la generación que viene detrás de la de Lucas.
     [1, 1],
@@ -73,10 +73,10 @@ assert.strictEqual(
   "el hijo ve los tres documentos enteros",
 );
 for (const pid of ["p25", "p126", "p131"]) {
-  assert.strictEqual(visibles(g, pid).size, 373, `${pid} ve 373`);
+  assert.strictEqual(visibles(g, pid).size, 378, `${pid} ve 378`);
 }
 assert.strictEqual(visibles(g, "p124").size, 188, "un abuelo ve solo lo suyo");
-assert.strictEqual(visibles(g, "p125").size, 201, "…y la abuela, lo suyo");
+assert.strictEqual(visibles(g, "p125").size, 206, "…y la abuela, lo suyo");
 
 // **Ya no hay quien vea el árbol entero.** Una familia dada de alta que solo se ata por un
 // matrimonio lateral —los Sala, por el marido de una hermana— no comparte ancestro con

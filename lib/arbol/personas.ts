@@ -80,12 +80,15 @@ export function apellidosDe(g: Grafo): Map<string, Apellidos> {
 
     // El primero es del padre y el segundo de la madre, y de cada uno el primero del suyo.
     // Sin padre en el árbol el de la madre no se sube de sitio: dejaría el apellido en el
-    // lado que no es. Salvo que tampoco lo haya fuera de él —el apellido escrito lo delata,
-    // que es de un padre que existe y no está—: entonces lo cría su madre sola y lleva los
-    // dos de ella, en su orden.
+    // lado que no es. Salvo que tampoco lo haya fuera de él: entonces lo cría su madre sola
+    // y lleva los dos de ella, en su orden. Que lo haya fuera lo delata el apellido escrito
+    // —es de un padre que existe y no está— o el `tipo` de una unión de un solo miembro, que
+    // es como se dice que hubo pareja sin saber quién; de esos no se hereda nada, porque el
+    // segundo apellido no se pinta sin el primero.
     const [padre, madre] = progenitores(g, id);
     const deLaMadre = madre ? resolver(madre) : [];
-    const deMadreSola = !padre && escritos.length === 0;
+    const suUnion = g.unionPorId.get(g.unionDeHijo.get(id) ?? "");
+    const deMadreSola = !padre && escritos.length === 0 && !suUnion?.tipo;
     const porLugar: (string | undefined)[] = deMadreSola ? deLaMadre : [padre && resolver(padre)[0], deLaMadre[0]];
     const todos: string[] = [];
     for (const lugar of [0, 1]) {

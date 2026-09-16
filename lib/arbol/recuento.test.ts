@@ -38,16 +38,16 @@ function panel(opciones: ReturnType<typeof estado>): { recuento: Recuento; linea
 // La vista de arranque desde Pablo
 const inicial = panel(estado("p25"));
 assert.deepStrictEqual(inicial.lineas, [
-  "3 bisabuelos 8/8",
+  "3 bisabuelos 8/8 · pareja 1/1",
   "2 abuelos 4/4 · tíos abuelos 0/10 · parejas 0/10",
-  "1 padres 2/2 · tíos 0/8 · tíos segundos 0/39 · parejas 0/45",
-  "0 hermanos 1/3 · primos 0/15 · primos segundos 0/75 · parejas 1/55",
+  "1 padres 2/2 · tíos 0/8 · tíos segundos 0/41 · parejas 0/45",
+  "0 hermanos 1/3 · primos 0/15 · primos segundos 0/75 · parejas 1/55 · sin parentesco 0/2",
   "-1 hijos 3/3 · sobrinos 0/5 · sobrinos segundos 0/15 · otros sobrinos 0/72 · parejas 0/2 · sin parentesco 0/1",
   // Manuela estrena generación, y con ella la fila que no existía.
   "-2 otra sobrina nieta 0/1",
 ]);
-assert.strictEqual(inicial.recuento.puestos, 19, "de arranque hay 19 puestos");
-assert.strictEqual(inicial.recuento.alcanzables, 373, "y 373 alcanzables, los conectados con él");
+assert.strictEqual(inicial.recuento.puestos, 20, "de arranque hay 20 puestos");
+assert.strictEqual(inicial.recuento.alcanzables, 378, "y 378 alcanzables, los conectados con él");
 
 // El punto de vista se cuenta entre sus hermanos y su pareja en el cajón de la fila.
 const fila0 = inicial.recuento.filas.find((f) => f.nivel === 0)!;
@@ -70,17 +70,17 @@ assert.deepStrictEqual(
 );
 assert.strictEqual(
   sinFiltro.recuento.puestos,
-  33,
+  34,
   "el arranque trae 14 más: la ascendencia de su mujer, que no es familia de nadie más",
 );
 
 // Hay fila mientras quede alguien alcanzable, aunque no haya nadie puesto
 // Desde el hijo, el vocabulario se estira hasta el tope por los dos extremos.
 assert.deepStrictEqual(panel(estado("p26")).lineas, [
-  "4 tatarabuelos 16/16",
+  "4 tatarabuelos 16/16 · pareja 1/1",
   "3 bisabuelos 8/8 · tíos bisabuelos 0/25 · parejas 0/16",
-  "2 abuelos 4/4 · tíos abuelos 0/14 · tíos abuelos segundos 0/52 · parejas 0/58",
-  "1 padres 2/2 · tíos 0/4 · tíos segundos 0/25 · otros tíos 0/89 · parejas 0/60",
+  "2 abuelos 4/4 · tíos abuelos 0/14 · tíos abuelos segundos 0/54 · parejas 0/58",
+  "1 padres 2/2 · tíos 0/4 · tíos segundos 0/25 · otros tíos 0/89 · parejas 0/60 · sin parentesco 0/2",
   "0 hermanos 1/3 · primos 0/5 · primos segundos 0/21 · primos terceros 0/73 · parejas 0/2 · sin parentesco 0/1",
   "-1 otra sobrina 0/1",
 ]);
@@ -128,7 +128,7 @@ for (const fila of inicial.recuento.filas) {
 
 // Desplegarlo todo llena el panel entero
 const todo = panel(estado("p25", true, new Set(g.unionPorId.keys())));
-assert.strictEqual(todo.recuento.puestos, 373, "abriéndolo todo se llega a todos los conectados");
+assert.strictEqual(todo.recuento.puestos, 378, "abriéndolo todo se llega a todos los conectados");
 for (const fila of todo.recuento.filas) {
   for (const fraccion of fila.fracciones) {
     assert.strictEqual(fraccion.puestos.length, fraccion.todos.length, `${fila.nivel} ${fraccion.termino} se queda a medias`);

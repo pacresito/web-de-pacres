@@ -76,6 +76,20 @@ assert.strictEqual(escrito({ death: "1992" }, "edad"), "", "sin nacimiento no se
 assert.strictEqual(escrito({ birth: "1917" }, "edad"), "", "ni al que pasaría de 100 sin que conste su defunción");
 assert.strictEqual(escrito({ birth: "1917" }, "año"), "1917", "…pero su nacimiento consta y se enseña");
 
+// Los dos primeros años se cuentan en meses, y el primero de todos en días: así se habla de
+// un crío, y así se dice lo que duró una vida corta, que en «vivió 0 años» no se lee.
+assert.strictEqual(escrito({ birth: "2026-06-03" }, "edad"), "2 meses");
+assert.strictEqual(escrito({ birth: "2026-07-06" }, "edad"), "1 mes", "en singular cuando toca");
+assert.strictEqual(escrito({ birth: "2026-08-05" }, "edad"), "1 día", "y el primer mes, en días");
+assert.strictEqual(escrito({ birth: "2026-08-06" }, "edad"), "0 días", "el recién nacido");
+assert.strictEqual(escrito({ birth: "1944-09-16", death: "1945-04-04" }, "edad"), "vivió 6 meses");
+assert.strictEqual(escrito({ birth: "2024-09-06" }, "edad"), "23 meses", "hasta los dos cumplidos");
+assert.strictEqual(escrito({ birth: "2024-08-06" }, "edad"), "2 años", "…y ahí vuelven los años");
+// Sin día no hay meses que contar, y decir «0 años» es no decir nada: se dice lo que se sabe.
+assert.strictEqual(escrito({ birth: "1926", death: "1926" }, "edad"), "vivió menos de un año");
+assert.strictEqual(escrito({ birth: "2026" }, "edad"), "menos de un año");
+assert.strictEqual(escrito({ birth: "2025" }, "edad"), "1 año", "el año que sí se puede decir se dice");
+
 // La duda abraza la cifra y no la frase: se duda de los años que vivió, no de que viviera.
 assert.strictEqual(conDuda("vivió 80 años"), "vivió ¿80 años?");
 assert.strictEqual(conDuda("† 2016"), "† ¿2016?", "ni de que muriera");

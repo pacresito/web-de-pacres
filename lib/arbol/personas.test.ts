@@ -98,6 +98,11 @@ assert.deepStrictEqual(linaje.get("p63")!.nuevos, ["Forasté", "Puget"], "quien 
 // Y el que no consta se hereda: el primero del padre y el segundo de la madre.
 assert.deepStrictEqual(linaje.get("p25")!.todos, ["Crespo", "Velasco"], "el de la madre completa al escrito");
 assert.deepStrictEqual(linaje.get("p26")!, { todos: ["Crespo", "Bordallo"], escritos: 0, nuevos: [] }, "el hijo, entero deducido");
+// De la madre sola se heredan los dos suyos, y del progenitor que ni se sabe quién es, ninguno:
+// lo que separa un caso del otro es el `tipo` de su unión de un solo miembro.
+assert.deepStrictEqual(linaje.get("p478")!.todos, ["Roca", "Pérez"], "la madre sola le da los dos suyos");
+assert.deepStrictEqual(linaje.get("p531")!.todos, [], "y de un padre del que no consta nada no hay primero que heredar");
+
 // Cuántos son exactamente cambia con cada alta; lo que se comprueba es que la deducción
 // hace el trabajo grueso, que es a lo que se la puso: más que dobla lo que trae escrito.
 const conDos = data.people.filter((p) => linaje.get(p.id)!.todos.length === 2).length;

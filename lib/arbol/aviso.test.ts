@@ -32,7 +32,8 @@ assert.strictEqual(laNoche("2026-08-25"), null);
 const mio = laNoche("2026-02-28")!;
 assert.strictEqual(mio.id, "arbol-2026-03-01", "el id es el día que se anuncia, para no avisar dos veces de lo mismo");
 assert.strictEqual(new Date(mio.sale).toISOString(), "2026-02-28T21:00:00.000Z");
-assert.ok(mio.texto.startsWith("<b>Mañana</b>"), mio.texto);
+// Sin titular que lo encabece: la primera línea ya es una celebración.
+assert.ok(new RegExp(`^(${[...TARTAS, ...FIESTAS].join("|")}) `, "u").test(mio.texto), mio.texto);
 assert.ok(/Mañana son 40|Mañana cumples 40|^40 mañana/m.test(mio.texto), mio.texto);
 assert.ok(!mio.texto.includes("<b>Pablo</b>"), "a mí no se me nombra en tercera persona");
 assert.ok(!mio.texto.includes("pacr.es"), "ni fecha ni enlace: el mensaje es de mañana y ya está");
@@ -74,7 +75,7 @@ assert.ok(/\b45\b/.test(conCumple.texto.split("\n").find((l) => l.includes("<b>M
 // Todo el año: cada línea con su emoji, nadie sin decir quién es y nada a medio redactar.
 for (const aviso of delAño) {
   if (!aviso) continue;
-  for (const linea of aviso.texto.split("\n").slice(2)) {
+  for (const linea of aviso.texto.split("\n")) {
     assert.ok(new RegExp(`^(${[...TARTAS, ...FIESTAS].join("|")}) \\S`, "u").test(linea), `línea sin emoji o vacía: «${linea}»`);
     assert.ok(!/undefined|null|NaN/.test(linea), `línea a medio redactar: «${linea}»`);
     // Quien no soy yo va nombrado en negrita y con lo que me es detrás.

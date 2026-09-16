@@ -65,6 +65,23 @@ export function edadEntre(desde: Fecha, hasta: Fecha): number {
 }
 
 /**
+ * Lo que va de una fecha a otra cuando no llega a dos años, dicho como se dice en casa: en
+ * meses, y en días el primer mes. Nadie tiene «cero años», y una vida que duró un invierno
+ * no se cuenta en años sin dejar de contar nada. Pide el día en las dos: sin él, «vivió seis
+ * meses» sería inventarse cuál de los dos extremos cae antes.
+ */
+export function mesesODias(desde: Fecha, hasta: Fecha): string | null {
+  if (!conDia(desde) || !conDia(hasta)) return null;
+  const meses =
+    (añoDe(hasta) - añoDe(desde)) * 12 +
+    (Number(hasta.slice(5, 7)) - Number(desde.slice(5, 7))) -
+    (Number(hasta.slice(8, 10)) < Number(desde.slice(8, 10)) ? 1 : 0);
+  if (meses >= 1) return `${meses} ${meses === 1 ? "mes" : "meses"}`;
+  const dias = (enMs(hasta) - enMs(desde)) / MS_DIA;
+  return `${dias} ${dias === 1 ? "día" : "días"}`;
+}
+
+/**
  * Los documentos anotan la defunción, pero no siempre. A quien hoy la alcanzara sin que
  * conste nada, el árbol no lo da por vivo: callar no es decir que sigue aquí. La mayor
  * edad que se llega a enseñar son, pues, 99 años.
@@ -128,8 +145,13 @@ export function escribirVida(p: { birth?: Fecha; death?: Fecha }, modo: ModoFech
   if (modo === "edad") {
     const edad = edadDe(p, hoy);
     if (edad === null) return "";
-    const años = `${edad} ${edad === 1 ? "año" : "años"}`;
-    return p.death ? `vivió ${años}` : años;
+    // Los dos primeros años se cuentan en meses —ver `mesesODias`—, y el que no trae día se
+    // queda sin poder contarlos: entonces se dice lo único que se sabe, que no llegó al año.
+    const cuanto =
+      edad < 2
+        ? (mesesODias(p.birth!, p.death ?? hoy) ?? (edad === 0 ? "menos de un año" : "1 año"))
+        : `${edad} años`;
+    return p.death ? `vivió ${cuanto}` : cuanto;
   }
   const fecha = (f: Fecha) => (modo === "completa" ? f : f.slice(0, 4));
   if (p.birth && p.death) return `${fecha(p.birth)} – ${fecha(p.death)}`;

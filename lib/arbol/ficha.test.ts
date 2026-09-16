@@ -42,7 +42,7 @@ const juguete: ArbolData = {
   ],
   unions: [
     union("u1", ["j1", "j2"], ["j3", "j4"]),
-    union("u2", ["j3"], ["j5", "j8"]),
+    union("u2", ["j3"], ["j5", "j8"], { tipo: null }), // madre sola: sus hijas llevan los dos apellidos de ella
     union("u3", ["j5", "j6"], [], { roto: true }),
     union("u4", ["j5", "j7"], [], { tipo: "pareja" }),
   ],
@@ -228,10 +228,11 @@ for (const p of data.people) {
   });
   assert.ok(f.titulo.length > 0, `${p.id}: la ficha se abre sin nombre`);
   assert.ok(f.relacion.pasos > 0 || p.id === POV, `${p.id}: no hay camino hasta el centro`);
-  // La rama solo falta en una ficha de las 438: las que entraron casándose heredan la de su
-  // cónyuge, y quien no desciende de nadie ni está casado con quien lo haga es Aina y nadie
-  // más — su padre no está en el árbol y su madre entró casándose.
-  assert.ok(f.filas.some((x) => x.clave.startsWith("Rama") && !x.falta) === (p.id !== "p425"), `${p.id}: la rama no cuadra`);
+  // La rama solo falta en tres fichas: las que entraron casándose heredan la de su cónyuge, y
+  // quien no desciende de nadie ni está casado con quien lo haga son los hijos de un padre que
+  // no está en el árbol y de una madre que entró casándose.
+  const sinRama = ["p425", "p531", "p532"];
+  assert.ok(f.filas.some((x) => x.clave.startsWith("Rama") && !x.falta) === !sinRama.includes(p.id), `${p.id}: la rama no cuadra`);
   // El santo lo lleva el nombre y no el documento, así que sin esta regla lo anunciaría la
   // ficha de gente de la que no consta ni el año: sin fecha de la que restar, siguen vivos.
   if (!p.birth) assert.ok(!f.filas.some((x) => x.clave === "Onomástica"), `${p.id} no trae fecha y su ficha da su santo`);
