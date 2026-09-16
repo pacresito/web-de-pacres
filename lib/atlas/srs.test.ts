@@ -1,6 +1,6 @@
 // Test de lógica pura: `npx tsx lib/atlas/srs.test.ts`. Fuera del build.
 import assert from "assert";
-import { ACIERTOS_APRENDIDO, calificar, cuenta, DATOS, DESCANSO, dominio, dominioPais, HUECO, huecos, MAX_EN_EL_AIRE, montar, nuevaVida, nuevosAciertos, siguiente, sospecha, tanda, TANDA, VIDA_ASENTADO, type Mazo } from "./srs";
+import { ACIERTOS_APRENDIDO, alDia, aviso, calificar, crudos, cuenta, DATOS, DESCANSO, dominio, dominioPais, HUECO, huecos, MAX_EN_EL_AIRE, montar, nuevaVida, nuevosAciertos, siguiente, sospecha, tanda, TANDA, VIDA_ASENTADO, type Mazo, type Tarjeta } from "./srs";
 import { PAISES } from "./paises";
 
 const DIA = 86_400_000;
@@ -169,9 +169,9 @@ assert.strictEqual(siguiente(enElAire, orden, AHORA)!.id, orden[9]); // nueve en
 // listón fuera el arranque de «fácil»— una tarde maratón marcando fácil abriría el mazo entero.
 {
   const treinta = PAISES.slice(0, MAX_EN_EL_AIRE);
-  const crudos: Mazo = Object.fromEntries(treinta.map((p) => [p.id, { nombre: vida(2, 0.5) }]));
+  const sinAsentar: Mazo = Object.fromEntries(treinta.map((p) => [p.id, { nombre: vida(2, 0.5) }]));
   const asentados: Mazo = Object.fromEntries(treinta.map((p) => [p.id, { nombre: vida(8, 1) }]));
-  assert.ok(treinta.some((p) => p.id === siguiente(crudos, orden, AHORA)!.id), "treinta crudos frenan");
+  assert.ok(treinta.some((p) => p.id === siguiente(sinAsentar, orden, AHORA)!.id), "treinta crudos frenan");
   assert.strictEqual(siguiente(asentados, orden, AHORA)!.id, orden[MAX_EN_EL_AIRE]);
   // Y el contador lleno no libera el freno por sí solo: eso se gana esperando, no acertando.
   const sabidos: Mazo = Object.fromEntries(treinta.map((p) => [p.id, { nombre: sabido(2, 0.5) }]));
@@ -276,7 +276,7 @@ assert.strictEqual(siguiente(enElAire, orden, AHORA)!.id, orden[9]); // nueve en
   assert.strictEqual(siguiente(enDescanso, orden, AHORA + DESCANSO)!.id, deudor);
 }
 
-// El aviso de parar: la centena de datos superada en las últimas doce horas
+// La tanda: el tramo de datos superado en las últimas doce horas
 {
   // Los datos se reparten de cuatro en cuatro, que es como se llenan los países de verdad.
   const conDatos = (n: number, hace = 0): Mazo => {
@@ -288,7 +288,7 @@ assert.strictEqual(siguiente(enElAire, orden, AHORA)!.id, orden[9]); // nueve en
     return m;
   };
   assert.strictEqual(tanda(conDatos(TANDA - 1), AHORA), 0);
-  assert.strictEqual(tanda(conDatos(TANDA), AHORA), 0); // cien no son «más de cien»
+  assert.strictEqual(tanda(conDatos(TANDA), AHORA), 0); // la tanda justa no es «más de» la tanda
   assert.strictEqual(tanda(conDatos(TANDA + 1), AHORA), TANDA);
   assert.strictEqual(tanda(conDatos(2 * TANDA + 1), AHORA), 2 * TANDA);
   // Lo de ayer no cuenta: lo que mide es la sesión de hoy, no el tamaño del mazo.
@@ -334,6 +334,66 @@ assert.strictEqual(siguiente(enElAire, orden, AHORA)!.id, orden[9]); // nueve en
   assert.strictEqual(dominioPais({ es: { ...cuatro, lugar: nuevo } }, "es"), "empezado");
   assert.strictEqual(dominioPais({ es: { nombre: nuevo } }, "es"), "empezado");
   assert.strictEqual(dominioPais({}, "es"), "sin ver");
+}
+
+// Los países crudos, que son los que cuenta el freno de estrenos y los que enseña la cabecera
+{
+  const p = PAISES[0].id, q = PAISES[1].id;
+  assert.strictEqual(crudos({}), 0);
+  assert.strictEqual(crudos({ [p]: { nombre: vida(VIDA_ASENTADO - 0.1, 0) } }), 1);
+  assert.strictEqual(crudos({ [p]: { nombre: vida(VIDA_ASENTADO, 0) } }), 0);
+  // Es de país y no de dato: con uno solo que aguante, el país deja de estar crudo.
+  assert.strictEqual(crudos({ [p]: { nombre: vida(1, 0), capital: vida(VIDA_ASENTADO, 0) } }), 0);
+  assert.strictEqual(crudos({ [p]: { nombre: vida(1, 0) }, [q]: { nombre: vida(1, 0) } }), 2);
+}
+
+// El porcentaje al día, que es el termómetro de la cabecera
+{
+  const p = PAISES[0].id, q = PAISES[1].id;
+  assert.strictEqual(alDia({}, AHORA), 100); // sin nada visto no se debe nada
+  assert.strictEqual(alDia({ [p]: { nombre: vida(10, 1) } }, AHORA), 100);
+  assert.strictEqual(alDia({ [p]: { nombre: vida(1, 10) } }, AHORA), 0);
+  // Va sobre lo visto: los tres datos que a estos países les faltan no cuentan como deuda.
+  assert.strictEqual(alDia({ [p]: { nombre: vida(10, 1) }, [q]: { nombre: vida(1, 10) } }, AHORA), 50);
+  // Lo que descansa cuenta como al día. Diez minutos después de acertar algo con la vida en
+  // minutos, el dato está vencidísimo y no se puede preguntar: eso no es deuda.
+  const acertado = { visto: AHORA - 600_000, vida: 0.001, aciertos: 0 };
+  assert.ok(sospecha(acertado, AHORA) > 1);
+  assert.strictEqual(alDia({ [p]: { nombre: acertado } }, AHORA), 100);
+  // Y lo fallado sí, que descansa solo lo que aguanta y a los diez minutos ya vuelve a tocar.
+  assert.strictEqual(alDia({ [p]: { nombre: { ...acertado, fallado: true } } }, AHORA), 0);
+}
+
+// El aviso de la cabecera: cuál de los cuatro mensajes toca
+{
+  const nueva: Tarjeta = { pais: PAISES[1], tapados: [], primeraVez: true };
+  const vieja: Tarjeta = { pais: PAISES[1], tapados: ["nombre"], primeraVez: false };
+  // `n` datos respondidos ahora mismo, de cuatro en cuatro y con vida de sobra: ni crudos ni deuda.
+  const hoy = (n: number): Mazo => {
+    const m: Mazo = {};
+    for (let i = 0; i < n; i++) {
+      const pais = PAISES[Math.floor(i / DATOS.length)].id;
+      m[pais] = { ...m[pais], [DATOS[i % DATOS.length]]: { visto: AHORA, vida: 10, aciertos: 0 } };
+    }
+    return m;
+  };
+  // Sin nada hecho hoy se invita a empezar, y manda sobre todo lo demás: ni el mazo de ayer ni
+  // una tarjeta de estreno dan un número antes de la primera respuesta.
+  assert.deepEqual(aviso({}, nueva, AHORA), { tipo: "empezar" });
+  assert.deepEqual(aviso({ [PAISES[0].id]: { nombre: vida(1, 1) } }, vieja, AHORA), { tipo: "empezar" });
+  // Empezada la sesión y antes de la primera tanda, el estado de reposo es el porcentaje.
+  assert.deepEqual(aviso(hoy(1), vieja, AHORA), { tipo: "aldia", pct: 100 });
+  assert.deepEqual(aviso(hoy(TANDA), vieja, AHORA), { tipo: "aldia", pct: 100 });
+  // Pasada la primera, la tanda; y descansar se sugiere al doble, no en cada una.
+  assert.deepEqual(aviso(hoy(TANDA + 1), vieja, AHORA), { tipo: "tanda", hechos: TANDA, descansa: false });
+  assert.deepEqual(aviso(hoy(2 * TANDA + 1), vieja, AHORA), { tipo: "tanda", hechos: 2 * TANDA, descansa: true });
+  // Estrenar país gana a la tanda, y se cuenta a sí mismo: el país de la tarjeta aún no está
+  // en el mazo, así que sin sumarlo el número iría siempre uno por detrás de lo que se mira.
+  assert.deepEqual(aviso(hoy(2 * TANDA + 1), nueva, AHORA), { tipo: "nuevo", crudos: 1, tope: MAX_EN_EL_AIRE });
+  // Y el cupo lleno se enseña en la tarjeta que lo llena, que es el aviso de que no hay más hoy.
+  const nueve: Mazo = Object.fromEntries(PAISES.slice(0, MAX_EN_EL_AIRE - 1).map((x) => [x.id, { nombre: vida(1, 0) }]));
+  const ultima: Tarjeta = { pais: PAISES[MAX_EN_EL_AIRE - 1], tapados: [], primeraVez: true };
+  assert.deepEqual(aviso(nueve, ultima, AHORA), { tipo: "nuevo", crudos: MAX_EN_EL_AIRE, tope: MAX_EN_EL_AIRE });
 }
 
 console.log("srs: ok");

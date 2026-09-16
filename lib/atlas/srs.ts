@@ -183,10 +183,8 @@ export function cuenta(mazo: Mazo): { vistos: number; aprendidos: number } {
 }
 
 /**
- * La tanda que ya se lleva hoy: la centena de datos **superada** en las últimas doce horas, o 0
- * mientras no se llegue a la primera. Lo enseña la cabecera de repasar, y su único trabajo es
- * ofrecer un sitio donde parar — no frena la cola, que quien decide cuándo ha tenido bastante es
- * quien juega.
+ * Lo hecho hoy: datos distintos respondidos en las últimas doce horas. En bruto, que es lo que
+ * distingue no haber empezado de llevar treinta.
  *
  * Cuenta datos distintos y no respuestas: el mazo guarda un solo `visto` por dato, así que
  * repetir uno en la misma tarde cuenta una vez. Es lo que se puede contar sin inventar un
@@ -196,16 +194,28 @@ export function cuenta(mazo: Mazo): { vistos: number; aprendidos: number } {
  * un contador que se pusiera a cero a medianoche diría que se empieza de nuevo justo donde más
  * falta hace decir lo contrario.
  */
-export const TANDA = 100;
 const VENTANA = 12 * 3_600_000;
-export function tanda(mazo: Mazo, ahora: number): number {
+function hechosHoy(mazo: Mazo, ahora: number): number {
   let n = 0;
   for (const p of PAISES) for (const d of DATOS) {
     const visto = mazo[p.id]?.[d]?.visto;
     if (visto !== undefined && ahora - visto < VENTANA) n++;
   }
-  return Math.max(0, Math.floor((n - 1) / TANDA) * TANDA);
+  return n;
 }
+
+/**
+ * La tanda **superada** de lo hecho hoy, o 0 mientras no se llegue a la primera. Su único trabajo
+ * es ofrecer un sitio donde parar — no frena la cola, que quien decide cuándo ha tenido bastante
+ * es quien juega.
+ *
+ * Cincuenta y no cien porque es lo único que marca el paso de la sesión, y a cien una tarde
+ * corriente no llega a decirlo nunca. **Parar se sugiere al doble**, que no es lo mismo que haber
+ * avanzado: contar cada cincuenta y proponer descanso cada cincuenta convierte el aviso en ruido.
+ */
+export const TANDA = 50;
+export const tanda = (mazo: Mazo, ahora: number): number =>
+  Math.max(0, Math.floor((hechosHoy(mazo, ahora) - 1) / TANDA) * TANDA);
 
 export type Tarjeta = { pais: Pais; tapados: Dato[]; primeraVez: boolean };
 
@@ -269,6 +279,20 @@ export const VIDA_ASENTADO = 3;
 const asentado = (e: Estado | undefined) => !!e && e.vida >= VIDA_ASENTADO;
 
 /**
+ * Cuántos países están **crudos**: vistos y sin un solo dato que aguante. Es lo que cuenta el
+ * freno de estrenos, y también lo que enseña la cabecera al abrir uno nuevo — escrito dos veces,
+ * la barra diría que queda cupo el día que la cola dejara de darlo.
+ */
+export function crudos(mazo: Mazo): number {
+  let n = 0;
+  for (const p of PAISES) {
+    if (!DATOS.some((d) => mazo[p.id]?.[d])) continue;
+    if (!DATOS.some((d) => asentado(mazo[p.id]?.[d]))) n++;
+  }
+  return n;
+}
+
+/**
  * Lo que descansa un dato al que se ha dicho que sí. **Lo decide la respuesta, no la vida**: quien
  * lo acierta lo aparta una hora, y quien lo falla espera solo lo que aguante —minuto y medio el
  * olvido, un cuarto de hora el estreno—, que es volver a verlo dentro de la sesión.
@@ -320,11 +344,9 @@ export function siguiente(mazo: Mazo, orden: string[], ahora: number, recientes:
   // La deuda de repaso —lo más sospechoso de lo que se puede preguntar ahora— y quien decide si
   // hay sitio para un país nuevo. Sin nada que preguntar vale cero, que es lo que abre la puerta.
   let deuda = 0;
-  let enElAire = 0;
+  const enElAire = crudos(mazo);
   for (const p of PAISES) {
-    const visto = DATOS.some((d) => mazo[p.id]?.[d]);
-    if (!visto) continue;
-    if (!DATOS.some((d) => asentado(mazo[p.id]?.[d]))) enElAire++;
+    if (!DATOS.some((d) => mazo[p.id]?.[d])) continue;
     // El país acaba de salir: no compite, pero sigue contando para el respaldo, que es la vía de
     // escape de todos los frenos de aquí.
     const acabaDeSalir = recientes.slice(-HUECO).includes(p.id);
@@ -356,4 +378,57 @@ export function siguiente(mazo: Mazo, orden: string[], ahora: number, recientes:
   const cedeAlNuevo = deuda < 1 && enElAire < MAX_EN_EL_AIRE;
   const id = cedeAlNuevo && nuevo ? nuevo : elegido?.id ?? nuevo;
   return id ? PAIS_POR_ID.get(id) ?? null : null;
+}
+
+/**
+ * Qué parte del mazo está al día, en porcentaje: 100 es no deber ni un repaso.
+ *
+ * **Es el mismo listón que abre la puerta a un país nuevo** —`siguiente` estrena cuando no queda
+ * nada vencido que preguntar—, así que llegar a 100 y estrenar son el mismo suceso contado dos
+ * veces. Por eso no hay contador de pendientes: este número dice lo mismo y está acotado, así que
+ * volver después de un mes dice «todo vencido» y no un número que ya solo mide la ausencia.
+ *
+ * **Va sobre lo visto y no sobre los 780 datos**: lo que no se ha presentado no se debe. Contando
+ * los cuatro de cada país, un mazo virgen saldría al 100% — cierto, y sin decir nada.
+ *
+ * **Y lo que descansa cuenta como al día**, igual que en la puerta: acertar algo con la vida en
+ * minutos lo deja vencido en el acto, así que sin esta excepción el número bajaría cuanto mejor
+ * se responde. Deuda es lo que se puede atender y no se atiende.
+ */
+export function alDia(mazo: Mazo, ahora: number): number {
+  let vistos = 0, bien = 0;
+  for (const p of PAISES) for (const d of DATOS) {
+    const e = mazo[p.id]?.[d];
+    if (!e) continue;
+    vistos++;
+    if (descansando(e, ahora) || sospecha(e, ahora) < 1) bien++;
+  }
+  return vistos === 0 ? 100 : Math.round((bien / vistos) * 100);
+}
+
+/**
+ * Lo que dice la cabecera de repasar. **Un solo hueco y un mensaje cada vez**: comparte fila con
+ * los botones y en un móvil estrecho ya envuelve a dos renglones, así que dos avisos a la vez
+ * empujan al control, que es lo único que no puede partirse.
+ */
+export type Aviso =
+  | { tipo: "empezar" }
+  | { tipo: "aldia"; pct: number }
+  | { tipo: "tanda"; hechos: number; descansa: boolean }
+  | { tipo: "nuevo"; crudos: number; tope: number };
+
+/**
+ * Cuál de los cuatro toca, **del más raro al más constante**: sin nada hecho no se quiere un
+ * número sino una invitación; estrenar país pasa una vez por país; la tanda no existe hasta la
+ * primera; y el porcentaje es el estado de reposo, que es donde se acaba siempre.
+ */
+export function aviso(mazo: Mazo, tarjeta: Tarjeta | null, ahora: number): Aviso {
+  if (hechosHoy(mazo, ahora) === 0) return { tipo: "empezar" };
+  // **El país de la tarjeta todavía no está en el mazo** —entra al calificarlo—, así que se suma
+  // a mano: el que se está mirando es el que ocupa el sitio del que habla el número. El tope se
+  // alcanza enseñándolo, que es como se avisa de que no hay más por hoy sin un aviso aparte.
+  if (tarjeta?.primeraVez) return { tipo: "nuevo", crudos: Math.min(crudos(mazo) + 1, MAX_EN_EL_AIRE), tope: MAX_EN_EL_AIRE };
+  const hechos = tanda(mazo, ahora);
+  if (hechos > 0) return { tipo: "tanda", hechos, descansa: hechos >= 2 * TANDA };
+  return { tipo: "aldia", pct: alDia(mazo, ahora) };
 }
