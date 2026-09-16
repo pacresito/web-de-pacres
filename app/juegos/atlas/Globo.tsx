@@ -133,12 +133,19 @@ export default function Globo({ id, lon, lat, r = 74, lado, oculto, puntos, marc
   };
 
   /**
-   * El globo no se sale del marco: a escala k sobresale la mitad de lo que crece, y de ahí no
-   * pasa. Con k = 1 el tope es cero, así que arrastrar sin acercar no mueve nada.
+   * El globo no se sale del marco: se arrastra hasta que su canto llega al del marco, y de ahí
+   * no pasa. Mientras quepa entero —y a k = 1 cabe, que el marco es mayor que él— el tope es
+   * cero y se queda centrado: arrastrar sin acercar no mueve nada.
+   *
+   * Lo que mide cuánto cabe es el ancho *de estilo* del globo y no su caja: la caja ya viene
+   * escalada por la transformación que estamos calculando, así que se mordería la cola.
    */
   const aplicar = (k: number, x: number, y: number) => {
-    const tope = ((k - 1) * marco.current!.getBoundingClientRect().width) / 2;
-    const nuevo = { k, x: Math.min(tope, Math.max(-tope, x)), y: Math.min(tope, Math.max(-tope, y)) };
+    const c = marco.current!.getBoundingClientRect();
+    const medio = (parseFloat(getComputedStyle(svg.current!).width) / 2) * k;
+    const topeX = Math.max(0, medio - c.width / 2);
+    const topeY = Math.max(0, medio - c.height / 2);
+    const nuevo = { k, x: Math.min(topeX, Math.max(-topeX, x)), y: Math.min(topeY, Math.max(-topeY, y)) };
     actual.current = nuevo;
     setZ(nuevo);
   };
@@ -225,10 +232,11 @@ export default function Globo({ id, lon, lat, r = 74, lado, oculto, puntos, marc
   const d = r * 2 + 2;
   const globo = (
     <svg ref={svg} onClick={tocar} width={d} height={d} viewBox={`${-r - 1} ${-r - 1} ${d} ${d}`}
-         style={alMarcar
-           ? { width: "100%", height: "100%", cursor: "crosshair", transformOrigin: "center",
-               transform: `translate(${z.x.toFixed(1)}px, ${z.y.toFixed(1)}px) scale(${z.k.toFixed(3)})` }
-           : { ...(lado && { width: lado, height: lado, flexShrink: 0 }) }}
+         style={{
+           ...(lado && { width: lado, height: lado, flexShrink: 0 }),
+           ...(alMarcar && { cursor: "crosshair", transformOrigin: "center",
+             transform: `translate(${z.x.toFixed(1)}px, ${z.y.toFixed(1)}px) scale(${z.k.toFixed(3)})` }),
+         }}
          aria-hidden>
       <circle r={r} fill="var(--t-paper2)" stroke="var(--t-rule)" />
       {/* No hace falta recortar por el círculo: lo escondido va pegado al canto y la cuerda
@@ -257,9 +265,11 @@ export default function Globo({ id, lon, lat, r = 74, lado, oculto, puntos, marc
 
   if (!alMarcar) return globo;
   // El marco recorta lo que se sale al acercar y se queda con los gestos, que si no se los lleva
-  // el navegador: dentro de él, pellizcar es acercar el globo y no la página.
+  // el navegador: dentro de él, pellizcar es acercar el globo y no la página. Mide bastante más
+  // que el globo —lo que da la pantalla— porque es la ventana por la que se mira al acercarlo:
+  // recortado a su tamaño en reposo, acercar solo enseñaría el mismo trozo más grande.
   return (
-    <div ref={marco} className="atlas-zoom" style={{ width: lado, height: lado }}
+    <div ref={marco} className="atlas-zoom"
          onPointerDown={abajo} onPointerMove={mover} onPointerUp={arriba} onPointerCancel={arriba}
          onWheel={rueda}>
       {globo}

@@ -359,22 +359,15 @@ function Tarjeta({ tarjeta, estrenando }: { tarjeta: NonNullable<Vista["tarjeta"
           <Globo id={pais.id} lon={centro[0]} lat={centro[1]} r={200} lado="min(86vw, 56vh)" puntos
                  oculto={lupa === "marcar"} marca={marca}
                  alMarcar={lupa === "marcar" ? (id) => { setMarca(id); setTimeout(() => setLupa(null), 320); } : undefined} />
-          <span style={{ fontSize: 11, color: "var(--t-ink4)", letterSpacing: "0.14em" }}>
-            {lupa === "marcar" ? (
-              <>
-                toca donde creas que está
-                {/* El zoom del globo no se ve hasta que se usa, y sin decirlo se pellizca la
-                    página. */}
-                <span className="atlas-solo-movil"> · pellizca para acercar</span>
-                <span className="atlas-solo-ancho"> · rueda para acercar</span>
-              </>
-            ) : (
-              <>
-                <span className="atlas-solo-movil">toca para volver</span>
-                <span className="atlas-solo-ancho">una tecla para volver</span>
-              </>
-            )}
-          </span>
+          {/* Solo el de mirar lleva pie: el de marcar se queda con la pantalla entera, que el
+              globo acercado la aprovecha toda, y lo que hay que hacer en él ya lo dijo el hueco
+              que se pinchó para llegar. */}
+          {lupa === "mirar" && (
+            <span style={{ fontSize: 11, color: "var(--t-ink4)", letterSpacing: "0.14em" }}>
+              <span className="atlas-solo-movil">toca para volver</span>
+              <span className="atlas-solo-ancho">una tecla para volver</span>
+            </span>
+          )}
         </div>
       )}
 
