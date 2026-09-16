@@ -55,8 +55,8 @@ export const ENLACES: Enlace[] = [
   { alias: "Castrillo", id: "p81", nombre: "Ambrosio", nace: "1883" },
   // Centrado en el patriarca, con los Maestre plegados: son 68 personas que tienen su propio
   // enlace, y sin plegarlas la entrada de los Velasco es la de las dos ramas a la vez.
-  { alias: "Velasco", id: "p271", nombre: "José", nace: "1888", pliega: [{ id: "p289", nombre: "José" }] },
-  { alias: "Maestre", id: "p289", nombre: "José", nace: "1914" },
+  { alias: "Velasco", id: "p271", nombre: "Pepe", nace: "1887", pliega: [{ id: "p289", nombre: "Pepe" }] },
+  { alias: "Maestre", id: "p289", nombre: "Pepe", nace: "1914" },
   { alias: "Perez", id: "p466", nombre: "Francisco", nace: "1883" },
   // Centrado en José Alberto y no en su padre: es el único que es sangre de las dos casas, y
   // desde cualquier otro los Oreja son familia política y el filtro los corta. Lo que abre son
