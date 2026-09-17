@@ -17,7 +17,7 @@
 // 4. ¿Qué se ve en los primeros días? Es lo primero que mira quien abre la página, y el panel
 //    tiene que aguantarlo: la población se desploma antes de recuperarse.
 
-import { RASGOS, banda, correrDia, crearMundo, signado } from "./engine";
+import { FUNDADOR, RASGOS, banda, correrDia, crearMundo, signado } from "./engine";
 import { RECORRIDO } from "./designs";
 import { BINS, columnas, crearHistoria, registrar, type Historia } from "./reparto";
 
@@ -45,15 +45,12 @@ const col = (x: string | number, n = 9) => String(x).padStart(n);
 // minutos para las mismas cifras.
 type Medida = { grosor: number; lejos: number };
 const historias: Historia[] = [];
-const evas: Record<string, number>[] = [];
 const medidas: Record<string, Medida[]> = {};
 for (const r of RASGOS) medidas[r] = [];
 
 for (const s of SEMILLAS) {
   const m = crearMundo(s);
   const h = crearHistoria();
-  evas.push({ ...m.eva });
-  const eva = { ...m.eva };
   const lejos: Record<string, number> = {}, grosores: Record<string, number[]> = {};
   for (const r of RASGOS) { lejos[r] = 0; grosores[r] = []; }
   let vivos = 0;
@@ -64,7 +61,7 @@ for (const s of SEMILLAS) {
     vivos++;
     for (const r of RASGOS) {
       const b = banda(m.bichos.map((x) => x.g[r]))!;
-      const lo = esc(r, b.lo, eva[r]), hi = esc(r, b.hi, eva[r]);
+      const lo = esc(r, b.lo, FUNDADOR[r]), hi = esc(r, b.hi, FUNDADOR[r]);
       lejos[r] = Math.max(lejos[r], Math.abs(lo), Math.abs(hi));
       grosores[r].push(hi - lo);
     }
@@ -103,7 +100,7 @@ console.log("Arriba, lo más alto que ese gen llega a dar; abajo, lo más bajo �
 console.log("la misma que pintan la tira y la leyenda. A lo ancho, la partida entera.\n");
 for (let i = 0; i < RASGOS.length; i++) {
   const r = RASGOS[i], fin = h0.dias[h0.dias.length - 1].med[i];
-  console.log(`${r}  ${evas[0][r].toFixed(2)} → ${fin.toFixed(2)}`);
+  console.log(`${r}  ${FUNDADOR[r].toFixed(2)} → ${fin.toFixed(2)}`);
   const marca = (k: number) => k === 0 ? "hi" : k === (ALTO >> 1) ? "  " : k === ALTO - 1 ? "lo" : "  ";
   pintarBanda(h0, i).forEach((f, k) => console.log(`  ${marca(k).padStart(2)} │${f}│`));
   console.log("");

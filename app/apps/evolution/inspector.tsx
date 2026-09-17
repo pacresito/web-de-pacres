@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { RASGOS, type Bicho, type Genoma, type Muerte, type Mundo, type Rasgo } from "./engine";
-import { enRecorrido, posGen } from "./render";
+import { enEje, posGen } from "./render";
 
 /**
  * Un bicho concreto, mientras la cámara lo sigue. **Va bajo el mundo y no encima**, al revés que
@@ -21,8 +21,7 @@ const REFRESCO = 333;
 const NOMBRE: Record<string, string> = { vision: "visión" };
 
 const num = (x: number) => x.toLocaleString("es-ES", { maximumSignificantDigits: 3 });
-const pct = (r: Rasgo, v: number) => Math.round(enRecorrido(r, v) * 100);
-const conSigno = (x: number) => (x >= 0 ? "+" : "−") + Math.abs(x);
+const pct = (r: Rasgo, v: number) => Math.round(enEje(r, v) * 100);
 
 /**
  * Cómo se cuenta cada muerte. En pasado y con el bicho de sujeto, porque es su ficha la que lo
@@ -146,15 +145,17 @@ export default function Inspector({ mundo, id, eva, cerrar, genes = true }: {
         <button className="in-cerrar" onClick={cerrar} title="Soltar el bicho" aria-label="Soltar el bicho">✕</button>
       </div>
 
-      {/* Los seis genes en la misma vara que la leyenda y la tira —el recorrido medido, vía
-          `posGen`—, para que «63%» quiera decir lo mismo en los tres sitios. La marca del
-          fundador va en cada barra: sin ella el tanto por ciento no dice de dónde salió. */}
+      {/* Los seis genes en la misma vara que la leyenda y la tira —octavas desde el fundador, vía
+          `posGen`—, para que «63%» quiera decir lo mismo en los tres sitios. La marca del fundador
+          va en cada barra: sin ella el tanto por ciento no dice de dónde salió. **Y solo la marca,
+          sin la distancia en cifra**: el fundador está clavado en el 50, así que restárselo al
+          tanto por ciento es escribir dos veces el mismo número. */}
       {genes && <div className="in-genes">
         {RASGOS.map((r) => (
           <div key={r} className="in-gen" title={`${NOMBRE[r] ?? r} ${num(f.g[r])}`}>
             <div className="in-gen-cab">
               <b>{NOMBRE[r] ?? r}</b>
-              <span>{pct(r, f.g[r])}% <i>{conSigno(pct(r, f.g[r]) - pct(r, eva[r]))}</i></span>
+              <span>{pct(r, f.g[r])}%</span>
             </div>
             <div className="in-barra">
               <span className="in-eva-marca" style={{ left: `${posGen(r, eva[r]) * 100}%` }} />

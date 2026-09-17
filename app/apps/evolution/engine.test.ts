@@ -144,10 +144,10 @@ check("comida abundante → baja la visión",
 //    coincidiría por casualidad.
 {
   // **Comparar dos mundos extintos no prueba nada**, así que los tres determinismos de aquí abajo
-  // exigen que `hola` llegue viva al día 150 — y lo exigen **en código**. Escrito solo en prosa, el
+  // exigen que `raiz` llegue viva al día 150 — y lo exigen **en código**. Escrito solo en prosa, el
   // día que una perilla del mundo se lleve por delante a esa semilla los tres pasan en verde
   // comparando dos ceros, que es peor que fallar: la promesa deja de estar probada sin avisar.
-  const a = crearMundo("hola"), b = crearMundo("hola");
+  const a = crearMundo("raiz"), b = crearMundo("raiz");
   for (let d = 0; d < 150; d++) { correrDia(a); correrDia(b); }
   const enPie = !a.extinto && a.bichos.length >= 5;
   check("misma semilla → estado idéntico al día 150", enPie && huella(a) === huella(b),
@@ -155,7 +155,7 @@ check("comida abundante → baja la visión",
 
   // Y que la página no altere el mundo por mirarlo: el bucle de pintado da los ticks de uno en
   // uno y cierra el día a mano, en vez de llamar a `correrDia`. Los dos caminos son el mismo.
-  const c = crearMundo("hola");
+  const c = crearMundo("raiz");
   for (let d = 0; d < 150 && !c.extinto; d++) {   // el mismo guardia que `correrDia` y que la página
     while (!tick(c));
     anochecer(c);
@@ -167,7 +167,7 @@ check("comida abundante → baja la visión",
   // mismo día 150, hasta el último bit. Si `copiar` se dejara algo —el estado del PRNG, sin ir más
   // lejos— nada fallaría: el mundo restaurado se separaría del original en silencio, y ahí se
   // acabaría la promesa de la semilla.
-  const d = crearMundo("hola");
+  const d = crearMundo("raiz");
   let foto = d;
   for (let k = 0; k < 150; k++) { if (k === 100) foto = copiar(d); correrDia(d); }
   const rebobinado = copiar(foto);
@@ -233,7 +233,7 @@ check("comida abundante → baja la visión",
 //    que muerde suelta a quien tenía cogido** — sin eso, escaparse no existiría y la franja de
 //    casa dejaría de ser refugio a medio bocado.
 {
-  const m = crearMundo("hola");
+  const m = crearMundo("raiz");
   for (let d = 0; d < 30 && !m.extinto; d++) correrDia(m);
   let dep = null, presa = null;
   for (let i = 0; i < 400000 && !m.extinto && !dep; i++) {

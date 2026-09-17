@@ -55,7 +55,7 @@ function secciones(comidas: number): Seccion[] {
       titulo: "el mundo",
       filas: [
         ["tamaño", `${cfg.ancho} × ${cfg.alto}`, "medido para que el suelo se barra: más grande, el centro no lo pisa nadie"],
-        ["casa", `franja de ${cfg.casa}`, `todo el perímetro; se está a salvo al llegar a su línea media, a ${num(cfg.casa / 2)} del borde`],
+        ["casa", `franja de ${cfg.casa}`, `todo el perímetro; pisarla ya es estar a salvo, y a ${num(cfg.casa / 2)} del borde se ha llegado del todo`],
         ["la jornada", `${cfg.ticksDia} ticks`, "se acaba cuando se acaba: el que sigue fuera hace noche donde le pilló"],
         ["la luz", "4·u·(1 − u)", "u es lo que lleva corrido el día: cero al alba y al ocaso, uno al mediodía"],
         ["el clima", `${cfg.comidas} bocados al día`, `lo sortea la semilla entre ${URNA.join(", ")} — es el techo de la población`],
@@ -86,15 +86,15 @@ function secciones(comidas: number): Seccion[] {
       titulo: "comer",
       filas: [
         ["un bocado", `radio ${RADIO_COMIDA} · ${num(E_COMIDA)} de masa`, "se recoge al tocarlo y se lleva encima, sin canjear"],
-        ["descargar", `un bocado cada ${TICKS_BOCADO} ticks`, "solo en casa: lo que se ve encima tarda en entrar lo que tarda en irse"],
+        ["descargar", `un bocado cada ${TICKS_BOCADO} ticks`, `solo pasada la línea media, a ${num(cfg.casa / 2)} del borde: lo que se ve encima tarda en entrar lo que tarda en irse`],
         ["alcance del ojo", "visión × luz × radio de lo que mira", "por eso el crepúsculo no se cosecha y lo pequeño hay que tenerlo cerca"],
-        ["dormir", "estar en casa y no ver nada", "no hay hora de acostarse: sale del ojo de cada uno y de la luz que queda"],
+        ["dormir", "haber llegado del todo y no ver nada", "no hay hora de acostarse: sale del ojo de cada uno y de la luz que queda"],
       ],
     },
     {
       titulo: "cazar",
       filas: [
-        ["hace falta ser", `${num(cfg.boca)} veces el radio del otro`, "y estar los dos fuera: en casa no se caza ni se es cazado"],
+        ["hace falta ser", `${num(cfg.boca)} veces el radio del otro`, "y estar los dos fuera de la franja: en casa no se caza ni se es cazado"],
         ["la dentellada", `${cfg.ticksPresa} ticks`, "mordiendo no se anda ni se decide, ni el que muerde ni el mordido"],
         ["se aprovecha", pct(EFICIENCIA), "de la masa de la presa; su carga cambia de dueño entera"],
         ["de los tuyos no", "distancia genética", "por debajo de lo que la población se separa entre sí, sois la misma cosa"],
@@ -103,7 +103,7 @@ function secciones(comidas: number): Seccion[] {
     {
       titulo: "criar y heredar",
       filas: [
-        ["se cría", "de noche y en casa", "el que hace noche fuera no cría, y no por eso se muere"],
+        ["se cría", "de noche y llegando del todo", "el que hace noche fuera no cría, y no por eso se muere"],
         ["un hijo cuesta", `${num(cfg.capReserva)} × su masa`, "se muta primero y se mira si cabe: por eso la talla se paga al criar"],
         ["mutación", `× o ÷ (1 + azar · ${num(cfg.tasa)})`, "multiplicativa en los cinco genes que no bajan de cero, y sin techo ninguno"],
         ["sociabilidad", `± azar · ${num(cfg.paso)}`, "el único con signo: sumando, porque lo suyo es querer estar lejos o cerca"],

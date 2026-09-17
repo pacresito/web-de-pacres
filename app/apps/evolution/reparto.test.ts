@@ -15,7 +15,7 @@ function check(nombre: string, ok: boolean, detalle = "") {
   if (!ok) fallos++;
 }
 
-const SEMILLA = "hola";
+const SEMILLA = "raiz";
 const DIAS = 60;
 
 /** Corre una partida registrando cada amanecer, que es donde la página llamará. */

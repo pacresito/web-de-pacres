@@ -27,6 +27,12 @@ const cerca = (a: number, b: number, t = 0.02) => Math.abs(a - b) <= t;
   check("y por tanto nace sin ningún adorno",
     m.brazo === 0 && m.pala === 0 && m.pata === 0 && m.pincho === 0 && m.aleta === 0,
     `brazo ${m.brazo} · pala ${m.pala} · pata ${m.pata} · pincho ${m.pincho} · aleta ${m.aleta}`);
+  // Y lo mismo en el eje de la tira, que es **otra escala** y la que lleva escrito debajo que el
+  // centro es el fundador: mientras salió del recorrido medido sin más, la raya quieta caía hasta
+  // una décima de barra fuera del sitio que la etiqueta le prometía.
+  const fuera = RASGOS.filter((r) => Math.abs(posGen(r, FUNDADOR[r]) - 0.5) > 1e-9);
+  check("y cae en el centro exacto del eje de la tira", fuera.length === 0,
+    fuera.length ? `fuera: ${fuera.join(", ")}` : "los seis en 0,50");
 }
 
 // 2. **La escala de pintado recorta el recorrido medido, nunca lo estira.** Son dos tablas de la

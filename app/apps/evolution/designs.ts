@@ -16,8 +16,9 @@ export const clamp = (v: number, a: number, b: number) => (v < a ? a : v > b ? b
 
 /**
  * **El recorrido medido de cada gen: el p01 y el p99 de una simulación de varios mundos.** Es lo que
- * ha llegado a existir, y está aquí para poder decir hasta dónde ha ido un linaje. **No para dibujar
- * con él:** eso lo hace `SEMI`, debajo, y por eso son dos tablas y no una.
+ * ha llegado a existir, y está aquí para poder decir hasta dónde ha ido un linaje: de él sale el
+ * medio ancho del eje de la tira (`SEMI_EJE`, abajo). **No para dibujar el cuerpo con él:** eso lo
+ * hace `SEMI`, debajo, y por eso son dos tablas y no una.
  *
  * Mientras fueron la misma, la cola mandaba en el dibujo. La del `retorno` se mueve de una pasada a
  * otra —p99 8,60 la anterior, 7,35 esta, y 11,45 si se mira solo el día mil—, así que cuatro bichos
@@ -1359,8 +1360,8 @@ export function designFor(semilla: string): Design {
 export const giroDe = (x: number, y: number) => ((x * 7919 + y * 104729) % 628) / 100;
 
 /**
- * Dónde cae un valor en la barra de la leyenda, en 0…1. **El fundador en el centro, el p01 y el p99
- * bastante cerca de los extremos pero no en ellos**: fuera del recorrido medido sigue habiendo
+ * Dónde cae un valor en la barra de la leyenda, en 0…1. **El fundador en el centro exacto y el
+ * recorrido medido bastante cerca de los extremos pero no en ellos**: fuera de él sigue habiendo
  * barra, que es donde se pinta el día que a alguien le dé por bajar del p01 o subir del p99. Sin ese
  * margen, un linaje que se saliera se quedaría pegado al borde diciendo lo mismo que otro que apenas
  * lo roza.
@@ -1370,22 +1371,41 @@ export const giroDe = (x: number, y: number) => ((x * 7919 + y * 104729) % 628) 
  */
 export const MARGEN = 0.12;
 
+/** Octavas desde el fundador; unidades, en el gen que lleva signo. */
+const desdeEva = (r: Rasgo, v: number): number =>
+  signado(r) ? v - FUNDADOR[r] : Math.log2(v / FUNDADOR[r]);
+
 /**
- * Dónde cae un valor **dentro del recorrido medido**, en 0…1: 0 es el p01 y 1 el p99. Sin recortar,
- * porque salirse es justo lo que hay que poder ver — un linaje en 1,2 se ha ido más allá del 1% más
- * alto que llegó a existir en cuarenta y ocho mundos, y eso es una noticia.
+ * El medio ancho del eje: lo que el fundador dista del extremo del recorrido que le queda **más
+ * lejos**. Es lo que pone al fundador en el 0,5 exacto, y por construcción en vez de por medida: el
+ * recorrido se remide cuando cambia la física y su punto medio nunca cae justo encima del fundador,
+ * así que anclar el eje en él dejaba la referencia quieta descentrada hasta una décima de barra —y
+ * la barra dice debajo que el centro es el fundador.
+ *
+ * **El mayor de los dos lados y no uno por lado.** Con dos varas, el 60% de una fila y el 60% de la
+ * de al lado querrían decir distancias distintas y la vara única deja de serlo; el precio es que en
+ * el lado corto sobra barra que nadie ha llegado a pisar, y eso es lo que tiene que sobrar.
+ */
+const SEMI_EJE = Object.fromEntries(RASGOS.map((r) => [r,
+  Math.max(-desdeEva(r, RECORRIDO[r][0]), desdeEva(r, RECORRIDO[r][1])),
+])) as Record<Rasgo, number>;
+
+/**
+ * Dónde cae un valor **en el eje**, en 0…1: 0,5 es el fundador y los extremos, lo más lejos que se
+ * ha llegado a ir de él. Sin recortar, porque salirse es justo lo que hay que poder ver — un linaje
+ * en 1,2 se ha ido más allá de lo que llegó a existir en cuarenta y ocho mundos, y eso es una
+ * noticia.
  *
  * **No es la escala con la que se dibuja el cuerpo**, que recorta antes a propósito: aquí el
  * recorrido cabe entero porque de lo que se está hablando es de cuánto ha viajado un linaje.
  *
- * Es el número que la leyenda enseña en tanto por ciento, y el único de este mundo que se entiende
- * sin saber de qué va: «empujaba como el 50% y ahora como el 63%» dice algo, y «empuje 2,14» no.
+ * Es el número que la tira enseña en tanto por ciento, y el único de este mundo que se entiende sin
+ * saber de qué va: «empujaba como el 50% y ahora como el 63%» dice algo, y «empuje 2,14» no.
  */
-export function enRecorrido(r: Rasgo, v: number): number {
-  const [lo, hi] = RECORRIDO[r];
-  return signado(r) ? (v - lo) / (hi - lo) : Math.log2(v / lo) / Math.log2(hi / lo);
+export function enEje(r: Rasgo, v: number): number {
+  return 0.5 + desdeEva(r, v) / (2 * SEMI_EJE[r]);
 }
 
 export function posGen(r: Rasgo, v: number): number {
-  return clamp(MARGEN + (1 - 2 * MARGEN) * enRecorrido(r, v), 0, 1);
+  return clamp(MARGEN + (1 - 2 * MARGEN) * enEje(r, v), 0, 1);
 }

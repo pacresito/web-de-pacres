@@ -15,10 +15,11 @@ import { posGen } from "./designs";
  * mira el presente, o el mismo gen se leería en dos sitios con dos reglas distintas y quien los
  * mirara seguidos sacaría una conclusión falsa.
  *
- * Aquí vivieron unas octavas propias —±2 alrededor del fundador de la partida— y se fueron al
- * pintarlas: la población real se mueve tres décimas de octava, así que en esa ventana caía entera
- * en el 10% central y una población partida en dos no se distinguía de una ancha. La de `posGen`
- * está medida para lo contrario, que el cuerpo de la población ocupe un tercio de la barra.
+ * Aquí vivieron unas octavas propias —±2 alrededor del fundador— y se fueron al pintarlas: la
+ * población real se mueve tres décimas de octava, así que en esa ventana caía entera en el 10%
+ * central y una población partida en dos no se distinguía de una ancha. `posGen` cuenta también en
+ * octavas desde el fundador, pero con el medio ancho medido para lo contrario: que el cuerpo de la
+ * población ocupe un tercio de la barra.
  */
 export const sitio = (r: Rasgo, x: number): number => posGen(r, x);
 

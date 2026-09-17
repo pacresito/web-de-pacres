@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { enRecorrido, pintarFila, posGen, type Design, type Fila, type Paleta, type Puesto, type Tinta } from "./render";
-import { RASGOS, mediana, type Mundo, type Rasgo } from "./engine";
+import { enEje, pintarFila, posGen, type Design, type Fila, type Paleta, type Puesto, type Tinta } from "./render";
+import { RASGOS, banda, type Mundo, type Rasgo } from "./engine";
 
 /**
  * La población de hoy, gen a gen, **pegada bajo el mundo y sin abrir nada**. Cada bicho vivo se
@@ -14,13 +14,12 @@ import { RASGOS, mediana, type Mundo, type Rasgo } from "./engine";
  * leería mejor a este tamaño y sería otro animal: el que se mira aquí tiene que ser el que anda
  * por el lienzo, o la tira deja de explicar el mundo y pasa a explicarse a sí misma.
  *
- * **El eje es el recorrido medido del gen —el mismo `posGen` de la leyenda— y no las octavas
- * alrededor del fundador con las que `reparto.ts` cuenta la historia.** Se probó con las dos y no
- * es cuestión de gusto: la población real vive en tres décimas de octava, así que en una escala de
- * ÷4 a ×4 los treinta bichos caen en el 10% central y el enjambre sale una bola de la que no se
- * distingue ni un cuerpo. El recorrido medido está calibrado justo para lo contrario —que el
- * cuerpo de la población ocupe un tercio de la barra—, y con él el montón se abre y se ve. Queda
- * una sola vara para leyenda y tira, que era la condición.
+ * **El eje son octavas alrededor del fundador, pero el medio ancho lo pone el recorrido medido —el
+ * mismo `posGen` de la leyenda— y no un número redondo.** Se probó con ÷4 a ×4 y no es cuestión de
+ * gusto: la población real vive en tres décimas de octava, así que ahí los treinta bichos caen en el
+ * 10% central y el enjambre sale una bola de la que no se distingue ni un cuerpo. El recorrido está
+ * medido justo para lo contrario —que el cuerpo de la población ocupe un tercio de la barra—, y con
+ * él el montón se abre y se ve. Queda una sola vara para leyenda y tira, que era la condición.
  */
 
 /**
@@ -42,17 +41,44 @@ const TACTO = 9;
 const NOMBRE: Record<string, string> = { vision: "visión" };
 
 /**
- * **La cifra va en el tanto por ciento del eje, no en octavas.** El eje es el recorrido medido del
- * gen, así que decir «−0,11 octavas» obliga a leer la fila con una vara distinta de la que se está
- * mirando; y «empuje 2,53» no dice nada sin saber qué es mucho. En el mismo tanto por ciento que la
- * leyenda —0% lo más bajo que llegó a existir, 100% lo más alto— se entiende sin saber nada, y la
- * distancia al fundador se lee en la misma unidad que la posición. El valor de verdad sigue en el
- * `title`, para quien quiera el número.
+ * **La cifra va en el tanto por ciento del eje, no en octavas.** Decir «−0,11 octavas» obliga a leer
+ * la fila con una vara distinta de la que se está mirando, y «empuje 2,53» no dice nada sin saber qué
+ * es mucho. En el mismo tanto por ciento que la leyenda —50% el fundador, 0% y 100% lo más lejos que
+ * se ha llegado a ir de él— se entiende sin saber nada. El valor de verdad sigue en el `title`, para
+ * quien quiera el número.
+ *
+ * **Al lado va el reparto y no la distancia al fundador**, que con el fundador clavado en el 50 era
+ * la misma cifra dos veces. El p10→p90 contesta lo otro —cuánto se parecen entre sí— y es lo único
+ * que la fila cerrada no puede enseñar: en veintidós píxeles de curva, una población apretada y una
+ * que ocupa medio eje salen casi iguales, y medir dice que el reparto va de seis puntos en la fiereza
+ * a veinticuatro en el empuje, con la misma partida moviéndose entre dos y cincuenta y tres.
+ *
+ * Y va de intervalo, no de `±`: los genes mutan multiplicando y el reparto sale sesgado, así que un
+ * «45% ±4» sobre una banda que va de 39 a 47 se inventa una simetría que no hay.
+ *
+ * **Del décimo al noveno decil, y no los extremos, porque los extremos ya están dibujados:** la fila
+ * cerrada pinta justo esos dos bichos. En cifra serían el dibujo escrito otra vez, y lo que la cifra
+ * tiene que aportar es lo que el dibujo no da — dónde está el bulto. Deja fuera al 19% de la
+ * población, y ése es el precio.
+ *
+ * No es por estabilidad, que fue la corazonada y es falsa: de un día al siguiente los dos extremos
+ * se mueven lo mismo que los dos deciles —2,0 puntos de mediana sobre 414.000 lecturas—. Lo que los
+ * hunde son las colas: uno de cada cien días min–max sale del triple de ancho y llega a 73 puntos
+ * de eje, y un rótulo que abarca tres cuartos de la barra no dice dónde vive nadie.
+ *
+ * Y el p01 con el p99 no son una tercera opción: con un censo de veintiuno, `banda` interpola
+ * `round(0,01 × 20) = 0` y el p01 **es** el mínimo. Serían los extremos con un nombre que finge.
  */
-const pct = (r: Rasgo, v: number) => Math.round(enRecorrido(r, v) * 100);
+const pct = (r: Rasgo, v: number) => Math.round(enEje(r, v) * 100);
 
 const num = (x: number) => x.toLocaleString("es-ES", { maximumSignificantDigits: 3 });
-const conSigno = (x: number) => (x >= 0 ? "+" : "−") + Math.abs(x);
+
+/**
+ * Censo por debajo del cual la fila enseña la mediana y nada más. **Siete, que es donde el primer y
+ * el noveno decil dejan a alguien fuera por los dos lados**: con seis, el «p90» es el mayor de todos
+ * y el reparto que se enseñaría son los extremos con otro nombre.
+ */
+const CENSO_REPARTO = 7;
 
 /** Los colores de la interfaz salen del CSS y no de una tabla: así el tema oscuro no es otra tabla. */
 export function tintaDe(el: HTMLElement): Tinta {
@@ -73,7 +99,8 @@ function FilaGen({ rasgo, activa, mundo, eva, paleta, diseno, latido, sel, marca
   /** Dónde ha quedado cada cuerpo en el último pintado: es lo único que sabe a quién se pulsa. Va
    *  en un ref porque no se pinta con él — se lee al pulsar, y eso no es un render. */
   const puestosRef = useRef<Puesto[]>([]);
-  const [pie, setPie] = useState<{ med: number; hoy: number; desde: number } | null>(null);
+  /** La mediana de hoy y el reparto, en valores de gen: el tanto por ciento se saca al pintarlo. */
+  const [pie, setPie] = useState<{ med: number; reparto: [number, number] | null } | null>(null);
   const alto = activa ? ALTO_ACTIVA : ALTO;
 
   useEffect(() => {
@@ -93,19 +120,22 @@ function FilaGen({ rasgo, activa, mundo, eva, paleta, diseno, latido, sel, marca
       t: posGen(rasgo, b.g[rasgo]),
       c: { x: 0, y: 0, hx: 1, hy: 0, radio: b.radio, carga: b.carga, edad: (m.dia - b.nacido) / m.cfg.vida, g: b.g },
     }));
-    const med = m.bichos.length ? mediana(m.bichos.map((b) => b.g[rasgo])) : null;
+    const rep = banda(m.bichos.map((b) => b.g[rasgo]));
 
     const fila: Fila = {
       cuerpos,
       eva: posGen(rasgo, base),
-      med: med === null ? null : posGen(rasgo, med),
+      med: rep === null ? null : posGen(rasgo, rep.med),
       recorrido: null,
       escala: (activa ? CUERPO : CUERPO_QUIETA) / (2 * eva.talla),
       enjambre: activa,
       sel,
     };
     puestosRef.current = pintarFila(ctx, W, H, dpr, diseno, paleta, tintaDe(cv), fila);
-    setPie(med === null ? null : { med, hoy: pct(rasgo, med), desde: pct(rasgo, med) - pct(rasgo, base) });
+    setPie(rep === null ? null : {
+      med: rep.med,
+      reparto: m.bichos.length >= CENSO_REPARTO ? [rep.lo, rep.hi] : null,
+    });
   }, [rasgo, activa, alto, mundo, eva, paleta, diseno, latido, sel]);
 
   /**
@@ -142,8 +172,11 @@ function FilaGen({ rasgo, activa, mundo, eva, paleta, diseno, latido, sel, marca
           y no los bichos quienes deciden lo que mide el mundo. */}
       <div className="tr-et">
         <b>{NOMBRE[rasgo] ?? rasgo}</b>
-        <span className="tr-cifra" title={pie ? `${NOMBRE[rasgo] ?? rasgo} ${num(pie.med)}` : undefined}>
-          {pie ? <>{pie.hoy}% <i>{conSigno(pie.desde)}</i></> : "—"}
+        <span
+          className="tr-cifra"
+          title={pie ? `${NOMBRE[rasgo] ?? rasgo} ${num(pie.med)}${pie.reparto ? ` · ${num(pie.reparto[0])}–${num(pie.reparto[1])}` : ""}` : undefined}
+        >
+          {pie ? <>{pct(rasgo, pie.med)}%{pie.reparto && <i> · {pct(rasgo, pie.reparto[0])}–{pct(rasgo, pie.reparto[1])}</i>}</> : "—"}
         </span>
       </div>
       <canvas ref={ref} style={{ width: "100%", height: alto, display: "block" }} />

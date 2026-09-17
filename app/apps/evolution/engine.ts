@@ -278,10 +278,18 @@ export type Config = {
 // **Salvo `retorno`, que no se deja clavar más fino que un 10%, y eso también es el resultado.**
 // Es el gen de mayor abanico entre mundos —cinco veces el de partida, contra 1,6 de la talla—, así
 // que su centro es una media de mundos que no se parecen y cada muestreo la mueve. Pedirle más
-// precisión sería inventarla: el ±12% con el que la semilla despeina al fundador ya es mayor.
+// precisión sería inventarla: es del mismo orden que lo que mueve el propio muestreo.
 //
 // Ponerlo en el centro del recorrido es además lo que hace que un gen se pueda ver moverse en las
 // dos direcciones: naciendo en un extremo, la mitad de su rango no se visita nunca.
+//
+// **Es el mismo en todas las semillas, y la semilla no lo toca.** Lo despeinó un ±12% mientras fue
+// la única diferencia de partida entre dos mundos, y medir dice que no hace falta para eso: con el
+// fundador clavado, treinta y dos semillas siguen acabando con el censo repartido ×5,7 y el empuje
+// ×2,2 —lo mismo que despeinándolo—, porque quien reparte los mundos es el clima, la geometría y la
+// mutación. A cambio, la referencia quieta de la tira y la leyenda deja de moverse de una partida a
+// otra: el fundador es **el** centro del eje y no un sitio distinto cada vez, así que dos semillas
+// se comparan mirando la misma raya.
 export const FUNDADOR: Genoma = {
   empuje: 2.53, talla: 2.42, vision: 28.57, sociabilidad: -0.09, fiereza: 1.33, retorno: 3.27,
 };
@@ -360,16 +368,30 @@ export type Bicho = {
   reserva: number;
   vivo: boolean;
   /**
-   * Está en casa ahora mismo, dentro de la línea media de la franja. **No es «por hoy ha
-   * terminado»**, que es lo que fue un rato: con eso un bicho hacía un solo viaje al día —salía,
-   * cogía uno, volvía y se aparcaba—, así que la cosecha de la población tenía techo pase lo que
-   * pase y **sobraba comida todos los días**: el 51% del suelo sin tocar incluso con la jornada
-   * cinco veces más larga, porque el día se acababa en cuanto estaban todos aparcados. Ahora
-   * llegar a casa descarga y suelta, y lo que limita la cosecha es la luz y las piernas.
+   * Ha pisado la franja de casa. **Es toda la franja y no su mitad interior**, porque es toda la
+   * franja lo que se pinta como casa: con el refugio a medio camino se veía a un bicho comerse a
+   * otro encima del suelo de casa —tres de cada diez muertes por depredación pasaban ahí—, y una
+   * regla que el dibujo desmiente no es una regla, es un bug con documentación.
+   *
+   * Aquí no se caza, no se es cazado y no se le ve a uno: para el resto del mundo, el que está en
+   * casa no está.
+   */
+  aSalvo: boolean;
+  /**
+   * Ha llegado **del todo**: pasada la línea media de la franja, que es donde se descarga, se
+   * duerme y se cría. Se para ahí y no al pisarla porque parándose en el borde exterior la
+   * población entera se alinearía sobre la misma raya, que es donde no está la casa de nadie.
+   *
+   * **No es «por hoy ha terminado»**, que es lo que fue un rato: con eso un bicho hacía un solo
+   * viaje al día —salía, cogía uno, volvía y se aparcaba—, así que la cosecha de la población tenía
+   * techo pase lo que pase y **sobraba comida todos los días**: el 51% del suelo sin tocar incluso
+   * con la jornada cinco veces más larga, porque el día se acababa en cuanto estaban todos
+   * aparcados. Ahora llegar a casa descarga y suelta, y lo que limita la cosecha es la luz y las
+   * piernas.
    *
    * Quedarse **sí** para cuando además no hay nada que ver: eso es dormir, y eso es `dormido`.
    */
-  aSalvo: boolean;
+  enCasa: boolean;
   /**
    * Está en casa y no ve nada, que es lo que quiere decir dormir aquí. Se deduce del sitio y de la
    * luz, pero se guarda: recomputarlo al pintar sería repasar la comida y el censo enteros por
@@ -461,7 +483,6 @@ export type Mundo = {
   /** Los cuerpos de los que se murieron sin que se los comieran, disolviéndose. Tampoco decide nada. */
   restos: Resto[];
   extinto: boolean;
-  eva: Genoma;
   /** `fuera` son **noches pasadas a la intemperie**, no muertes: al anochecer ya no muere nadie. */
   cuenta: { nacidos: number; hambre: number; fuera: number; comidos: number; vejez: number };
 };
@@ -486,40 +507,22 @@ const masaCargada = (c: Config, b: Bicho): number =>
   b.masa + b.carga * E_COMIDA + Math.max(0, b.reserva - c.capReserva * b.masa);
 const radioCargado = (c: Config, b: Bicho): number => raizCubica(masaCargada(c, b), b.radio);
 
-/**
- * La semilla despeina al fundador: define el mundo *y* quién lo empezó. La población de partida
- * son clones de ese genoma, para ver divergir lo que empezó idéntico.
- *
- * Está fuera de `crearMundo` porque es **lo primero que sale del PRNG**, antes que nada del mundo:
- * así `evaDe(azarCon(palabra), CONFIG)` devuelve el fundador de esa partida sin sembrarla, que es
- * lo que necesita la leyenda para enseñar de dónde salió la población.
- */
-export function evaDe(a: Azar, c: Config): Genoma {
-  const eva = { ...c.fundador };
-  for (const r of RASGOS) {
-    eva[r] = r === "sociabilidad"
-      ? eva[r] + centrado(a) * c.paso * 2
-      : eva[r] * (1 + centrado(a) * 0.12);
-  }
-  return eva;
-}
-
 export function crearMundo(semilla: string, cfg: Partial<Config> = {}): Mundo {
   const c: Config = { ...CONFIG, ...cfg };
   const azar = azarCon(semilla);
-  // El clima sale **antes que nadie**: el mundo existe antes que quien lo empieza. Y se saca de la
-  // urna aunque quien llama haya fijado la comida, para tirarlo después: así la semilla da la misma
-  // Eva con el clima sorteado y con el clima puesto a mano, y los escenarios que fijan `comidas`
-  // comparan poblaciones que empezaron idénticas y no dos linajes distintos.
+  // El clima sale **antes que nadie**, y de la urna aunque quien llama haya fijado la comida, para
+  // tirarlo después: así la semilla reparte el resto del azar igual con el clima sorteado y con el
+  // clima puesto a mano, y los escenarios que fijan `comidas` comparan mundos que solo se
+  // diferencian en eso.
   const clima = URNA[Math.floor(sig(azar) * URNA.length)];
   if (cfg.comidas === undefined) c.comidas = clima;
-  const eva = evaDe(azar, c);
   const m: Mundo = {
     cfg: c, azar, dia: 0, viajes: 0, t: 0, duracion: 0, bichos: [], comida: [], siguienteId: 1,
     noche: false, especie: 0, marcas: [], restos: [],
-    extinto: false, eva, cuenta: { nacidos: 0, hambre: 0, fuera: 0, comidos: 0, vejez: 0 },
+    extinto: false, cuenta: { nacidos: 0, hambre: 0, fuera: 0, comidos: 0, vejez: 0 },
   };
-  for (let i = 0; i < c.censoInicial; i++) nacer(m, { ...eva }, -1, 0);
+  // La población de partida son clones del fundador, para ver divergir lo que empezó idéntico.
+  for (let i = 0; i < c.censoInicial; i++) nacer(m, { ...c.fundador }, -1, 0);
   amanecer(m);
   return m;
 }
@@ -553,7 +556,7 @@ function nacer(m: Mundo, g: Genoma, idMadre: number, gen: number, donde?: [numbe
     // no tenía —antes un hijo costaba dos bocados fuera cual fuera su tamaño—.
     radio: g.talla, masa: masaDe(g.talla), carga: 0, reserva: m.cfg.capReserva * masaDe(g.talla),
     muerde: 0, restan: 0, preso: 0,
-    vivo: true, aSalvo: false, dormido: false, hijos: 0, crias: 0, muerte: null, recien: false, g,
+    vivo: true, aSalvo: false, enCasa: false, dormido: false, hijos: 0, crias: 0, muerte: null, recien: false, g,
   };
   m.bichos.push(b);
   return b;
@@ -613,6 +616,7 @@ export function amanecer(m: Mundo) {
   }
   for (const b of m.bichos) {
     b.aSalvo = false;
+    b.enCasa = false;
     b.dormido = false;
     b.hijos = 0;
     b.recien = false;
@@ -624,7 +628,7 @@ export function amanecer(m: Mundo) {
     // refleja la componente que apunta al muro: amanecer contra la pared de tu propia casa es
     // perder la mañana en un rebote, y eso no lo decide ningún gen. Solo a quien está en casa: al
     // de fuera, la pared que le estorba es otra.
-    if (enCasa(c, b.x, b.y)) {
+    if (enFranja(c, b.x, b.y)) {
       const [dx, dy] = haciaCasa(m, b);
       if (b.hx * dx + b.hy * dy > 0) { if (dx !== 0) b.hx = -b.hx; else b.hy = -b.hy; }
     }
@@ -785,7 +789,7 @@ function morder(m: Mundo, dep: Bicho, presa: Bicho) {
 export const MARCA = 14;
 
 /** Si un punto cae en la franja del borde, que es casa. */
-const enCasa = (c: Config, x: number, y: number): boolean =>
+const enFranja = (c: Config, x: number, y: number): boolean =>
   x < c.casa || y < c.casa || x > c.ancho - c.casa || y > c.alto - c.casa;
 
 /**
@@ -853,7 +857,7 @@ export function tick(m: Mundo) {
     // cazar cuesta además de perseguir — un segundo de la única cosa que aquí no se puede
     // ahorrar, que es la luz que queda. Se sigue pagando el basal y la vista, como al que espera.
     const vio = b.muerde ? false : decidir(m, b, radioMax, luz, cae);
-    const dormido = b.aSalvo && !vio;
+    const dormido = b.enCasa && !vio;
     b.dormido = dormido;
     const v = dormido || b.muerde ? 0 : b.g.empuje / radioCargado(c, b);
     if (v > 0) mover(m, b, v);
@@ -883,19 +887,20 @@ export function tick(m: Mundo) {
     }
 
     // **Llegar a casa descarga y suelta**, bocado a bocado: la carga que se ve encima tiene que
-    // tardar en entrar lo que tarda en desaparecer del dibujo. Se descarga al alcanzar la línea
-    // media de la franja, no al pisarla: parándose en su borde interior la población entera se
-    // alinearía sobre la misma raya, que es donde no está la casa de nadie.
+    // tardar en entrar lo que tarda en desaparecer del dibujo. A salvo se está al pisar la franja
+    // —es lo que se pinta como casa—, pero descargar, dormir y criar piden llegar del todo.
     const [, , d] = haciaCasa(m, b);
-    b.aSalvo = d <= c.casa / 2;
-    if (b.aSalvo && b.carga > 0 && m.t % TICKS_BOCADO === 0) {
+    b.aSalvo = d <= c.casa;
+    b.enCasa = d <= c.casa / 2;
+    if (b.enCasa && b.carga > 0 && m.t % TICKS_BOCADO === 0) {
       b.reserva += E_COMIDA;
       if (--b.carga === 0) m.viajes++;   // el viaje se cuenta al vaciarse, no al llegar
     }
   }
 
-  // **En casa no se caza ni se es cazado.** Es lo que hace de la franja un refugio y no solo una
-  // meta: entrar corriendo es escaparse, y eso lo decide el genoma sin que nadie lo programe.
+  // **En casa no se caza ni se es cazado, y casa es toda la franja.** Es lo que hace de ella un
+  // refugio y no solo una meta: pisarla corriendo es escaparse, y eso lo decide el genoma sin que
+  // nadie lo programe.
   if (c.caza) {
     for (let i = 0; i < m.bichos.length; i++) {
       const a = m.bichos[i];
@@ -973,7 +978,7 @@ export function anochecer(m: Mundo) {
   for (let i = 0; i < adultos; i++) {
     const b = m.bichos[i];
     // Quien está en casa ya descargó al llegar, en su propio tick: aquí solo se cría.
-    if (!b.aSalvo) { m.cuenta.fuera++; continue; }   // la noche fuera: ni cría
+    if (!b.enCasa) { m.cuenta.fuera++; continue; }   // la noche fuera: ni cría
     const cap = c.capReserva * b.masa;
     // Se mutan los hijos de uno en uno y **se comprueba si caben antes de nacer**: uno grande
     // cuesta más que uno pequeño, así que a la madre le puede sobrar para un hijo cualquiera y no

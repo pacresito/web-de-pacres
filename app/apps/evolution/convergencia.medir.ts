@@ -3,12 +3,11 @@
 // **No es un test: no falla, mide.** Contesta las tres preguntas que deciden cómo se pinta un
 // genoma, y que no se pueden contestar a ojo:
 //
-// 1. **¿Un gen converge o abre abanico?** Los mundos arrancan de fundadores que la semilla ya
-//    despeina un ±12%, así que la pregunta se contesta comparando dispersiones: si al día mil los
-//    mundos están **más juntos** que sus fundadores, el gen converge y el mundo lo empuja a un
-//    sitio; si están más separados, cada partida se queda con el suyo. La razón entre las dos
-//    dispersiones es el número, y el ±12% de salida es la vara — sin ella, "están repartidos entre
-//    5 y 15" no dice si eso es mucho o poco.
+// 1. **¿Un gen converge o abre abanico?** Los mundos arrancan todos del **mismo** fundador, así que
+//    la vara es el propio abanico temprano: si al día mil los mundos están más juntos que al cien,
+//    el gen converge y el mundo lo empuja a un sitio; si están más separados, cada partida se sigue
+//    quedando con el suyo. La razón entre las dos dispersiones es el número — sin una vara, "están
+//    repartidos entre 5 y 15" no dice si eso es mucho o poco.
 // 2. **Dónde está el centro de los mundos desarrollados**, que es a dónde se movería el fundador.
 // 3. **Cuánto mide la población en un día concreto**, que es el contraste que se ve en pantalla
 //    entre dos bichos a la vez, y que no es lo mismo que lo anterior ni se mide con ello.
@@ -56,7 +55,6 @@ const f2 = (x: number) => x.toFixed(2);
 
 type Partida = {
   semilla: string;
-  eva: Genoma;
   vivo: boolean;
   dias: number;
   censoFinal: number;
@@ -121,7 +119,7 @@ for (const s of SEMILLAS) {
   const grosor = {} as Record<Rasgo, number>;
   for (const r of RASGOS) grosor[r] = grosores[r].length ? med(grosores[r]) : NaN;
   partidas.push({
-    semilla: s, eva: { ...m.eva }, vivo: !m.extinto, dias: d, censoFinal: m.bichos.length,
+    semilla: s, vivo: !m.extinto, dias: d, censoFinal: m.bichos.length,
     cortes, grosor, finales: m.extinto ? [] : m.bichos.map((b) => ({ ...b.g })), min, max,
   });
   console.log([s.padEnd(10), col(d, 6), col(m.extinto ? "extinto" : m.bichos.length, 7)].join(" "));
@@ -138,34 +136,33 @@ if (vivas.length < 4) {
 //
 // Las dos dispersiones se miden **en la misma vara** —octavas alrededor de la mediana del grupo—,
 // así que la razón entre ellas es adimensional y comparable entre genes.
-console.log("## ¿Converge o abre abanico? Dispersión entre mundos, al empezar y al acabar\n");
-console.log([col("gen", 13), col("evas"), col("día " + DIAS), col("razón"), col("veredicto", 13)].join(" "));
+console.log("## ¿Converge o abre abanico? Dispersión entre mundos, pronto y al acabar\n");
+console.log([col("gen", 13), col("día " + CORTES[0]), col("día " + DIAS), col("razón"), col("veredicto", 13)].join(" "));
 const centro = {} as Record<Rasgo, number>;
 for (const r of RASGOS) {
-  const evas = vivas.map((p) => p.eva[r]);
+  // Los que no llegaron al primer corte no cuentan en él: una mediana ausente no es un mundo junto.
+  const pronto = vivas.map((p) => p.cortes[r][0]).filter((x): x is number => x !== null);
   const fines = vivas.map((p) => p.cortes[r][CORTES.length - 1]!);
-  const refE = med(evas), refF = med(fines);
-  const dE = disp(evas.map((x) => esc(r, x, refE)));
+  const refP = med(pronto), refF = med(fines);
+  const dP = disp(pronto.map((x) => esc(r, x, refP)));
   const dF = disp(fines.map((x) => esc(r, x, refF)));
   centro[r] = refF;
-  const razon = dF / dE;
+  const razon = dF / dP;
   const v = razon < 0.6 ? "converge" : razon > 1.6 ? "abanico" : "ni una ni otra";
-  console.log([r.padEnd(13), col(f2(dE)), col(f2(dF)), col(f2(razon)), col(v, 13)].join(" "));
+  console.log([r.padEnd(13), col(f2(dP)), col(f2(dF)), col(f2(razon)), col(v, 13)].join(" "));
 }
-console.log("\nA leer: **evas** es lo despeinados que salen los veinte fundadores (la semilla los mueve un ±12%)");
-console.log("y **día 1000** lo repartidos que acaban los veinte mundos. Razón por debajo de 0,6: el mundo los");
-console.log("junta, y poner ahí al fundador deja al gen quieto toda la partida. Por encima de 1,6: cada mundo");
-console.log("se queda con el suyo, y el centro es un buen sitio para nacer. En medio, la semilla manda tanto");
-console.log("como el mundo.\n");
+console.log(`\nA leer: **día ${CORTES[0]}** es lo repartidos que están los mundos cuando apenas han salido del`);
+console.log("fundador común, y **día 1000** cómo acaban. Razón por debajo de 0,6: el mundo los junta, y poner");
+console.log("ahí al fundador deja al gen quieto toda la partida. Por encima de 1,6: cada mundo se queda con el");
+console.log("suyo, y el centro es un buen sitio para nacer. En medio, el gen se abre pronto y ahí se queda.\n");
 
 // ── 2. El centro de los mundos desarrollados ─────────────────────────────────
 console.log("## Dónde acaban los mundos, y el fundador que eso propone\n");
-console.log([col("gen", 13), col("eva hoy"), col("p10"), col("centro"), col("p90"), col("mueve")].join(" "));
+console.log([col("gen", 13), col("fundador"), col("p10"), col("centro"), col("p90"), col("mueve")].join(" "));
 for (const r of RASGOS) {
   const fines = vivas.map((p) => p.cortes[r][CORTES.length - 1]!);
-  const evaHoy = med(vivas.map((p) => p.eva[r]));
-  console.log([r.padEnd(13), col(f2(evaHoy)), col(f2(cuantil(fines, 0.1))), col(f2(centro[r])),
-    col(f2(cuantil(fines, 0.9))), col(f2(esc(r, centro[r], evaHoy)))].join(" "));
+  console.log([r.padEnd(13), col(f2(FUNDADOR[r])), col(f2(cuantil(fines, 0.1))), col(f2(centro[r])),
+    col(f2(cuantil(fines, 0.9))), col(f2(esc(r, centro[r], FUNDADOR[r])))].join(" "));
 }
 console.log("\nA leer: **centro** es el fundador que propone la medida, y **mueve** cuánto hay que moverlo desde");
 console.log("el de hoy, en octavas (unidades en la sociabilidad). Un gen que converge y a la vez pide moverse");
@@ -189,13 +186,13 @@ console.log("de un gen tiene que caber las dos, y la razón dice cuánto se pisa
 console.log("el grosor, una escala que enseñe el abanico deja a los vecinos indistinguibles.\n");
 
 // ── 4. ¿Sigue moviéndose al final? ───────────────────────────────────────────
-console.log("## La mediana en el camino — octavas desde el fundador de cada mundo\n");
+console.log("## La mediana en el camino — octavas desde el fundador\n");
 for (const r of RASGOS) {
   console.log(`${r}`);
   console.log([col("semilla", 10), ...CORTES.map((d) => col("d" + d, 8))].join(" "));
   for (const p of vivas) {
     console.log([p.semilla.padEnd(10), ...p.cortes[r].map((x) =>
-      col(x === null ? "—" : esc(r, x, p.eva[r]).toFixed(2), 8))].join(" "));
+      col(x === null ? "—" : esc(r, x, FUNDADOR[r]).toFixed(2), 8))].join(" "));
   }
   console.log("");
 }
@@ -267,14 +264,14 @@ console.log("pincho o con aleta. Uno que pase de la mitad es un adorno que ha de
 // saliendo de una anécdota en vez de una población.
 console.log("\n## El fundador que proponen los extremos\n");
 console.log(`Extremos sobre todos los mundos vivos; cuantiles sobre ${muestra[RASGOS[0]].length} bichos muestreados cada ${PASO_MUESTRA} días.\n`);
-console.log([col("gen", 13), col("mín"), col("máx"), col("medio"), col("p01"), col("p99"), col("medio p"), col("eva hoy")].join(" "));
+console.log([col("gen", 13), col("mín"), col("máx"), col("medio"), col("p01"), col("p99"), col("medio p"), col("fundador")].join(" "));
 for (const r of RASGOS) {
   const lo = Math.min(...vivas.map((p) => p.min[r])), hi = Math.max(...vivas.map((p) => p.max[r]));
   const medio = signado(r) ? (lo + hi) / 2 : Math.sqrt(lo * hi);
   const q1 = cuantil(muestra[r], 0.01), q99 = cuantil(muestra[r], 0.99);
   const medioQ = signado(r) ? (q1 + q99) / 2 : Math.sqrt(q1 * q99);
   console.log([r.padEnd(13), col(f2(lo)), col(f2(hi)), col(f2(medio)), col(f2(q1)), col(f2(q99)),
-    col(f2(medioQ)), col(f2(med(vivas.map((p) => p.eva[r]))))].join(" "));
+    col(f2(medioQ)), col(f2(FUNDADOR[r]))].join(" "));
 }
 console.log("\nA leer: **medio** es el punto medio en octavas entre el mínimo y el máximo que han existido, y");
 console.log("**medio p** el mismo punto entre el p01 y el p99. Si los dos se parecen, el fundador propuesto se");

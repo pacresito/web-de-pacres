@@ -36,10 +36,10 @@ const QUE_ES: Record<string, string> = {
   retorno: "Las ganas de volver a casa en cuanto lleva comida encima. Solo lo que llega a casa se come y se convierte en hijos — pero volver pronto es dejar de buscar.",
 };
 
-// La escala de la barra es la de `posGen`: el fundador en el centro y los dos extremos del
-// recorrido medido cerca de los bordes. **Una sola geometría para los seis genes**, así que dos barras se
-// comparan de un vistazo aunque midan cosas de unidades distintas — y el número que las acompaña
-// deja de ser el dato: lo que se lee es dónde cae respecto a donde nació todo el mundo.
+// La escala de la barra es la de `posGen`: el fundador en el centro exacto y el recorrido medido
+// cerca de los bordes. **Una sola geometría para los seis genes**, así que dos barras se comparan de
+// un vistazo aunque midan cosas de unidades distintas — y el número que las acompaña deja de ser el
+// dato: lo que se lee es dónde cae respecto a donde nació todo el mundo.
 
 // Sin pies bajo las muestras: los tres bichos ya son la escala, y la cifra de la derecha dice en
 // qué punto de ella está la población. Un rótulo que repite lo que ya se ve es ruido.
@@ -47,10 +47,9 @@ const QUE_ES: Record<string, string> = {
 const CELDA = 54;                  // lado de cada muestra de cuerpo, en px CSS
 
 /**
- * Los tres valores de una fila: los dos extremos de la **escala de pintado** y el fundador de esta
- * semilla en medio. Los del dibujo y no los del recorrido, porque pasados esos dos el cuerpo ya no
- * cambia: la muestra de la izquierda es literalmente el bicho más bajo que se va a ver y la de la
- * derecha, el más alto.
+ * Los tres valores de una fila: los dos extremos de la **escala de pintado** y el fundador en medio.
+ * Los del dibujo y no los del recorrido, porque pasados esos dos el cuerpo ya no cambia: la muestra
+ * de la izquierda es literalmente el bicho más bajo que se va a ver y la de la derecha, el más alto.
  */
 const muestrasDe = (rasgo: string, eva: Record<string, number>): number[] =>
   [ESCALA[rasgo as Rasgo][0], eva[rasgo], ESCALA[rasgo as Rasgo][1]];
@@ -106,8 +105,8 @@ const DIAS_EDAD = Array.from({ length: PASOS_EDAD }, (_, i) => Math.round((i * C
  * fundador y banda de población, y la edad no tiene ninguna de las tres — de fila diría que es un
  * gen, que es justo lo que no es.
  *
- * Los cuerpos son el fundador de la partida a distintas edades y los pinta el diseño como los del
- * mundo, así que la rampa que se ve aquí es la que se ve ahí.
+ * Los cuerpos son el fundador a distintas edades y los pinta el diseño como los del mundo, así
+ * que la rampa que se ve aquí es la que se ve ahí.
  */
 function Vejez({ eva, paleta, diseno }: { eva: Record<string, number>; paleta: Paleta; diseno: Design }) {
   const refs = useRef<(HTMLCanvasElement | null)[]>([]);
@@ -174,7 +173,7 @@ function Fila({ rasgo, eva, tabla, paleta, diseno }: {
 export default function Leyenda({ rasgos, tabla, eva, paleta, diseno, cerrar }: {
   rasgos: readonly string[];
   tabla: Record<string, { paga: string; cobra: string }>;
-  /** El fundador **de esta partida**, ya despeinado por la semilla: de ahí salió todo el mundo. */
+  /** El fundador, el mismo en todas las semillas: de ahí salió todo el mundo, en todas. */
   eva: Record<string, number>;
   paleta: Paleta;
   diseno: Design;
@@ -195,9 +194,9 @@ export default function Leyenda({ rasgos, tabla, eva, paleta, diseno, cerrar }: 
       </div>
       <p className="lg-intro">
         Cada bicho lleva el genoma puesto. A la izquierda, cómo se ve el gen en los dos extremos del
-        dibujo y en el fundador de esta semilla, que nace en medio. Pasados esos dos extremos el gen
-        sigue subiendo y el bicho ya se pinta igual. <b>Dónde está hoy la población</b> lo cuenta la
-        tira de abajo, gen a gen.
+        dibujo y en el fundador, que nace en medio y es el mismo en todas las semillas. Pasados esos
+        dos extremos el gen sigue subiendo y el bicho ya se pinta igual. <b>Dónde está hoy la
+        población</b> lo cuenta la tira de abajo, gen a gen.
       </p>
       <p className="lg-intro lg-aviso">
         <b>No hay tope:</b> la mutación multiplica sin techo, así que ningún gen tiene máximo —

@@ -12,7 +12,7 @@ import {
   type Cuerpo, type Design, type Paleta,
 } from "./designs";
 
-export { ESCALA, RECORRIDO, designFor, enRecorrido, medidas, posGen, type Cuerpo, type Design, type Paleta } from "./designs";
+export { ESCALA, RECORRIDO, designFor, enEje, medidas, posGen, type Cuerpo, type Design, type Paleta } from "./designs";
 
 const TAU = Math.PI * 2;
 

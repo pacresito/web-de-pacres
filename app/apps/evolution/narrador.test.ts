@@ -5,7 +5,7 @@
 // nada**: que volver atrás reescribe la misma crónica, que ninguna línea se repite, que lo que
 // ocurrió acaba escrito aunque ese día ya hubiera línea, y que un mundo largo no se convierte en
 // un teletipo.
-import { copiar, correrDia, crearMundo, evaDe, azarCon, CONFIG, type Mundo } from "./engine";
+import { copiar, correrDia, crearMundo, CONFIG, type Mundo } from "./engine";
 import { crearDiario, narrar, type Diario } from "./narrador";
 
 let fallos = 0;
@@ -14,16 +14,14 @@ function check(nombre: string, ok: boolean, detalle = "") {
   if (!ok) fallos++;
 }
 
-const SEMILLA = "hola";
+const SEMILLA = "raiz";
 const DIAS = 120;
-
-const eva = (s: string) => evaDe(azarCon(s), CONFIG);
 
 /** Corre una partida narrando cada amanecer, que es donde la página llama. */
 function partida(dias: number, semilla = SEMILLA) {
   const m = crearMundo(semilla);
   const d = crearDiario();
-  for (let i = 0; i < dias && !m.extinto; i++) { correrDia(m); narrar(d, m, eva(semilla)); }
+  for (let i = 0; i < dias && !m.extinto; i++) { correrDia(m); narrar(d, m, CONFIG.fundador); }
   return { m, d };
 }
 
@@ -40,11 +38,11 @@ const firma = (d: Diario) => d.eventos.map((e) => `${e.dia}:${e.clave}:${e.texto
   const d = crearDiario();
   let guardado: Mundo | null = null;
   for (let i = 0; i < 30; i++) {
-    correrDia(m); narrar(d, m, eva(SEMILLA));
+    correrDia(m); narrar(d, m, CONFIG.fundador);
     if (m.dia === 20) guardado = copiar(m);
   }
   m = copiar(guardado!);
-  while (m.dia < DIAS && !m.extinto) { correrDia(m); narrar(d, m, eva(SEMILLA)); }
+  while (m.dia < DIAS && !m.extinto) { correrDia(m); narrar(d, m, CONFIG.fundador); }
 
   check("volver atrás y revivir reescribe la misma crónica", firma(d) === firma(recto),
     `${d.eventos.length} líneas vs ${recto.eventos.length}`);

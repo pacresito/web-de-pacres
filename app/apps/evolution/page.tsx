@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import TerminalShell from "../../components/TerminalShell";
 import WhyFooter from "../../components/WhyFooter";
 import { useTema } from "../../components/usePersistedTheme";
-import { CONFIG, RASGOS, TABLA, amanecer, anochecer, azarCon, copiar, crearMundo, evaDe, tick, type Bicho, type Mundo } from "./engine";
+import { CONFIG, RASGOS, TABLA, amanecer, anochecer, copiar, crearMundo, tick, type Bicho, type Mundo } from "./engine";
 import Leyenda from "./leyenda";
 import Diario from "./diario";
 import Tira from "./tira";
@@ -53,7 +53,10 @@ const HISTORIA = 60;
  */
 const PAUSA_NOCHE = 1500;
 
-const SEMILLA_POR_DEFECTO = "hola";
+// **La de por defecto tiene que llegar viva a mañana**, que se arranca con una sola fundadora y el
+// primer día es una lotería: con «hola» se moría de hambre antes de anochecer y la página abría en
+// un mundo vacío. Ésta sale con el clima de en medio y aguanta trescientos días.
+const SEMILLA_POR_DEFECTO = "marea";
 
 /**
  * Lo que se puede tener abierto, que es una cosa o ninguna. `poblacion` va debajo del mundo y las
@@ -235,12 +238,9 @@ export default function Evolution() {
   const [sel, setSel] = useState(0);
   const [hayAtras, setHayAtras] = useState(false);
   const tema = useTema();
-  // El fundador de la partida en curso, calculado y no guardado: el mundo vive en un ref que no
-  // re-renderiza nada, así que un estado en paralelo solo podría quedarse viejo.
-  const eva = useMemo(() => evaDe(azarCon(semilla), CONFIG), [semilla]);
-
-  const evaRef = useRef(eva);
-  useEffect(() => { evaRef.current = eva; }, [eva]);
+  // El fundador, que es el mismo en todas las semillas: la referencia quieta contra la que se lee
+  // la población no se mueve al sembrar, así que dos partidas se comparan sobre la misma raya.
+  const eva = CONFIG.fundador;
 
   useEffect(() => { corriendoRef.current = corriendo; }, [corriendo]);
   useEffect(() => { velRef.current = VELOCIDADES[velIdx]; }, [velIdx]);
@@ -424,7 +424,7 @@ export default function Evolution() {
       if (h.length > HISTORIA) h.shift();
     }
     registrar(repartoRef.current, m);
-    const ev = narrar(cronicaRef.current, m, evaRef.current);
+    const ev = narrar(cronicaRef.current, m, CONFIG.fundador);
     if (ev) ultimoRef.current = ev;
   }, []);
   /** Cerrar el panel que esté abierto. **No suelta al bicho marcado**: la marca es del mundo, y el
@@ -536,7 +536,7 @@ export default function Evolution() {
       // ya no se dan pasos, y vuelve a correr si se retrocede y se revive — el diario habrá
       // olvidado su línea al volver atrás, así que no se duplica.
       if (dados && m.extinto) {
-        const fin = narrar(cronicaRef.current, m, evaRef.current);
+        const fin = narrar(cronicaRef.current, m, CONFIG.fundador);
         if (fin) ultimoRef.current = fin;
       }
 
@@ -784,8 +784,10 @@ export default function Evolution() {
         .tr-et { display: flex; align-items: baseline; gap: 0.4rem; min-width: 0; line-height: 1.2; }
         .tr-et b { font-size: 0.64rem; letter-spacing: 0.05em; color: var(--t-ink2); }
         .tr-fila.on .tr-et b { color: var(--t-ink); }
-        .tr-cifra { font-size: 0.6rem; color: var(--muted); font-variant-numeric: tabular-nums; }
-        .tr-cifra i { font-style: normal; color: var(--t-ink2); }
+        /* La mediana manda y el reparto acompaña: el brillo iba al revés cuando lo de al lado era
+           la distancia al fundador, que era la noticia. Ahora la noticia es dónde está. */
+        .tr-cifra { font-size: 0.6rem; color: var(--t-ink2); font-variant-numeric: tabular-nums; }
+        .tr-cifra i { font-style: normal; color: var(--muted); }
         .tr-eje {
           display: flex; justify-content: space-between; font-size: 0.58rem; color: var(--t-ink3);
           padding: 0.2rem 0 0; margin-left: calc(168px + 0.6rem);
@@ -830,7 +832,6 @@ export default function Evolution() {
           min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
         }
         .in-gen-cab span { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
-        .in-gen-cab i { font-style: normal; color: var(--t-ink4); }
         /* La barra lleva la misma vara que la leyenda y la tira —el recorrido medido—, y la marca
            fina del fundador: sin ella, «63%» no dice de dónde salió este linaje. */
         .in-barra { position: relative; height: 6px; margin-top: 2px; border-bottom: 1px solid var(--t-rule2); }
@@ -934,8 +935,9 @@ export default function Evolution() {
         .lg-cab b { color: var(--t-ink); letter-spacing: 0.04em; }
         .lg-cifra { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
-        /* La barra: el recorrido medido del gen —su p01 y su p99—, con el fundador cerca del centro
-           y margen fuera para el linaje que se salga. La geometría es posGen, en designs.ts. */
+        /* La barra: octavas desde el fundador, que va en el centro exacto, con el recorrido medido
+           —su p01 y su p99— cerca de los bordes y margen fuera para el linaje que se salga. La
+           geometría es posGen, en designs.ts. */
 
         .lg-que { font-size: 0.68rem; line-height: 1.5; color: var(--t-ink); margin: 0.2rem 0 0; }
         .lg-nota { font-size: 0.62rem; line-height: 1.5; color: var(--t-ink3); margin-top: 0.2rem; }
