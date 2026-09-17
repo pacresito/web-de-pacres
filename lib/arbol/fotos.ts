@@ -102,10 +102,10 @@ export const FOTOS: Foto[] = [
     titulo: "El primer encuentro, en el faro de Cabo de Palos",
     tomada: "1971-04-09",
     gente: [
-      { id: "p124", nombre: "Ricardo", recuadro: r(252, 0, 340, 1452) },
-      { id: "p125", nombre: "Lola", recuadro: r(455, 245, 300, 1452) },
-      { id: "p275", nombre: "Mariló", recuadro: r(730, 295, 300, 1452) },
-      { id: "p140", nombre: "Tili", recuadro: r(975, 190, 380, 1452) },
+      { id: "p124", nombre: "Ricardo", recuadro: r(322, 90, 460, 1792) },
+      { id: "p125", nombre: "Lola", recuadro: r(615, 475, 351, 1792) },
+      { id: "p275", nombre: "Mariló", recuadro: r(937, 533, 351, 1792) },
+      { id: "p140", nombre: "Tili", recuadro: r(1224, 410, 445, 1792) },
     ],
   },
 ];
