@@ -397,24 +397,39 @@ export type Bicho = {
 
 /**
  * De qué se muere aquí, y no hay una cuarta: **quedarse fuera al anochecer no mata**, solo cuesta
- * la noche. Lo comparten el bicho y su marca, que cuentan la misma muerte para dos sitios
- * distintos —el panel y el lienzo— y no pueden discrepar.
+ * la noche. Se lo apunta el bicho, y lo leen los dos que hablan de él cuando ya no está: el panel,
+ * que lo cuenta, y el cuerpo que se disuelve, que enseña de cuál de las tres fue.
  */
 export type Muerte = "comido" | "hambre" | "vejez";
 
 /**
- * Una muerte, guardada lo justo para poder pintarla: dónde, cuándo, de qué tamaño era y con qué
- * tono —la fiereza, que es lo único del genoma que se ve—. Caducan en `MARCA` ticks. Solo hay dos
- * causas de día: **al anochecer ya no muere nadie de la jornada**, así que el que se queda fuera
- * sigue pintándose vivo, que es lo que es. La tercera, la vejez, sí llega de noche — y su marca no
- * cuenta ticks, porque el reloj del mundo está parado mientras se mira.
+ * El zarpazo: dónde y cuándo se comieron a alguien, y de qué tamaño era. Dura `MARCA` ticks y es
+ * **la única muerte que no deja cuerpo**, porque el cuerpo se lo lleva quien se lo come. Las otras
+ * dos van a `restos`.
  */
-export type Marca = {
-  x: number; y: number; r: number; t: number;
-  causa: Muerte;
-  /** Lo viejo que era, 0…1. Es lo que le da color al cuerpo, vivo o muerto. */
-  edad: number;
-};
+export type Marca = { x: number; y: number; r: number; t: number };
+
+/**
+ * Un cuerpo que sigue a la vista después de muerto. **No es una marca**: la marca es la animación
+ * de un instante y esto es el bicho entero —su genoma, su rumbo, su camada, de qué se murió—
+ * pintándose igual que cuando andaba, solo que cada vez más transparente hasta que se lo traga el
+ * suelo.
+ *
+ * Lo dejan la vejez y el hambre. En la vejez es lo que enseña que **criar va antes que morirse**:
+ * la madre se queda toda la noche al lado de las crías que acaba de poner, con su `+n` encima, y
+ * se va a la mañana siguiente. Muriendo a la vista —el cuerpo desaparecía al cerrar el día— lo
+ * que se veía era lo contrario: una mancha donde estaba la madre y unas crías saliendo de ella.
+ */
+export type Resto = { b: Bicho; restan: number };
+
+/**
+ * Lo que tarda un cuerpo en disolverse, **en ticks**: unos tres segundos a ×1, y menos cuanto más
+ * corra el mundo, como todo lo demás. En fracciones de jornada —media, que es como estuvo— a ×1
+ * son ocho segundos de cadáver por cada bicho que se muere, y con el censo lleno el campo es un
+ * cementerio. Va en ticks y no en reloj de pared porque el cuerpo es del mundo: rebobinar tiene
+ * que devolverlo donde estaba.
+ */
+export const DISOLUCION = 180;
 
 export type Mundo = {
   cfg: Config;
@@ -441,8 +456,10 @@ export type Mundo = {
    * ellos** por grande que sea uno. Sale del mundo cada mañana, no de un número elegido a ojo.
    */
   especie: number;
-  /** Quién ha muerto, dónde y de qué, para que el pintado pueda enseñarlo. No decide nada. */
+  /** Dónde se han comido a alguien hoy, para que el pintado pueda enseñarlo. No decide nada. */
   marcas: Marca[];
+  /** Los cuerpos de los que se murieron sin que se los comieran, disolviéndose. Tampoco decide nada. */
+  restos: Resto[];
   extinto: boolean;
   eva: Genoma;
   /** `fuera` son **noches pasadas a la intemperie**, no muertes: al anochecer ya no muere nadie. */
@@ -499,7 +516,7 @@ export function crearMundo(semilla: string, cfg: Partial<Config> = {}): Mundo {
   const eva = evaDe(azar, c);
   const m: Mundo = {
     cfg: c, azar, dia: 0, viajes: 0, t: 0, duracion: 0, bichos: [], comida: [], siguienteId: 1,
-    noche: false, especie: 0, marcas: [],
+    noche: false, especie: 0, marcas: [], restos: [],
     extinto: false, eva, cuenta: { nacidos: 0, hambre: 0, fuera: 0, comidos: 0, vejez: 0 },
   };
   for (let i = 0; i < c.censoInicial; i++) nacer(m, { ...eva }, -1, 0);
@@ -584,6 +601,7 @@ export function amanecer(m: Mundo) {
   m.viajes = 0;
   m.noche = false;
   m.comida.length = 0;
+  // Los zarpazos se van con el día; los cuerpos no, que para eso llevan su cuenta atrás.
   m.marcas.length = 0;
   m.especie = dispersion(m);
   const margen = c.casa + RADIO_COMIDA;
@@ -727,7 +745,7 @@ function comer(m: Mundo, dep: Bicho, presa: Bicho) {
   dep.carga += presa.carga;
   presa.vivo = false;
   presa.muerte = "comido";
-  m.marcas.push({ x: presa.x, y: presa.y, r: presa.radio, t: m.t, causa: "comido", edad: edadDe(m, presa) });
+  m.marcas.push({ x: presa.x, y: presa.y, r: presa.radio, t: m.t });
   m.cuenta.comidos++;
   dep.muerde = 0; dep.restan = 0;
   // Al que se traga le puede quedar alguien a medio comer en su propia boca: se suelta, que quien
@@ -763,7 +781,7 @@ function morder(m: Mundo, dep: Bicho, presa: Bicho) {
   if (d > 1e-6) { dep.hx = dx / d; dep.hy = dy / d; }
 }
 
-/** Lo que dura en pantalla una muerte del día, en ticks. Solo la mira el pintado. */
+/** Lo que dura en pantalla el zarpazo, en ticks. Solo lo mira el pintado. */
 export const MARCA = 14;
 
 /** Si un punto cae en la franja del borde, que es casa. */
@@ -814,6 +832,13 @@ export function tick(m: Mundo) {
   const c = m.cfg;
   m.t++;
   if (m.marcas.length) m.marcas = m.marcas.filter((z) => m.t - z.t < MARCA);
+  // Los cuerpos sí cruzan el alba, así que llevan su propia cuenta atrás en vez de mirar `m.t`,
+  // que se pone a cero cada mañana. Y no corre de noche, que es cuando no hay ticks: el muerto se
+  // queda entero mientras se mira la camada, y se va durante la jornada siguiente.
+  if (m.restos.length) {
+    for (const z of m.restos) z.restan--;
+    m.restos = m.restos.filter((z) => z.restan > 0);
+  }
   const luz = luzDe(m.t, c), cae = luz < luzDe(m.t - 1, c);
   let radioMax = 1;
   for (const b of m.bichos) if (b.vivo && !b.aSalvo && b.radio > radioMax) radioMax = b.radio;
@@ -846,7 +871,7 @@ export function tick(m: Mundo) {
       b.vivo = false;
       b.muerte = "hambre";
       if (b.muerde) soltar(m, b);
-      m.marcas.push({ x: b.x, y: b.y, r: b.radio, t: m.t, causa: "hambre", edad: edadDe(m, b) });
+      m.restos.push({ b, restan: DISOLUCION });
       m.cuenta.hambre++;
       continue;
     }
@@ -976,13 +1001,14 @@ export function anochecer(m: Mundo) {
   }
   // **La vejez llega después de criar**: la última noche todavía se pone descendencia. Mata al
   // cerrar el día y no en el campo — cumplir años no es un accidente de la jornada—, así que el
-  // que se murió de viejo se queda a la vista toda la noche, al lado de los que acaban de nacer.
+  // que se murió de viejo se queda a la vista toda la noche, al lado de los que acaban de nacer,
+  // y se disuelve durante la mañana siguiente.
   if (c.vida < Infinity) {
     for (const b of m.bichos) {
       if (m.dia - b.nacido < c.vida) continue;
       b.vivo = false;
       b.muerte = "vejez";
-      m.marcas.push({ x: b.x, y: b.y, r: b.radio, t: m.t, causa: "vejez", edad: 1 });
+      m.restos.push({ b, restan: DISOLUCION });
       m.cuenta.vejez++;
     }
     m.bichos = m.bichos.filter((b) => b.vivo);

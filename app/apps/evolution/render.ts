@@ -6,9 +6,9 @@
 // diseño, así que este bucle tiene que servir igual para un pez de papel y para un instrumento de
 // rectas: en cuanto empiece a saber de aletas, el siguiente diseño no cabrá.
 
-import { MARCA, RADIO_COMIDA, edadDe, luzDe, type Bicho, type Mundo } from "./engine";
+import { DISOLUCION, MARCA, RADIO_COMIDA, edadDe, luzDe, type Bicho, type Mundo } from "./engine";
 import {
-  RECORRIDO, azarFijo, clamp, colorCuerpo, designFor, enrojecer, envejecer, giroDe, mix,
+  RECORRIDO, azarFijo, clamp, designFor, enrojecer, envejecer, giroDe, mix,
   type Cuerpo, type Design, type Paleta,
 } from "./designs";
 
@@ -215,32 +215,17 @@ export function pintar(
     ctx.globalCompositeOperation = "source-over";
   }
 
-  // Las muertes, debajo de los vivos. Comido es un anillo que se abre —el zarpazo— y el hambre es
-  // el cuerpo apagándose y encogiendo. El que se quedó fuera al anochecer no está aquí: no muere,
-  // así que se sigue pintando vivo donde le pilló la noche.
+  // El zarpazo, debajo de los vivos: un anillo que se abre donde se comieron a alguien. Es la
+  // única muerte que se pinta sin cuerpo, porque el cuerpo se lo está llevando el otro; las otras
+  // dos dejan resto. El que se quedó fuera al anochecer no está aquí: no muere, así que se sigue
+  // pintando vivo donde le pilló la noche.
   for (const z of m.marcas) {
     const k = (m.t - z.t) / MARCA;
     if (k < 0 || k > 1) continue;
-    if (z.causa === "vejez") {
-      // La vejez mata al cerrar el día, con el reloj del mundo parado: su marca no puede contar
-      // ticks como las otras dos, así que se apaga con la noche — a la vez que crecen las crías.
-      ctx.globalAlpha = (1 - noche) * 0.7;
-      ctx.fillStyle = colorCuerpo(p, z.edad, 0);
-      ctx.beginPath(); ctx.arc(z.x, z.y, z.r, 0, TAU); ctx.fill();
-      ctx.globalAlpha = 1;
-      continue;
-    }
-    if (z.causa === "comido") {
-      ctx.strokeStyle = p.hot;
-      ctx.globalAlpha = 1 - k;
-      ctx.lineWidth = 1.2;
-      ctx.beginPath(); ctx.arc(z.x, z.y, z.r * (1 + 3 * k), 0, TAU); ctx.stroke();
-      ctx.globalAlpha = 1;
-      continue;
-    }
-    ctx.globalAlpha = (1 - k) * 0.85;
-    ctx.fillStyle = colorCuerpo(p, z.edad, 0);
-    ctx.beginPath(); ctx.arc(z.x, z.y, z.r * (1 - 0.65 * k), 0, TAU); ctx.fill();
+    ctx.strokeStyle = p.hot;
+    ctx.globalAlpha = 1 - k;
+    ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.arc(z.x, z.y, z.r * (1 + 3 * k), 0, TAU); ctx.stroke();
     ctx.globalAlpha = 1;
   }
 
@@ -258,6 +243,38 @@ export function pintar(
   };
 
   const brote = Math.min(1, noche / 0.6);
+
+  // **Los muertos se quedan donde cayeron y se van con el suelo.** Se pintan como andaban —el
+  // mismo cuerpo, el mismo rumbo, la misma carga— y solo pierden opacidad: el motor ya no los
+  // tiene, pero para el que mira siguen siendo ese bicho, y sustituirlos por un disco en el
+  // momento de morir era enseñar una mancha donde estaba la madre justo cuando salían de ella las
+  // crías. Debajo de los vivos, que el mundo es de quien anda.
+  //
+  // **El aspa va sobre el cuerpo entero y no sobre los ojos**, que es donde se pidió: el ojo mide
+  // dos píxeles en la vista de mundo entero —la única que hay en un móvil— y la mitad de los
+  // diseños no tiene ojos, que ven por antenas o por un arco de barrido. Sobre el cuerpo se lee a
+  // las cuatro escalas y sirve para los cuatro mundos. Y recta mientras el cuerpo gira, como las
+  // esquinas del marcado: no es anatomía, es lo que dice de qué murió este.
+  for (const z of m.restos) {
+    const b = z.b;
+    ctx.globalAlpha = Math.min(1, z.restan / DISOLUCION);
+    const edad = edadDe(m, b);
+    d.cuerpo(ctx, { ...b, edad }, clamp(b.reserva / (c.capReserva * b.masa), 0, 1), paletaCon(edad));
+    if (b.muerte === "hambre") {
+      ctx.save();
+      const a = b.radio * 0.78;
+      ctx.strokeStyle = p.tinta;
+      ctx.lineWidth = Math.max(0.35, b.radio * 0.2);
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(b.x - a, b.y - a); ctx.lineTo(b.x + a, b.y + a);
+      ctx.moveTo(b.x + a, b.y - a); ctx.lineTo(b.x - a, b.y + a);
+      ctx.stroke();
+      ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+  }
+
   ctx.fillStyle = p.hi;
   ctx.globalAlpha = NIDO_DIA + NIDO_NOCHE * sombra;
   for (const b of m.bichos) if (b.dormido) {
@@ -276,7 +293,9 @@ export function pintar(
   // taparían justo las púas y los dientes que el panel se ha abierto a mirar.
   if (sel) {
     ctx.save();
-    const alcance = sel.g.vision * (1 - sombra) * RADIO_COMIDA;
+    // El aro del ojo solo si sigue vivo: un cuerpo también se puede marcar —se pulsa mientras se
+    // disuelve— y lo que ve un muerto es nada. Las esquinas sí, que son de quien mira.
+    const alcance = sel.vivo ? sel.g.vision * (1 - sombra) * RADIO_COMIDA : 0;
     if (alcance > 1) {
       ctx.strokeStyle = p.acc2;
       ctx.globalAlpha = 0.65;
@@ -392,7 +411,11 @@ export function pintar(
     ctx.lineWidth = 2.5;
     ctx.lineJoin = "round";
     ctx.strokeStyle = p.bg;
-    for (const b of m.bichos) {
+    // Las madres muertas esta noche llevan el suyo como las vivas: es la camada que acaban de
+    // poner, y es lo único que dice que criaron antes de morirse. El `hijos` de las vivas lo pone
+    // a cero el alba y el de un cuerpo ya no lo toca nadie, pero tampoco hace falta: para la noche
+    // siguiente hace mil ticks que se disolvió.
+    for (const b of [...m.bichos, ...m.restos.map((z) => z.b)]) {
       if (b.hijos <= 0) continue;
       const t = `+${b.hijos}`, x = b.x + b.radio + 2, y = b.y - b.radio - 2;
       ctx.strokeText(t, x, y);

@@ -49,7 +49,14 @@ function fichar(m: Mundo, b: Bicho): Ficha {
   for (const o of m.bichos) if (o.idMadre === b.id) vivas++;
   return {
     id: b.id, gen: b.gen,
-    dias: m.dia - b.nacido, vida: m.cfg.vida,
+    // **Los días que lleva vividos, contando el de hoy**, que es lo que hace que el plazo se lea:
+    // en crudo, `dia - nacido` deja al que se muere hoy de viejo en «9 días de 10» —y la ficha se
+    // congela ahí, porque muere al cerrar el día—, así que la causa y la edad se contradicen. De
+    // noche no se suma: `dia` ya es el de mañana, y la cría que acaba de nacer no ha salido aún.
+    // Topado en el plazo porque **un muerto no cumple años**: su cuerpo se puede pulsar al día
+    // siguiente —se disuelve cruzando el alba— y `dia` ya ha corrido, así que el de viejo saldría
+    // con once días de diez, que es justo la contradicción que esto viene a quitar.
+    dias: Math.min(m.cfg.vida, m.dia - b.nacido + (m.noche ? 0 : 1)), vida: m.cfg.vida,
     despensa: b.reserva / (m.cfg.capReserva * b.masa),
     carga: b.carga,
     crias: b.crias, vivas, camada: m.noche ? b.hijos : 0,
@@ -94,7 +101,10 @@ export default function Inspector({ mundo, id, eva, cerrar, genes = true }: {
       const m = mundo();
       if (!m) return;
       const b = m.bichos.find((x) => x.id === id) ?? null;
-      if (b) { cuerpoRef.current = b; setFicha(fichar(m, b)); }
+      // Se puede pulsar un cuerpo que todavía se disuelve, y entonces no hay ninguna foto anterior
+      // que enseñar: se saca de él, **una sola vez**, y desde ahí se congela como cualquier otra.
+      const cuerpo = b ?? (cuerpoRef.current ? null : m.restos.find((z) => z.b.id === id)?.b ?? null);
+      if (cuerpo) { cuerpoRef.current = cuerpo; setFicha(fichar(m, cuerpo)); }
       setVivo(b !== null);
       setMuerte(b ? null : cuerpoRef.current?.muerte ?? null);
     };

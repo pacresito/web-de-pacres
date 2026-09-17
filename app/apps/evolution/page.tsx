@@ -80,6 +80,15 @@ const TACTO = 9;
  * que una escala que se mueva por centésimas rehace mil quinientas figuras en cada fotograma.
  */
 const SEGUIMIENTO = 0.14;
+/**
+ * Lo que la cámara se queda donde se murió el que estaba siguiendo, en ms de reloj de pared. Sin
+ * esto, el bicho desaparece del censo y el mismo fotograma devuelve la vista al mundo entero: lo
+ * último que se ve del que llevabas media partida mirando es un salto hacia atrás. **Da de sobra
+ * para que el cuerpo termine de disolverse** —`DISOLUCION` son tres segundos a ×1—, que es lo que
+ * hay que poder ver. Es tiempo de quien mira y no del mundo, así que corre igual en pausa y no
+ * toca el determinismo.
+ */
+const LUTO = 5000;
 
 const ACENTO = (x: string | number) => `<span style="color:var(--t-accent)">${x}</span>`;
 
@@ -172,6 +181,13 @@ export default function Evolution() {
    * también lo que convierte un clic en coordenadas del mundo: lo que se pulsa es lo que se ve.
    */
   const camRef = useRef<Camara | null>(null);
+  /**
+   * Dónde está el marcado y hasta cuándo se le espera ahí. `hasta` en 0 es que sigue vivo: la
+   * cámara le hace el seguimiento y no hay plazo que contar. **La marca no se suelta al morir**
+   * —el panel sigue contando quién fue— y quien vuelve atrás lo encuentra vivo otra vez, así que
+   * el luto se rehace solo.
+   */
+  const lutoRef = useRef<{ id: number; x: number; y: number; hasta: number } | null>(null);
   const rafRef = useRef(0);
   const sizeRef = useRef({ W: 0, H: 0 });
   const dprRef = useRef(1);
@@ -416,6 +432,9 @@ export default function Evolution() {
    * Un clic en el lienzo marca al bicho que se haya pulsado, o suelta al que había si se pulsa el
    * suelo. Gana el más cercano y no el primero que se encuentre: en un montón de treinta, el
    * primero del censo es el más viejo, no el que está debajo del dedo.
+   *
+   * **Un cuerpo que todavía se disuelve se pulsa como uno vivo.** Se está viendo, así que se
+   * puede querer saber de quién era — y es justo cuando se quiere: acaba de pasar algo.
    */
   const pulsar = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     const m = mundoRef.current, v = camRef.current, cv = canvasRef.current;
@@ -424,7 +443,7 @@ export default function Evolution() {
     const x = (e.clientX - caja.left - v.ox) / v.escala, y = (e.clientY - caja.top - v.oy) / v.escala;
     const margen = TACTO / v.escala;
     let mejor: Bicho | null = null, cerca = 0;
-    for (const b of m.bichos) {
+    for (const b of [...m.bichos, ...m.restos.map((z) => z.b)]) {
       const dx = b.x - x, dy = b.y - y, d2 = dx * dx + dy * dy;
       const alcance = b.radio + margen;
       if (d2 > alcance * alcance) continue;
@@ -518,9 +537,27 @@ export default function Evolution() {
 
       // **La cámara se calcula siempre, aunque el mundo esté en pausa**: quien la mueve no es solo
       // el mundo, también un clic — y el que acaba de elegir a alguien tiene el mundo parado.
+      // El marcado es el vivo **o su cuerpo**, que sigue en el campo mientras se disuelve y se
+      // puede pulsar igual. `vivo` es lo que los distingue: el motor lo apaga al morir.
       const elegido = selRef.current ? m.bichos.find((b) => b.id === selRef.current) ?? null : null;
-      const meta = elegido
-        ? vistaSobre(W, H, CONFIG.ancho, CONFIG.alto, elegido.x, elegido.y)
+      const marcado = elegido ?? (selRef.current
+        ? m.restos.find((z) => z.b.id === selRef.current)?.b ?? null
+        : null);
+      // Dónde mira la cámara: al marcado mientras esté en el campo, y unos segundos más al sitio
+      // donde cayó. **El plazo arranca al morir y no al disolverse**, que es lo que hace que los
+      // cinco segundos sirvan para ver desaparecer el cuerpo en vez de empezar a contar cuando ya
+      // no queda nada. Se pone al descubrirlo muerto y no al morir, que quien lo descubre es este
+      // bucle: adelantando cien días nadie está mirando.
+      const ahora = performance.now();
+      let luto = lutoRef.current;
+      if (luto && luto.id !== selRef.current) luto = null;   // era de otro
+      if (marcado) {
+        luto = { id: marcado.id, x: marcado.x, y: marcado.y, hasta: marcado.vivo ? 0 : (luto?.hasta || ahora + LUTO) };
+      } else if (luto && !luto.hasta) luto.hasta = ahora + LUTO;   // se fue sin dejar cuerpo
+      lutoRef.current = luto;
+      const foco = luto && (!luto.hasta || luto.hasta > ahora) ? luto : null;
+      const meta = foco
+        ? vistaSobre(W, H, CONFIG.ancho, CONFIG.alto, foco.x, foco.y)
         : vistaDe(W, H, CONFIG.ancho, CONFIG.alto);
       const antes = camRef.current;
       let v = meta;
@@ -539,13 +576,13 @@ export default function Evolution() {
       // Se repinta cuando el mundo ha cambiado, cuando se ha movido la cámara y también cuando
       // algo de fuera lo pide —el tema, un cambio de tamaño—: en pausa no hay ticks y sin esa
       // última razón el lienzo se quedaría con la paleta anterior hasta que alguien diera al play.
-      if (dados || movida || repintarRef.current) {
+      if (dados || movida || repintarRef.current || (luto && luto.hasta > ahora)) {
         repintarRef.current = false;
         // Cuánto lleva corrida la noche, para que las crías crezcan en vez de aparecer hechas.
         const noche = m.noche
           ? Math.min(1, Math.max(0, 1 - (nocheRef.current.fin - performance.now()) / nocheRef.current.dura))
           : 1;
-        pintar(ctx, m, disenoRef.current, paletaRef.current, v, W, H, dprRef.current, noche, elegido);
+        pintar(ctx, m, disenoRef.current, paletaRef.current, v, W, H, dprRef.current, noche, marcado);
       }
 
       // El botón de volver se pinta desde React y la historia vive en un ref, así que el espejo se
@@ -626,7 +663,10 @@ export default function Evolution() {
       <style>{`
         main { --border: var(--t-rule); --muted: var(--t-ink3); }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        html, body { height: 100%; overflow: hidden; }
+        /* **El papel va en la raíz y no solo en el shell.** El shell mide 100dvh, y en el móvil
+           eso es lo que medía la ventana cuando se calculó: al plegarse la barra del navegador la
+           ventana crece y el shell no, y por el hueco de abajo se ve el blanco del documento. */
+        html, body { height: 100%; overflow: hidden; background: var(--t-paper); }
 
         .toolbar { display: flex; align-items: center; gap: 0.4rem; padding: 0.6rem 0; flex-wrap: wrap; }
         .ev-btn {
@@ -963,25 +1003,14 @@ export default function Evolution() {
              cajón, y un mundo centrado se lleva la mitad debajo de él. */
           .sim-canvas { border-radius: 0; top: 0; transform: translateX(-50%); }
 
-          /* Una fila y se desliza: apilados son cuatro renglones de botones, y los dos que se usan
-             a ráfagas —seguir y la velocidad— acaban lejos del pulgar. La máscara de la derecha es
-             lo que dice que la fila sigue. */
-          /* **Y con min-width 0**, o la fila que no envuelve pasa a ser el ancho mínimo de la
-             página entera —ochocientos píxeles en una ventana de 375— y el lienzo se mide contra
-             una caja que no existe. El overflow no salva: quien decide es el mínimo automático. */
-          .toolbar {
-            flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; min-width: 0;
-            justify-content: flex-start;
-            mask-image: linear-gradient(to right, #000 92%, transparent);
-          }
-          /* **Maximizado no se desliza: se envuelve.** El lienzo no crece por estrechar la barra
-             —lo limita el ancho—, así que aquí, donde el alto no se lo quita a nadie, salen todos
-             los botones a la vez y la línea de estado se queda con su renglón. */
-          .escena.fs .toolbar {
-            flex-wrap: wrap; overflow-x: visible; mask-image: none; justify-content: flex-start;
-            padding-right: 2.2rem;   /* el aspa de salir flota en esa esquina */
-          }
-          .toolbar::-webkit-scrollbar { display: none; }
+          /* **La barra envuelve, no se desliza.** En vertical el mundo lo limita el ancho, así
+             que los renglones que se lleva la barra no le quitan ni un píxel de lienzo — y a
+             cambio se ven todos los botones sin tener que descubrir que la fila seguía. Es lo
+             mismo que hace maximizada, y por lo mismo. */
+          /* A la izquierda, también maximizada: centrada, la última fila queda descolgada del
+             resto y la barra deja de leerse como una sola cosa. */
+          .toolbar, .escena.fs .toolbar { justify-content: flex-start; }
+          .escena.fs .toolbar { padding-right: 2.2rem; }   /* el aspa de salir flota en esa esquina */
           .toolbar > * { flex: 0 0 auto; }
 
           .lg-panel, .dr-panel, .es-panel, .cajon, .rg-panel {
