@@ -88,13 +88,13 @@ export const FOTOS: Foto[] = [
   },
   {
     titulo: "La familia Carrión",
-    tomada: "1920",
-    // Medidos sobre el recorte de 1352 px, ya sin el margen del papel ni la flecha.
+    tomada: "1922",
+    // Medidos sobre el recorte de 1354 px que preparó Pablo, sin el margen ni la flecha.
     gente: [
-      { id: "p272", nombre: "Dolores", recuadro: r(595, 152, 200, 1352) },
-      { id: "p271", nombre: "Pepe", recuadro: r(835, 160, 210, 1352) },
-      { id: "p273", nombre: "Joaquín", recuadro: r(615, 570, 190, 1352) },
-      { id: "p288", nombre: "Magdalena", recuadro: r(804, 579, 175, 1352) },
+      { id: "p272", nombre: "Dolores", recuadro: r(615, 115, 165, 1354) },
+      { id: "p271", nombre: "Pepe", recuadro: r(835, 164, 210, 1354) },
+      { id: "p273", nombre: "Joaquín", recuadro: r(615, 574, 190, 1354) },
+      { id: "p288", nombre: "Magdalena", recuadro: r(804, 583, 175, 1354) },
     ],
   },
   { tomada: "1949", gente: [{ id: "p467", nombre: "Florentina", recuadro: r(30, 320, 1120, 1223) }] },
