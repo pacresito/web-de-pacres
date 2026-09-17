@@ -247,7 +247,54 @@ export type Config = {
    * —0,75 presas al día contra 0,81— y sigue dentro del ruido. Todo de `dentellada.medir.ts`.
    */
   ticksPresa: number;
+  /**
+   * Lo que una mutación multiplica o divide, como mucho: el factor es `1 + |centrado| · tasa` y
+   * `centrado` no pasa de 1,5, así que **el tope por generación es ±7,5%** y lo típico, ±2%.
+   *
+   * **La elige el ojo, y la acota la selección por debajo.** Lo que se mira es una camada al lado de
+   * su madre, y el salto se lee en el eje de cada gen: ahí la talla es el más estrecho —el gen que
+   * más aprieta la selección es el que menos recorrido deja—, así que la misma mutación le ocupa
+   * tres veces más barra que a la fiereza. Que la herencia aguanta lo dice el cuartil: de las hijas
+   * de las madres del cuartil alto de talla, el 67% se queda en el cuartil alto, contra el 25% del
+   * azar.
+   *
+   * **Por debajo de 0,04 la selección se queda sin materia prima**, y ése es el suelo: con el
+   * contraste de `engine.test.ts` —70 bocados contra 400, 24 semillas a 150 días— el margen de la
+   * talla va ×1,35 · ×1,35 · ×1,39 · ×1,23 · ×0,92 para 0,08 · 0,06 · 0,04 · 0,03 · 0,02. En 0,02
+   * el mundo rico ya no hace gigantes: se invierte.
+   *
+   * Y bajarla rinde cada vez menos, porque `RECORRIDO` se remide y el eje se renormaliza detrás.
+   * Dividiéndola por cuatro, el recorrido explorado se encoge ×0,53 en el empuje y ×0,27 en la
+   * fiereza: al gen que deriva se lo fija la propia mutación, y se sigue viendo igual por mucho que
+   * se le acorte el paso.
+   *
+   * **Tocarla arrastra tres tablas y una perilla:** `FUNDADOR`, `RECORRIDO` y `SEMI` se remiden, y
+   * el fundador que sale de la medida puede no aguantar el primer día — de ahí `despensaFundador`.
+   */
+  /**
+   * Veces la despensa normal con las que **el fundador** sale al mundo. Los demás nacen con la suya
+   * llena, que se la paga su madre; al primero no hay quien se la pague, y el día 1 es un sorteo que
+   * se lleva el mundo entero: sin provisiones, el 17% de las palabras dan un mundo muerto antes de
+   * anochecer.
+   *
+   * **Compra un día de vida, no hijos gratis**, y por eso no es lo mismo que empezar con varias
+   * fundadoras. La despensa es a la vez el umbral de cría, así que cabía esperar que el sobrante
+   * naciera esa misma noche; no pasa, porque la jornada se lo come: de vacío se aguantan 230 ticks
+   * de los 1000 que dura un día, así que con cinco veces se llega al anochecer con poco más de una
+   * despensa y la camada sube de cuatro crías a cinco. Lo que cambia es que se llega.
+   *
+   * Cinco y no dos ni diez: a 200 días se extingue el 21% de las palabras con una, el 7% con dos, el
+   * 4% con tres, el **2% con cinco** y el 5% con diez. Y no mueve a dónde va la partida — el censo
+   * se queda en veinte y la talla en 2,2 con cualquiera de ellas.
+   */
+  despensaFundador: number;
   tasa: number;
+  /**
+   * Lo que suma o resta una mutación de la sociabilidad, el único gen con signo. **Va atado a
+   * `tasa` en la misma proporción** —0,75 de ella— para que los seis genes se muevan la misma
+   * fracción de su eje: suelto, tocar la tasa dejaba a la sociabilidad de gen más saltarín sin que
+   * nadie lo hubiera decidido.
+   */
   paso: number;
   /**
    * Días que vive un bicho, contados desde el primero que sale al campo. `Infinity` es no morirse
@@ -271,14 +318,19 @@ export type Config = {
 //
 // Medido en `convergencia.medir.ts`, y **la medida se muerde la cola: hay que iterarla**. El
 // recorrido sale de dónde acaba la población y dónde acaba la población depende de dónde nace, así
-// que la primera pasada solo acierta el orden de magnitud —movió la `talla` un 29% y la `visión`
-// un 44%—. Se vuelve a poner y se vuelve a medir hasta que el fundador propuesto sea el que ya
-// está: cinco pasadas, y la última mueve todo por debajo del 2%.
+// que la primera pasada solo acierta el orden de magnitud. Se vuelve a poner y se vuelve a medir
+// hasta que el fundador propuesto sea el que ya está: cuatro pasadas, y la última mueve los seis
+// por debajo del 2%.
 //
-// **Salvo `retorno`, que no se deja clavar más fino que un 10%, y eso también es el resultado.**
-// Es el gen de mayor abanico entre mundos —cinco veces el de partida, contra 1,6 de la talla—, así
-// que su centro es una media de mundos que no se parecen y cada muestreo la mueve. Pedirle más
-// precisión sería inventarla: es del mismo orden que lo que mueve el propio muestreo.
+// **`fiereza` y `retorno` no se dejan clavar: su centro propuesto rebota un 15% de una pasada a la
+// siguiente, y eso también es el resultado.** Son los dos que abren abanico entre mundos —×3,2 y
+// ×6,3 del día cien al mil, contra ×1,1 de la talla—, así que lo propone una media de mundos que no
+// se parecen, con una cola de arriba larguísima que cada muestreo deja en otro sitio: el `retorno`
+// llega a 14 en algún mundo y vive en 3,3 en casi todos.
+//
+// **Lo que sí se comprueba en esos dos es el p50 de la sección 6**, que es lo que de verdad hace
+// falta: dice dónde cae la población en la escala con la que se la pinta, y ahí los seis están entre
+// 0,46 y 0,58. Perseguir el punto medio de una cola sería perseguirse la cola.
 //
 // Ponerlo en el centro del recorrido es además lo que hace que un gen se pueda ver moverse en las
 // dos direcciones: naciendo en un extremo, la mitad de su rango no se visita nunca.
@@ -291,7 +343,7 @@ export type Config = {
 // otra: el fundador es **el** centro del eje y no un sitio distinto cada vez, así que dos semillas
 // se comparan mirando la misma raya.
 export const FUNDADOR: Genoma = {
-  empuje: 2.53, talla: 2.42, vision: 28.57, sociabilidad: -0.09, fiereza: 1.33, retorno: 3.27,
+  empuje: 2.5, talla: 2.19, vision: 31.11, sociabilidad: -0.06, fiereza: 1.79, retorno: 3.33,
 };
 // Medido en `costes.medir.ts`, y **el tamaño del mundo lo decide que se coma la comida**. Con
 // 448×320 sobraba la mitad del suelo todos los días y el centro del mapa no lo pisaba nadie: la
@@ -329,18 +381,18 @@ export const URNA = [25, 40, 55];
 // **Se empieza con una sola bicha, y el mundo no recuerda con cuántas empezó.** Medido a 100 días
 // sobre treinta y dos semillas, arrancar con 1, 5, 10 o 20 da el mismo censo ya desde el día 10: la
 // comida fija el techo y la población lo alcanza en menos de diez días desde donde sea. Con veinte
-// no se compraba diversidad —eran clones de la misma Eva— sino saltarse el principio, que es la
+// no se compraba diversidad —eran clones del mismo fundador— sino saltarse el principio, que es la
 // parte que se puede mirar.
 //
-// El precio se paga entero en el clima pobre, donde la fundadora que no cría la primera noche se
-// lleva el mundo: con 25 bocados, tres de cuarenta y cuatro semillas se acaban el día 2; con 40,
-// ninguna.
+// El precio se paga entero el primer día, donde la fundadora que no cría la primera noche se lleva
+// el mundo. **Se paga con despensa y no con más fundadoras**, que es `despensaFundador`: una segunda
+// bicha arregla la cifra igual de bien y a cambio el principio deja de ser un principio.
 export const CONFIG: Config = {
   ancho: 288, alto: 200,
   comidas: 40, censoInicial: 1,
   ticksDia: 1000, capReserva: CAP_RESERVA, casa: 18,
   caza: true, boca: 1.2, ticksPresa: 120,
-  tasa: 0.08, paso: 0.06,
+  despensaFundador: 5, tasa: 0.05, paso: 0.0375,
   vida: 10,
   fundador: FUNDADOR,
 };
@@ -521,8 +573,9 @@ export function crearMundo(semilla: string, cfg: Partial<Config> = {}): Mundo {
     noche: false, especie: 0, marcas: [], restos: [],
     extinto: false, cuenta: { nacidos: 0, hambre: 0, fuera: 0, comidos: 0, vejez: 0 },
   };
-  // La población de partida son clones del fundador, para ver divergir lo que empezó idéntico.
-  for (let i = 0; i < c.censoInicial; i++) nacer(m, { ...c.fundador }, -1, 0);
+  // La población de partida son clones del fundador, para ver divergir lo que empezó idéntico, y
+  // salen con provisiones: nadie les ha pagado la despensa y el primer día no perdona.
+  for (let i = 0; i < c.censoInicial; i++) nacer(m, { ...c.fundador }, -1, 0).reserva *= c.despensaFundador;
   amanecer(m);
   return m;
 }

@@ -59,7 +59,8 @@ function secciones(comidas: number): Seccion[] {
         ["la jornada", `${cfg.ticksDia} ticks`, "se acaba cuando se acaba: el que sigue fuera hace noche donde le pilló"],
         ["la luz", "4·u·(1 − u)", "u es lo que lleva corrido el día: cero al alba y al ocaso, uno al mediodía"],
         ["el clima", `${cfg.comidas} bocados al día`, `lo sortea la semilla entre ${URNA.join(", ")} — es el techo de la población`],
-        ["se empieza con", `${cfg.censoInicial}`, "y el mundo no recuerda con cuántas empezó: en diez días el clima manda"],
+        ["se empieza con", `${cfg.censoInicial}`, `y el mundo no recuerda con cuántas empezó: en diez días el clima manda`],
+        ["y con provisiones", `despensa ×${num(cfg.despensaFundador)}`, "solo el fundador, al que nadie se la ha pagado: le compra el primer día, no hijos"],
       ],
     },
     {

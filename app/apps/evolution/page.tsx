@@ -53,9 +53,9 @@ const HISTORIA = 60;
  */
 const PAUSA_NOCHE = 1500;
 
-// **La de por defecto tiene que llegar viva a mañana**, que se arranca con una sola fundadora y el
-// primer día es una lotería: con «hola» se moría de hambre antes de anochecer y la página abría en
-// un mundo vacío. Ésta sale con el clima de en medio y aguanta trescientos días.
+// **La de por defecto se elige mirándola**: clima de en medio, viva a los trescientos días y con
+// población de sobra para que la tira diga algo desde el principio. No vale cualquiera que no se
+// extinga — una que sobrevive con cuatro bichos abre la página en un mundo que no se mueve.
 const SEMILLA_POR_DEFECTO = "marea";
 
 /**

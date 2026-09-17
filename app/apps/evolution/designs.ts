@@ -21,26 +21,29 @@ export const clamp = (v: number, a: number, b: number) => (v < a ? a : v > b ? b
  * hace `SEMI`, debajo, y por eso son dos tablas y no una.
  *
  * Mientras fueron la misma, la cola mandaba en el dibujo. La del `retorno` se mueve de una pasada a
- * otra —p99 8,60 la anterior, 7,35 esta, y 11,45 si se mira solo el día mil—, así que cuatro bichos
- * raros decidían con qué escala se pintaba la población entera: los tres cuartos de abajo apretados
- * en media escala y la otra media para ellos. Separadas, el recorrido puede crecer con lo que
- * aparezca sin estrechar el dibujo de nadie.
+ * otra —y la de la `fiereza` con ella—, así que cuatro bichos raros decidían con qué escala se
+ * pintaba la población entera: los tres cuartos de abajo apretados en media escala y la otra media
+ * para ellos. Separadas, el recorrido puede crecer con lo que aparezca sin estrechar el dibujo de
+ * nadie.
  *
  * No son ÷2 y ×2 del fundador. El fundador no tiene por qué estar donde vive la población —y durante
  * mucho tiempo no lo estuvo—, así que anclar en él dejaba la mitad de cada rango sin visitar.
  * Anclando en la población, un extremo lo tiene el 1% de los bichos, que es lo que hace que verlo
  * signifique algo.
  *
- * Salen de la sección 7 de `convergencia.medir.ts` —48 mundos × 1000 días, 79.000 bichos
- * muestreados— y se refrescan corriéndolo otra vez.
+ * Salen de la sección 7 de `convergencia.medir.ts` —48 mundos × 1000 días, 80.000 bichos
+ * muestreados— y **se refrescan cada vez que se toca `tasa`**: bajarla encoge lo que un linaje llega
+ * a recorrer, y no por igual en los seis. Al gen que la selección aprieta —empuje, talla, visión— le
+ * fija el recorrido ella y encoge poco; al que deriva —fiereza, retorno— se lo fija la propia
+ * mutación y encoge casi en proporción.
  */
 export const RECORRIDO: Record<Rasgo, [number, number]> = {
-  empuje: [1.66, 3.78],
-  talla: [1.89, 3.15],
-  vision: [20.23, 41.10],
-  sociabilidad: [-0.65, 0.33],
-  fiereza: [0.36, 4.28],
-  retorno: [1.27, 7.35],
+  empuje: [1.76, 3.54],
+  talla: [1.74, 2.76],
+  vision: [23.69, 40.86],
+  sociabilidad: [-0.41, 0.28],
+  fiereza: [0.96, 3.35],
+  retorno: [1.59, 6.98],
 };
 
 /**
@@ -56,14 +59,16 @@ export const RECORRIDO: Record<Rasgo, [number, number]> = {
  * cuánto se ha ido de donde salió, no en qué percentil vive.
  *
  * Lo mide la sección 6 de `convergencia.medir.ts`, que de paso comprueba las dos cosas que la escala
- * tiene que conseguir. Que el cuerpo de la población quepa ancho: del p25 al p75 ocupa entre el 31%
- * y el 42% de ella, donde el `retorno` con la tabla compartida se quedaba en el 24%. Y que los
- * umbrales sigan diciendo algo: los seis que cuelgan de uno —pala, brazo, patas, púas, aletas y lo
- * que le sale al grande— los lleva del 21% al 31% de los bichos, y ninguno se ha vuelto universal ni
- * imposible.
+ * tiene que conseguir. Que el cuerpo de la población quepa ancho: del p25 al p75 ocupa entre el 32%
+ * y el 40% de ella, donde el `retorno` con la tabla compartida se quedaba en el 24%. Y que los
+ * umbrales sigan diciendo algo: los que cuelgan de uno —pala, brazo, patas, púas, aletas y lo que le
+ * sale al grande— los lleva del 17% al 47% de los bichos, y ninguno se ha vuelto universal ni
+ * imposible. **Ese es el número que avisa cuando el fundador deja de vivir donde vive la
+ * población:** clavándole la talla dos décimas por encima del centro medido, la pala se la ponía el
+ * 67% —un adorno que ya no dice nada— y la mitad de arriba de su barra no la pisaba nadie.
  */
 const SEMI: Record<Rasgo, number> = {
-  empuje: 0.42, talla: 0.26, vision: 0.38, sociabilidad: 0.30, fiereza: 1.23, retorno: 0.87,
+  empuje: 0.36, talla: 0.22, vision: 0.29, sociabilidad: 0.23, fiereza: 0.56, retorno: 0.8,
 };
 
 /**
