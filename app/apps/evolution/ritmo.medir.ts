@@ -123,3 +123,18 @@ for (const vel of VELOCIDADES) {
 }
 console.log(`\nSi una jornada tarda lo que dice su fila, va tan rápido como la pantalla deja.` +
   ` Si tarda más, mira los cuadros por segundo y los cuerpos por cuadro — no el motor.`);
+
+// **Lo que este medidor no puede medir es el navegador**, que es donde se nota. La tabla de arriba
+// dice lo que una jornada *debería* tardar; esto la cronometra de verdad. Va aquí y no en la
+// página porque es diagnóstico y no mundo: la partida no tiene por qué llevar un reloj encima.
+console.log(`\nPara cronometrarla de verdad, pegar esto en la consola de /apps/evolution — mide la
+primera jornada completa que pase, de amanecer a anochecer, a la velocidad que esté puesta:
+
+  (()=>{const e=document.querySelector('.ev-estado');let f=0,t0=0;const i=setInterval(()=>{
+  const n=e.textContent.includes('anochece');
+  if(f===0&&n)f=1; else if(f===1&&!n){f=2;t0=performance.now()}
+  else if(f===2&&n){clearInterval(i);console.log(((performance.now()-t0)/1000).toFixed(2)+' s la jornada')}},8)})()
+
+Y para saber a qué refresco va la pantalla, que es lo que fija la fila:
+
+  (()=>{let n=0,t=performance.now();const f=()=>{n++;performance.now()-t<1000?requestAnimationFrame(f):console.log(n+' Hz')};requestAnimationFrame(f)})()`);

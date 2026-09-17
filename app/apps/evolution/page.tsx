@@ -81,14 +81,19 @@ const TACTO = 9;
  */
 const SEGUIMIENTO = 0.14;
 /**
- * Lo que la cámara se queda donde se murió el que estaba siguiendo, en ms de reloj de pared. Sin
- * esto, el bicho desaparece del censo y el mismo fotograma devuelve la vista al mundo entero: lo
- * último que se ve del que llevabas media partida mirando es un salto hacia atrás. **Da de sobra
- * para que el cuerpo termine de disolverse** —`DISOLUCION` son tres segundos a ×1—, que es lo que
- * hay que poder ver. Es tiempo de quien mira y no del mundo, así que corre igual en pausa y no
- * toca el determinismo.
+ * Lo que la cámara se queda **después** de que no quede cuerpo que mirar, en ms de reloj de pared.
+ * Sin ella, el bicho desaparece del censo y el mismo fotograma devuelve la vista al mundo entero:
+ * lo último que se ve del que llevabas media partida mirando es un salto hacia atrás.
+ *
+ * **Es una cola y no un plazo fijo**, porque el cuerpo se disuelve en ticks y la cámara espera en
+ * segundos: contando desde la muerte, los cinco segundos que a ×1 cubren la noche, la disolución y
+ * un respiro se convertían a ×64 en cinco segundos de suelo vacío con treinta días pasando por
+ * detrás. Siguiendo al cuerpo, la espera dura lo que dura lo que hay que ver, a la velocidad que
+ * sea — y en pausa no se acaba nunca, que es justo lo que se quiere al pararse a mirar un muerto.
+ *
+ * Es tiempo de quien mira y no del mundo, así que corre igual en pausa y no toca el determinismo.
  */
-const LUTO = 5000;
+const COLA = 2000;
 
 const ACENTO = (x: string | number) => `<span style="color:var(--t-accent)">${x}</span>`;
 
@@ -185,9 +190,9 @@ export default function Evolution() {
    * Dónde está el marcado y hasta cuándo se le espera ahí. `hasta` en 0 es que sigue vivo: la
    * cámara le hace el seguimiento y no hay plazo que contar. **La marca no se suelta al morir**
    * —el panel sigue contando quién fue— y quien vuelve atrás lo encuentra vivo otra vez, así que
-   * el luto se rehace solo.
+   * la espera se rehace sola.
    */
-  const lutoRef = useRef<{ id: number; x: number; y: number; hasta: number } | null>(null);
+  const esperaRef = useRef<{ id: number; x: number; y: number; hasta: number } | null>(null);
   const rafRef = useRef(0);
   const sizeRef = useRef({ W: 0, H: 0 });
   const dprRef = useRef(1);
@@ -543,19 +548,18 @@ export default function Evolution() {
       const marcado = elegido ?? (selRef.current
         ? m.restos.find((z) => z.b.id === selRef.current)?.b ?? null
         : null);
-      // Dónde mira la cámara: al marcado mientras esté en el campo, y unos segundos más al sitio
-      // donde cayó. **El plazo arranca al morir y no al disolverse**, que es lo que hace que los
-      // cinco segundos sirvan para ver desaparecer el cuerpo en vez de empezar a contar cuando ya
-      // no queda nada. Se pone al descubrirlo muerto y no al morir, que quien lo descubre es este
-      // bucle: adelantando cien días nadie está mirando.
+      // Dónde mira la cámara: al marcado mientras esté en el campo, y la cola al sitio donde cayó.
+      // **El plazo se renueva mientras quede cuerpo**, así que solo empieza a correr cuando ya no
+      // hay nada que mirar. Se lleva en reloj de pared y por eso se lee de `performance.now()` y
+      // no del mundo: adelantando cien días nadie está mirando.
       const ahora = performance.now();
-      let luto = lutoRef.current;
-      if (luto && luto.id !== selRef.current) luto = null;   // era de otro
+      let espera = esperaRef.current;
+      if (espera && espera.id !== selRef.current) espera = null;   // era de otro
       if (marcado) {
-        luto = { id: marcado.id, x: marcado.x, y: marcado.y, hasta: marcado.vivo ? 0 : (luto?.hasta || ahora + LUTO) };
-      } else if (luto && !luto.hasta) luto.hasta = ahora + LUTO;   // se fue sin dejar cuerpo
-      lutoRef.current = luto;
-      const foco = luto && (!luto.hasta || luto.hasta > ahora) ? luto : null;
+        espera = { id: marcado.id, x: marcado.x, y: marcado.y, hasta: marcado.vivo ? 0 : ahora + COLA };
+      } else if (espera && !espera.hasta) espera.hasta = ahora + COLA;   // se fue sin dejar cuerpo
+      esperaRef.current = espera;
+      const foco = espera && (!espera.hasta || espera.hasta > ahora) ? espera : null;
       const meta = foco
         ? vistaSobre(W, H, CONFIG.ancho, CONFIG.alto, foco.x, foco.y)
         : vistaDe(W, H, CONFIG.ancho, CONFIG.alto);
@@ -576,7 +580,7 @@ export default function Evolution() {
       // Se repinta cuando el mundo ha cambiado, cuando se ha movido la cámara y también cuando
       // algo de fuera lo pide —el tema, un cambio de tamaño—: en pausa no hay ticks y sin esa
       // última razón el lienzo se quedaría con la paleta anterior hasta que alguien diera al play.
-      if (dados || movida || repintarRef.current || (luto && luto.hasta > ahora)) {
+      if (dados || movida || repintarRef.current) {
         repintarRef.current = false;
         // Cuánto lleva corrida la noche, para que las crías crezcan en vez de aparecer hechas.
         const noche = m.noche
