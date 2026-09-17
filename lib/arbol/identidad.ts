@@ -1,7 +1,7 @@
 // El bloque de identidad: las dos líneas con las que una persona aparece en cualquier
 // superficie del árbol. Puro: `npx tsx lib/arbol/identidad.test.ts`.
 //
-// Nadie sale nunca como un nombre suelto. A 58 personas el documento no les da apellido y
+// Nadie sale nunca como un nombre suelto. A 60 personas el documento no les da apellido y
 // a 137 ninguna fecha, así que la segunda línea —de quién son— no es contexto: es el
 // identificador, y por eso es lo último que se recorta. Cuando no cabe se degrada por
 // peldaños, y el primer progenitor y el cónyuge no están en ninguno: quitarlos deja a esas
