@@ -20,6 +20,11 @@
 // **Y en cuanto la foto sale pequeña se apagan todos menos ese.** Una foto apaisada en un
 // móvil de pie no llega a 400 px, y diez pastillas ahí dentro tapan justo lo que se ha
 // abierto a ver; los recuadros solos siguen diciendo a quién se puede tocar.
+//
+// **En táctil, señalar es el primer toque y abrir el segundo.** Señalar es lo que enseña el
+// nombre, y sin ratón no hay dónde apoyarlo: con un solo toque que abriera la ficha, el
+// móvil —donde la foto sale pequeña y los rótulos se apagan— era la única pantalla en la
+// que no se podía leer un nombre sin salir de la foto.
 
 import { useEffect, useRef, useState } from "react";
 import type { Retratado } from "@/lib/arbol/retratados";
@@ -47,6 +52,12 @@ export default function Ampliada({
   const foto = useRef<HTMLImageElement>(null);
   const [caja, setCaja] = useState<{ w: number; h: number } | null>(null);
   const [señalado, setSeñalado] = useState<string | undefined>(mirando);
+  // Con qué se toca y qué encuentra el toque, **apuntado en el `pointerdown`**: el foco que
+  // el propio dedo le da al recuadro llega después y ya lo deja señalado, así que en el
+  // `click` no queda manera de saber si el nombre estaba puesto antes de tocar. Y no se
+  // pregunta por `(hover: none)`: un portátil táctil contesta que sí lo tiene y deja al dedo
+  // sin su primer toque.
+  const toque = useRef({ conElDedo: false, yaSeñalado: false });
   // Cuando la foto no llega a los 480 px, los rótulos pequeños se solapan entre ellos: se
   // apagan y se deja solo el del que se señala.
   const apretada = !!caja && caja.w < 480 && gente.length > 3;
@@ -113,9 +124,14 @@ export default function Ampliada({
                 <button
                   key={r.id}
                   type="button"
-                  onClick={() => onPersona(r.id)}
-                  onPointerEnter={() => setSeñalado(r.id)}
-                  onPointerLeave={() => setSeñalado(mirando)}
+                  onPointerDown={(e) => {
+                    toque.current = { conElDedo: e.pointerType !== "mouse", yaSeñalado: abierto };
+                  }}
+                  onClick={() =>
+                    toque.current.conElDedo && !toque.current.yaSeñalado ? setSeñalado(r.id) : onPersona(r.id)
+                  }
+                  onPointerEnter={(e) => e.pointerType === "mouse" && setSeñalado(r.id)}
+                  onPointerLeave={(e) => e.pointerType === "mouse" && setSeñalado(mirando)}
                   onFocus={() => setSeñalado(r.id)}
                   onBlur={() => setSeñalado(mirando)}
                   style={{
