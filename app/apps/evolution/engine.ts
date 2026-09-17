@@ -322,15 +322,19 @@ export type Config = {
 // hasta que el fundador propuesto sea el que ya está: cuatro pasadas, y la última mueve los seis
 // por debajo del 2%.
 //
-// **`fiereza` y `retorno` no se dejan clavar: su centro propuesto rebota un 15% de una pasada a la
-// siguiente, y eso también es el resultado.** Son los dos que abren abanico entre mundos —×3,2 y
-// ×6,3 del día cien al mil, contra ×1,1 de la talla—, así que lo propone una media de mundos que no
-// se parecen, con una cola de arriba larguísima que cada muestreo deja en otro sitio: el `retorno`
-// llega a 14 en algún mundo y vive en 3,3 en casi todos.
+// **`fiereza` y `retorno` no se dejan clavar, y eso también es el resultado: no es que falten
+// pasadas, es el techo de lo que la medida puede decir.** Dos muestras de 48 palabras **que no se
+// solapan** proponen 1,55 y 1,98 de fiereza, y 4,01 y 3,38 de retorno — un 27% y un 16% de
+// diferencia sobre el mismo mundo. Son los dos que abren abanico entre partidas —×3,2 y ×6,3 del día
+// cien al mil, contra ×1,1 de la talla—, con una cola de arriba larguísima que cada muestreo deja en
+// otro sitio: el `retorno` llega a 14 en algún mundo y vive en 3,3 en casi todos.
 //
-// **Lo que sí se comprueba en esos dos es el p50 de la sección 6**, que es lo que de verdad hace
-// falta: dice dónde cae la población en la escala con la que se la pinta, y ahí los seis están entre
-// 0,46 y 0,58. Perseguir el punto medio de una cola sería perseguirse la cola.
+// Los otros cuatro sí se clavan, y la misma prueba lo dice: las dos muestras proponen 2,51 y 2,50 de
+// empuje, y **2,22 y 2,23 de talla**.
+//
+// **Lo que se comprueba en la fiereza y el retorno es el p50 de la sección 6**, que es lo que de
+// verdad hace falta: dice dónde cae la población en la escala con la que se la pinta, y ahí los seis
+// están entre 0,46 y 0,58. Perseguir el punto medio de una cola sería perseguirse la cola.
 //
 // Ponerlo en el centro del recorrido es además lo que hace que un gen se pueda ver moverse en las
 // dos direcciones: naciendo en un extremo, la mitad de su rango no se visita nunca.
