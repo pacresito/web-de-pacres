@@ -14,11 +14,11 @@ const o = { nombre: "familiar" as const, linaje: libretaDe(g).linaje };
 
 const enLaVenta = retratadosEn(g, "la-venta-de-la-paloma-1962", o);
 
-// Los diez, y **en el orden en que se les ve**, no en el que están escritos: de arriba abajo.
-assert.strictEqual(enLaVenta.length, 10);
+// Los nueve, y **en el orden en que se les ve**, no en el que están escritos: de arriba abajo.
+assert.strictEqual(enLaVenta.length, 9);
 assert.deepStrictEqual(
-  enLaVenta.slice(0, 3).map((r) => r.nombre),
-  ["Flora Velasco Carrión", "Lola Velasco Pérez", "Flora Velasco Pérez"],
+  enLaVenta.slice(0, 2).map((r) => r.nombre),
+  ["Lola Velasco Pérez", "Flora Velasco Pérez"],
   "la fila de atrás primero, y de izquierda a derecha",
 );
 assert.strictEqual(enLaVenta.at(-1)!.nombre, "Juan José Martínez Velasco", "el último, el de abajo del todo");

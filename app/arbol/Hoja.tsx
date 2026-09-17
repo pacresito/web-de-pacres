@@ -15,11 +15,18 @@ import { useEffect, useRef } from "react";
 export default function Hoja({
   contenido,
   onCerrar,
+  volver,
   children,
 }: {
   /** Qué se está leyendo: cambiarlo es empezar a leer otra cosa, y eso empieza por arriba. */
   contenido: string;
   onCerrar: () => void;
+  /**
+   * Si debajo queda algo en vez de nada. **Con una foto puesta el aspa mentía**: prometía
+   * cerrar y lo que hacía era destapar la ficha. La flecha lo dice antes de pulsarla, que es
+   * lo único que se le pide a un mando de una sola tecla.
+   */
+  volver?: boolean;
   children: React.ReactNode;
 }) {
   const caja = useRef<HTMLDivElement>(null);
@@ -54,10 +61,10 @@ export default function Hoja({
         <button
           type="button"
           onClick={onCerrar}
-          aria-label="Cerrar"
+          aria-label={volver ? "Volver a la ficha" : "Cerrar"}
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[16px] text-[var(--mut)] hover:bg-[var(--soft)] hover:text-[var(--ink)] md:ml-auto"
         >
-          ✕
+          {volver ? "←" : "✕"}
         </button>
       </div>
       {children}

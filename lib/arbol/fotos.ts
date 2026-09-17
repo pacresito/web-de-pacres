@@ -77,7 +77,6 @@ export const FOTOS: Foto[] = [
     gente: [
       { id: "p271", nombre: "Pepe", recuadro: r(352, 393, 195) },
       { id: "p528", nombre: "Paca", recuadro: r(580, 433, 175) },
-      { id: "p427", nombre: "Flora", recuadro: r(725, 228, 150) },
       { id: "p125", nombre: "Lola", recuadro: r(621, 275, 175) },
       { id: "p413", nombre: "Flora", recuadro: r(812, 281, 175) },
       { id: "p418", nombre: "Pepe", recuadro: r(368, 618, 175) },
@@ -85,6 +84,28 @@ export const FOTOS: Foto[] = [
       { id: "p388", nombre: "Paco", recuadro: r(163, 380, 160) },
       { id: "p435", nombre: "Félix", recuadro: r(737, 440, 160) },
       { id: "p429", nombre: "Juan José", recuadro: r(543, 706, 130) },
+    ],
+  },
+  {
+    titulo: "La familia Carrión",
+    tomada: "1920",
+    // Medidos sobre el recorte de 1352 px, ya sin el margen del papel ni la flecha.
+    gente: [
+      { id: "p272", nombre: "Dolores", recuadro: r(595, 152, 200, 1352) },
+      { id: "p271", nombre: "Pepe", recuadro: r(835, 160, 210, 1352) },
+      { id: "p273", nombre: "Joaquín", recuadro: r(615, 570, 190, 1352) },
+      { id: "p288", nombre: "Magdalena", recuadro: r(804, 579, 175, 1352) },
+    ],
+  },
+  { tomada: "1949", gente: [{ id: "p467", nombre: "Florentina", recuadro: r(30, 320, 1120, 1223) }] },
+  {
+    titulo: "El primer encuentro, en el faro de Cabo de Palos",
+    tomada: "1971-04-09",
+    gente: [
+      { id: "p124", nombre: "Ricardo", recuadro: r(236, 2, 300, 1452) },
+      { id: "p125", nombre: "Lola", recuadro: r(455, 245, 300, 1452) },
+      { id: "p275", nombre: "Mariló", recuadro: r(730, 295, 300, 1452) },
+      { id: "p140", nombre: "Tili", recuadro: r(990, 257, 320, 1452) },
     ],
   },
 ];

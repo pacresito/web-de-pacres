@@ -1150,6 +1150,7 @@ export default function Arbol({
           // arriba, y lo mismo hacen Escape y el gesto de volver. Así el visor no necesita
           // un cerrar propio, que en un marco de tres líneas sería el cuarto mando.
           onCerrar={() => (hoja.tipo === "foto" ? abrirFicha(hoja.id) : setHoja(null))}
+          volver={hoja.tipo === "foto"}
         >
           {hoja.tipo === "capas" ? (
             <Capas
