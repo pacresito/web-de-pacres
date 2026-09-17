@@ -67,7 +67,11 @@ export default function Ficha({
             <span className={f.falta ? "text-[var(--mut)]" : undefined}>{f.valor}</span>
           </Campo>
         ))}
-        {datos.nota && <Campo clave="Nota">{datos.nota}</Campo>}
+        {datos.nota && (
+          <Campo clave="Nota">
+            <span className="whitespace-pre-line">{datos.nota}</span>
+          </Campo>
+        )}
         {/* Al final del todo y solo si las hay: no se anuncian desde ninguna otra parte —ni
             el lienzo las marca ni hay forma de listarlas—, así que este campo es la única
             manera de saber que existen, y encontrarlas es la gracia. */}
