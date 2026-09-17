@@ -1165,7 +1165,7 @@ export default function Arbol({
               escondidos={escondidos}
               repaso={repaso}
               setRepaso={setRepaso}
-              // Los que están puestos y no los 272 del árbol: la cifra es lo que se va a
+              // Los que están puestos y no los 271 del árbol: la cifra es lo que se va a
               // encontrar al cerrar la hoja, y el total no cabe en ninguna pantalla.
               incompletos={layout.nodos.filter((n) => conHuecos.has(n.id)).length}
               todoDesplegado={todoDesplegado}
