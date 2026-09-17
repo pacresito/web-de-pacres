@@ -11,7 +11,7 @@ import { tieneSesion } from "@/app/arbol/auth";
 import { hayFoto, rutaEnBlob } from "@/lib/arbol/fotos";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ clave: string; nombre: string }> },
 ): Promise<Response> {
   if (!(await tieneSesion())) return new Response("No autorizado", { status: 401 });
@@ -21,17 +21,26 @@ export async function GET(
   // que hubiera en el blob para cualquiera con sesión.
   if (!hayFoto(clave)) return new Response("No encontrada", { status: 404 });
 
-  const foto = await get(rutaEnBlob(clave), { access: "private" });
+  // **El navegador pregunta siempre, y casi siempre se va con un 304.** La clave sale del
+  // dueño y del año, así que resubir la foto reutiliza la suya: guardarla por tiempo —fuera
+  // un día o una semana— es prometer que el archivo de esa clave no cambia, y cambia. Y no
+  // basta con que tarde en verse la nueva: los recuadros son fracciones del ancho, así que
+  // una copia con otro encuadre deja las caras recortadas por los ojos hasta que caduque.
+  // El ETag es el del propio blob y el 304 lo decide él, que es quien sabe si cambió.
+  const foto = await get(rutaEnBlob(clave), {
+    access: "private",
+    ifNoneMatch: request.headers.get("if-none-match") ?? undefined,
+  });
   if (!foto) return new Response("No encontrada", { status: 404 });
+
+  // Privada, porque en medio hay CDN y esto no es de todos.
+  const revalidar = { ETag: foto.blob.etag, "Cache-Control": "private, no-cache" };
+  if (foto.statusCode === 304) return new Response(null, { status: 304, headers: revalidar });
 
   return new Response(foto.stream, {
     headers: {
+      ...revalidar,
       "Content-Type": "image/jpeg",
-      // Una semana, y **nunca `immutable`**: la clave sale del dueño y del año, así que
-      // resubir una foto mejor escaneada reutiliza la suya y el navegador seguiría
-      // enseñando la vieja sin que nada lo delate. Privada, porque en medio hay CDN y esto
-      // no es de todos.
-      "Cache-Control": "private, max-age=604800",
       "Content-Disposition": `inline; filename*=UTF-8''${encodeURIComponent(saneado(nombre))}`,
     },
   });
