@@ -91,7 +91,7 @@ export const FOTOS: Foto[] = [
     tomada: "1922",
     // Medidos sobre el recorte de 1354 px que preparó Pablo, sin el margen ni la flecha.
     gente: [
-      { id: "p272", nombre: "Dolores", recuadro: r(615, 115, 165, 1354) },
+      { id: "p272", nombre: "Dolores", recuadro: r(612, 144, 161, 1354) },
       { id: "p271", nombre: "Pepe", recuadro: r(835, 164, 210, 1354) },
       { id: "p273", nombre: "Joaquín", recuadro: r(615, 574, 190, 1354) },
       { id: "p288", nombre: "Magdalena", recuadro: r(804, 583, 175, 1354) },
@@ -102,10 +102,10 @@ export const FOTOS: Foto[] = [
     titulo: "El primer encuentro, en el faro de Cabo de Palos",
     tomada: "1971-04-09",
     gente: [
-      { id: "p124", nombre: "Ricardo", recuadro: r(236, 2, 300, 1452) },
+      { id: "p124", nombre: "Ricardo", recuadro: r(252, 0, 340, 1452) },
       { id: "p125", nombre: "Lola", recuadro: r(455, 245, 300, 1452) },
       { id: "p275", nombre: "Mariló", recuadro: r(730, 295, 300, 1452) },
-      { id: "p140", nombre: "Tili", recuadro: r(990, 257, 320, 1452) },
+      { id: "p140", nombre: "Tili", recuadro: r(975, 190, 380, 1452) },
     ],
   },
 ];
