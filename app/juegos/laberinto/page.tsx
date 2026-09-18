@@ -10,6 +10,7 @@ import {
 } from "./engine";
 import { buildStaticLayer } from "./render";
 import { IconoRanking, IconoPantallaCompleta } from "../../components/Iconos";
+import BarraEstado, { Dato } from "../../components/BarraEstado";
 
 /** Estado inicial del juego (incluye un laberinto generado). Se llama una sola vez
  *  vía lazy-init del ref: initMaze() es caro (Warnsdorff) y no debe correr por render. */
@@ -677,33 +678,30 @@ export default function Laberinto() {
   ) : null;
 
   const header = (
-    <div style={{ display: "flex", alignItems: "center", gap: "1rem", fontFamily: "var(--t-mono)" }}>
-      <span style={{ fontSize: "0.75rem", color: "var(--t-ink3)", fontVariantNumeric: "tabular-nums" }}>
-        ↳ tilt: <span ref={tiltYRef}>+0°</span> / <span ref={tiltXRef}>+0°</span>
-      </span>
-      <span style={{ fontSize: "0.75rem", color: timerColor, fontVariantNumeric: "tabular-nums" }}>{timeLeft}s</span>
-      <span style={{ fontSize: "0.75rem", color: scoreColor, fontWeight: 600 }}>{score >= 0 ? "+" : ""}{score}</span>
-      <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "1rem" }}>
-        <a
-          className="hover-accent"
-          href="/juegos/laberinto/ranking"
-          title="Ranking"
-          aria-label="Ranking"
-          style={{ display: "flex", alignItems: "center" }}
-        >
+    <BarraEstado
+      estilo={{ width: BOARD_W * scale }}
+      acciones={<>
+        <a className="be-icono hover-accent" href="/juegos/laberinto/ranking" title="Ranking" aria-label="Ranking">
           <IconoRanking size={14} />
         </a>
         <button
-          className="hover-accent"
+          className="be-icono hover-accent"
           onClick={() => setFullscreen(f => !f)}
           title={fullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
           aria-label={fullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
-          style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center" }}
         >
           <IconoPantallaCompleta size={13} salir={fullscreen} />
         </button>
-      </div>
-    </div>
+      </>}
+    >
+      <Dato etiqueta="tilt">
+        <span style={{ fontVariantNumeric: "tabular-nums" }}>
+          <span ref={tiltYRef}>+0°</span> / <span ref={tiltXRef}>+0°</span>
+        </span>
+      </Dato>
+      <span style={{ color: timerColor, fontVariantNumeric: "tabular-nums" }}>{timeLeft}s</span>
+      <span style={{ color: scoreColor, fontWeight: 600 }}>{score >= 0 ? "+" : ""}{score}</span>
+    </BarraEstado>
   );
 
   const boardEl = (

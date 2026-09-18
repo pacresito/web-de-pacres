@@ -668,3 +668,32 @@
 @media (max-width: 700px) {
   .t-session-meta { display: none; }
 }
+
+/* ── Barra de estado de los experimentos (componente BarraEstado) ──────────────
+   La línea de datos sobre el lienzo, igual en los siete: el terminal escribe una
+   sola clase de línea y una página nueva no tiene que inventarse la suya. */
+.be-barra {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 12px 18px;
+  font-family: var(--t-mono); font-size: 13px;
+  padding-bottom: 14px; border-bottom: 1px solid var(--t-rule2);
+}
+/* Envuelve en estrecho: con los iconos empujados a la derecha, sin wrap la fila los
+   saca del viewport en móvil en vez de bajarlos de línea. */
+@media (min-width: 640px) { .be-barra { gap: 26px; } }
+/* La flecha es del primer dato y no de la barra: como hermana, el hueco que la separa
+   de la etiqueta sería el que separa los datos entre sí, y se despegaría de lo suyo. */
+.be-barra > :first-child::before { content: "↳ "; color: var(--t-ink4); }
+.be-dato { display: flex; align-items: baseline; gap: 8px; white-space: nowrap; }
+.be-etq { color: var(--t-ink3); }
+.be-fin { display: flex; align-items: center; gap: 14px; margin-left: auto; }
+/* El dato que se genera entero por texto: en una sola línea, lo que cabe se lee y lo que
+   no, se corta. Envolviendo, la fila pasa a dos renglones en cuanto el contador llega a
+   cuatro cifras, y esos renglones se los quita al lienzo un día sí y otro también. */
+.be-elastico {
+  flex: 1 1 0; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+/* Botón-icono de la barra: el reset del botón, que si no lo repite cada página en su style.
+   El color y su hover los pone `.hover-accent`, que va al lado. */
+.be-icono { background: none; border: none; padding: 0; display: flex; align-items: center; cursor: pointer; }

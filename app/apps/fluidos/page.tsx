@@ -10,6 +10,7 @@ import {
 } from "./engine";
 import { render } from "./render";
 import { IconoPantallaCompleta } from "../../components/Iconos";
+import BarraEstado from "../../components/BarraEstado";
 
 // Un color por herramienta; borde, fondo y brillo del estado activo se derivan de él. Borrar
 // no pinta ningún elemento: lleva la tinta del tema, porque un neutro fijo solo se lee sobre
@@ -134,7 +135,7 @@ export default function Fluidos() {
           .map(({ id, label, color }) =>
             `<span style="white-space:nowrap"><span style="color:${color}">${label.toLowerCase()}</span>: ${counts[id]}</span>`)
           .join(" · ");
-        statsLabelRef.current.innerHTML = `<span style="color:var(--t-ink3)">↳ elements:</span> ${body}`;
+        statsLabelRef.current.innerHTML = `<span class="be-etq">elements:</span> ${body}`;
       }
     };
     rafRef.current = requestAnimationFrame(loop);
@@ -375,23 +376,21 @@ export default function Fluidos() {
         flexDirection: "column",
       }}>
 
-        {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", fontFamily: "var(--t-mono)", paddingTop: "1rem", paddingBottom: "0.6rem" }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <span ref={statsLabelRef} style={{ fontSize: "0.75rem", color: "var(--t-ink4)", fontVariantNumeric: "tabular-nums" }} />
-          </div>
-          <div style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
+        <BarraEstado
+          estilo={{ marginTop: "1rem" }}
+          acciones={
             <button
-              className="hover-accent"
+              className="be-icono hover-accent"
               onClick={() => setFullscreen(f => !f)}
               title={fullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
               aria-label={fullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
-              style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center" }}
             >
               <IconoPantallaCompleta size={14} salir={fullscreen} />
             </button>
-          </div>
-        </div>
+          }
+        >
+          <span ref={statsLabelRef} className="be-elastico" />
+        </BarraEstado>
 
         {/* Toolbar */}
         <div className="toolbar">

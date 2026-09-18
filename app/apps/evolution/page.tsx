@@ -15,6 +15,7 @@ import { designFor, paletaDe, pintar, vistaDe, vistaSobre, type Design, type Pal
 import { crearHistoria, registrar, type Historia } from "./reparto";
 import { crearDiario, narrar, olvidar, type Diario as Cronica, type Evento } from "./narrador";
 import { IconoInfo, IconoPantallaCompleta } from "../../components/Iconos";
+import BarraEstado from "../../components/BarraEstado";
 
 // Cuántos ticks se intentan por fotograma. Es un objetivo, no una promesa: el bucle corta por
 // presupuesto de tiempo (abajo), así que en un mundo lleno x64 va tan rápido como dé la máquina.
@@ -99,6 +100,7 @@ const SEGUIMIENTO = 0.14;
 const COLA = 2000;
 
 const ACENTO = (x: string | number) => `<span style="color:var(--t-accent)">${x}</span>`;
+const ETQ = (x: string) => `<span class="be-etq">${x}</span>`;
 
 /**
  * Cuánto lleva corrida la noche en curso, en reloj de pared. Lo lleva la página y no el motor,
@@ -134,10 +136,10 @@ function linea(m: Mundo): string {
     let crias = 0, madres = 0;
     for (const b of m.bichos) if (b.hijos > 0) { crias += b.hijos; madres++; }
     const cria = crias === 1 ? "cría" : "crías", madre = madres === 1 ? "madre" : "madres";
-    return `anochece · ${ACENTO(`${crias} ${cria}`)} de ${madres} ${madre} · censo ${m.bichos.length}`;
+    return `anochece · ${ACENTO(`${crias} ${cria}`)} de ${madres} ${madre} · ${ETQ("censo")} ${m.bichos.length}`;
   }
-  return `día ${ACENTO(m.dia)} · censo ${m.bichos.length} · viajes ${m.viajes}` +
-    ` · comida ${m.comida.length} · tick ${m.t}`;
+  return `${ETQ("día")} ${ACENTO(m.dia)} · ${ETQ("censo")} ${m.bichos.length} · ${ETQ("viajes")} ${m.viajes}` +
+    ` · ${ETQ("comida")} ${m.comida.length} · ${ETQ("tick")} ${m.t}`;
 }
 
 
@@ -584,8 +586,8 @@ export default function Evolution() {
       if (atras !== hayAtrasRef.current) { hayAtrasRef.current = atras; setHayAtras(atras); }
 
       const texto = m.extinto
-        ? `↳ <span style="color:#e55">extinción</span> en el día ${m.dia}`
-        : `↳ ${linea(m)}${saltoRef.current ? ` · adelantando… ${ACENTO(`día ${m.dia}/${saltoRef.current}`)}` : ""}`;
+        ? `<span style="color:#e55">extinción</span> en el día ${m.dia}`
+        : `${linea(m)}${saltoRef.current ? ` · adelantando… ${ACENTO(`día ${m.dia}/${saltoRef.current}`)}` : ""}`;
       for (const el of [estadoRef.current, estadoFsRef.current]) if (el) el.innerHTML = texto;
 
       const ev = ultimoRef.current;
@@ -717,26 +719,12 @@ export default function Evolution() {
         }
         .escena.fs .toolbar { justify-content: center; }
         .escena.fs .sim-canvas { border-radius: 0; }
+        /* Fuera de la barra —en pantalla completa no hay— la flecha se la pone ella. */
         .ev-estado-fs {
           flex-basis: 100%; text-align: center; font-size: 0.66rem; color: var(--t-ink3);
           font-variant-numeric: tabular-nums;
         }
-        /* **Rejilla, por lo mismo que el carril del diario**: una fila flex no encoge por debajo
-           de lo que mide su texto, aunque el hijo lleve min-width 0 y su ellipsis, así que la
-           línea de estado ensancha la página entera y en una ventana estrecha el mundo se sale
-           por la derecha. Una pista minmax(0, 1fr) sí llega a cero. */
-        .ev-cab {
-          display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center;
-          gap: 0.75rem; font-family: var(--t-mono); padding: 1rem 0 0.6rem;
-        }
-        /* En una sola línea: lo que cabe se lee y lo que no, se corta. Envolviendo, la fila pasa
-           a dos renglones en cuanto el tick llega a cuatro cifras, y esos renglones se los quita
-           al mundo un día sí y otro también. */
-        .ev-estado {
-          display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-          font-size: 0.75rem; color: var(--t-ink3); font-variant-numeric: tabular-nums;
-        }
-
+        .ev-estado-fs::before { content: "↳ "; color: var(--t-ink4); }
         /* El carril del diario: una línea bajo el mundo, siempre. Entera es el acceso al panel —
            un renglón de 20 px no tiene sitio para un botón aparte, y lo que se quiere pulsar es
            la línea que se acaba de leer. */
@@ -1059,13 +1047,17 @@ export default function Evolution() {
         overflowX: "hidden", overflowY: "auto",
         display: "flex", flexDirection: "column",
       }}>
-        <div className="ev-cab">
-          <span ref={estadoRef} className="ev-estado" />
-          <button className="hover-accent" onClick={() => setFullscreen(true)} title="Pantalla completa" aria-label="Pantalla completa"
-            style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center" }}>
-            <ExpandIcon />
-          </button>
-        </div>
+        <BarraEstado
+          estilo={{ marginTop: "1rem" }}
+          acciones={
+            <button className="be-icono hover-accent" onClick={() => setFullscreen(true)}
+              title="Pantalla completa" aria-label="Pantalla completa">
+              <ExpandIcon />
+            </button>
+          }
+        >
+          <span ref={estadoRef} className="be-elastico" />
+        </BarraEstado>
 
         <div className={`escena${fullscreen ? " fs" : ""}`}>
           <div className="toolbar">

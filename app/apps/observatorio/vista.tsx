@@ -5,6 +5,7 @@ import TerminalShell from "../../components/TerminalShell";
 import WhyFooter from "../../components/WhyFooter";
 import { MARCO_INICIO_H, MARCO_MINUTOS, minutosEnMarco } from "./marco";
 import type { Cielo, Evento, EventoSatelite, FilaPlaneta, PuntoArco } from "./engine";
+import BarraEstado, { Dato } from "../../components/BarraEstado";
 
 const redondo = (n: number) => +n.toFixed(2);
 
@@ -590,9 +591,12 @@ function PantallaCompleta({ paso, onCerrar, entra }: {
 function LineaEstado({ cielo }: { cielo: Cielo }) {
   const ahora = useAhora(1000);
   const visibles = cielo.planetas.filter((p) => p.ventana).length;
-  const cabecera = <>↳ location: <span className="obs-verde">{cielo.sede}</span> · visibles: <span className="obs-verde">{visibles}</span></>;
+  const cabecera = <>
+    <Dato etiqueta="location"><span className="obs-verde">{cielo.sede}</span></Dato>
+    <Dato etiqueta="visibles"><span className="obs-verde">{visibles}</span></Dato>
+  </>;
 
-  if (ahora === null) return <p className="obs-estado">{cabecera}</p>;
+  if (ahora === null) return <BarraEstado estilo={{ marginBottom: "1.8rem" }}>{cabecera}</BarraEstado>;
 
   const enCurso = cielo.citas.find((c) => c.instante <= ahora && ahora <= c.instanteFin);
   const proximo = cielo.citas.find((c) => c.instante > ahora);
@@ -600,16 +604,16 @@ function LineaEstado({ cielo }: { cielo: Cielo }) {
   const inminente = proximo !== undefined && proximo.instante - ahora < 5 * 60_000;
 
   return (
-    <p className="obs-estado">
-      {cabecera} ·{" "}
+    <BarraEstado estilo={{ marginBottom: "1.8rem" }}>
+      {cabecera}
       {enCurso
-        ? <span>now: <span className="obs-verde">{enCurso.nombre} +{cuenta(ahora - enCurso.instante)}</span></span>
+        ? <Dato etiqueta="now"><span className="obs-verde">{enCurso.nombre} +{cuenta(ahora - enCurso.instante)}</span></Dato>
         : proximo
-          ? <span>next event: {inminente
+          ? <Dato etiqueta="next event">{inminente
               ? <span className="obs-verde">{proximo.nombre} in {cuenta(proximo.instante - ahora)}</span>
-              : <>{proximo.nombre} in {cuenta(proximo.instante - ahora)}</>}</span>
-          : <span>next event: nada previsto</span>}
-    </p>
+              : <>{proximo.nombre} in {cuenta(proximo.instante - ahora)}</>}</Dato>
+          : <Dato etiqueta="next event">nada previsto</Dato>}
+    </BarraEstado>
   );
 }
 
@@ -650,7 +654,6 @@ export default function Vista({ cielo, comando, abrir }: {
         .obs-mut { color: var(--t-ink3); }
         .obs-verde { color: var(--t-accent); }
         .obs-sect { font-size: 0.62rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--t-ink3); }
-        .obs-estado { font-size: 0.75rem; color: var(--t-ink3); margin: 0 0 1.8rem; }
 
         /* ── Línea de tiempo ── */
         /* Las horas se colocan por su sitio real en el marco, no repartidas: así los rótulos y

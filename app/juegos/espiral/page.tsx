@@ -6,6 +6,7 @@ import TerminalShell from "../../components/TerminalShell";
 import WhyFooter from "../../components/WhyFooter";
 import { useTema } from "../../components/usePersistedTheme";
 import { IconoRanking, IconoPantallaCompleta } from "../../components/Iconos";
+import BarraEstado, { Dato } from "../../components/BarraEstado";
 
 // Descuento del panel que envuelve los tableros, que va por fuera del canvas: sin restarlo
 // el tablero se sale por el lado en vertical.
@@ -495,13 +496,6 @@ export default function EspiralPage() {
         }
         .esp-submit:disabled { opacity: 0.4; cursor: default; }
 
-        /* Fila de estado */
-        /* Envuelve en estrecho: con los iconos empujados a la derecha, sin wrap la fila
-           los saca del viewport en móvil en vez de bajarlos de línea. */
-        .esp-status { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 18px;
-          font-size: 13px; padding-bottom: 14px; border-bottom: 1px solid var(--t-rule2); }
-        .esp-status-fin { display: flex; align-items: center; gap: 14px; margin-left: auto; }
-        @media (min-width: 640px) { .esp-status { gap: 26px; } }
         .esp-chip {
           padding: 2px 8px; border-radius: 4px; font-weight: 500;
           font-family: inherit; font-size: inherit; cursor: pointer;
@@ -509,11 +503,6 @@ export default function EspiralPage() {
           border: 1px solid color-mix(in oklab, var(--c) 26%, var(--t-paper));
           transition: color 0.12s ease, background 0.12s ease, border-color 0.12s ease;
         }
-        .esp-icon { color: var(--t-ink3); display: flex; align-items: center;
-          background: none; border: none; padding: 0; cursor: pointer; transition: color 0.12s ease; }
-        @media (hover: hover) { .esp-icon:hover { color: var(--t-ink2); } }
-        .esp-icon:active { color: var(--t-ink2); }
-
         /* Los dos tableros como una sola pieza: el panel los envuelve y la junta central
            marca el eje de simetría. En vertical el eje gira con ellos. */
         .esp-panel {
@@ -560,7 +549,7 @@ export default function EspiralPage() {
 
         {!mandosArriba && (
           <button
-            className="esp-icon esp-salir"
+            className="be-icono hover-accent esp-salir"
             onClick={() => setFullscreen(false)}
             title="Salir de pantalla completa"
             aria-label="Salir de pantalla completa"
@@ -575,10 +564,20 @@ export default function EspiralPage() {
         {/* status row + hint */}
         {mandosArriba && (
         <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", width: "100%", maxWidth: 960 }}>
-        <div className="esp-status" style={{ fontFamily: MONO }}>
-          <div style={{ display: "flex", alignItems: "baseline", gap: "8px", whiteSpace: "nowrap" }}>
-            <span style={{ color: "var(--t-ink4)" }}>↳</span>
-            <span style={{ color: "var(--t-ink3)" }}>status:</span>
+        <BarraEstado acciones={<>
+          <a className="be-icono hover-accent" href="/juegos/espiral/ranking" title="Ranking" aria-label="Ranking">
+            <IconoRanking />
+          </a>
+          <button
+            className="be-icono hover-accent"
+            onClick={() => setFullscreen(f => !f)}
+            title={fullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
+            aria-label={fullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
+          >
+            <IconoPantallaCompleta salir={fullscreen} />
+          </button>
+        </>}>
+          <Dato etiqueta="status">
             <span style={{ fontWeight: 500 }}>
               <span style={{ color: left.gameState === "win" ? "var(--t-accent)" : left.gameState === "dead" ? "#e55" : "var(--t-ink2)" }}>
                 {STATE_LABEL[left.gameState]}
@@ -588,36 +587,22 @@ export default function EspiralPage() {
                 {STATE_LABEL[right.gameState]}
               </span>
             </span>
-          </div>
+          </Dato>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <span style={{ color: "var(--t-ink3)" }}>speed:</span>
+          <Dato etiqueta="speed">
             <button
               className="esp-chip"
               onClick={cycleSpeed}
               title="Cambiar velocidad"
               style={{ "--c": SPEED_COLOR[speed] } as React.CSSProperties}
             >{speed}</button>
-          </div>
+          </Dato>
 
           {(elapsed > 0 || left.gameState !== "idle" || right.gameState !== "idle") && !bothWin && (
             <span style={{ color: "var(--t-ink2)", fontVariantNumeric: "tabular-nums" }}>{elapsed}s</span>
           )}
 
-          <div className="esp-status-fin">
-            <a className="esp-icon" href="/juegos/espiral/ranking" title="Ranking" aria-label="Ranking">
-              <IconoRanking />
-            </a>
-            <button
-              className="esp-icon"
-              onClick={() => setFullscreen(f => !f)}
-              title={fullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
-              aria-label={fullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
-            >
-              <IconoPantallaCompleta salir={fullscreen} />
-            </button>
-          </div>
-        </div>
+        </BarraEstado>
 
         {elapsed >= 100 && !bothWin && (
           <div style={{ display: "flex", alignItems: "center", gap: "12px", fontSize: "12px", color: "var(--t-ink3)", fontFamily: MONO }}>

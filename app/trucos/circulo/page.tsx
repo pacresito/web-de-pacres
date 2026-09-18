@@ -5,6 +5,7 @@ import TerminalShell from "../../components/TerminalShell";
 import WhyFooter from "../../components/WhyFooter";
 import Certificado from "../../components/Certificado";
 import { computeScore, fitCircle } from "./engine";
+import BarraEstado, { Dato } from "../../components/BarraEstado";
 
 type Phase = "idle" | "drawing" | "score" | "alive" | "caught";
 
@@ -353,12 +354,13 @@ export default function CirculoPerfecto() {
       `}</style>
 
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1.5rem", flex: 1, justifyContent: "center", width: "100%" }}>
-        <span style={{ fontSize: "0.75rem", color: "var(--t-ink3)", fontFamily: "var(--t-mono)" }}>
-          {"↳ roundness: "}
-          <span style={{ color: (phase === "alive" || phase === "caught" || (phase === "drawing" && (liveRoundness ?? 0) >= THRESHOLD) || (phase === "score" && displayScore >= THRESHOLD)) ? "var(--t-accent)" : "var(--t-ink2)" }}>
-            {phase === "idle" ? "0.00" : phase === "drawing" ? (liveRoundness !== null ? liveRoundness.toFixed(2) : "0.00") : phase === "score" ? displayScore.toFixed(2) : phase === "alive" ? "vivo" : "atrapado"}
-          </span>
-        </span>
+        <BarraEstado estilo={{ width: sz || 480 }}>
+          <Dato etiqueta="roundness">
+            <span style={{ color: (phase === "alive" || phase === "caught" || (phase === "drawing" && (liveRoundness ?? 0) >= THRESHOLD) || (phase === "score" && displayScore >= THRESHOLD)) ? "var(--t-accent)" : "var(--t-ink2)" }}>
+              {phase === "idle" ? "0.00" : phase === "drawing" ? (liveRoundness !== null ? liveRoundness.toFixed(2) : "0.00") : phase === "score" ? displayScore.toFixed(2) : phase === "alive" ? "vivo" : "atrapado"}
+            </span>
+          </Dato>
+        </BarraEstado>
 
         <div style={{ position: "relative", width: sz || 480, height: sz || 480 }}>
           <canvas

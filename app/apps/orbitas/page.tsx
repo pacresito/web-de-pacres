@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import TerminalShell from "../../components/TerminalShell";
 import WhyFooter from "../../components/WhyFooter";
 import { IconoPantallaCompleta } from "../../components/Iconos";
+import BarraEstado from "../../components/BarraEstado";
 import {
   createWorld, clearWorld, addBody, makeBody, step, pruneEscaped,
   radiusForMass, totalMass, presetSolar, presetBinary, presetCluster,
@@ -216,8 +217,8 @@ export default function Orbitas() {
         // verde = sistema estable (1-3 cuerpos); rojo = más de 3 (propenso al caos)
         const nColor = n === 0 ? "var(--t-ink2)" : n <= 3 ? "var(--t-accent)" : "#e55";
         statsLabelRef.current.innerHTML =
-          `↳ cuerpos: <span style="color:${nColor}">${n}</span>` +
-          ` · masa total: <span style="color:rgb(${cr},${cg},${cb})">${M}</span>`;
+          `<span class="be-etq">cuerpos:</span> <span style="color:${nColor}">${n}</span>` +
+          ` · <span class="be-etq">masa total:</span> <span style="color:rgb(${cr},${cg},${cb})">${M}</span>`;
       }
     };
     rafRef.current = requestAnimationFrame(loop);
@@ -360,23 +361,23 @@ export default function Orbitas() {
         display: "flex", flexDirection: "column",
       }}>
 
-        {/* Header: línea de estado + botón pantalla completa */}
-        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", fontFamily: "var(--t-mono)", paddingTop: "1rem", paddingBottom: "0.6rem" }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <span ref={statsLabelRef} style={{ fontSize: "0.75rem", color: "var(--t-ink3)", fontVariantNumeric: "tabular-nums" }} />
-          </div>
-          {/* Entrar en pantalla completa. La salida la hace el botón .fs-exit, que en fullscreen
-              tapa este header → aquí solo hace falta el icono de entrar. */}
-          <button
-            className="hover-accent"
-            onClick={() => setFullscreen(true)}
-            title="Pantalla completa"
-            aria-label="Pantalla completa"
-            style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center" }}
-          >
-            <ExpandIcon />
-          </button>
-        </div>
+        {/* Entrar en pantalla completa. La salida la hace el botón .fs-exit, que en fullscreen
+            tapa la barra → aquí solo hace falta el icono de entrar. */}
+        <BarraEstado
+          estilo={{ marginTop: "1rem" }}
+          acciones={
+            <button
+              className="be-icono hover-accent"
+              onClick={() => setFullscreen(true)}
+              title="Pantalla completa"
+              aria-label="Pantalla completa"
+            >
+              <ExpandIcon />
+            </button>
+          }
+        >
+          <span ref={statsLabelRef} className="be-elastico" />
+        </BarraEstado>
 
         {/* Toolbar: presets + borrar */}
         <div className="toolbar">
