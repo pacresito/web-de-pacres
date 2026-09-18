@@ -145,17 +145,6 @@ const ExpandIcon = () => <IconoPantallaCompleta size={14} />;
 const CollapseIcon = () => <IconoPantallaCompleta size={16} salir />;
 
 export default function Evolution() {
-  // El porqué abre debajo del lienzo, y la página está montada para no desplazarse: mientras esté
-  // abierto se le devuelve el desplazamiento al documento, y al cerrarlo se le quita.
-  const [porque, setPorque] = useState(false);
-  useEffect(() => {
-    const raiz = document.documentElement;
-    const soltar = () => { raiz.style.height = ""; raiz.style.overflow = ""; document.body.style.overflow = ""; };
-    if (porque) { raiz.style.height = "auto"; raiz.style.overflow = "auto"; document.body.style.overflow = "auto"; }
-    else soltar();
-    return soltar;
-  }, [porque]);
-
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const mundoRef = useRef<Mundo | null>(null);
@@ -696,7 +685,13 @@ export default function Evolution() {
            donde vive CONFIG: en CSS, aspect-ratio cede ante uno de los dos límites y deja el
            lienzo o desbordado —empujando la leyenda fuera del overflow, que es cómo desaparecía
            en pantalla ancha— o con dos franjas muertas. */
-        .sim-box { flex: 1 1 auto; min-height: 0; position: relative; }
+        /* **Y tiene suelo, porque una caja a cero no falla: desaparece.** El lienzo va fuera del
+           flujo y el resize descarta la medida absurda, así que la caja vacía deja el mundo
+           pintado a la medida de antes y centrado en una línea sin alto —encima de lo que venga
+           debajo— y los paneles, que son un inset 0 de ella, en nada. Le pasa a lo que se abra en
+           la página y reparta alto con la escena: el porqué. 200 px es el alto del mundo a escala
+           1; por debajo se está mirando una miniatura, y para eso se desplaza la página. */
+        .sim-box { flex: 1 1 auto; min-height: 200px; position: relative; }
         /* **El lienzo va fuera del flujo**, centrado sobre la caja y no colocado por ella. En flujo
            es él quien decide lo ancha que es la página —lleva su ancho en píxeles, puesto por el
            JS de arriba—, así que al encoger la ventana con un panel abierto se mide una vez con la
@@ -711,7 +706,11 @@ export default function Evolution() {
            tira— toma la ventana y se reparte el alto igual que en la página, así que el mundo crece
            por lo que se le ha quitado a los márgenes y no hay una capa tapando la franja de casa.
            La leyenda sigue siendo un panel encima, que para eso se abre y se cierra. */
-        .escena { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+        /* **Sin min-height 0, que aquí el suelo de la caja es lo que se defiende.** Con él la
+           escena encoge a lo que le dejen y sus hijos —el mundo con su suelo— se le salen por
+           abajo sobre lo que haya después; con el automático no baja de lo que mide su contenido,
+           así que lo que no cabe desborda el main, que se desplaza. */
+        .escena { display: flex; flex-direction: column; flex: 1 1 auto; }
         .escena.fs {
           position: fixed; inset: 0; z-index: 1000; background: var(--t-paper);
           padding: 0 clamp(0.75rem, 2vw, 1.5rem) 0.75rem;
@@ -1049,8 +1048,15 @@ export default function Evolution() {
       <main style={{
         width: "100%", maxWidth: 900, margin: "0 auto",
         padding: `0 clamp(1.25rem, 4vw, 2rem) clamp(1.25rem, 4vw, 2rem)`,
-        height: porque ? "auto" : "100%", minHeight: "100%",
-        overflowX: "hidden", overflowY: porque ? "auto" : "hidden",
+        height: "100%",
+        /* **Aquí se desplaza lo que no cabe, y no el documento.** El porqué se abre debajo del
+           mundo y pide más alto del que hay; darle el desplazamiento al documento obliga a
+           deshacer el `overflow: hidden` de la raíz —que está puesto porque en el móvil, al
+           plegarse la barra del navegador, por el hueco de abajo se ve el blanco— y a devolverlo
+           al cerrarse: un estado que sobrevivía a maximizar y dejaba la página tocada sin que
+           nadie lo hubiera abierto. `main` cubre el hueco entero, así que desplazarlo a él es lo
+           mismo a la vista y no hay nada que recordar. */
+        overflowX: "hidden", overflowY: "auto",
         display: "flex", flexDirection: "column",
       }}>
         <div className="ev-cab">
@@ -1121,13 +1127,11 @@ export default function Evolution() {
         )}
 
         {!fullscreen && (
-          <>
-            <WhyFooter question="¿Por qué un simulador de evolución?" date="2 de septiembre de 2026" onOpenChange={setPorque} style={{ marginTop: "auto" }}>
-              <p>Que de unas reglas simples salga algo que nadie ha escrito me parece la idea más bonita que tiene la biología. Y es de las que cuesta creerse si no la ves pasar.</p>
-              <p>Aquí nadie decide cómo se comporta un bicho. Solo hay seis números que se heredan con pequeños errores y un mundo en el que solo lo que llega a casa se convierte en hijos. Con eso basta.</p>
-              <p>Al rato la población es otra y hace cosas que yo no programé: cazar, apartarse, volver antes de tiempo. No hay guion — es lo que ha quedado vivo.</p>
-            </WhyFooter>
-          </>
+          <WhyFooter question="¿Por qué un simulador de evolución?" date="2 de septiembre de 2026" style={{ marginTop: "auto" }}>
+            <p>Que de unas reglas simples salga algo que nadie ha escrito me parece la idea más bonita que tiene la biología. Y es de las que cuesta creerse si no la ves pasar.</p>
+            <p>Aquí nadie decide cómo se comporta un bicho. Solo hay seis números que se heredan con pequeños errores y un mundo en el que solo lo que llega a casa se convierte en hijos. Con eso basta.</p>
+            <p>Al rato la población es otra y hace cosas que yo no programé: cazar, apartarse, volver antes de tiempo. No hay guion — es lo que ha quedado vivo.</p>
+          </WhyFooter>
         )}
       </main>
     </TerminalShell>
