@@ -41,6 +41,7 @@ export default function Nodo({
   identidad,
   vida,
   huecos,
+  fotos,
   fiesta,
   atenuado,
   abierta,
@@ -52,6 +53,13 @@ export default function Nodo({
   vida: string;
   /** Durante el repaso, lo que le falta: sustituye a los años y añade un aviso al nombre. */
   huecos: Huecos | null;
+  /**
+   * Cuántas fotos tiene, durante el repaso: quien no tiene ninguna se queda en blanco, que es
+   * la respuesta que se busca y se lee de una pasada por la columna. **Fuera del repaso no se
+   * enseña**: el árbol es para mirarlo, y esto es del trabajo de rellenarlo, como los huecos
+   * con los que comparte interruptor.
+   */
+  fotos: number;
   /** Lo que celebra, o nada si no le toca nada: es lo que enciende la guirnalda. */
   fiesta: Fiesta | null;
   atenuado: boolean;
@@ -71,70 +79,84 @@ export default function Nodo({
       className={`nodo cursor-pointer g${abierta ? 0 : Math.min(Math.abs(nodo.nivel), 4)}${
         nodo.lineaDirecta || nodo.esPuntoDeVista ? " nodo-dir" : ""
       }`}
-      style={atenuado ? { opacity: ATENUADO } : undefined}
     >
-      {fiesta && <Guirnalda nodo={nodo} fiesta={fiesta} />}
-      {/* El cerco es la tercera marca y no le quita el canal a ninguna de las dos: el fondo
-          sigue midiendo la cercanía y el borde, dónde miras. */}
-      {abierta && (
+      {/* El nodo se apaga por dentro y no desde el grupo de fuera, para que el contador de
+          fotos se quede encendido mientras el resto se atenúa: quien las tiene suele ser justo
+          quien ya está completo, que es a quien apaga el repaso. La transición la trae su
+          clase, por lo mismo que la del nodo entero. */}
+      <g className="nd-cuerpo" style={atenuado ? { opacity: ATENUADO } : undefined}>
+        {fiesta && <Guirnalda nodo={nodo} fiesta={fiesta} />}
+        {/* El cerco es la tercera marca y no le quita el canal a ninguna de las dos: el fondo
+            sigue midiendo la cercanía y el borde, dónde miras. */}
+        {abierta && (
+          <rect
+            x={nodo.x - ANCHO_NODO / 2 - 4}
+            y={nodo.y - ALTO_NODO / 2 - 4}
+            width={ANCHO_NODO + 8}
+            height={ALTO_NODO + 8}
+            rx={13}
+            // El único hueco va por atributo, que no es un color y no necesita resolver
+            // var(): un rect sin regla de relleno se pinta negro macizo, y una hoja de
+            // estilos rancia —o la que un deploy se deje por el camino— taparía al nodo
+            // justo cuando se le señala.
+            fill="none"
+            className="nd-cerco"
+          />
+        )}
         <rect
-          x={nodo.x - ANCHO_NODO / 2 - 4}
-          y={nodo.y - ALTO_NODO / 2 - 4}
-          width={ANCHO_NODO + 8}
-          height={ALTO_NODO + 8}
-          rx={13}
-          // El único hueco va por atributo, que no es un color y no necesita resolver
-          // var(): un rect sin regla de relleno se pinta negro macizo, y una hoja de
-          // estilos rancia —o la que un deploy se deje por el camino— taparía al nodo
-          // justo cuando se le señala.
-          fill="none"
-          className="nd-cerco"
+          x={nodo.x - ANCHO_NODO / 2}
+          y={nodo.y - ALTO_NODO / 2}
+          width={ANCHO_NODO}
+          height={ALTO_NODO}
+          rx={9}
+          // Fondo y borde por separado: el fondo dice cuánto es tuyo y el borde, dónde miras.
+          className={`${
+            nodo.esPuntoDeVista ? "nd-pov" : nodo.lineaDirecta ? "nd-dir" : nodo.consanguineo ? "nd-con" : "nd"
+          } ${nodo.esPuntoDeVista || abierta ? "bd-acc" : nodo.lineaDirecta ? "bd-dir" : "bd"}`}
         />
-      )}
-      <rect
-        x={nodo.x - ANCHO_NODO / 2}
-        y={nodo.y - ALTO_NODO / 2}
-        width={ANCHO_NODO}
-        height={ALTO_NODO}
-        rx={9}
-        // Fondo y borde por separado: el fondo dice cuánto es tuyo y el borde, dónde miras.
-        className={`${
-          nodo.esPuntoDeVista ? "nd-pov" : nodo.lineaDirecta ? "nd-dir" : nodo.consanguineo ? "nd-con" : "nd"
-        } ${nodo.esPuntoDeVista || abierta ? "bd-acc" : nodo.lineaDirecta ? "bd-dir" : "bd"}`}
-      />
-      <text x={izquierda} y={nodo.y + (vida || huecos ? BASE.conAños : BASE.solo)} fontSize={13} fontWeight={600}>
-        {identidad.titulo.map((trozo, i) => (
-          <tspan
-            key={i}
-            // Durante el repaso, el nombre que el documento no daba por seguro se marca como
-            // se marca todo lo dudoso: en color y sin decirlo. Los apellidos no, que ahí lo
-            // dudoso es del nombre y no de lo que se hereda subiendo.
-            className={huecos?.nombre === "dudoso" && trozo.pinta !== "heredado" ? "hueco" : PINTAS[trozo.pinta].clase}
-            fontStyle={PINTAS[trozo.pinta].cursiva ? "italic" : undefined}
-          >
-            {trozo.texto}
-          </tspan>
-        ))}
-        {/* Lo que falta del nombre se pide donde iría, que es aquí y no en la línea de abajo. */}
-        {huecos && loQueFalta(huecos) && <tspan className="hueco"> · {loQueFalta(huecos)}</tspan>}
-      </text>
-      {/* Abajo, los años. De quién es hijo y con quién se casó lo dicen los trazos que salen
-          del nodo, así que escribirlo era decir con letra lo que el lienzo ya dibuja; los
-          años no los dibuja nada. Quien no los trae se queda sin línea, y no con una vacía. */}
-      {huecos ? (
-        <text x={izquierda} y={nodo.y + 13} fontSize={10.5} className="ct-mono">
-          {huecos.vida.map((trozo, i) => (
-            <tspan key={i} className={trozo.falta ? "hueco" : undefined}>
+        <text x={izquierda} y={nodo.y + (vida || huecos ? BASE.conAños : BASE.solo)} fontSize={13} fontWeight={600}>
+          {identidad.titulo.map((trozo, i) => (
+            <tspan
+              key={i}
+              // Durante el repaso, el nombre que el documento no daba por seguro se marca como
+              // se marca todo lo dudoso: en color y sin decirlo. Los apellidos no, que ahí lo
+              // dudoso es del nombre y no de lo que se hereda subiendo.
+              className={huecos?.nombre === "dudoso" && trozo.pinta !== "heredado" ? "hueco" : PINTAS[trozo.pinta].clase}
+              fontStyle={PINTAS[trozo.pinta].cursiva ? "italic" : undefined}
+            >
               {trozo.texto}
             </tspan>
           ))}
+          {/* Lo que falta del nombre se pide donde iría, que es aquí y no en la línea de abajo. */}
+          {huecos && loQueFalta(huecos) && <tspan className="hueco"> · {loQueFalta(huecos)}</tspan>}
         </text>
-      ) : (
-        vida && (
-          <text x={izquierda} y={nodo.y + 13} fontSize={10.5} className="ct">
-            {vida}
+        {/* Abajo, los años. De quién es hijo y con quién se casó lo dicen los trazos que salen
+            del nodo, así que escribirlo era decir con letra lo que el lienzo ya dibuja; los
+            años no los dibuja nada. Quien no los trae se queda sin línea, y no con una vacía. */}
+        {huecos ? (
+          <text x={izquierda} y={nodo.y + 13} fontSize={10.5} className="ct-mono">
+            {huecos.vida.map((trozo, i) => (
+              <tspan key={i} className={trozo.falta ? "hueco" : undefined}>
+                {trozo.texto}
+              </tspan>
+            ))}
           </text>
-        )
+        ) : (
+          vida && (
+            <text x={izquierda} y={nodo.y + 13} fontSize={10.5} className="ct">
+              {vida}
+            </text>
+          )
+        )}
+      </g>
+      {/* Las fotos que tiene, arrimadas al borde de dentro. **A la altura de los años y no a
+          media caja**: el nombre gasta el ancho entero —32 caracteres llegan a 3 px del borde— y
+          un número centrado se le montaría encima al primero largo que tuviera fotos. Aquí no hay
+          con quién chocar: la línea de abajo es mono y la más larga ocupa dos tercios. */}
+      {fotos > 0 && (
+        <text x={nodo.x + ANCHO_NODO / 2 - SANGRADO} y={nodo.y + 13} textAnchor="end" fontSize={10.5} className="ct-mono">
+          {fotos}
+        </text>
       )}
     </g>
   );

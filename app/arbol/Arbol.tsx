@@ -23,7 +23,7 @@ import {
 import { caminoEntre, trazosDelCamino } from "@/lib/arbol/camino";
 import { aberturasDe, centroRecordado, pliegueDe, recordarCentro } from "@/lib/arbol/enlaces";
 import { añoDe, conDuda, escribirVida, FECHAS_POR_DEFECTO, type ModoFechas } from "@/lib/arbol/fechas";
-import { fotoDe } from "@/lib/arbol/fotos";
+import { cuantasFotos, fotoDe } from "@/lib/arbol/fotos";
 import { fiestasDelArbol, proximasCelebraciones } from "@/lib/arbol/celebraciones";
 import { construirGrafo, pasosDesde, visibles } from "@/lib/arbol/grafo";
 import { fichaDe } from "@/lib/arbol/ficha";
@@ -231,6 +231,10 @@ export default function Arbol({
   const comoLoLlamo = (id: string) => comoSeLlama(personaPorId.get(id)!, nombre);
   const huecosDelNodo = (id: string) =>
     repaso ? huecosDe(personaPorId.get(id)!, libreta.linaje.get(id)!, hoy) : null;
+  // El repaso enseña de paso cuántas fotos tiene cada uno. Va aquí y no en su propio mando
+  // porque es la misma faena —ver de un vistazo a quién le falta algo— y el árbol no crece en
+  // controles; para los huecos no cuenta, que una foto no es un dato del documento.
+  const fotosPorPersona = repaso ? cuantasFotos() : null;
 
   /**
    * Lo que el enlace de entrada deja plegado, **y solo mientras se mire desde su Centro**:
@@ -964,6 +968,7 @@ export default function Arbol({
               })}
               vida={vidaDe(n.id)}
               huecos={huecosDelNodo(n.id)}
+              fotos={fotosPorPersona?.get(n.id) ?? 0}
               fiesta={fiestas.get(n.id) ?? null}
               atenuado={opacidadDe(n.id) !== undefined}
               // El camino no deja de leer a quien lo abrió: el cerco sigue puesto mientras

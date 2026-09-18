@@ -3,7 +3,7 @@
 import assert from "assert";
 import { readFileSync } from "fs";
 import { resolve } from "path";
-import { claveDeFoto, encuadreDe, FOTOS, fotosDe, nombreDeArchivo, rotuloDeFoto, type Foto } from "./fotos";
+import { claveDeFoto, cuantasFotos, encuadreDe, FOTOS, fotosDe, nombreDeArchivo, rotuloDeFoto, type Foto } from "./fotos";
 import { construirGrafo } from "./grafo";
 import { comoSeLlama } from "./personas";
 import type { ArbolData } from "./tree";
@@ -120,6 +120,13 @@ assert.ok(
   suyas[2].url,
 );
 assert.deepStrictEqual(fotosDe("j3", quien), [], "quien no tiene fotos no tiene campo");
+
+// Cuántas tiene cada uno, que es lo que el nodo enseña durante el repaso.
+const cuantas = cuantasFotos();
+assert.strictEqual(cuantas.get("j1"), 3, "las tres suyas, con título y sin él");
+assert.strictEqual(cuantas.get("j2"), 2);
+// Quien no sale en ninguna no está en la cuenta: el nodo lo pinta en blanco, no con un cero.
+assert.strictEqual(cuantas.get("j3"), undefined);
 
 FOTOS.length -= inventadas.length;
 
