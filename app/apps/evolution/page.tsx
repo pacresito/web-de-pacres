@@ -663,10 +663,9 @@ export default function Evolution() {
       <style>{`
         main { --border: var(--t-rule); --muted: var(--t-ink3); }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        /* **El papel va en la raíz y no solo en el shell.** El shell mide 100dvh, y en el móvil
-           eso es lo que medía la ventana cuando se calculó: al plegarse la barra del navegador la
-           ventana crece y el shell no, y por el hueco de abajo se ve el blanco del documento. */
-        html, body { height: 100%; overflow: hidden; background: var(--t-paper); }
+        /* El papel de la raíz lo pone el shell. Aquí solo el alto y el candado del
+           desplazamiento, que es de esta página: lo que no cabe lo desplaza el main. */
+        html, body { height: 100%; overflow: hidden; }
 
         .toolbar { display: flex; align-items: center; gap: 0.4rem; padding: 0.6rem 0; flex-wrap: wrap; }
         .ev-btn {

@@ -178,6 +178,11 @@ export default function TerminalShell({
 
   return (
     <>
+      {/* **El papel va también en la raíz.** Este marco mide 100dvh, y en el móvil eso es lo que
+          medía la ventana cuando se calculó: al plegarse la barra del navegador la ventana crece
+          y el marco no, y por el hueco de abajo se ve el blanco del documento. La variante
+          `chrome` no lo necesita —fluye con el documento, que crece con él—. */}
+      <style>{`html, body { background: var(--t-paper); }`}</style>
       <div
         className={animClass === "ts-win-unmaximizing" ? "ts-outer-unmaximizing" : ""}
         style={{ height: "100dvh", overflow: "hidden", background: "var(--t-canvas)", display: "flex", justifyContent: "center", alignItems: "flex-start", padding: 0 }}
