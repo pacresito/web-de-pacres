@@ -101,6 +101,9 @@ const COLA = 2000;
 
 const ACENTO = (x: string | number) => `<span style="color:var(--t-accent)">${x}</span>`;
 const ETQ = (x: string) => `<span class="be-etq">${x}</span>`;
+/* La pareja etiqueta-valor no se parte: la línea envuelve en móvil y el corte cae en el `·`. */
+const PAR = (etq: string, val: string | number) =>
+  `<span style="white-space:nowrap">${ETQ(etq)} ${val}</span>`;
 
 /**
  * Cuánto lleva corrida la noche en curso, en reloj de pared. Lo lleva la página y no el motor,
@@ -136,10 +139,12 @@ function linea(m: Mundo): string {
     let crias = 0, madres = 0;
     for (const b of m.bichos) if (b.hijos > 0) { crias += b.hijos; madres++; }
     const cria = crias === 1 ? "cría" : "crías", madre = madres === 1 ? "madre" : "madres";
-    return `anochece · ${ACENTO(`${crias} ${cria}`)} de ${madres} ${madre} · ${ETQ("censo")} ${m.bichos.length}`;
+    return `anochece · ${ACENTO(`${crias} ${cria}`)} de ${madres} ${madre} · ${PAR("censo", m.bichos.length)}`;
   }
-  return `${ETQ("día")} ${ACENTO(m.dia)} · ${ETQ("censo")} ${m.bichos.length} · ${ETQ("viajes")} ${m.viajes}` +
-    ` · ${ETQ("comida")} ${m.comida.length} · ${ETQ("tick")} ${m.t}`;
+  return [
+    PAR("día", ACENTO(m.dia)), PAR("censo", m.bichos.length), PAR("viajes", m.viajes),
+    PAR("comida", m.comida.length), PAR("tick", m.t),
+  ].join(" · ");
 }
 
 

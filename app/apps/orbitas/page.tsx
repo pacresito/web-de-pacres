@@ -217,8 +217,8 @@ export default function Orbitas() {
         // verde = sistema estable (1-3 cuerpos); rojo = más de 3 (propenso al caos)
         const nColor = n === 0 ? "var(--t-ink2)" : n <= 3 ? "var(--t-accent)" : "#e55";
         statsLabelRef.current.innerHTML =
-          `<span class="be-etq">cuerpos:</span> <span style="color:${nColor}">${n}</span>` +
-          ` · <span class="be-etq">masa total:</span> <span style="color:rgb(${cr},${cg},${cb})">${M}</span>`;
+          `<span style="white-space:nowrap"><span class="be-etq">cuerpos:</span> <span style="color:${nColor}">${n}</span></span>` +
+          ` · <span style="white-space:nowrap"><span class="be-etq">masa total:</span> <span style="color:rgb(${cr},${cg},${cb})">${M}</span></span>`;
       }
     };
     rafRef.current = requestAnimationFrame(loop);

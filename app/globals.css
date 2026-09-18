@@ -198,6 +198,7 @@
    es lo único que el ojo puede seguir mientras todo lo demás cambia de sitio. Gana a las
    opacidades de generación por especificidad, sin tocarlas. */
 .arbol .nodo,
+.arbol .nd-cuerpo,
 .arbol .lk { transition: opacity 240ms ease-out; }
 .arbol .gira .nodo:not(.nodo-dir),
 .arbol .gira .lk { opacity: 0.25; transition: none; }
@@ -686,14 +687,13 @@
 .be-dato { display: flex; align-items: baseline; gap: 8px; white-space: nowrap; }
 .be-etq { color: var(--t-ink3); }
 .be-fin { display: flex; align-items: center; gap: 14px; margin-left: auto; }
-/* El dato que se genera entero por texto: en una sola línea, lo que cabe se lee y lo que
-   no, se corta. Envolviendo, la fila pasa a dos renglones en cuanto el contador llega a
-   cuatro cifras, y esos renglones se los quita al lienzo un día sí y otro también. */
-.be-elastico {
-  flex: 1 1 0; min-width: 0;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
+/* El dato que se genera entero por texto. **Envuelve, nunca se corta:** un dato a medias
+   no se lee, y el renglón que gana en móvil vale lo que cuesta. Cada pareja
+   `etiqueta valor` va en un `white-space: nowrap` suyo, así que el corte cae en el `·`.
+   Y por eso mismo no lleva el nowrap aquí: con él, el min-content de la línea es la cadena
+   entera y ensancha a la página — `min-width: 0` deja encogerla al pintar, pero no al
+   calcular lo ancho que es su antepasado, que se sale de la ventana sin fallar nada. */
+.be-elastico { flex: 1 1 0; min-width: 0; font-variant-numeric: tabular-nums; }
 /* Botón-icono de la barra: el reset del botón, que si no lo repite cada página en su style.
    El color y su hover los pone `.hover-accent`, que va al lado. */
 .be-icono { background: none; border: none; padding: 0; display: flex; align-items: center; cursor: pointer; }
