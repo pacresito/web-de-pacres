@@ -64,11 +64,6 @@ export interface Foto {
 }
 
 export const FOTOS: Foto[] = [
-  { tomada: "2012", gente: [{ id: "p25", nombre: "Pablo" }] },
-  {
-    tomada: "2026-08",
-    gente: [{ id: "p125", nombre: "Lola", recuadro: { x: 100 / 1067, y: 300 / 1067, lado: 900 / 1067 } }],
-  },
   {
     titulo: "La Venta de La Paloma",
     tomada: "1962",
@@ -236,6 +231,7 @@ export const FOTOS: Foto[] = [
     gente: [
       { id: "p114", nombre: "Aquilino", recuadro: r(208, 118, 402, 2500) },
       { id: "p124", nombre: "Ricardo", recuadro: r(659, 45, 400, 2500) },
+      { id: "p133", nombre: "Yago", recuadro: r(854, 1045, 356, 2500) },
       { id: "p118", nombre: "Pablo", recuadro: r(856, 323, 382, 2500) },
       { id: "p110", nombre: "Diego", recuadro: r(1170, 182, 336, 2500) },
       { id: "p119", nombre: "Lucas", recuadro: r(1207, 468, 388, 2500) },
@@ -339,13 +335,13 @@ export const FOTOS: Foto[] = [
   },
   {
     titulo: "Los 72 de Lola en La Manga",
-    tomada: "2018-08-15",
+    tomada: "2018-08-16",
     gente: [
       { id: "p24", nombre: "Carmen", recuadro: r(222, 675, 682, 3264) },
       { id: "p124", nombre: "Ricardo", recuadro: r(482, 1120, 918, 3264) },
       { id: "p132", nombre: "Santi", recuadro: r(759, 637, 608, 3264) },
-      { id: "p127", nombre: "Mar", recuadro: r(1218, 1311, 698, 3264) },
-      { id: "p125", nombre: "Lola", recuadro: r(1268, 668, 514, 3264) },
+      { id: "p125", nombre: "Lola", recuadro: r(1218, 1311, 698, 3264) },
+      { id: "p127", nombre: "Mar", recuadro: r(1268, 668, 514, 3264) },
       { id: "p126", nombre: "Ricardo", recuadro: r(1688, 618, 474, 3264) },
       { id: "p134", nombre: "Jara", recuadro: r(1684, 1428, 568, 3264) },
       { id: "p133", nombre: "Yago", recuadro: r(2029, 639, 440, 3264) },
