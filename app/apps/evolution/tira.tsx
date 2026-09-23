@@ -1,8 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { enEje, pintarFila, posGen, type Design, type Fila, type Paleta, type Puesto, type Tinta } from "./render";
-import { RASGOS, banda, type Mundo, type Rasgo } from "./engine";
+import {
+  enEje, opacidadResto, pintarFila, posGen, rojoDe,
+  type Design, type Fila, type Muestra, type Paleta, type Puesto, type Tinta,
+} from "./render";
+import { RASGOS, banda, edadDe, type Bicho, type Mundo, type Rasgo } from "./engine";
 
 /**
  * La población de hoy, gen a gen, **pegada bajo el mundo y sin abrir nada**. Cada bicho vivo se
@@ -34,6 +37,9 @@ const CUERPO = 15, CUERPO_QUIETA = 10;
 /** Refresco de la tira, en ms. El mundo corre en su propio bucle y la población cambia en días,
  *  no en fotogramas: a 60 Hz esto re-renderizaría la página entera para no mover nada. */
 const REFRESCO = 333;
+/** El refresco mientras alguien se muere: el rojo de la presa y el cuerpo que se disuelve son
+ *  animación, y a tres cuadros por segundo avanzan a saltos. */
+const REFRESCO_LUTO = 50;
 /** Margen de acierto al pulsar un cuerpo de la tira, en px CSS. El mismo dedo que en el mundo, y
  *  por eso el mismo número — aquí los cuerpos son más pequeños, pero la mano no. */
 const TACTO = 9;
@@ -115,11 +121,22 @@ function FilaGen({ rasgo, activa, mundo, eva, paleta, diseno, latido, sel, marca
     cv.height = Math.round(H * dpr);
 
     const base = eva[rasgo];
-    const cuerpos = m.bichos.map((b) => ({
+    const muestra = (b: Bicho): Muestra => ({
       id: b.id,
       t: posGen(rasgo, b.g[rasgo]),
-      c: { x: 0, y: 0, hx: 1, hy: 0, radio: b.radio, carga: b.carga, edad: (m.dia - b.nacido) / m.cfg.vida, g: b.g },
-    }));
+      c: { x: 0, y: 0, hx: 1, hy: 0, radio: b.radio, carga: b.carga, edad: edadDe(m, b), g: b.g },
+    });
+    // Las tres muertes del mundo, pintadas igual: la presa enrojece en la boca de su verdugo y los
+    // cuerpos se van disolviendo, con el aspa encima el de hambre.
+    const bocas = new Map<number, Bicho>();
+    for (const b of m.bichos) if (b.muerde) bocas.set(b.muerde, b);
+    const cuerpos: Muestra[] = [
+      ...m.bichos.map((b) => {
+        const dep = b.preso ? bocas.get(b.id) : undefined;
+        return dep ? { ...muestra(b), rojo: rojoDe(m.cfg, dep) } : muestra(b);
+      }),
+      ...m.restos.map((z) => ({ ...muestra(z.b), resto: opacidadResto(z.restan), aspa: z.b.muerte === "hambre" })),
+    ];
     const rep = banda(m.bichos.map((b) => b.g[rasgo]));
 
     const fila: Fila = {
@@ -204,9 +221,20 @@ export default function Tira({ mundo, eva, paleta, diseno, sel, marcar }: {
   // repintar seis filas.
   const [latido, setLatido] = useState(0);
   useEffect(() => {
-    const id = window.setInterval(() => setLatido((n) => n + 1), REFRESCO);
-    return () => window.clearInterval(id);
-  }, []);
+    // Rápido solo si hay muerte **y el mundo ha corrido**: de noche y en pausa los restos siguen
+    // ahí pero quietos, y repintarlos veinte veces por segundo sería volver a no mover nada.
+    let id = 0, antes = -1;
+    const latir = () => {
+      setLatido((n) => n + 1);
+      const m = mundo();
+      const corre = !!m && m.t !== antes;
+      antes = m?.t ?? -1;
+      const luto = corre && !!m && (m.restos.length > 0 || m.bichos.some((b) => b.preso));
+      id = window.setTimeout(latir, luto ? REFRESCO_LUTO : REFRESCO);
+    };
+    id = window.setTimeout(latir, REFRESCO);
+    return () => window.clearTimeout(id);
+  }, [mundo]);
 
   const cambiar = useCallback((r: Rasgo) => () => setActiva((x) => (x === r ? null : r)), []);
 

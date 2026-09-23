@@ -6,7 +6,7 @@
 // diseño, así que este bucle tiene que servir igual para un pez de papel y para un instrumento de
 // rectas: en cuanto empiece a saber de aletas, el siguiente diseño no cabrá.
 
-import { DISOLUCION, MARCA, RADIO_COMIDA, edadDe, luzDe, type Bicho, type Mundo } from "./engine";
+import { DISOLUCION, MARCA, RADIO_COMIDA, edadDe, luzDe, type Bicho, type Config, type Mundo } from "./engine";
 import {
   RECORRIDO, azarFijo, clamp, designFor, enrojecer, envejecer, giroDe, mix,
   type Cuerpo, type Design, type Paleta,
@@ -195,6 +195,34 @@ function esquinas(
 }
 
 /**
+ * El aspa del que se murió de hambre, sobre el cuerpo entero y recta aunque el cuerpo gire. La
+ * pintan el mundo y la tira: es el mismo muerto en los dos.
+ */
+function aspa(ctx: CanvasRenderingContext2D, x: number, y: number, radio: number, color: string) {
+  const a = radio * 0.78;
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = Math.max(0.35, radio * 0.2);
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(x - a, y - a); ctx.lineTo(x + a, y + a);
+  ctx.moveTo(x + a, y - a); ctx.lineTo(x - a, y + a);
+  ctx.stroke();
+  ctx.restore();
+}
+
+/** Lo que le queda por verse a un cuerpo, de 1 recién caído a 0 disuelto. */
+export const opacidadResto = (restan: number): number => Math.min(1, restan / DISOLUCION);
+
+/**
+ * El rojo de la presa según va la dentellada, desde el `restan` de quien la tiene en la boca.
+ * **Satura donde empieza a hundirse**, no al final: el rojo entero tiene que verse un rato, y el
+ * último tramo ya cuenta lo suyo encogiendo.
+ */
+const enBoca = (c: Config, dep: Bicho): number => (c.ticksPresa > 0 ? 1 - dep.restan / c.ticksPresa : 1);
+export const rojoDe = (c: Config, dep: Bicho): number => Math.min(1, enBoca(c, dep) / BOCA.trago);
+
+/**
  * El mundo entero, en un lienzo de `W`×`H` px CSS con `dpr` píxeles de dispositivo por cada uno.
  * El suelo y la casa vienen cocidos; encima solo lo que decide la partida.
  */
@@ -283,21 +311,10 @@ export function pintar(
   // esquinas del marcado: no es anatomía, es lo que dice de qué murió este.
   for (const z of m.restos) {
     const b = z.b;
-    ctx.globalAlpha = Math.min(1, z.restan / DISOLUCION);
+    ctx.globalAlpha = opacidadResto(z.restan);
     const edad = edadDe(m, b);
     d.cuerpo(ctx, { ...b, edad }, clamp(b.reserva / (c.capReserva * b.masa), 0, 1), paletaCon(edad));
-    if (b.muerte === "hambre") {
-      ctx.save();
-      const a = b.radio * 0.78;
-      ctx.strokeStyle = p.tinta;
-      ctx.lineWidth = Math.max(0.35, b.radio * 0.2);
-      ctx.lineCap = "round";
-      ctx.beginPath();
-      ctx.moveTo(b.x - a, b.y - a); ctx.lineTo(b.x + a, b.y + a);
-      ctx.moveTo(b.x + a, b.y - a); ctx.lineTo(b.x - a, b.y + a);
-      ctx.stroke();
-      ctx.restore();
-    }
+    if (b.muerte === "hambre") aspa(ctx, b.x, b.y, b.radio, p.tinta);
     ctx.globalAlpha = 1;
   }
 
@@ -346,7 +363,7 @@ export function pintar(
    * no como dos animaciones a la vez.
    */
   const mordisco = (dep: Bicho) => {
-    const k = c.ticksPresa > 0 ? 1 - dep.restan / c.ticksPresa : 1;
+    const k = enBoca(c, dep);
     return { k, sacudon: Math.sin((TAU * k * c.ticksPresa) / BOCA.ciclo) * (1 - k) };
   };
 
@@ -421,12 +438,9 @@ export function pintar(
     const edad = edadDe(m, b);
     const vigor = clamp(b.reserva / (c.capReserva * b.masa), 0, 1);
     // Y va poniéndose del color del zarpazo según se la comen: el forcejeo dura un segundo entre
-    // treinta cuerpos que se mueven, y la pose sola no lo saca de la escena. **Satura donde empieza
-    // a hundirse**, no al final: el rojo entero tiene que verse un rato, y el último tramo ya
-    // cuenta lo suyo encogiendo.
-    const rojo = Math.min(1, k / BOCA.trago);
+    // treinta cuerpos que se mueven, y la pose sola no lo saca de la escena.
     d.cuerpo(ctx, { ...b, x, y, hx: hx / norma, hy: hy / norma, radio: b.radio * (1 - 0.5 * trago), edad },
-      vigor, enrojecer(paletaCon(edad), rojo));
+      vigor, enrojecer(paletaCon(edad), rojoDe(c, dep)));
   }
 
   // De noche, lo único que se escribe encima del mundo: cuántas crías ha puesto cada madre, al lado
@@ -486,8 +500,13 @@ export type Fila = {
   sel: number;
 };
 
-/** Un bicho vivo colocado en el eje de un gen. */
-export type Muestra = { id: number; t: number; c: Cuerpo };
+/**
+ * Un bicho colocado en el eje de un gen. Los que se están muriendo llevan cómo, **con lo mismo que
+ * en el mundo**: `rojo` la presa según se la comen, `resto` la opacidad del cuerpo que se disuelve
+ * y `aspa` el muerto de hambre. Un resto ya no es población —ni curva, ni extremos—, pero sigue a
+ * la vista donde estaba, como en el lienzo.
+ */
+export type Muestra = { id: number; t: number; c: Cuerpo; rojo?: number; resto?: number; aspa?: boolean };
 
 /** Dónde ha quedado pintado cada cuerpo de una fila, en px CSS: es con lo que se sabe a quién se
  *  ha pulsado. El montón se apila según lo junta que esté la población, así que esto no se puede
@@ -541,7 +560,8 @@ export function pintarFila(
     ctx.fillRect(x(f.recorrido[0]), 0, x(f.recorrido[1] - f.recorrido[0]), H);
   }
 
-  const ys = cresta(f.cuerpos.map((c) => c.t));
+  const vivos = f.cuerpos.filter((s) => s.resto === undefined);
+  const ys = cresta(vivos.map((c) => c.t));
   ctx.beginPath();
   for (let i = 0; i < CRESTA; i++) {
     const px = +((i + 0.5) / CRESTA * W).toFixed(2), py = +(H - 1 - ys[i] * (H - 4)).toFixed(2);
@@ -562,15 +582,22 @@ export function pintarFila(
   // del enjambre el montón se la comía entera.
   vertical(f.eva, t.ink4, 1);
 
-  const muestras = f.enjambre ? f.cuerpos : extremos(f.cuerpos);
+  // Los restos, solo en la fila abierta: la cerrada son los dos extremos de los vivos, y un muerto
+  // ahí sería una tercera muestra que no es ninguno de los dos.
+  const muestras = f.enjambre ? f.cuerpos : extremos(vivos);
   const puestos = colocar(muestras, W, H, d, f.escala);
-  puestos.forEach(({ c, cx, cy, escala }) => {
+  // En el orden del mundo: los restos debajo de los vivos y la presa encima de todos.
+  const capa = (s: Muestra) => (s.resto !== undefined ? 0 : s.rojo !== undefined ? 2 : 1);
+  [...puestos].sort((a, b) => capa(a) - capa(b)).forEach(({ c, cx, cy, escala, rojo, resto, aspa: hambre }) => {
     // El lienzo ya está en píxeles CSS por el `setTransform` de arriba, así que aquí no se vuelve
     // a multiplicar por `dpr`: hacerlo colocaba a toda la población fuera del borde derecho.
     ctx.save();
     ctx.translate(cx, cy);
     ctx.scale(escala, escala);
-    d.cuerpo(ctx, { ...c, x: 0, y: 0, hx: 1, hy: 0 }, 1, envejecer(p, c.edad ?? 0));
+    ctx.globalAlpha = resto ?? 1;
+    const q = envejecer(p, c.edad ?? 0);
+    d.cuerpo(ctx, { ...c, x: 0, y: 0, hx: 1, hy: 0 }, 1, rojo ? enrojecer(q, rojo) : q);
+    if (hambre) aspa(ctx, 0, 0, c.radio, p.tinta);
     ctx.restore();
   });
 
@@ -608,13 +635,13 @@ function extremos(cs: Muestra[]): Muestra[] {
 function colocar(cs: Muestra[], W: number, H: number, d: Design, escala: number) {
   const orden = [...cs].sort((a, b) => a.t - b.t);
   const niveles: number[] = [];
-  const puestos = orden.map(({ id, t, c }) => {
-    const ancho = Math.max(...d.extension(c.g, c.radio)) * 2 * escala;
-    const cx = Math.min(W - ancho / 2, Math.max(ancho / 2, t * W));
+  const puestos = orden.map((s) => {
+    const ancho = Math.max(...d.extension(s.c.g, s.c.radio)) * 2 * escala;
+    const cx = Math.min(W - ancho / 2, Math.max(ancho / 2, s.t * W));
     let n = 0;
     while (n < niveles.length && niveles[n] > cx - ancho / 2) n++;
     niveles[n] = cx + ancho / 2 + 0.8;
-    return { id, c, cx, n, ancho, escala };
+    return { ...s, cx, n, ancho, escala };
   });
 
   // **El montón se aprieta hasta caber, no se corta por arriba.** Cuántos niveles hacen falta no se
