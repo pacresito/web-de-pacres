@@ -409,12 +409,14 @@ export function alDia(mazo: Mazo, ahora: number): number {
 /**
  * Lo que dice la cabecera de repasar. **Un solo hueco y un mensaje cada vez**: comparte fila con
  * los botones y en un móvil estrecho ya envuelve a dos renglones, así que dos avisos a la vez
- * empujan al control, que es lo único que no puede partirse.
+ * empujan al control, que es lo único que no puede partirse. La tanda es la excepción medida: su
+ * cola lleva el porcentaje o el descanso, nunca los dos, y cualquiera de las dos cabe.
  */
 export type Aviso =
   | { tipo: "empezar" }
   | { tipo: "aldia"; pct: number }
-  | { tipo: "tanda"; hechos: number; descansa: boolean }
+  | { tipo: "tanda"; hechos: number; descansa: false; pct: number }
+  | { tipo: "tanda"; hechos: number; descansa: true }
   | { tipo: "nuevo"; crudos: number; tope: number };
 
 /**
@@ -429,6 +431,9 @@ export function aviso(mazo: Mazo, tarjeta: Tarjeta | null, ahora: number): Aviso
   // alcanza enseñándolo, que es como se avisa de que no hay más por hoy sin un aviso aparte.
   if (tarjeta?.primeraVez) return { tipo: "nuevo", crudos: Math.min(crudos(mazo) + 1, MAX_EN_EL_AIRE), tope: MAX_EN_EL_AIRE };
   const hechos = tanda(mazo, ahora);
-  if (hechos > 0) return { tipo: "tanda", hechos, descansa: hechos >= 2 * TANDA };
+  // Mientras no toca descansar, el porcentaje sigue: es lo que se mira durante toda la sesión, y
+  // la tanda sola lo escondía justo en la mitad. Con el descanso sobra, que ya se sugiere parar.
+  if (hechos >= 2 * TANDA) return { tipo: "tanda", hechos, descansa: true };
+  if (hechos > 0) return { tipo: "tanda", hechos, descansa: false, pct: alDia(mazo, ahora) };
   return { tipo: "aldia", pct: alDia(mazo, ahora) };
 }

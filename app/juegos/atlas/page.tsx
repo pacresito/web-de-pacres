@@ -82,7 +82,7 @@ export default function Atlas() {
                     : aviso.tipo === "aldia" ? `${aviso.pct}% al día`
                     : aviso.tipo === "nuevo" ? `Nuevo país ${aviso.crudos}/${aviso.tope}`
                     : <>Ya llevas más de {aviso.hechos} hoy
-                        {aviso.descansa && <>. <span style={{ color: "var(--t-accent)" }}>Descansa</span></>}</>}
+                        {aviso.descansa ? <>. <span style={{ color: "var(--t-accent)" }}>Descansa</span></> : `. ${aviso.pct}% al día`}</>}
                 </span>
               )}
               <button className="atlas-modo" onClick={() => setModo("explorar")} style={{ fontSize: 12, letterSpacing: "0.04em", whiteSpace: "nowrap" }}>

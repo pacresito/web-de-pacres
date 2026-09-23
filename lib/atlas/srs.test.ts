@@ -384,8 +384,9 @@ assert.strictEqual(siguiente(enElAire, orden, AHORA)!.id, orden[9]); // nueve en
   // Empezada la sesión y antes de la primera tanda, el estado de reposo es el porcentaje.
   assert.deepEqual(aviso(hoy(1), vieja, AHORA), { tipo: "aldia", pct: 100 });
   assert.deepEqual(aviso(hoy(TANDA), vieja, AHORA), { tipo: "aldia", pct: 100 });
-  // Pasada la primera, la tanda; y descansar se sugiere al doble, no en cada una.
-  assert.deepEqual(aviso(hoy(TANDA + 1), vieja, AHORA), { tipo: "tanda", hechos: TANDA, descansa: false });
+  // Pasada la primera, la tanda con el porcentaje detrás; y descansar se sugiere al doble, no en
+  // cada una, y entonces sustituye al porcentaje.
+  assert.deepEqual(aviso(hoy(TANDA + 1), vieja, AHORA), { tipo: "tanda", hechos: TANDA, descansa: false, pct: 100 });
   assert.deepEqual(aviso(hoy(2 * TANDA + 1), vieja, AHORA), { tipo: "tanda", hechos: 2 * TANDA, descansa: true });
   // Estrenar país gana a la tanda, y se cuenta a sí mismo: el país de la tarjeta aún no está
   // en el mazo, así que sin sumarlo el número iría siempre uno por detrás de lo que se mira.
