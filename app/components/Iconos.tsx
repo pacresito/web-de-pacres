@@ -17,6 +17,14 @@ export function IconoInfo({ size = 20 }: { size?: number }) {
   );
 }
 
+export function IconoAyuda({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <circle cx="10" cy="10" r="7.5" /><path d="M7.8 7.9a2.3 2.3 0 1 1 3.1 2.1c-.6.3-.9.8-.9 1.4v.3" /><path d="M10 14.2v.1" />
+    </svg>
+  );
+}
+
 /** `salir` da la variante con las esquinas hacia dentro (ya está en pantalla completa). */
 export function IconoPantallaCompleta({ size = 20, salir = false }: { size?: number; salir?: boolean }) {
   return (

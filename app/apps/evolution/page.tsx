@@ -14,7 +14,8 @@ import Reglas from "./reglas";
 import { designFor, paletaDe, pintar, vistaDe, vistaSobre, type Design, type Paleta, type Vista as Camara } from "./render";
 import { crearHistoria, registrar, type Historia } from "./reparto";
 import { crearDiario, narrar, olvidar, type Diario as Cronica, type Evento } from "./narrador";
-import { IconoInfo, IconoPantallaCompleta } from "../../components/Iconos";
+import { MAX_SEMILLA, tirarDado } from "./semillas";
+import { IconoAyuda, IconoInfo, IconoPantallaCompleta, IconoRanking } from "../../components/Iconos";
 import BarraEstado from "../../components/BarraEstado";
 
 // Cuántos ticks se intentan por fotograma. Es un objetivo, no una promesa: el bucle corta por
@@ -54,23 +55,54 @@ const HISTORIA = 60;
  */
 const PAUSA_NOCHE = 1500;
 
-// **La de por defecto se elige mirándola**: clima de en medio, viva a los trescientos días y con
-// población de sobra para que la tira diga algo desde el principio. No vale cualquiera que no se
-// extinga — una que sobrevive con cuatro bichos abre la página en un mundo que no se mueve.
-const SEMILLA_POR_DEFECTO = "marea";
+// La que pinta el prerender, que en el servidor no hay dado: al montar se cambia por la del enlace
+// o por una al azar (ver la lectura de la URL).
+const SEMILLA_PRERENDER = "marea";
 
 /**
  * Lo que se puede tener abierto, que es una cosa o ninguna. `poblacion` va debajo del mundo y las
- * otras son paneles encima, pero todas compiten por el mismo alto: el del lienzo. Dos no tienen
- * botón de texto porque se abren desde donde se miran: el diario desde su carril, que está siempre
- * a la vista, y las reglas desde su icono.
+ * otras son paneles encima, pero todas compiten por el mismo alto: el del lienzo. El diario no
+ * tiene botón porque se abre desde donde se mira: su carril, que está siempre a la vista.
  *
  * **El bicho no es una vista**, aunque su panel viva donde ellas: no se abre, se marca — y lo
  * marcado dura lo que dure la marca, no lo que dure un panel. Cuelga de `sel` y se pinta siempre
  * que el mundo se vea, que es donde la marca significa algo.
  */
 type Vista = "leyenda" | "poblacion" | "partida" | "diario" | "reglas" | null;
-const VISTAS: [Vista, string][] = [["leyenda", "leyenda"], ["poblacion", "población"], ["partida", "la partida"]];
+// Los iconos propios de la barra, en el mismo trazo que los compartidos. Seguir va relleno y las dos
+// direcciones huecas: en pausa el botón de seguir y el ×1 serían el mismo triángulo.
+const Trazo = ({ children, size = 14 }: { children: React.ReactNode; size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2"
+    strokeLinecap="round" strokeLinejoin="round">{children}</svg>
+);
+const IconoPausa = () => <Trazo><path d="M7 4.5v11" /><path d="M13 4.5v11" /></Trazo>;
+const IconoSeguir = () => <Trazo><path d="M6.5 4.5l9 5.5-9 5.5z" fill="currentColor" /></Trazo>;
+const IconoAdelante = () => <Trazo><path d="M6.5 4.5l9 5.5-9 5.5z" /></Trazo>;
+const IconoAtras = () => <Trazo><path d="M13.5 4.5l-9 5.5 9 5.5z" /></Trazo>;
+const IconoDado = () => (
+  <Trazo>
+    <rect x="3.5" y="3.5" width="13" height="13" rx="2.5" />
+    <circle cx="7" cy="7" r="0.6" fill="currentColor" /><circle cx="10" cy="10" r="0.6" fill="currentColor" />
+    <circle cx="13" cy="13" r="0.6" fill="currentColor" />
+  </Trazo>
+);
+/** Un bicho visto desde arriba: el cuerpo, dos antenas y tres patas por lado. */
+const IconoBicho = ({ size = 14 }: { size?: number }) => (
+  <Trazo size={size}>
+    <ellipse cx="10" cy="11.5" rx="3.6" ry="5" />
+    <path d="M8.6 6.8L6.8 3.6" /><path d="M11.4 6.8l1.8-3.2" />
+    <path d="M6.4 9.5L3.5 8" /><path d="M13.6 9.5l2.9-1.5" />
+    <path d="M6.4 12h-3" /><path d="M13.6 12h3" />
+    <path d="M6.6 14.5l-2.6 2" /><path d="M13.4 14.5l2.6 2" />
+  </Trazo>
+);
+
+// Población primero, que es la que más se abre. Las reglas van en la barra y no en la cabecera de la página: en pantalla completa la cabecera no
+// está, y unas reglas que solo se abren desde fuera del mundo no se abren.
+const VISTAS_ICONO: [Vista, string, typeof IconoInfo][] = [
+  ["poblacion", "La población", IconoBicho], ["partida", "La partida", IconoRanking], ["leyenda", "La leyenda", IconoInfo], ["reglas", "Las reglas del mundo", IconoAyuda],
+];
+
 
 /**
  * Margen de acierto al pulsar un bicho, **en píxeles de pantalla y no en unidades de mundo**: lo
@@ -142,7 +174,7 @@ function linea(m: Mundo): string {
     return `anochece · ${ACENTO(`${crias} ${cria}`)} de ${madres} ${madre} · ${PAR("censo", m.bichos.length)}`;
   }
   return [
-    PAR("día", ACENTO(m.dia)), PAR("censo", m.bichos.length), PAR("viajes", m.viajes),
+    PAR("día", ACENTO(m.dia)), PAR("censo", m.bichos.length),
     PAR("comida", m.comida.length), PAR("tick", m.t),
   ].join(" · ");
 }
@@ -174,7 +206,7 @@ export default function Evolution() {
    */
   const cronicaRef = useRef<Cronica>(crearDiario());
   const ultimoRef = useRef<Evento | null>(null);
-  const hayAtrasRef = useRef(false);   // espejo de `historiaRef.length > 0`, para poder pintar el botón
+  const hayAtrasRef = useRef(false);   // espejo de si queda historia detrás, para poder pintar el botón
   /**
    * El bicho que se está mirando, por id, o `0`. Va en un ref además de en estado porque quien lo
    * usa en cada fotograma es el bucle, que no re-renderiza nada.
@@ -205,8 +237,8 @@ export default function Evolution() {
   // que la primera vuelta escriba el carril aunque todavía no haya pasado nada.
   const ultimoElRef = useRef<HTMLSpanElement>(null);
   const ultimoPintadoRef = useRef("?");
-  const paletaRef = useRef<Paleta>(paletaDe(SEMILLA_POR_DEFECTO, "light"));
-  const disenoRef = useRef<Design>(designFor(SEMILLA_POR_DEFECTO));
+  const paletaRef = useRef<Paleta>(paletaDe(SEMILLA_PRERENDER, "light"));
+  const disenoRef = useRef<Design>(designFor(SEMILLA_PRERENDER));
   const corriendoRef = useRef(true);
   const velRef = useRef<number>(VELOCIDADES[NORMAL]);
   /**
@@ -218,8 +250,8 @@ export default function Evolution() {
   const saltoRef = useRef(0);          // día objetivo mientras se adelanta; 0 = no se adelanta
   const repintarRef = useRef(true);    // el mundo cambió sin que corra el reloj: hay que repintar
 
-  const [semilla, setSemilla] = useState(SEMILLA_POR_DEFECTO);
-  const [texto, setTexto] = useState(SEMILLA_POR_DEFECTO);
+  const [semilla, setSemilla] = useState(SEMILLA_PRERENDER);
+  const [texto, setTexto] = useState(SEMILLA_PRERENDER);
   const [corriendo, setCorriendo] = useState(true);
   const [velIdx, setVelIdx] = useState(NORMAL);
   const [saltando, setSaltando] = useState(false);
@@ -249,28 +281,27 @@ export default function Evolution() {
     repintarRef.current = true;
   }, [semilla, tema]);
 
-  // La semilla de la URL manda sobre la de por defecto: un enlace lleva a un mundo concreto, que
-  // es de lo que sirve que la semilla sea una palabra. Se lee del `location` y no de
+  // La semilla de la URL manda sobre el dado: un enlace lleva a un mundo concreto, que es de lo
+  // que sirve que la semilla sea una palabra. Sin enlace, cada visita abre un mundo distinto. Se lee del `location` y no de
   // `useSearchParams` para no arrastrar el Suspense que este pide en el prerender.
   //
   // **Y una sola vez de verdad, con un ref que sobreviva al montaje doble de StrictMode.** El
   // efecto de sembrar reescribe la query, así que una segunda lectura no lee el enlace del
   // visitante: lee lo que acabamos de escribir, y la semilla compartida se pierde a favor de la
-  // de por defecto. Con `[]` no basta — en desarrollo eso corre dos veces.
+  // del prerender. Con `[]` no basta — en desarrollo eso corre dos veces.
   const urlLeidaRef = useRef(false);
   useEffect(() => {
     if (urlLeidaRef.current) return;
     urlLeidaRef.current = true;
-    const s = new URLSearchParams(window.location.search).get("semilla");
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- init en mount: en el servidor no hay URL que leer
-    if (s) { setSemilla(s); setTexto(s); }
+    const s = new URLSearchParams(window.location.search).get("semilla")?.slice(0, MAX_SEMILLA) || tirarDado("");
+    setSemilla(s); setTexto(s);
   }, []);
 
   // Sembrar: mundo nuevo, y la semilla a la URL sin apilar una entrada de historial por tecla.
   useEffect(() => {
     const m = crearMundo(semilla);
     mundoRef.current = m;
-    historiaRef.current = [];
+    historiaRef.current = [copiar(m)];   // el amanecer del día 0: sin él, el primer día no se rebobina
     rebRef.current = null;
     repartoRef.current = crearHistoria();
     cronicaRef.current = crearDiario();
@@ -300,8 +331,9 @@ export default function Evolution() {
     marcar(id === selRef.current ? 0 : id);
   }, [marcar]);
 
-  const sembrar = useCallback(() => {
-    const s = texto.trim();
+  /** Sembrar lo que haya en la caja, o `palabra` si se da — la del dado, que no espera al estado. */
+  const sembrar = useCallback((palabra?: string) => {
+    const s = (palabra ?? texto).trim().slice(0, MAX_SEMILLA);
     if (!s) return;
     // Sembrar cancela el salto en curso, y lo hace aquí y no en el efecto: al montar no hay
     // ninguno, así que el efecto solo tendría un `setState` que no cambia nada.
@@ -312,7 +344,7 @@ export default function Evolution() {
     if (selRef.current) marcar(0);
     if (s === semilla) {          // misma palabra = mismo mundo: reinicia
       mundoRef.current = crearMundo(s);
-      historiaRef.current = [];
+      historiaRef.current = [copiar(mundoRef.current)];
       rebRef.current = null;
       repartoRef.current = crearHistoria();
       cronicaRef.current = crearDiario();
@@ -337,7 +369,7 @@ export default function Evolution() {
     const vuelto = copiar(h[i]);
     mundoRef.current = vuelto;
     rebRef.current = null;
-    h.length = i;
+    h.length = i + 1;   // el amanecer al que se vuelve se queda: sin él, ese día no se rebobina
     // El diario se corta aquí y no en el próximo amanecer: en pausa no hay amanecer que llegue, y
     // el panel se quedaría enseñando los días que el mundo acaba de deshacer.
     olvidar(cronicaRef.current, vuelto.dia + 1);
@@ -587,7 +619,9 @@ export default function Evolution() {
 
       // El botón de volver se pinta desde React y la historia vive en un ref, así que el espejo se
       // sincroniza aquí —una comparación por fotograma— y no en los cuatro sitios que la tocan.
-      const atras = historiaRef.current.length > 0;
+      // Hay atrás si el mundo no está en el amanecer más viejo que se guarda.
+      const h0 = historiaRef.current[0];
+      const atras = !!h0 && (m.dia > h0.dia || m.t > 0 || m.noche);
       if (atras !== hayAtrasRef.current) { hayAtrasRef.current = atras; setHayAtras(atras); }
 
       const texto = m.extinto
@@ -612,39 +646,52 @@ export default function Evolution() {
 
   // Los mismos botones sirven a la barra de abajo y a la que flota en pantalla completa: un
   // segundo juego de JSX se quedaría a medias el día que se añada un control.
+  /** Elegir velocidad es también arrancar: quien pide ×64 no quiere verlo en pausa. */
+  const elegir = (i: number) => { setVelIdx(i); setCorriendo(true); };
   const controles = (
     <>
-        <button className="ev-btn" onClick={() => setCorriendo((c) => !c)}>
-          {corriendo ? "Pausa" : "Seguir"}
+        <button className="ev-btn icono tinta" onClick={() => setCorriendo((c) => !c)}
+          title={corriendo ? "Pausa" : "Seguir"} aria-label={corriendo ? "Pausa" : "Seguir"}>
+          {corriendo ? <IconoPausa /> : <IconoSeguir />}
         </button>
-        {VELOCIDADES.map((v, i) => (
-          <button key={v} className={`ev-btn${i === velIdx ? " on" : ""}`} onClick={() => setVelIdx(i)}>
-            ×{v < 0 ? `−${-v}` : v}
+        {VELOCIDADES.map((v, i) => {
+          const on = i === velIdx ? " on" : "";
+          if (v === -1 || v === 1) {
+            const nombre = v < 0 ? "Hacia atrás" : "Velocidad normal";
+            return (
+              <button key={v} className={`ev-btn icono tinta${on}`} onClick={() => elegir(i)} title={nombre} aria-label={nombre}>
+                {v < 0 ? <IconoAtras /> : <IconoAdelante />}
+              </button>
+            );
+          }
+          return <button key={v} className={`ev-btn${on}`} onClick={() => elegir(i)}>×{v}</button>;
+        })}
+        <button className="ev-btn muted" onClick={volver} disabled={!hayAtras} title={`Volver ${RETROCESO} días`}>
+          −{RETROCESO} d
+        </button>
+        <button className="ev-btn muted" onClick={saltar} disabled={saltando} title={`Adelantar ${SALTO_DIAS} días`}>
+          {saltando ? "adelantando…" : `+${SALTO_DIAS} d`}
+        </button>
+        {/* La semilla y lo que la siembra, en una sola caja: son un control y no dos. */}
+        <div className="ev-sembrado">
+          <input
+            className="ev-semilla" value={texto} spellCheck={false} aria-label="Semilla"
+            onChange={(e) => setTexto(e.target.value)}
+            maxLength={MAX_SEMILLA}
+            onKeyDown={(e) => { if (e.key === "Enter") sembrar(); }}
+          />
+          <button className="ev-dado hover-accent" title="Una semilla al azar" aria-label="Una semilla al azar"
+            onClick={() => { const w = tirarDado(semilla); setTexto(w); sembrar(w); }}>
+            <IconoDado />
+          </button>
+          <button className="ev-btn muted" onClick={() => sembrar()}>Sembrar</button>
+        </div>
+        {VISTAS_ICONO.map(([v, nombre, Icono]) => (
+          <button key={v} className={`ev-btn icono${vista === v ? " on" : ""}`} onClick={() => abrir(v)}
+            title={nombre} aria-label={nombre}>
+            <Icono size={14} />
           </button>
         ))}
-        <button className="ev-btn muted" onClick={volver} disabled={!hayAtras}>
-          −{RETROCESO} días
-        </button>
-        <button className="ev-btn muted" onClick={saltar} disabled={saltando}>
-          {saltando ? "adelantando…" : `+${SALTO_DIAS} días`}
-        </button>
-        <input
-          className="ev-semilla" value={texto} spellCheck={false} aria-label="Semilla"
-          onChange={(e) => setTexto(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") sembrar(); }}
-        />
-        <button className="ev-btn muted" onClick={sembrar}>Sembrar</button>
-        {VISTAS.map(([v, nombre]) => (
-          <button key={v} className={`ev-btn${vista === v ? " on" : ""}`} onClick={() => abrir(v)}>
-            {nombre}
-          </button>
-        ))}
-        {/* Las reglas van en la barra y no en la cabecera de la página: en pantalla completa la
-            cabecera no está, y unas reglas que solo se abren desde fuera del mundo no se abren. */}
-        <button className={`ev-btn icono${vista === "reglas" ? " on" : ""}`} onClick={() => abrir("reglas")}
-          title="Las reglas del mundo" aria-label="Las reglas del mundo">
-          <IconoInfo size={14} />
-        </button>
     </>
   );
 
@@ -667,7 +714,7 @@ export default function Evolution() {
            desplazamiento, que es de esta página: lo que no cabe lo desplaza el main. */
         html, body { height: 100%; overflow: hidden; }
 
-        .toolbar { display: flex; align-items: center; gap: 0.4rem; padding: 0.6rem 0; flex-wrap: wrap; }
+        .toolbar { display: flex; align-items: center; justify-content: center; gap: 0.4rem; padding: 0.6rem 0; flex-wrap: wrap; }
         .ev-btn {
           padding: 0.4rem 0.75rem; border-radius: 4px; border: 1px solid var(--border);
           background: transparent; cursor: pointer; font-size: 0.72rem; font-weight: 600;
@@ -677,7 +724,8 @@ export default function Evolution() {
         .ev-btn:hover { border-color: rgba(0,184,122,0.4); background: rgba(0,184,122,0.04); }
         .ev-btn.on { border-color: var(--t-accent); color: var(--t-accent); }
         .ev-btn.muted { color: var(--muted); }
-        .ev-btn.icono { display: inline-flex; align-items: center; padding: 0.4rem 0.55rem; color: var(--muted); }
+        .ev-btn.icono { display: inline-flex; align-items: center; align-self: stretch; padding: 0.4rem 0.55rem; color: var(--muted); }
+        .ev-btn.icono.tinta { color: var(--t-ink); }   /* transporte: se usa, no se consulta */
         .ev-btn.icono.on { color: var(--t-accent); }
         .ev-btn:disabled { opacity: 0.45; cursor: default; }
         .ev-semilla {
@@ -685,7 +733,15 @@ export default function Evolution() {
           font-family: var(--t-mono); font-size: 0.72rem; color: var(--t-ink);
           background: transparent; width: 6.5rem;
         }
-        .ev-semilla:focus { outline: none; border-color: var(--t-accent); }
+        .ev-semilla:focus { outline: none; }
+        .ev-sembrado {
+          display: inline-flex; align-self: stretch; border: 1px solid var(--border); border-radius: 4px;
+          overflow: hidden; transition: border-color 0.15s;
+        }
+        .ev-sembrado:focus-within { border-color: var(--t-accent); }
+        .ev-sembrado .ev-semilla { border: none; border-radius: 0; }
+        .ev-sembrado .ev-btn { border: none; border-left: 1px solid var(--border); border-radius: 0; }
+        .ev-dado { display: inline-flex; align-items: center; padding: 0 0.45rem; cursor: pointer; }
 
         /* La caja se queda con el alto libre y el lienzo lo mide el JS (ver resize), que es
            donde vive CONFIG: en CSS, aspect-ratio cede ante uno de los dos límites y deja el
@@ -721,7 +777,6 @@ export default function Evolution() {
           position: fixed; inset: 0; z-index: 1000; background: var(--t-paper);
           padding: 0 clamp(0.75rem, 2vw, 1.5rem) 0.75rem;
         }
-        .escena.fs .toolbar { justify-content: center; }
         .escena.fs .sim-canvas { border-radius: 0; }
         /* Fuera de la barra —en pantalla completa no hay— la flecha se la pone ella. */
         .ev-estado-fs {
@@ -1004,9 +1059,6 @@ export default function Evolution() {
              que los renglones que se lleva la barra no le quitan ni un píxel de lienzo — y a
              cambio se ven todos los botones sin tener que descubrir que la fila seguía. Es lo
              mismo que hace maximizada, y por lo mismo. */
-          /* A la izquierda, también maximizada: centrada, la última fila queda descolgada del
-             resto y la barra deja de leerse como una sola cosa. */
-          .toolbar, .escena.fs .toolbar { justify-content: flex-start; }
           .escena.fs .toolbar { padding-right: 2.2rem; }   /* el aspa de salir flota en esa esquina */
           .toolbar > * { flex: 0 0 auto; }
 
