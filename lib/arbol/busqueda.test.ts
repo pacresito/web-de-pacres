@@ -85,7 +85,7 @@ const suyo = { linaje: libretaDe(real).linaje, pasos: pasosDesde(real, POV) };
 
 const pablos = buscar(real, "Pablo", suyo);
 assert.strictEqual(pablos[0]!.id, POV, "el Centro es el más cercano a sí mismo y encabeza su propio nombre");
-assert.strictEqual(pablos.filter((r) => r.via === "nombre").length, 15, "doce Pablo y tres que lo llevan de segundo");
+assert.strictEqual(pablos.filter((r) => r.via === "nombre").length, 16, "doce Pablo y cuatro que lo llevan de segundo");
 
 // Que a cada uno se llega por sus dos nombres, y a todos por su propio `apodos`: aquí ya no hay
 // tabla de sinónimos que lleve a nadie, así que esta lista es la que la sustituyó entera.

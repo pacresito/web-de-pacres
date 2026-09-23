@@ -96,12 +96,12 @@ assert.deepStrictEqual(
     ["0 sin parentesco", 42],
     ["1 padres", 2],
     ["1 parejas", 45],
-    ["1 sin parentesco", 38],
+    ["1 sin parentesco", 42],
     ["1 tíos segundos", 41],
     ["1 tíos", 8],
     ["2 abuelos", 4],
     ["2 parejas", 10],
-    ["2 sin parentesco", 25],
+    ["2 sin parentesco", 27],
     ["2 tíos abuelos", 10],
     ["3 bisabuelos", 8],
     ["3 parejas", 1],
@@ -134,11 +134,11 @@ assert.deepStrictEqual(
 const parejas = [...parentescos(g, "p25")].filter(([, p]) => p.termino === PAREJAS).map(([id]) => id);
 const nombradas = parejas.filter((id) => relaciones.get(id)!.frase.startsWith("Es la pareja de tu "));
 assert.ok(nombradas.length >= parejas.length * 0.9, `solo ${nombradas.length} de ${parejas.length} parejas se saben nombrar`);
-// Y a la familia de la pareja se la nombra desde ella, con su artículo: 80 de los 131 que no
+// Y a la familia de la pareja se la nombra desde ella, con su artículo: 80 de los 137 que no
 // comparten sangre con nadie. Al resto —los que ni por ahí se dejan nombrar— les queda
 // entrar por alguien, y ese alguien es lo que se dice de ellos.
 const ajenos = [...parentescos(g, "p25")].filter(([, p]) => p.termino === SIN_PARENTESCO).map(([id]) => id);
-assert.strictEqual(ajenos.length, 131);
+assert.strictEqual(ajenos.length, 137);
 assert.strictEqual(relaciones.get("p3")!.frase, "Es el abuelo de tu pareja");
 // «El abuelo de tu pareja», no «de la familia política de tu pareja»: la de ella tiene
 // término propio y los otros cuarenta y nueve solo tienen por dónde entraron.

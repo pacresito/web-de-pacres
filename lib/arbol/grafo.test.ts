@@ -43,8 +43,8 @@ assert.deepStrictEqual(
   [...porNivel.entries()].sort((a, b) => a[0] - b[0]),
   [
     [-4, 17],
-    [-3, 49],
-    [-2, 134],
+    [-3, 51],
+    [-2, 138],
     [-1, 190],
     [0, 115],
     // Manuela, la primera de la generación que viene detrás de la de Lucas.

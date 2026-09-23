@@ -92,7 +92,7 @@ export function identidadDe(g: Grafo, id: string, o: OpcionesIdentidad): Identid
 
 /**
  * El nombre manda y el año no se recorta nunca: es el desempate más barato que hay y lo
- * llevan 366 personas. Lo que cede es el apellido, que además se lee subiendo por el árbol.
+ * llevan 372 personas. Lo que cede es el apellido, que además se lee subiendo por el árbol.
  */
 function tituloDe(p: Persona, { linaje, apellidos, fechas, hoy, largos, nombre }: OpcionesIdentidad): Trozo[] {
   const año = añoEscrito(p, fechas, hoy);
@@ -128,7 +128,7 @@ function añoEscrito(p: Persona, modo: ModoFechas, hoy: Fecha): string {
 /**
  * Los peldaños, del texto entero al mínimo que identifica. Se bajan en este orden: primero
  * los años de padres y cónyuge, luego el segundo progenitor y por último la rama, que es
- * lo que menos distingue a una persona de otra —son doce para 506—.
+ * lo que menos distingue a una persona de otra —son doce para 512—.
  */
 const PELDAÑOS = [
   { años: true, ambosPadres: true, rama: true },

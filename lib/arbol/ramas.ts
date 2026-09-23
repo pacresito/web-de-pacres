@@ -30,7 +30,7 @@ export interface Rama {
 export const RAMAS: Rama[] = [
   { nombre: "Crespo", ancestro: "p84" }, // Vicente Crespo
   { nombre: "Crespo-León", ancestro: "p211", excluye: "p84" }, // Miguel Crespo
-  { nombre: "Castrillo", ancestro: "p81", excluye: "p84" }, // Ambrosio Castrillo González
+  { nombre: "Castrillo", ancestro: "p81", excluye: "p84" }, // Ambrosio Castrillo Gutiérrez
   { nombre: "Velasco", ancestro: "p271", excluye: "p289" }, // José Velasco Martínez
   { nombre: "Maestre", ancestro: "p289" }, // José Maestre
   // Los Pérez de Catalina, sin lo que salió de casarla con un Velasco: esa línea la cuenta
@@ -44,10 +44,10 @@ export const RAMAS: Rama[] = [
   // Juan Martín Cruzán, sin lo que salió de casar a su hija con un Cardona: esa línea la
   // cuenta la familia como Cardona y solo como Cardona.
   { nombre: "Martín", ancestro: "p62", excluye: "p3" },
-  // El padre de Santi, del que todavía no se sabe el nombre. La familia de un cónyuge no
-  // hereda la rama de su hijo político —la rama solo salta al cónyuge y nunca de segunda
-  // mano—, así que o es rama o se queda fuera del reparto.
-  { nombre: "Sala", ancestro: "p442" },
+  // El abuelo de Santi. La familia de un cónyuge no hereda la rama de su hijo político —la
+  // rama solo salta al cónyuge y nunca de segunda mano—, así que o es rama o se queda fuera
+  // del reparto.
+  { nombre: "Sala", ancestro: "p533" }, // Antonio Sala Iñesta
   { nombre: "Baños", ancestro: "p461" }, // Francisco Baños García, el padre de Mar
 ];
 
