@@ -1,5 +1,6 @@
 "use client";
 
+import Asa from "./asa";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Diario as DiarioT, Evento } from "./narrador";
 
@@ -51,10 +52,11 @@ export default function Diario({ diario, dia, clima, cerrar }: {
 
   return (
     <div className="dr-panel" ref={fondo} onScroll={mirar}>
+      <Asa cerrar={cerrar} />
       <div className="dr-cabecera">
         <b>el diario</b>
         <span className="dr-rango">día 1 → {hoy}</span>
-        <button className="ev-btn muted" onClick={cerrar}>cerrar</button>
+        <button className="ev-btn muted ev-cerrar" onClick={cerrar}>cerrar</button>
       </div>
       {/* El clima primero y sin día: la comida que amanece es el techo de la población y la sortea
           la semilla, así que sin ese número un censo de 17 no se distingue de un desastre. Es la

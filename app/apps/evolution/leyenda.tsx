@@ -1,5 +1,6 @@
 "use client";
 
+import Asa from "./asa";
 import { useEffect, useRef } from "react";
 import { ESCALA, pintarMuestra, type Design, type Paleta } from "./render";
 import { CONFIG, type Genoma, type Rasgo } from "./engine";
@@ -188,20 +189,11 @@ export default function Leyenda({ rasgos, tabla, eva, paleta, diseno, cerrar }: 
 
   return (
     <div className="lg-panel">
+      <Asa cerrar={cerrar} />
       <div className="lg-cabecera">
         <b>leyenda</b>
-        <button className="ev-btn muted" onClick={cerrar}>cerrar</button>
+        <button className="ev-btn muted ev-cerrar" onClick={cerrar}>cerrar</button>
       </div>
-      <p className="lg-intro">
-        Cada bicho lleva el genoma puesto. A la izquierda, cómo se ve el gen en los dos extremos del
-        dibujo y en el fundador, que nace en medio y es el mismo en todas las semillas. Pasados esos
-        dos extremos el gen sigue subiendo y el bicho ya se pinta igual. <b>Dónde está hoy la
-        población</b> lo cuenta la tira de abajo, gen a gen.
-      </p>
-      <p className="lg-intro lg-aviso">
-        <b>No hay tope:</b> la mutación multiplica sin techo, así que ningún gen tiene máximo —
-        solo lo que cuesta.
-      </p>
       <div className="lg-filas">
         {rasgos.map((r) => (
           <Fila key={r} rasgo={r} eva={eva} tabla={tabla[r]} paleta={paleta} diseno={diseno} />

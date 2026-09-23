@@ -1,5 +1,6 @@
 "use client";
 
+import Asa from "./asa";
 import { useEffect, useState } from "react";
 import {
   C_BASAL, C_EMPUJE, C_VISION, CONFIG, EFICIENCIA, E_COMIDA, GIRO, RADIO_COMIDA, TICKS_BOCADO, URNA,
@@ -128,15 +129,11 @@ export default function Reglas({ clima, cerrar }: { clima: () => number; cerrar:
 
   return (
     <div className="rg-panel">
+      <Asa cerrar={cerrar} />
       <div className="rg-cabecera">
         <b>las reglas</b>
-        <span className="rg-nota">las de este mundo, sacadas del motor</span>
-        <button className="ev-btn muted" onClick={cerrar}>cerrar</button>
+        <button className="ev-btn muted ev-cerrar" onClick={cerrar}>cerrar</button>
       </div>
-      <p className="rg-intro">
-        Esto es contra lo que juegan los seis genes. Qué hace cada uno lo cuenta la leyenda; aquí
-        está el mundo en el que sale más a cuenta uno u otro, que es lo único que decide.
-      </p>
       {secciones(comidas).map((s) => (
         <section key={s.titulo} className="rg-seccion">
           <h3 className="rg-titulo">{s.titulo}</h3>

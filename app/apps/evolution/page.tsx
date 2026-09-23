@@ -11,6 +11,7 @@ import Tira from "./tira";
 import Estratos from "./estratos";
 import Inspector from "./inspector";
 import Reglas from "./reglas";
+import Asa from "./asa";
 import { designFor, paletaDe, pintar, vistaDe, vistaSobre, type Design, type Paleta, type Vista as Camara } from "./render";
 import { crearHistoria, registrar, type Historia } from "./reparto";
 import { crearDiario, narrar, olvidar, type Diario as Cronica, type Evento } from "./narrador";
@@ -226,12 +227,11 @@ export default function Evolution() {
   const esperaRef = useRef<{ id: number; x: number; y: number; hasta: number } | null>(null);
   const rafRef = useRef(0);
   const sizeRef = useRef({ W: 0, H: 0 });
+  const arribaRef = useRef(false);   // el mundo pegado arriba del lienzo: móvil maximizado
+  const topeRef = useRef(0);         // lo que tapan los botones flotando sobre el lienzo maximizado
+  const barraRef = useRef<HTMLDivElement>(null);
   const dprRef = useRef(1);
-  // Dos sitios donde sale la línea de estado —la de la página y la de la barra que flota en
-  // pantalla completa—, y las dos se escriben en el mismo sitio del bucle: sin esto, en pantalla
-  // completa no hay ni día ni censo, que es lo único que dice si la partida avanza.
   const estadoRef = useRef<HTMLSpanElement>(null);
-  const estadoFsRef = useRef<HTMLSpanElement>(null);
   // La última línea del diario, escrita desde el bucle y solo cuando cambia: es texto que se
   // queda quieto días enteros. El sello arranca con un valor que ningún evento puede tener, para
   // que la primera vuelta escriba el carril aunque todavía no haya pasado nada.
@@ -498,15 +498,23 @@ export default function Evolution() {
 
   // El lienzo toma la forma del mundo dentro del hueco libre, y el mundo mide lo que mide: la
   // vista lo escala y lo centra, pero estirarlo al lienzo daría partidas distintas en cada
-  // pantalla y la semilla dejaría de prometer nada.
+  // pantalla y la semilla dejaría de prometer nada. **Maximizado, el lienzo toma el hueco entero**
+  // y lo que sobra alrededor del mundo se pinta de casa: el mundo no acaba en un marco.
   useEffect(() => {
     const canvas = canvasRef.current, caja = wrapRef.current;
     if (!canvas || !caja) return;
     const resize = () => {
       const libre = { W: caja.clientWidth, H: caja.clientHeight };
       if (libre.W < 2 || libre.H < 2) return;
+      arribaRef.current = fullscreen && window.matchMedia("(max-width: 640px)").matches;
+      // Los botones envuelven distinto con cada ancho, así que lo que tapan se mide aquí y no se
+      // supone. Los paneles de escritorio empiezan debajo de ellos, que si no los tapan.
+      const tope = fullscreen ? barraRef.current?.offsetHeight ?? 0 : 0;
+      if (tope !== topeRef.current) { topeRef.current = tope; repintarRef.current = true; }
+      caja.style.setProperty("--tope", `${tope}px`);
       const escala = Math.min(libre.W / CONFIG.ancho, libre.H / CONFIG.alto);
-      const W = Math.round(CONFIG.ancho * escala), H = Math.round(CONFIG.alto * escala);
+      const W = fullscreen ? libre.W : Math.round(CONFIG.ancho * escala);
+      const H = fullscreen ? libre.H : Math.round(CONFIG.alto * escala);
       if (W === sizeRef.current.W && H === sizeRef.current.H) return;
       const dpr = window.devicePixelRatio || 1;
       dprRef.current = dpr;
@@ -520,8 +528,9 @@ export default function Evolution() {
     resize();
     const ro = new ResizeObserver(resize);
     ro.observe(caja);
+    if (barraRef.current) ro.observe(barraRef.current);
     return () => ro.disconnect();
-  }, []);
+  }, [fullscreen]);
 
   useEffect(() => {
     const loop = () => {
@@ -589,8 +598,8 @@ export default function Evolution() {
       esperaRef.current = espera;
       const foco = espera && (!espera.hasta || espera.hasta > ahora) ? espera : null;
       const meta = foco
-        ? vistaSobre(W, H, CONFIG.ancho, CONFIG.alto, foco.x, foco.y)
-        : vistaDe(W, H, CONFIG.ancho, CONFIG.alto);
+        ? vistaSobre(W, H, CONFIG.ancho, CONFIG.alto, foco.x, foco.y, arribaRef.current, topeRef.current)
+        : vistaDe(W, H, CONFIG.ancho, CONFIG.alto, arribaRef.current, topeRef.current);
       const antes = camRef.current;
       let v = meta;
       if (antes && antes.escala === meta.escala) {
@@ -627,7 +636,7 @@ export default function Evolution() {
       const texto = m.extinto
         ? `<span style="color:#e55">extinción</span> en el día ${m.dia}`
         : `${linea(m)}${saltoRef.current ? ` · adelantando… ${ACENTO(`día ${m.dia}/${saltoRef.current}`)}` : ""}`;
-      for (const el of [estadoRef.current, estadoFsRef.current]) if (el) el.innerHTML = texto;
+      if (estadoRef.current) estadoRef.current.innerHTML = texto;
 
       const ev = ultimoRef.current;
       const sello = ev ? `${ev.dia}·${ev.clave}` : "";
@@ -694,6 +703,10 @@ export default function Evolution() {
         ))}
     </>
   );
+
+  // Maximizada, la barra va dentro de la caja del lienzo y flota sobre él: la casa llega hasta la
+  // barra de estado y los botones quedan encima. Sin maximizar, va antes, en el flujo.
+  const barra = <div className="toolbar" ref={barraRef}>{controles}</div>;
 
   /** Lo que la tira necesita, en un sitio: se pinta en dos y los dos tienen que decir lo mismo. */
   const tira = {
@@ -778,12 +791,25 @@ export default function Evolution() {
           padding: 0 clamp(0.75rem, 2vw, 1.5rem) 0.75rem;
         }
         .escena.fs .sim-canvas { border-radius: 0; }
-        /* Fuera de la barra —en pantalla completa no hay— la flecha se la pone ella. */
-        .ev-estado-fs {
-          flex-basis: 100%; text-align: center; font-size: 0.66rem; color: var(--t-ink3);
-          font-variant-numeric: tabular-nums;
+        /* Maximizada, la caja se come el relleno lateral de la escena: el lienzo la llena de casa
+           y un filo de papel a cada lado volvería a ser el marco que se quiere quitar. */
+        .escena.fs .sim-box { margin-inline: calc(clamp(0.75rem, 2vw, 1.5rem) * -1); }
+        .asa { display: none; }   /* solo existe en los cajones del móvil, abajo */
+        /* La barra flotando sobre la casa. Deja pasar los toques por sus huecos —debajo puede
+           haber un bicho, con la cámara cerca— y los botones llevan papel para leerse sobre
+           cualquier material. */
+        .escena.fs .toolbar {
+          position: absolute; top: 0; left: 0; right: 0; z-index: 6; pointer-events: none;
+          padding-inline: clamp(0.75rem, 2vw, 1.5rem);
         }
-        .ev-estado-fs::before { content: "↳ "; color: var(--t-ink4); }
+        .escena.fs .toolbar > * { pointer-events: auto; }
+        .escena.fs .toolbar .ev-btn, .escena.fs .ev-sembrado { background: var(--t-paper); }
+        .escena.fs .ev-sembrado .ev-btn { background: transparent; }
+        @media (min-width: 641px) {
+          .escena.fs .lg-panel, .escena.fs .rg-panel, .escena.fs .es-panel, .escena.fs .dr-panel {
+            top: var(--tope, 0px);
+          }
+        }
         /* El carril del diario: una línea bajo el mundo, siempre. Entera es el acceso al panel —
            un renglón de 20 px no tiene sitio para un botón aparte, y lo que se quiere pulsar es
            la línea que se acaba de leer. */
@@ -803,13 +829,6 @@ export default function Evolution() {
         }
         .dr-abrir { flex: 0 0 auto; color: var(--muted); }
         .dr-carril:hover .dr-abrir, .dr-carril:active .dr-abrir { color: var(--t-accent); }
-
-        .fs-exit {
-          position: fixed; top: 14px; right: 16px; z-index: 1001;
-          background: none; border: none; cursor: pointer; padding: 6px; display: flex;
-          color: var(--t-accent); transition: opacity 0.15s; opacity: 0.7;
-        }
-        .fs-exit:hover { opacity: 1; }
 
         /* ── Tira de población ────────────────────────────────────────────────
            Debajo del mundo y en el flujo, no encima: es lo que está siempre, así que taparlo
@@ -958,8 +977,6 @@ export default function Evolution() {
         }
         .lg-cabecera { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
         .lg-cabecera b { font-size: 0.78rem; letter-spacing: 0.08em; color: var(--t-accent); }
-        .lg-intro { font-size: 0.68rem; line-height: 1.55; color: var(--muted); margin: 0.6rem 0 0; max-width: 62ch; }
-        .lg-aviso b { color: var(--t-ink2); }
 
         .lg-filas { margin-top: 0.5rem; }
         .lg-fila { display: flex; gap: 0.8rem; align-items: flex-start; padding: 0.7rem 0; border-top: 1px solid var(--border); }
@@ -999,10 +1016,8 @@ export default function Evolution() {
         }
         .rg-cabecera { display: flex; align-items: baseline; gap: 0.8rem; }
         .rg-cabecera b { font-size: 0.78rem; letter-spacing: 0.08em; color: var(--t-accent); }
-        .rg-cabecera .rg-nota { font-size: 0.62rem; color: var(--t-ink4); }
         /* El hueco lo pone el botón y no la nota, que en móvil se esconde. */
         .rg-cabecera button { margin-left: auto; }
-        .rg-intro { font-size: 0.68rem; line-height: 1.55; color: var(--muted); margin: 0.6rem 0 0; max-width: 62ch; }
         .rg-seccion { margin-top: 0.9rem; }
         .rg-titulo {
           font-size: 0.66rem; font-weight: 600; letter-spacing: 0.09em; color: var(--t-ink2);
@@ -1026,10 +1041,15 @@ export default function Evolution() {
           /* Apiladas: tres columnas en 375 px dejan la nota en una columna de cuatro letras. */
           .rg-fila { grid-template-columns: minmax(0, 1fr) minmax(0, auto); }
           .rg-porque { grid-column: 1 / -1; }
-          .rg-cabecera .rg-nota { display: none; }   /* parte el título en dos y no dice nada nuevo */
         }
 
-        @media (max-width: 500px) { .toolbar { gap: 0.25rem; } .ev-btn { padding: 0.4rem 0.55rem; } }
+        @media (max-width: 500px) {
+          .toolbar { gap: 0.25rem; }
+          .ev-btn { padding: 0.4rem 0.55rem; }
+          /* La semilla cede para que la caja y los cuatro paneles quepan en un renglón: con el dado
+             dentro, el de las reglas se iba solo a un tercero. Cabe la palabra más larga del dado. */
+          .ev-semilla { width: 5rem; padding-inline: 0.45rem; }
+        }
 
         /* ── Móvil: el cajón ──────────────────────────────────────────────────
            **En vertical el mundo lo limita el ancho, nunca el alto**, así que quitarle filas a la
@@ -1045,12 +1065,9 @@ export default function Evolution() {
            el flujo—, porque en un teléfono la diferencia entre «encima» y «debajo» no existe: solo
            hay un sitio libre. Sin fondo que oscurezca el mundo: el mundo sigue corriendo ahí
            arriba, y el que trae el inspector es el que se está siguiendo. Se cierran por su
-           botón, que todos lo llevan. */
+           botón o por el asa. */
         @media (max-width: 640px) {
           .sim-box { margin-inline: calc(clamp(1.25rem, 4vw, 2rem) * -1); }
-          /* En pantalla completa el relleno que hay que devolver es el de la escena, que es otro:
-             con el de la página el lienzo se sale ocho píxeles por cada lado. */
-          .escena.fs .sim-box { margin-inline: calc(clamp(0.75rem, 2vw, 1.5rem) * -1); }
           /* Arriba del todo y no centrado en lo que sobra: lo que sobra es por donde sube el
              cajón, y un mundo centrado se lleva la mitad debajo de él. */
           .sim-canvas { border-radius: 0; top: 0; transform: translateX(-50%); }
@@ -1059,7 +1076,6 @@ export default function Evolution() {
              que los renglones que se lleva la barra no le quitan ni un píxel de lienzo — y a
              cambio se ven todos los botones sin tener que descubrir que la fila seguía. Es lo
              mismo que hace maximizada, y por lo mismo. */
-          .escena.fs .toolbar { padding-right: 2.2rem; }   /* el aspa de salir flota en esa esquina */
           .toolbar > * { flex: 0 0 auto; }
 
           .lg-panel, .dr-panel, .es-panel, .cajon, .rg-panel {
@@ -1071,14 +1087,20 @@ export default function Evolution() {
           }
           /* El asa, que es lo que lo hace un cajón y no una tarjeta que ha aparecido. **El hueco de
              arriba lo pone ella y nunca el panel:** un relleno de arriba en quien se desplaza deja una
-             franja por la que se ve pasar el texto por encima de la cabecera pegada. */
-          .lg-panel::before, .dr-panel::before, .es-panel::before,
-          .cajon::before, .rg-panel::before {
-            content: ""; display: block; width: 36px; height: 4px; margin: 0.55rem auto 0.5rem;
-            border-radius: 2px; background: var(--t-rule);
+             franja por la que se ve pasar el texto por encima de la cabecera pegada. Y va pegada
+             arriba, que un asa que se va con el texto obliga a subir para cerrar. */
+          .asa {
+            display: block; position: sticky; top: 0; z-index: 2; height: 28px; margin: 0 -1rem;
+            background: var(--t-paper); touch-action: none; cursor: grab;
           }
+          .asa::after {
+            content: ""; position: absolute; left: 50%; top: 12px; width: 36px; height: 4px;
+            margin-left: -18px; border-radius: 2px; background: var(--t-rule);
+          }
+          .dr-cabecera { top: 28px; }   /* la cabecera del diario se pega debajo del asa, no debajo de ella */
+          .ev-cerrar { display: none; }   /* en el cajón cierra el asa; el botón queda para escritorio */
           /* Dentro del cajón la línea de arriba sobra: quien lo separa del mundo es el cajón. */
-          .cajon > :first-child { border-top: none; }
+          .cajon > .asa + * { border-top: none; }
           @keyframes cj-subir { from { transform: translateY(100%); } }
         }
       `}</style>
@@ -1103,25 +1125,27 @@ export default function Evolution() {
         overflowX: "hidden", overflowY: "auto",
         display: "flex", flexDirection: "column",
       }}>
-        <BarraEstado
-          estilo={{ marginTop: "1rem" }}
-          acciones={
-            <button className="be-icono hover-accent" onClick={() => setFullscreen(true)}
-              title="Pantalla completa" aria-label="Pantalla completa">
-              <ExpandIcon />
-            </button>
-          }
-        >
-          <span ref={estadoRef} className="be-elastico" />
-        </BarraEstado>
-
         <div className={`escena${fullscreen ? " fs" : ""}`}>
-          <div className="toolbar">
-            {controles}
-            {fullscreen && <span ref={estadoFsRef} className="ev-estado-fs" />}
-          </div>
+          {/* La barra de estado va dentro de la escena para que maximizada siga arriba, con la
+              salida a su derecha: flotando en la esquina, la salida le quitaba el ancho a los
+              botones. */}
+          <BarraEstado
+            estilo={{ marginTop: "1rem" }}
+            acciones={
+              <button className="be-icono hover-accent" onClick={() => setFullscreen((f) => !f)}
+                title={fullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
+                aria-label={fullscreen ? "Salir de pantalla completa" : "Pantalla completa"}>
+                {fullscreen ? <CollapseIcon /> : <ExpandIcon />}
+              </button>
+            }
+          >
+            <span ref={estadoRef} className="be-elastico" />
+          </BarraEstado>
+
+          {!fullscreen && barra}
 
           <div className="sim-box" ref={wrapRef}>
+            {fullscreen && barra}
             {/* Pulsar el mundo es elegir bicho, y por eso el lienzo lleva puntero. Va en
                 `pointerdown` y no en `click`: con el ratón es lo mismo, y con el dedo no —un
                 `click` táctil llega tarde y detrás de un desplazamiento que aquí no existe. */}
@@ -1159,6 +1183,8 @@ export default function Evolution() {
               toda la población— y así las dos caben sin dejar al mundo en un renglón. */}
           {(vista === "poblacion" || (sel > 0 && vista === null)) && (
             <div className="cajon">
+              {/* El asa cierra lo último que se abrió: la tira, si está; si no, la ficha. */}
+              <Asa cerrar={vista === "poblacion" ? cerrar : soltar} />
               {sel > 0 && (vista === null || vista === "poblacion") && (
                 <Inspector mundo={mundoVivo} id={sel} eva={eva} cerrar={soltar} genes={vista === null} />
               )}
@@ -1167,12 +1193,6 @@ export default function Evolution() {
           )}
         </div>
 
-
-        {fullscreen && (
-          <button className="fs-exit" onClick={() => setFullscreen(false)} title="Salir de pantalla completa" aria-label="Salir de pantalla completa">
-            <CollapseIcon />
-          </button>
-        )}
 
         {!fullscreen && (
           <WhyFooter question="¿Por qué un simulador de evolución?" date="2 de septiembre de 2026" style={{ marginTop: "auto" }}>

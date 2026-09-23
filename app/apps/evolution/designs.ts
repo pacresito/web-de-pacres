@@ -284,6 +284,16 @@ export type Design = {
   comida: (ctx: CanvasRenderingContext2D, p: Paleta, giro: number) => void;
   /** El suelo y la franja de casa, en unidades de mundo. Se cuece una vez, no por cuadro. */
   fondo: (c: CanvasRenderingContext2D, ancho: number, alto: number, casa: number, escala: number, p: Paleta) => void;
+  /**
+   * La casa más allá del mundo, que es lo que se ve alrededor de él maximizado: el material de la
+   * franja sin su orilla, para que el mundo no acabe en un marco sino en más casa. Pinta el
+   * rectángulo `x0,y0 → x1,y1` en unidades de mundo, que se sale por debajo de cero; lo que caiga
+   * dentro del mundo lo tapa `fondo`, que va después.
+   */
+  afuera: (
+    c: CanvasRenderingContext2D, ancho: number, alto: number,
+    x0: number, y0: number, x1: number, y1: number, escala: number, p: Paleta,
+  ) => void;
 };
 
 // ─── Suelos ───────────────────────────────────────────────────────────────────
@@ -301,12 +311,22 @@ function franja(c: CanvasRenderingContext2D, ancho: number, alto: number, casa: 
   c.fill("evenodd");
 }
 
+/** Las motas que se tiran sobre el mundo entero; solo se quedan las que caen en la franja. */
+const MOTAS = 1100;
+
 /** Moteado de arena, solo dentro de la franja: casa tiene textura y el suelo no. */
 function moteado(c: CanvasRenderingContext2D, ancho: number, alto: number, casa: number, escala: number, p: Paleta, azar: () => number) {
+  motas(c, 0, 0, ancho, alto, MOTAS, escala, p, azar, (x, y) => x > casa && x < ancho - casa && y > casa && y < alto - casa);
+}
+
+function motas(
+  c: CanvasRenderingContext2D, x0: number, y0: number, x1: number, y1: number, n: number,
+  escala: number, p: Paleta, azar: () => number, fuera: (x: number, y: number) => boolean = () => false,
+) {
   c.fillStyle = p.homeInk;
-  for (let i = 0; i < 1100; i++) {
-    const x = azar() * ancho, y = azar() * alto;
-    if (x > casa && x < ancho - casa && y > casa && y < alto - casa) continue;
+  for (let i = 0; i < n; i++) {
+    const x = x0 + azar() * (x1 - x0), y = y0 + azar() * (y1 - y0);
+    if (fuera(x, y)) continue;
     c.globalAlpha = 0.25 + azar() * 0.5;
     c.beginPath(); c.arc(x, y, (0.6 + azar() * 1.5) / escala, 0, TAU); c.fill();
   }
@@ -356,6 +376,33 @@ function papel(c: CanvasRenderingContext2D, ancho: number, alto: number, escala:
   c.globalAlpha = 1;
 }
 
+/** La franja moteada, fuera del mundo: con la misma densidad de motas que tiene dentro. */
+const afueraMoteado: Design["afuera"] = (c, ancho, alto, x0, y0, x1, y1, escala, p) => {
+  c.fillStyle = p.home; c.fillRect(x0, y0, x1 - x0, y1 - y0);
+  const n = Math.round((MOTAS * (x1 - x0) * (y1 - y0)) / (ancho * alto));
+  motas(c, x0, y0, x1, y1, n, escala, p, azarFijo(5));
+};
+
+/** El paso del rayado de la casa de cristal, en unidades de mundo. */
+const pasoRayado = (escala: number) => (7 / escala) * 2.7;
+
+/** La franja rayada, fuera del mundo: las rayas siguen la misma red que dentro y no se cortan. */
+const afueraRayado: Design["afuera"] = (c, ancho, alto, x0, y0, x1, y1, escala, p) => {
+  c.fillStyle = p.home; c.fillRect(x0, y0, x1 - x0, y1 - y0);
+  c.strokeStyle = p.homeInk;
+  c.lineWidth = 1 / escala;
+  const paso = pasoRayado(escala);
+  // Rayas `x − y = d`, con `d` en la red que empieza en −alto, que es la de `sueloMotas`.
+  for (let d = -alto + Math.floor((x0 - y1 + alto) / paso) * paso; d < x1 - y0; d += paso) {
+    c.beginPath(); c.moveTo(d + y0, y0); c.lineTo(d + y1, y1); c.stroke();
+  }
+};
+
+/** La casa del instrumento es lisa: las marcas de regla son del borde, no del material. */
+const afueraLiso: Design["afuera"] = (c, _ancho, _alto, x0, y0, x1, y1, _escala, p) => {
+  c.fillStyle = p.home; c.fillRect(x0, y0, x1 - x0, y1 - y0);
+};
+
 /** Suelo de papel con casa moteada y orilla ondulada. */
 const sueloPapel: Design["fondo"] = (c, ancho, alto, casa, escala, p) => {
   const azar = azarFijo(3);
@@ -394,7 +441,7 @@ const sueloMotas: Design["fondo"] = (c, ancho, alto, casa, escala, p) => {
   c.clip("evenodd");
   c.strokeStyle = p.homeInk;
   c.lineWidth = 1 / escala;
-  for (let d = -alto; d < ancho + alto; d += 7 / escala * 2.7) {
+  for (let d = -alto; d < ancho + alto; d += pasoRayado(escala)) {
     c.beginPath(); c.moveTo(d, 0); c.lineTo(d + alto, alto); c.stroke();
   }
   c.restore();
@@ -1299,7 +1346,7 @@ export const DESIGNS: Design[] = [
           cold: "#2f6b60", mid: "#6f8a58", hot: "#bd4b34", dim: "#9fadb2", hi: "#fbf8ef", vejez: "#fbf8ef",
           line: "#17272e", maw: "#232c29", acc: "#dfae48", acc2: "#dfae48", jaw: "#bd4b34",
           belly: "#f2ecda", fin: "#7fb0b8", tinta: "#17272e" },
-    cuerpo: pezCuerpo, extension: pezExtension, comida: bacilo, fondo: sueloPapel,
+    cuerpo: pezCuerpo, extension: pezExtension, comida: bacilo, fondo: sueloPapel, afuera: afueraMoteado,
   },
   {
     id: "protozoo",
@@ -1315,7 +1362,7 @@ export const DESIGNS: Design[] = [
           cold: "#4d6272", mid: "#6e5560", hot: "#8d2f27", dim: "#a09781", hi: "#faf6ec", vejez: "#faf6ec",
           line: "#3a322c", maw: "#241d19", acc: "#9a7b3c", acc2: "#bd7418", jaw: "#8d2f27",
           belly: "#f2ecda", fin: "#b09a72", tinta: "#3a322c" },
-    cuerpo: protoCuerpo, extension: protoExtension, comida: discoCon(0.78), fondo: sueloVineta,
+    cuerpo: protoCuerpo, extension: protoExtension, comida: discoCon(0.78), fondo: sueloVineta, afuera: afueraMoteado,
   },
   {
     id: "cristal",
@@ -1329,7 +1376,7 @@ export const DESIGNS: Design[] = [
           cold: "#38566a", mid: "#4f7080", hot: "#ac3d29", dim: "#9aa8b0", hi: "#ffffff", vejez: "#ffffff",
           line: "#1b262c", maw: "#1b262c", acc: "#4e7386", acc2: "#c1861a", jaw: "#ac3d29",
           belly: "#eef5f7", fin: "#7fb0b8", tinta: "#1b262c" },
-    cuerpo: cristalCuerpo, extension: cristalExtension, comida: triangulo, fondo: sueloMotas,
+    cuerpo: cristalCuerpo, extension: cristalExtension, comida: triangulo, fondo: sueloMotas, afuera: afueraRayado,
   },
   {
     id: "instrumento",
@@ -1343,7 +1390,7 @@ export const DESIGNS: Design[] = [
           cold: "#3d5159", mid: "#6a6f66", hot: "#b03a2b", dim: "#a9a292", hi: "#fbf8ef", vejez: "#fbf8ef",
           line: "#1d1d19", maw: "#1d1d19", acc: "#8d8873", acc2: "#3f6f5f", jaw: "#b03a2b",
           belly: "#f2ecda", fin: "#8bb6a5", tinta: "#1d1d19" },
-    cuerpo: dialCuerpo, extension: dialExtension, comida: cruz, fondo: sueloRejilla,
+    cuerpo: dialCuerpo, extension: dialExtension, comida: cruz, fondo: sueloRejilla, afuera: afueraLiso,
   },
 ];
 

@@ -63,9 +63,13 @@ const BOCA = { entrada: 0.18, trago: 0.72, ciclo: 12 };
  */
 export type Vista = { escala: number; ox: number; oy: number };
 
-export function vistaDe(W: number, H: number, ancho: number, alto: number): Vista {
-  const escala = Math.min(W / ancho, H / alto);
-  return { escala, ox: (W - ancho * escala) / 2, oy: (H - alto * escala) / 2 };
+/** `arriba` pega el mundo al borde de arriba en vez de centrarlo: en el móvil maximizado, lo de
+ *  abajo es por donde sube el cajón. `tope` es lo que tapan los botones que flotan arriba del
+ *  lienzo maximizado: ahí hay casa, pero el mundo empieza debajo. */
+export function vistaDe(W: number, H: number, ancho: number, alto: number, arriba = false, tope = 0): Vista {
+  const h = H - tope;
+  const escala = Math.min(W / ancho, h / alto);
+  return { escala, ox: (W - ancho * escala) / 2, oy: tope + (arriba ? 0 : (h - alto * escala) / 2) };
 }
 
 /**
@@ -93,14 +97,21 @@ export const ESCALA_SEGUIR = CUERPO_LEGIBLE / (2 * RECORRIDO.talla[0]);
  * cuando no hace falta solo quita de la vista lo que pasa alrededor, que en este mundo es la mitad
  * de lo que explica al que se está mirando.
  */
-export function vistaSobre(W: number, H: number, ancho: number, alto: number, x: number, y: number): Vista {
-  if (Math.min(W / ancho, H / alto) >= ESCALA_SEGUIR) return vistaDe(W, H, ancho, alto);
+export function vistaSobre(
+  W: number, H: number, ancho: number, alto: number, x: number, y: number, arriba = false, tope = 0,
+): Vista {
+  if (Math.min(W / ancho, (H - tope) / alto) >= ESCALA_SEGUIR) return vistaDe(W, H, ancho, alto, arriba, tope);
   const e = ESCALA_SEGUIR;
-  return {
-    escala: e,
-    ox: clamp(W / 2 - x * e, W - ancho * e, 0),
-    oy: clamp(H / 2 - y * e, H - alto * e, 0),
+  // Por el eje en el que el mundo cabe entero —maximizado, el lienzo puede ser más largo que él—
+  // no hay nada que seguir: se queda donde lo pone la vista entera. `ini` es donde empieza lo que
+  // se ve sin botones encima, que es donde se centra al que se sigue.
+  const eje = (L: number, lado: number, foco: number, pegado: boolean, ini: number) => {
+    const libre = L - ini;
+    return lado * e <= libre
+      ? ini + (pegado ? 0 : (libre - lado * e) / 2)
+      : clamp(ini + libre / 2 - foco * e, L - lado * e, ini);
   };
+  return { escala: e, ox: eje(W, ancho, x, false, 0), oy: eje(H, alto, y, arriba, tope) };
 }
 
 /** La paleta de una partida: la del diseño que le toque a su semilla. */
@@ -116,16 +127,20 @@ export const paletaDe = (semilla: string, tema: "light" | "dark"): Paleta =>
  */
 let cacheFondo: { clave: string; lienzo: HTMLCanvasElement } | null = null;
 
-function fondoDe(d: Design, p: Paleta, ancho: number, alto: number, casa: number, escala: number, dpr: number): HTMLCanvasElement {
-  const w = Math.round(ancho * escala * dpr), h = Math.round(alto * escala * dpr);
-  const clave = `${d.id}|${p.tema}|${w}|${h}`;
+function fondoDe(
+  d: Design, p: Paleta, ancho: number, alto: number, casa: number, escala: number, dpr: number,
+  mx: number, my: number,
+): HTMLCanvasElement {
+  const w = Math.round((ancho + 2 * mx) * escala * dpr), h = Math.round((alto + 2 * my) * escala * dpr);
+  const clave = `${d.id}|${p.tema}|${w}|${h}|${mx}|${my}`;
   if (cacheFondo && cacheFondo.clave === clave) return cacheFondo.lienzo;
 
   const cv = document.createElement("canvas");
   cv.width = w; cv.height = h;
   const c = cv.getContext("2d")!;
   const e = escala * dpr;
-  c.setTransform(e, 0, 0, e, 0, 0);
+  c.setTransform(e, 0, 0, e, mx * e, my * e);
+  if (mx || my) d.afuera(c, ancho, alto, -mx, -my, ancho + mx, alto + my, escala, p);
   d.fondo(c, ancho, alto, casa, escala, p);
 
   cacheFondo = { clave, lienzo: cv };
@@ -191,7 +206,18 @@ export function pintar(
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.fillStyle = p.bg;
   ctx.fillRect(0, 0, W, H);
-  ctx.drawImage(fondoDe(d, p, c.ancho, c.alto, c.casa, v.escala, dpr), v.ox, v.oy, c.ancho * v.escala, c.alto * v.escala);
+  // **Lo que el lienzo enseña más allá del mundo es casa**, en unidades de mundo: el sobrante entero
+  // por cada lado, que cubre el mundo centrado y el pegado arriba. Fuera de pantalla completa el
+  // lienzo mide lo que el mundo y no sobra nada.
+  const margen = (lienzo: number, lado: number) => {
+    const m = lienzo / v.escala - lado;   // el redondeo del lienzo a píxeles deja décimas: eso no es sobrante
+    return m >= 1 ? Math.ceil(m) : 0;
+  };
+  const mx = margen(W, c.ancho), my = margen(H, c.alto);
+  ctx.drawImage(
+    fondoDe(d, p, c.ancho, c.alto, c.casa, v.escala, dpr, mx, my),
+    v.ox - mx * v.escala, v.oy - my * v.escala, (c.ancho + 2 * mx) * v.escala, (c.alto + 2 * my) * v.escala,
+  );
 
   const e = v.escala * dpr;
   ctx.setTransform(e, 0, 0, e, v.ox * dpr, v.oy * dpr);
@@ -211,7 +237,7 @@ export function pintar(
   if (sombra > 0.01) {
     ctx.globalCompositeOperation = "multiply";
     ctx.fillStyle = mix("#ffffff", CREPUSCULO[p.tema], sombra);
-    ctx.fillRect(0, 0, c.ancho, c.alto);
+    ctx.fillRect(-mx, -my, c.ancho + 2 * mx, c.alto + 2 * my);   // la casa de fuera también anochece
     ctx.globalCompositeOperation = "source-over";
   }
 

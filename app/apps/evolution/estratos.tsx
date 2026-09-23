@@ -1,5 +1,6 @@
 "use client";
 
+import Asa from "./asa";
 import { useEffect, useRef, useState } from "react";
 import { pintarEstrato, posGen, type Estrato, type Tinta } from "./render";
 import { RASGOS, type Rasgo } from "./engine";
@@ -99,10 +100,11 @@ export default function Estratos({ historia, eva, dia, cerrar }: {
 
   return (
     <div ref={caja} className="es-panel" style={{ "--es-alto": `${ALTO}px`, "--es-alto-movil": `${ALTO_MOVIL}px` } as React.CSSProperties}>
+      <Asa cerrar={cerrar} />
       <div className="es-cabecera">
         <b>toda la partida</b>
         <span className="es-rango">día 1 → {hoy}</span>
-        <button className="ev-btn muted" onClick={cerrar}>cerrar</button>
+        <button className="ev-btn muted ev-cerrar" onClick={cerrar}>cerrar</button>
       </div>
       {RASGOS.map((r) => (
         <Franja key={r} rasgo={r} cs={cs} eva={eva} />
