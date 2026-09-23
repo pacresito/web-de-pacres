@@ -2,6 +2,8 @@
 // y vuelven antes de que anochezca. El que no vuelve, muere; el que vuelve con uno, vive; cada dos
 // bocados dan un hijo. Lógica pura, sin React ni canvas — render.ts lo pinta y page.tsx lo conecta.
 //
+// **Cambiar el motor caduca la lista del dado** (`semillas.ts`): se vuelve a pasar `semillas.medir.ts`.
+//
 // Tres promesas que el resto del archivo cumple línea a línea:
 //
 // 1. **Ningún gen mejor cuanto más alto.** Uno sin óptimo interior se clava en el tope en tres
