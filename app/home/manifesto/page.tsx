@@ -486,10 +486,12 @@ body:has(.vE.wf-page) { background: var(--bg); }
 /* Aptitudes */
 .vE-skills { padding: 48px 0 64px; border-bottom: 1px solid var(--line); }
 .vE-skills__k { font: 500 12px "IBM Plex Mono", monospace; letter-spacing: .2em; color: var(--ink-3); margin-bottom: 20px; }
-.vE-skills__list { margin: 0; padding: 0; font-family: "Instrument Serif", Georgia, serif; font-size: 19px; line-height: 1.6; letter-spacing: -.005em; color: var(--ink-4); max-width: 800px; }
+/* El punto va delante de todas y la lista se corre a la izquierda lo que mide: el que abre
+   renglón cae en ese margen y el clip-path lo recorta. Sin medir nada, parta por donde parta. */
+.vE-skills__list { margin: 0; padding: 0; font-family: "Instrument Serif", Georgia, serif; font-size: 19px; line-height: 1.6; letter-spacing: -.005em; color: var(--ink-4); max-width: calc(800px + .85em); clip-path: inset(-.5em -.5em -.5em calc(.85em - 4px)); }
+.vE p.vE-skills__list { margin-left: -.85em; }
 .vE-skills__list span { color: var(--ink-3); white-space: nowrap; }
-.vE-skills__list span[data-line-start="1"] .vE-dot { display: none; }
-.vE-skills__list em { color: var(--ink-4); font-style: normal; padding: 0 .2em; }
+.vE-skills__list .vE-dot { display: inline-block; width: .85em; text-align: center; color: var(--ink-4); font-style: normal; }
 
 /* Skill shine — mismo color que los span de aptitudes (--ink-3) */
 .vE-skill-shine {
@@ -727,7 +729,6 @@ export default function Manifesto() {
   const [skillsMode, setSkillsMode] = useState<"default" | "fading" | "terminal">("default");
   const [fullWhite, setFullWhite] = useState(false);
   const [skillsMinHeight, setSkillsMinHeight] = useState<number | undefined>();
-  const skillsRef = useRef<HTMLParagraphElement>(null);
   const skillsSectionRef = useRef<HTMLElement>(null);
   const physicsActiveRef = useRef(false);
   const restoreRef = useRef<(() => void) | null>(null);
@@ -757,41 +758,6 @@ export default function Manifesto() {
     }, { threshold: 0.12 });
     els.forEach(el => obs.observe(el));
     return () => obs.disconnect();
-  }, []);
-
-  useEffect(() => {
-    const update = () => {
-      const container = skillsRef.current;
-      if (!container) return;
-      const firstSpan = container.querySelector<HTMLSpanElement>("span:not([data-line-start])");
-      const spans = container.querySelectorAll<HTMLSpanElement>("span[data-line-start]");
-      if (!spans.length) return;
-      // Start clean: no dots
-      spans.forEach(s => { s.dataset.lineStart = "1"; });
-      void container.offsetHeight;
-      // Process left-to-right: tentatively add dot to each span, keep it only if the span
-      // stays on the same visual line as its predecessor. Each decision is committed before
-      // the next span is processed — no oscillation.
-      let prevTop = firstSpan ? Math.round(firstSpan.getBoundingClientRect().top) : 0;
-      spans.forEach(span => {
-        span.dataset.lineStart = "0"; // try dot
-        const myTop = Math.round(span.getBoundingClientRect().top); // forces reflow
-        if (myTop !== prevTop) {
-          span.dataset.lineStart = "1"; // dot causes overflow → revert
-          prevTop = Math.round(span.getBoundingClientRect().top);
-        } else {
-          prevTop = myTop;
-        }
-      });
-    };
-    update();
-    document.fonts.ready.then(update);
-    const t = setTimeout(update, 500);
-    window.addEventListener("resize", update);
-    return () => {
-      clearTimeout(t);
-      window.removeEventListener("resize", update);
-    };
   }, []);
 
   const triggerLetterPhysics = useCallback(async () => {
@@ -1215,15 +1181,14 @@ export default function Manifesto() {
             {skillsMode === "default" ? (
               <>
                 <div className="vE-skills__k">— APTITUDES —</div>
-                <p className="vE-skills__list" ref={skillsRef}>
-                  {APTITUDES.map((a, ai) => (
+                <p className="vE-skills__list">
+                  {APTITUDES.map((a) => (
                     <Fragment key={a}>
-                      {ai > 0 && " "}
+                      <wbr />
                       {a === "Resolución de problemas" ? (
                         <a
                           href="/cv"
                           className="vE-skill-shine"
-                          {...(ai > 0 ? { "data-line-start": "0" } : {})}
                           onClick={(e) => {
                             e.preventDefault();
                             setSkillsMinHeight(skillsSectionRef.current?.offsetHeight);
@@ -1246,11 +1211,13 @@ export default function Manifesto() {
                             }
                           }}
                         >
-                          {ai > 0 && <em className="vE-dot">· </em>}{a}
+                          <em className="vE-dot">·</em>
+                          {a}
                         </a>
                       ) : (
-                        <span {...(ai > 0 ? { "data-line-start": "0" } : {})}>
-                          {ai > 0 && <em className="vE-dot">· </em>}{a}
+                        <span>
+                          <em className="vE-dot">·</em>
+                          {a}
                         </span>
                       )}
                     </Fragment>
