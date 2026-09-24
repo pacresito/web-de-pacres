@@ -101,10 +101,9 @@ export default function Reposo() {
           </button>
         )}
 
-        <p className="rp-pista">Observa la escena y vuelve en unos días —o meses—.</p>
-        <p className="rp-texto">
-          Cuando vuelvas habrán cambiado cosas, y el juego es descubrir cuáles. Cuanto más tardes en
-          volver, más cambia.
+        <p className="rp-pista">
+          Observa la escena y vuelve en unos días —o meses— · al volver habrán cambiado cosas:
+          descubre cuáles · cuanto más tardes, más cambia
         </p>
 
         <WhyFooter question="¿por qué un juego que premia no jugar?">
@@ -130,7 +129,6 @@ export default function Reposo() {
           display: flex; flex-direction: column; gap: 14px;
         }
         .rp-pista { margin: 0; color: var(--t-ink3); font-size: 12px; }
-        .rp-texto { margin: 0; color: var(--t-ink2); font-size: 13px; line-height: 1.6; }
         /* El lienzo manda: si no cabe, la caja se desplaza en vez de encoger la calle. El filo
            va en outline y no en border, que ocupa sitio: la caja mediría dos píxeles menos que
            la calle y se desplazaría siempre. */
