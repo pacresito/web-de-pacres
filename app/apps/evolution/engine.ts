@@ -31,6 +31,8 @@
 //
 // Las cifras de las constantes salen de `costes.medir.ts`, no de la intuición.
 
+import { FORMAS, MEDIDAS, chocar, enFranja, haciaCasa, isla, puntoComida, puntoEnCasa, seVe, type Forma } from "./formas";
+
 // ─── Azar determinista ────────────────────────────────────────────────────────
 
 export type Azar = { s: number };
@@ -197,6 +199,11 @@ export const TABLA: Record<Rasgo, { paga: string; cobra: string }> = {
 };
 
 export type Config = {
+  /**
+   * La geometría del mundo, y **la sortea la semilla** como el clima (`formas.ts`). Fijarla aquí lo
+   * salta. `ancho` y `alto` son la caja que la contiene, y salen de la forma salvo que se fijen.
+   */
+  forma: Forma;
   ancho: number;
   alto: number;
   /**
@@ -393,7 +400,7 @@ export const URNA = [25, 40, 55];
 // el mundo. **Se paga con despensa y no con más fundadoras**, que es `despensaFundador`: una segunda
 // bicha arregla la cifra igual de bien y a cambio el principio deja de ser un principio.
 export const CONFIG: Config = {
-  ancho: 288, alto: 200,
+  forma: "caja", ancho: 288, alto: 200,
   comidas: 40, censoInicial: 1,
   ticksDia: 1000, capReserva: CAP_RESERVA, casa: 18,
   caza: true, boca: 1.2, ticksPresa: 120,
@@ -401,6 +408,15 @@ export const CONFIG: Config = {
   vida: 10,
   fundador: FUNDADOR,
 };
+
+/**
+ * **El mundo en el que se mide: la caja.** El fundador, `RECORRIDO`, `SEMI` y los costes salen de
+ * medidores que corren con esto, y no con la forma que sortee cada semilla. Las formas mueven la
+ * mediana de cada gen menos de un 10% (`formas.medir.ts`; lo más lejos, el donut: visión ×1,10 y
+ * sociabilidad −0,24), y medir en la mezcla haría que añadir o quitar una forma moviera la escala con
+ * la que se pintan todas.
+ */
+export const REFERENCIA = { forma: "caja" } as const satisfies Partial<Config>;
 
 export type Bicho = {
   id: number; idMadre: number; gen: number;
@@ -533,8 +549,12 @@ export type Mundo = {
    * Hasta dónde llega el parecido de familia hoy: la distancia genética típica de esta población
    * a su propio centro. Por debajo de ella dos bichos son de los mismos, y **no se comen entre
    * ellos** por grande que sea uno. Sale del mundo cada mañana, no de un número elegido a ojo.
+   *
+   * **Una por isla** (`isla` en `formas.ts`), y en las demás formas una sola: dos islas son dos
+   * poblaciones que no se tocan, y con una vara común lo que diverge una decidiría quién se come a
+   * quién en la otra.
    */
-  especie: number;
+  especie: number[];
   /** Dónde se han comido a alguien hoy, para que el pintado pueda enseñarlo. No decide nada. */
   marcas: Marca[];
   /** Los cuerpos de los que se murieron sin que se los comieran, disolviéndose. Tampoco decide nada. */
@@ -564,6 +584,9 @@ const masaCargada = (c: Config, b: Bicho): number =>
   b.masa + b.carga * E_COMIDA + Math.max(0, b.reserva - c.capReserva * b.masa);
 const radioCargado = (c: Config, b: Bicho): number => raizCubica(masaCargada(c, b), b.radio);
 
+/** La forma que le toca a una semilla. */
+export const formaDe = (semilla: string): Forma => FORMAS[hashSemilla(`forma ${semilla}`) % FORMAS.length];
+
 export function crearMundo(semilla: string, cfg: Partial<Config> = {}): Mundo {
   const c: Config = { ...CONFIG, ...cfg };
   const azar = azarCon(semilla);
@@ -573,39 +596,31 @@ export function crearMundo(semilla: string, cfg: Partial<Config> = {}): Mundo {
   // diferencian en eso.
   const clima = URNA[Math.floor(sig(azar) * URNA.length)];
   if (cfg.comidas === undefined) c.comidas = clima;
+  // La forma sale de su propio dado y no del azar del mundo: una semilla que saque caja da el mismo
+  // mundo que antes de que hubiera formas.
+  if (cfg.forma === undefined) c.forma = formaDe(semilla);
+  if (cfg.ancho === undefined) c.ancho = MEDIDAS[c.forma].ancho;
+  if (cfg.alto === undefined) c.alto = MEDIDAS[c.forma].alto;
   const m: Mundo = {
     cfg: c, azar, dia: 0, viajes: 0, t: 0, duracion: 0, bichos: [], comida: [], siguienteId: 1,
-    noche: false, especie: 0, marcas: [], restos: [],
+    noche: false, especie: [0], marcas: [], restos: [],
     extinto: false, cuenta: { nacidos: 0, hambre: 0, fuera: 0, comidos: 0, vejez: 0 },
   };
+  // En las islas, una fundadora por isla: las dos idénticas, para ver si lo mismo da lo mismo.
+  if (cfg.censoInicial === undefined && c.forma === "islas") c.censoInicial = 2;
   // La población de partida son clones del fundador, para ver divergir lo que empezó idéntico, y
-  // salen con provisiones: nadie les ha pagado la despensa y el primer día no perdona.
-  for (let i = 0; i < c.censoInicial; i++) nacer(m, { ...c.fundador }, -1, 0).reserva *= c.despensaFundador;
+  // salen con provisiones: nadie les ha pagado la despensa y el primer día no perdona. Amanecen en
+  // la línea media de casa; a partir de ahí cada uno amanece donde acabó y las crías, donde nacieron.
+  for (let i = 0; i < c.censoInicial; i++) {
+    nacer(m, { ...c.fundador }, -1, 0, puntoEnCasa(c, () => sig(azar), i)).reserva *= c.despensaFundador;
+  }
   amanecer(m);
   return m;
 }
 
-/**
- * Un punto al azar en la línea media de la franja de casa: donde se está a salvo y, por tanto,
- * donde se amanece. Solo la usan los fundadores del primer día — a partir de ahí cada uno amanece
- * donde acabó y las crías, donde nacieron.
- */
-function enCasaDelTodo(m: Mundo): [number, number] {
-  const c = m.cfg;
-  const u = sig(m.azar), v = c.casa / 2;
-  const perimetro = 2 * (c.ancho + c.alto);
-  let d = u * perimetro;
-  if (d < c.ancho) return [d, v];
-  d -= c.ancho;
-  if (d < c.alto) return [c.ancho - v, d];
-  d -= c.alto;
-  if (d < c.ancho) return [c.ancho - d, c.alto - v];
-  return [v, d - c.ancho];
-}
-
-/** Nace en la línea de salida, o donde se le diga — una cría nace pegada a su madre, y ahí se ve. */
-function nacer(m: Mundo, g: Genoma, idMadre: number, gen: number, donde?: [number, number]): Bicho {
-  const [x, y] = donde ?? enCasaDelTodo(m);
+/** Nace donde se le diga: el fundador en casa, y una cría pegada a su madre, que es donde se ve. */
+function nacer(m: Mundo, g: Genoma, idMadre: number, gen: number, donde: [number, number]): Bicho {
+  const [x, y] = donde;
   const [hx, hy] = unidad(m.azar);
   const b: Bicho = {
     id: m.siguienteId++, idMadre, gen, nacido: m.dia, x, y, hx, hy,
@@ -640,11 +655,11 @@ export function distancia(a: Genoma, b: Genoma): number {
  * mundo de clones vale 0 y no se salva nadie por parecido; en uno partido en dos formas de vida
  * crece, y cada mitad queda protegida de sí misma.
  */
-function dispersion(m: Mundo): number {
-  if (m.bichos.length < 2) return 0;
+function dispersion(bichos: Bicho[]): number {
+  if (bichos.length < 2) return 0;
   const centro = {} as Genoma;
-  for (const r of RASGOS) centro[r] = mediana(m.bichos.map((b) => b.g[r]));
-  return mediana(m.bichos.map((b) => distancia(b.g, centro)));
+  for (const r of RASGOS) centro[r] = mediana(bichos.map((b) => b.g[r]));
+  return mediana(bichos.map((b) => distancia(b.g, centro)));
 }
 
 /**
@@ -664,13 +679,13 @@ export function amanecer(m: Mundo) {
   m.comida.length = 0;
   // Los zarpazos se van con el día; los cuerpos no, que para eso llevan su cuenta atrás.
   m.marcas.length = 0;
-  m.especie = dispersion(m);
+  m.especie = c.forma === "islas"
+    ? [0, 1].map((i) => dispersion(m.bichos.filter((b) => isla(c, b.x) === i)))
+    : [dispersion(m.bichos)];
   const margen = c.casa + RADIO_COMIDA;
   for (let i = 0; i < c.comidas; i++) {
-    m.comida.push({
-      x: margen + sig(m.azar) * (c.ancho - 2 * margen),
-      y: margen + sig(m.azar) * (c.alto - 2 * margen),
-    });
+    const [x, y] = puntoComida(c, margen, RADIO_COMIDA, () => sig(m.azar), i + m.dia);
+    m.comida.push({ x, y });
   }
   for (const b of m.bichos) {
     b.aSalvo = false;
@@ -687,21 +702,11 @@ export function amanecer(m: Mundo) {
     // perder la mañana en un rebote, y eso no lo decide ningún gen. Solo a quien está en casa: al
     // de fuera, la pared que le estorba es otra.
     if (enFranja(c, b.x, b.y)) {
-      const [dx, dy] = haciaCasa(m, b);
-      if (b.hx * dx + b.hy * dy > 0) { if (dx !== 0) b.hx = -b.hx; else b.hy = -b.hy; }
+      const [dx, dy] = haciaCasa(c, b.x, b.y);
+      const p = b.hx * dx + b.hy * dy;
+      if (p > 0) { b.hx -= 2 * p * dx; b.hy -= 2 * p * dy; }
     }
   }
-}
-
-/** Distancia al borde más cercano y hacia dónde está, sin trigonometría. */
-function haciaCasa(m: Mundo, b: Bicho): [number, number, number] {
-  const c = m.cfg;
-  const izq = b.x, der = c.ancho - b.x, arr = b.y, aba = c.alto - b.y;
-  let d = izq, dx = -1, dy = 0;
-  if (der < d) { d = der; dx = 1; dy = 0; }
-  if (arr < d) { d = arr; dx = 0; dy = -1; }
-  if (aba < d) { d = aba; dx = 0; dy = 1; }
-  return [dx, dy, d];
 }
 
 /**
@@ -727,7 +732,7 @@ function decidir(m: Mundo, b: Bicho, radioMax: number, luz: number, cae: boolean
   let d2c = alcanceC * alcanceC, cx = 0, cy = 0, hay = false;
   for (const c of m.comida) {
     const dx = c.x - b.x, dy = c.y - b.y, d2 = dx * dx + dy * dy;
-    if (d2 < d2c && d2 > 1e-9) { d2c = d2; cx = dx; cy = dy; hay = true; }
+    if (d2 < d2c && d2 > 1e-9 && seVe(m.cfg, b.x, b.y, c.x, c.y)) { d2c = d2; cx = dx; cy = dy; hay = true; }
   }
   if (hay) { const d = Math.sqrt(d2c); sx += cx / d; sy += cy / d; }
 
@@ -748,6 +753,7 @@ function decidir(m: Mundo, b: Bicho, radioMax: number, luz: number, cae: boolean
     if (d2 > alcanceB * alcanceB) continue;
     const alcance = g.vision * luz * o.radio;
     if (d2 > alcance * alcance) continue;
+    if (!seVe(m.cfg, b.x, b.y, o.x, o.y)) continue;
     sumM += o.masa; sumX += o.masa * dx; sumY += o.masa * dy;
     if (o.masa < mMenor) { mMenor = o.masa; xMenor = dx; yMenor = dy; }
   }
@@ -767,7 +773,7 @@ function decidir(m: Mundo, b: Bicho, radioMax: number, luz: number, cae: boolean
   // **Dos motivos para volver, un solo gen.** Tira la carga —proporcional, que es lo que la carga
   // hace: pesar— y tira la oscuridad mientras cae, que es cuando de fuera ya no se saca nada. No
   // hace falta reloj para lo segundo: basta con que haya menos luz que hace un tick.
-  const [hx, hy] = haciaCasa(m, b);
+  const [hx, hy] = haciaCasa(m.cfg, b.x, b.y);
   const w = g.retorno * (b.carga + (cae ? 1 - luz : 0));
   if (w > 0) { sx += hx * w; sy += hy * w; }
   // Probado y descartado: `retorno` como cupo —volver al llevar N bocados—. Solo, nadie pasa del
@@ -851,16 +857,12 @@ function morder(m: Mundo, dep: Bicho, presa: Bicho) {
 /** Lo que dura en pantalla el zarpazo, en ticks. Solo lo mira el pintado. */
 export const MARCA = 14;
 
-/** Si un punto cae en la franja del borde, que es casa. */
-const enFranja = (c: Config, x: number, y: number): boolean =>
-  x < c.casa || y < c.casa || x > c.ancho - c.casa || y > c.alto - c.casa;
-
 /**
  * Mover y chocar, siempre rebotando y nunca pegándose: un rumbo clavado contra la pared deja al
  * bicho raspándola el día entero sin decidir nada, y el rebote no es genético — nadie evoluciona
  * a atravesar un muro.
  *
- * Una sola pared, la del mundo, y **cada uno la tiene a su propio radio**: el cuerpo se para
+ * Las paredes son las de la forma (`chocar`), y **cada uno las tiene a su propio radio**: el cuerpo se para
  * tangente al borde en vez de centrado en él, que es como se pintaba media población partida por
  * la mitad. Más adentro no puede ir —probado en la línea media de la franja—: el aro exterior es
  * la sala de espera donde se hace noche, y cerrarlo hunde los nacimientos a la mitad en el mundo
@@ -868,14 +870,8 @@ const enFranja = (c: Config, x: number, y: number): boolean =>
  * ninguna norma, lo castiga que de noche no se ve nada.
  */
 function mover(m: Mundo, b: Bicho, v: number) {
-  const c = m.cfg;
-  let x = b.x + b.hx * v, y = b.y + b.hy * v;
-  const lim = b.radio;
-  if (x < lim) { x = lim; b.hx = Math.abs(b.hx); }
-  else if (x > c.ancho - lim) { x = c.ancho - lim; b.hx = -Math.abs(b.hx); }
-  if (y < lim) { y = lim; b.hy = Math.abs(b.hy); }
-  else if (y > c.alto - lim) { y = c.alto - lim; b.hy = -Math.abs(b.hy); }
-  b.x = x; b.y = y;
+  b.x += b.hx * v; b.y += b.hy * v;
+  chocar(m.cfg, b, b.radio);
 }
 
 /**
@@ -952,7 +948,7 @@ export function tick(m: Mundo) {
     // **Llegar a casa descarga y suelta**, bocado a bocado: la carga que se ve encima tiene que
     // tardar en entrar lo que tarda en desaparecer del dibujo. A salvo se está al pisar la franja
     // —es lo que se pinta como casa—, pero descargar, dormir y criar piden llegar del todo.
-    const [, , d] = haciaCasa(m, b);
+    const [, , d] = haciaCasa(c, b.x, b.y);
     b.aSalvo = d <= c.casa;
     b.enCasa = d <= c.casa / 2;
     if (b.enCasa && b.carga > 0 && m.t % TICKS_BOCADO === 0) {
@@ -978,7 +974,7 @@ export function tick(m: Mundo) {
         // De los tuyos no se come, por grande que seas: por debajo de la dispersión de la
         // población sois la misma cosa. Con la población clonada (`especie` = 0) eso cubre a los
         // idénticos, que es exactamente lo que hay el primer día.
-        if (distancia(a.g, b.g) <= m.especie) continue;
+        if (distancia(a.g, b.g) <= m.especie[isla(c, a.x)]) continue;
         // Comerse a otro da **dos cosas distintas**, y esa es la gracia: su cuerpo entra en la
         // despensa —con la eficiencia trófica, el resto se pierde— y su carga cambia de dueño,
         // todavía a cuestas y sin canjear. Las dos crían: lo robado nace esta misma noche y lo
@@ -1058,9 +1054,9 @@ export function anochecer(m: Mundo) {
       const d = b.radio + h.radio + 1;
       // Al lado de su madre, pero de este lado del muro: se cría pegada a él, y la cría que cayera
       // fuera amanecería pintada a medias.
-      const muro = h.radio;
-      h.x = Math.min(Math.max(b.x + ux * d, muro), c.ancho - muro);
-      h.y = Math.min(Math.max(b.y + uy * d, muro), c.alto - muro);
+      const sitio = { x: b.x + ux * d, y: b.y + uy * d, hx: 0, hy: 0 };
+      chocar(c, sitio, h.radio);
+      h.x = sitio.x; h.y = sitio.y;
       h.recien = true;
       b.hijos++;
       b.crias++;

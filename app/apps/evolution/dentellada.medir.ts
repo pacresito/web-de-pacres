@@ -13,7 +13,7 @@
 // 2. Emparejando por semilla —el clima y la Eva son la mayor fuente de ruido—, ¿hacia dónde se
 //    mueve cada mundo, o se reparten a un lado y a otro como el azar?
 // 3. ¿Cuánta jornada se va de verdad en morder? Es la magnitud de la que cuelgan las otras dos.
-import { CONFIG, correrDia, crearMundo, mediana, resumen, tick, anochecer, amanecer } from "./engine";
+import { CONFIG, correrDia, REFERENCIA, crearMundo, mediana, resumen, tick, anochecer, amanecer } from "./engine";
 
 const SEMILLAS = ("hola pablo claudio mar brizna raiz sal duna ocho nueve diez once sur norte cal arena hoja rama polvo cima " +
   "vado junco era brea luna sol pino roble olmo haya sauce cedro").split(" ");
@@ -29,7 +29,7 @@ const fila = (xs: (string | number)[]) => console.log(xs.map((x) => String(x).pa
 type Fin = { censo: number; comidos: number; presa: number; talla: number; fiereza: number } | null;
 
 function correr(sem: string, comidas: number, ticksPresa: number): Fin {
-  const m = crearMundo(sem, { comidas, ticksPresa });
+  const m = crearMundo(sem, { ...REFERENCIA, comidas, ticksPresa });
   for (let d = 0; d < DIAS && !m.extinto; d++) correrDia(m);
   if (m.extinto || m.bichos.length < 3) return null;
   const r = resumen(m);
@@ -92,7 +92,7 @@ for (const ticksPresa of TICKS) {
   if (ticksPresa === 0) continue;
   let anclados = 0, vividos = 0, presas = 0, dias = 0, censo = 0;
   for (const sem of SEMILLAS.slice(0, 10)) {
-    const m = crearMundo(sem, { comidas: 55, ticksPresa });
+    const m = crearMundo(sem, { ...REFERENCIA, comidas: 55, ticksPresa });
     for (let d = 0; d < 60 && !m.extinto; d++) {
       while (!tick(m)) for (const b of m.bichos) { vividos++; if (b.muerde || b.preso) anclados++; }
       anchoDia(m);

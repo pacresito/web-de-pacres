@@ -18,7 +18,7 @@
 // Un mundo extinto no cuenta para el centro ni para la dispersión: promediar con él mete el sesgo
 // de que los que se mueren pronto se mueren de una cosa concreta.
 
-import { FUNDADOR, RASGOS, banda, correrDia, crearMundo, signado, type Genoma, type Rasgo } from "./engine";
+import { FUNDADOR, RASGOS, banda, correrDia, REFERENCIA, crearMundo, signado, type Genoma, type Rasgo } from "./engine";
 import { DESVIO } from "./designs";
 
 // **Cuarenta y ocho y no veinte**, porque los genes no se dejan fijar igual de bien: `talla` y
@@ -86,7 +86,7 @@ const partidas: Partida[] = [];
 const t0 = Date.now();
 
 for (const s of SEMILLAS) {
-  const m = crearMundo(s);
+  const m = crearMundo(s, REFERENCIA);
   const cortes = {} as Partida["cortes"], grosores = {} as Record<Rasgo, number[]>;
   const min = {} as Record<Rasgo, number>, max = {} as Record<Rasgo, number>;
   for (const r of RASGOS) { cortes[r] = []; grosores[r] = []; min[r] = Infinity; max[r] = -Infinity; }

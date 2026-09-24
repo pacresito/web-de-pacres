@@ -92,7 +92,7 @@ for (const d of DESIGNS) {
   const vacios = roles.filter((k) => !p[k] || !q[k]);
   check(`${d.nombre}: paleta completa en los dos temas`, vacios.length === 0, vacios.join(", "));
   check(`${d.nombre}: tiene cuerpo, comida y suelo propios`,
-    typeof d.cuerpo === "function" && typeof d.comida === "function" && typeof d.fondo === "function");
+    typeof d.cuerpo === "function" && typeof d.comida === "function" && typeof d.suelo === "function");
 }
 
 // 6. **El reparto de semillas no puede estar sesgado.** Si una palabra de cada dos cayera en el

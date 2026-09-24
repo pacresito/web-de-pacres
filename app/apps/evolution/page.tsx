@@ -598,8 +598,8 @@ export default function Evolution() {
       esperaRef.current = espera;
       const foco = espera && (!espera.hasta || espera.hasta > ahora) ? espera : null;
       const meta = foco
-        ? vistaSobre(W, H, CONFIG.ancho, CONFIG.alto, foco.x, foco.y, arribaRef.current, topeRef.current)
-        : vistaDe(W, H, CONFIG.ancho, CONFIG.alto, arribaRef.current, topeRef.current);
+        ? vistaSobre(W, H, m.cfg.ancho, m.cfg.alto, foco.x, foco.y, arribaRef.current, topeRef.current)
+        : vistaDe(W, H, m.cfg.ancho, m.cfg.alto, arribaRef.current, topeRef.current);
       const antes = camRef.current;
       let v = meta;
       if (antes && antes.escala === meta.escala) {

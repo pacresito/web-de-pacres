@@ -17,7 +17,7 @@
 // 4. ¿Qué se ve en los primeros días? Es lo primero que mira quien abre la página, y el panel
 //    tiene que aguantarlo: la población se desploma antes de recuperarse.
 
-import { FUNDADOR, RASGOS, banda, correrDia, crearMundo, signado } from "./engine";
+import { FUNDADOR, RASGOS, banda, correrDia, REFERENCIA, crearMundo, signado } from "./engine";
 import { RECORRIDO } from "./designs";
 import { BINS, columnas, crearHistoria, registrar, type Historia } from "./reparto";
 
@@ -49,7 +49,7 @@ const medidas: Record<string, Medida[]> = {};
 for (const r of RASGOS) medidas[r] = [];
 
 for (const s of SEMILLAS) {
-  const m = crearMundo(s);
+  const m = crearMundo(s, REFERENCIA);
   const h = crearHistoria();
   const lejos: Record<string, number> = {}, grosores: Record<string, number[]> = {};
   for (const r of RASGOS) { lejos[r] = 0; grosores[r] = []; }

@@ -10,6 +10,7 @@
 // Se llama `designs` y no `diseños` porque es un identificador ASCII (regla «Nombres»).
 
 import { FUNDADOR, RADIO_COMIDA, RASGOS, hashSemilla, signado, type Genoma, type Rasgo } from "./engine";
+import type { PuntoOrilla } from "./formas";
 
 const TAU = Math.PI * 2;
 export const clamp = (v: number, a: number, b: number) => (v < a ? a : v > b ? b : v);
@@ -282,18 +283,18 @@ export type Design = {
   extension: (g: Genoma, radio: number) => [number, number];
   /** Un bocado, centrado en el origen. `giro` es estable por bocado: sale de su posición. */
   comida: (ctx: CanvasRenderingContext2D, p: Paleta, giro: number) => void;
-  /** El suelo y la franja de casa, en unidades de mundo. Se cuece una vez, no por cuadro. */
-  fondo: (c: CanvasRenderingContext2D, ancho: number, alto: number, casa: number, escala: number, p: Paleta) => void;
   /**
-   * La casa más allá del mundo, que es lo que se ve alrededor de él maximizado: el material de la
-   * franja sin su orilla, para que el mundo no acabe en un marco sino en más casa. Pinta el
-   * rectángulo `x0,y0 → x1,y1` en unidades de mundo, que se sale por debajo de cero; lo que caiga
-   * dentro del mundo lo tapa `fondo`, que va después.
+   * El suelo, en unidades de mundo, se cuece una vez y no por cuadro, en tres capas que **no saben
+   * de la forma del mundo**: quien pinta las recorta y las pone en su sitio.
+   *
+   * `casa` es el material de casa sobre el rectángulo `x0,y0 → x1,y1`, que se sale del mundo: **todo
+   * lo que no es campo es casa**, así que el mundo no acaba en un marco sino en más casa.
    */
-  afuera: (
-    c: CanvasRenderingContext2D, ancho: number, alto: number,
-    x0: number, y0: number, x1: number, y1: number, escala: number, p: Paleta,
-  ) => void;
+  casa: (c: CanvasRenderingContext2D, x0: number, y0: number, x1: number, y1: number, escala: number, p: Paleta) => void;
+  /** El suelo del campo sobre la caja del mundo entera; llega recortado a la forma. */
+  suelo: (c: CanvasRenderingContext2D, ancho: number, alto: number, casa: number, escala: number, p: Paleta) => void;
+  /** La orilla entre el campo y casa, sobre sus lazos. La normal de cada punto mira a casa. */
+  borde: (c: CanvasRenderingContext2D, lazos: PuntoOrilla[][], casa: number, escala: number, p: Paleta) => void;
 };
 
 // ─── Suelos ───────────────────────────────────────────────────────────────────
@@ -302,173 +303,149 @@ export type Design = {
 // haría parpadear como nieve de televisión, y son más de mil figuras — pintarlas sesenta veces por
 // segundo cuesta más que todos los bichos juntos.
 
-/** La franja del perímetro, rellena de un solo tono. Casa es una orilla, no un marco. */
-function franja(c: CanvasRenderingContext2D, ancho: number, alto: number, casa: number, p: Paleta) {
-  c.fillStyle = p.home;
-  c.beginPath();
-  c.rect(0, 0, ancho, alto);
-  c.rect(casa, casa, ancho - casa * 2, alto - casa * 2);
-  c.fill("evenodd");
-}
-
-/** Las motas que se tiran sobre el mundo entero; solo se quedan las que caen en la franja. */
-const MOTAS = 1100;
-
-/** Moteado de arena, solo dentro de la franja: casa tiene textura y el suelo no. */
-function moteado(c: CanvasRenderingContext2D, ancho: number, alto: number, casa: number, escala: number, p: Paleta, azar: () => number) {
-  motas(c, 0, 0, ancho, alto, MOTAS, escala, p, azar, (x, y) => x > casa && x < ancho - casa && y > casa && y < alto - casa);
-}
+/**
+ * Figuras de grano por unidad de área: las que tenía la caja de 288×200, que es la medida con la que
+ * se eligieron. Por área y no por mundo, para que un mundo más pequeño no salga más granulado.
+ */
+const POR_AREA = 1 / (288 * 200);
+const MOTAS = 1100, GRANO = 480, PUNTOS = 900;
 
 function motas(
-  c: CanvasRenderingContext2D, x0: number, y0: number, x1: number, y1: number, n: number,
-  escala: number, p: Paleta, azar: () => number, fuera: (x: number, y: number) => boolean = () => false,
+  c: CanvasRenderingContext2D, x0: number, y0: number, x1: number, y1: number,
+  escala: number, p: Paleta, azar: () => number,
 ) {
   c.fillStyle = p.homeInk;
+  const n = Math.round(MOTAS * POR_AREA * (x1 - x0) * (y1 - y0));
   for (let i = 0; i < n; i++) {
     const x = x0 + azar() * (x1 - x0), y = y0 + azar() * (y1 - y0);
-    if (fuera(x, y)) continue;
     c.globalAlpha = 0.25 + azar() * 0.5;
     c.beginPath(); c.arc(x, y, (0.6 + azar() * 1.5) / escala, 0, TAU); c.fill();
   }
   c.globalAlpha = 1;
 }
 
-/**
- * El borde interior de casa, ondulado. Es una orilla: se lee como algo del mundo y no como el marco
- * de un plano. **La línea media de la franja —donde de verdad se está a salvo— no se pinta:** quien
- * juega la aprende viendo que ahí dejan de cazarse.
- */
-function orilla(c: CanvasRenderingContext2D, ancho: number, alto: number, casa: number, escala: number, p: Paleta) {
-  c.strokeStyle = p.homeInk;
-  c.lineWidth = 2 / escala;
-  c.beginPath();
-  const onda = (v: number) => Math.sin(v * 0.16) * 0.8;
-  const paso = 2.2;
-  for (let x = casa; x <= ancho - casa; x += paso) {
-    const y = casa + onda(x);
-    if (x === casa) c.moveTo(x, y); else c.lineTo(x, y);
-  }
-  for (let y = casa; y <= alto - casa; y += paso) c.lineTo(ancho - casa + onda(y), y);
-  for (let x = ancho - casa; x >= casa; x -= paso) c.lineTo(x, alto - casa + onda(x));
-  for (let y = alto - casa; y >= casa; y -= paso) c.lineTo(casa + onda(y), y);
-  c.closePath();
-  c.stroke();
-}
-
-/** El mismo borde, recto. Los diseños de material duro lo quieren así: ahí la recta es el material. */
-function canto(c: CanvasRenderingContext2D, ancho: number, alto: number, casa: number, escala: number, p: Paleta, guiones = false) {
-  const f = 1 / escala;
-  c.strokeStyle = p.homeInk;
-  c.lineWidth = 2 * f;
-  if (guiones) c.setLineDash([6 * f, 5 * f]);
-  c.strokeRect(casa, casa, ancho - casa * 2, alto - casa * 2);
-  c.setLineDash([]);
-}
-
-/** Grano de papel: despega el suelo del color plano sin dibujar nada que signifique algo. */
-function papel(c: CanvasRenderingContext2D, ancho: number, alto: number, escala: number, p: Paleta, azar: () => number) {
-  c.fillStyle = mix(p.bg, p.bg2, 0.9);
-  c.globalAlpha = 0.5;
-  for (let i = 0; i < 480; i++) {
-    const s = (1 + azar() * 2.2) / escala;
-    c.fillRect(azar() * ancho, azar() * alto, s, s * 0.7);
-  }
-  c.globalAlpha = 1;
-}
-
-/** La franja moteada, fuera del mundo: con la misma densidad de motas que tiene dentro. */
-const afueraMoteado: Design["afuera"] = (c, ancho, alto, x0, y0, x1, y1, escala, p) => {
+/** Casa moteada de arena. */
+const casaMoteada: Design["casa"] = (c, x0, y0, x1, y1, escala, p) => {
   c.fillStyle = p.home; c.fillRect(x0, y0, x1 - x0, y1 - y0);
-  const n = Math.round((MOTAS * (x1 - x0) * (y1 - y0)) / (ancho * alto));
-  motas(c, x0, y0, x1, y1, n, escala, p, azarFijo(5));
+  motas(c, x0, y0, x1, y1, escala, p, azarFijo(5));
 };
 
 /** El paso del rayado de la casa de cristal, en unidades de mundo. */
 const pasoRayado = (escala: number) => (7 / escala) * 2.7;
 
-/** La franja rayada, fuera del mundo: las rayas siguen la misma red que dentro y no se cortan. */
-const afueraRayado: Design["afuera"] = (c, ancho, alto, x0, y0, x1, y1, escala, p) => {
+/** Casa rayada en diagonal: rayas `x − y = d`, con `d` en una red que no se corta. */
+const casaRayada: Design["casa"] = (c, x0, y0, x1, y1, escala, p) => {
   c.fillStyle = p.home; c.fillRect(x0, y0, x1 - x0, y1 - y0);
   c.strokeStyle = p.homeInk;
   c.lineWidth = 1 / escala;
   const paso = pasoRayado(escala);
-  // Rayas `x − y = d`, con `d` en la red que empieza en −alto, que es la de `sueloMotas`.
-  for (let d = -alto + Math.floor((x0 - y1 + alto) / paso) * paso; d < x1 - y0; d += paso) {
+  for (let d = Math.floor((x0 - y1) / paso) * paso; d < x1 - y0; d += paso) {
     c.beginPath(); c.moveTo(d + y0, y0); c.lineTo(d + y1, y1); c.stroke();
   }
 };
 
 /** La casa del instrumento es lisa: las marcas de regla son del borde, no del material. */
-const afueraLiso: Design["afuera"] = (c, _ancho, _alto, x0, y0, x1, y1, _escala, p) => {
+const casaLisa: Design["casa"] = (c, x0, y0, x1, y1, _escala, p) => {
   c.fillStyle = p.home; c.fillRect(x0, y0, x1 - x0, y1 - y0);
 };
 
-/** Suelo de papel con casa moteada y orilla ondulada. */
-const sueloPapel: Design["fondo"] = (c, ancho, alto, casa, escala, p) => {
+/** Grano de papel: despega el suelo del color plano sin dibujar nada que signifique algo. */
+const sueloPapel: Design["suelo"] = (c, ancho, alto, _casa, escala, p) => {
   const azar = azarFijo(3);
   c.fillStyle = p.bg; c.fillRect(0, 0, ancho, alto);
-  papel(c, ancho, alto, escala, p, azar);
-  franja(c, ancho, alto, casa, p);
-  moteado(c, ancho, alto, casa, escala, p, azar);
-  orilla(c, ancho, alto, casa, escala, p);
+  c.fillStyle = mix(p.bg, p.bg2, 0.9);
+  c.globalAlpha = 0.5;
+  for (let i = 0, n = Math.round(GRANO * POR_AREA * ancho * alto); i < n; i++) {
+    const s = (1 + azar() * 2.2) / escala;
+    c.fillRect(azar() * ancho, azar() * alto, s, s * 0.7);
+  }
+  c.globalAlpha = 1;
 };
 
-/** Lo mismo con una viñeta: el centro del mundo se aclara y los bordes se hunden. */
-const sueloVineta: Design["fondo"] = (c, ancho, alto, casa, escala, p) => {
-  const azar = azarFijo(3);
+/** Una viñeta: el centro del mundo se aclara y los bordes se hunden. */
+const sueloVineta: Design["suelo"] = (c, ancho, alto, _casa, _escala, p) => {
   c.fillStyle = p.bg; c.fillRect(0, 0, ancho, alto);
   const gr = c.createRadialGradient(ancho * 0.45, alto * 0.42, alto * 0.1, ancho * 0.5, alto * 0.5, ancho * 0.72);
   gr.addColorStop(0, mix(p.bg, p.hi, 0.1));
   gr.addColorStop(1, p.bg2);
   c.fillStyle = gr; c.fillRect(0, 0, ancho, alto);
-  franja(c, ancho, alto, casa, p);
-  moteado(c, ancho, alto, casa, escala, p, azar);
-  orilla(c, ancho, alto, casa, escala, p);
 };
 
-/** Motas finas y casa rayada en diagonal. Borde recto: aquí el material es la recta. */
-const sueloMotas: Design["fondo"] = (c, ancho, alto, casa, escala, p) => {
+/** Motas finas. */
+const sueloMotas: Design["suelo"] = (c, ancho, alto, _casa, escala, p) => {
   const azar = azarFijo(3);
   c.fillStyle = p.bg; c.fillRect(0, 0, ancho, alto);
   c.fillStyle = p.bg2;
   const s = 1.4 / escala;
-  for (let i = 0; i < 900; i++) c.fillRect(azar() * ancho, azar() * alto, s, s);
-  franja(c, ancho, alto, casa, p);
-  c.save();
-  c.beginPath();
-  c.rect(0, 0, ancho, alto);
-  c.rect(casa, casa, ancho - casa * 2, alto - casa * 2);
-  c.clip("evenodd");
-  c.strokeStyle = p.homeInk;
-  c.lineWidth = 1 / escala;
-  for (let d = -alto; d < ancho + alto; d += pasoRayado(escala)) {
-    c.beginPath(); c.moveTo(d, 0); c.lineTo(d + alto, alto); c.stroke();
-  }
-  c.restore();
-  canto(c, ancho, alto, casa, escala, p);
+  for (let i = 0, n = Math.round(PUNTOS * POR_AREA * ancho * alto); i < n; i++) c.fillRect(azar() * ancho, azar() * alto, s, s);
 };
 
-/** Rejilla y casa con marcas de regla. El suelo de un instrumento se mide. */
-const sueloRejilla: Design["fondo"] = (c, ancho, alto, casa, escala, p) => {
+/** Rejilla: el suelo de un instrumento se mide. Arranca en la orilla de casa. */
+const sueloRejilla: Design["suelo"] = (c, ancho, alto, casa, escala, p) => {
   c.fillStyle = p.bg; c.fillRect(0, 0, ancho, alto);
+  c.strokeStyle = p.bg2; c.lineWidth = 1 / escala;
+  for (let x = casa; x < ancho; x += 16) { c.beginPath(); c.moveTo(x, 0); c.lineTo(x, alto); c.stroke(); }
+  for (let y = casa; y < alto; y += 16) { c.beginPath(); c.moveTo(0, y); c.lineTo(ancho, y); c.stroke(); }
+};
+
+/** Recorre cada lazo como un trazo cerrado, apartando cada punto `f(s)` hacia casa. */
+function trazarLazos(c: CanvasRenderingContext2D, lazos: PuntoOrilla[][], f: (s: number) => number = () => 0) {
+  c.beginPath();
+  for (const l of lazos) {
+    let s = 0;
+    l.forEach((q, i) => {
+      if (i) s += Math.hypot(q.x - l[i - 1].x, q.y - l[i - 1].y);
+      const o = f(s), x = q.x + q.nx * o, y = q.y + q.ny * o;
+      if (i) c.lineTo(x, y); else c.moveTo(x, y);
+    });
+    c.closePath();
+  }
+}
+
+/**
+ * El borde de casa, ondulado. Es una orilla: se lee como algo del mundo y no como el marco de un
+ * plano. **La línea media de la franja —donde de verdad se está a salvo— no se pinta:** quien juega
+ * la aprende viendo que ahí dejan de cazarse.
+ */
+const orilla: Design["borde"] = (c, lazos, _casa, escala, p) => {
+  c.strokeStyle = p.homeInk;
+  c.lineWidth = 2 / escala;
+  trazarLazos(c, lazos, (s) => Math.sin(s * 0.16) * 0.8);
+  c.stroke();
+};
+
+/** El mismo borde, recto. Los diseños de material duro lo quieren así: ahí la recta es el material. */
+const canto: Design["borde"] = (c, lazos, _casa, escala, p) => {
+  c.strokeStyle = p.homeInk;
+  c.lineWidth = 2 / escala;
+  trazarLazos(c, lazos);
+  c.stroke();
+};
+
+/** Canto a guiones con marcas de regla hacia casa, una larga cada cinco. */
+const regla: Design["borde"] = (c, lazos, casa, escala, p) => {
   const f = 1 / escala;
-  c.strokeStyle = p.bg2; c.lineWidth = f;
-  for (let x = casa; x < ancho - casa; x += 16) { c.beginPath(); c.moveTo(x, casa); c.lineTo(x, alto - casa); c.stroke(); }
-  for (let y = casa; y < alto - casa; y += 16) { c.beginPath(); c.moveTo(casa, y); c.lineTo(ancho - casa, y); c.stroke(); }
-  franja(c, ancho, alto, casa, p);
   c.strokeStyle = p.homeInk; c.lineWidth = f;
-  const marca = (i: number) => (i % 5 === 0 ? casa * 0.55 : casa * 0.3);
-  for (let x = casa, i = 0; x < ancho - casa; x += 8, i++) {
-    const l = marca(i);
-    c.beginPath(); c.moveTo(x, casa); c.lineTo(x, casa - l); c.stroke();
-    c.beginPath(); c.moveTo(x, alto - casa); c.lineTo(x, alto - casa + l); c.stroke();
+  // Cada 8 unidades de orilla exactas, interpoladas entre los puntos del lazo: en el punto más
+  // cercano la regla saldría con los dientes desiguales.
+  for (const l of lazos) {
+    let i = 0, acum = 0;
+    for (let k = 0; k < l.length; k++) {
+      const a = l[k], b = l[(k + 1) % l.length], largo = Math.hypot(b.x - a.x, b.y - a.y);
+      for (; i * 8 < acum + largo; i++) {
+        const t = (i * 8 - acum) / (largo || 1);
+        const x = a.x + (b.x - a.x) * t, y = a.y + (b.y - a.y) * t;
+        const l0 = i % 5 === 0 ? casa * 0.55 : casa * 0.3;
+        c.beginPath(); c.moveTo(x, y); c.lineTo(x + a.nx * l0, y + a.ny * l0); c.stroke();
+      }
+      acum += largo;
+    }
   }
-  for (let y = casa, i = 0; y < alto - casa; y += 8, i++) {
-    const l = marca(i);
-    c.beginPath(); c.moveTo(casa, y); c.lineTo(casa - l, y); c.stroke();
-    c.beginPath(); c.moveTo(ancho - casa, y); c.lineTo(ancho - casa + l, y); c.stroke();
-  }
-  canto(c, ancho, alto, casa, escala, p, true);
+  c.lineWidth = 2 * f;
+  c.setLineDash([6 * f, 5 * f]);
+  trazarLazos(c, lazos);
+  c.stroke();
+  c.setLineDash([]);
 };
 
 // ─── Comidas ──────────────────────────────────────────────────────────────────
@@ -1346,7 +1323,7 @@ export const DESIGNS: Design[] = [
           cold: "#2f6b60", mid: "#6f8a58", hot: "#bd4b34", dim: "#9fadb2", hi: "#fbf8ef", vejez: "#fbf8ef",
           line: "#17272e", maw: "#232c29", acc: "#dfae48", acc2: "#dfae48", jaw: "#bd4b34",
           belly: "#f2ecda", fin: "#7fb0b8", tinta: "#17272e" },
-    cuerpo: pezCuerpo, extension: pezExtension, comida: bacilo, fondo: sueloPapel, afuera: afueraMoteado,
+    cuerpo: pezCuerpo, extension: pezExtension, comida: bacilo, casa: casaMoteada, suelo: sueloPapel, borde: orilla,
   },
   {
     id: "protozoo",
@@ -1362,7 +1339,7 @@ export const DESIGNS: Design[] = [
           cold: "#4d6272", mid: "#6e5560", hot: "#8d2f27", dim: "#a09781", hi: "#faf6ec", vejez: "#faf6ec",
           line: "#3a322c", maw: "#241d19", acc: "#9a7b3c", acc2: "#bd7418", jaw: "#8d2f27",
           belly: "#f2ecda", fin: "#b09a72", tinta: "#3a322c" },
-    cuerpo: protoCuerpo, extension: protoExtension, comida: discoCon(0.78), fondo: sueloVineta, afuera: afueraMoteado,
+    cuerpo: protoCuerpo, extension: protoExtension, comida: discoCon(0.78), casa: casaMoteada, suelo: sueloVineta, borde: orilla,
   },
   {
     id: "cristal",
@@ -1376,7 +1353,7 @@ export const DESIGNS: Design[] = [
           cold: "#38566a", mid: "#4f7080", hot: "#ac3d29", dim: "#9aa8b0", hi: "#ffffff", vejez: "#ffffff",
           line: "#1b262c", maw: "#1b262c", acc: "#4e7386", acc2: "#c1861a", jaw: "#ac3d29",
           belly: "#eef5f7", fin: "#7fb0b8", tinta: "#1b262c" },
-    cuerpo: cristalCuerpo, extension: cristalExtension, comida: triangulo, fondo: sueloMotas, afuera: afueraRayado,
+    cuerpo: cristalCuerpo, extension: cristalExtension, comida: triangulo, casa: casaRayada, suelo: sueloMotas, borde: canto,
   },
   {
     id: "instrumento",
@@ -1390,7 +1367,7 @@ export const DESIGNS: Design[] = [
           cold: "#3d5159", mid: "#6a6f66", hot: "#b03a2b", dim: "#a9a292", hi: "#fbf8ef", vejez: "#fbf8ef",
           line: "#1d1d19", maw: "#1d1d19", acc: "#8d8873", acc2: "#3f6f5f", jaw: "#b03a2b",
           belly: "#f2ecda", fin: "#8bb6a5", tinta: "#1d1d19" },
-    cuerpo: dialCuerpo, extension: dialExtension, comida: cruz, fondo: sueloRejilla, afuera: afueraLiso,
+    cuerpo: dialCuerpo, extension: dialExtension, comida: cruz, casa: casaLisa, suelo: sueloRejilla, borde: regla,
   },
 ];
 

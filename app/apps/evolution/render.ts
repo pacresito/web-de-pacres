@@ -11,6 +11,7 @@ import {
   RECORRIDO, azarFijo, clamp, designFor, enrojecer, envejecer, giroDe, mix,
   type Cuerpo, type Design, type Paleta,
 } from "./designs";
+import { MURO, conMar, huecoDe, lazos, muros, trazarCampo, trazarMundo, type Geometria } from "./formas";
 
 export { ESCALA, RECORRIDO, designFor, enEje, medidas, posGen, type Cuerpo, type Design, type Paleta } from "./designs";
 
@@ -127,12 +128,19 @@ export const paletaDe = (semilla: string, tema: "light" | "dark"): Paleta =>
  */
 let cacheFondo: { clave: string; lienzo: HTMLCanvasElement } | null = null;
 
+/**
+ * El mar: lo que queda fuera del mundo en las formas con mar, que no es ni campo ni casa. Pintarlo
+ * de casa, como alrededor de la caja, prometería un refugio que no existe; y hundido a medias se
+ * confunde con el campo, que en los temas oscuros ya vive en el suelo del rango.
+ */
+const fueraDe = (p: Paleta) => (p.tema === "dark" ? mix(p.bg, "#000000", 0.55) : mix(p.bg, p.homeInk, 0.55));
+
 function fondoDe(
-  d: Design, p: Paleta, ancho: number, alto: number, casa: number, escala: number, dpr: number,
-  mx: number, my: number,
+  d: Design, p: Paleta, g: Geometria, escala: number, dpr: number, mx: number, my: number,
 ): HTMLCanvasElement {
+  const { ancho, alto, casa } = g;
   const w = Math.round((ancho + 2 * mx) * escala * dpr), h = Math.round((alto + 2 * my) * escala * dpr);
-  const clave = `${d.id}|${p.tema}|${w}|${h}|${mx}|${my}`;
+  const clave = `${d.id}|${p.tema}|${w}|${h}|${mx}|${my}|${g.forma}|${ancho}|${alto}`;
   if (cacheFondo && cacheFondo.clave === clave) return cacheFondo.lienzo;
 
   const cv = document.createElement("canvas");
@@ -140,8 +148,40 @@ function fondoDe(
   const c = cv.getContext("2d")!;
   const e = escala * dpr;
   c.setTransform(e, 0, 0, e, mx * e, my * e);
-  if (mx || my) d.afuera(c, ancho, alto, -mx, -my, ancho + mx, alto + my, escala, p);
-  d.fondo(c, ancho, alto, casa, escala, p);
+  const f = 1 / escala, R = ancho / 2;
+  // Todo lo que no es campo es casa; el campo, recortado a su forma, va encima.
+  d.casa(c, -mx, -my, ancho + mx, alto + my, escala, p);
+  if (conMar(g)) {
+    c.save();
+    c.beginPath();
+    c.rect(-mx, -my, ancho + 2 * mx, alto + 2 * my);
+    trazarMundo(g, c);
+    c.clip("evenodd");
+    c.fillStyle = fueraDe(p);
+    c.fillRect(-mx, -my, ancho + 2 * mx, alto + 2 * my);
+    c.restore();
+  }
+  c.save();
+  c.beginPath();
+  trazarCampo(g, c);
+  c.clip("evenodd");
+  d.suelo(c, ancho, alto, casa, escala, p);
+  c.restore();
+  d.borde(c, lazos(g, 2.2), casa, escala, p);
+  // Las paredes que no son casa, con la tinta de casa y a pleno: un muro se lee como muro.
+  c.strokeStyle = p.homeInk;
+  if (conMar(g)) {
+    c.lineWidth = 2.5 * f;
+    c.beginPath(); trazarMundo(g, c); c.stroke();
+  }
+  if (g.forma === "donut") {
+    c.lineWidth = 1.5 * f;
+    c.beginPath(); c.arc(R, R, huecoDe(g), 0, TAU); c.stroke();
+  }
+  c.lineWidth = MURO.grosor;
+  c.lineCap = "round";
+  for (const [ax, ay, bx, by] of muros(g)) { c.beginPath(); c.moveTo(ax, ay); c.lineTo(bx, by); c.stroke(); }
+  c.lineCap = "butt";
 
   cacheFondo = { clave, lienzo: cv };
   return cv;
@@ -243,7 +283,7 @@ export function pintar(
   };
   const mx = margen(W, c.ancho), my = margen(H, c.alto);
   ctx.drawImage(
-    fondoDe(d, p, c.ancho, c.alto, c.casa, v.escala, dpr, mx, my),
+    fondoDe(d, p, c, v.escala, dpr, mx, my),
     v.ox - mx * v.escala, v.oy - my * v.escala, (c.ancho + 2 * mx) * v.escala, (c.alto + 2 * my) * v.escala,
   );
 

@@ -9,7 +9,7 @@
 // 4. ¿Cuánto dura un día, y cuánto hay que mirar para ver una generación?
 
 import {
-  CONFIG, RASGOS, correrDia, crearMundo, masaDe, resumen,
+  CONFIG, RASGOS, correrDia, REFERENCIA, crearMundo, masaDe, resumen,
   type Bicho, type Config, type Rasgo,
 } from "./engine";
 
@@ -31,7 +31,7 @@ function correr(cfg: Partial<Config>, dias = DIAS) {
   for (const r of RASGOS) genes[r] = [];
   let vivas = 0;
   for (const s of SEMILLAS) {
-    const m = crearMundo(s, cfg);
+    const m = crearMundo(s, { ...REFERENCIA, ...cfg });
     let suma = 0;
     for (let d = 0; d < dias && !m.extinto; d++) { correrDia(m); suma += m.duracion; }
     if (m.extinto || m.bichos.length < 3) continue;
@@ -99,7 +99,7 @@ function fijar(b: Bicho, r: Rasgo, v: number) {
 function viables(r: Rasgo, v: number): number {
   let n = 0;
   for (const s of SEMILLAS) {
-    const m = crearMundo(s);
+    const m = crearMundo(s, REFERENCIA);
     for (const b of m.bichos) fijar(b, r, v);
     for (let d = 0; d < DIAS_VIABLE && !m.extinto; d++) correrDia(m);
     if (!m.extinto && m.bichos.length >= 3) n++;
@@ -112,7 +112,7 @@ function duelo(r: Rasgo, bajo: number, alto: number) {
   const fin: number[] = [];
   let vivas = 0;
   for (const s of SEMILLAS) {
-    const m = crearMundo(s);
+    const m = crearMundo(s, REFERENCIA);
     m.bichos.forEach((b, i) => fijar(b, r, i % 2 ? alto : bajo));
     for (let d = 0; d < DIAS_DUELO && !m.extinto; d++) correrDia(m);
     if (m.extinto || m.bichos.length < 3) continue;

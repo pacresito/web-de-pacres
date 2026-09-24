@@ -16,7 +16,7 @@
 // - **A ×8 y ×64 lo que manda es cuántos cuerpos hay que pintar**, no cuántos ticks hay que dar.
 //   Por eso este medidor cuenta cuerpos por cuadro: es la cifra que de verdad puede crecer.
 
-import { CONFIG, amanecer, anochecer, crearMundo, tick, type Mundo } from "./engine";
+import { CONFIG, amanecer, anochecer, REFERENCIA, crearMundo, tick, type Mundo } from "./engine";
 import { designFor, paletaDe, pintar, vistaDe } from "./render";
 
 /** Lo que la página intenta por fotograma y el presupuesto que se da. Copiados de `page.tsx`. */
@@ -42,7 +42,7 @@ const lienzoFalso = (): CanvasRenderingContext2D => new Proxy({ globalAlpha: 1 }
 
 /** El mundo de esa semilla al empezar el día `dia`, sin contar lo que cuesta llegar hasta él. */
 function hasta(semilla: string, dia: number): Mundo {
-  const m = crearMundo(semilla);
+  const m = crearMundo(semilla, REFERENCIA);
   for (let d = 0; d < dia && !m.extinto; d++) {
     for (;;) if (tick(m)) break;
     anochecer(m);
