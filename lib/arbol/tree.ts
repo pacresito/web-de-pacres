@@ -17,8 +17,7 @@ export interface Persona {
   apellidos: string[];
   /**
    * Coloca al hombre encima de cada pareja y dice de quién viene cada apellido. No sale de los
-   * Word: lo escribe `scripts/correcciones.py` uno a uno, y solo falta en un puñado que no lo
-   * traen.
+   * Word: se escribe a mano, y solo falta en un puñado del que no consta.
    */
   sexo?: "h" | "m";
   /**

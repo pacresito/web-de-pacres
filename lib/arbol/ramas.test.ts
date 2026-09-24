@@ -3,8 +3,8 @@
 import assert from "assert";
 import { readFileSync } from "fs";
 import { resolve } from "path";
-import { construirGrafo, visibles } from "./grafo";
-import { calcularRamas, ramaVisible, RAMAS, repartoDeRamas, type Rama } from "./ramas";
+import { construirGrafo } from "./grafo";
+import { calcularRamas, RAMAS, type Rama } from "./ramas";
 import type { ArbolData, Persona, Union } from "./tree";
 
 const persona = (id: string): Persona => ({ id, nombre: id, apellidos: [], fuentes: [] });
@@ -86,47 +86,7 @@ assert.deepStrictEqual(
   "el reparto por rama; Santi y Mar dejan Crespo y Velasco al estrenar la suya",
 );
 const total = [...pertenencias.values()].reduce((n, p) => n + p.ramas.length, 0);
-assert.strictEqual(total, 534, "534 pertenencias para 509 personas: el mapa de áreas suma un 5 % de más");
+assert.strictEqual(total, 534, "534 pertenencias para 509 personas: estar en dos ramas suma de más");
 assert.strictEqual([...pertenencias.values()].filter((p) => p.ramas.length > 1).length, 14, "los que están en más de una");
-
-// El mapa de la escala más lejana: un rectángulo por rama, con lo que cada uno confiesa.
-const reparto = repartoDeRamas(pertenencias, "p25");
-assert.deepStrictEqual(
-  reparto.map((r) => r.nombre),
-  RAMAS.map((r) => r.nombre),
-  "el mapa respeta el orden de la familia, no el de los datos",
-);
-assert.strictEqual(
-  reparto.reduce((n, r) => n + r.gente.length, 0),
-  total,
-  "el mapa reparte exactamente las pertenencias, con sus repeticiones",
-);
-assert.ok(
-  reparto.some((r) => r.tuya),
-  "el punto de vista tiene su rama señalada",
-);
-for (const r of reparto) {
-  assert.ok(r.compartidos <= r.gente.length, `${r.nombre} no puede compartir más gente de la que tiene`);
-}
-
-// El filtro de consanguinidad decide qué ramas se pintan, y no por cuánta gente le quede a
-// cada una: los Cardona, los Sala y los Baños de Pablo son familia política y asoman con
-// dos o tres cónyuges, que bastaban para levantar rectángulo.
-const dentro = visibles(g, "p25");
-assert.deepStrictEqual(
-  repartoDeRamas(
-    new Map([...pertenencias].filter(([id]) => dentro.has(id))),
-    "p25",
-  )
-    .filter((r) => ramaVisible(r, dentro))
-    .map((r) => r.nombre),
-  ["Crespo", "Crespo-León", "Castrillo", "Velasco", "Maestre", "Pérez"],
-  "sin el que estrena el apellido a la vista, la rama no se pinta",
-);
-assert.strictEqual(
-  repartoDeRamas(pertenencias, "p25").filter((r) => ramaVisible(r, null)).length,
-  RAMAS.length,
-  "sin filtro están todas: no hay nada que decidir",
-);
 
 console.log(`ramas.test.ts OK (${RAMAS.length} ramas, ${total} pertenencias para ${pertenencias.size} personas)`);

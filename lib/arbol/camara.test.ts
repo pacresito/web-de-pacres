@@ -3,13 +3,11 @@
 import assert from "assert";
 import {
   acotar,
-  alCambiarDeUnidad,
   brujulaDe,
   conZoom,
   ESCALA_MAX,
   ESCALA_MIN,
   reglaDe,
-  ZOOM_DE,
   type Encuadre,
   type Vista,
 } from "./camara";
@@ -158,7 +156,7 @@ const vista = (dx: number, dy: number, escala = 1): Vista => ({ dx, dy, escala }
   assert.strictEqual(borde.x, ANCHO_COLUMNA / 4);
 
   // Alejarse mete más columnas en el hueco, y todas se rotulan.
-  assert.strictEqual(reglaDe(niveles, 0, ZOOM_DE.bloques, 800).length, 5);
+  assert.strictEqual(reglaDe(niveles, 0, 0.42, 800).length, 5);
   // Lo que apenas asoma no se rotula, y sin hueco medido no hay regla que pintar.
   assert.deepStrictEqual(reglaDe([1], ANCHO_COLUMNA / 2 + 400 - 20 - ANCHO_COLUMNA, 1, 800), []);
   assert.deepStrictEqual(reglaDe(niveles, 0, 1, 0), []);
@@ -172,29 +170,6 @@ const vista = (dx: number, dy: number, escala = 1): Vista => ({ dx, dy, escala }
   );
   assert.deepStrictEqual(reglaDe([0], ANCHO_COLUMNA / 2 + 400 - 1, 1, 800).length, 1, "un píxel de columna tuya basta");
   assert.deepStrictEqual(reglaDe([0], ANCHO_COLUMNA / 2 + 400 + 1, 1, 800), [], "y fuera del hueco, nada");
-}
-
-// Las tres unidades
-// La altura cómoda de cada una cae dentro del zoom: es a donde lleva un salto que nadie ha
-// pedido, y llevar a un tope sería no llevar a ninguna parte.
-for (const parada of ["ramas", "bloques", "personas"] as const) {
-  assert.ok(ZOOM_DE[parada] >= ESCALA_MIN && ZOOM_DE[parada] <= ESCALA_MAX, `«${parada}» cae fuera del zoom`);
-}
-
-// El riel no toca la cámara: el tamaño es del pellizco y la unidad es suya.
-{
-  for (const parada of ["ramas", "bloques", "personas"] as const) {
-    const puesta = vista(30, 40, ZOOM_DE.bloques);
-    assert.strictEqual(alCambiarDeUnidad(puesta, parada), puesta, `«${parada}» mueve la cámara sin que nadie se lo pida`);
-  }
-  // Salvo cuando lleva a un mapa que a esa altura no se leería. El árbol de personas no:
-  // verlo entero y pequeño es justo lo que se ha ido a buscar alejándose tanto.
-  const lejos = vista(30, 40, ESCALA_MIN);
-  assert.strictEqual(alCambiarDeUnidad(lejos, "bloques").escala, ZOOM_DE.bloques);
-  assert.strictEqual(alCambiarDeUnidad(lejos, "personas"), lejos);
-  assert.strictEqual(alCambiarDeUnidad(lejos, "ramas"), lejos);
-  // Y lo que ya se lee se respeta: ni se acerca ni se aleja para «encajarlo».
-  assert.deepStrictEqual(alCambiarDeUnidad(vista(0, 0, 0.3), "bloques"), vista(0, 0, 0.3));
 }
 
 console.log("camara: ok");

@@ -3,46 +3,11 @@
 // Todo en coordenadas del árbol; los píxeles de pantalla entran solo como tamaño del hueco.
 import { ALTO_NODO, ANCHO_COLUMNA, ANCHO_NODO, type Layout } from "./layout";
 
-// Alejarse encoge el árbol y nada más: **la unidad la elige el riel y el tamaño, el
-// pellizco**, y ninguno de los dos toca lo del otro. El zoom semántico —cambiar de unidad
-// al cruzar una escala— dejaba sin enseñar el árbol abierto en pequeño, que es una vista
-// que se quiere: la forma entera de lo desplegado, aunque los nombres ya no se lean.
+// Alejarse encoge el árbol y nada más. El zoom semántico —cambiar de unidad al cruzar una
+// escala— dejaba sin enseñar el árbol abierto en pequeño, que es una vista que se quiere: la
+// forma entera de lo desplegado, aunque los nombres ya no se lean.
 export const ESCALA_MIN = 0.06;
 export const ESCALA_MAX = 2.2;
-
-/**
- * Las tres unidades con que se dibuja el árbol: una persona, un grupo de hermanos o una
- * rama entera. Se cambia de una a otra desde el riel.
- */
-export type Parada = "ramas" | "bloques" | "personas";
-
-/**
- * La altura en que cada unidad se lee cómoda. No es donde vive cada parada —el pellizco
- * llega a donde quiera desde cualquiera—: es a dónde lleva un salto que no lo ha pedido
- * nadie, como tocar un bloque para caer en su familia.
- */
-export const ZOOM_DE: Record<Parada, number> = { ramas: 0.18, bloques: 0.42, personas: 1 };
-
-/**
- * A 0,25 los recuadros del mapa de familias todavía se leen, y cada uno lleva escrito de quién
- * es: por debajo de ahí no es un mapa más pequeño, es una mancha.
- */
-const SUELO_BLOQUES = 0.25;
-
-/**
- * Lo que el riel le hace a la cámara al cambiar de unidad: **nada**, salvo que a esta altura
- * la unidad a la que va no se leyera. El árbol de personas no tiene suelo —verlo entero y
- * pequeño, sin nombres, es una vista que se quiere— y las ramas no miran la escala.
- */
-export function alCambiarDeUnidad(v: Vista, parada: Parada): Vista {
-  return parada !== "bloques" || v.escala >= SUELO_BLOQUES ? v : { ...v, escala: ZOOM_DE.bloques };
-}
-
-/**
- * Por debajo de esto, un bloque es una caja con sus marcas y nada más: su título acabaría
- * en una mancha. Un mapa esconde los rótulos antes que dibujarlos ilegibles.
- */
-export const ZOOM_TITULO_BLOQUE = 0.34;
 
 /** La cámara se guarda relativa al punto de vista: así lo persigue sin efectos ni saltos. */
 export interface Vista {

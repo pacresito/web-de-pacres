@@ -6,18 +6,13 @@
 // salen de los tokens de `.arbol` en globals.css, que es lo que vira con el tema.
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { calcularBloques, type Bloque } from "@/lib/arbol/bloques";
 import { acortar, buscar, losSinNombre, porCercania } from "@/lib/arbol/busqueda";
 import {
   acotar,
-  alCambiarDeUnidad,
   brujulaDe,
   conZoom,
   reglaDe,
-  ZOOM_DE,
-  ZOOM_TITULO_BLOQUE,
   type Encuadre,
-  type Parada,
   type Vista,
 } from "@/lib/arbol/camara";
 import { caminoEntre, trazosDelCamino } from "@/lib/arbol/camino";
@@ -44,7 +39,7 @@ import {
   type ModoApellidos,
   type ModoNombre,
 } from "@/lib/arbol/personas";
-import { calcularRamas, ramaVisible, repartoDeRamas } from "@/lib/arbol/ramas";
+import { calcularRamas } from "@/lib/arbol/ramas";
 import { retratadosEn } from "@/lib/arbol/retratados";
 import {
   ALTO_NODO,
@@ -58,7 +53,6 @@ import type { ArbolData } from "@/lib/arbol/tree";
 import Ampliada from "./Ampliada";
 import AvisoDeMudanza from "./AvisoDeMudanza";
 import BarraDeAbajo from "./BarraDeAbajo";
-import Bloques from "./Bloques";
 import Brujula from "./Brujula";
 import Busqueda from "./Busqueda";
 import Capas from "./Capas";
@@ -69,11 +63,9 @@ import Ficha from "./Ficha";
 import Hoja from "./Hoja";
 import Nodo, { ATENUADO } from "./Nodo";
 import { ContadorRama, GUION, Manija, MasPareja, TrazoDePareja } from "./Piezas";
-import Ramas from "./Ramas";
 import Recuento from "./Recuento";
 import Redondo, { IconoFiltros } from "./Redondo";
 import Regla from "./Regla";
-import Riel from "./Riel";
 import { useAtras } from "./useAtras";
 import Visor from "./Visor";
 
@@ -118,13 +110,10 @@ export default function Arbol({
   data,
   hoy,
   centroDelEnlace,
-  conVistas,
 }: {
   data: ArbolData;
   hoy: string;
   centroDelEnlace: string | null;
-  /** Si sale el riel de unidades. Sin él el árbol se queda en personas, que es su parada. */
-  conVistas: boolean;
 }) {
   const grafo = useMemo(() => construirGrafo(data), [data]);
   const personaPorId = grafo.personaPorId;
@@ -193,12 +182,6 @@ export default function Arbol({
    */
   const [marcados, setMarcados] = useState<{ termino: string; ids: Set<string> } | null>(null);
   const [vista, setVista] = useState<Vista>(CENTRADA);
-  /**
-   * Con qué unidad se dibuja. Es estado y no una lectura de la escala: el zoom semántico
-   * cambiaba de unidad al pellizcar y con ello se llevaba por delante el árbol abierto en
-   * pequeño, que es una vista que se quiere —la forma de lo desplegado, sin nombres—.
-   */
-  const [parada, setParada] = useState<Parada>("personas");
   const [tamano, setTamano] = useState({ w: 0, h: 0 });
   /** A quién hay que traer a pantalla en cuanto el layout lo coloque. */
   const [aEnfocar, setAEnfocar] = useState<string | null>(null);
@@ -255,12 +238,6 @@ export default function Arbol({
     () => calcularLayout(grafo, { puntoDeVista, expandidas, parejas, plegados, ocultarNoConectados }),
     [grafo, puntoDeVista, expandidas, parejas, plegados, ocultarNoConectados],
   );
-  // El mapa de bloques no depende de lo desplegado: la escala media enseña la familia
-  // entera, que es a lo que se aleja quien se aleja.
-  const mapa = useMemo(
-    () => calcularBloques(grafo, { puntoDeVista, ocultarNoConectados }),
-    [grafo, puntoDeVista, ocultarNoConectados],
-  );
   /** Quién está puesto en el lienzo ahora mismo: lo que no esté, hay que abrirlo para verlo. */
   const dibujado = useMemo(() => new Set(layout.nodos.map((n) => n.id)), [layout]);
   const cuentas = useMemo(
@@ -287,16 +264,6 @@ export default function Arbol({
     () => grafo.personaPorId.size - visibles(grafo, puntoDeVista).size,
     [grafo, puntoDeVista],
   );
-  /**
-   * El mapa de ramas obedece al mismo filtro que las otras dos escalas: enseñar ahí una
-   * rama entera que el lienzo esconde sería contar dos familias distintas en la misma app.
-   * La que se cae del mapa y por qué, en `ramaVisible`.
-   */
-  const reparto = useMemo(() => {
-    const dentro = ocultarNoConectados ? visibles(grafo, puntoDeVista) : null;
-    const suyas = dentro ? new Map([...pertenencias].filter(([id]) => dentro.has(id))) : pertenencias;
-    return repartoDeRamas(suyas, puntoDeVista).filter((r) => ramaVisible(r, dentro));
-  }, [grafo, pertenencias, puntoDeVista, ocultarNoConectados]);
   /**
    * Escribir a alguien. Lo que no cambia de una superficie a otra —el linaje y las
    * homonimias, que se calculan una vez por árbol, y el día del servidor— se pone aquí; lo
@@ -426,18 +393,9 @@ export default function Arbol({
     };
   }, []);
 
-  /**
-   * La unidad manda sobre el sistema de coordenadas: bloques y personas se colocan cada uno
-   * por su cuenta. La cámara se guarda relativa al punto de vista, así que cambiar de ancla
-   * al cambiar de unidad lo deja donde estaba en pantalla y es el árbol el que se recompone
-   * alrededor.
-   */
-  const anclaje =
-    parada === "bloques"
-      ? mapa.bloques.find((b) => b.esDelPuntoDeVista)
-      : layout.nodos.find((n) => n.esPuntoDeVista);
+  const anclaje = layout.nodos.find((n) => n.esPuntoDeVista);
   const ancla = { x: anclaje?.x ?? 0, y: anclaje?.y ?? 0 };
-  const limites = parada === "bloques" ? mapa.limites : layout.limites;
+  const { limites } = layout;
   const centro = { x: ancla.x + vista.dx, y: ancla.y + vista.dy };
 
   // El encuadre se guarda en un ref porque lo consultan gestos que no se rehacen en cada
@@ -647,21 +605,6 @@ export default function Arbol({
     setMarcados(repliega ? null : { termino, ids: new Set(todos) });
   }
 
-  /**
-   * Tocar un bloque es pedir a esa familia: se abre lo que haga falta para traerla, se salta
-   * a la escala de personas y se enfoca en ella. Es la única forma de cruzar el árbol de un
-   * lado a otro sin arrastrar, y por eso el mapa de bloques existe.
-   */
-  function abrirBloque(bloque: Bloque) {
-    const gente = [...bloque.hermanos, ...bloque.parejas];
-    abrirRamas(unionesHasta(grafo, puntoDeVista, gente, plegados));
-    // El salto que nadie ha pedido sí lleva a una altura cómoda: se ha tocado una familia
-    // para verla, no para elegir un tamaño.
-    setParada("personas");
-    setVista((v) => ({ ...v, escala: ZOOM_DE.personas }));
-    setAEnfocar(gente[0]);
-  }
-
   /** Abrir lo justo para que esa gente esté puesta, y dejar el lienzo a la vista. */
   function traerAlLienzo(gente: string[]) {
     // A quien esconde el filtro no lo trae ninguna unión: hay que quitarlo, o se abrirían
@@ -669,7 +612,6 @@ export default function Arbol({
     const dentro = visibles(grafo, puntoDeVista);
     if (gente.some((p) => !dentro.has(p))) setOcultarNoConectados(false);
     abrirRamas(unionesHasta(grafo, puntoDeVista, gente, plegados));
-    setParada("personas");
     // Y suelta lo señalado: el lienzo solo sabe encender una cosa a la vez, y lo que se acaba
     // de pedir es mirar a esta gente. Con la fracción puesta, el que llega nace atenuado.
     setMarcados(null);
@@ -731,7 +673,6 @@ export default function Arbol({
     setApellidos(APELLIDOS_POR_DEFECTO);
     setNombre(NOMBRE_POR_DEFECTO);
     setRepaso(false);
-    setParada("personas");
     setVista(CENTRADA);
     setBusquedaAbierta(false);
     setConsulta("");
@@ -821,8 +762,7 @@ export default function Arbol({
   const apartado = hoja && !hojaRecogida ? "md:right-[392px]" : "";
   const brujula = brujulaDe(vista, tamano.w, tamano.h);
   const transformacion = `translate(${tamano.w / 2} ${tamano.h / 2}) scale(${vista.escala}) translate(${-centro.x} ${-centro.y})`;
-  const dibujados = parada === "bloques" ? mapa.bloques : layout.nodos;
-  const niveles = useMemo(() => [...new Set(dibujados.map((n) => n.nivel))].sort((a, b) => a - b), [dibujados]);
+  const niveles = useMemo(() => [...new Set(layout.nodos.map((n) => n.nivel))].sort((a, b) => a - b), [layout]);
   const generacionPov = grafo.generacion.get(puntoDeVista) ?? 0;
   const { minY, maxY } = limites;
   /**
@@ -870,10 +810,8 @@ export default function Arbol({
         onPointerCancel={onPointerUp}
       >
         {/* Hasta medir el hueco no se pinta nada: el servidor no sabe ni el tamaño ni
-            el punto de vista guardado, así que la hidratación cuadra con el lienzo vacío.
-            Y en la parada de ramas tampoco: ahí el lienzo no es un árbol, es un mapa, y lo
-            pinta su propia capa por encima. */}
-        {tamano.w > 0 && parada !== "ramas" && (
+            el punto de vista guardado, así que la hidratación cuadra con el lienzo vacío. */}
+        {tamano.w > 0 && (
           <g transform={transformacion}>
             {/* Banda por generación: todos los de una columna comparten tratamiento. El
                 claroscuro va por la generación absoluta, no por la relativa: si no, cambiar
@@ -889,129 +827,118 @@ export default function Arbol({
               />
             ))}
 
-            {parada === "bloques" ? (
-              <Bloques
-                bloques={mapa.bloques}
-                conTitulo={vista.escala >= ZOOM_TITULO_BLOQUE}
-                puntoDeVista={puntoDeVista}
-                onElegir={(b) => arrastre.current <= ARRASTRE_MINIMO && abrirBloque(b)}
-              />
-            ) : (
-              <>
-                {/* El reparto arranca en la propia unión y muere en el borde de cada hijo: los
-                    tramos que cruzan un nodo quedan tapados por él, y lo que se ve toca a los dos. */}
-                <g opacity={camino ? ATENUADO : opacidadDe()}>
-                  {layout.vinculos.map((v) => (
-                    <g key={v.unionId} className={v.directo ? "lk-dir" : "lk"}>
-                      {v.hijos.map((h, i) => (
-                        <path key={i} d={bajada(v, h)} />
-                      ))}
-                      {v.pareja && (
-                      <TrazoDePareja x={v.x} extremos={entreBordes(v.pareja)} tipo={v.tipo} roto={v.roto} />
-                    )}
-                    </g>
+            {/* El reparto arranca en la propia unión y muere en el borde de cada hijo: los
+                tramos que cruzan un nodo quedan tapados por él, y lo que se ve toca a los dos. */}
+            <g opacity={camino ? ATENUADO : opacidadDe()}>
+              {layout.vinculos.map((v) => (
+                <g key={v.unionId} className={v.directo ? "lk-dir" : "lk"}>
+                  {v.hijos.map((h, i) => (
+                    <path key={i} d={bajada(v, h)} />
                   ))}
-                </g>
-
-                {/* El camino, encima de lo demás y **de una pieza**: dibujarlo con los trazos de
-                    cada unión le cambiaba el peso a media travesía según por dónde pasara, y una
-                    línea que engorda y adelgaza no se lee como una sola. */}
-                {trazos && (
-                  <g className="lk-cam">
-                    {layout.vinculos.map((v) => (
-                      <g key={v.unionId}>
-                        {v.hijos.map((h) => {
-                          const desde = trazos.bajadas.get(`${v.unionId}:${h.id}`);
-                          if (!desde) return null;
-                          // Al hermano por el que se llega hay que buscarlo aquí: el camino sabe
-                          // por dónde va, pero a qué altura queda cada uno lo dice el layout.
-                          const hermano =
-                          desde === "entera" ? undefined : v.hijos.find((o) => o.id === desde.desdeElHermano);
-                          return <path key={h.id} d={bajada(v, h, hermano && alturaDe(v, hermano))} />;
-                        })}
-                        {/* De la pareja, solo la mitad que llega a quien está en el camino: la otra
-                            va a su pareja, y hasta ella no se pasa. Muere en el ancla, que es de
-                            donde sale la bajada —o en el corazón, si fueron novios—. */}
-                        {v.pareja &&
-                          v.miembros?.map((m, i) => {
-                            if (!trazos.uniones.get(v.unionId)?.has(m)) return null;
-                            const borde = entreBordes(v.pareja!)[i];
-                            return (
-                              <line
-                                key={m}
-                                x1={v.x}
-                                y1={borde}
-                                x2={v.x}
-                                y2={hastaElAncla(borde, v.y, v.tipo === "pareja")}
-                                strokeDasharray={v.roto && v.tipo !== "pareja" ? GUION : undefined}
-                              />
-                            );
-                          })}
-                      </g>
-                    ))}
-                  </g>
+                  {v.pareja && (
+                  <TrazoDePareja x={v.x} extremos={entreBordes(v.pareja)} tipo={v.tipo} roto={v.roto} />
                 )}
-
-                <g opacity={opacidadDe()}>
-                  {layout.contadores.map((c) => (
-                    <ContadorRama
-                      key={`${c.sentido}:${c.unionId}`}
-                      contador={c}
-                      onAbrir={() => arrastre.current <= ARRASTRE_MINIMO && abrirRamas([c.unionId])}
-                    />
-                  ))}
                 </g>
+              ))}
+            </g>
 
-                {layout.nodos.map((n) => (
-                  <Nodo
-                    key={n.id}
-                    nodo={n}
-                    identidad={escribirlo(n.id, {
-                      fechas: "ocultar",
-                      apellidos: comoSePinta.apellidos,
-                      largos: { titulo: LARGOS_NODO.titulo, contexto: 0 },
+            {/* El camino, encima de lo demás y **de una pieza**: dibujarlo con los trazos de
+                cada unión le cambiaba el peso a media travesía según por dónde pasara, y una
+                línea que engorda y adelgaza no se lee como una sola. */}
+            {trazos && (
+              <g className="lk-cam">
+                {layout.vinculos.map((v) => (
+                  <g key={v.unionId}>
+                    {v.hijos.map((h) => {
+                      const desde = trazos.bajadas.get(`${v.unionId}:${h.id}`);
+                      if (!desde) return null;
+                      // Al hermano por el que se llega hay que buscarlo aquí: el camino sabe
+                      // por dónde va, pero a qué altura queda cada uno lo dice el layout.
+                      const hermano =
+                      desde === "entera" ? undefined : v.hijos.find((o) => o.id === desde.desdeElHermano);
+                      return <path key={h.id} d={bajada(v, h, hermano && alturaDe(v, hermano))} />;
                     })}
-                    vida={vidaDe(n.id)}
-                    huecos={huecosDelNodo(n.id)}
-                    fotos={fotosPorPersona?.get(n.id) ?? 0}
-                    fiesta={fiestas.get(n.id) ?? null}
-                    atenuado={opacidadDe(n.id) !== undefined}
-                    // El camino no deja de leer a quien lo abrió: el cerco sigue puesto mientras
-                    // se mira cómo se llega hasta él, que es lo que se ha ido a ver.
-                    abierta={hoja !== null && "id" in hoja && hoja.id === n.id}
-                    onElegir={() => arrastre.current <= ARRASTRE_MINIMO && abrirFicha(n.id)}
+                    {/* De la pareja, solo la mitad que llega a quien está en el camino: la otra
+                        va a su pareja, y hasta ella no se pasa. Muere en el ancla, que es de
+                        donde sale la bajada —o en el corazón, si fueron novios—. */}
+                    {v.pareja &&
+                      v.miembros?.map((m, i) => {
+                        if (!trazos.uniones.get(v.unionId)?.has(m)) return null;
+                        const borde = entreBordes(v.pareja!)[i];
+                        return (
+                          <line
+                            key={m}
+                            x1={v.x}
+                            y1={borde}
+                            x2={v.x}
+                            y2={hastaElAncla(borde, v.y, v.tipo === "pareja")}
+                            strokeDasharray={v.roto && v.tipo !== "pareja" ? GUION : undefined}
+                          />
+                        );
+                      })}
+                  </g>
+                ))}
+              </g>
+            )}
+
+            <g opacity={opacidadDe()}>
+              {layout.contadores.map((c) => (
+                <ContadorRama
+                  key={`${c.sentido}:${c.unionId}`}
+                  contador={c}
+                  onAbrir={() => arrastre.current <= ARRASTRE_MINIMO && abrirRamas([c.unionId])}
+                />
+              ))}
+            </g>
+
+            {layout.nodos.map((n) => (
+              <Nodo
+                key={n.id}
+                nodo={n}
+                identidad={escribirlo(n.id, {
+                  fechas: "ocultar",
+                  apellidos: comoSePinta.apellidos,
+                  largos: { titulo: LARGOS_NODO.titulo, contexto: 0 },
+                })}
+                vida={vidaDe(n.id)}
+                huecos={huecosDelNodo(n.id)}
+                fotos={fotosPorPersona?.get(n.id) ?? 0}
+                fiesta={fiestas.get(n.id) ?? null}
+                atenuado={opacidadDe(n.id) !== undefined}
+                // El camino no deja de leer a quien lo abrió: el cerco sigue puesto mientras
+                // se mira cómo se llega hasta él, que es lo que se ha ido a ver.
+                abierta={hoja !== null && "id" in hoja && hoja.id === n.id}
+                onElegir={() => arrastre.current <= ARRASTRE_MINIMO && abrirFicha(n.id)}
+              />
+            ))}
+
+            <g opacity={opacidadDe()}>
+              {/* Las parejas que no se pintan, asomando por su borde. Como la manija, van
+                  después de los nodos: por encima del suyo y por delante para pulsarlas. */}
+              {layout.nodos.flatMap((n) =>
+                n.pendientes.map((p) => (
+                  <MasPareja
+                    key={`+:${p.unionId}`}
+                    x={n.x}
+                    y={n.y + (p.arriba ? -ALTO_NODO / 2 : ALTO_NODO / 2)}
+                    onAbrir={() => arrastre.current <= ARRASTRE_MINIMO && mostrarPareja(p.unionId)}
+                  />
+                )),
+              )}
+
+              {/* Lo que se abrió a mano se cierra por donde se abrió: en su propia unión.
+                  Va después de los nodos para quedar por encima y poder pulsarse. */}
+              {layout.vinculos
+                .filter((v) => v.colapsable)
+                .map((v) => (
+                  <Manija
+                    key={`x:${v.unionId}`}
+                    x={v.x + ANCHO_NODO / 2 + 14}
+                    y={v.y}
+                    onPulsar={() => arrastre.current <= ARRASTRE_MINIMO && cerrarRamas([v.unionId])}
                   />
                 ))}
-
-                <g opacity={opacidadDe()}>
-                  {/* Las parejas que no se pintan, asomando por su borde. Como la manija, van
-                      después de los nodos: por encima del suyo y por delante para pulsarlas. */}
-                  {layout.nodos.flatMap((n) =>
-                    n.pendientes.map((p) => (
-                      <MasPareja
-                        key={`+:${p.unionId}`}
-                        x={n.x}
-                        y={n.y + (p.arriba ? -ALTO_NODO / 2 : ALTO_NODO / 2)}
-                        onAbrir={() => arrastre.current <= ARRASTRE_MINIMO && mostrarPareja(p.unionId)}
-                      />
-                    )),
-                  )}
-
-                  {/* Lo que se abrió a mano se cierra por donde se abrió: en su propia unión.
-                      Va después de los nodos para quedar por encima y poder pulsarse. */}
-                  {layout.vinculos
-                    .filter((v) => v.colapsable)
-                    .map((v) => (
-                      <Manija
-                        key={`x:${v.unionId}`}
-                        x={v.x + ANCHO_NODO / 2 + 14}
-                        y={v.y}
-                        onPulsar={() => arrastre.current <= ARRASTRE_MINIMO && cerrarRamas([v.unionId])}
-                      />
-                    ))}
-                </g>
-              </>
-            )}
+            </g>
           </g>
         )}
       </svg>
@@ -1020,36 +947,9 @@ export default function Arbol({
           ese hueco va debajo del cromo, que sí viene servido. */}
       {tamano.w === 0 && <Esqueleto escala={CENTRADA.escala} />}
 
-      {/* En la escala de ramas no se pinta: ahí no hay personas colocadas por generación,
-          y una regla que rotulase el mapa estaría midiendo otra cosa. */}
-      {tamano.w > 0 && parada !== "ramas" && <Regla marcas={reglaDe(niveles, centro.x, vista.escala, tamano.w)} />}
+      {tamano.w > 0 && <Regla marcas={reglaDe(niveles, centro.x, vista.escala, tamano.w)} />}
 
-      {parada === "ramas" && (
-        <Ramas
-          reparto={reparto}
-          onRama={(rama) => {
-            setCajon({ termino: `rama de ${rama.nombre}`, ids: [...rama.gente].sort(porCercania(grafo, opcionesBusqueda.pasos)) });
-            setBusquedaAbierta(true);
-          }}
-        />
-      )}
-
-      {/* El riel: con qué unidad se dibuja, y **no toca la cámara** —el tamaño es del
-          pellizco—. Va en el borde derecho y a media altura, que es donde no le quita el
-          sitio ni al aviso de arriba ni a los botones de abajo. Solo con `?vistas`: las
-          otras dos escalas se enseñan, y el árbol al que se entra es el de personas. */}
-      {conVistas && (
-        <Riel
-          parada={parada}
-          onIr={(p) => {
-            setParada(p);
-            mover((v) => alCambiarDeUnidad(v, p));
-          }}
-          apartado={apartado}
-        />
-      )}
-
-      {brujula && parada === "personas" && (
+      {brujula && (
         <Brujula
           posicion={brujula}
           nombre={comoLoLlamo(puntoDeVista)}
