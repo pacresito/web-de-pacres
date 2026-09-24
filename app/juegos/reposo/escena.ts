@@ -12,9 +12,10 @@ const MS_ESTACION = 91 * MS_DIA;
 const MS_ANIO = 365 * MS_DIA;
 
 /** Arranque de todo reloj: fase cero de los cíclicos, instante cero de los monótonos, borde
- *  inferior de la ventana de los únicos. Se fija al publicar (paso 6 del plan) para que el
- *  reloj de verdad empiece entonces; hasta ese momento, hoy vale como marcador de trabajo. */
-export const ORIGEN_MS = Date.UTC(2026, 8, 17);
+ *  inferior de la ventana de los únicos. Anterior a la publicación a propósito: la calle se
+ *  estrena ya crecida, con árbol y sucesos, en vez de recién nacida y vacía. **No se mueve
+ *  nunca:** moverlo cambia la calle a todo el que ya la ha mirado. */
+export const ORIGEN_MS = Date.UTC(2026, 0, 1);
 
 export type Tipo = "monótono" | "cíclico" | "único";
 

@@ -30,8 +30,8 @@ const fuera = zonas(vista, calle.cajas).filter((z) => z.x < 0 || z.y < 0 || z.x 
 test("ninguna zona sensible se sale del lienzo", fuera.length === 0, fuera.map((z) => z.id).join(", "));
 
 // El detalle más pequeño tiene que seguir siendo tocable y visible en la vista por defecto:
-// en escritorio la calle se sirve a ~1100 px, o sea escala 0,69.
-const menor = zonas({ ...vista, ancho: 1100, escala: 1100 / LIENZO.ancho }, calle.cajas)
+// en escritorio la calle se sirve a 960 px, el `ANCHO` de page.tsx.
+const menor = zonas({ ...vista, ancho: 960, escala: 960 / LIENZO.ancho }, calle.cajas)
   .reduce((a, z) => (z.w * z.h < a.w * a.h ? z : a));
 test("la pieza más pequeña mide 20 px o más de lado en escritorio",
   Math.min(menor.w, menor.h) >= 20, `${menor.id}: ${menor.w.toFixed(0)}×${menor.h.toFixed(0)} px`);

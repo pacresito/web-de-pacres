@@ -180,7 +180,7 @@ export const PIEZAS: Record<string, Pieza> = {
   ropa:       { x: 360,  y: 316, w: 132, h: 76,  arquetipo: "tendal",  variantes: 4, franja: [8, 21] },
   grafiti:    { x: 96,   y: 500, w: 150, h: 96,  arquetipo: "mancha",  variantes: 4 },
   cartel:     { x: 300,  y: 486, w: 86,  h: 110, arquetipo: "mancha",  variantes: 4 },
-  buzon:      { x: 432,  y: 584, w: 36,  h: 56,  arquetipo: "bulto",   variantes: 3 },
+  buzon:      { x: 430,  y: 584, w: 40,  h: 56,  arquetipo: "bulto",   variantes: 3 },
 
   // Local central (el comercio y su escaparate)
   comercio:   { x: 580,  y: 430, w: 430, h: 210, arquetipo: "hueco",   variantes: 5 },
