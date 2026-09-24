@@ -6,6 +6,7 @@
 import { CATALOGO } from "./escena";
 import { LIENZO, PIEZAS, css, esNoche, luzDe, mezcla, paletaDe, tenir, zonas, type Oklch } from "./render";
 import { escena as calle } from "./calle/ventana";
+import { DETALLE, PINCELES, PROPIOS } from "./calle/pincel";
 
 let fails = 0;
 function test(name: string, ok: boolean, detail = "") {
@@ -21,6 +22,11 @@ const sinPieza = ids.filter((id) => !PIEZAS[id]);
 const sinSlot = Object.keys(PIEZAS).filter((id) => !ids.includes(id));
 test("todo objeto del catálogo tiene su pieza", sinPieza.length === 0, sinPieza.join(", "));
 test("ninguna pieza sobra del catálogo", sinSlot.length === 0, sinSlot.join(", "));
+
+const sinPincel = ids.filter((id) => !PROPIOS[id] && !PINCELES[PIEZAS[id].arquetipo]);
+test("todo objeto tiene con qué pintarse", sinPincel.length === 0, sinPincel.join(", "));
+const detalleSinBase = Object.keys(DETALLE).filter((id) => !PINCELES[PIEZAS[id]?.arquetipo]);
+test("todo detalle va sobre un arquetipo que existe", detalleSinBase.length === 0, detalleSinBase.join(", "));
 
 const sinCaja = ids.filter((id) => !calle.cajas[id]);
 test("la escena publicada coloca los 24", sinCaja.length === 0, sinCaja.join(", "));

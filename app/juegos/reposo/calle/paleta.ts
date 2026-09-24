@@ -170,20 +170,6 @@ export const TEJADOS = {
   cerca: [110, 66, 142, 88, 124, 58, 100],
 };
 
-/** Las ventanas de los tres bloques, en coordenadas del lienzo virtual. Cuáles se encienden es
- *  fijo: una ventana que se encendiera sola sería un cambio que el diff no conoce y que el
- *  jugador señalaría. */
-export function ventanasDelFondo(cb: (x: number, y: number, encendida: boolean) => void) {
-  for (let f = 0; f < 3; f++)
-    for (let c = 0; c < 22; c++) {
-      const x = 70 + c * 68, y = 236 + f * 96;
-      if (x > 520 && x < 560) continue;
-      if (x > 1000 && x < 1060) continue;
-      if (x > 560 && x < 1040 && y > 330) continue;
-      cb(x, y, (c * 7 + f * 3) % 5 < 2);
-    }
-}
-
 /** Los tres bloques de la calle, en coordenadas del lienzo virtual. */
 export const BLOQUES: [number, number, number][] = [[40, 210, 500], [560, 190, 470], [1040, 180, 520]];
 

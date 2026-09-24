@@ -3,17 +3,18 @@
 // La calle de verdad, a la hora de verdad, y nada más: se mira. La partida —comparar contra la
 // visita anterior— no está en la página todavía; el motor y la partida esperan en `escena.ts`
 // y `partida.ts`.
+//
+// La composición que se publica es la calle vista desde una ventana, y con vida: lo quieto se
+// repinta cada minuto y lo que se mueve —`calle/vida.ts`— doce veces por segundo encima.
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import TerminalShell from "../../components/TerminalShell";
 import WhyFooter from "../../components/WhyFooter";
 import BarraEstado, { Dato } from "../../components/BarraEstado";
 import { IconoPantallaCompleta } from "../../components/Iconos";
 import { escena } from "./escena";
-import { LIENZO, vistaDe } from "./render";
-import { pintarEscena } from "./calle/pincel";
-// La composición que se publica: la calle vista desde una ventana. El encuadre es parte del
-// juego, no decoración — pide volver a mirar un sitio, y da el sitio desde el que se mira.
-import { escena as calle } from "./calle/ventana";
+import { LIENZO, vistaDe, type Vista } from "./render";
+import { componer, pintarCapas, type Capas } from "./calle/animar";
+import { agenda } from "./calle/vida";
 
 /** Una sola calle para todos: la semilla no cambia nunca, o la calle sería otra. */
 const SEMILLA = "reposo";
@@ -44,6 +45,15 @@ function suscribirVentana(avisar: () => void) {
 const leerPantalla = () => Math.floor(Math.min(window.innerWidth, (window.innerHeight * LIENZO.ancho) / LIENZO.alto));
 const pantallaDelServidor = () => ANCHO;
 
+/** Fotogramas por segundo de la vida: los de un pixel art, no los de la pantalla. A más, el
+ *  vapor y la ropa se mueven de píxel en píxel igual, solo que gastando el triple. */
+const FPS = 12;
+
+const horaLocal = (t: number) => {
+  const d = new Date(t * 1000);
+  return d.getHours() + d.getMinutes() / 60;
+};
+
 export default function Reposo() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const ahora = useSyncExternalStore(suscribirReloj, leerReloj, relojDelServidor);
@@ -54,11 +64,38 @@ export default function Reposo() {
   const fecha = new Date(ahora);
   const hora = fecha.getHours() + fecha.getMinutes() / 60;
 
+  // Lo que el bucle lee en cada fotograma. Va en refs porque el bucle vive lo que la página y
+  // lo quieto se repinta aparte, cada minuto.
+  const capas = useRef<Capas | null>(null);
+  const vista = useRef<Vista | null>(null);
+  const dibujar = useRef<(t: number) => void>(() => {});
+
+  useEffect(() => {
+    dibujar.current = (t: number) => {
+      const ctx = canvasRef.current?.getContext("2d");
+      if (!ctx || !capas.current || !vista.current) return;
+      componer(ctx, vista.current, capas.current, { t, hora: horaLocal(t), sucesos: agenda(t, horaLocal) });
+    };
+    let id = 0, ultimo = -1;
+    const vuelta = (real: number) => {
+      id = requestAnimationFrame(vuelta);
+      const cuadro = Math.floor(real / (1000 / FPS));
+      if (cuadro === ultimo) return;
+      ultimo = cuadro;
+      dibujar.current(Date.now() / 1000);
+    };
+    id = requestAnimationFrame(vuelta);
+    return () => cancelAnimationFrame(id);
+  }, []);
+
+  // Lo quieto, una vez por minuto (o al cambiar de ancho): la calle a su hora, en capas.
   useEffect(() => {
     const canvas = canvasRef.current;
-    const ctx = canvas?.getContext("2d");
-    if (!canvas || !ctx || ahora === 0) return;
-    pintarEscena(ctx, vistaDe(canvas, ancho, window.devicePixelRatio || 1), escena(SEMILLA, ahora), hora, calle);
+    if (!canvas || ahora === 0) return;
+    vista.current = vistaDe(canvas, ancho, window.devicePixelRatio || 1);
+    capas.current = pintarCapas(escena(SEMILLA, ahora), hora);
+    // Redimensionar el canvas lo borra: se repinta ya, sin esperar al siguiente fotograma.
+    dibujar.current(Date.now() / 1000);
   }, [ahora, hora, ancho]);
 
   const hhmm = fecha.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
