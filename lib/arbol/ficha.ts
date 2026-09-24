@@ -261,10 +261,10 @@ const hijos = (g: Grafo, id: string, modo: ModoNombre): string =>
     .join(", ");
 
 /**
- * Estar en dos ramas no es una ambigüedad que resolver, así que la fila las dice todas. Y
- * **de quien entró por su pareja se dice por quién**: la rama es suya, pero no de sangre, y
- * el nombre de quien lo trajo es lo que sitúa a las 139 personas que están en ese caso. Se
- * decía «por matrimonio», que a los que nunca se casaron los casaba de oficio.
+ * Estar en dos ramas no es una ambigüedad que resolver, así que la fila las dice todas. Y **de
+ * quien entró por su pareja se dice por quién**: la rama es suya, pero no de sangre, y el
+ * nombre de quien lo trajo es lo que sitúa a más de un centenar de personas. Se decía «por
+ * matrimonio», que a los que nunca se casaron los casaba de oficio.
  */
 function ramas(g: Grafo, modo: ModoNombre, pertenencia?: Pertenencia): Fila[] {
   if (!pertenencia) return [{ clave: "Rama", valor: "— no consta", falta: true }];

@@ -24,8 +24,8 @@ export type Parada = "ramas" | "bloques" | "personas";
 export const ZOOM_DE: Record<Parada, number> = { ramas: 0.18, bloques: 0.42, personas: 1 };
 
 /**
- * Los 130 recuadros del mapa de familias caben en un móvil a 0,25, y cada uno lleva escrito
- * de quién es: por debajo de ahí no es un mapa más pequeño, es una mancha.
+ * A 0,25 los recuadros del mapa de familias todavía se leen, y cada uno lleva escrito de quién
+ * es: por debajo de ahí no es un mapa más pequeño, es una mancha.
  */
 const SUELO_BLOQUES = 0.25;
 

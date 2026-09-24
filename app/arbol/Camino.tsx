@@ -2,7 +2,8 @@
 
 // El camino del Centro a alguien: la cadena de eslabones que hay entre los dos. Es lo que
 // contesta a «¿y esta quién es?» cuando la lengua no tiene palabra para la relación, que le
-// pasa a 271 de las 416. Cualquier eslabón se toca y abre su ficha; ninguno muda el Centro.
+// pasa a buena parte de la familia. Cualquier eslabón se toca y abre su ficha; ninguno muda el
+// Centro.
 
 import type { Camino as Datos } from "@/lib/arbol/camino";
 import type { Paso } from "@/lib/arbol/grafo";

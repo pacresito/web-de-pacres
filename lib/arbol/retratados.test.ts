@@ -3,6 +3,7 @@
 import assert from "assert";
 import { readFileSync } from "fs";
 import { resolve } from "path";
+import { FOTOS } from "./fotos";
 import { construirGrafo } from "./grafo";
 import { libretaDe } from "./identidad";
 import { retratadosEn } from "./retratados";
@@ -29,9 +30,9 @@ assert.strictEqual(enLaVenta.find((r) => r.id === "p271")!.edad, "75 años");
 
 // Una foto que no existe no rompe nada: no hay a quien rotular y ya está.
 assert.deepStrictEqual(retratadosEn(g, "no-existe-1900", o), []);
-// Y la de uno solo no rotula a nadie, tenga recuadro o no: abierta se ve entera, y el único
-// que sale es de quien es la ficha desde la que se ha abierto.
-assert.deepStrictEqual(retratadosEn(g, "p25-2012", o), []);
-assert.deepStrictEqual(retratadosEn(g, "p125-2026", o), [], "aunque lleve recuadro");
+// Y la de uno solo no rotula a nadie: abierta se ve entera, y el único que sale es de quien es
+// la ficha desde la que se ha abierto. Inventada, para no depender de que la lista tenga una.
+FOTOS.push({ tomada: "1900", gente: [{ id: "p25", nombre: "Pablo", recuadro: { x: 0, y: 0, lado: 1 } }] });
+assert.deepStrictEqual(retratadosEn(g, "p25-1900", o), []);
 
 console.log("retratados.test.ts ✓");

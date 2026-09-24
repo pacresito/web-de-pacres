@@ -32,9 +32,6 @@ const claves = FOTOS.map(claveDeFoto);
 assert.strictEqual(new Set(claves).size, claves.length, `dos fotos comparten clave: ${claves.join(", ")}`);
 
 // El recuadro, ya en CSS
-// Sin recuadro no hay estilo que poner: el marco la centra él con `object-fit`, que no
-// necesita saber cuánto mide la foto.
-assert.strictEqual(encuadreDe(undefined), undefined);
 // La mitad izquierda de una foto: se estira al doble del marco y no se desplaza.
 assert.deepStrictEqual(encuadreDe({ x: 0, y: 0, lado: 0.5 }), { width: "200%", left: "0%", top: "0%" });
 // Y un recuadro que empieza a un cuarto del ancho se va fuera del marco esa misma distancia,
@@ -46,7 +43,8 @@ assert.deepStrictEqual(encuadreDe({ x: 0.25, y: 0.1, lado: 0.5 }), {
 });
 
 // El rótulo del link
-const foto = (tomada: string): Foto => ({ tomada, gente: [{ id: "j1", nombre: "Juguete" }] });
+const ENTERA = { x: 0, y: 0, lado: 1 };
+const foto = (tomada: string): Foto => ({ tomada, gente: [{ id: "j1", nombre: "Juguete", recuadro: ENTERA }] });
 
 assert.strictEqual(rotuloDeFoto(foto("2009"), "1989"), "con 20 años");
 assert.strictEqual(rotuloDeFoto(foto("1990"), "1989"), "con 1 año");
@@ -81,14 +79,14 @@ assert.strictEqual(
 const inventadas: Foto[] = [
   foto("2009"),
   foto("1989"),
-  { tomada: "1999", gente: [{ id: "j2", nombre: "Otro" }] },
+  { tomada: "1999", gente: [{ id: "j2", nombre: "Otro", recuadro: ENTERA }] },
   // La de varios: sale en las de los dos, con la misma clave y un recuadro para cada uno.
   {
     titulo: "La Venta de La Paloma",
     tomada: "1999",
     gente: [
       { id: "j1", nombre: "Juguete", recuadro: { x: 0.1, y: 0.2, lado: 0.25 } },
-      { id: "j2", nombre: "Otro" },
+      { id: "j2", nombre: "Otro", recuadro: { x: 0.5, y: 0.2, lado: 0.25 } },
     ],
   },
 ];
@@ -98,16 +96,16 @@ const suyas = fotosDe("j1", quien);
 assert.deepStrictEqual(
   suyas.map((f) => f.rotulo),
   ["de bebé", "con 10 años", "con 20 años"],
-  "las suyas y solo las suyas, de la más joven a la más vieja",
+  "las suyas y solo las suyas, de la más antigua a la más reciente",
 );
 assert.strictEqual(suyas[2].clave, "j1-2009");
 // La de varios no se llama por nadie: lleva su título, y es la misma para los dos.
 assert.strictEqual(suyas[1].clave, "la-venta-de-la-paloma-1999");
 assert.strictEqual(fotosDe("j2", quien).at(-1)!.clave, "la-venta-de-la-paloma-1999");
 assert.strictEqual(suyas[1].cuantos, 2, "la ficha sabe que hay a quien reconocer");
-// Y cada uno la ve por su recuadro; quien no tiene, por el centro.
+// Y cada uno la ve por su recuadro.
 assert.deepStrictEqual(suyas[1].encuadre, { width: "400%", left: "-40%", top: "-80%" });
-assert.strictEqual(fotosDe("j2", quien).at(-1)!.encuadre, undefined);
+assert.deepStrictEqual(fotosDe("j2", quien).at(-1)!.encuadre, { width: "400%", left: "-200%", top: "-80%" });
 // La descarga de una de varios se llama por la foto: lo que se lleva es la familia entera.
 assert.ok(
   decodeURIComponent(suyas[1].url).endsWith("/La Venta de La Paloma, 1999.jpg"),

@@ -46,7 +46,7 @@ export function retratadosEn(g: Grafo, clave: string, o: OpcionesRetratados): Re
   return foto.gente
     .flatMap((quien) => {
       const p = g.personaPorId.get(quien.id);
-      if (!p || !quien.recuadro) return [];
+      if (!p) return [];
       return [
         {
           id: quien.id,
@@ -63,11 +63,12 @@ export function retratadosEn(g: Grafo, clave: string, o: OpcionesRetratados): Re
 /**
  * La edad que tenía cuando se hizo la foto. **Con solo el año puede fallar por uno** —como en
  * todo el árbol—, y por eso se escribe redonda y sin fingir precisión: «16 años», no «16 años
- * y 3 meses». Al que aún no había cumplido uno no se le dice «0 años», que no lo dice nadie.
+ * y 3 meses». Al que aún no había cumplido uno no se le dice «0 años», que no lo dice nadie,
+ * sino «bebé», como en el enlace de su ficha: «recién nacido» presumiría del día que no se sabe.
  */
 function edadEn(p: Persona, tomada: Fecha): string {
   if (!p.birth) return "";
   const edad = edadEntre(p.birth, tomada);
-  if (edad === 0) return p.sexo === "m" ? "recién nacida" : "recién nacido";
+  if (edad === 0) return "bebé";
   return `${edad} ${edad === 1 ? "año" : "años"}`;
 }

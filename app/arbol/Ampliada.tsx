@@ -18,7 +18,7 @@
 // una taparía a los de al lado. El completo, con la edad, aparece en el que se señala.
 //
 // **Y en cuanto la foto sale pequeña se apagan todos menos ese.** Una foto apaisada en un
-// móvil de pie no llega a 400 px, y diez pastillas ahí dentro tapan justo lo que se ha
+// móvil de pie no llega a 480 px, y diez pastillas ahí dentro tapan justo lo que se ha
 // abierto a ver; los recuadros solos siguen diciendo a quién se puede tocar.
 //
 // **En táctil, señalar es el primer toque y abrir el segundo.** Señalar es lo que enseña el
@@ -59,7 +59,8 @@ export default function Ampliada({
   // sin su primer toque.
   const toque = useRef({ conElDedo: false, yaSeñalado: false });
   // Cuando la foto no llega a los 480 px, los rótulos pequeños se solapan entre ellos: se
-  // apagan y se deja solo el del que se señala.
+  // apagan y se deja solo el del que se señala. Con tres o menos caben igual, que sobra foto
+  // entre cara y cara.
   const apretada = !!caja && caja.w < 480 && gente.length > 3;
 
   useEffect(() => {
@@ -71,11 +72,17 @@ export default function Ampliada({
     // El observador de tamaño no dispara con la pestaña oculta y el de ventana sí: aquí lo
     // único que cambia el tamaño de la foto es la ventana.
     window.addEventListener("resize", medir);
-    const alTeclear = (e: KeyboardEvent) => e.key === "Escape" && onCerrar();
-    window.addEventListener("keydown", alTeclear);
+    // Escape cierra la foto y nada más: la hoja de debajo también lo escucha en `window`, y
+    // sin cortarlo aquí —en la captura, que llega antes— un Escape cerraba las dos capas.
+    const alTeclear = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      e.stopPropagation();
+      onCerrar();
+    };
+    window.addEventListener("keydown", alTeclear, true);
     return () => {
       window.removeEventListener("resize", medir);
-      window.removeEventListener("keydown", alTeclear);
+      window.removeEventListener("keydown", alTeclear, true);
     };
   }, [onCerrar]);
 
@@ -159,7 +166,6 @@ export default function Ampliada({
             })}
         </div>
       </div>
-
     </div>
   );
 }

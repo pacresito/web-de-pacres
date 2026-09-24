@@ -23,8 +23,7 @@ import { añoDe, edadEntre, type Fecha } from "./fechas";
  * Qué cuadrado de la foto se enseña en el marco, **en fracciones del ancho de la foto** —los
  * dos ejes en la misma unidad, porque el recuadro es cuadrado y así no hace falta saber el
  * alto para colocarlo, ni volver a medir nada el día que se resuba la foto mejor escaneada—.
- * Sin él, el marco enseña el centro, que es lo que sale bien cuando la foto ya venía
- * recortada y mal cuando la cara no está en medio.
+ * Lo lleva cada cara, también la de una foto que ya venía cuadrada: `r(0, 0, ancho, ancho)`.
  */
 export interface Recuadro {
   /** Su borde izquierdo, desde el de la foto. */
@@ -40,8 +39,8 @@ export interface Aparicion {
   id: string;
   /** Su nombre, para poder leer esta lista. Manda el id; el test vigila que concuerden. */
   nombre: string;
-  /** Qué trozo se enseña en su ficha, si no vale el centro. */
-  recuadro?: Recuadro;
+  /** Qué trozo se enseña en su ficha. */
+  recuadro: Recuadro;
 }
 
 export interface Foto {
@@ -67,24 +66,21 @@ export const FOTOS: Foto[] = [
   {
     titulo: "La Venta de La Paloma",
     tomada: "1962",
-    // Los recuadros salen de medir sobre el escaneo de 1184 px de ancho; en fracciones, así
-    // que un escaneo mejor de la misma copia los hereda sin volver a medir.
     gente: [
-      { id: "p271", nombre: "Pepe", recuadro: r(352, 393, 195) },
-      { id: "p528", nombre: "Paca", recuadro: r(580, 433, 175) },
-      { id: "p125", nombre: "Lola", recuadro: r(621, 275, 175) },
-      { id: "p413", nombre: "Flora", recuadro: r(812, 281, 175) },
-      { id: "p418", nombre: "Pepe", recuadro: r(368, 618, 175) },
-      { id: "p286", nombre: "Marijose", recuadro: r(462, 400, 160) },
-      { id: "p388", nombre: "Paco", recuadro: r(163, 380, 160) },
-      { id: "p435", nombre: "Félix", recuadro: r(737, 440, 160) },
-      { id: "p429", nombre: "Juan José", recuadro: r(543, 706, 130) },
+      { id: "p271", nombre: "Pepe", recuadro: r(352, 393, 195, 1184) },
+      { id: "p528", nombre: "Paca", recuadro: r(580, 433, 175, 1184) },
+      { id: "p125", nombre: "Lola", recuadro: r(621, 275, 175, 1184) },
+      { id: "p413", nombre: "Flora", recuadro: r(812, 281, 175, 1184) },
+      { id: "p418", nombre: "Pepe", recuadro: r(368, 618, 175, 1184) },
+      { id: "p286", nombre: "Marijose", recuadro: r(462, 400, 160, 1184) },
+      { id: "p388", nombre: "Paco", recuadro: r(163, 380, 160, 1184) },
+      { id: "p435", nombre: "Félix", recuadro: r(737, 440, 160, 1184) },
+      { id: "p429", nombre: "Juan José", recuadro: r(543, 706, 130, 1184) },
     ],
   },
   {
     titulo: "La familia Carrión",
     tomada: "1922",
-    // Medidos sobre el recorte de 1354 px que preparó Pablo, sin el margen ni la flecha.
     gente: [
       { id: "p272", nombre: "Dolores", recuadro: r(612, 144, 161, 1354) },
       { id: "p271", nombre: "Pepe", recuadro: r(835, 164, 210, 1354) },
@@ -435,8 +431,11 @@ export function cuantasFotos(): Map<string, number> {
   return cuenta;
 }
 
-/** Un recuadro medido en píxeles del escaneo, que es como se mira una foto con una regla. */
-function r(x: number, y: number, lado: number, ancho = 1184): Recuadro {
+/**
+ * Un recuadro medido en píxeles del escaneo, que es como se mira una foto con una regla. El
+ * último es el ancho del archivo sobre el que se midió.
+ */
+function r(x: number, y: number, lado: number, ancho: number): Recuadro {
   return { x: x / ancho, y: y / ancho, lado: lado / ancho };
 }
 
@@ -446,7 +445,7 @@ function r(x: number, y: number, lado: number, ancho = 1184): Recuadro {
  * evita un tercer dato a mano. El test vigila que no se repita, que es lo único que la
  * derivación no puede garantizar sola.
  */
-export const claveDeFoto = (f: Foto): string =>
+export const claveDeFoto = (f: Pick<Foto, "titulo" | "tomada"> & { gente: Pick<Aparicion, "id">[] }): string =>
   `${f.titulo ? sinAcentos(f.titulo) : f.gente[0].id}-${añoDe(f.tomada)}`;
 
 /** Un título hecho clave: minúsculas, sin acentos y con guiones, porque viaja en una URL. */
@@ -478,8 +477,7 @@ export interface Encuadre {
  * desplaza hasta que empieza donde él: **el marco no recorta con `object-fit`**, que solo
  * sabe encajar la foto entera y no un trozo elegido de ella.
  */
-export function encuadreDe(r?: Recuadro): Encuadre | undefined {
-  if (!r) return undefined;
+export function encuadreDe(r: Recuadro): Encuadre {
   const porciento = (v: number) => `${+((v / r.lado) * 100).toFixed(3)}%`;
   return { width: porciento(1), left: porciento(-r.x), top: porciento(-r.y) };
 }
@@ -489,8 +487,8 @@ export interface FotoEnFicha {
   clave: string;
   /** Cómo se lee el link: «con 20 años». */
   rotulo: string;
-  /** Cómo se coloca dentro del marco, ya en CSS; sin recuadro, el marco la centra él. */
-  encuadre?: Encuadre;
+  /** Cómo se coloca dentro del marco, ya en CSS. */
+  encuadre: Encuadre;
   /** Cuántos salen. Con más de uno, abrirla entera es reconocer a los demás. */
   cuantos: number;
   /** De dónde se pide, con el nombre de la descarga en el último tramo. */
@@ -498,8 +496,8 @@ export interface FotoEnFicha {
 }
 
 /**
- * Las suyas, de la más joven a la más vieja: la ficha las lista en el orden en que se vivieron
- * y así pasar de una a otra es verla envejecer.
+ * Las suyas, de la más antigua a la más reciente: la ficha las lista en el orden en que se
+ * vivieron y así pasar de una a otra es verla envejecer.
  */
 export function fotosDe(id: string, quien: { nombreCompleto: string; birth?: Fecha }): FotoEnFicha[] {
   return FOTOS.filter((f) => f.gente.some((g) => g.id === id))

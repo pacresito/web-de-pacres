@@ -1,9 +1,9 @@
 // El bloque de identidad: las dos líneas con las que una persona aparece en cualquier
 // superficie del árbol. Puro: `npx tsx lib/arbol/identidad.test.ts`.
 //
-// Nadie sale nunca como un nombre suelto. A 60 personas el documento no les da apellido y
-// a 137 ninguna fecha, así que la segunda línea —de quién son— no es contexto: es el
-// identificador, y por eso es lo último que se recorta. Cuando no cabe se degrada por
+// Nadie sale nunca como un nombre suelto. A una de cada diez el documento no le da apellido y a
+// una de cada cuatro ninguna fecha, así que la segunda línea —de quién son— no es contexto: es
+// el identificador, y por eso es lo último que se recorta. Cuando no cabe se degrada por
 // peldaños, y el primer progenitor y el cónyuge no están en ninguno: quitarlos deja a esas
 // personas sin nada que las distinga de otra con su mismo nombre.
 
@@ -68,10 +68,10 @@ export interface OpcionesIdentidad {
   /** Sus ramas, cuando quien pinta las sabe; sin ellas la línea se queda en la familia. */
   ramas?: string[];
   /**
-   * Si los padres y el cónyuge van con su año. Vienen de serie porque son el desempate de
-   * trece filas que dicen «hijo de José»; una lista que ya sabe de quién habla —la de
-   * celebraciones, con una fila por persona y un día al lado— gasta ahí sitio que le hace
-   * falta para el segundo progenitor, que distingue más que dos fechas.
+   * Si los padres y el cónyuge van con su año. Vienen de serie porque son el desempate de una
+   * docena de filas que dicen «hijo de José»; una lista que ya sabe de quién habla —la de
+   * celebraciones, con una fila por persona y un día al lado— gasta ahí sitio que le hace falta
+   * para el segundo progenitor, que distingue más que dos fechas.
    */
   añosDeLosSuyos?: boolean;
   homonimia?: Homonimia;
@@ -91,8 +91,9 @@ export function identidadDe(g: Grafo, id: string, o: OpcionesIdentidad): Identid
 // Línea 1: el nombre, sus apellidos y el año
 
 /**
- * El nombre manda y el año no se recorta nunca: es el desempate más barato que hay y lo
- * llevan 372 personas. Lo que cede es el apellido, que además se lee subiendo por el árbol.
+ * El nombre manda y el año no se recorta nunca: es el desempate más barato que hay y lo llevan
+ * casi tres de cada cuatro. Lo que cede es el apellido, que además se lee subiendo por el
+ * árbol.
  */
 function tituloDe(p: Persona, { linaje, apellidos, fechas, hoy, largos, nombre }: OpcionesIdentidad): Trozo[] {
   const año = añoEscrito(p, fechas, hoy);
@@ -126,9 +127,9 @@ function añoEscrito(p: Persona, modo: ModoFechas, hoy: Fecha): string {
 // Línea 2: de quién es
 
 /**
- * Los peldaños, del texto entero al mínimo que identifica. Se bajan en este orden: primero
- * los años de padres y cónyuge, luego el segundo progenitor y por último la rama, que es
- * lo que menos distingue a una persona de otra —son doce para 512—.
+ * Los peldaños, del texto entero al mínimo que identifica. Se bajan en este orden: primero los
+ * años de padres y cónyuge, luego el segundo progenitor y por último la rama, que es lo que
+ * menos distingue a una persona de otra —son una docena para toda la familia—.
  */
 const PELDAÑOS = [
   { años: true, ambosPadres: true, rama: true },
@@ -274,9 +275,9 @@ function marcasDe(p: Persona, { homonimia }: OpcionesIdentidad): string[] {
 }
 
 /**
- * Quiénes comparten nombre completo —con los apellidos ya deducidos del árbol— y año. Con
- * los apellidos reconstruidos son 15 personas; contando solo los que traía el documento
- * serían 50, que era el problema que el dato crudo aparentaba tener.
+ * Quiénes comparten nombre completo —con los apellidos ya deducidos del árbol— y año. Con los
+ * apellidos reconstruidos son un puñado; contando solo los que traía el documento serían más
+ * del triple, que era el problema que el dato crudo aparentaba tener.
  */
 export function homonimias(g: Grafo, linaje: Map<string, Apellidos>): Map<string, Homonimia> {
   const grupos = new Map<string, string[]>();
@@ -309,7 +310,8 @@ export const LARGOS_FILA = { titulo: 34, contexto: 51 };
 
 /**
  * Y lo que cabe en una fila de lista, donde el título solo comparte ancho con los pasos: hay
- * sitio para los dos apellidos, que es lo que distingue a trece filas que se llaman igual.
+ * sitio para los dos apellidos, que es lo que distingue a una docena de filas que se llaman
+ * igual.
  */
 export const LARGOS_LISTA = { titulo: 40, contexto: 44 };
 

@@ -13,10 +13,10 @@ export const ATENUADO = 0.15;
 const SANGRADO = 9; // el aire entre el borde del nodo y su texto
 
 /**
- * Dónde va la línea base del nombre: arriba cuando debajo lleva los años, y al medio
- * cuando no —113 personas no traen ninguna fecha, así que no es el caso raro—. **No es la
- * mitad del nodo:** una línea base centrada deja el texto colgando, y lo que se centra es
- * la altura de las mayúsculas.
+ * Dónde va la línea base del nombre: arriba cuando debajo lleva los años, y al medio cuando no
+ * —una de cada cuatro personas no trae ninguna fecha, así que no es el caso raro—. **No es la
+ * mitad del nodo:** una línea base centrada deja el texto colgando, y lo que se centra es la
+ * altura de las mayúsculas.
  */
 const BASE = { conAños: -3, solo: 4 };
 
@@ -71,11 +71,11 @@ export default function Nodo({
   return (
     <g
       onClick={onElegir}
-      // El contraste dice a cuántas generaciones del punto de vista está, y lo dice por
-      // clase para que el tema oscuro pueda comprimir la escala sin que React lo sepa. A
-      // quien se está leyendo se le devuelve entero: la distancia ya no es lo que cuenta.
-      // `nodo-dir` es quien no se apaga en el giro, y va por clase por lo mismo: el giro se
-      // conduce encendiendo una sola clase arriba, sin que React vuelva a pintar 342 nodos.
+      // El contraste dice a cuántas generaciones del punto de vista está, y lo dice por clase
+      // para que el tema oscuro pueda comprimir la escala sin que React lo sepa. A quien se
+      // está leyendo se le devuelve entero: la distancia ya no es lo que cuenta. `nodo-dir` es
+      // quien no se apaga en el giro, y va por clase por lo mismo: el giro se conduce
+      // encendiendo una sola clase arriba, sin que React vuelva a pintar cientos de nodos.
       className={`nodo cursor-pointer g${abierta ? 0 : Math.min(Math.abs(nodo.nivel), 4)}${
         nodo.lineaDirecta || nodo.esPuntoDeVista ? " nodo-dir" : ""
       }`}

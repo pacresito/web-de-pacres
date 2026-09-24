@@ -5,7 +5,7 @@
 // se lo enseña a quien lo esté mirando y esto me habla a mí, así que ni la gente que entra
 // —eso lo dice `lista.ts`— ni las frases pueden ser las mismas.
 //
-// Todo el día en un mensaje y no uno por celebración: el 19 de marzo caen seis, y seis
+// Todo el día en un mensaje y no uno por celebración: el 19 de marzo caen media docena, y seis
 // vibraciones seguidas a las diez de la noche no son seis avisos, son una molestia.
 //
 // La víspera y no el día: un cumpleaños del que uno se entera por la mañana ya llega tarde

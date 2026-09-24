@@ -1,14 +1,14 @@
 // Las ramas de la familia. Puro: `npx tsx lib/arbol/ramas.test.ts`.
 //
-// La familia no se cuenta por documentos —los tres Word son tres tomos, no tres ramas—
-// sino por antepasado, y con exclusiones: los descendientes de Ambrosio son 85 hasta que
-// se les quitan los de Vicente, que forman rama aparte. Eso no está en el dato y no cabe
-// en él: se deriva del grafo y se queda aquí.
+// La familia no se cuenta por documentos —los tres Word son tres tomos, no tres ramas— sino por
+// antepasado, y con exclusiones: los descendientes de Ambrosio son sus Castrillo hasta que se
+// les quitan los de Vicente, que forman rama aparte. Eso no está en el dato y no cabe en él: se
+// deriva del grafo y se queda aquí.
 //
-// **La rama es un conjunto, no un valor.** Descender de dos deja a 13 personas en más de
-// una, y salen en todas: pertenecer a dos ramas es un hecho de la familia, no una
-// ambigüedad que resolver. Y quien no desciende de ninguno de los siete —las 124 que
-// entraron casándose— hereda las de su cónyuge, así que nadie se queda sin rama.
+// **La rama es un conjunto, no un valor.** Descender de dos deja a una docena larga de personas
+// en más de una, y salen en todas: pertenecer a dos ramas es un hecho de la familia, no una
+// ambigüedad que resolver. Y quien no desciende de ninguno de los siete —las que entraron
+// casándose— hereda las de su cónyuge, así que nadie se queda sin rama.
 
 import { descendientes, parejaDirecta, type Grafo } from "./grafo";
 

@@ -53,7 +53,7 @@ export interface Pliegue {
 export const ENLACES: Enlace[] = [
   { alias: "Crespo", id: "p84", nombre: "Vicente", nace: "1900" },
   { alias: "Castrillo", id: "p81", nombre: "Ambrosio", nace: "1883" },
-  // Centrado en el patriarca, con los Maestre plegados: son 68 personas que tienen su propio
+  // Centrado en el patriarca, con los Maestre plegados: son una rama entera con su propio
   // enlace, y sin plegarlas la entrada de los Velasco es la de las dos ramas a la vez.
   { alias: "Velasco", id: "p271", nombre: "Pepe", nace: "1887", pliega: [{ id: "p289", nombre: "Pepe" }] },
   { alias: "Maestre", id: "p289", nombre: "Pepe", nace: "1914" },

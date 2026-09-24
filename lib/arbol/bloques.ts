@@ -1,10 +1,10 @@
 // La escala media del lienzo: la unidad deja de ser la persona y pasa a ser el grupo de
 // hermanos, con las parejas que entraron en él casándose. Puro: `npx tsx lib/arbol/bloques.test.ts`.
 //
-// **Están todos.** La escala de personas enseña lo que se ha desplegado; esta enseña la
-// familia entera, que es a lo que se aleja quien se aleja. Las 428 personas son 130 bloques
-// y la columna más ancha pasa de 12.800 px de alto a 2.800: lo que se recorría arrastrando
-// se recorre de un vistazo.
+// **Están todos.** La escala de personas enseña lo que se ha desplegado; esta enseña la familia
+// entera, que es a lo que se aleja quien se aleja. Cada bloque junta a tres personas de media y
+// la columna más ancha se queda en una fracción de su alto: lo que se recorría arrastrando se
+// recorre de un vistazo.
 //
 // Los bloques no heredan la colocación de `layout.ts`: entre dos hermanos caben sus
 // descendencias enteras, así que la caja que los envolviera mediría media columna. Se

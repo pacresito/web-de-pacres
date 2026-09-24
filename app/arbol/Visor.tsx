@@ -5,16 +5,16 @@
 // venido a hacer aquí es mirar una cara.
 //
 // **El marco es cuadrado aunque la foto no lo sea**, y el recorte es solo de pantalla: quien
-// la descargue se lleva el archivo entero. Qué trozo se enseña lo dice el recuadro de la
-// foto —y si no lo lleva, su centro—, y **tocarlo la abre entera**: sin icono ni lupa, que
-// una foto que se agranda al tocarla es lo que hace cualquier foto de cualquier pantalla.
-// Y **se monta vacío**: el cuadrado gris se dibuja en el
-// primer fotograma y la foto entra fundiéndose cuando llega, así que la apertura no espera
-// a la red. Un indicador de carga dentro de un marco que ya está dibujado es ruido
+// la descargue se lleva el archivo entero. Qué trozo se enseña lo dice su recuadro, y
+// **tocarlo la abre entera**: sin icono ni lupa, que una foto que se agranda al tocarla es lo
+// que hace cualquier foto de cualquier pantalla. Y **se monta vacío**: el cuadrado gris se
+// dibuja en el primer fotograma y la foto entra fundiéndose cuando llega, así que la apertura
+// no espera a la red. Un indicador de carga dentro de un marco que ya está dibujado es ruido
 // —con la foto en caché ni se vería—.
 
 import { useState } from "react";
 import type { Ficha } from "@/lib/arbol/ficha";
+import type { FotoEnFicha } from "@/lib/arbol/fotos";
 import Fotos from "./Fotos";
 import { Titulo } from "./Identidad";
 
@@ -28,16 +28,16 @@ export default function Visor({
   /** Cuál de las suyas se está mirando. */
   clave: string;
   onFoto: (clave: string) => void;
-  onAmpliar: (clave: string) => void;
+  onAmpliar: (foto: FotoEnFicha) => void;
 }) {
   const [cargadas, setCargadas] = useState<ReadonlySet<string>>(() => new Set());
   const actual = datos.fotos.find((f) => f.clave === clave) ?? datos.fotos[0];
 
   // Se monta la que se mira y las que ya cargaron; las demás, ni se piden. Así entrar al
-  // visor no se trae las otras dos, y al cambiar de foto **la anterior se queda debajo**
+  // visor no se trae todas las suyas, y al cambiar de foto **la anterior se queda debajo**
   // hasta que la nueva termine: la de arriba entra fundiéndose encima de ella y el marco no
   // parpadea en gris entre una y otra. Pasar de «con 20» a «con 40» es una cara envejeciendo
-  // en el sitio, que es la gracia de tener tres.
+  // en el sitio, que es la gracia de tener varias.
   const montadas = datos.fotos.filter((f) => f.clave === clave || cargadas.has(f.clave));
 
   return (
@@ -49,7 +49,7 @@ export default function Visor({
 
       <button
         type="button"
-        onClick={() => onAmpliar(actual.clave)}
+        onClick={() => onAmpliar(actual)}
         aria-label={actual.cuantos > 1 ? "Ver la foto entera y quién sale" : "Ver la foto entera"}
         className="relative mt-3.5 block aspect-square w-full cursor-zoom-in overflow-hidden rounded-[14px] bg-[var(--soft)]"
       >
@@ -63,17 +63,15 @@ export default function Visor({
             alt={`Foto ${f.rotulo}`}
             onLoad={() => setCargadas((s) => new Set(s).add(f.clave))}
             style={f.encuadre}
-            className={`absolute transition-opacity duration-300 ${
-              f.encuadre ? "max-w-none" : "inset-0 h-full w-full object-cover"
-            } ${cargadas.has(f.clave) ? "opacity-100" : "opacity-0"} ${
-              f.clave === clave ? "z-[2]" : "z-[1]"
-            }`}
+            className={`absolute max-w-none transition-opacity duration-300 ${
+              cargadas.has(f.clave) ? "opacity-100" : "opacity-0"
+            } ${f.clave === clave ? "z-[2]" : "z-[1]"}`}
           />
         ))}
       </button>
 
       {/* Con una sola foto queda su rótulo a secas, que es lo que hay que decir cuando no
-          hay elección; con tres, en cuál de ellas se está. */}
+          hay elección; con varias, en cuál de ellas se está. */}
       <p className="mt-3 text-[12.5px] leading-[1.45]">
         <Fotos fotos={datos.fotos} actual={actual.clave} onFoto={onFoto} />
       </p>

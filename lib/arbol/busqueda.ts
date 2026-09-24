@@ -1,8 +1,8 @@
 // La búsqueda: a quién se llega tecleando. Puro: `npx tsx lib/arbol/busqueda.test.ts`.
 //
-// Se busca sobre las dos líneas con las que cada uno aparece —el nombre con sus apellidos y
-// de quién es—, no sobre el nombre a secas: a 55 personas el documento no les da apellido,
-// así que hay gente a la que solo se llega por su familia y «hija de Antonia» tiene que
+// Se busca sobre las dos líneas con las que cada uno aparece —el nombre con sus apellidos y de
+// quién es—, no sobre el nombre a secas: a una de cada diez el documento no le da apellido, así
+// que hay gente a la que solo se llega por su familia y «hija de Antonia» tiene que
 // encontrarla. Las dos vías no se mezclan: quien se llama así va antes que quien es hijo de
 // alguien que se llama así.
 //
@@ -42,11 +42,11 @@ export function buscar(g: Grafo, consulta: string, { linaje, pasos }: OpcionesBu
   const salida: Resultado[] = [];
   for (const [id, p] of g.personaPorId) {
     // «No consta» no es un nombre sino la forma de escribir que el documento no lo daba, así
-    // que no se busca ni en el propio ni en el de la familia: teclearlo devolvía a trece
-    // personas que no se llaman así y a todo el que se casó con una de ellas.
-    // **Se busca por los dos nombres**, se esté enseñando el que se esté enseñando: quien
-    // teclea «José Gerardo» y quien teclea «Pepe» buscan al mismo, y el interruptor de la
-    // hoja decide cómo se lee la lista, no a quién se llega.
+    // que no se busca ni en el propio ni en el de la familia: teclearlo devolvía a una docena
+    // de personas que no se llaman así y a todo el que se casó con una de ellas. **Se busca por
+    // los dos nombres**, se esté enseñando el que se esté enseñando: quien teclea «José
+    // Gerardo» y quien teclea «Pepe» buscan al mismo, y el interruptor de la hoja decide cómo
+    // se lee la lista, no a quién se llega.
     const suyo =
       p.nombre === SIN_NOMBRE ? "" : [p.nombre, ...(p.apodos ?? []), ...(linaje.get(id)?.todos ?? [])].join(" ");
     if (casan(buscadas, suyo)) salida.push({ id, via: "nombre" });
@@ -55,7 +55,7 @@ export function buscar(g: Grafo, consulta: string, { linaje, pasos }: OpcionesBu
   return ordenar(g, salida, pasos);
 }
 
-/** Las trece sin nombre, que es la única forma de llegar a ellas sin recorrer el árbol. */
+/** Las que no tienen nombre, que es la única forma de llegar a ellas sin recorrer el árbol. */
 export function losSinNombre(g: Grafo, { pasos }: OpcionesBusqueda): Resultado[] {
   const suyas = [...g.personaPorId.values()]
     .filter((p) => p.nombre === SIN_NOMBRE)

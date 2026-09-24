@@ -1,8 +1,8 @@
 // El camino de uno a otro: los eslabones que hay que recorrer, dichos como los diría la
 // familia. Puro: `npx tsx lib/arbol/camino.test.ts`.
 //
-// Es lo que contesta a «¿y esta quién es?» cuando la lengua no tiene palabra para la
-// relación, que le pasa a 271 de las 416. Los eslabones son los mismos que cuentan la
+// Es lo que contesta a «¿y esta quién es?» cuando la lengua no tiene palabra para la relación,
+// que le pasa a buena parte de la familia. Los eslabones son los mismos que cuentan la
 // distancia, así que el camino nunca dice un número distinto del de la ficha.
 
 import { vecinos, type Grafo, type Paso, type Vecino } from "./grafo";

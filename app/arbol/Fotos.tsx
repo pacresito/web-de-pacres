@@ -8,11 +8,11 @@ import type { FotoEnFicha } from "@/lib/arbol/fotos";
 
 export default function Fotos({
   fotos,
-  /** Cuál se está mirando, si es que se está mirando alguna: esa se lee, no se pulsa. */
   actual,
   onFoto,
 }: {
   fotos: FotoEnFicha[];
+  /** Cuál se está mirando, si es que se está mirando alguna: esa se lee, no se pulsa. */
   actual?: string;
   onFoto: (clave: string) => void;
 }) {

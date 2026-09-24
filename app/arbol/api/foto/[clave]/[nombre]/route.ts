@@ -21,8 +21,8 @@ export async function GET(
   // que hubiera en el blob para cualquiera con sesión.
   if (!hayFoto(clave)) return new Response("No encontrada", { status: 404 });
 
-  // **El navegador pregunta siempre, y casi siempre se va con un 304.** La clave sale del
-  // dueño y del año, así que resubir la foto reutiliza la suya: guardarla por tiempo —fuera
+  // **El navegador pregunta siempre, y casi siempre se va con un 304.** La clave sale de la
+  // foto —su título o su dueño— y del año, así que resubir la foto reutiliza la suya: guardarla por tiempo —fuera
   // un día o una semana— es prometer que el archivo de esa clave no cambia, y cambia. Y no
   // basta con que tarde en verse la nueva: los recuadros son fracciones del ancho, así que
   // una copia con otro encuadre deja las caras recortadas por los ojos hasta que caduque.

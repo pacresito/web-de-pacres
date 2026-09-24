@@ -289,7 +289,7 @@ function generacionArriba(g: Grafo, id: string, generaciones: number): (string |
 /**
  * Los diez que vienen, del árbol entero. **De los que el árbol da por vivos**: felicitar a un
  * muerto es el error que no se puede arreglar después. Y pide el día escrito —quien solo trae
- * el año no cumple ningún día en concreto—, que es lo que deja fuera a 229 de los vivos.
+ * el año no cumple ningún día en concreto—, que es lo que deja fuera a la mitad de los vivos.
  *
  * No sale de `celebraciones.ts`, que contesta otra pregunta: aquella lista es a quién felicita
  * **uno**, se recorta a la familia cercana de quien mira y se acaba a los treinta días. Esta no

@@ -28,7 +28,7 @@ async function main() {
   // varios. No hace falta una opción para distinguirlos porque no hay título que se escriba así.
   const esId = /^p\d+$/.test(dequien);
   const foto = esId
-    ? { tomada, gente: [{ id: dequien, nombre: "" }] }
+    ? { tomada, gente: [{ id: dequien }] }
     : { titulo: dequien, tomada, gente: [] };
 
   const clave = claveDeFoto(foto);
@@ -43,7 +43,7 @@ async function main() {
   console.log(`Subida a ${pathname}. Falta la línea en lib/arbol/fotos.ts:`);
   console.log(
     esId
-      ? `  { tomada: "${tomada}", gente: [{ id: "${dequien}", nombre: "<su nombre en el árbol>" }] },`
+      ? `  { tomada: "${tomada}", gente: [{ id: "${dequien}", nombre: "<su nombre en el árbol>", recuadro: r(x, y, lado, ancho) }] },`
       : `  { titulo: "${dequien}", tomada: "${tomada}", gente: [/* uno por cara, con su recuadro */] },`,
   );
 }

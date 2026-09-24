@@ -16,9 +16,9 @@ export interface Persona {
   /** Cero, uno o dos. Cuántos se pintan lo decide un interruptor global. */
   apellidos: string[];
   /**
-   * Coloca al hombre encima de cada pareja y dice de quién viene cada apellido. No sale
-   * de los Word: lo escribe `scripts/correcciones.py` uno a uno, y solo falta en los
-   * cuatro que no lo traen.
+   * Coloca al hombre encima de cada pareja y dice de quién viene cada apellido. No sale de los
+   * Word: lo escribe `scripts/correcciones.py` uno a uno, y solo falta en un puñado que no lo
+   * traen.
    */
   sexo?: "h" | "m";
   /**
