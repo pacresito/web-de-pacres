@@ -216,9 +216,8 @@ export type Config = {
    */
   capReserva: number;
   /**
-   * Ancho de la franja del borde que es casa. **De vacío es pared:** no se entra, aunque desde
-   * dentro siempre se pueda salir. Cargado es refugio, pero no basta con rozarla: se está a salvo
-   * al llegar a su **línea media**, metido en la franja y no parado en su borde interior.
+   * Ancho de la franja del borde que es casa. Pisarla ya es estar a salvo; descargar, dormir y
+   * criar piden llegar a su **línea media**, metido en la franja y no parado en su borde interior.
    */
   casa: number;
   caza: boolean;
@@ -712,8 +711,7 @@ function haciaCasa(m: Mundo, b: Bicho): [number, number, number] {
  * el bicho empuja hacia la suma. El arbitraje —"llevo uno y veo otro bocado, ¿vuelvo o me
  * arriesgo?"— no se programa: sale.
  *
- * El borde cambia de signo según lleves o no comida: vacío te empuja hacia dentro y es pared,
- * cargado te llama a casa con el peso de `retorno`. Y el menor pesa por **contraste de masas**,
+ * Cargado, el borde te llama a casa con el peso de `retorno`. Y el menor pesa por **contraste de masas**,
  * no por masa absoluta: lo que se persigue no es lo pequeño, es lo pequeño comparado contigo.
  *
  * **Aquí ya no hay peso al mayor.** Era `audacia`, y no se veía: un bicho miedoso y uno temerario
@@ -772,6 +770,12 @@ function decidir(m: Mundo, b: Bicho, radioMax: number, luz: number, cae: boolean
   const [hx, hy] = haciaCasa(m, b);
   const w = g.retorno * (b.carga + (cae ? 1 - luz : 0));
   if (w > 0) { sx += hx * w; sy += hy * w; }
+  // Probado y descartado: `retorno` como cupo —volver al llevar N bocados—. Solo, nadie pasa del
+  // primer bocado: la despensa llena son 230 ticks de faena y lo de la espalda no alimenta, así que
+  // quien sigue buscando se muere de hambre cargado. Dejando comer de la carga, las vueltas bajan de
+  // 1,6 a 0,6 al día, pero el cupo sube sin techo —es también el tirón del anochecer—, el mundo pobre
+  // se llena de enanos —un bocado comido entero es despensa para cincuenta crías— y la caza cae a la
+  // sexta parte.
 
   // Haber visto algo —un bocado o un bicho— es lo que separa el día de la noche, y lo separa para
   // cada uno: el que tiene mejor ojo se levanta antes y se acuesta más tarde.
