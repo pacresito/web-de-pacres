@@ -2,8 +2,8 @@
 //
 // **No es un test: no falla, mide.** Fuera del build, como el resto de medidores. Una
 // pregunta, y no es de opinión: para un hueco de una hora, un día, una semana, un mes y un
-// año, ¿cuántos cambios evidentes anuncia el «al menos X»? El objetivo del plan: ~2 en un
-// día, ~10 en un mes.
+// año, ¿cuántos cambios evidentes hay? El objetivo: ~2 en un día, ~10 en un mes, y que
+// siga creciendo con el hueco.
 //
 // El punto de partida importa —cada objeto tiene su propia fase— así que cada fila es la
 // mediana sobre muchos puntos de partida repartidos a lo largo de varios años, no una sola
@@ -61,7 +61,7 @@ function medir(huecoMs: number, partidas: number[] = PARTIDAS) {
   return { total: media(totales), evidentes: media(evidentesN), medEvidentes: mediana(evidentesN) };
 }
 
-console.log(`\n## «Al menos X»: sobre ${MUESTRAS} puntos de partida desde el origen\n`);
+console.log(`\n## Cambios evidentes: sobre ${MUESTRAS} puntos de partida desde el origen\n`);
 fila(["hueco", "media evid.", "mediana evid.", "media total"]);
 const HUECOS: [string, number][] = [
   ["1 hora", 60 * 60 * 1000],
@@ -75,8 +75,8 @@ for (const [nombre, ms] of HUECOS) {
   const r = medir(ms);
   fila([nombre, fmt(r.evidentes, 2), fmt(r.medEvidentes, 1), fmt(r.total, 2)]);
 }
-console.log("\nObjetivo del plan: ~2 evidentes en «1 día», ~10 en «1 mes». La mediana importa tanto");
-console.log("como la media: si difieren mucho, el «al menos X» promete de más la mitad de las veces.");
+console.log("\nObjetivo: ~2 evidentes en «1 día», ~10 en «1 mes». La mediana importa tanto como la");
+console.log("media: si difieren mucho, el ritmo depende de cuándo se empiece a mirar.");
 
 // ── ¿Qué reloj sostiene cada franja? ─────────────────────────────────────────
 // Si un solo objeto (el árbol, por su visibilidad alta) explica todo «1 año», el resto del

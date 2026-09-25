@@ -39,23 +39,23 @@ export interface Slot {
 // hueco, la probabilidad de pillarlo distinto no pasa de (n-1)/n; el monótono y el único sí
 // se acercan a la certeza. Y lo que decide si un hueco ya lo pilla no es el periodo, es el
 // **paso** (periodo/escalones): con paso corto, un hueco de un día ya cruza de sobra y el
-// objeto satura ahí, sin dejar nada que crecer hasta el mes. Por eso los evidentes que
-// sostienen el «al menos X» del día al mes llevan el paso de 2 a 14 días, y los de paso corto
-// se quedan en el techo abierto, donde saturar pronto no rompe ninguna promesa.
+// objeto satura ahí, sin dejar nada que crecer hasta el mes. Por eso los evidentes, que son
+// los que hacen crecer lo que se ve del día al mes, llevan el paso de 2 a 14 días, y los de
+// paso corto se quedan entre los sutiles, donde saturar pronto no se nota.
 //
 // **Ningún periodo cíclico cae en una cadencia humana** (24 h, 7/14/30 días): quien volviera
 // con esa cadencia sería ciego a ese objeto para siempre. Eso es la regla 5, pero como
 // accidente del catálogo en vez de como lección — el aliasing que enseña es el que sale de
 // que cada objeto tenga SU ritmo, no el de un reloj clavado al calendario del jugador.
 export const CATALOGO: Slot[] = [
-  // Rápidos y sutiles: el techo abierto. Los caza quien busca, pero no cuentan en el «al menos X».
+  // Rápidos y sutiles: los caza quien busca.
   { id: "coche",      tipo: "cíclico",  periodoMs: 9 * MS_HORA,      escalones: 5, visibilidad: 0.20 },
   { id: "ropa",       tipo: "cíclico",  periodoMs: 2.2 * MS_DIA,     escalones: 4, visibilidad: 0.30 },
   { id: "puesto",     tipo: "cíclico",  periodoMs: 6.5 * MS_DIA,     escalones: 3, visibilidad: 0.45 },
   { id: "papelera",   tipo: "cíclico",  periodoMs: 4.1 * MS_DIA,     escalones: 3, visibilidad: 0.25 },
   { id: "buzon",      tipo: "cíclico",  periodoMs: 13.3 * MS_DIA,    escalones: 3, visibilidad: 0.35 },
 
-  // Medios y evidentes: el grueso del «al menos X», de un día a un mes. El paso (periodo /
+  // Medios y evidentes: el grueso de lo que se ve, de un día a un mes. El paso (periodo /
   // escalones) va de 2 a 14 días — quien vuelve a diario solo pilla los de paso corto, quien
   // vuelve al mes los pilla todos.
   { id: "persiana",   tipo: "cíclico",  periodoMs: 10.2 * MS_DIA,  escalones: 5, visibilidad: 0.60 },
@@ -213,30 +213,7 @@ export function diferencia(anterior: Snapshot, actual: NivelObjeto[]): Cambio[] 
   return cambios;
 }
 
-/** Cuánto lleva un objeto en el nivel que tiene ahora. Es lo que el juego dice al acertar —«el
- *  toldo, recogido hace doce días»— y el **único canal por el que explica que la calle tiene
- *  estratos de tiempo**: sin esto se puede jugar meses sin descubrir que espaciar las visitas
- *  es lo que paga, y entonces el juego premia la ausencia en secreto. Devuelve ms. */
-export function antiguedadDe(semilla: string, id: string, tMs: number): number {
-  const obj = construirCalle(semilla).find((o) => o.id === id);
-  if (!obj) return 0;
-  if (obj.tipo === "único") {
-    const { ultimo } = sucesosHasta(obj, tMs);
-    // Sin sucesos todavía: lleva así desde que la calle existe, no desde hace un instante.
-    return Number.isFinite(ultimo) ? tMs - ultimo : tMs - ORIGEN_MS;
-  }
-  if (obj.tipo === "cíclico") {
-    const paso = obj.periodoMs / obj.escalones;
-    return (((tMs - obj.faseMs) % paso) + paso) % paso;
-  }
-  const avance = tMs - ORIGEN_MS + obj.faseMs;
-  const tope = Number.isFinite(obj.escalones) ? (obj.escalones - 1) * obj.periodoMs : Infinity;
-  // Un monótono que ya tocó su techo lleva ahí desde que lo tocó, no desde el último escalón
-  // que habría cruzado si siguiera subiendo.
-  return avance >= tope ? avance - tope : avance % obj.periodoMs;
-}
-
-// El «al menos X» solo cuenta lo evidente (Q4): el número se desacopla del total de escalones
-// del catálogo, así que jugar mucho no revela el techo.
+// Lo evidente es la vara del ritmo en calibrar.ts: lo sutil satura pronto y taparía si lo que
+// se ve crece de verdad con el hueco.
 export const UMBRAL_EVIDENTE = 0.6;
 export const evidentes = (cambios: Cambio[]): Cambio[] => cambios.filter((c) => c.visibilidad >= UMBRAL_EVIDENTE);

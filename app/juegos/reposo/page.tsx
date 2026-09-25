@@ -1,8 +1,8 @@
 "use client";
 
-// La calle de verdad, a la hora de verdad, y nada más: se mira. La partida —comparar contra la
-// visita anterior— no está en la página todavía; el motor y la partida esperan en `escena.ts`
-// y `partida.ts`.
+// La calle de verdad, a la hora de verdad, y nada más: se mira. Sin partida ni puntos: la
+// barra dice cuánto hace que miraste y cuántas cosas han cambiado desde entonces, y deja ver
+// la calle como estaba. Qué ha cambiado lo busca quien mira.
 //
 // La composición que se publica es la calle vista desde una ventana, y con vida: lo quieto se
 // repinta cada minuto y lo que se mueve —`calle/vida.ts`— doce veces por segundo encima.
@@ -11,7 +11,7 @@ import TerminalShell from "../../components/TerminalShell";
 import WhyFooter from "../../components/WhyFooter";
 import BarraEstado, { Dato } from "../../components/BarraEstado";
 import { IconoPantallaCompleta } from "../../components/Iconos";
-import { escena } from "./escena";
+import { diferencia, escena, snapshot, type NivelObjeto, type Snapshot } from "./escena";
 import { LIENZO, vistaDe, type Vista } from "./render";
 import { componer, pintarCapas, type Capas } from "./calle/animar";
 import { agenda } from "./calle/vida";
@@ -49,6 +49,35 @@ const pantallaDelServidor = () => ANCHO;
  *  vapor y la ropa se mueven de píxel en píxel igual, solo que gastando el triple. */
 const FPS = 12;
 
+// La visita anterior vive en el navegador y no en un servidor: cada dispositivo tiene su «la
+// última vez», sin nombre ni cuenta. Se guarda lo que se vio —los niveles— y no solo el
+// instante, para que retocar un reloj del catálogo no reescriba lo que alguien ya miró.
+const CLAVE = "reposo:visita";
+const MS_DIA = 24 * 3600e3;
+interface Visita { t: number; niveles: Snapshot }
+
+function cargarVisita(): Visita | null {
+  try {
+    const v = JSON.parse(localStorage.getItem(CLAVE) ?? "null");
+    return v && typeof v.t === "number" && v.niveles ? v : null;
+  } catch { return null; }
+}
+function guardarVisita(t: number) {
+  try { localStorage.setItem(CLAVE, JSON.stringify({ t, niveles: snapshot(escena(SEMILLA, t)) })); } catch {}
+}
+
+// Se lee una vez al entrar y no se mueve mientras se está: la referencia es la visita de
+// antes, aunque esta ya se esté guardando. La primera vez no hay visita de antes y la
+// referencia es el momento de entrar. Se olvida al salir, para releerla al volver sin recargar.
+let anterior: Visita | undefined;
+const leerAnterior = () => {
+  if (anterior) return anterior;
+  const t = Date.now();
+  return (anterior = cargarVisita() ?? { t, niveles: snapshot(escena(SEMILLA, t)) });
+};
+const anteriorDelServidor = () => null;
+const sinSuscripcion = () => () => {};
+
 const horaLocal = (t: number) => {
   const d = new Date(t * 1000);
   return d.getHours() + d.getMinutes() / 60;
@@ -60,6 +89,8 @@ export default function Reposo() {
   const [maximizada, setMaximizada] = useState(false);
   const pantalla = useSyncExternalStore(suscribirVentana, leerPantalla, pantallaDelServidor);
   const ancho = maximizada ? Math.max(ANCHO, pantalla) : ANCHO;
+  const visita = useSyncExternalStore(sinSuscripcion, leerAnterior, anteriorDelServidor);
+  const [antes, setAntes] = useState(false);
 
   const fecha = new Date(ahora);
   const hora = fecha.getHours() + fecha.getMinutes() / 60;
@@ -88,15 +119,36 @@ export default function Reposo() {
     return () => cancelAnimationFrame(id);
   }, []);
 
-  // Lo quieto, una vez por minuto (o al cambiar de ancho): la calle a su hora, en capas.
+  // Solo cuenta como visita quedarse un minuto mirando: cargar y cerrar no gasta la
+  // referencia. Y mientras se mira se sigue guardando, así la próxima compara contra lo último
+  // que se vio; con la pestaña oculta no, que nadie está mirando.
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (document.visibilityState === "visible") guardarVisita(Date.now());
+    }, 60e3);
+    return () => { clearInterval(id); anterior = undefined; };
+  }, []);
+
+  const calle = ahora === 0 ? [] : escena(SEMILLA, ahora);
+  const cambios = visita ? diferencia(visita.niveles, calle).length : 0;
+  const dias = visita ? Math.max(0, Math.floor((ahora - visita.t) / MS_DIA)) : 0;
+  const cuando = dias === 0 ? "hoy" : dias === 1 ? "ayer" : `hace ${dias} días`;
+
+  // Lo quieto, una vez por minuto (o al cambiar de ancho o de «antes»): la calle a su hora, en
+  // capas. La de antes se pinta con la luz de ahora: con la suya, cambiaría todo y no se vería
+  // qué cambió.
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || ahora === 0) return;
+    const ahoraMismo = escena(SEMILLA, ahora);
+    const niveles: NivelObjeto[] = antes && visita
+      ? ahoraMismo.map((o) => ({ ...o, nivel: visita.niveles[o.id] ?? o.nivel }))
+      : ahoraMismo;
     vista.current = vistaDe(canvas, ancho, window.devicePixelRatio || 1);
-    capas.current = pintarCapas(escena(SEMILLA, ahora), hora);
+    capas.current = pintarCapas(niveles, hora);
     // Redimensionar el canvas lo borra: se repinta ya, sin esperar al siguiente fotograma.
     dibujar.current(Date.now() / 1000);
-  }, [ahora, hora, ancho]);
+  }, [ahora, hora, ancho, antes, visita]);
 
   const hhmm = fecha.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
 
@@ -121,6 +173,19 @@ export default function Reposo() {
           <Dato etiqueta="hora">
             <span style={{ fontVariantNumeric: "tabular-nums" }}>{ahora === 0 ? "--:--" : hhmm}</span>
           </Dato>
+          {visita && ahora !== 0 && <>
+            <Dato etiqueta="last seen">
+              <button
+                className={`rp-antes${antes ? " es-antes" : ""}`}
+                onClick={() => setAntes((a) => !a)}
+                aria-pressed={antes}
+                title={antes ? "Volver a la calle de ahora" : "Ver la calle como estaba"}
+              >{cuando}</button>
+            </Dato>
+            <Dato etiqueta="cambios">
+              <span style={{ fontVariantNumeric: "tabular-nums" }}>{cambios}</span>
+            </Dato>
+          </>}
         </BarraEstado>
 
         <div className={`rp-caja${maximizada ? " es-maximizada" : ""}`}>
@@ -139,8 +204,8 @@ export default function Reposo() {
         )}
 
         <p className="rp-pista">
-          Observa la escena y vuelve en unos días —o meses— · al volver habrán cambiado cosas:
-          descubre cuáles · cuanto más tardes, más cambia
+          Observa la escena y vuelve en unos días (o meses) · al volver habrán cambiado cosas ·
+          puedes pulsar «last seen» para ver cómo estaba la calle
         </p>
 
         <WhyFooter question="¿por qué un juego que premia no jugar?">
@@ -166,6 +231,16 @@ export default function Reposo() {
           display: flex; flex-direction: column; gap: 14px;
         }
         .rp-pista { margin: 0; color: var(--t-ink3); font-size: 12px; }
+        /* El conmutador es el propio dato, subrayado a puntos para que se sepa pulsable sin
+           parecer un botón: la barra informa, y mirar el pasado es un gesto discreto. */
+        .rp-antes {
+          cursor: pointer; color: var(--t-ink2); font-variant-numeric: tabular-nums;
+          text-decoration: underline dotted; text-underline-offset: 3px;
+          transition: color 0.12s ease;
+        }
+        .rp-antes.es-antes, .rp-antes:active { color: var(--t-accent); }
+        .rp-antes.es-antes { text-decoration-style: solid; }
+        @media (hover: hover) { .rp-antes:hover { color: var(--t-accent); } }
         /* El lienzo manda: si no cabe, la caja se desplaza en vez de encoger la calle. El filo
            va en outline y no en border, que ocupa sitio: la caja mediría dos píxeles menos que
            la calle y se desplazaría siempre. */
