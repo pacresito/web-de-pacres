@@ -1,10 +1,10 @@
 // npx tsx app/juegos/reposo/render.test.ts
 //
-// Lo que protegen estos tests: que todo objeto del catálogo tenga dónde pintarse y dónde
-// tocarse, que la paleta no dé un salto al cruzar la medianoche, y que interpolar en OKLCH
-// sirva de verdad para lo que el plan dice que sirve.
+// Lo que protegen estos tests: que todo objeto del catálogo tenga dónde pintarse y tamaño para
+// que su cambio se vea, que la paleta no dé un salto al cruzar la medianoche, y que interpolar
+// en OKLCH sirva de verdad para lo que el plan dice que sirve.
 import { CATALOGO } from "./escena";
-import { LIENZO, PIEZAS, css, esNoche, luzDe, mezcla, paletaDe, tenir, zonas, type Oklch } from "./render";
+import { LIENZO, PIEZAS, css, esNoche, luzDe, mezcla, paletaDe, tenir, type Oklch } from "./render";
 import { escena as calle } from "./calle/ventana";
 import { DETALLE, PINCELES, PROPIOS } from "./calle/pincel";
 
@@ -28,19 +28,22 @@ test("todo objeto tiene con qué pintarse", sinPincel.length === 0, sinPincel.jo
 const detalleSinBase = Object.keys(DETALLE).filter((id) => !PINCELES[PIEZAS[id]?.arquetipo]);
 test("todo detalle va sobre un arquetipo que existe", detalleSinBase.length === 0, detalleSinBase.join(", "));
 
+// Un estado sin dibujo propio pinta el de otro, y el diff cuenta como diferencia un cambio que
+// nadie puede ver: el jugador busca algo que no está.
+const cortos = CATALOGO.filter((s) => Number.isFinite(s.escalones) && PIEZAS[s.id].variantes !== s.escalones);
+test("cada estado de un objeto con estados contados tiene su dibujo", cortos.length === 0,
+  cortos.map((s) => `${s.id}: ${PIEZAS[s.id].variantes} dibujos para ${s.escalones} estados`).join(", "));
+
 const sinCaja = ids.filter((id) => !calle.cajas[id]);
-test("la escena publicada coloca los 24", sinCaja.length === 0, sinCaja.join(", "));
+test("la escena publicada coloca los 22", sinCaja.length === 0, sinCaja.join(", "));
 
-const vista = { ancho: 1600, alto: 900, escala: 1, dpr: 1 };
-const fuera = zonas(vista, calle.cajas).filter((z) => z.x < 0 || z.y < 0 || z.x + z.w > LIENZO.ancho || z.y + z.h > LIENZO.alto);
-test("ninguna zona sensible se sale del lienzo", fuera.length === 0, fuera.map((z) => z.id).join(", "));
-
-// El detalle más pequeño tiene que seguir siendo tocable y visible en la vista por defecto:
-// en escritorio la calle se sirve a 960 px, el `ANCHO` de page.tsx.
-const menor = zonas({ ...vista, ancho: 960, escala: 960 / LIENZO.ancho }, calle.cajas)
-  .reduce((a, z) => (z.w * z.h < a.w * a.h ? z : a));
+// Lo que el juego pide es ver qué ha cambiado, y el cambio de algo de menos de 20 px no lo ve
+// nadie sin lupa. Se mide en la vista por defecto: en escritorio la calle se sirve a 960 px,
+// el `ANCHO` de page.tsx.
+const escala = 960 / LIENZO.ancho;
+const [menor, caja] = Object.entries(calle.cajas).reduce((a, b) => (b[1].w * b[1].h < a[1].w * a[1].h ? b : a));
 test("la pieza más pequeña mide 20 px o más de lado en escritorio",
-  Math.min(menor.w, menor.h) >= 20, `${menor.id}: ${menor.w.toFixed(0)}×${menor.h.toFixed(0)} px`);
+  Math.min(caja.w, caja.h) * escala >= 20, `${menor}: ${(caja.w * escala).toFixed(0)}×${(caja.h * escala).toFixed(0)} px`);
 
 // La paleta
 

@@ -155,7 +155,7 @@ export default function Reposo() {
   return (
     <TerminalShell
       title="reposo"
-      prompt={{ host: "reposo", path: "~/juegos", command: "./reposo --objetos=24" }}
+      prompt={{ host: "reposo", path: "~/juegos", command: "./reposo --objetos=22" }}
       backUrl="/lab"
       hideChrome={maximizada}
     >

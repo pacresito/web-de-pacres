@@ -1,7 +1,7 @@
 // Escena «alzado» — la calle de frente, que es la composición que ya tiene el juego.
 //
 // Su virtud es la que no se ve hasta comparar: **todo está a la misma distancia**, así que
-// todo se lee igual de bien y una caja de toque es un rectángulo honesto. Es la composición
+// todo se lee igual de bien y cada caja es un rectángulo honesto de lo que se ve. Es la composición
 // que menos estorba a la mecánica. Y es también la que menos se parece a un sitio: un alzado
 // es un plano de arquitecto, y los planos no dan ganas de volver.
 import { ACERA, CAJAS, SUELO, TEJADOS, px, tramar, type Ctx } from "./paleta";

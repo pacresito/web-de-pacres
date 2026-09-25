@@ -10,7 +10,7 @@
 // Todo va en píxeles finos del alzado (640×360) salvo la obra, que es un objeto y se pinta
 // dentro de su caja en la ventana. El tercer bloque del alzado no se pinta: detrás de la obra
 // queda cielo y los tejados lejanos, que es el aire que le hacía falta a la calle.
-import { BLOQUES, CAJAS, azar, px, tramar, type Caja, type Ctx, type Rampa } from "./paleta";
+import { BLOQUES, CAJAS, TIENDA, azar, px, tramar, type Caja, type Ctx, type Rampa } from "./paleta";
 import type { Mano } from "./pincel";
 
 const ESC = 2.5;
@@ -21,11 +21,10 @@ export interface Vano { x: number; y: number; w: number; h: number; encendida: b
 
 // ── Dónde no se puede abrir una ventana ─────────────────────────────────────
 
-const EN_FACHADA = ["persiana", "cortina", "grafiti", "cartel", "buzon", "comercio", "escaparate", "letrero", "toldo"];
-const OCUPADO: Caja[] = EN_FACHADA.map((id) => {
-  const c = CAJAS[id];
-  return { x: c.x / ESC, y: c.y / ESC, w: c.w / ESC, h: c.h / ESC };
-});
+const EN_FACHADA = ["persiana", "cortina", "grafiti", "cartel", "buzon", "escaparate", "letrero", "toldo"];
+const OCUPADO: Caja[] = [...EN_FACHADA.map((id) => CAJAS[id]), TIENDA].map((c) => (
+  { x: c.x / ESC, y: c.y / ESC, w: c.w / ESC, h: c.h / ESC }
+));
 const libre = (x: number, y: number, w: number, h: number) =>
   !OCUPADO.some((o) => x < o.x + o.w && x + w > o.x && y < o.y + o.h && y + h > o.y);
 

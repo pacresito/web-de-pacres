@@ -1,15 +1,15 @@
 // El puente entre el motor y el dibujo: la luz, las cajas del catálogo y los cuatro ayudantes
 // que usan todos los módulos de `calle/`.
 //
-// **Lo que ningún dibujo puede tocar:** los 24 ids. Son lo que archivan las crónicas, así que
+// **Lo que ningún dibujo puede tocar:** los 22 ids. Son lo que archivan las crónicas, así que
 // la calle se puede repintar entera —incluso después de publicar— sin que ninguna partida
 // pasada mienta. Lo que sí cambia con el dibujo es cuánto canta cada cambio, y eso se repasa
-// en las 24 visibilidades de `escena.ts`.
+// en las 22 visibilidades de `escena.ts`.
 import type { NivelObjeto } from "../escena";
-import { CAJAS, LIENZO, PIEZAS, css, esNoche, luzDe, mezcla, tenir } from "../render";
+import { CAJAS, LIENZO, PIEZAS, TIENDA, css, esNoche, luzDe, mezcla, tenir } from "../render";
 import type { Cajas, Luz, Oklch, Vista } from "../render";
 
-export { CAJAS, LIENZO, PIEZAS, css, esNoche, luzDe, mezcla, tenir };
+export { CAJAS, LIENZO, PIEZAS, TIENDA, css, esNoche, luzDe, mezcla, tenir };
 export type { Cajas, Luz, Oklch, Vista };
 
 export type Pieza = (typeof PIEZAS)[string];
@@ -25,8 +25,8 @@ function visible(p: Pieza, hora: number): boolean {
 }
 
 /** Las piezas que toca pintar a esta hora, en el orden de PIEZAS —que es el de profundidad—,
- *  cada una con su nivel. Lo que no se pinta conserva su zona sensible: de eso se encarga
- *  `zonas()`, que no mira la hora. */
+ *  cada una con su nivel. Lo que no se pinta a esta hora sigue teniendo nivel: la visita lo
+ *  compara aunque no se vea. */
 export function enEscena(niveles: NivelObjeto[], hora: number): { id: string; p: Pieza; n: number }[] {
   const nivel = new Map(niveles.map((x) => [x.id, x.nivel]));
   return Object.entries(PIEZAS)
@@ -36,7 +36,7 @@ export function enEscena(niveles: NivelObjeto[], hora: number): { id: string; p:
 
 /** Aleatorio determinista a partir de un entero: el mismo adorno en el mismo sitio en cada
  *  repintado. Un `Math.random()` en el pintado haría parpadear la calle al mover la hora, y
- *  peor: sería un cambio que el diff no conoce y que el jugador señalaría. */
+ *  peor: sería un cambio que el diff no conoce y que el jugador tomaría por una diferencia. */
 export function azar(n: number): number {
   let h = Math.imul(n ^ 0x9e3779b9, 2654435761);
   h ^= h >>> 15;

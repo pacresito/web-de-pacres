@@ -38,7 +38,7 @@ export interface Capas {
   calle: HTMLCanvasElement;
   pasos: Paso[];
   marco: HTMLCanvasElement;
-  /** Las cajas de los 24 en píxeles finos de la ventana, estén o no a esta hora. */
+  /** Las cajas de los 22 en píxeles finos de la ventana, estén o no a esta hora. */
   cajas: Record<string, Caja>;
   nivel: Record<string, number>;
 }

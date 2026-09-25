@@ -40,7 +40,7 @@ const fmt = (n: number, d = 1) => n.toFixed(d).padStart(6);
 const fila = (xs: (string | number)[]) => console.log(xs.map((x) => String(x).padStart(10)).join(" "));
 
 /** Puntos de partida repartidos en 5 años desde el origen, para que hasta el único más lento
- *  (comercio, 3 años de ventana) tenga sitio de sobra para caer dentro de la muestra. */
+ *  (el banco, más de dos años entre diferencias) tenga sitio de sobra para caer dentro de la muestra. */
 const PARTIDAS = Array.from({ length: MUESTRAS }, (_, i) => t0 + Math.floor((i / MUESTRAS) * 5 * 365 * DIA));
 
 /** Un jugador no vuelve al segundo exacto: cada muestra sacude el hueco un ±15% además de
@@ -105,7 +105,7 @@ console.log("no es un fallo de calibración, es el interruptor de la regla 5.");
 // solo el estreno es medir el mejor día de la calle y llamarlo normal.
 console.log("\n## La misma calle, medida desde distintos años de su vida (media de evidentes)\n");
 fila(["arranca en", "1 día", "1 mes", "1 año", "¿mes < año?"]);
-// Cada fila muestrea tres años, no uno: con sucesos espaciados años, una ventana de un año
+// Cada fila muestrea tres años, no uno: con diferencias espaciadas años, una ventana de un año
 // tiene tan pocos dentro que el veredicto lo decide el azar de qué año toque.
 for (const anio of [0, 1, 2, 5, 10, 20]) {
   const base = ORIGEN_MS + anio * 365 * DIA;

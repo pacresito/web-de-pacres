@@ -13,7 +13,8 @@
 // **Y tiene un precio que lo puede tumbar:** la calle se queda en el 87 % y recortada por
 // arriba y por abajo. Menos píxeles por objeto justo en el juego que pide distinguir lo que
 // cambió, y el borde del hueco se come el cielo alto y el asfalto de delante.
-import { fino, px, tramar, type Ctx } from "./paleta";
+import { TIENDA, fino, px, tramar, type Ctx } from "./paleta";
+import { tienda } from "./objetos";
 import { ANCHO, ESC, disco, type Escena, type Mano } from "./pincel";
 import { escena as alzado, cieloQuieto, sinCielo } from "./alzado";
 
@@ -31,7 +32,7 @@ export const aVentana = (x: number, y: number) => ({ x: HUECO.x + x * ESCALA, y:
 /** Lo que mide como mínimo una caja en el lienzo grande. Sale de la regla del plan —el detalle
  *  más pequeño no baja de 20 px en escritorio— deshecha: a 1100 px de ancho la escala es 0,69,
  *  así que 30 unidades del lienzo son esos 20 px. Al enmarcar, el buzón se quedaba en 19,8 y
- *  pasaba a ser un objeto que el jugador no puede señalar sin apuntar con lupa. */
+ *  pasaba a ser un objeto cuyo cambio no se ve sin lupa. */
 const MINIMO = 30;
 
 /** Lo que en la ventana no va donde en el alzado, en píxeles finos. El coche sube a la mitad
@@ -59,15 +60,26 @@ function pegar(ctx: Ctx, clave: string, pintar: (aux: Ctx) => void) {
   ctx.drawImage(aux.lienzo, 0, RECORTE_Y, ANCHO, HUECO.h / ESCALA, HUECO.x, HUECO.y, HUECO.w, HUECO.h);
 }
 
+/** El local de la tienda, en píxeles finos de la ventana. Es decorado, pero se pinta a la
+ *  escala de los objetos y no con el alzado: sus medidas son las de cuando era uno. */
+const LOCAL = (() => {
+  const c = dentro(TIENDA.x / ESC, TIENDA.y / ESC, TIENDA.w / ESC, TIENDA.h / ESC);
+  return { x: Math.round(c.x / ESC), y: Math.round(c.y / ESC), w: Math.round(c.w / ESC), h: Math.round(c.h / ESC) };
+})();
+
 function fondo(ctx: Ctx, m: Mano, hora: number) {
   px(ctx, 0, 0, ANCHO, ALTO, m.noche ? m.P.madera[0] : m.P.madera[1]);
   pegar(ctx, "ventana", (aux) => alzado.fondo(aux, m, hora));
+  tienda(ctx, m, LOCAL);
 }
 
 /** La escena animada en capas: el cielo sin nubes, y la calle sobre transparente para que lo
  *  que cruza el cielo pase por detrás de los tejados. */
 export const cieloVentana = (ctx: Ctx, m: Mano, hora: number) => pegar(ctx, "ventana-cielo", (aux) => cieloQuieto(aux, m, hora));
-export const calleVentana = (ctx: Ctx, m: Mano) => pegar(ctx, "ventana", (aux) => sinCielo(aux, m));
+export function calleVentana(ctx: Ctx, m: Mano) {
+  pegar(ctx, "ventana", (aux) => sinCielo(aux, m));
+  tienda(ctx, m, LOCAL);
+}
 
 /** El marco, la repisa y lo que hay en ella. Va después de los objetos: por eso tapa. */
 function primerPlano(ctx: Ctx, m: Mano) {
@@ -145,7 +157,8 @@ export const PARTES: Record<"cortina" | "planta" | "taza", (ctx: Ctx, m: Mano) =
         for (let i = 0; i < w; i++) {
           const u = i / w, x = lado < 0 ? borde + i : borde - 1 - i;
           const pliegue = Math.sin(u * Math.PI * 4.5 + 0.6);
-          const color = i === w - 1 ? R[0] : pliegue < -0.35 ? R[1] : pliegue > 0.55 ? R[4] : R[3];
+          // Los dos cantos en el verde más oscuro: el que cae libre y el recto de la jamba.
+          const color = i === w - 1 || i === 0 ? R[0] : pliegue < -0.35 ? R[1] : pliegue > 0.55 ? R[4] : R[3];
           px(ctx, x, y, 1, 1, color);
         }
         if (y === fin - 1) px(ctx, lado < 0 ? borde : borde - w, y, w, 1, R[0]);   // el bajo
@@ -157,22 +170,47 @@ export const PARTES: Record<"cortina" | "planta" | "taza", (ctx: Ctx, m: Mano) =
       px(ctx, lx + 1, lazo - 1, 16, 1, m.P.tela[4]);
     }
   },
-  // Una planta a la izquierda, contra la luz.
+  // Una cinta en su maceta de barro, a la izquierda, contra la luz: las hojas se arquean y
+  // caen por su peso, y la luz de fuera les enciende el filo de arriba.
   planta: (ctx, m) => {
-    const repisa = REPISA, px0 = MACETA.x;
-    px(ctx, px0, repisa - 22, 26, 22, m.P.ladrillo[1]);
-    px(ctx, px0, repisa - 22, 26, 2, m.P.ladrillo[2]);
-    for (let i = 0; i < 9; i++) {
-      const a = -Math.PI / 2 + (i - 4) * 0.34, largo = 20 + (i % 3) * 9;
-      for (let t = 0; t < largo; t++)
-        px(ctx, Math.round(px0 + 13 + Math.cos(a) * t * 0.9), Math.round(repisa - 22 + Math.sin(a) * t), 2, 2,
-          m.P.hoja[i % 2 ? 1 : 0]);
+    const { x, y, w, h } = MACETA, cx = x + Math.round(w / 2);
+    const barro = m.P.ladrillo;
+    for (let j = 3; j < h; j++) {                                               // se estrecha al bajar
+      const hueco = Math.round((j / h) * 3);
+      px(ctx, x + hueco, y + j, w - 2 * hueco, 1, barro[1]);
+      px(ctx, x + hueco, y + j, 2, 1, barro[2]);
+      px(ctx, x + w - hueco - 2, y + j, 2, 1, barro[0]);
     }
+    px(ctx, x - 1, y, w + 2, 4, barro[2]);                                      // el borde
+    px(ctx, x - 1, y, w + 2, 1, barro[3]);
+    px(ctx, x - 1, y + 3, w + 2, 1, barro[0]);
+    px(ctx, x + 1, y - 1, w - 2, 1, m.P.madera[0]);                             // la tierra
+    const hojas = [[-2.7, 30], [-2.35, 38], [-2.0, 27], [-1.75, 34], [-1.45, 24], [-1.2, 36], [-0.9, 29], [-0.55, 33], [-0.3, 22]];
+    hojas.forEach(([a, largo], i) => {
+      const x0 = cx + (i - 4) * 1.2;
+      for (let t = 0; t < largo; t++) {
+        const hx = Math.round(x0 + Math.cos(a) * t), hy = Math.round(y - 1 + Math.sin(a) * t + 0.022 * t * t);
+        const g = t < largo * 0.6 ? 2 : 1;
+        px(ctx, hx, hy, g, g, m.P.hoja[i % 2 ? 1 : 0]);
+        if (t % 2 === 0 && t > 3) px(ctx, hx, hy - 1, 1, 1, m.P.hoja[m.noche ? 1 : 2]);   // el filo encendido
+      }
+    });
   },
-  // Una taza a la derecha.
+  // Una taza de loza a la derecha: cuerpo, asa hueca, el borde con luz y el café dentro.
   taza: (ctx, m) => {
-    px(ctx, TAZA.x, TAZA.y, TAZA.w, TAZA.h, m.P.metal[1]);
-    px(ctx, TAZA.x + TAZA.w - 2, REPISA - 11, 6, 6, m.P.metal[1]);
+    const { x, y, w, h } = TAZA;
+    const loza = m.noche ? [m.P.piedra[0], ...m.P.piedra.slice(0, -1)] : m.P.piedra;   // de noche, un tono más apagada
+    px(ctx, x - 1, y - 1, w + 2, h + 1, m.F.tinta);
+    px(ctx, x, y, w, h - 1, loza[2]);
+    px(ctx, x + 1, y + 1, 2, h - 3, loza[3]);                                    // la luz de la ventana
+    px(ctx, x + w - 3, y + 1, 2, h - 3, loza[1]);
+    px(ctx, x, y, w, 1, loza[4]);                                                // el borde
+    px(ctx, x + 1, y + 1, w - 2, 1, m.P.madera[0]);                              // el café
+    px(ctx, x + 2, y + h - 1, w - 4, 1, loza[1]);                                // el culo, más estrecho
+    // El asa: un anillo, con el hueco por el que se ve la pared.
+    px(ctx, x + w, y + 2, 5, 8, m.F.tinta);
+    px(ctx, x + w, y + 3, 4, 6, loza[2]);
+    px(ctx, x + w, y + 5, 2, 2, m.noche ? m.P.madera[0] : m.P.madera[1]);
   },
 };
 

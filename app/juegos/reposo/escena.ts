@@ -9,11 +9,10 @@
 const MS_HORA = 60 * 60 * 1000;
 const MS_DIA = 24 * MS_HORA;
 const MS_ESTACION = 91 * MS_DIA;
-const MS_ANIO = 365 * MS_DIA;
 
 /** Arranque de todo reloj: fase cero de los cíclicos, instante cero de los monótonos, borde
  *  inferior de la ventana de los únicos. Anterior a la publicación a propósito: la calle se
- *  estrena ya crecida, con árbol y sucesos, en vez de recién nacida y vacía. **No se mueve
+ *  estrena ya crecida, con árbol y diferencias, en vez de recién nacida y vacía. **No se mueve
  *  nunca:** moverlo cambia la calle a todo el que ya la ha mirado. */
 export const ORIGEN_MS = Date.UTC(2026, 0, 1);
 
@@ -22,7 +21,7 @@ export type Tipo = "monótono" | "cíclico" | "único";
 export interface Slot {
   id: string;
   tipo: Tipo;
-  /** Monótono: ms por escalón. Cíclico: ms del ciclo completo. Único: tiempo medio entre sucesos. */
+  /** Monótono: ms por escalón. Cíclico: ms del ciclo completo. Único: tiempo medio entre diferencias. */
   periodoMs: number;
   /** Monótono: techo de escalones (Infinity si no lo tiene). Cíclico: escalones del ciclo. Único: Infinity. */
   escalones: number;
@@ -30,7 +29,7 @@ export interface Slot {
   visibilidad: number;
 }
 
-// 24 objetos que cubren los tres tipos, de horas a años. El catálogo es el mismo para
+// 22 objetos que cubren los tres tipos, de horas a años. El catálogo es el mismo para
 // cualquier semilla — lo que varía con ella es la fase de cada uno (`construirCalle`).
 //
 // Dos cosas que gobiernan los números de aquí y no se ven mirándolos:
@@ -76,20 +75,15 @@ export const CATALOGO: Slot[] = [
   // pintarla, que se note terminada, o queda como señuelo permanente de un fallo.
   { id: "obra",       tipo: "monótono", periodoMs: 17.3 * MS_DIA,    escalones: 6, visibilidad: 0.70 },
 
-  // Únicos: sucesos sueltos, cada uno pasa una vez y no vuelve. El periodo es el tiempo medio
+  // Únicos: diferencias sueltas, cada una pasa una vez y no vuelve. El periodo es el tiempo medio
   // hasta el siguiente — un goteo irregular que no se acaba, no un evento con fecha.
   { id: "cartel",     tipo: "único",    periodoMs: 200 * MS_DIA,  escalones: Infinity, visibilidad: 0.35 },
   { id: "grafiti",    tipo: "único",    periodoMs: 500 * MS_DIA,  escalones: Infinity, visibilidad: 0.50 },
   { id: "farola",     tipo: "único",    periodoMs: 550 * MS_DIA,  escalones: Infinity, visibilidad: 0.30 },
   { id: "banco",      tipo: "único",    periodoMs: 800 * MS_DIA,  escalones: Infinity, visibilidad: 0.60 },
 
-  // Lentos y evidentes: la razón de existir de un hueco de estaciones o años. La fachada se
-  // apaga durante años y un día la repintan, así que su ciclo es de años y su paso de meses:
-  // con techo en vez de ciclo se apagaría del todo el primer año y medio y no volvería a
-  // cambiar nunca — un objeto muerto pintado en mitad de la calle.
-  { id: "fachada",    tipo: "cíclico",  periodoMs: 7.3 * MS_ANIO,     escalones: 6,        visibilidad: 0.70 },
+  // Lento y evidente: la razón de existir de un hueco de estaciones o años.
   { id: "arbol",      tipo: "monótono", periodoMs: MS_ESTACION * 1.5, escalones: Infinity, visibilidad: 0.80 },
-  { id: "comercio",   tipo: "único",    periodoMs: 3 * MS_ANIO,       escalones: Infinity, visibilidad: 0.85 },
 ];
 
 function hash32(s: string): number {
@@ -129,7 +123,7 @@ export function construirCalle(semilla: string): Objeto[] {
     const semillaHash = hash32(`${semilla}:${slot.id}`);
     const rng = mulberry32(semillaHash);
     if (slot.tipo === "único") {
-      // Nunca en el borde: un suceso que cae justo en el origen es indistinguible de uno que
+      // Nunca en el borde: una diferencia que cae justo en el origen es indistinguible de una que
       // nunca estuvo, porque no hay visita anterior con la que hacer diff contra él.
       return { ...slot, semillaHash, faseMs: ORIGEN_MS + slot.periodoMs * (0.1 + rng() * 0.8) };
     }
@@ -139,12 +133,12 @@ export function construirCalle(semilla: string): Objeto[] {
   return objetos;
 }
 
-/** Cuántos sucesos de este objeto han pasado ya. Los instantes los va dando la semilla uno
- *  tras otro, sin lista que agotar: el suceso nº 40 existe aunque falten décadas para él, por
- *  la misma razón por la que el árbol nunca deja de crecer. Cada suceso pasa una vez y no
- *  vuelve —la tienda que cerró no reabre—, pero la calle no se queda sin sucesos.
+/** Cuántas diferencias de este objeto han pasado ya. Los instantes los va dando la semilla uno
+ *  tras otro, sin lista que agotar: la diferencia nº 40 existe aunque falten décadas para ella, por
+ *  la misma razón por la que el árbol nunca deja de crecer. Cada diferencia pasa una vez y
+ *  no vuelve —la tienda que cerró no reabre—, pero la calle no se queda sin diferencias.
  *  El espaciado es irregular a propósito: un goteo regular sería un cíclico con otro nombre. */
-function sucesosHasta(obj: Objeto, tMs: number): { n: number; ultimo: number } {
+function diferenciasHasta(obj: Objeto, tMs: number): { n: number; ultimo: number } {
   const rng = mulberry32(obj.semillaHash);
   let t = obj.faseMs, n = 0, ultimo = -Infinity;
   while (t <= tMs) {
@@ -167,7 +161,7 @@ export function nivelDe(obj: Objeto, tMs: number): number {
       return Math.floor(mod / paso);
     }
     case "único":
-      return sucesosHasta(obj, tMs).n;
+      return diferenciasHasta(obj, tMs).n;
   }
 }
 

@@ -154,19 +154,17 @@ export function vistaDe(canvas: HTMLCanvasElement, anchoCSS: number, dpr: number
   return { ancho: anchoCSS, alto, escala, dpr };
 }
 
-export interface Zona { id: string; x: number; y: number; w: number; h: number }
-
-type Arquetipo = "hueco" | "banda" | "bulto" | "planta" | "mancha" | "poste" | "andamio" | "tendal" | "tinte";
+type Arquetipo = "hueco" | "banda" | "bulto" | "planta" | "mancha" | "poste" | "andamio" | "tendal";
 
 interface Pieza {
   x: number; y: number; w: number; h: number;
   arquetipo: Arquetipo;
   /** Variantes visuales: el nivel entra módulo esto, así un contador sin techo (el árbol, un
-   *  goteo de sucesos) siempre cae en un dibujo que existe. */
+   *  goteo de diferencias) siempre cae en un dibujo que existe. */
   variantes: number;
-  /** Horas en las que la pieza existe. Fuera de ellas no se pinta —pero su zona sensible
-   *  sigue ahí—: quien entra siempre a la misma hora es ciego a media calle, y eso es el
-   *  aliasing más barato que tiene el juego. */
+  /** Horas en las que la pieza existe. Fuera de ellas no se pinta, pero su nivel sigue
+   *  corriendo y la visita lo compara igual: quien entra siempre a la misma hora es ciego a
+   *  media calle, y eso es el aliasing más barato que tiene el juego. */
   franja?: [number, number];
 }
 
@@ -174,39 +172,43 @@ interface Pieza {
  *  sitio y forma, no reloj. */
 export const PIEZAS: Record<string, Pieza> = {
   // Fachada izquierda (portal y viviendas)
-  fachada:    { x: 60,   y: 210, w: 470, h: 430, arquetipo: "tinte",   variantes: 6 },
   persiana:   { x: 96,   y: 300, w: 92,  h: 108, arquetipo: "hueco",   variantes: 5 },
   cortina:    { x: 232,  y: 300, w: 92,  h: 108, arquetipo: "banda",   variantes: 5 },
   ropa:       { x: 360,  y: 316, w: 132, h: 76,  arquetipo: "tendal",  variantes: 4, franja: [8, 21] },
-  grafiti:    { x: 96,   y: 500, w: 150, h: 96,  arquetipo: "mancha",  variantes: 4 },
+  grafiti:    { x: 96,   y: 494, w: 150, h: 90,  arquetipo: "mancha",  variantes: 8 },
   cartel:     { x: 300,  y: 486, w: 86,  h: 110, arquetipo: "mancha",  variantes: 4 },
   buzon:      { x: 430,  y: 584, w: 40,  h: 56,  arquetipo: "bulto",   variantes: 3 },
 
-  // Local central (el comercio y su escaparate)
-  comercio:   { x: 580,  y: 430, w: 430, h: 210, arquetipo: "hueco",   variantes: 5 },
+  // Local central (el escaparate de la tienda, que es decorado: `TIENDA`)
   escaparate: { x: 620,  y: 470, w: 160, h: 150, arquetipo: "hueco",   variantes: 5 },
   letrero:    { x: 596,  y: 386, w: 398, h: 44,  arquetipo: "banda",   variantes: 5 },
   toldo:      { x: 596,  y: 430, w: 398, h: 52,  arquetipo: "banda",   variantes: 5 },
   mesas:      { x: 700,  y: 576, w: 190, h: 64,  arquetipo: "bulto",   variantes: 5, franja: [11, 24] },
   sombrilla:  { x: 830,  y: 470, w: 130, h: 170, arquetipo: "banda",   variantes: 5, franja: [11, 24] },
-  terraza:    { x: 900,  y: 580, w: 104, h: 60,  arquetipo: "bulto",   variantes: 3, franja: [11, 24] },
+  terraza:    { x: 900,  y: 580, w: 104, h: 60,  arquetipo: "bulto",   variantes: 5, franja: [11, 24] },
 
   // Fachada derecha y la obra
   obra:       { x: 1040, y: 180, w: 500, h: 460, arquetipo: "andamio", variantes: 6 },
-  macetero:   { x: 1064, y: 566, w: 70,  h: 74,  arquetipo: "planta",  variantes: 4 },
-  puesto:     { x: 1170, y: 528, w: 180, h: 112, arquetipo: "bulto",   variantes: 2, franja: [6, 14] },
+  macetero:   { x: 1064, y: 566, w: 70,  h: 74,  arquetipo: "planta",  variantes: 5 },
+  // Metido en la acera, no pegado a la fachada: al pie del edificio parecía flotar.
+  puesto:     { x: 1170, y: 568, w: 180, h: 112, arquetipo: "bulto",   variantes: 3, franja: [6, 14] },
   papelera:   { x: 1392, y: 570, w: 40,  h: 70,  arquetipo: "bulto",   variantes: 3 },
 
   // Acera y calzada
   arbol:      { x: 470,  y: 300, w: 200, h: 340, arquetipo: "planta",  variantes: 8 },
   farola:     { x: 1010, y: 250, w: 60,  h: 390, arquetipo: "poste",   variantes: 3 },
-  banco:      { x: 236,  y: 586, w: 150, h: 54,  arquetipo: "bulto",   variantes: 3 },
-  // Atada a la farola, y no junto a la terraza: allí su caja tapaba la de la terraza casi
-  // entera y, entre dos cajas iguales, siempre ganaba la misma — la terraza no se podía tocar.
-  bici:       { x: 992,  y: 588, w: 96,  h: 52,  arquetipo: "bulto",   variantes: 4 },
+  // Contra la pared, bajo el grafiti y entre la esquina y el portal: delante de la puerta
+  // tapaba la entrada.
+  banco:      { x: 90,   y: 586, w: 150, h: 54,  arquetipo: "bulto",   variantes: 3 },
+  // Atada a la farola, y no junto a la terraza: allí la tapaba casi entera.
+  bici:       { x: 992,  y: 588, w: 96,  h: 52,  arquetipo: "bulto",   variantes: 5 },
   coche:      { x: 180,  y: 706, w: 330, h: 122, arquetipo: "bulto",   variantes: 5 },
-  contenedor: { x: 1110, y: 700, w: 190, h: 116, arquetipo: "bulto",   variantes: 4 },
+  contenedor: { x: 1110, y: 700, w: 190, h: 116, arquetipo: "bulto",   variantes: 5 },
 };
+
+/** El local de la tienda —marco, puerta y ventana—: decorado fijo que se pinta con el fondo.
+ *  Lo que cambia en él son sus objetos: el escaparate, el letrero, el toldo. */
+export const TIENDA = { x: 580, y: 430, w: 430, h: 210 };
 
 /** Dónde vive cada objeto en una composición: es lo único que una escena puede mover. */
 export type Cajas = Record<string, { x: number; y: number; w: number; h: number }>;
@@ -215,46 +217,3 @@ export type Cajas = Record<string, { x: number; y: number; w: number; h: number 
 export const CAJAS: Cajas = Object.fromEntries(
   Object.entries(PIEZAS).map(([id, p]) => [id, { x: p.x, y: p.y, w: p.w, h: p.h }]),
 );
-
-/** Las cajas en píxeles de pantalla, para el enganche por toque. Están TODAS, también las de
- *  lo que ahora mismo no se pinta: lo que desapareció conserva su zona sensible, que es el
- *  problema de los países sin contorno del Atlas y se resuelve igual.
- *
- *  **Y salen de la escena, no del catálogo.** La composición que se publica enmarca la calle y
- *  la reduce; si el toque siguiera preguntando al catálogo, cada zona caería donde el objeto
- *  estaba antes de enmarcarlo — y fallaría en silencio, porque una zona desplazada engancha
- *  igual, solo que al vecino. */
-export function zonas(vista: Vista, cajas: Cajas = CAJAS): Zona[] {
-  return Object.entries(cajas).map(([id, p]) => ({
-    id, x: p.x * vista.escala, y: p.y * vista.escala,
-    w: p.w * vista.escala, h: p.h * vista.escala,
-  }));
-}
-
-// ── Las marcas de la visita ──────────────────────────────────────────────────
-
-/** Lo encontrado y lo descartado, sobre la calle ya pintada. Van aparte del dibujo porque no
- *  son la calle —la calle no sabe que hay alguien mirándola— y porque lo que las coloca es la
- *  escena, igual que a las zonas de toque. */
-export function marcas(
-  ctx: CanvasRenderingContext2D, vista: Vista,
-  encontrados: string[], descartados: string[], cajas: Cajas = CAJAS,
-) {
-  ctx.setTransform(vista.escala * vista.dpr, 0, 0, vista.escala * vista.dpr, 0, 0);
-  ctx.lineWidth = 4;
-  for (const id of descartados) {
-    const p = cajas[id];
-    if (!p) continue;
-    // Descartado: un velo, no una cruz. Marca que ahí ya se miró sin gritar el error.
-    ctx.globalAlpha = 0.35;
-    ctx.fillStyle = "#15150f";
-    ctx.fillRect(p.x, p.y, p.w, p.h);
-    ctx.globalAlpha = 1;
-  }
-  for (const id of encontrados) {
-    const p = cajas[id];
-    if (!p) continue;
-    ctx.strokeStyle = "#1fd897";
-    ctx.strokeRect(p.x - 4, p.y - 4, p.w + 8, p.h + 8);
-  }
-}

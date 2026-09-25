@@ -1,6 +1,6 @@
 // La vida de la escena: lo que se mueve mientras la miras y no cuenta como cambio.
 //
-// **Nada de esto es un nivel.** El diff compara los 24 objetos; lo de aquí pasa y se va —el
+// **Nada de esto es un nivel.** El diff compara los 22 objetos; lo de aquí pasa y se va —el
 // perro cruza, el gato se asoma, la ropa ondea— y ninguna crónica lo archiva. Por eso es de
 // otra naturaleza que la calle: lo que se ve al volver es lo que cambió, no lo que se movía.
 //

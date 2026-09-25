@@ -1,13 +1,14 @@
 // Los objetos de la calle que se dibujan enteros, cada uno como lo que es: la tienda con su
-// letrero, su toldo y su terraza, los balcones de la fachada, el grafiti y el cartel, el
-// buzón, la bici, el banco, la papelera y el puesto del mercado.
+// letrero, su toldo y su terraza, los balcones de la fachada, el cartel, el buzón, la bici, el
+// banco, la papelera y el puesto del mercado. El grafiti vive aparte, en `grafiti.ts`.
 //
 // **Cada nivel se tiene que distinguir del anterior**: es lo que el jugador señala. Por eso
 // los niveles no retocan un tamaño —eso se lee como que el dibujo respira— sino que cambian
 // algo que se nombra: la persiana baja, el toldo sale, hay otra bici, han pegado otro cartel.
 // Todo en píxeles finos de la ventana, dentro de la caja que da la escena.
-import { apoyo, azar, px, tramar, type Caja, type Ctx, type Pieza, type Rampa } from "./paleta";
+import { apoyo, px, tramar, type Caja, type Ctx, type Pieza, type Rampa } from "./paleta";
 import type { Mano, Pincel } from "./pincel";
+import { grafiti } from "./grafiti";
 
 const R = Math.round;
 
@@ -93,6 +94,39 @@ function barandilla(ctx: Ctx, m: Mano, x: number, y: number, w: number, h: numbe
   for (let k = x - 4; k < x + w + 4; k += 2) px(ctx, k, b - 7, 1, 7, m.F.tinta);
 }
 
+/** El local de la tienda: marco de madera, la puerta y la ventana de la derecha con sus
+ *  estantes, y el cajón del cierre, subido. Es decorado —lo pinta el fondo— y está siempre
+ *  abierto: lo que cambia en la tienda son sus objetos. */
+export function tienda(ctx: Ctx, m: Mano, b: Caja) {
+  const madera = m.tono({ l: 0.34, c: 0.06, h: 160 });
+  const x0 = b.x + 4, x1 = b.x + b.w - 4, arriba = b.y + 18, suelo = b.y + b.h - 1;
+  px(ctx, x0, arriba, x1 - x0, suelo - arriba, madera[2]);
+  px(ctx, x0, arriba, x1 - x0, 1, madera[4]);
+  const puerta = { x: b.x + 80, y: arriba + 4, w: 16, h: suelo - arriba - 4 };
+  const escap = { x: b.x + 102, y: arriba + 4, w: x1 - b.x - 106, h: suelo - arriba - 16 };
+  for (const c of [puerta, escap]) {
+    px(ctx, c.x - 1, c.y - 1, c.w + 2, c.h + 2, madera[1]);
+    lunaDeTienda(ctx, m, c.x, c.y, c.w, c.h, true);
+  }
+  // Dentro: dos baldas con tarros y botellas.
+  for (const k of [0.35, 0.72]) {
+    const yb = escap.y + R(escap.h * k);
+    px(ctx, escap.x, yb, escap.w, 1, madera[3]);
+    for (let i = escap.x + 1; i < escap.x + escap.w - 1; i += 3)
+      px(ctx, i, yb - 3 - (i % 2), 2, 3 + (i % 2), [m.P.tela[3], m.P.hoja[3], m.P.luz[3], m.P.metal[3]][i % 4]);
+  }
+  px(ctx, escap.x - 1, escap.y + escap.h + 1, escap.w + 2, 11, madera[3]);     // el zócalo de madera
+  px(ctx, puerta.x + puerta.w - 4, puerta.y + R(puerta.h * 0.5), 2, 3, m.P.luz[4]);   // el tirador
+  px(ctx, puerta.x, puerta.y + R(puerta.h * 0.55), puerta.w, 1, madera[1]);
+  cierre(ctx, m, puerta.x, puerta.y, puerta.w, puerta.h, 0);
+  cierre(ctx, m, escap.x, escap.y, escap.w, escap.h + 12, 0);
+  // De noche, la luz de la tienda sale a la acera.
+  if (m.noche) {
+    tramar(ctx, puerta.x - 8, suelo, escap.x + escap.w - puerta.x + 16, Math.max(0, Math.min(20, m.suelo - suelo)), m.F.ventana, 0.3);
+    tramar(ctx, puerta.x - 4, suelo, escap.x + escap.w - puerta.x + 8, 6, m.P.luz[5], 0.45);
+  }
+}
+
 // ── Los objetos ─────────────────────────────────────────────────────────────
 
 export const OBJETOS: Record<string, Pincel> = {
@@ -125,31 +159,7 @@ export const OBJETOS: Record<string, Pincel> = {
     for (let i = 0; i < ancho; i += 4) px(ctx, x0 + i, v.y - 2 + largo, 3, 1, m.P.tela[2]);   // el faldón
     tramar(ctx, x0, v.y - 2 + largo - 3, ancho, 3, m.P.tela[1], 0.3);
   },
-  // Un grafiti de letras hinchadas: cada suceso, otro, con otras letras y otro color.
-  grafiti: (ctx, m, b, _p, n) => {
-    if (n === 0) return;
-    const T: Rampa = [m.P.tela, m.P.hoja, m.P.luz, m.tono({ l: 0.55, c: 0.12, h: 250 }), m.tono({ l: 0.6, c: 0.14, h: 320 })][n % 5];
-    const letras = 3 + (n % 2), paso = (b.w - 10) / letras, base = b.y + b.h - 6;
-    const formas: [number, number, number, number][] = [];
-    for (let i = 0; i < letras; i++) {
-      const alto = 9 + Math.floor(azar(n * 31 + i) * 6), ancho = R(paso * 0.55) + 1;
-      formas.push([R(b.x + 6 + paso * i + paso / 2), base - alto + Math.floor(azar(n * 17 + i) * 3), ancho, alto]);
-    }
-    const letra = (x: number, y: number, a: number, h: number, c: string, g = 0) => {
-      circulo(ctx, x, y + a - g, a + g, c);
-      px(ctx, x - a - g, y + a - g, 2 * (a + g) + 1, Math.max(1, h - 2 * a + 2 * g), c);
-      circulo(ctx, x, y + h - a + g, a + g, c);
-    };
-    for (const [x, y, a, h] of formas) letra(x, y, a, h, m.F.tinta, 1);
-    for (const [x, y, a, h] of formas) letra(x, y, a, h, T[4]);
-    for (const [x, y, a, h] of formas) {
-      px(ctx, x - a + 1, y + h - 3, 2 * a - 1, 2, T[2]);                          // sombra de abajo
-      px(ctx, x - 1, y + 2, 1, 2, m.P.piedra[5]);                                // brillo
-      if (azar(n + x) < 0.5) px(ctx, x + 1, y + h + 1, 1, 2 + Math.floor(azar(n + y) * 4), T[3]);   // chorreón
-    }
-    // La firma, fina, encima.
-    for (let k = 0; k < 10; k++) px(ctx, b.x + 8 + k * 2, b.y + 3 + R(Math.sin(k + n) * 1.5), 2, 1, m.F.tinta);
-  },
+  grafiti,
   // Un cartel pegado: papel con una ilustración, dos líneas de texto, celo y una esquina rota.
   cartel: (ctx, m, b, _p, n) => {
     if (n === 0) return;
@@ -185,39 +195,6 @@ export const OBJETOS: Record<string, Pincel> = {
     px(ctx, x + 3, y + 8, w - 6, 3, m.tono({ l: 0.45, c: 0.1, h: 255 })[3]);     // el escudo azul
     if (v >= 1) { px(ctx, x + 1, y + 11, 3, 2, m.P.tela[4]); px(ctx, x + 6, y + 1, 2, 2, m.P.hoja[4]); }
     if (v === 2) for (let k = 0; k < 4; k++) px(ctx, x + 1 + k * 2, y + 6 + (k % 2), 2, 1, m.F.tinta);
-  },
-  // La fachada de la tienda: marco de madera, la puerta y la ventana de la derecha con sus
-  // estantes, y el cierre metálico que baja sobre las dos.
-  comercio: (ctx, m, b, p, n) => {
-    const f = fraccion(p, n);
-    const madera = m.tono({ l: 0.34, c: 0.06, h: 160 });
-    const x0 = b.x + 4, x1 = b.x + b.w - 4, arriba = b.y + 18, suelo = b.y + b.h - 1;
-    px(ctx, x0, arriba, x1 - x0, suelo - arriba, madera[2]);
-    px(ctx, x0, arriba, x1 - x0, 1, madera[4]);
-    const puerta = { x: b.x + 80, y: arriba + 4, w: 16, h: suelo - arriba - 4 };
-    const escap = { x: b.x + 102, y: arriba + 4, w: x1 - b.x - 106, h: suelo - arriba - 16 };
-    for (const c of [puerta, escap]) {
-      px(ctx, c.x - 1, c.y - 1, c.w + 2, c.h + 2, madera[1]);
-      lunaDeTienda(ctx, m, c.x, c.y, c.w, c.h, f < 1);
-    }
-    // Dentro: dos baldas con tarros y botellas.
-    for (const k of [0.35, 0.72]) {
-      const yb = escap.y + R(escap.h * k);
-      px(ctx, escap.x, yb, escap.w, 1, madera[3]);
-      for (let i = escap.x + 1; i < escap.x + escap.w - 1; i += 3)
-        px(ctx, i, yb - 3 - (i % 2), 2, 3 + (i % 2), [m.P.tela[3], m.P.hoja[3], m.P.luz[3], m.P.metal[3]][i % 4]);
-    }
-    px(ctx, escap.x - 1, escap.y + escap.h + 1, escap.w + 2, 11, madera[3]);     // el zócalo de madera
-    px(ctx, puerta.x + puerta.w - 4, puerta.y + R(puerta.h * 0.5), 2, 3, m.P.luz[4]);   // el tirador
-    px(ctx, puerta.x, puerta.y + R(puerta.h * 0.55), puerta.w, 1, madera[1]);
-    cierre(ctx, m, puerta.x, puerta.y, puerta.w, puerta.h, f);
-    cierre(ctx, m, escap.x, escap.y, escap.w, escap.h + 12, f);
-    // De noche, la luz de la tienda abierta sale a la acera.
-    if (m.noche && f < 1) {
-      const hueco = R((suelo - arriba) * (1 - f));
-      tramar(ctx, puerta.x - 8, suelo, escap.x + escap.w - puerta.x + 16, Math.max(0, Math.min(20, m.suelo - suelo)), m.F.ventana, 0.3 * (hueco > 4 ? 1 : 0));
-      if (hueco > 4) tramar(ctx, puerta.x - 4, suelo, escap.x + escap.w - puerta.x + 8, 6, m.P.luz[5], 0.45);
-    }
   },
   // El escaparate: lo que se ve en él es la mercancía —pan y pasteles en dos baldas— y tiene
   // su propio cierre, que baja a su ritmo.
@@ -296,10 +273,21 @@ export const OBJETOS: Record<string, Pincel> = {
     else if (v === 1) { juego(cx - 17); juego(cx + 17); }
     else if (v === 2) { juego(cx - 17, true); juego(cx + 17, true); }
     else if (v === 3) { juego(cx - 22); mesa(cx, false); juego(cx + 22); }
-    else {                                                                       // recogidas: sillas apiladas
-      for (let k = 0; k < 4; k++) silla(cx - 12 + k, 1);
-      for (let k = 0; k < 3; k++) px(ctx, cx + 4, suelo - 10 - k * 3, 11, 2, m.P.metal[4]);
-      px(ctx, cx + 9, suelo - 5, 1, 5, m.P.metal[1]);
+    else {                                                                       // recogidas y encadenadas
+      // Una torre de sillas, cada una encajada en la de abajo, y las mesas plegadas de canto
+      // contra la pared, con la cadena que lo ata todo.
+      for (let k = 0; k < 5; k++) {
+        const y = suelo - 5 - k * 3;
+        px(ctx, cx - 14, y, 7, 1, m.P.madera[k % 2 ? 2 : 3]);
+        px(ctx, cx - 14, y - 6, 1, 6, m.P.madera[2]);
+      }
+      for (const lx of [cx - 14, cx - 8]) px(ctx, lx, suelo - 4, 1, 4, m.P.metal[1]);
+      for (let k = 0; k < 3; k++) {
+        px(ctx, cx + 2 + k * 4, suelo - 13, 2, 13, m.P.metal[4 - (k % 2)]);
+        px(ctx, cx + 2 + k * 4, suelo - 13, 2, 1, m.P.metal[5]);
+      }
+      for (let i = cx - 15; i < cx + 14; i += 2) px(ctx, i, suelo - 8 + (i % 4 ? 0 : 1), 1, 1, m.F.tinta);   // la cadena
+      px(ctx, cx + 13, suelo - 9, 2, 3, m.P.luz[3]);                                 // el candado
     }
   },
   // La sombrilla de la terraza: cerrada, o abierta en uno de cuatro colores.
@@ -321,7 +309,8 @@ export const OBJETOS: Record<string, Pincel> = {
     for (let i = -ancho; i < ancho; i += 4) px(ctx, cx + i, alto + 8, 3, 1, T[2]);
     px(ctx, cx - 1, alto - 1, 3, 1, m.P.metal[3]);
   },
-  // Junto a la terraza: la pizarra del menú, dos jardineras o una estufa de exterior.
+  // Junto a la terraza: la pizarra del menú, dos jardineras, una estufa de exterior, los
+  // barriles de cerveza o el arcón de los helados.
   terraza: (ctx, m, b, p, n) => {
     const v = nivel(p, n), suelo = b.y + b.h - 1, cx = b.x + R(b.w / 2);
     if (v === 0) {
@@ -336,6 +325,24 @@ export const OBJETOS: Record<string, Pincel> = {
         px(ctx, x, suelo - 5, 9, 1, m.P.ladrillo[4]);
         for (let k = 0; k < 9; k += 2) px(ctx, x + k, suelo - 9 - (k % 3), 2, 4 + (k % 3), m.P.hoja[k % 4 ? 3 : 2]);
       }
+    } else if (v === 3) {
+      for (const [x, y] of [[cx - 10, 0], [cx + 1, 0], [cx - 5, 9]]) {
+        px(ctx, x - 1, suelo - y - 9, 11, 9, m.F.tinta);
+        px(ctx, x, suelo - y - 8, 9, 8, m.P.metal[4]);
+        px(ctx, x, suelo - y - 8, 2, 8, m.P.metal[5]);
+        px(ctx, x + 7, suelo - y - 8, 2, 8, m.P.metal[2]);
+        for (const k of [2, 5]) px(ctx, x, suelo - y - 8 + k, 9, 1, m.P.metal[1]);   // los aros
+      }
+    } else if (v === 4) {
+      const A = m.tono({ l: 0.55, c: 0.13, h: 250 });
+      px(ctx, cx - 12, suelo - 13, 24, 13, m.F.tinta);
+      px(ctx, cx - 11, suelo - 12, 22, 12, m.P.piedra[5]);
+      px(ctx, cx - 11, suelo - 12, 22, 3, A[3]);                                  // la tapa
+      px(ctx, cx - 11, suelo - 12, 22, 1, A[4]);
+      px(ctx, cx - 5, suelo - 7, 10, 4, m.P.tela[3]);                              // el cartel de los helados
+      circulo(ctx, cx, suelo - 5, 1, m.P.luz[5]);
+      px(ctx, cx - 11, suelo - 2, 22, 2, m.P.piedra[3]);
+      for (const lx of [cx - 11, cx + 9]) px(ctx, lx, suelo - 1, 2, 1, m.F.tinta);
     } else {
       px(ctx, cx - 3, suelo - 2, 7, 2, m.P.metal[1]);
       px(ctx, cx, suelo - 20, 1, 18, m.P.metal[2]);
@@ -344,8 +351,8 @@ export const OBJETOS: Record<string, Pincel> = {
       if (m.noche) px(ctx, cx - 1, suelo - 19, 3, 3, m.P.tela[5]);
     }
   },
-  // La bici atada a la farola: roja, azul con cesta, ninguna (queda el candado) o verde con
-  // sillita.
+  // La bici atada a la farola: roja, azul con cesta, ninguna (queda el candado), verde con
+  // sillita, o vuelve la azul, pero le han robado la rueda de delante.
   bici: (ctx, m, b, p, n) => {
     const v = nivel(p, n), suelo = b.y + b.h - 1;
     if (v === 2) {
@@ -353,9 +360,10 @@ export const OBJETOS: Record<string, Pincel> = {
       anillo(ctx, b.x + b.w - 8, suelo - 6, 2, m.F.tinta);
       return;
     }
-    const color = [m.P.tela[4], m.tono({ l: 0.55, c: 0.12, h: 250 })[4], "", m.P.hoja[4]][v];
+    const azul = m.tono({ l: 0.55, c: 0.12, h: 250 })[4];
+    const color = [m.P.tela[4], azul, "", m.P.hoja[4], azul][v];
     const r = 6, y = suelo - r, xa = b.x + r + 1, xb = b.x + b.w - r - 2;
-    for (const cx of [xa, xb]) {
+    for (const cx of v === 4 ? [xa] : [xa, xb]) {
       anillo(ctx, cx, y, r, m.F.tinta);
       anillo(ctx, cx, y, r - 1, m.P.metal[2]);
       px(ctx, cx, y, 1, 1, m.P.metal[4]);
@@ -369,10 +377,11 @@ export const OBJETOS: Record<string, Pincel> = {
     linea(ctx, manillar.x, manillar.y, xb, y, color);
     px(ctx, sillin.x - 2, sillin.y - 1, 5, 1, m.F.tinta);
     px(ctx, manillar.x - 1, manillar.y - 1, 4, 1, m.F.tinta);
-    if (v === 1) px(ctx, manillar.x + 1, manillar.y, 5, 4, m.P.madera[3]);        // la cesta
+    if (v === 1 || v === 4) px(ctx, manillar.x + 1, manillar.y, 5, 4, m.P.madera[3]);   // la cesta
     if (v === 3) px(ctx, xa - 2, sillin.y - 1, 5, 4, m.P.luz[3]);                  // la sillita
   },
-  // El puesto del mercado: toldillo a rayas, mesa y cajas de fruta, o cubos de flores.
+  // El puesto del mercado: toldillo a rayas y mesa, con cajas de fruta, cubos de flores, o
+  // quesos en la mesa y embutido colgado del toldillo.
   puesto: (ctx, m, b, p, n) => {
     const v = nivel(p, n), suelo = b.y + b.h - 1, x = b.x + 3, w = b.w - 6;
     const mesa = suelo - 12, techo = b.y + 3;
@@ -388,6 +397,15 @@ export const OBJETOS: Record<string, Pincel> = {
         px(ctx, cx, mesa - 4, ancho, 4, m.P.madera[3]);
         const fruta = [m.P.luz[4], m.P.tela[4], m.P.hoja[4], m.tono({ l: 0.5, c: 0.12, h: 320 })[4]][c];
         for (let k = 0; k < ancho; k += 2) px(ctx, cx + k, mesa - 6 + (k % 4 ? 0 : 1), 2, 2, fruta);
+      } else if (v === 2) {
+        const queso = m.tono({ l: 0.8, c: 0.1, h: 88 });
+        px(ctx, cx, mesa - 4, ancho, 4, queso[2]);                                 // la rueda de queso
+        px(ctx, cx, mesa - 4, ancho, 1, queso[4]);
+        px(ctx, cx + ancho - 3, mesa - 4, 3, 4, queso[5]);                         // el corte
+        for (let k = 1; k < ancho - 1; k += 3) {                                   // chorizos colgando
+          px(ctx, cx + k, techo + 6, 1, 2, m.P.madera[1]);
+          px(ctx, cx + k - 1, techo + 8, 2, 6 + (k % 2) * 2, m.P.tela[1]);
+        }
       } else {
         px(ctx, cx + 1, mesa - 5, ancho - 2, 5, m.P.metal[3]);
         const flor = [m.P.tela[5], m.P.luz[5], m.P.piedra[5], m.tono({ l: 0.7, c: 0.12, h: 330 })[4]][c];
@@ -410,8 +428,8 @@ export const OBJETOS: Record<string, Pincel> = {
     if (v >= 1) { circulo(ctx, cx, y - 1, 3, m.P.piedra[5]); px(ctx, cx - 1, y - 5, 2, 2, m.P.piedra[4]); }
     if (v === 2) for (let k = 0; k < 3; k++) px(ctx, cx - 7 + k * 5, suelo - 1, 3, 1, [m.P.piedra[5], m.P.tela[4], m.P.luz[4]][k]);
   },
-  // El banco: de listones con pies de hierro, uno de metal moderno o uno de piedra. Es un
-  // suceso: el ayuntamiento lo cambia de higos a brevas.
+  // El banco: de listones con pies de hierro, uno de metal moderno o uno de piedra. Es una
+  // diferencia suelta: el ayuntamiento lo cambia de higos a brevas.
   banco: (ctx, m, b, p, n) => {
     const v = nivel(p, n), suelo = b.y + b.h - 1, x = b.x + 2, w = b.w - 4;
     apoyo(ctx, { x, y: suelo - 12, w, h: 13 }, m.F.tinta);

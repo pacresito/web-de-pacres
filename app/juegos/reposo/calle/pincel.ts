@@ -3,7 +3,7 @@
 // **Aquí no hay calle.** Este módulo sabe dibujar un toldo, un árbol o una persiana dentro de
 // la caja que le den, y nada más. Dónde van esas cajas y qué hay detrás lo decide la escena
 // (`alzado.ts`, `fuga.ts`, `esquina.ts`, `ventana.ts`), que es lo que se está eligiendo ahora.
-// Así una composición nueva cuesta una tabla de 24 cajas y un fondo, no otro pincel.
+// Así una composición nueva cuesta una tabla de 22 cajas y un fondo, no otro pincel.
 //
 // El píxel es el grano de una ilustración, no el protagonista: carpintería en las ventanas,
 // neblina entre planos y la luz derramándose sobre la acera. El precio, que es real: cuatro
@@ -33,7 +33,7 @@ export interface Mano {
   tono: (m: Material) => Rampa;
 }
 
-/** Una escena es una composición: dónde va cada uno de los 24 objetos y qué hay detrás. Los
+/** Una escena es una composición: dónde va cada uno de los 22 objetos y qué hay detrás. Los
  *  ids y sus arquetipos no se tocan —son lo que archivan las crónicas—; lo que cambia es la
  *  caja. */
 export interface Escena {
@@ -199,28 +199,59 @@ export const PINCELES: Record<string, Pincel> = {
     disco(ctx, cx + Math.round(r * 0.35), cy + Math.round(r * 0.3), Math.max(1, Math.round(r * 0.1)), m.P.hoja[0]);
     disco(ctx, cx - Math.round(r * 0.45), cy - Math.round(r * 0.05), Math.max(1, Math.round(r * 0.08)), m.P.hoja[0]);
   },
+  // La farola: cada diferencia, el ayuntamiento pone otro modelo —la de brazo curvo, la
+  // fernandina de farol o una de LED—, que se distinguen de día por la silueta y el color.
+  // Las tres tienen la cabeza arriba en (cx + 4 … cx + 18, b.y): ahí se posa el pájaro.
   poste: (ctx, m, b, p, n, vivo) => {
+    const v = n % p.variantes;
     const cx = b.x + Math.round(b.w / 2);
-    px(ctx, cx - 2, b.y + 10, 4, b.h - 10, m.F.tinta);
-    px(ctx, cx - 2, b.y + 10, 1, b.h - 10, m.P.metal[3]);
-    px(ctx, cx - 5, b.y + b.h - 6, 11, 6, m.F.tinta);
-    px(ctx, cx - 5, b.y + b.h - 6, 11, 1, m.P.metal[2]);
-    for (let i = 0; i < 12; i++) px(ctx, cx - 2 + Math.round(i * 0.5), b.y + 10 - i, 3, 2, m.F.tinta);
-    px(ctx, cx + 4, b.y, 14, 5, m.F.tinta);
-    if (!m.noche || n % p.variantes === 2) return;
+    const color = [m.F.tinta, m.tono({ l: 0.3, c: 0.05, h: 160 })[1], m.P.metal[3]][v];
+    const brillo = [m.P.metal[3], m.tono({ l: 0.3, c: 0.05, h: 160 })[3], m.P.metal[5]][v];
+    let foco: { x: number; y: number };
+    if (v === 0) {                                  // brazo curvo con la cabeza de chapa
+      px(ctx, cx - 2, b.y + 10, 4, b.h - 10, color);
+      px(ctx, cx - 2, b.y + 10, 1, b.h - 10, brillo);
+      for (let i = 0; i < 12; i++) px(ctx, cx - 2 + Math.round(i * 0.5), b.y + 10 - i, 3, 2, color);
+      px(ctx, cx + 4, b.y, 14, 5, color);
+      foco = { x: cx + 11, y: b.y + 5 };
+    } else if (v === 1) {                           // fernandina: fuste con anillos, voluta y farol
+      px(ctx, cx - 2, b.y + 8, 3, b.h - 8, color);
+      px(ctx, cx - 2, b.y + 8, 1, b.h - 8, brillo);
+      for (const k of [0.25, 0.55]) px(ctx, cx - 3, b.y + Math.round(b.h * k), 5, 2, color);
+      px(ctx, cx - 4, b.y + b.h - 10, 7, 10, color);                            // la basa
+      px(ctx, cx - 1, b.y + 8, 13, 2, color);                                   // el brazo recto
+      for (let i = 0; i < 5; i++) px(ctx, cx + 1 + i, b.y + 10 + Math.round(Math.sin(i) * 1.5), 1, 1, color);   // la voluta
+      px(ctx, cx + 8, b.y, 9, 2, color);                                        // el sombrerete
+      px(ctx, cx + 9, b.y + 2, 7, 8, color);                                    // el farol
+      px(ctx, cx + 10, b.y + 3, 5, 6, m.noche ? m.P.luz[5] : m.P.metal[4]);
+      px(ctx, cx + 12, b.y + 3, 1, 6, color);
+      px(ctx, cx + 10, b.y + 10, 5, 1, color);
+      foco = { x: cx + 12, y: b.y + 10 };
+    } else {                                        // de LED: fuste recto y cabeza plana
+      px(ctx, cx - 1, b.y + 2, 3, b.h - 2, color);
+      px(ctx, cx - 1, b.y + 2, 1, b.h - 2, brillo);
+      px(ctx, cx - 3, b.y + b.h - 4, 7, 4, m.P.metal[2]);
+      px(ctx, cx + 1, b.y + 1, 4, 1, color);
+      px(ctx, cx + 3, b.y, 17, 3, m.P.metal[2]);
+      px(ctx, cx + 3, b.y, 17, 1, brillo);
+      px(ctx, cx + 5, b.y + 3, 13, 1, m.noche ? m.P.metal[5] : m.P.metal[4]);
+      foco = { x: cx + 11, y: b.y + 4 };
+    }
+    if (!m.noche) return;
     const luz = vivo?.luz ?? 1;
-    px(ctx, cx + 5, b.y + 5, 12, 2, luz > 0.5 ? m.P.luz[5] : m.P.metal[2]);
+    if (v === 0) px(ctx, cx + 5, b.y + 5, 12, 2, luz > 0.5 ? m.P.luz[5] : m.P.metal[2]);
     if (luz <= 0) return;
     // El cono: densidad, no degradado — y con el borde deshilachado, que una cuña de tramado
-    // uniforme se lee como una chapa blanca apoyada en la farola.
-    const bajo = m.suelo + 12;
-    for (let j = 0; j < bajo - b.y - 6; j++) {
-      const t = j / (bajo - b.y - 6);
+    // uniforme se lee como una chapa blanca apoyada en la farola. El LED alumbra más blanco.
+    const tinte = v === 2 ? m.P.metal[5] : m.P.luz[5];
+    const bajo = m.suelo + 12, largo = bajo - foco.y;
+    for (let j = 0; j < largo; j++) {
+      const t = j / largo;
       const ancho = 8 + Math.round(j * 0.9);
       for (let i = 0; i < ancho; i++) {
         const lado = Math.abs(i / (ancho - 1) - 0.5) * 2;
-        if (trama(cx + 11 - Math.round(ancho / 2) + i, b.y + 6 + j) < 0.42 * luz * (1 - t) * (1 - lado ** 2))
-          px(ctx, cx + 11 - Math.round(ancho / 2) + i, b.y + 6 + j, 1, 1, m.P.luz[5]);
+        const x = foco.x - Math.round(ancho / 2) + i, y = foco.y + j;
+        if (trama(x, y) < 0.42 * luz * (1 - t) * (1 - lado ** 2)) px(ctx, x, y, 1, 1, tinte);
       }
     }
   },
@@ -270,16 +301,6 @@ export const PINCELES: Record<string, Pincel> = {
       }
     }
   },
-  tinte: (ctx, m, b, p, n) => {
-    const v = (n % p.variantes) / (p.variantes - 1);
-    if (v === 0) return;
-    for (let j = 0; j < b.h; j++)
-      tramar(ctx, b.x, b.y + j, b.w, 1, m.P.muro[1], v * (0.18 + 0.45 * (1 - j / b.h)));
-    for (let i = 0; i < 14; i++) {      // regueros: la fachada se ensucia por donde corre el agua
-      const x = b.x + Math.floor(azar(i * 3 + 1) * b.w), w = 1 + Math.floor(azar(i * 3 + 2) * 3);
-      tramar(ctx, x, b.y, w, Math.round(b.h * (0.2 + azar(i * 3 + 3) * 0.7)), m.P.muro[0], 0.2 + 0.3 * v);
-    }
-  },
 };
 
 /** Los objetos que no son un arquetipo con un adorno encima sino un dibujo entero suyo. */
@@ -288,16 +309,13 @@ export const PROPIOS: Record<string, Pincel> = {
   // El coche no estira: **cada nivel es otro vehículo**, con su altura propia. Estirando uno
   // solo, mover la hora lo inflaba y desinflaba —el coche cambia de nivel cada hora y
   // media— y eso no se lee como «hoy hay aparcada otra cosa», se lee como una avería del
-  // dibujo. El nivel 2 es la plaza vacía: el sitio conserva su zona sensible.
+  // dibujo. El nivel 2 es la plaza vacía.
   //
   // Se dibuja entero, sin arquetipo debajo: encima de un bloque de color, un coche es un
   // bloque de color con ventanillas.
   coche: (ctx, m, b, p, n) => {
     const v = n % p.variantes;
-    if (v === 2) {                      // se lo llevaron: queda la mancha de aceite
-      tramar(ctx, b.x + 10, b.y + b.h - 4, b.w - 20, 4, m.P.asfalto[1], 0.5);
-      return;
-    }
+    if (v === 2) return;                // la plaza vacía
     // alto: de las ruedas al techo · chapa: qué parte del alto es carrocería · capo y maletero:
     // lo que sobresale de la cabina por delante y por detrás · luna y zaga: cuánto se inclinan
     // el parabrisas y la luna trasera (píxeles por fila).
@@ -370,10 +388,11 @@ export const PROPIOS: Record<string, Pincel> = {
   },
   // Un contenedor de calle: cuba casi recta, tapa abombada, asas, costillas, pedal y las
   // ruedas asomando por debajo. Casi tan alto como ancho: más bajo, se lee como una maceta.
-  // El color es el nivel —lo que cambia de un mes a otro— y el alto casi no.
-  contenedor: (ctx, m, b, _p, n) => {
-    const v = n % 4;
-    const R = [m.P.hoja, m.P.metal, m.P.madera, m.P.ladrillo][v];
+  // El color es el nivel —lo que cambia de un mes a otro— y el alto casi no: vidrio, papel,
+  // orgánico y plástico; y en el último, el de plástico con bolsas tiradas al lado.
+  contenedor: (ctx, m, b, p, n) => {
+    const v = n % p.variantes;
+    const R = [m.P.hoja, m.tono({ l: 0.5, c: 0.12, h: 250 }), m.P.madera, m.tono({ l: 0.74, c: 0.15, h: 92 }), m.tono({ l: 0.74, c: 0.15, h: 92 })][v];
     const suelo = b.y + b.h - 1;
     const alto = Math.round(b.h * (0.88 + 0.03 * v)), w = Math.min(b.w - 6, Math.round(alto * 1.25));
     const x0 = b.x + Math.round((b.w - w) / 2), y0 = suelo - alto;
@@ -406,6 +425,14 @@ export const PROPIOS: Record<string, Pincel> = {
     for (const [hueco, j] of filas) px(ctx, x0 + hueco - 1, y0 + j - 1, w - 2 * hueco + 2, 1, m.F.tinta);
     for (const [hueco, j] of filas) px(ctx, x0 + hueco, y0 + j, w - 2 * hueco, 1, j === 0 ? R[4] : j === 4 ? R[1] : R[2]);
     px(ctx, x0 - 3, y0 + 4, w + 6, 1, m.F.tinta);
+    if (v === 4) {                                                               // las bolsas
+      for (const [bx, r] of [[x0 - 3, 4], [x0 + 3, 3], [x0 + w + 1, 4]] as const) {
+        disco(ctx, bx, suelo - r, r + 1, m.F.tinta);
+        disco(ctx, bx, suelo - r, r, m.P.asfalto[1]);
+        px(ctx, bx - 1, suelo - r * 2 - 1, 2, 2, m.P.asfalto[2]);                 // el nudo
+        px(ctx, bx - 1, suelo - r - 1, 1, 1, m.P.metal[3]);                       // el brillo del plástico
+      }
+    }
   },
 };
 
