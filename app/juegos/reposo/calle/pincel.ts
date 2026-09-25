@@ -1,13 +1,7 @@
-// El pincel de «fino»: los arquetipos, los objetos con dibujo propio y el cielo, a 640×360.
+// El pincel: los arquetipos, los objetos con dibujo propio y el cielo, a 640×360.
 //
-// **Aquí no hay calle.** Este módulo sabe dibujar un toldo, un árbol o una persiana dentro de
-// la caja que le den, y nada más. Dónde van esas cajas y qué hay detrás lo decide la escena
-// (`alzado.ts`, `fuga.ts`, `esquina.ts`, `ventana.ts`), que es lo que se está eligiendo ahora.
-// Así una composición nueva cuesta una tabla de 22 cajas y un fondo, no otro pincel.
-//
-// El píxel es el grano de una ilustración, no el protagonista: carpintería en las ventanas,
-// neblina entre planos y la luz derramándose sobre la acera. El precio, que es real: cuatro
-// veces más superficie que a 320×180 por cada objeto y cada estado.
+// **Aquí no hay calle:** cada pincel dibuja su objeto dentro de la caja que le den. Dónde van
+// las cajas y qué hay detrás lo decide la escena (`alzado.ts`, `ventana.ts`).
 import type { NivelObjeto } from "../escena";
 import {
   apoyo, azar, caja, enEscena, fino, fondo, luzDe, paleta, px, rampa, trama, tramar, volcar,
@@ -33,23 +27,17 @@ export interface Mano {
   tono: (m: Material) => Rampa;
 }
 
-/** Una escena es una composición: dónde va cada uno de los 22 objetos y qué hay detrás. Los
- *  ids y sus arquetipos no se tocan —son lo que archivan las crónicas—; lo que cambia es la
- *  caja. */
+/** Una composición: dónde va cada objeto y qué hay detrás. */
 export interface Escena {
   id: string;
-  nombre: string;
-  nota: string;
-  /** Solo la caja: el arquetipo, las variantes y la franja horaria salen del catálogo. */
+  /** Solo la caja: lo demás sale del catálogo. */
   cajas: Cajas;
   /** El suelo en píxeles finos, para los derrames de luz. */
   suelo: number;
   fondo: (ctx: Ctx, m: Mano, hora: number) => void;
-  /** Lo que tapa a los objetos: el marco de una ventana, una rama, el canto de una mesa. Se
-   *  pinta DESPUÉS que ellos — un primer plano que se pintara antes no es un primer plano. */
+  /** Lo que tapa a los objetos, como el marco de la ventana: se pinta después de ellos. */
   primerPlano?: (ctx: Ctx, m: Mano, hora: number) => void;
-  /** Si la escena enmarca la calle, dónde cabe: fuera de ahí no se pinta ningún objeto. En
-   *  píxeles finos. */
+  /** Si la escena enmarca la calle, dónde cabe, en píxeles finos. */
   recorte?: { x: number; y: number; w: number; h: number };
 }
 
@@ -69,9 +57,7 @@ export function fundir(ctx: Ctx, x: number, y: number, w: number, alto: number, 
   for (let j = 0; j < alto; j++) tramar(ctx, x, y + j, w, 1, b, j / Math.max(1, alto - 1));
 }
 
-/** Un resplandor redondo y tramado. **Redondo de verdad:** `tramar` sobre un rectángulo deja
- *  un cuadrado de puntos alrededor del sol, que es exactamente lo que no puede haber en el
- *  cielo — la única forma sin borde de la lámina dibujada con borde. */
+/** Un resplandor redondo y tramado: `tramar` sobre un rectángulo dejaría un cuadrado. */
 export function resplandor(ctx: Ctx, cx: number, cy: number, radio: number, color: string, fuerza: number) {
   for (let j = -radio; j <= radio; j++)
     for (let i = -radio; i <= radio; i++) {
@@ -87,9 +73,8 @@ export function disco(ctx: Ctx, cx: number, cy: number, r: number, color: string
   }
 }
 
-/** El cielo hasta `horizonte`, con sus bandas tramadas en la costura, sus estrellas, sus nubes
- *  y el astro de la hora. Lo comparten todas las escenas: la luz es del sitio, no del encuadre.
- *  Nubes y estrellas se pueden dejar fuera: la escena animada las pinta en cada fotograma. */
+/** El cielo hasta `horizonte`, con el astro de la hora. Sin nubes ni estrellas cuando las pinta
+ *  la animación. */
 export function cielo(ctx: Ctx, m: Mano, hora: number, horizonte: number, conNubes = true) {
   const n = m.F.cielo.length;
   for (let y = 0; y < horizonte; y++) {
@@ -127,8 +112,7 @@ export function cielo(ctx: Ctx, m: Mano, hora: number, horizonte: number, conNub
 
 // ── Los arquetipos ──────────────────────────────────────────────────────────
 
-/** Lo que mueve a un objeto sin cambiarlo de nivel: el viento en la ropa y en la copa, el
- *  parpadeo de la farola. Sin él, el objeto se pinta quieto — que es como lo archiva el diff. */
+/** Lo que mueve a un objeto sin cambiarlo de nivel: el viento, el parpadeo de la farola. */
 export interface Vivo {
   /** Segundos: la fase de los vaivenes. */
   t: number;
@@ -146,8 +130,7 @@ export const PINCELES: Record<string, Pincel> = {
     const cx = b.x + Math.round(b.w / 2), cy = b.y + Math.round(b.h * 0.42), pie = b.y + b.h;
     const r = Math.max(3, Math.round((b.w / 2) * (0.45 + 0.55 * v)));
     const lado = m.luzDesde;
-    // El tronco, que se ensancha al bajar, con su lado de luz y su lado de sombra, y se abre
-    // en dos ramas que se meten en la copa.
+    // El tronco, que se ensancha al bajar y se abre en ramas.
     const tronco = Math.max(2, Math.round(b.w * 0.09));
     const arranque = cy + Math.round(r * 0.35);
     for (let j = arranque; j < pie; j++) {
@@ -164,14 +147,12 @@ export const PINCELES: Record<string, Pincel> = {
         px(ctx, Math.round(cx + dx * r * t), Math.round(arranque + (dy * r - r * 0.35) * t), t < 0.5 ? 2 : 1, 2, m.P.madera[2]);
       }
     apoyo(ctx, { ...b, x: cx - tronco * 2, w: tronco * 4 }, m.F.tinta);
-    // El viento mece la copa, no el tronco: cuanto más alto el racimo, más se aparta — y cada
-    // uno con su fase, que una copa que se mueve en bloque parece una pegatina.
+    // El viento mece la copa, cada racimo con su fase: en bloque parece una pegatina.
     const mecer = (i: number, my: number) => vivo
       ? Math.round(vivo.viento * 2.2 * Math.max(0.2, (cy + r * 0.3 - my) / r) * Math.sin(vivo.t * 1.3 + i * 1.7) + vivo.viento * 0.8)
       : 0;
-    // La copa son racimos: se pinta la silueta de todos en sombra, luego el medio tono corrido
-    // hacia la luz, luego la luz, más pequeña y más arriba. Por capas y no racimo a racimo: así
-    // la copa se lee como una sola masa con volumen y no como un montón de bolas.
+    // La copa se pinta por capas —sombra, medio tono, luz— y no racimo a racimo, para que se
+    // lea como una masa y no como un montón de bolas.
     const racimos: [number, number, number][] = [
       [0, -0.3, 0.6], [-0.48, 0, 0.5], [0.48, -0.05, 0.5], [-0.25, 0.32, 0.46], [0.3, 0.3, 0.46],
       [-0.05, -0.62, 0.42], [0.5, -0.45, 0.36], [-0.52, -0.42, 0.36], [0.05, 0.1, 0.5],
@@ -195,13 +176,12 @@ export const PINCELES: Record<string, Pincel> = {
       for (let k = 0; k < 4; k++)
         px(ctx, q.x + lado * Math.round(azar(i * 9 + k) * q.r * 0.7), q.y - Math.round(azar(i * 9 + k + 3) * q.r * 0.7), 1, 1, m.P.hoja[4]);
     });
-    // Un par de huecos en verde casi negro: sin ellos la copa es una piedra.
+    // Dos huecos oscuros: sin ellos la copa es una piedra.
     disco(ctx, cx + Math.round(r * 0.35), cy + Math.round(r * 0.3), Math.max(1, Math.round(r * 0.1)), m.P.hoja[0]);
     disco(ctx, cx - Math.round(r * 0.45), cy - Math.round(r * 0.05), Math.max(1, Math.round(r * 0.08)), m.P.hoja[0]);
   },
-  // La farola: cada diferencia, el ayuntamiento pone otro modelo —la de brazo curvo, la
-  // fernandina de farol o una de LED—, que se distinguen de día por la silueta y el color.
-  // Las tres tienen la cabeza arriba en (cx + 4 … cx + 18, b.y): ahí se posa el pájaro.
+  // La farola, un modelo por nivel: brazo curvo, fernandina o LED. Las tres tienen la cabeza en
+  // (cx + 4 … cx + 18, b.y), donde se posa el pájaro.
   poste: (ctx, m, b, p, n, vivo) => {
     const v = n % p.variantes;
     const cx = b.x + Math.round(b.w / 2);
@@ -241,8 +221,7 @@ export const PINCELES: Record<string, Pincel> = {
     const luz = vivo?.luz ?? 1;
     if (v === 0) px(ctx, cx + 5, b.y + 5, 12, 2, luz > 0.5 ? m.P.luz[5] : m.P.metal[2]);
     if (luz <= 0) return;
-    // El cono: densidad, no degradado — y con el borde deshilachado, que una cuña de tramado
-    // uniforme se lee como una chapa blanca apoyada en la farola. El LED alumbra más blanco.
+    // El cono, con el borde deshilachado: uniforme parece una chapa. El LED alumbra más blanco.
     const tinte = v === 2 ? m.P.metal[5] : m.P.luz[5];
     const bajo = m.suelo + 12, largo = bajo - foco.y;
     for (let j = 0; j < largo; j++) {
@@ -258,7 +237,6 @@ export const PINCELES: Record<string, Pincel> = {
   andamio: (ctx, m, b, p, n) => {
     const fase = Math.min(n, p.variantes - 1);
     if (fase === p.variantes - 1) {
-      // Terminada es un edificio más de la calle, y se dibuja con ellos.
       edificioObra(ctx, m, b);
       return;
     }
@@ -275,8 +253,7 @@ export const PINCELES: Record<string, Pincel> = {
     }
   },
   tendal: (ctx, m, b, p, n, vivo) => {
-    // Con viento, el cable bota un poco y cada prenda se inclina desde la pinza: fila a fila,
-    // cuanto más abajo más se aparta. Sin viento sale el dibujo quieto de siempre.
+    // Con viento, el cable bota y cada prenda se aparta más cuanto más abajo.
     const bote = vivo ? 1 + 0.35 * vivo.viento * Math.sin(vivo.t * 1.1) : 1;
     const flecha = (x: number) => Math.round(2 * bote * Math.sin((x / b.w) * Math.PI));
     for (let x = 0; x < b.w; x++) px(ctx, b.x + x, b.y + flecha(x), 1, 1, m.F.tinta);
@@ -306,16 +283,10 @@ export const PINCELES: Record<string, Pincel> = {
 /** Los objetos que no son un arquetipo con un adorno encima sino un dibujo entero suyo. */
 export const PROPIOS: Record<string, Pincel> = {
   ...OBJETOS,
-  // El coche no estira: **cada nivel es otro vehículo**, con su altura propia. Estirando uno
-  // solo, mover la hora lo inflaba y desinflaba —el coche cambia de nivel cada hora y
-  // media— y eso no se lee como «hoy hay aparcada otra cosa», se lee como una avería del
-  // dibujo. El nivel 2 es la plaza vacía.
-  //
-  // Se dibuja entero, sin arquetipo debajo: encima de un bloque de color, un coche es un
-  // bloque de color con ventanillas.
+  // Cada nivel es otro vehículo, con su forma: turismo, furgoneta, plaza vacía, ranchera, taxi.
   coche: (ctx, m, b, p, n) => {
     const v = n % p.variantes;
-    if (v === 2) return;                // la plaza vacía
+    if (v === 2) return;
     // alto: de las ruedas al techo · chapa: qué parte del alto es carrocería · capo y maletero:
     // lo que sobresale de la cabina por delante y por detrás · luna y zaga: cuánto se inclinan
     // el parabrisas y la luna trasera (píxeles por fila).
@@ -386,10 +357,8 @@ export const PROPIOS: Record<string, Pincel> = {
       px(ctx, x0 + 2, base - Math.round(chapa / 2), L - 4, 1, m.P.tela[4]);
     }
   },
-  // Un contenedor de calle: cuba casi recta, tapa abombada, asas, costillas, pedal y las
-  // ruedas asomando por debajo. Casi tan alto como ancho: más bajo, se lee como una maceta.
-  // El color es el nivel —lo que cambia de un mes a otro— y el alto casi no: vidrio, papel,
-  // orgánico y plástico; y en el último, el de plástico con bolsas tiradas al lado.
+  // El contenedor: el nivel es el color —vidrio, papel, orgánico, plástico— y el último, el de
+  // plástico con bolsas al lado. Casi tan alto como ancho: más bajo parece una maceta.
   contenedor: (ctx, m, b, p, n) => {
     const v = n % p.variantes;
     const R = [m.P.hoja, m.tono({ l: 0.5, c: 0.12, h: 250 }), m.P.madera, m.tono({ l: 0.74, c: 0.15, h: 92 }), m.tono({ l: 0.74, c: 0.15, h: 92 })][v];
@@ -436,7 +405,7 @@ export const PROPIOS: Record<string, Pincel> = {
   },
 };
 
-/** Encima del arquetipo, lo que hace que ese objeto sea ese: la maceta del macetero. */
+/** Lo que se pinta encima del arquetipo: la maceta del macetero. */
 export const DETALLE: Record<string, Pincel> = {
   macetero: (ctx, m, b) => {
     const y = b.y + Math.round(b.h * 0.5);
@@ -454,7 +423,7 @@ export function pintarObjeto(ctx: Ctx, m: Mano, id: string, b: Caja, p: Pieza, n
   DETALLE[id]?.(ctx, m, b, p, n, vivo);
 }
 
-/** Pinta una escena entera. El catálogo pone el arquetipo y las variantes; la escena, la caja. */
+/** Pinta una escena entera. */
 export function pintarEscena(ctx: Ctx, vista: Vista, niveles: NivelObjeto[], hora: number, escena: Escena) {
   const m = manoDe(hora, escena.suelo);
   const f = fino(ESC);

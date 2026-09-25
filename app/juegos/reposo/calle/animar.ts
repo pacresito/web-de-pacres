@@ -1,17 +1,15 @@
 // La ventana con vida: la misma escena que `pintarEscena`, partida en capas para que lo que se
 // mueve pueda pasar por detrás de lo que no.
 //
-// **Lo quieto se pinta una vez por minuto; lo vivo, en cada fotograma.** Repintar la calle
-// entera doce veces por segundo es tramar cien mil píxeles para mover una nube. Así que el
-// cielo, la calle, los objetos y el marco se guardan en lienzos, y cada fotograma solo los
-// apila y dibuja entre ellos lo que se mueve. El orden de la pila es la profundidad:
+// **Lo quieto se pinta una vez por minuto; lo vivo, en cada fotograma:** cielo, calle, objetos y
+// marco se guardan en lienzos, y cada fotograma los apila y dibuja entre ellos lo que se mueve.
+// El orden de la pila es la profundidad:
 //
 //   cielo · nubes, estrellas, avión · calle · humo · objetos (con la ropa, el árbol
 //   y la farola pintados en vivo, y el perro entre la acera y la calzada) · tele, pájaro, hoja ·
 //   marco · gato, maceta, taza, vapor
 //
-// Cada hueco entre capas es donde puede ir algo: el perro pasa por detrás del contenedor
-// porque se pinta antes que él, y el gato por detrás de la taza por lo mismo.
+// El perro pasa por detrás del contenedor porque se pinta antes que él; el gato, igual con la taza.
 import type { NivelObjeto } from "../escena";
 import {
   PIEZAS, azar, caja, enEscena, fino, px, trama, volcar, type Caja, type Ctx, type Vista,
@@ -38,7 +36,7 @@ export interface Capas {
   calle: HTMLCanvasElement;
   pasos: Paso[];
   marco: HTMLCanvasElement;
-  /** Las cajas de los 22 en píxeles finos de la ventana, estén o no a esta hora. */
+  /** Las cajas de todos los objetos en píxeles finos de la ventana, estén o no a esta hora. */
   cajas: Record<string, Caja>;
   nivel: Record<string, number>;
 }
@@ -265,8 +263,7 @@ function humo(g: Ctx, m: Mano, t: number, v: number) {
 
 // ── La calle ─────────────────────────────────────────────────────────────────
 
-/** La línea de la acera por donde pisa el perro: delante de todo lo de la acera y detrás de
- *  lo que está aparcado. La acera va de la fila 256 a la 280 del alzado. */
+/** La línea por donde pisa el perro: delante de lo de la acera y detrás de lo aparcado. */
 const ACERA_PERRO = Math.round(aVentana(0, 270).y);
 
 function perroAcera(g: Ctx, m: Mano, s: number, variante: number) {
@@ -301,8 +298,7 @@ function perroSentado(g: Ctx, m: Mano, s: number, variante: number, cajas: Recor
 
 /** Asoma la cabeza por un lado del contenedor —el izquierdo o el derecho—, husmea y vuelve. */
 function perroContenedor(g: Ctx, m: Mano, s: number, variante: number, b: Caja) {
-  // Detrás del contenedor quiere decir más lejos, así que más arriba: con los pies a su altura
-  // el marco de la ventana le cortaría las patas.
+  // Detrás del contenedor es más lejos, así que más arriba.
   const suelo = b.y + 13;
   const dir: 1 | -1 = variante ? 1 : -1;
   const oculto = variante ? b.x + b.w - 12 : b.x + 12, fuera = variante ? b.x + b.w + 2 : b.x - 2;
@@ -310,9 +306,8 @@ function perroContenedor(g: Ctx, m: Mano, s: number, variante: number, b: Caja) 
   perro(g, m, x, suelo, dir, s, s > 6 && s < 9 ? "huele" : "anda", 0);
 }
 
-/** Una ventana encendida del edificio de la derecha con la tele puesta —azul, a cortes— o con
- *  una luz cálida que tiembla. Solo titila: cuáles están encendidas no cambia nunca. Si la obra
- *  no ha acabado no hay edificio, y no hay tele. */
+/** Una ventana encendida del edificio de la obra con la tele puesta o una luz que tiembla.
+ *  Cuáles están encendidas no cambia nunca; sin la obra acabada, no hay tele. */
 function tele(g: Ctx, m: Mano, s: number, su: Suceso, c: Capas) {
   const obra = PIEZAS.obra;
   if ((c.nivel.obra ?? 0) < obra.variantes - 1) return;
@@ -384,8 +379,7 @@ function hoja(g: Ctx, m: Mano, s: number, variante: number, b: Caja) {
 
 // ── Dentro ───────────────────────────────────────────────────────────────────
 
-/** Motas de polvo que cruzan el sol que entra por la ventana. Van delante del marco —están en
- *  la habitación— y se ven sobre la pared oscura. */
+/** Motas de polvo en el sol que entra por la ventana, delante del marco. */
 function polvo(g: Ctx, m: Mano, t: number) {
   for (let i = 0; i < 18; i++) {
     const x = 70 + azar(i * 5 + 201) * 520 + Math.sin(t * (0.05 + azar(i + 9) * 0.06) + i) * 26;
@@ -395,8 +389,7 @@ function polvo(g: Ctx, m: Mano, t: number) {
   }
 }
 
-/** El vapor del café: dos hilos que ondulan y se deshacen al subir. La trama sube con el
- *  tiempo, y eso es lo que hace que parezca que fluye. */
+/** El vapor del café: dos hilos que ondulan y se deshacen al subir. */
 function vapor(g: Ctx, m: Mano, t: number) {
   const fuerza = 0.75 + 0.25 * Math.sin((2 * Math.PI * t) / 420);
   const color = m.noche ? m.P.luz[3] : m.P.piedra[5];
@@ -414,8 +407,7 @@ function vapor(g: Ctx, m: Mano, t: number) {
 
 const SUELO_REPISA = REPISA + 1;
 
-/** Hacia dónde mira mientras está asomado, y cuándo parpadea: a ratos, y una vez despacio,
- *  que en un gato es cariño. */
+/** Hacia dónde mira mientras está asomado, y cuándo parpadea. */
 const mirada = (s: number) => [0, -1, -1, 0, 1, 1, 0][Math.floor(s / 3) % 7];
 const parpadeo = (s: number) => s % 5.3 > 4.9 || (s > 9 && s < 10.2);
 

@@ -1,15 +1,10 @@
-// Los edificios de la calle: los dos bloques del fondo y el que deja la obra al terminarse.
-// Mediterráneos: estuco de color, aleros de teja, postigos en algunas ventanas y macetas.
+// Los edificios: los dos bloques del fondo y el que deja la obra al terminarse. Estuco de color,
+// aleros de teja, postigos y macetas.
 //
-// **Lo que los edificios no pueden mover:** los objetos que viven en las fachadas —la
-// persiana, la cortina, el grafiti, el cartel, el buzón y la tienda con su letrero y su
-// toldo—. Tienen caja fija y son lo que el juego compara; aquí se dibuja la pared de detrás y
-// se abren ventanas donde no los pisan (`libre`). Tampoco se mueve cuáles se encienden de
-// noche ni qué lleva cada ventana: sale de la posición, no del azar del momento.
+// Las ventanas se abren donde no pisan a los objetos de la fachada (`libre`), y cuáles se
+// encienden y qué lleva cada una sale de su posición: no puede cambiar entre repintados.
 //
-// Todo va en píxeles finos del alzado (640×360) salvo la obra, que es un objeto y se pinta
-// dentro de su caja en la ventana. El tercer bloque del alzado no se pinta: detrás de la obra
-// queda cielo y los tejados lejanos, que es el aire que le hacía falta a la calle.
+// En píxeles finos del alzado (640×360), salvo la obra, que se pinta en su caja de la ventana.
 import { BLOQUES, CAJAS, TIENDA, azar, px, tramar, type Caja, type Ctx, type Rampa } from "./paleta";
 import type { Mano } from "./pincel";
 
@@ -97,8 +92,7 @@ function cristal(ctx: Ctx, m: Mano, x: number, y: number, w: number, h: number, 
   if (!m.noche) for (let j = 0; j < Math.min(w, h) - 2; j++) px(ctx, x + w - 2 - j, y + 1 + j, 1, 1, m.P.metal[4]);
 }
 
-/** Una maceta en el alféizar, cada una la suya: geranios de tres colores, un cactus, hierbas
- *  o una hiedra que cuelga; y el tiesto de barro, azul o blanco. */
+/** Una maceta en el alféizar: geranios, cactus, hierbas o hiedra. */
 export function maceta(ctx: Ctx, m: Mano, x: number, y: number, w: number, semilla: number) {
   const tipo = Math.floor(azar(semilla * 3 + 1) * 6);
   const tiesto = [m.P.ladrillo, m.tono({ l: 0.5, c: 0.09, h: 245 }), m.P.piedra][Math.floor(azar(semilla * 3 + 2) * 3)];
@@ -122,9 +116,7 @@ export function maceta(ctx: Ctx, m: Mano, x: number, y: number, w: number, semil
   px(ctx, x0, y, ancho, 1, tiesto[4]);
 }
 
-/** Una ventana: marco claro, cristal y alféizar. Según la semilla lleva postigos abiertos,
- *  un balconcillo de forja o nada, y a veces una maceta. Casi nunca todo a la vez: una
- *  fachada con todos los adornos en todas las ventanas es un escaparate de adornos. */
+/** Una ventana con postigos, balconcillo o nada, y a veces una maceta; casi nunca todo junto. */
 function ventana(ctx: Ctx, m: Mano, x: number, y: number, w: number, h: number, semilla: number, C: Rampa,
   cuantosPostigos: number, on = enciende(semilla)) {
   const r = azar(semilla * 5 + 11);
@@ -198,8 +190,7 @@ export function fachadas(ctx: Ctx, m: Mano) {
   alero(ctx, m, C.x, C.y, C.w);
 }
 
-/** El edificio de la obra: tres plantas y bajo, y la rejilla de huecos que da `vanosObra`.
- *  Ocupa lo mismo que ocupaba la obra terminada de antes. */
+/** El edificio de la obra: tres plantas y bajo, con la rejilla de huecos de `vanosObra`. */
 function medidasObra(b: Caja) {
   const x = b.x + 12, y = b.y + 14, w = b.w - 24, h = b.h - 14;
   const bajo = 30, planta = R((h - bajo - 8) / 3);

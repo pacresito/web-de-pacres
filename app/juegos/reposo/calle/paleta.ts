@@ -1,17 +1,10 @@
-// La maquinaria común de las variantes de pixel art: el lienzo fino, el píxel, el tramado y
-// —lo que de verdad separa un pixel art con oficio de una captura con la resolución bajada—
-// **las rampas de material con desplazamiento de tono**.
+// La maquinaria del pixel art: el lienzo fino, el píxel, el tramado y las rampas de material.
 //
-// **El color no se calcula por objeto, se elige de una rampa.** Cada material tiene cinco
-// escalones fijos y todo lo que se pinta con él usa esos cinco. Así dos objetos distintos
-// comparten color y se distinguen por silueta, que es como se lee el pixel art; y así la
-// paleta entera de la calle cabe en la cabeza de quien dibuja el objeto veinticinco.
+// **El color no se calcula por objeto, se elige de una rampa:** cada material tiene unos pocos
+// escalones y todo lo que se pinta con él usa esos. Los objetos se distinguen por silueta.
 //
-// **Y las rampas giran el tono, no solo bajan la claridad.** La sombra de un muro amarillo no
-// es el mismo amarillo más oscuro: es más fría y va hacia el color del cielo, porque lo que
-// ilumina una zona en sombra es el cielo. La luz va hacia la fuente —el sol, o la ventana de
-// noche—. Un degradado de claridad pura se ve plástico y es la marca de casa del pixel art
-// malo; esto es lo mismo que hace a mano cualquiera que sepa.
+// **Las rampas giran el tono:** la sombra va hacia el color del cielo y la luz hacia la fuente
+// (el sol, o la ventana de noche). Solo con claridad, se ve plástico.
 import {
   LIENZO, css, mezcla, tenir, trama,
   type Ctx, type Luz, type Oklch, type Pieza, type Vista,
@@ -24,16 +17,13 @@ export type { Cajas, Ctx, Luz, Oklch, Pieza, Vista } from "./comun";
 
 // ── El lienzo fino ───────────────────────────────────────────────────────────
 
-/** Un lienzo por escala, reutilizado entre repintados: crear uno por fotograma deja al
- *  recolector limpiando texturas mientras se mueve el deslizador de la hora. */
+/** Un lienzo por clave, reutilizado entre repintados. */
 const lienzos = new Map<string, HTMLCanvasElement>();
 
 export interface Fino { ctx: Ctx; ancho: number; alto: number; esc: number; lienzo: HTMLCanvasElement }
 
-/** `esc` son los píxeles del lienzo virtual (1600×900) por cada píxel de la calle: 5 da
- *  320×180. Se pinta aquí y se amplía sin suavizado, nunca directo sobre el canvas final —la
- *  escala de pantalla es fraccionaria y cada borde caería a medio píxel, que es el halo
- *  borroso que este estilo no se puede permitir. */
+/** `esc` son los píxeles del lienzo virtual (1600×900) por píxel de la calle. Se pinta aquí y
+ *  se amplía sin suavizado: directo sobre el canvas, cada borde caería a medio píxel. */
 export function fino(esc: number, clave = ""): Fino {
   const ancho = Math.round(LIENZO.ancho / esc), alto = Math.round(LIENZO.alto / esc);
   let lienzo = lienzos.get(`${esc}:${clave}`);
@@ -62,7 +52,7 @@ export function px(ctx: Ctx, x: number, y: number, w: number, h: number, color: 
   ctx.fillRect(Math.round(x), Math.round(y), Math.max(1, Math.round(w)), Math.max(1, Math.round(h)));
 }
 
-/** Tramado de una zona: `v` es cuánto cubre, de 0 a 1. La sombra suave de este medio. */
+/** Tramado de una zona: `v` es cuánto cubre, de 0 a 1. */
 export function tramar(ctx: Ctx, x: number, y: number, w: number, h: number, color: string, v: number) {
   if (v <= 0) return;
   ctx.fillStyle = color;
@@ -83,8 +73,7 @@ export const caja = (p: Pieza, esc: number): Caja => ({
 
 export interface Material { l: number; c: number; h: number }
 
-/** Los materiales de la calle. El tono es lo único que los distingue de verdad: la claridad
- *  se la pone la rampa y la hora. */
+/** Los materiales de la calle; la claridad la ponen la rampa y la hora. */
 export const MATERIALES = {
   muro:     { l: 0.62, c: 0.035, h: 62 },
   ladrillo: { l: 0.52, c: 0.085, h: 38 },
@@ -98,7 +87,7 @@ export const MATERIALES = {
 } satisfies Record<string, Material>;
 
 export type Nombre = keyof typeof MATERIALES;
-/** Cinco escalones, del más oscuro al más claro. Índice 2 es el color «propio» del material. */
+/** Los escalones de un material, del más oscuro al más claro. */
 export type Rampa = string[];
 
 const corta = (o: Oklch, pasos: number): Oklch => ({
@@ -108,19 +97,17 @@ const corta = (o: Oklch, pasos: number): Oklch => ({
 });
 
 export interface Corte {
-  /** Escalones de claridad de la paleta. Pocos = más duro y más de 8 bits. */
+  /** Escalones de claridad de la paleta: pocos, más duro. */
   pasos: number;
   /** Cuánto se abre la rampa por arriba y por abajo. */
   recorrido: number;
-  /** Cuánto giran el tono la sombra y la luz. 0 lo apaga y se nota: sale plástico. */
+  /** Cuánto giran el tono la sombra y la luz. */
   giro: number;
 }
 
 export const CORTE: Corte = { pasos: 11, recorrido: 0.19, giro: 1 };
 
-/** La rampa de un material bajo la luz de la hora. La sombra tira hacia el cielo —lo que
- *  ilumina lo que no ve el sol— y la luz hacia la fuente: el cielo bajo de día, la ventana
- *  encendida de noche. */
+/** La rampa de un material bajo la luz de la hora. */
 export function rampa(m: Material, L: Luz, corte: Corte = CORTE, n = 5): Rampa {
   const base = tenir(m, L);
   const frio = L.crudo.cielo, calido = L.noche ? L.crudo.ventana : L.crudo.cieloBajo;
@@ -144,8 +131,7 @@ export function paleta(L: Luz, corte: Corte = CORTE, n = 5): Paleta {
   return salida;
 }
 
-/** Los colores del decorado que no son material: cielo, lejanía y tinta. Van aparte porque el
- *  cielo no tiene sombra propia —es la fuente— y la tinta no tiene luz. */
+/** Los colores del decorado que no son material: cielo, lejanía, tinta y ventana encendida. */
 export interface Fondo { cielo: string[]; lejos: (k: number) => string; tinta: string; ventana: string }
 
 export function fondo(L: Luz, corte: Corte = CORTE, escalones = 7): Fondo {
@@ -154,8 +140,7 @@ export function fondo(L: Luz, corte: Corte = CORTE, escalones = 7): Fondo {
     cielo.push(css(corta(mezcla(L.crudo.cielo, L.crudo.cieloBajo, i / (escalones - 1)), corte.pasos)));
   return {
     cielo,
-    // `k` es cuánta neblina: 0 es lo de delante, 1 el último tejado. Los planos del fondo no
-    // llevan color propio, llevan el del cielo con el que se funden.
+    // `k` es cuánta neblina: 0 lo de delante, 1 el último tejado.
     lejos: (k: number) => css(corta(mezcla(L.crudo.lejos, L.crudo.cieloBajo, k), corte.pasos)),
     tinta: css(corta({ ...tenir({ l: 0.2, c: 0.03, h: 260 }, L), l: Math.max(0.1, L.crudo.tinta.l - 0.04) }, corte.pasos)),
     ventana: css(corta(L.crudo.ventana, corte.pasos)),
@@ -164,7 +149,7 @@ export function fondo(L: Luz, corte: Corte = CORTE, escalones = 7): Fondo {
 
 // ── El decorado que no cambia ────────────────────────────────────────────────
 
-/** Los tejados del fondo, en dos filas para que haya profundidad y no recorte. */
+/** Las alturas de los tejados del fondo, en dos filas. */
 export const TEJADOS = {
   lejos: [140, 92, 178, 118, 152, 84, 126, 164, 104, 146],
   cerca: [110, 66, 142, 88, 124, 58, 100],
@@ -173,8 +158,7 @@ export const TEJADOS = {
 /** Los tres bloques de la calle, en coordenadas del lienzo virtual. */
 export const BLOQUES: [number, number, number][] = [[40, 210, 500], [560, 190, 470], [1040, 180, 520]];
 
-/** La sombra de contacto, en un medio que no tiene medias tintas: dos filas de tramado que se
- *  aprietan contra el objeto. Sin esto, todo flota un milímetro por encima de la acera. */
+/** La sombra de contacto: sin ella, todo flota sobre la acera. */
 export function apoyo(ctx: Ctx, b: Caja, color: string) {
   tramar(ctx, b.x - 1, b.y + b.h - 2, b.w + 2, 2, color, 0.55);
   tramar(ctx, b.x - 2, b.y + b.h - 1, b.w + 4, 1, color, 0.3);

@@ -1,9 +1,4 @@
-// Escena «alzado» — la calle de frente, que es la composición que ya tiene el juego.
-//
-// Su virtud es la que no se ve hasta comparar: **todo está a la misma distancia**, así que
-// todo se lee igual de bien y cada caja es un rectángulo honesto de lo que se ve. Es la composición
-// que menos estorba a la mecánica. Y es también la que menos se parece a un sitio: un alzado
-// es un plano de arquitecto, y los planos no dan ganas de volver.
+// Escena «alzado»: la calle de frente, todo a la misma distancia. Es lo que la ventana enmarca.
 import { ACERA, CAJAS, SUELO, TEJADOS, px, tramar, type Ctx } from "./paleta";
 import { fachadas } from "./edificios";
 import { ANCHO, ESC, cielo, fundir, type Escena, type Mano } from "./pincel";
@@ -50,8 +45,7 @@ export function sinCielo(ctx: Ctx, m: Mano) {
   px(ctx, 0, CALLE, ANCHO, 2, m.P.asfalto[0]);
   tramar(ctx, 0, CALLE + 2, ANCHO, ALTO - CALLE - 2, m.P.asfalto[2], 0.3);
   fundir(ctx, 0, ALTO - 40, ANCHO, 40, m.P.asfalto[3], m.P.asfalto[4]);
-  // La raya discontinua del centro, a la altura que la ventana todavía ve, y un paso de
-  // cebra delante de la tienda: franjas paralelas a la calle, cada vez más anchas al acercarse.
+  // La raya del centro y el paso de cebra delante de la tienda, más ancho al acercarse.
   for (let x = 16; x < ANCHO; x += 44) px(ctx, x, 309, 24, 2, m.P.asfalto[5]);
   for (let y = CALLE + 4, k = 0; y < ALTO - 6; y += 6, k++) {
     const abre = Math.round(k * 1.5);
@@ -63,8 +57,6 @@ export function sinCielo(ctx: Ctx, m: Mano) {
 
 export const escena: Escena = {
   id: "alzado",
-  nombre: "alzado",
-  nota: "La de ahora: todo de frente y a la misma distancia. La que mejor sirve a la mecánica y la que menos parece un sitio.",
   cajas: CAJAS,
   suelo: CALLE,
   fondo,

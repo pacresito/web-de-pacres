@@ -1,28 +1,17 @@
-// La luz, el lienzo y las cajas. **Aquí no se dibuja nada**: el dibujo vive en `calle/`, que
-// es lo que se puede tirar y rehacer sin tocar ni el motor ni la partida. Lo que queda aquí es
-// lo que comparten los dos lados —qué color tiene cada hora, cómo se escala el canvas y dónde
-// está cada objeto— y por eso sobrevive a cualquier repintado.
+// La luz, el lienzo y las cajas: lo que comparten el motor y el dibujo de `calle/`. Aquí no se
+// dibuja nada.
 //
-// **La luz es una paleta, no un repintado.** Cada pieza se dibuja una vez pidiendo colores
-// por rol —cielo, muro, acera, asfalto— y la hora elige qué paleta responde. Las cuatro
-// claves (noche, amanecer, día, atardecer) se interpolan **en OKLCH**: en RGB el paso del
-// azul al naranja cruza por un gris sucio y el amanecer se apaga justo por el centro.
+// **La luz son cuatro claves** (noche, amanecer, día, atardecer) interpoladas en OKLCH: en RGB
+// el paso del azul al naranja cruza un gris sucio. El cielo recorre toda la claridad y el resto
+// la mitad, o el atardecer dejaría la calle en un monocromo naranja donde no se distingue nada.
 //
-// **El contraste tiene suelo.** Entre las cuatro claves, el cielo se va entero —de L 0,16 a
-// 0,86— y los muros, la acera y el asfalto se mueven la mitad. Si todo virara a la vez, el
-// amanecer y el atardecer dejarían la calle en un monocromo naranja justo cuando el juego
-// pide distinguir cambios sutiles.
-//
-// **La calle NO vira con el tema oscuro del sitio.** Su color es el dato —qué hora es—, como
-// el relieve del Atlas; el tema manda en el marco de la página, no aquí dentro.
+// **La calle no vira con el tema oscuro del sitio:** su color es la hora.
 
 // ── Color ────────────────────────────────────────────────────────────────────
 
 export interface Oklch { l: number; c: number; h: number }
 
-/** OKLCH → sRGB, la conversión estándar (OKLCH→OKLab→LMS→lineal→gamma). Fuera de gamut se
- *  recorta por canal: en esta paleta nada se acerca al borde, y un recorte por canal en un
- *  color que ya vive dentro no se distingue del exacto. */
+/** OKLCH → sRGB. Fuera de gamut recorta por canal: esta paleta no se acerca al borde. */
 export function css(o: Oklch): string {
   const rad = (o.h * Math.PI) / 180;
   const a = o.c * Math.cos(rad), b = o.c * Math.sin(rad);
@@ -39,8 +28,7 @@ export function css(o: Oklch): string {
     canal(-0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s)})`;
 }
 
-/** Mezcla dos colores en OKLCH. El tono va por el arco corto: de 350° a 10° son 20 grados
- *  cruzando el rojo, no 340 dando la vuelta entera por el verde. */
+/** Mezcla dos colores en OKLCH, con el tono por el arco corto. */
 export function mezcla(a: Oklch, b: Oklch, t: number): Oklch {
   let dh = b.h - a.h;
   if (dh > 180) dh -= 360;
@@ -54,8 +42,7 @@ export type Paleta = Record<Rol, string>;
 
 interface Clave { hora: number; colores: Record<Rol, Oklch> }
 
-/** Las cuatro claves, ancladas a la hora en que cada una manda del todo. Entre ellas no hay
- *  saltos: cualquier instante es una mezcla de las dos vecinas. */
+/** Cada clave, a la hora en que manda del todo; entre dos, se mezclan. */
 const CLAVES: Clave[] = [
   { hora: 1, colores: {
     cielo: { l: 0.16, c: 0.04, h: 265 }, cieloBajo: { l: 0.24, c: 0.06, h: 280 },
@@ -93,8 +80,7 @@ export interface Luz {
   noche: boolean;
 }
 
-/** La luz de una hora decimal (13.5 = las 13:30). El día da la vuelta, así que entre la
- *  última clave y la primera se cruza la medianoche en vez de retroceder por todo el día. */
+/** La luz de una hora decimal (13.5 = las 13:30), que cruza la medianoche sin salto. */
 export function luzDe(hora: number): Luz {
   const h = ((hora % 24) + 24) % 24;
   let i = CLAVES.length - 1;
@@ -113,11 +99,8 @@ export function luzDe(hora: number): Luz {
 
 export const paletaDe = (hora: number): Paleta => luzDe(hora).color;
 
-/** Tiñe el color propio de un objeto con la luz que le está dando. **Poco, a propósito:** el
- *  fondo se va entero de la noche al día y los objetos solo se arrastran un tercio, porque si
- *  todo virara a la vez el atardecer dejaría la calle en un monocromo naranja justo cuando el
- *  juego pide distinguir cambios sutiles. Y de noche baja el croma además de la claridad: un
- *  coche rojo de madrugada se ve gris oscuro, no rojo apagado. */
+/** Tiñe el color de un objeto con la luz del momento, solo un tercio para que dos colores
+ *  sigan siendo dos. De noche baja también el croma. */
 export function tenir(propio: Oklch, luz: Luz, fuerza = 0.34): Oklch {
   const amb = luz.crudo.cieloBajo;
   return {
@@ -127,8 +110,7 @@ export function tenir(propio: Oklch, luz: Luz, fuerza = 0.34): Oklch {
   };
 }
 
-/** Cuánta noche hay a esta hora (0 = pleno día, 1 = noche cerrada). Gobierna lo binario —las
- *  ventanas encendidas, el halo de la farola—, que no se degrada: o están o no están. */
+/** Si es de noche: gobierna lo que se enciende o no, como las ventanas y las luces. */
 export function esNoche(hora: number): boolean {
   const h = ((hora % 24) + 24) % 24;
   return h < 7 || h >= 20.5;
@@ -136,14 +118,12 @@ export function esNoche(hora: number): boolean {
 
 // ── Geometría ────────────────────────────────────────────────────────────────
 
-// La calle se compone en un lienzo virtual de 1600×900 y se escala al canvas real. Así las
-// cajas de las piezas son números fijos y legibles, y el escalado es un único `setTransform`.
+// Las cajas van en un lienzo virtual de 1600×900 que se escala al canvas real.
 export const LIENZO = { ancho: 1600, alto: 900 };
 
 export interface Vista { ancho: number; alto: number; escala: number; dpr: number }
 
-/** Ajusta el canvas a su tamaño en pantalla y devuelve la vista. El `dpr` real es parte de
- *  esto: un canvas sin escalar por él se ve nítido en headless y borroso en cualquier retina. */
+/** Ajusta el canvas a su tamaño en pantalla y al `dpr` real, sin el que se ve borroso. */
 export function vistaDe(canvas: HTMLCanvasElement, anchoCSS: number, dpr: number): Vista {
   const escala = anchoCSS / LIENZO.ancho;
   const alto = LIENZO.alto * escala;
@@ -159,17 +139,15 @@ type Arquetipo = "hueco" | "banda" | "bulto" | "planta" | "mancha" | "poste" | "
 interface Pieza {
   x: number; y: number; w: number; h: number;
   arquetipo: Arquetipo;
-  /** Variantes visuales: el nivel entra módulo esto, así un contador sin techo (el árbol, un
-   *  goteo de diferencias) siempre cae en un dibujo que existe. */
+  /** Dibujos distintos; el nivel entra módulo esto. Si el objeto tiene estados contados, uno
+   *  por estado. */
   variantes: number;
-  /** Horas en las que la pieza existe. Fuera de ellas no se pinta, pero su nivel sigue
-   *  corriendo y la visita lo compara igual: quien entra siempre a la misma hora es ciego a
-   *  media calle, y eso es el aliasing más barato que tiene el juego. */
+  /** Horas en las que se pinta. Fuera de ellas su nivel sigue corriendo: quien entra siempre
+   *  a la misma hora no lo ve cambiar. */
   franja?: [number, number];
 }
 
-/** Dónde vive cada objeto del catálogo. El id es el de escena.ts; lo que aquí se decide es
- *  sitio y forma, no reloj. */
+/** Sitio y forma de cada objeto de escena.ts, en orden de profundidad. */
 export const PIEZAS: Record<string, Pieza> = {
   // Fachada izquierda (portal y viviendas)
   persiana:   { x: 96,   y: 300, w: 92,  h: 108, arquetipo: "hueco",   variantes: 5 },
@@ -179,7 +157,7 @@ export const PIEZAS: Record<string, Pieza> = {
   cartel:     { x: 300,  y: 486, w: 86,  h: 110, arquetipo: "mancha",  variantes: 4 },
   buzon:      { x: 430,  y: 584, w: 40,  h: 56,  arquetipo: "bulto",   variantes: 3 },
 
-  // Local central (el escaparate de la tienda, que es decorado: `TIENDA`)
+  // La tienda (su local es decorado: `TIENDA`)
   escaparate: { x: 620,  y: 470, w: 160, h: 150, arquetipo: "hueco",   variantes: 5 },
   letrero:    { x: 596,  y: 386, w: 398, h: 44,  arquetipo: "banda",   variantes: 5 },
   toldo:      { x: 596,  y: 430, w: 398, h: 52,  arquetipo: "banda",   variantes: 5 },
@@ -190,24 +168,20 @@ export const PIEZAS: Record<string, Pieza> = {
   // Fachada derecha y la obra
   obra:       { x: 1040, y: 180, w: 500, h: 460, arquetipo: "andamio", variantes: 6 },
   macetero:   { x: 1064, y: 566, w: 70,  h: 74,  arquetipo: "planta",  variantes: 5 },
-  // Metido en la acera, no pegado a la fachada: al pie del edificio parecía flotar.
   puesto:     { x: 1170, y: 568, w: 180, h: 112, arquetipo: "bulto",   variantes: 3, franja: [6, 14] },
   papelera:   { x: 1392, y: 570, w: 40,  h: 70,  arquetipo: "bulto",   variantes: 3 },
 
   // Acera y calzada
   arbol:      { x: 470,  y: 300, w: 200, h: 340, arquetipo: "planta",  variantes: 8 },
   farola:     { x: 1010, y: 250, w: 60,  h: 390, arquetipo: "poste",   variantes: 3 },
-  // Contra la pared, bajo el grafiti y entre la esquina y el portal: delante de la puerta
-  // tapaba la entrada.
   banco:      { x: 90,   y: 586, w: 150, h: 54,  arquetipo: "bulto",   variantes: 3 },
-  // Atada a la farola, y no junto a la terraza: allí la tapaba casi entera.
+  // Atada a la farola.
   bici:       { x: 992,  y: 588, w: 96,  h: 52,  arquetipo: "bulto",   variantes: 5 },
   coche:      { x: 180,  y: 706, w: 330, h: 122, arquetipo: "bulto",   variantes: 5 },
   contenedor: { x: 1110, y: 700, w: 190, h: 116, arquetipo: "bulto",   variantes: 5 },
 };
 
-/** El local de la tienda —marco, puerta y ventana—: decorado fijo que se pinta con el fondo.
- *  Lo que cambia en él son sus objetos: el escaparate, el letrero, el toldo. */
+/** El local de la tienda: decorado fijo, siempre abierto. */
 export const TIENDA = { x: 580, y: 430, w: 430, h: 210 };
 
 /** Dónde vive cada objeto en una composición: es lo único que una escena puede mover. */

@@ -1,11 +1,7 @@
-// Los objetos de la calle que se dibujan enteros, cada uno como lo que es: la tienda con su
-// letrero, su toldo y su terraza, los balcones de la fachada, el cartel, el buzón, la bici, el
-// banco, la papelera y el puesto del mercado. El grafiti vive aparte, en `grafiti.ts`.
+// Los objetos de la calle con dibujo propio (el grafiti, en `grafiti.ts`) y el local de la tienda.
 //
-// **Cada nivel se tiene que distinguir del anterior**: es lo que el jugador señala. Por eso
-// los niveles no retocan un tamaño —eso se lee como que el dibujo respira— sino que cambian
-// algo que se nombra: la persiana baja, el toldo sale, hay otra bici, han pegado otro cartel.
-// Todo en píxeles finos de la ventana, dentro de la caja que da la escena.
+// **Cada nivel cambia algo que se nombra** —la persiana baja, hay otra bici, han pegado otro
+// cartel—, no un tamaño: un tamaño que cambia se lee como que el dibujo respira.
 import { apoyo, px, tramar, type Caja, type Ctx, type Pieza, type Rampa } from "./paleta";
 import type { Mano, Pincel } from "./pincel";
 import { grafiti } from "./grafiti";
@@ -94,9 +90,7 @@ function barandilla(ctx: Ctx, m: Mano, x: number, y: number, w: number, h: numbe
   for (let k = x - 4; k < x + w + 4; k += 2) px(ctx, k, b - 7, 1, 7, m.F.tinta);
 }
 
-/** El local de la tienda: marco de madera, la puerta y la ventana de la derecha con sus
- *  estantes, y el cajón del cierre, subido. Es decorado —lo pinta el fondo— y está siempre
- *  abierto: lo que cambia en la tienda son sus objetos. */
+/** El local de la tienda: marco, puerta y ventana con estantes. Decorado, siempre abierto. */
 export function tienda(ctx: Ctx, m: Mano, b: Caja) {
   const madera = m.tono({ l: 0.34, c: 0.06, h: 160 });
   const x0 = b.x + 4, x1 = b.x + b.w - 4, arriba = b.y + 18, suelo = b.y + b.h - 1;
@@ -130,7 +124,7 @@ export function tienda(ctx: Ctx, m: Mano, b: Caja) {
 // ── Los objetos ─────────────────────────────────────────────────────────────
 
 export const OBJETOS: Record<string, Pincel> = {
-  // Persiana alicantina —de lamas de madera, enrollable— bajada a cada nivel un poco más.
+  // Persiana alicantina, cada nivel un poco más bajada.
   persiana: (ctx, m, b, p, n) => {
     const f = fraccion(p, n);
     const v = balconera(ctx, m, b, f < 1);
@@ -196,8 +190,7 @@ export const OBJETOS: Record<string, Pincel> = {
     if (v >= 1) { px(ctx, x + 1, y + 11, 3, 2, m.P.tela[4]); px(ctx, x + 6, y + 1, 2, 2, m.P.hoja[4]); }
     if (v === 2) for (let k = 0; k < 4; k++) px(ctx, x + 1 + k * 2, y + 6 + (k % 2), 2, 1, m.F.tinta);
   },
-  // El escaparate: lo que se ve en él es la mercancía —pan y pasteles en dos baldas— y tiene
-  // su propio cierre, que baja a su ritmo.
+  // El escaparate: pan y pasteles, y su cierre, que baja con el nivel.
   escaparate: (ctx, m, b, p, n) => {
     const f = fraccion(p, n);
     const madera = m.tono({ l: 0.34, c: 0.06, h: 160 });
@@ -216,8 +209,7 @@ export const OBJETOS: Record<string, Pincel> = {
     px(ctx, x - 2, y + h + 2, w + 4, 1, madera[4]);
     cierre(ctx, m, x, y, w, h, f);
   },
-  // El letrero pintado sobre la tienda: cada nivel, otro nombre y otros colores. El marco de
-  // la ventana le pasa por delante y tapa un poco las letras; se lee igual.
+  // El letrero de la tienda: cada nivel, otro nombre y otros colores.
   letrero: (ctx, m, b, p, n) => {
     const v = nivel(p, n);
     const nombres = ["CAFE", "BAR PEPE", "PANADERIA", "TAPAS", "BODEGA"];
@@ -273,9 +265,7 @@ export const OBJETOS: Record<string, Pincel> = {
     else if (v === 1) { juego(cx - 17); juego(cx + 17); }
     else if (v === 2) { juego(cx - 17, true); juego(cx + 17, true); }
     else if (v === 3) { juego(cx - 22); mesa(cx, false); juego(cx + 22); }
-    else {                                                                       // recogidas y encadenadas
-      // Una torre de sillas, cada una encajada en la de abajo, y las mesas plegadas de canto
-      // contra la pared, con la cadena que lo ata todo.
+    else {                                             // recogidas: sillas apiladas, mesas de canto y cadena
       for (let k = 0; k < 5; k++) {
         const y = suelo - 5 - k * 3;
         px(ctx, cx - 14, y, 7, 1, m.P.madera[k % 2 ? 2 : 3]);
@@ -428,8 +418,7 @@ export const OBJETOS: Record<string, Pincel> = {
     if (v >= 1) { circulo(ctx, cx, y - 1, 3, m.P.piedra[5]); px(ctx, cx - 1, y - 5, 2, 2, m.P.piedra[4]); }
     if (v === 2) for (let k = 0; k < 3; k++) px(ctx, cx - 7 + k * 5, suelo - 1, 3, 1, [m.P.piedra[5], m.P.tela[4], m.P.luz[4]][k]);
   },
-  // El banco: de listones con pies de hierro, uno de metal moderno o uno de piedra. Es una
-  // diferencia suelta: el ayuntamiento lo cambia de higos a brevas.
+  // El banco: de listones, de metal o de piedra.
   banco: (ctx, m, b, p, n) => {
     const v = nivel(p, n), suelo = b.y + b.h - 1, x = b.x + 2, w = b.w - 4;
     apoyo(ctx, { x, y: suelo - 12, w, h: 13 }, m.F.tinta);

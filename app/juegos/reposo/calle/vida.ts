@@ -1,20 +1,12 @@
-// La vida de la escena: lo que se mueve mientras la miras y no cuenta como cambio.
+// La vida de la escena: lo que se mueve mientras la miras —los sucesos— y no es un nivel: pasa
+// y se va, y el diff no lo ve.
 //
-// **Nada de esto es un nivel.** El diff compara los 22 objetos; lo de aquí pasa y se va —el
-// perro cruza, el gato se asoma, la ropa ondea— y ninguna crónica lo archiva. Por eso es de
-// otra naturaleza que la calle: lo que se ve al volver es lo que cambió, no lo que se movía.
+// **Es una función del tiempo:** dos pantallas a la misma hora ven el mismo perro, y el test
+// recorre un día sin pintar nada.
 //
-// **Es una función del tiempo, como la calle.** Qué pasa a las 17:42:10 lo decide el reloj,
-// no un `Math.random()` en el bucle: dos pantallas a la misma hora ven el mismo perro, y el
-// test puede recorrer un día entero sin pintar nada.
-//
-// **Pocas cosas a la vez, y con aire entre ellas.** Lo continuo es lento y pequeño —vapor,
-// nubes, viento—; lo que llama la atención son los sucesos, y de esos hay como mucho uno cada
-// vez. El tiempo va en tramos, y cada suceso deja calma a los dos lados de su tramo. Los
-// tramos se agrupan en rondas, y en cada ronda cada familia —gato, perro, pájaros, cielo,
-// calle— tiene un solo turno: el gato no se asoma dos veces seguidas ni el perro pasa detrás
-// de otro perro. La siesta del gato ocupa el turno del gato de su ronda entera; mientras duerme
-// puede pasar un perro, no otro gato.
+// **Como mucho un suceso a la vez, con calma a los lados.** El tiempo va en tramos agrupados en
+// rondas, y en cada ronda cada familia —gato, perro, pájaros, cielo, calle— tiene un solo
+// turno. La siesta del gato ocupa el turno del gato de su ronda entera.
 import { azar } from "./paleta";
 
 type Familia = "gato" | "perro" | "pajaros" | "cielo" | "calle";
@@ -75,9 +67,8 @@ const DUR_SIESTA = 600;
 
 const semilla = (k: number, sal: number) => azar(((k % 1e9) * 131 + sal) | 0);
 
-/** Los turnos de una ronda, barajados. **Sin mirar la ronda anterior ya colocada**, solo su
- *  barajado: si la familia que la cierra abre esta, se cambia el primer turno por el segundo.
- *  El cambio nunca toca el último, así que cada ronda se decide sin arrastrar a las de antes. */
+/** Los turnos de una ronda, barajados. Si la familia que cierra la anterior abre esta, se
+ *  cambian los dos primeros; nunca el último, así ninguna ronda arrastra a las de antes. */
 function barajar(r: number): (Familia | null)[] {
   const t = [...TURNOS];
   for (let i = t.length - 1; i > 0; i--) {
@@ -98,15 +89,14 @@ function siestaDeRonda(r: number): Suceso | null {
   return { id: "siesta", variante: 0, inicio: r * RONDA * TRAMO + 4 * CALMA, dur: DUR_SIESTA };
 }
 
-/** Lo que pasa en el tramo `k`, si pasa algo. La hora es la del principio del tramo: así un
- *  suceso no se corta a medias porque se haga de noche mientras dura. */
+/** Lo que pasa en el tramo `k`, si pasa algo, con la hora del principio del tramo: que no se
+ *  corte a medias porque anochezca. */
 export function sucesoDelTramo(k: number, horaEn: (t: number) => number): Suceso | null {
   const r = Math.floor(k / RONDA);
   const familia = turnos(r)[k - r * RONDA];
 
   if (!familia) return null;
-  // La siesta desborda su ronda: el gato tampoco se asoma justo antes de dormirse ni nada más
-  // despertar.
+  // El gato tampoco se asoma justo antes ni justo después de la siesta.
   const pos = k - r * RONDA;
   if (familia === "gato"
     && (siestaDeRonda(r) || (pos === 0 && siestaDeRonda(r - 1)) || (pos === RONDA - 1 && siestaDeRonda(r + 1)))) return null;
@@ -137,8 +127,7 @@ export function agenda(t: number, horaEn: (t: number) => number): Suceso[] {
 
 // ── El viento y la farola ────────────────────────────────────────────────────
 
-/** El viento de ahora, de 0 a 1: una brisa que sube y baja despacio y, de vez en cuando, una
- *  ráfaga de unos segundos. Lo comparten la ropa, el árbol y el humo, que se mueven juntos. */
+/** El viento de ahora, de 0 a 1: brisa lenta y alguna ráfaga. Lo comparten ropa, árbol y humo. */
 export function viento(t: number): number {
   const brisa = 0.32 + 0.16 * Math.sin((2 * Math.PI * t) / 173) + 0.1 * Math.sin((2 * Math.PI * t) / 61 + 1.3);
   const k = Math.floor(t / 50);
@@ -150,8 +139,7 @@ export function viento(t: number): number {
   return Math.min(1, Math.max(0, brisa + rafaga));
 }
 
-/** La farola de noche: casi siempre fija, y cada pocos minutos un par de segundos de bombilla
- *  que falla. Devuelve cuánto luce (0 apagada, 1 entera). */
+/** Cuánto luce la farola (0 apagada, 1 entera): fija, salvo algún parpadeo cada pocos minutos. */
 export function farolaLuz(t: number): number {
   const k = Math.floor(t / 210);
   if (semilla(k, 21) >= 0.6) return 1;

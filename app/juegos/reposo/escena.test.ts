@@ -39,8 +39,6 @@ test("un hueco de un año sí produce cambios", cambiosAno.length > 0, `${cambio
 test("un hueco de un año incluye algún cambio evidente", evidentes(cambiosAno).length > 0,
   `${evidentes(cambiosAno).length} evidente(s) de ${cambiosAno.length}`);
 
-// Mismo hueco, puntos de partida distintos: el desfase de cada ciclo mueve el reparto exacto,
-// pero un hueco que dobla varios relojes lentos no se queda nunca a cero por dónde empiece.
 const hueco = 40 * DIA;
 const cuentas = [t0, t0 + 17 * DIA, t0 + 200 * DIA].map(
   (desde) => diferencia(snapshot(escena(SEMILLA, desde)), escena(SEMILLA, desde + hueco)).length,
@@ -48,9 +46,6 @@ const cuentas = [t0, t0 + 17 * DIA, t0 + 200 * DIA].map(
 test("un hueco de 40 días produce cambios sea cual sea el punto de partida",
   cuentas.every((n) => n > 0), cuentas.join(", "));
 
-// Un monótono nunca retrocede: el nivel es una función no decreciente del tiempo, sin
-// memoria de quién lo consultó ni cuándo — la única fuente de "pérdida" es que un diff que
-// no cruza un escalón no se reporta, no que el reloj vaya hacia atrás.
 let monotonoOk = true;
 let anterior = -1;
 for (let dias = 0; dias <= 900; dias += 5) {

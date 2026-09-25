@@ -1,19 +1,16 @@
-// Motor de Reposo: la calle como función pura del tiempo, `escena(semilla, t)`.
-// Puro, sin React ni canvas — calibrar.ts la mide y render.ts la pinta.
+// Motor de Reposo: la calle como función pura del tiempo, `escena(semilla, t)`. Sin React ni
+// canvas: calibrar.ts la mide y calle/ la pinta.
 //
-// Cada objeto lleva tres etiquetas independientes: su tipo (cómo cambia), su reloj (cada
-// cuánto) y su visibilidad (cuánto canta el cambio una vez ocurrido) — no correlacionan: el
-// árbol es lentísimo y evidente, el coche es rápido y casi invisible. El diff compara
-// NIVELES, no valores continuos: lo que no cruza un escalón no cuenta, aunque haya avanzado.
+// Cada objeto tiene un tipo (cómo cambia), un reloj (cada cuánto) y una visibilidad (cuánto
+// se nota el cambio), independientes entre sí. El diff compara niveles enteros: lo que no
+// cruza un escalón no cuenta.
 
 const MS_HORA = 60 * 60 * 1000;
 const MS_DIA = 24 * MS_HORA;
 const MS_ESTACION = 91 * MS_DIA;
 
-/** Arranque de todo reloj: fase cero de los cíclicos, instante cero de los monótonos, borde
- *  inferior de la ventana de los únicos. Anterior a la publicación a propósito: la calle se
- *  estrena ya crecida, con árbol y diferencias, en vez de recién nacida y vacía. **No se mueve
- *  nunca:** moverlo cambia la calle a todo el que ya la ha mirado. */
+/** Arranque de todos los relojes, anterior a la publicación para que la calle se estrene ya
+ *  crecida. **No se mueve nunca:** moverlo cambia la calle a todo el que ya la ha mirado. */
 export const ORIGEN_MS = Date.UTC(2026, 0, 1);
 
 export type Tipo = "monótono" | "cíclico" | "único";
@@ -29,23 +26,15 @@ export interface Slot {
   visibilidad: number;
 }
 
-// 22 objetos que cubren los tres tipos, de horas a años. El catálogo es el mismo para
-// cualquier semilla — lo que varía con ella es la fase de cada uno (`construirCalle`).
+// El catálogo es el mismo para cualquier semilla; la semilla solo pone la fase de cada objeto.
 //
-// Dos cosas que gobiernan los números de aquí y no se ven mirándolos:
-//
-// **Un cíclico no es un contador, es un interruptor de n posiciones.** Por grande que sea el
-// hueco, la probabilidad de pillarlo distinto no pasa de (n-1)/n; el monótono y el único sí
-// se acercan a la certeza. Y lo que decide si un hueco ya lo pilla no es el periodo, es el
-// **paso** (periodo/escalones): con paso corto, un hueco de un día ya cruza de sobra y el
-// objeto satura ahí, sin dejar nada que crecer hasta el mes. Por eso los evidentes, que son
-// los que hacen crecer lo que se ve del día al mes, llevan el paso de 2 a 14 días, y los de
-// paso corto se quedan entre los sutiles, donde saturar pronto no se nota.
+// **Un cíclico es un interruptor de n posiciones:** por largo que sea el hueco, la
+// probabilidad de verlo distinto no pasa de (n-1)/n. Y lo que decide si un hueco lo pilla es
+// el paso (periodo/escalones): con paso corto satura en un día. Por eso los evidentes llevan
+// pasos de 2 a 14 días, y los de paso corto son sutiles.
 //
 // **Ningún periodo cíclico cae en una cadencia humana** (24 h, 7/14/30 días): quien volviera
-// con esa cadencia sería ciego a ese objeto para siempre. Eso es la regla 5, pero como
-// accidente del catálogo en vez de como lección — el aliasing que enseña es el que sale de
-// que cada objeto tenga SU ritmo, no el de un reloj clavado al calendario del jugador.
+// con esa cadencia no vería cambiar ese objeto nunca.
 export const CATALOGO: Slot[] = [
   // Rápidos y sutiles: los caza quien busca.
   { id: "coche",      tipo: "cíclico",  periodoMs: 9 * MS_HORA,      escalones: 5, visibilidad: 0.20 },
@@ -54,9 +43,7 @@ export const CATALOGO: Slot[] = [
   { id: "papelera",   tipo: "cíclico",  periodoMs: 4.1 * MS_DIA,     escalones: 3, visibilidad: 0.25 },
   { id: "buzon",      tipo: "cíclico",  periodoMs: 13.3 * MS_DIA,    escalones: 3, visibilidad: 0.35 },
 
-  // Medios y evidentes: el grueso de lo que se ve, de un día a un mes. El paso (periodo /
-  // escalones) va de 2 a 14 días — quien vuelve a diario solo pilla los de paso corto, quien
-  // vuelve al mes los pilla todos.
+  // Medios y evidentes: el grueso de lo que cambia entre un día y un mes.
   { id: "persiana",   tipo: "cíclico",  periodoMs: 10.2 * MS_DIA,  escalones: 5, visibilidad: 0.60 },
   { id: "contenedor", tipo: "cíclico",  periodoMs: 15.3 * MS_DIA,  escalones: 5, visibilidad: 0.65 },
   { id: "escaparate", tipo: "cíclico",  periodoMs: 20.4 * MS_DIA,  escalones: 5, visibilidad: 0.65 },
@@ -69,20 +56,17 @@ export const CATALOGO: Slot[] = [
   { id: "sombrilla",  tipo: "cíclico",  periodoMs: 60.7 * MS_DIA,  escalones: 5, visibilidad: 0.65 },
   { id: "letrero",    tipo: "cíclico",  periodoMs: 68.9 * MS_DIA,  escalones: 5, visibilidad: 0.60 },
 
-  // El único objeto que se muere a propósito: una obra concreta arranca con la calle, avanza
-  // por fases y termina para siempre. Después no vuelve a cambiar nunca — y está bien, porque
-  // lo que deja es un edificio que antes no estaba. Es el premio, no un fallo; pero al
-  // pintarla, que se note terminada, o queda como señuelo permanente de un fallo.
+  // La obra avanza por fases y termina para siempre: su último estado tiene que leerse como
+  // edificio acabado, no como una obra parada.
   { id: "obra",       tipo: "monótono", periodoMs: 17.3 * MS_DIA,    escalones: 6, visibilidad: 0.70 },
 
-  // Únicos: diferencias sueltas, cada una pasa una vez y no vuelve. El periodo es el tiempo medio
-  // hasta el siguiente — un goteo irregular que no se acaba, no un evento con fecha.
+  // Únicos: diferencias sueltas a intervalos irregulares; el periodo es el tiempo medio.
   { id: "cartel",     tipo: "único",    periodoMs: 200 * MS_DIA,  escalones: Infinity, visibilidad: 0.35 },
   { id: "grafiti",    tipo: "único",    periodoMs: 500 * MS_DIA,  escalones: Infinity, visibilidad: 0.50 },
   { id: "farola",     tipo: "único",    periodoMs: 550 * MS_DIA,  escalones: Infinity, visibilidad: 0.30 },
   { id: "banco",      tipo: "único",    periodoMs: 800 * MS_DIA,  escalones: Infinity, visibilidad: 0.60 },
 
-  // Lento y evidente: la razón de existir de un hueco de estaciones o años.
+  // Lento y evidente: lo que premia volver tras meses.
   { id: "arbol",      tipo: "monótono", periodoMs: MS_ESTACION * 1.5, escalones: Infinity, visibilidad: 0.80 },
 ];
 
@@ -114,8 +98,7 @@ export interface Objeto extends Slot {
 
 const cacheCalles = new Map<string, Objeto[]>();
 
-/** Instancia el catálogo para una semilla: misma forma, fases distintas. Memoizado porque es
- *  la misma calle en cada llamada, no porque haga falta para la pureza. */
+/** El catálogo con las fases de una semilla. */
 export function construirCalle(semilla: string): Objeto[] {
   const cacheada = cacheCalles.get(semilla);
   if (cacheada) return cacheada;
@@ -123,8 +106,7 @@ export function construirCalle(semilla: string): Objeto[] {
     const semillaHash = hash32(`${semilla}:${slot.id}`);
     const rng = mulberry32(semillaHash);
     if (slot.tipo === "único") {
-      // Nunca en el borde: una diferencia que cae justo en el origen es indistinguible de una que
-      // nunca estuvo, porque no hay visita anterior con la que hacer diff contra él.
+      // Nunca pegado al origen: ahí no hay visita anterior contra la que verla.
       return { ...slot, semillaHash, faseMs: ORIGEN_MS + slot.periodoMs * (0.1 + rng() * 0.8) };
     }
     return { ...slot, semillaHash, faseMs: Math.floor(rng() * slot.periodoMs) };
@@ -133,11 +115,8 @@ export function construirCalle(semilla: string): Objeto[] {
   return objetos;
 }
 
-/** Cuántas diferencias de este objeto han pasado ya. Los instantes los va dando la semilla uno
- *  tras otro, sin lista que agotar: la diferencia nº 40 existe aunque falten décadas para ella, por
- *  la misma razón por la que el árbol nunca deja de crecer. Cada diferencia pasa una vez y
- *  no vuelve —la tienda que cerró no reabre—, pero la calle no se queda sin diferencias.
- *  El espaciado es irregular a propósito: un goteo regular sería un cíclico con otro nombre. */
+/** Cuántas diferencias de este objeto han pasado ya. La semilla da los instantes uno tras
+ *  otro, sin fin; el espaciado es irregular porque uno regular sería un cíclico. */
 function diferenciasHasta(obj: Objeto, tMs: number): { n: number; ultimo: number } {
   const rng = mulberry32(obj.semillaHash);
   let t = obj.faseMs, n = 0, ultimo = -Infinity;
@@ -193,9 +172,8 @@ export interface Cambio {
   nivelAhora: number;
 }
 
-/** El diff va contra lo que el jugador vio de verdad, nunca contra un pasado recalculado:
- *  tocar un reloj del catálogo cambiaría el pasado de la calle, no solo su futuro, y el
- *  snapshot archivado es lo único que evita que la siguiente visita mienta sobre eso. */
+/** Contra lo que se vio de verdad, no contra un pasado recalculado: retocar un reloj del
+ *  catálogo cambia también el pasado de la calle. */
 export function diferencia(anterior: Snapshot, actual: NivelObjeto[]): Cambio[] {
   const cambios: Cambio[] = [];
   for (const obj of actual) {
@@ -207,7 +185,6 @@ export function diferencia(anterior: Snapshot, actual: NivelObjeto[]): Cambio[] 
   return cambios;
 }
 
-// Lo evidente es la vara del ritmo en calibrar.ts: lo sutil satura pronto y taparía si lo que
-// se ve crece de verdad con el hueco.
+// La vara con la que calibrar.ts mide el ritmo: lo sutil satura pronto y lo taparía.
 export const UMBRAL_EVIDENTE = 0.6;
 export const evidentes = (cambios: Cambio[]): Cambio[] => cambios.filter((c) => c.visibilidad >= UMBRAL_EVIDENTE);

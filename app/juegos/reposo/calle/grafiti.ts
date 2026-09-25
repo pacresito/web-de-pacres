@@ -1,15 +1,13 @@
-// El grafiti del zócalo: una lista cerrada de ocho que se recorre en orden, una diferencia
-// cada uno. **Cada uno es de otro género que el anterior** —letras gordas, firma, plantilla,
-// corazón, tapado—, porque lo que el jugador señala es «han pintado otra cosa», y dos del
-// mismo género seguidos solo se distinguirían por el matiz. A 500 días de media por
-// diferencia, la vuelta entera dura unos once años.
+// El grafiti del zócalo: ocho, uno por diferencia, en orden. **Cada uno de otro género que el
+// anterior** —letras gordas, firma, plantilla, corazón, tapado—: dos del mismo seguidos solo se
+// distinguirían por el matiz.
 import { azar, px, type Caja, type Ctx } from "./paleta";
 import type { Mano, Pincel } from "./pincel";
 
 const R = Math.round;
-/** El rosa del zócalo, el de `fachadas()`: la pared sobre la que se pinta. */
+/** El rosa del zócalo, el de `fachadas()`. */
 const ZOCALO = { l: 0.8, c: 0.05, h: 20 };
-/** Cuánto pared se come la pintura de las letras gordas: sin él, gritan más que la calle. */
+/** Cuánto color de pared llevan encima las letras gordas: sin él, gritan más que la calle. */
 const VELO = 0.3;
 
 // ── Máscaras: el contorno y el volumen salen de engordar la forma ────────────
@@ -46,8 +44,7 @@ const GORDAS: Record<string, string[]> = {
   P: ["##.", "#.#", "##.", "#..", "#.."], Z: ["###", "..#", ".#.", "#..", "###"],
 };
 
-/** Throw-up: letras de 3×5 al doble, que bailan un poco, con contorno, volumen y brillo, y
- *  un velo del color de la pared encima: pintura con años, no recién salida del spray. */
+/** Throw-up: letras de 3×5 al doble, con contorno, volumen, brillo y el velo de pared. */
 function letrasGordas(ctx: Ctx, m: Mano, b: Caja, palabra: string, hue: number) {
   const T = m.tono({ l: 0.58, c: 0.13, h: hue });
   const e = 2, hueco = 1;
@@ -71,7 +68,7 @@ function letrasGordas(ctx: Ctx, m: Mano, b: Caja, palabra: string, hue: number) 
   const ex = x0 + ancho + 4, ey = y0 - 1;                                       // la estrella
   const estrella = ex < b.x + b.w - 2;
   if (estrella) { px(ctx, ex, ey - 2, 1, 5, m.P.piedra[5]); px(ctx, ex - 2, ey, 5, 1, m.P.piedra[5]); }
-  // El velo, solo sobre lo pintado: la pared de alrededor está en otra capa.
+  // Solo sobre lo pintado: la pared está en otra capa.
   const pared = m.tono(ZOCALO)[2];
   ctx.save();
   ctx.globalAlpha = VELO;
@@ -98,8 +95,7 @@ function linea(ctx: Ctx, x0: number, y0: number, x1: number, y1: number, color: 
   for (let s = 0; s <= pasos; s++) px(ctx, R(x0 + ((x1 - x0) * s) / pasos), R(y0 + ((y1 - y0) * s) / pasos), g, 1, color);
 }
 
-/** Tag: un nombre a rotulador de punta biselada —dos de ancho, uno de alto—, inclinado,
- *  con el subrayado que vuelve hacia atrás, la corona y los goterones. */
+/** Tag: un nombre a rotulador biselado, inclinado, con subrayado, corona y goterones. */
 function firma(ctx: Ctx, b: Caja, nombre: string, color: string, semilla: number) {
   const w = 7, h = 13, paso = w + 2, incl = 3;
   const x0 = b.x + R((b.w - nombre.length * paso) / 2), arriba = b.y + R((b.h - h) / 2) - 1, abajo = arriba + h;
@@ -130,7 +126,7 @@ const SILUETAS: Record<string, string[]> = {
   ],
 };
 
-/** Stencil: la silueta limpia y el poco de spray que se escapa por el borde del corte. */
+/** Stencil: la silueta y el spray que se escapa por el borde. */
 function plantilla(ctx: Ctx, b: Caja, silueta: string[], color: string, semilla: number) {
   const e = 2, w = silueta[0].length * e, h = silueta.length * e;
   const x = b.x + R((b.w - w) / 2), y = b.y + R((b.h - h) / 2) - 1;
@@ -174,8 +170,7 @@ function corazon(ctx: Ctx, m: Mano, b: Caja) {
 
 // ── Tapado ──────────────────────────────────────────────────────────────────
 
-/** Lo han tapado con pintura del zócalo, pero nueva: más limpia que la pared, a brochazos, y
- *  por el borde asoma el corazón que había debajo. */
+/** Tapado con pintura del zócalo más limpia que la pared; asoma el corazón de debajo. */
 function tapado(ctx: Ctx, m: Mano, b: Caja) {
   const Z = m.tono(ZOCALO);
   const x = b.x + 6, y = b.y + 7, w = b.w - 12, h = b.h - 14;
@@ -199,8 +194,7 @@ const LISTA: ((ctx: Ctx, m: Mano, b: Caja) => void)[] = [
   (ctx, m, b) => plantilla(ctx, b, SILUETAS.pajaro, m.F.tinta, 7),
 ];
 
-/** La diferencia `n` pinta el grafiti `n`, y tras el octavo vuelve el primero. Antes de la
- *  primera, la pared está limpia. */
+/** El nivel 0 es la pared limpia; tras el octavo vuelve el primero. */
 export const grafiti: Pincel = (ctx, m, b, _p, n) => {
   if (n > 0) LISTA[(n - 1) % LISTA.length](ctx, m, b);
 };

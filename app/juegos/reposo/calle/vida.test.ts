@@ -1,9 +1,4 @@
 // npx tsx app/juegos/reposo/calle/vida.test.ts
-//
-// Lo que protegen: que nunca pasen dos cosas a la vez y que entre dos haya calma, que la misma
-// familia no repita seguida, que el gato no se asome por otro sitio mientras duerme la siesta,
-// que cada suceso quepa en su tramo y salga a su hora, y que el reloj decida — la misma hora
-// da la misma escena.
 import { CALMA, SUCESOS, TRAMO, agenda, familiaDe, farolaLuz, sucesoDelTramo, viento, type Suceso } from "./vida";
 
 let fails = 0;
@@ -39,8 +34,7 @@ const cada = SEMANA / sucesos / 60;
 test("un suceso cada tres minutos, más o menos", cada > 2.5 && cada < 4, `${cada.toFixed(1)} min`);
 const ocupado = tiempoConAlgo / SEMANA;
 test("la mayor parte del tiempo no pasa nada", ocupado < 0.4, `${Math.round(ocupado * 100)} % con algo`);
-// El aire entre sucesos: todos, y más aún los de la misma familia. Con la siesta cuenta el
-// gato: no puede asomarse nada más acabar de dormir.
+// Calma entre sucesos, más aún en la misma familia; la siesta cuenta como gato.
 const lista: Suceso[] = [...vistos.keys()].map((k) => {
   const [id, inicio] = k.split("@");
   const dur = id === "siesta" ? 600 : SUCESOS[id as keyof typeof SUCESOS].dur;

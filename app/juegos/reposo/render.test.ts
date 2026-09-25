@@ -1,8 +1,4 @@
 // npx tsx app/juegos/reposo/render.test.ts
-//
-// Lo que protegen estos tests: que todo objeto del catálogo tenga dónde pintarse y tamaño para
-// que su cambio se vea, que la paleta no dé un salto al cruzar la medianoche, y que interpolar
-// en OKLCH sirva de verdad para lo que el plan dice que sirve.
 import { CATALOGO } from "./escena";
 import { LIENZO, PIEZAS, css, esNoche, luzDe, mezcla, paletaDe, tenir, type Oklch } from "./render";
 import { escena as calle } from "./calle/ventana";
@@ -28,8 +24,7 @@ test("todo objeto tiene con qué pintarse", sinPincel.length === 0, sinPincel.jo
 const detalleSinBase = Object.keys(DETALLE).filter((id) => !PINCELES[PIEZAS[id]?.arquetipo]);
 test("todo detalle va sobre un arquetipo que existe", detalleSinBase.length === 0, detalleSinBase.join(", "));
 
-// Un estado sin dibujo propio pinta el de otro, y el diff cuenta como diferencia un cambio que
-// nadie puede ver: el jugador busca algo que no está.
+// Un estado sin dibujo propio repite el de otro: el diff contaría un cambio que no se ve.
 const cortos = CATALOGO.filter((s) => Number.isFinite(s.escalones) && PIEZAS[s.id].variantes !== s.escalones);
 test("cada estado de un objeto con estados contados tiene su dibujo", cortos.length === 0,
   cortos.map((s) => `${s.id}: ${PIEZAS[s.id].variantes} dibujos para ${s.escalones} estados`).join(", "));
@@ -37,9 +32,7 @@ test("cada estado de un objeto con estados contados tiene su dibujo", cortos.len
 const sinCaja = ids.filter((id) => !calle.cajas[id]);
 test("la escena publicada coloca los 22", sinCaja.length === 0, sinCaja.join(", "));
 
-// Lo que el juego pide es ver qué ha cambiado, y el cambio de algo de menos de 20 px no lo ve
-// nadie sin lupa. Se mide en la vista por defecto: en escritorio la calle se sirve a 960 px,
-// el `ANCHO` de page.tsx.
+// El cambio de algo de menos de 20 px no se ve sin lupa. A 960 px, el `ANCHO` de page.tsx.
 const escala = 960 / LIENZO.ancho;
 const [menor, caja] = Object.entries(calle.cajas).reduce((a, b) => (b[1].w * b[1].h < a[1].w * a[1].h ? b : a));
 test("la pieza más pequeña mide 20 px o más de lado en escritorio",
@@ -63,9 +56,7 @@ test("la luz no salta en ningún cuarto de hora del día", brinco <= 14, `mayor 
 
 test("de noche es de noche y a mediodía no", esNoche(3) && esNoche(23) && !esNoche(13) && !esNoche(9));
 
-// Por qué OKLCH y no RGB: el paso del azul de noche al naranja del atardecer. En RGB el punto
-// medio se va a un gris sucio —es el "se apaga por el centro" del plan—; en OKLCH mantiene el
-// color. Se mide con la saturación del punto medio: cuánto separa el canal mayor del menor.
+// Por qué OKLCH: entre el azul de noche y el naranja del atardecer, RGB pasa por un gris sucio.
 const azul: Oklch = { l: 0.3, c: 0.09, h: 265 }, naranja: Oklch = { l: 0.68, c: 0.14, h: 50 };
 const satur = (c: number[]) => (Math.max(...c) - Math.min(...c)) / Math.max(1, Math.max(...c));
 const medioOklch = rgb(css(mezcla(azul, naranja, 0.5)));
@@ -83,8 +74,7 @@ test("el tono cruza por el arco corto", (() => {
 test("blanco y negro salen exactos", css({ l: 1, c: 0, h: 0 }) === "rgb(255 255 255)"
   && css({ l: 0, c: 0, h: 0 }) === "rgb(0 0 0)");
 
-// El teñido: "se tiñe el fondo a fondo y los objetos poco". Es medible — el recorrido de luz
-// del cielo a lo largo del día contra el del mismo objeto bajo esa luz.
+// El fondo se tiñe entero y los objetos poco.
 const horas = Array.from({ length: 48 }, (_, i) => i / 2);
 const recorrido = (xs: number[]) => Math.max(...xs) - Math.min(...xs);
 const pintura: Oklch = { l: 0.46, c: 0.12, h: 28 };
@@ -97,8 +87,7 @@ test("de noche baja el croma además de la claridad",
   tenir(pintura, luzDe(3)).c < tenir(pintura, luzDe(13)).c * 0.8,
   `${tenir(pintura, luzDe(3)).c.toFixed(3)} de noche vs ${tenir(pintura, luzDe(13)).c.toFixed(3)} de día`);
 
-// Dos objetos de colores distintos tienen que seguir siendo dos a cualquier hora: si la luz
-// los colapsa, el jugador ve un cambio donde no lo hay o deja de ver el que sí hay.
+// Dos colores distintos siguen siendo dos a cualquier hora.
 const otra: Oklch = { l: 0.56, c: 0.09, h: 250 };
 const juntos = horas.filter((h) => {
   const [a, b] = [tenir(pintura, luzDe(h)), tenir(otra, luzDe(h))];

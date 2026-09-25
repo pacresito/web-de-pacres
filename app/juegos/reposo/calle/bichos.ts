@@ -1,10 +1,7 @@
-// El gato, el perro y los pájaros: dibujados con primitivas, como el resto de la calle, para
-// que cada postura salga de unos pocos números —la cola, la cabeza, la zancada— y no de un
-// inventario de sprites.
+// El gato, el perro y los pájaros, con primitivas: cada postura sale de unos pocos números.
 //
-// **El contorno es lo que los separa del fondo.** Todo bicho se pinta dos veces: primero cada
-// forma en tinta desplazada un píxel a los cuatro lados, después en su color. A esta escala un
-// gato sin contorno es una mancha naranja sobre una fachada naranja.
+// **Todo bicho lleva contorno:** cada forma se pinta primero en tinta desplazada un píxel a los
+// cuatro lados y después en su color. Sin él, se funden con la fachada.
 import { px, type Ctx } from "./paleta";
 import type { Mano } from "./pincel";
 
@@ -51,8 +48,7 @@ function silueta(ctx: Ctx, formas: Forma[], tinta: string) {
 
 // ── El gato ─────────────────────────────────────────────────────────────────
 
-/** Un gato atigrado naranja: con la luz de la hora, como todo lo demás. De noche le brillan
- *  los ojos, que es lo primero que se ve de un gato a oscuras. */
+/** Los colores del gato atigrado naranja; de noche le brillan los ojos. */
 function pelaje(m: Mano) {
   const L = m.P.ladrillo;
   return {
@@ -61,8 +57,7 @@ function pelaje(m: Mano) {
   };
 }
 
-/** Sentado de espaldas, mirando la calle: la postura de un gato en una ventana. `giro` vuelve
- *  la cabeza (-1 a la izquierda, 1 a la derecha) y enseña un ojo; `cola` es el vaivén. */
+/** Sentado de espaldas, mirando la calle. `giro` vuelve la cabeza (-1 izquierda, 1 derecha). */
 export function gatoSentado(ctx: Ctx, m: Mano, cx: number, suelo: number, t: number, giro = 0, lado = 1) {
   const c = pelaje(m);
   const vaiven = Math.sin(t * 1.6) * 2.2 + Math.sin(t * 0.43) * 1.2;
@@ -149,9 +144,7 @@ export function gatoDormido(ctx: Ctx, m: Mano, cx: number, suelo: number, t: num
   px(ctx, cx - 10 + punta, suelo - 3, 3, 1, c.raya);
 }
 
-/** La cabeza de frente, asomando. `mira` desplaza las pupilas; `cierra` es un parpadeo.
- *  `cuerpo` es lo que asoma con ella —una cabeza sola flota—: los hombros si sube desde abajo,
- *  el lomo hacia fuera si entra por la derecha. */
+/** La cabeza de frente, asomando. `cuerpo` es lo que asoma con ella: una cabeza sola flota. */
 export function gatoCabeza(
   ctx: Ctx, m: Mano, cx: number, cy: number, mira: number, cierra: boolean,
   cuerpo?: "abajo" | "derecha",
@@ -188,7 +181,7 @@ export function gatoCabeza(
   px(ctx, cx + 10, cy + 2, 4, 1, c.luz);
 }
 
-/** La cola sola, colgando desde arriba del encuadre: el gato está en lo alto del armario. */
+/** La cola sola, colgando desde arriba del encuadre. */
 export function gatoCola(ctx: Ctx, m: Mano, x0: number, largo: number, t: number) {
   const c = pelaje(m);
   const pts: [number, number][] = [];
@@ -207,8 +200,7 @@ export function gatoCola(ctx: Ctx, m: Mano, x0: number, largo: number, t: number
 
 // ── El perro ────────────────────────────────────────────────────────────────
 
-/** Un perro pequeño, marrón con pechera blanca, a la escala de la calle —cabe tres veces en el
- *  contenedor—. Sus posturas: andando, olisqueando (cabeza abajo) y sentado. */
+/** Un perro pequeño, marrón con pechera blanca: andando, olisqueando o sentado. */
 export function perro(
   ctx: Ctx, m: Mano, cx: number, suelo: number, dir: 1 | -1, t: number,
   postura: "anda" | "huele" | "sentado" | "rasca", paso = 0,
@@ -219,8 +211,7 @@ export function perro(
   cx = R(cx);
   const meneo = R(Math.sin(t * 11) * 1.5);
   if (postura === "sentado" || postura === "rasca") {
-    // Sentado de perfil: el cuarto trasero en el suelo, el pecho erguido y la cabeza adelantada,
-    // con el hocico por delante. Con la cabeza encima del cuerpo parece un pingüino.
+    // Sentado de perfil, con la cabeza adelantada: encima del cuerpo parece un pingüino.
     const rasca = postura === "rasca" ? R(Math.sin(t * 22)) : 0;
     const o = (n: number) => (s < 0 ? n : 0);
     silueta(ctx, [

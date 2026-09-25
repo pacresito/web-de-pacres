@@ -1,11 +1,8 @@
 "use client";
 
-// La calle de verdad, a la hora de verdad, y nada más: se mira. Sin partida ni puntos: la
-// barra dice cuánto hace que miraste y cuántas cosas han cambiado desde entonces, y deja ver
-// la calle como estaba. Qué ha cambiado lo busca quien mira.
-//
-// La composición que se publica es la calle vista desde una ventana, y con vida: lo quieto se
-// repinta cada minuto y lo que se mueve —`calle/vida.ts`— doce veces por segundo encima.
+// La calle a la hora de verdad, vista desde una ventana. La barra dice cuándo miraste y cuántas
+// cosas han cambiado, y deja ver la calle como estaba. Lo quieto se repinta cada minuto; lo que
+// se mueve (`calle/vida.ts`), doce veces por segundo.
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import TerminalShell from "../../components/TerminalShell";
 import WhyFooter from "../../components/WhyFooter";
@@ -16,18 +13,15 @@ import { LIENZO, vistaDe, type Vista } from "./render";
 import { componer, pintarCapas, type Capas } from "./calle/animar";
 import { agenda } from "./calle/vida";
 
-/** Una sola calle para todos: la semilla no cambia nunca, o la calle sería otra. */
+/** Una sola calle para todos: cambiar la semilla cambia la calle. */
 const SEMILLA = "reposo";
 
-/** El ancho al que se sirve la calle, el de lo más ancho del laboratorio. En una ventana
- *  estrecha no encoge: se desplaza, que es lo que el plan admite en móvil — más pequeña, los
- *  objetos pequeños dejarían de verse. Maximizada crece hasta llenar la pantalla, nunca menos. */
+/** El ancho de la calle. En una ventana estrecha se desplaza en vez de encoger, o lo pequeño
+ *  dejaría de verse; maximizada crece hasta llenar la pantalla. */
 const ANCHO = 960;
 
-// La hora, releída cada minuto: con ella cambian la luz y lo que la calle tiene a esa hora. En
-// el servidor es 0 —la hora de allí no es la de nadie, y pintar con ella rompería la
-// hidratación con una calle a otra luz de la que traía el HTML—. Fija entre lecturas y no
-// `Date.now()` cada vez: un valor que cambia en cada lectura haría renderizar sin parar.
+// La hora, releída cada minuto. En el servidor es 0, o la hidratación traería otra luz; y fija
+// entre lecturas, porque un valor que cambia en cada lectura renderiza sin parar.
 const reloj = { t: 0 };
 function suscribirReloj(avisar: () => void) {
   const id = setInterval(() => { reloj.t = Date.now(); avisar(); }, 60e3);
@@ -36,8 +30,7 @@ function suscribirReloj(avisar: () => void) {
 const leerReloj = () => reloj.t || (reloj.t = Date.now());
 const relojDelServidor = () => 0;
 
-// Maximizada, la calle entera en la pantalla entera: lo que no cubre su proporción queda en
-// bandas, porque recortarla dejaría objetos fuera de la vista.
+// Maximizada, la calle entera con bandas: recortarla dejaría objetos fuera.
 function suscribirVentana(avisar: () => void) {
   window.addEventListener("resize", avisar);
   return () => window.removeEventListener("resize", avisar);
@@ -45,13 +38,11 @@ function suscribirVentana(avisar: () => void) {
 const leerPantalla = () => Math.floor(Math.min(window.innerWidth, (window.innerHeight * LIENZO.ancho) / LIENZO.alto));
 const pantallaDelServidor = () => ANCHO;
 
-/** Fotogramas por segundo de la vida: los de un pixel art, no los de la pantalla. A más, el
- *  vapor y la ropa se mueven de píxel en píxel igual, solo que gastando el triple. */
+/** Los de un pixel art: a más, se mueve igual de píxel en píxel y gasta el triple. */
 const FPS = 12;
 
-// La visita anterior vive en el navegador y no en un servidor: cada dispositivo tiene su «la
-// última vez», sin nombre ni cuenta. Se guarda lo que se vio —los niveles— y no solo el
-// instante, para que retocar un reloj del catálogo no reescriba lo que alguien ya miró.
+// La visita anterior vive en el navegador, sin cuenta. Se guardan los niveles vistos y no solo
+// el instante, para que retocar un reloj no reescriba lo que alguien ya miró.
 const CLAVE = "reposo:visita";
 const MS_DIA = 24 * 3600e3;
 interface Visita { t: number; niveles: Snapshot }
@@ -66,9 +57,8 @@ function guardarVisita(t: number) {
   try { localStorage.setItem(CLAVE, JSON.stringify({ t, niveles: snapshot(escena(SEMILLA, t)) })); } catch {}
 }
 
-// Se lee una vez al entrar y no se mueve mientras se está: la referencia es la visita de
-// antes, aunque esta ya se esté guardando. La primera vez no hay visita de antes y la
-// referencia es el momento de entrar. Se olvida al salir, para releerla al volver sin recargar.
+// Se lee al entrar y no se mueve mientras se mira, aunque esta visita ya se esté guardando. La
+// primera vez, la referencia es el momento de entrar. Se olvida al salir de la página.
 let anterior: Visita | undefined;
 const leerAnterior = () => {
   if (anterior) return anterior;
@@ -95,8 +85,7 @@ export default function Reposo() {
   const fecha = new Date(ahora);
   const hora = fecha.getHours() + fecha.getMinutes() / 60;
 
-  // Lo que el bucle lee en cada fotograma. Va en refs porque el bucle vive lo que la página y
-  // lo quieto se repinta aparte, cada minuto.
+  // Lo que el bucle lee en cada fotograma.
   const capas = useRef<Capas | null>(null);
   const vista = useRef<Vista | null>(null);
   const dibujar = useRef<(t: number) => void>(() => {});
@@ -119,9 +108,8 @@ export default function Reposo() {
     return () => cancelAnimationFrame(id);
   }, []);
 
-  // Solo cuenta como visita quedarse un minuto mirando: cargar y cerrar no gasta la
-  // referencia. Y mientras se mira se sigue guardando, así la próxima compara contra lo último
-  // que se vio; con la pestaña oculta no, que nadie está mirando.
+  // Cuenta como visita quedarse un minuto mirando, y se sigue guardando mientras se mira (con la
+  // pestaña visible): la próxima compara contra lo último que se vio.
   useEffect(() => {
     const id = setInterval(() => {
       if (document.visibilityState === "visible") guardarVisita(Date.now());
@@ -134,9 +122,8 @@ export default function Reposo() {
   const dias = visita ? Math.max(0, Math.floor((ahora - visita.t) / MS_DIA)) : 0;
   const cuando = dias === 0 ? "hoy" : dias === 1 ? "ayer" : `hace ${dias} días`;
 
-  // Lo quieto, una vez por minuto (o al cambiar de ancho o de «antes»): la calle a su hora, en
-  // capas. La de antes se pinta con la luz de ahora: con la suya, cambiaría todo y no se vería
-  // qué cambió.
+  // Lo quieto, una vez por minuto. La calle de antes se pinta con la luz de ahora: con la suya
+  // cambiaría todo y no se vería qué cambió.
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || ahora === 0) return;
@@ -231,8 +218,7 @@ export default function Reposo() {
           display: flex; flex-direction: column; gap: 14px;
         }
         .rp-pista { margin: 0; color: var(--t-ink3); font-size: 12px; }
-        /* El conmutador es el propio dato, subrayado a puntos para que se sepa pulsable sin
-           parecer un botón: la barra informa, y mirar el pasado es un gesto discreto. */
+        /* El dato es el conmutador: subrayado a puntos, pulsable sin parecer un botón. */
         .rp-antes {
           cursor: pointer; color: var(--t-ink2); font-variant-numeric: tabular-nums;
           text-decoration: underline dotted; text-underline-offset: 3px;
@@ -241,9 +227,8 @@ export default function Reposo() {
         .rp-antes.es-antes, .rp-antes:active { color: var(--t-accent); }
         .rp-antes.es-antes { text-decoration-style: solid; }
         @media (hover: hover) { .rp-antes:hover { color: var(--t-accent); } }
-        /* El lienzo manda: si no cabe, la caja se desplaza en vez de encoger la calle. El filo
-           va en outline y no en border, que ocupa sitio: la caja mediría dos píxeles menos que
-           la calle y se desplazaría siempre. */
+        /* Si no cabe, se desplaza. El filo en outline: un border ocupa sitio y la haría
+           desplazarse siempre. */
         .rp-caja {
           width: 100%; min-width: 0; overflow-x: auto;
           outline: 1px solid var(--t-ink4); border-radius: 3px;
