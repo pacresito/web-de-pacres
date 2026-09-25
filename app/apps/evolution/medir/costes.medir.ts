@@ -1,17 +1,15 @@
-// Las cifras que justifican las constantes del motor — `npx tsx app/apps/evolution/costes.medir.ts`.
+// Las cifras de las constantes del motor — `npx tsx app/apps/evolution/medir/costes.medir.ts`.
+// No es un test: mide. Fuera del build.
 //
-// **No es un test: no falla, mide.** Fuera del build, como el resto de medidores. Cuatro
-// preguntas, y ninguna es de opinión:
-//
-// 1. ¿La población se sostiene sin extinguirse siempre, y por debajo del techo que fija la comida?
-// 2. ¿Se asienta cada gen, o hay alguno mejor cuanto más alto (la regla 1, que invalida el modelo)?
+// 1. ¿Se sostiene la población, por debajo del techo de la comida?
+// 2. ¿Se asienta cada gen, o hay alguno mejor cuanto más alto?
 // 3. ¿Qué selecciona la escasez, y qué la abundancia?
 // 4. ¿Cuánto dura un día, y cuánto hay que mirar para ver una generación?
 
 import {
   CONFIG, RASGOS, correrDia, REFERENCIA, crearMundo, masaDe, resumen,
   type Bicho, type Config, type Rasgo,
-} from "./engine";
+} from "../engine";
 
 const SEMILLAS = ["hola", "pablo", "claudio", "mar", "brizna", "raiz", "sal", "duna"];
 const DIAS = 120;
@@ -60,32 +58,13 @@ console.log("\nA leer: el techo teórico es tantos bichos como bocados. Un censo
 console.log("sin hambre; uno muy por debajo, un mundo donde volver a casa es el problema y no encontrar comida.");
 
 // ── 2. La regla 1: ningún gen mejor cuanto más alto ──────────────────────────
-// **Con la población mezclada, no con clones.** Arrancar un mundo entero con el gen a ×3 y ver
-// dónde acaba no mide selección: mide si ese fundador es viable —con el empuje a ×0,3 se
-// extinguían las ocho semillas y la casilla no decía nada— y encima deja fuera a los genes que
-// solo significan algo frente a otro, que es justo la fiereza. Aquí media población arranca con
-// el gen bajo y media con el alto, en el mismo mundo, compitiendo entre sí.
-//
-// **Y un solo abanico no basta: hay que saber antes cuáles de sus extremos son habitables.** Un
-// duelo entre un valor viable y uno letal no mide selección, mide viabilidad, y deja al
-// superviviente pegado a su extremo con toda la pinta de un gen sin techo. Por eso se mide
-// primero qué valores sostienen un mundo de clones, y el duelo cuyo extremo cae fuera de esa
-// ventana ni se corre.
-//
-// **La posición se lee en escala logarítmica**, porque los genes mutan multiplicando: el punto
-// neutro de una deriva sin dirección es la media geométrica del abanico, no la aritmética.
-//
-// Es la sección cara del medidor —la ventana son ocho mundos de clones por gen, y cada duelo son
-// 300 días— y por eso corre menos días la parte que solo tiene que distinguir vivo de muerto.
+// Con la población mezclada —media abajo y media arriba, compitiendo— y solo entre valores
+// habitables: un duelo contra un valor letal mide viabilidad, no selección. En escala logarítmica.
 console.log("\n## Ningún gen puede ser mejor cuanto más alto\n");
 
 /** Múltiplos del fundador que se barren; cada duelo enfrenta un valor con el que va dos más allá. */
 const ESCALA = [1 / 8, 1 / 4, 1 / 2, 1, 2, 4, 8, 16];
-// **El veredicto de un duelo ya está a los 100 días**, comprobado en `fiereza` y `retorno`: los seis
-// abanicos dicen lo mismo que a 300 y la posición se mueve menos de 0,1. Los dos grupos compiten
-// desde el primer día y la cosa se decide pronto. Lo que sí necesitaría 300 es ver derivar a una
-// población **homogénea**, que al día 100 todavía no se ha separado de su arranque — pero eso no es
-// lo que esta sección pregunta.
+// A los 100 días el duelo ya está decidido: a 300 dice lo mismo.
 const DIAS_DUELO = 100;
 const DIAS_VIABLE = 100;
 
@@ -133,10 +112,7 @@ for (const r of RASGOS) {
   fila(["clones", ...ventana.map((n) => `${n}/${SEMILLAS.length}`)]);
   fila(["abanico", "final", "pos", "vivas", "veredicto"]);
   for (let i = 0; i + 1 < valores.length; i++) {
-    // El duelo con un extremo fuera de la ventana no se corre: su veredicto sería el de la
-    // viabilidad disfrazado de selección, que es el error que esta sección existe para no cometer.
-    // Pero rendirse ahí deja mudos a los genes cuya ventana entera es más estrecha que el abanico
-    // —empuje y talla viven en un factor 2—, así que el abanico se encoge a ×2 antes de callarse.
+    // Con un extremo fuera de la ventana no se corre; antes de callarse, el abanico se encoge a ×2.
     const j = i + 2 < valores.length && ventana[i + 2] >= MITAD ? i + 2 : i + 1;
     const bajo = valores[i], alto = valores[j];
     const rango = `${fmt(bajo, 1).trim()}–${fmt(alto, 1).trim()}`;

@@ -1,16 +1,13 @@
-// Las palabras del dado contra su criba — `npx tsx app/apps/evolution/semillas.medir.ts [palabra,…]`.
+// La criba del dado — `npx tsx app/apps/evolution/medir/semillas.medir.ts [palabra,…]`.
+// No es un test: mide. Fuera del build.
 //
-// **No es un test: no falla, mide.** Ciento ochenta mundos a 300 días son unos minutos, demasiado
-// para correr con cada cambio; se pasa cuando cambia el motor, que es cuando la lista puede caducar.
-// Sin argumentos mide `PALABRAS`; con una lista separada por comas, mide candidatas.
-//
-// Lo que sale: las que no pasan —extintas antes de `DIAS`, o en las islas con una de las dos vacía— y
-// el reparto de las que sí por forma, familia de mundo y clima, que es lo que hay que mantener parejo.
+// Se pasa cuando cambia el motor. Saca las que no pasan —extintas antes de `DIAS`, o con una isla
+// vacía— y el reparto de las que sí por forma, diseño y clima.
 
-import { URNA, amanecer, anochecer, crearMundo, formaDe, tick } from "./engine";
-import { DESIGNS, designFor } from "./designs";
-import { FORMAS, isla } from "./formas";
-import { PALABRAS } from "./semillas";
+import { URNA, amanecer, anochecer, crearMundo, formaDe, tick } from "../engine";
+import { DESIGNS, designFor } from "../designs";
+import { FORMAS, isla } from "../formas";
+import { PALABRAS } from "../semillas";
 
 const DIAS = 300;
 

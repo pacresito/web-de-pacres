@@ -1,31 +1,15 @@
-// Dónde acaba cada gen cuando el mundo lleva mil días — `npx tsx app/apps/evolution/convergencia.medir.ts`.
+// Dónde acaba cada gen al día mil — `npx tsx app/apps/evolution/medir/convergencia.medir.ts`.
+// No es un test: mide. Fuera del build.
 //
-// **No es un test: no falla, mide.** Contesta las tres preguntas que deciden cómo se pinta un
-// genoma, y que no se pueden contestar a ojo:
-//
-// 1. **¿Un gen converge o abre abanico?** Los mundos arrancan todos del **mismo** fundador, así que
-//    la vara es el propio abanico temprano: si al día mil los mundos están más juntos que al cien,
-//    el gen converge y el mundo lo empuja a un sitio; si están más separados, cada partida se sigue
-//    quedando con el suyo. La razón entre las dos dispersiones es el número — sin una vara, "están
-//    repartidos entre 5 y 15" no dice si eso es mucho o poco.
-// 2. **Dónde está el centro de los mundos desarrollados**, que es a dónde se movería el fundador.
-// 3. **Cuánto mide la población en un día concreto**, que es el contraste que se ve en pantalla
-//    entre dos bichos a la vez, y que no es lo mismo que lo anterior ni se mide con ello.
-//
-// Todo en octavas —los genes mutan multiplicando, así que la distancia natural es log2 y el
-// promedio, el geométrico—, salvo la sociabilidad, que lleva signo y vive en unidades.
-//
-// Un mundo extinto no cuenta para el centro ni para la dispersión: promediar con él mete el sesgo
-// de que los que se mueren pronto se mueren de una cosa concreta.
+// 1. ¿Converge o abre abanico? La vara es el abanico del día cien: todos parten del mismo fundador.
+// 2. El centro de los mundos desarrollados: a dónde se movería el fundador.
+// 3. Lo ancha que es una población en un día: el contraste que se ve en pantalla.
+// Todo en octavas (unidades en la sociabilidad). Los mundos extintos no cuentan.
 
-import { FUNDADOR, RASGOS, banda, correrDia, REFERENCIA, crearMundo, signado, type Genoma, type Rasgo } from "./engine";
-import { DESVIO } from "./designs";
+import { FUNDADOR, RASGOS, banda, correrDia, REFERENCIA, crearMundo, signado, type Genoma, type Rasgo } from "../engine";
+import { DESVIO } from "../designs";
 
-// **Cuarenta y ocho y no veinte**, porque los genes no se dejan fijar igual de bien: `talla` y
-// `visión` acaban en el mismo sitio en todos los mundos, pero `fiereza` y `retorno` abren un
-// abanico de cinco a diez veces el de partida —cada mundo se queda con el suyo— y veinte muestras
-// de ese abanico dan un centro que rebota un tercio de una pasada a la siguiente. Cuesta minutos y
-// se corre cuando cambia la física, no cada día.
+// Cuarenta y ocho mundos: con menos, el centro de fiereza y retorno rebota entre pasadas.
 const SEMILLAS = [
   "hola", "pablo", "mar", "brizna", "duna", "carmen", "sal", "raiz",
   "ambar", "liquen", "orilla", "vela", "junco", "greda", "ola", "esparto",
@@ -69,12 +53,7 @@ type Partida = {
   max: Record<Rasgo, number>;
 };
 
-/**
- * Todos los bichos vivos, muestreados cada `PASO_MUESTRA` días y de todos los mundos. Los extremos
- * exactos los da un mundo entero, pero un mínimo absoluto es **un bicho**: el mutante más raro de
- * trescientos mil, y no dice dónde vive nadie. Por eso al lado van los cuantiles de esta muestra,
- * que sí aguantan que el más raro haya sido más raro de lo normal.
- */
+/** Todos los vivos cada `PASO_MUESTRA` días, de todos los mundos: los cuantiles aguantan al mutante raro. */
 const PASO_MUESTRA = 10;
 const muestra = {} as Record<Rasgo, number[]>;
 for (const r of RASGOS) muestra[r] = [];
@@ -113,8 +92,7 @@ for (const s of SEMILLAS) {
       }
     }
   }
-  // Un mundo que se extingue antes de un corte no tiene mediana allí: se rellena con `null` para
-  // que la tabla no desalinee las columnas de los que sí llegaron.
+  // Extinto antes del corte: `null`, para no desalinear la tabla.
   for (const r of RASGOS) while (cortes[r].length < CORTES.length) cortes[r].push(null);
   const grosor = {} as Record<Rasgo, number>;
   for (const r of RASGOS) grosor[r] = grosores[r].length ? med(grosores[r]) : NaN;
@@ -132,10 +110,7 @@ if (vivas.length < 4) {
   process.exit(0);
 }
 
-// ── 1. ¿Converge o abre abanico? ─────────────────────────────────────────────
-//
-// Las dos dispersiones se miden **en la misma vara** —octavas alrededor de la mediana del grupo—,
-// así que la razón entre ellas es adimensional y comparable entre genes.
+// ── 1. ¿Converge o abre abanico? Las dos dispersiones en la misma vara ───────
 console.log("## ¿Converge o abre abanico? Dispersión entre mundos, pronto y al acabar\n");
 console.log([col("gen", 13), col("día " + CORTES[0]), col("día " + DIAS), col("razón"), col("veredicto", 13)].join(" "));
 const centro = {} as Record<Rasgo, number>;
@@ -168,10 +143,7 @@ console.log("\nA leer: **centro** es el fundador que propone la medida, y **muev
 console.log("el de hoy, en octavas (unidades en la sociabilidad). Un gen que converge y a la vez pide moverse");
 console.log("mucho es el que más gana con el cambio: hoy nace lejos de donde va a vivir.\n");
 
-// ── 3. El contraste que se ve en pantalla ────────────────────────────────────
-//
-// Es otra cosa que lo anterior y se confunde fácil: entre mundos puede haber un abanico enorme y
-// dentro de un día, ninguno. Lo que decide si dos bichos a la vez se distinguen es esto.
+// ── 3. El contraste que se ve en pantalla: dentro de un día, no entre mundos ─
 console.log("## Grosor de la población en un día, contra el abanico entre mundos\n");
 console.log([col("gen", 13), col("grosor"), col("abanico"), col("razón")].join(" "));
 for (const r of RASGOS) {
@@ -200,10 +172,7 @@ console.log("A leer: una columna que crece y luego baja es un gen que fluctúa, 
 console.log("vía buena. Una que sigue subiendo en el último tramo es un mundo al que le faltan días, no un gen");
 console.log("que se haya asentado.\n");
 
-// ── 5. La población entera del día 1000, para poner los umbrales ─────────────
-//
-// Sobre bichos y no sobre medianas de mundo: un umbral marca individuos, así que la fracción que
-// marca se lee en la distribución de individuos. Todos los mundos vivos juntos.
+// ── 5. La población del día 1000, sobre individuos: un umbral marca bichos ──
 console.log(`## Todos los bichos vivos al día ${DIAS}, por cuantiles — de aquí salen los umbrales\n`);
 const todos = vivas.flatMap((p) => p.finales);
 console.log(`${todos.length} bichos de ${vivas.length} mundos.\n`);
@@ -216,21 +185,9 @@ console.log("\nA leer: un adorno que quiera marcar al cuarto más fiero se pone 
 console.log("un número redondo. Y son cuantiles del **recorrido**: la escala con la que se pinta es otra cosa, y");
 console.log("sale de la sección siguiente.\n");
 
-// ── 6. La escala de pintado que proponen estas cifras ────────────────────────
-//
-// **No es el recorrido de arriba, y por eso va aparte.** El recorrido tiene que caber entero, que es
-// lo único que contesta «¿hasta dónde ha llegado este linaje?»; la escala de pintado tiene que
-// gastar sus dos mitades donde vive la gente. Con una sola tabla para las dos cosas, el gen de cola
-// larga se pinta al revés de como se reparte: tres cuartos de la población apretados en media escala
-// y la otra media para cuatro raros.
-//
-// Va **centrada en el fundador y no en el p50**: los umbrales de los adornos están a ±`DESVIO` del
-// centro, así que un centro que no sea el fundador le pone dientes el primer día. El medio ancho es
-// el radio que deja dentro al 90% de los bichos muestreados —**los mismos de la sección 7**, que es
-// de donde sale el recorrido: dos tablas de la misma población, o «recortar la cola» no significa
-// nada— —simétrico por construcción, así que una cola larga
-// por un lado no estira también el otro— y lo de fuera se recorta: pasado el borde el cuerpo deja de
-// cambiar, que es lo que cuesta ver bien el resto.
+// ── 6. La escala de pintado (`SEMI`) ─────────────────────────────────────────
+// Centrada en el fundador y simétrica: el radio que deja dentro al 90% de los bichos de la
+// sección 7. Lo de fuera se recorta.
 console.log("## Propuesta de escala de pintado, centrada en el fundador\n");
 console.log([col("gen", 13), col("fundador"), col("±oct"), col("÷ extremo"), col("× extremo"),
   col("sale−"), col("sale+"), col("p25"), col("p50"), col("p75"), col("adorno−"), col("adorno+")].join(" "));
@@ -253,15 +210,9 @@ console.log("población, y unos cuartiles que caben en un tercio de la escala so
 console.log("**adorno+**, la fracción de bichos que cruza cada umbral: los que se pintan con pala o con brazo, con");
 console.log("pincho o con aleta. Uno que pase de la mitad es un adorno que ha dejado de decir nada.");
 
-// ── 7. El fundador que proponen los extremos ────────────────────────────────
-//
-// Lo que pidió Pablo: el punto medio entre lo más bajo y lo más alto que ha llegado a existir.
-// **En octavas**, que es donde vive un gen que muta multiplicando — la media aritmética de 1 y 16
-// es 8,5 y la que parte el recorrido por la mitad es 4.
-//
-// Al lado, la misma cuenta sobre el p01 y el p99 de todos los bichos muestreados. Los dos deberían
-// dar casi lo mismo; si no lo dan, el extremo absoluto es un mutante suelto y el fundador estaría
-// saliendo de una anécdota en vez de una población.
+// ── 7. El fundador que proponen los extremos (`RECORRIDO`) ───────────────────
+// El punto medio en octavas entre lo más bajo y lo más alto, y lo mismo sobre p01 y p99: si no
+// coinciden, el extremo absoluto es un mutante suelto.
 console.log("\n## El fundador que proponen los extremos\n");
 console.log(`Extremos sobre todos los mundos vivos; cuantiles sobre ${muestra[RASGOS[0]].length} bichos muestreados cada ${PASO_MUESTRA} días.\n`);
 console.log([col("gen", 13), col("mín"), col("máx"), col("medio"), col("p01"), col("p99"), col("medio p"), col("fundador")].join(" "));

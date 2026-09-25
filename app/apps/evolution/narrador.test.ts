@@ -1,10 +1,5 @@
-// Los tests del diario — `npx tsx app/apps/evolution/narrador.test.ts`.
-// No es parte del build; corre sin navegador y en segundos.
-//
-// Como los del reparto, **no comprueban el mundo sino que contarlo no lo estropea ni se pierde
-// nada**: que volver atrás reescribe la misma crónica, que ninguna línea se repite, que lo que
-// ocurrió acaba escrito aunque ese día ya hubiera línea, y que un mundo largo no se convierte en
-// un teletipo.
+// Tests del diario — `npx tsx app/apps/evolution/narrador.test.ts`. Comprueban que contar el
+// mundo no lo estropea ni pierde nada.
 import { copiar, correrDia, crearMundo, CONFIG, type Mundo } from "./engine";
 import { crearDiario, narrar, type Diario } from "./narrador";
 
@@ -17,7 +12,7 @@ function check(nombre: string, ok: boolean, detalle = "") {
 const SEMILLA = "raiz";
 const DIAS = 120;
 
-/** Corre una partida narrando cada amanecer, que es donde la página llama. */
+/** Una partida narrada en cada amanecer, como en la página. */
 function partida(dias: number, semilla = SEMILLA) {
   const m = crearMundo(semilla);
   const d = crearDiario();
@@ -27,10 +22,7 @@ function partida(dias: number, semilla = SEMILLA) {
 
 const firma = (d: Diario) => d.eventos.map((e) => `${e.dia}:${e.clave}:${e.texto}`).join("|");
 
-// 1. Volver atrás y revivir escribe la misma crónica. El diario no guarda «lo que ya vi» aparte
-//    del mundo —las condiciones son acumulados que viven en él y se restauran con él—, así que
-//    esto es lo que dice que esa decisión se sostiene. Si se colara un contador propio, aquí se
-//    vería: el mundo volvería al día 20 y el narrador no.
+// 1. Volver atrás y revivir escribe la misma crónica: el diario no guarda nada fuera del mundo.
 {
   const { d: recto } = partida(DIAS);
 
@@ -48,8 +40,7 @@ const firma = (d: Diario) => d.eventos.map((e) => `${e.dia}:${e.clave}:${e.texto
     `${d.eventos.length} líneas vs ${recto.eventos.length}`);
 }
 
-// 2. Una clave es una vez, y un día es como mucho una línea. Las dos juntas son la promesa del
-//    diario: sin la primera se repetiría, sin la segunda sería el teletipo que se descartó.
+// 2. Una clave es una vez, y un día es como mucho una línea.
 {
   const { d } = partida(DIAS);
   const claves = new Set(d.eventos.map((e) => e.clave));
@@ -60,9 +51,7 @@ const firma = (d: Diario) => d.eventos.map((e) => `${e.dia}:${e.clave}:${e.texto
     `${d.eventos.length} líneas en ${dias.size} días`);
 }
 
-// 3. Lo que pasó acaba escrito. Un día puede traer tres noticias y solo escribirse una, así que
-//    la condición tiene que seguir cumpliéndose mañana y no evaporarse: lo que se mira aquí son
-//    las cinco cuentas del motor, que son las únicas comprobables desde fuera.
+// 3. Lo que pasó acaba escrito, aunque ese día ya hubiera línea.
 {
   const { m, d } = partida(DIAS);
   const claves = new Set(d.eventos.map((e) => e.clave));
@@ -74,8 +63,7 @@ const firma = (d: Diario) => d.eventos.map((e) => `${e.dia}:${e.clave}:${e.texto
   check("la cola se drena: lo que ocurrió está escrito", falta.length === 0, falta.join(", "));
 }
 
-// 4. Un mundo largo no se vuelve un teletipo. El diario habla al principio y se va callando: si
-//    creciera con los días, es que se ha colado un evento que se dispara con la costumbre.
+// 4. Un mundo largo no se vuelve un teletipo: el diario se va callando.
 {
   const { d } = partida(DIAS);
   const tarde = d.eventos.filter((e) => e.dia > DIAS / 2).length;
@@ -84,8 +72,7 @@ const firma = (d: Diario) => d.eventos.map((e) => `${e.dia}:${e.clave}:${e.texto
   check("el diario cabe en una pantalla", d.eventos.length <= 24, `${d.eventos.length} líneas en ${DIAS} días`);
 }
 
-// 5. La extinción cierra el diario: de un mundo vacío no hay más que contar, y las medianas de
-//    una población que no existe no son noticia sino un NaN.
+// 5. La extinción cierra el diario.
 {
   let semilla = "", dias = 0;
   for (const s of ["frio", "yermo", "sal", "duna", "hielo", "cardo", "sequia", "roca"]) {

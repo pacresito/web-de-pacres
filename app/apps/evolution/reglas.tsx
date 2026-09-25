@@ -1,31 +1,23 @@
 "use client";
 
 import Asa from "./asa";
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import {
   C_BASAL, C_EMPUJE, C_VISION, CONFIG, EFICIENCIA, E_COMIDA, GIRO, RADIO_COMIDA, TICKS_BOCADO, URNA,
+  type Config, type Mundo,
 } from "./engine";
+import { usePanel } from "./panel";
 
-/**
- * Todas las reglas del mundo, de una vez. Es lo que la leyenda no contesta: allí está qué hace
- * cada gen y aquí, contra qué juegan los seis.
- *
- * **Ni una cifra escrita a mano.** Cada número de aquí sale de la constante que lo manda en el
- * motor, así que recalibrar un exponente cambia esta tabla sola. Escrita a mano mentiría en
- * silencio en cuanto alguien mueva un coste, que es la única forma de error que aquí no se ve
- * venir: una tabla de reglas equivocada parece una tabla de reglas.
- */
+/** Todas las reglas del mundo. Ni una cifra escrita a mano: salen de las constantes del motor. */
 
-/** Un número para leer, no para calcular: coma decimal y, por debajo de la milésima, potencia. */
+/** Un número para leer: coma decimal y, por debajo de la milésima, potencia. */
 function num(x: number): string {
   if (x === 0) return "0";
   const a = Math.abs(x);
   if (a >= 1) return String(+x.toFixed(3)).replace(".", ",");
   if (a >= 1e-3) {
-    // Los ceros de la cola se quitan **solo si hay coma**: en un entero se llevarían el número
-    // (un 10 acabaría en 1), que es justo la clase de error que esta tabla está para no cometer.
     const s = x.toFixed(3 - Math.floor(Math.log10(a)));
-    return s.replace(/0+$/, "").replace(".", ",");
+    return s.replace(/0+$/, "").replace(".", ",");   // aquí siempre hay coma: no se come un 10
   }
   const exp = Math.floor(Math.log10(a));
   const mant = +(x / 10 ** exp).toFixed(2);
@@ -35,28 +27,27 @@ function num(x: number): string {
 const SUPS: Record<string, string> = { "-": "⁻", 0: "⁰", 1: "¹", 2: "²", 3: "³", 4: "⁴", 5: "⁵", 6: "⁶", 7: "⁷", 8: "⁸", 9: "⁹" };
 const sup = (n: number): string => String(n).split("").map((c) => SUPS[c] ?? c).join("");
 
-/** Porcentaje entero, redondeado: multiplicar por cien en binario no siempre cae redondo. */
 const pct = (x: number): string => `${Math.round(x * 100)}%`;
 
-/** Cada cuánto se vuelve a mirar el clima, en ms. Solo cambia al sembrar: no hay prisa. */
-const REFRESCO = 700;
+const CASA: Record<Config["forma"], string> = {
+  caja: "todo el perímetro",
+  donut: "alrededor del hueco central",
+  barrera: "todo el perímetro, a los dos lados del muro",
+  trebol: "todo el borde del disco",
+  islas: "el perímetro de cada isla",
+};
 
 type Fila = [que: string, cuanto: string, porque: string];
 type Seccion = { titulo: string; filas: Fila[] };
 
-/**
- * **Todo sale de `CONFIG` menos el clima**, que es el único campo que la semilla sortea: el mundo
- * se construye con `{...CONFIG}` y le cambia `comidas`. Pedirle el resto al mundo vivo obligaría a
- * leer su ref mientras se pinta, que es justo lo que React no quiere.
- */
-function secciones(comidas: number): Seccion[] {
-  const cfg = { ...CONFIG, comidas };
+function secciones(cfg: Config): Seccion[] {
   return [
     {
       titulo: "el mundo",
       filas: [
+        ["la forma", cfg.forma, "la sortea la semilla: decide lo lejos que queda la comida y quién se encuentra con quién"],
         ["tamaño", `${cfg.ancho} × ${cfg.alto}`, "medido para que el suelo se barra: más grande, el centro no lo pisa nadie"],
-        ["casa", `franja de ${cfg.casa}`, `todo el perímetro; pisarla ya es estar a salvo, y a ${num(cfg.casa / 2)} del borde se ha llegado del todo`],
+        ["casa", `franja de ${cfg.casa}`, `${CASA[cfg.forma]}; pisarla ya es estar a salvo, y a ${num(cfg.casa / 2)} del borde se ha llegado del todo`],
         ["la jornada", `${cfg.ticksDia} ticks`, "se acaba cuando se acaba: el que sigue fuera hace noche donde le pilló"],
         ["la luz", "4·u·(1 − u)", "u es lo que lleva corrido el día: cero al alba y al ocaso, uno al mediodía"],
         ["el clima", `${cfg.comidas} bocados al día`, `lo sortea la semilla entre ${URNA.join(", ")} — es el techo de la población`],
@@ -114,27 +105,42 @@ function secciones(comidas: number): Seccion[] {
   ];
 }
 
-export default function Reglas({ clima, cerrar }: { clima: () => number; cerrar: () => void }) {
-  // El de fábrica hasta que conteste el mundo, que es el mismo fotograma. Y se sigue mirando:
-  // sembrar con esto abierto cambia el clima, y unas reglas del mundo anterior no se ven mal.
-  const [comidas, setComidas] = useState(CONFIG.comidas);
-  useEffect(() => {
-    const leer = () => setComidas(clima() || CONFIG.comidas);
-    leer();
-    const id = window.setInterval(leer, REFRESCO);
-    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") cerrar(); };
-    window.addEventListener("keydown", esc);
-    return () => { window.clearInterval(id); window.removeEventListener("keydown", esc); };
-  }, [clima, cerrar]);
+export default function Reglas({ mundo, cerrar }: { mundo: () => Mundo | null; cerrar: () => void }) {
+  // Se sigue mirando: sembrar con el panel abierto cambia el mundo.
+  const [cfg, setCfg] = useState<Config>(CONFIG);
+  const leer = useCallback(() => setCfg(mundo()?.cfg ?? CONFIG), [mundo]);
+  usePanel(cerrar, leer);
 
   return (
-    <div className="rg-panel">
+    <div className="ev-panel rg-panel">
+      <style>{`
+        .rg-panel { border: 1px solid var(--border); border-radius: 6px; padding: 0.9rem 1rem 1.2rem; }
+        .rg-seccion { margin-top: 0.9rem; }
+        .rg-titulo {
+          font-size: 0.66rem; font-weight: 600; letter-spacing: 0.09em; color: var(--t-ink2);
+          border-bottom: 1px solid var(--border); padding-bottom: 0.25rem;
+        }
+        /* En rejilla: en flex, la nota más larga fijaría el ancho de la tabla. */
+        .rg-fila {
+          display: grid; grid-template-columns: minmax(0, 8.5rem) minmax(0, 12rem) minmax(0, 1fr);
+          gap: 0.2rem 0.9rem; align-items: baseline;
+          border-top: 1px solid var(--t-rule2); padding: 0.3rem 0; font-size: 0.66rem;
+        }
+        .rg-fila:first-of-type { border-top: none; }
+        .rg-que { color: var(--t-ink); font-weight: 600; letter-spacing: 0.03em; }
+        .rg-cuanto { color: var(--t-accent); font-variant-numeric: tabular-nums; }
+        .rg-porque { color: var(--t-ink3); line-height: 1.45; }
+        @media (max-width: 620px) {
+          .rg-fila { grid-template-columns: minmax(0, 1fr) minmax(0, auto); }
+          .rg-porque { grid-column: 1 / -1; }
+        }
+      `}</style>
       <Asa cerrar={cerrar} />
-      <div className="rg-cabecera">
+      <div className="ev-cabecera">
         <b>las reglas</b>
         <button className="ev-btn muted ev-cerrar" onClick={cerrar}>cerrar</button>
       </div>
-      {secciones(comidas).map((s) => (
+      {secciones(cfg).map((s) => (
         <section key={s.titulo} className="rg-seccion">
           <h3 className="rg-titulo">{s.titulo}</h3>
           {s.filas.map(([que, cuanto, porque], i) => (

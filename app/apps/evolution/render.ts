@@ -1,111 +1,50 @@
-// El bucle de pintado de evolution: el mundo entero a escala, la comida del día y cada bicho con su
-// genoma en el cuerpo. Sin React ni estado propio.
-//
-// **Aquí no hay ninguna forma.** Todo el vocabulario —cuerpos, comida, suelo y paleta— vive en
-// `designs.ts`, y este módulo solo sabe dónde va cada cosa y en qué orden. La semilla elige el
-// diseño, así que este bucle tiene que servir igual para un pez de papel y para un instrumento de
-// rectas: en cuanto empiece a saber de aletas, el siguiente diseño no cabrá.
+// El pintado de evolution: el mundo a escala, la comida y cada bicho con su genoma en el cuerpo.
+// Las formas viven en `designs.ts`; aquí solo dónde va cada cosa y en qué orden.
 
 import { DISOLUCION, MARCA, RADIO_COMIDA, edadDe, luzDe, type Bicho, type Config, type Mundo } from "./engine";
 import {
-  RECORRIDO, azarFijo, clamp, designFor, enrojecer, envejecer, giroDe, mix,
+  RECORRIDO, canales, clamp, designFor, enrojecer, envejecer, giroDe, mix,
   type Cuerpo, type Design, type Paleta,
 } from "./designs";
 import { MURO, conMar, huecoDe, lazos, muros, trazarCampo, trazarMundo, type Geometria } from "./formas";
 
-export { ESCALA, RECORRIDO, designFor, enEje, medidas, posGen, type Cuerpo, type Design, type Paleta } from "./designs";
-
 const TAU = Math.PI * 2;
 
 /**
- * Lo que queda de luz al ras del suelo, y **el mismo para los cuatro mundos**: el material lo pone
- * cada diseño, pero el sol es uno. Se multiplica sobre lo pintado —de blanco a mediodía a este al
- * alba y al ocaso—, que es lo que hace la luz de verdad: apagar en proporción. Un velo opaco
- * encima, en cambio, arrastra los dos temas hacia el mismo gris y borra de qué está hecho el mundo.
- *
- * **Dos, porque el tema oscuro ya vive en el suelo del rango.** Multiplicar conserva las
- * proporciones, no las distancias, y las suyas son de dos dígitos: con el factor del claro, el
- * suelo, la rejilla y el grano caen todos dentro del mismo negro y la mitad final del día se pinta
- * en un rectángulo vacío. Le toca el mismo día con menos recorrido, y lo que lleva el ritmo ahí
- * son los nidos, que aclaran en vez de apagar.
- *
- * Ninguno llega a negro: el mundo se sigue mirando con poca luz — la partida arranca parada en el
- * tick 0, que es el alba, y las crías nacen de noche.
+ * El color de la luz mínima, que se multiplica sobre suelo y comida. En oscuro, más claro: el
+ * tema ya vive en el suelo del rango y multiplicar lo hundiría todo en el mismo negro.
  */
 const CREPUSCULO = { light: "#3c4c60", dark: "#aab6c4" };
 
-/**
- * El hoyo del que duerme: un charco de luz bajo el cuerpo, **encima del velo y debajo del bicho**.
- * Es lo que evita que el ocaso se lea como un mundo que se vacía —el campo se apaga y la
- * población entera se queda quieta en la orilla, y sin esto no hay nada que diga que sigue ahí— y
- * a la vez no le toca al cuerpo ni un canal, que los tiene todos ocupados en decir genes y años.
- *
- * Crece con la sombra porque es cuando hace falta: a mediodía se ve a todo el mundo y un charco
- * por bicho sería un adorno más compitiendo con los que sí dicen algo.
- */
+/** El charco de luz bajo el que duerme, que crece con la sombra. */
 const NIDO = 1.6, NIDO_DIA = 0.18, NIDO_NOCHE = 0.46;
 
-/**
- * La dentellada: lo que la presa tarda en llegar a la boca desde donde la alcanzaron y cuándo
- * empieza a hundirse, en fracciones del bocado — y el `ciclo`, **en ticks y no en fracciones**,
- * que es lo que le da al forcejeo la misma cadencia dure lo que dure la dentellada. En fracciones,
- * doblar `ticksPresa` dejaba el zarandeo a la mitad de rápido.
- *
- * **El motor solo dice quién tiene a quién y cuánto falta** —la presa no se mueve del sitio donde
- * la mordieron—, así que la pose entera se calcula aquí: mover el cuerpo desde el motor sería
- * meterle una coreografía al mundo y romper la semilla a cambio de nada.
- */
+/** Tramos de la dentellada en fracciones del bocado; `ciclo`, en ticks, fija la cadencia del forcejeo. */
 const BOCA = { entrada: 0.18, trago: 0.72, ciclo: 12 };
 
-/**
- * El mundo tiene tamaño fijo y el lienzo no, así que la vista escala y centra en vez de estirar: la
- * semilla promete el mismo mundo en cualquier pantalla, y un mundo que midiera lo que mide la
- * ventana daría partidas distintas en el móvil y en el portátil.
- */
+/** El mundo mide lo mismo en cualquier pantalla: la vista escala y centra, nunca estira. */
 export type Vista = { escala: number; ox: number; oy: number };
 
-/** `arriba` pega el mundo al borde de arriba en vez de centrarlo: en el móvil maximizado, lo de
- *  abajo es por donde sube el cajón. `tope` es lo que tapan los botones que flotan arriba del
- *  lienzo maximizado: ahí hay casa, pero el mundo empieza debajo. */
+/** `arriba` pega el mundo al borde superior; `tope` es lo que tapan los botones flotantes. */
 export function vistaDe(W: number, H: number, ancho: number, alto: number, arriba = false, tope = 0): Vista {
   const h = H - tope;
   const escala = Math.min(W / ancho, h / alto);
   return { escala, ox: (W - ancho * escala) / 2, oy: tope + (arriba ? 0 : (h - alto * escala) / 2) };
 }
 
-/**
- * Diámetro por debajo del cual un cuerpo pierde sus miembros —púas, dientes, antenas—, en píxeles
- * CSS. Es la medida del handoff de las criaturas, y es justo lo que el inspector está para enseñar.
- */
+/** Diámetro en px por debajo del cual un cuerpo pierde sus miembros. */
 const CUERPO_LEGIBLE = 14;
 
-/**
- * Píxeles CSS por unidad de mundo a los que la cámara sigue a un bicho: los que le dan ese
- * diámetro **al más pequeño de la ventana medida**, el p01 de la talla.
- *
- * Anclada ahí y no en la talla de cada cual, es una sola escala para toda la partida —y el suelo
- * se cuece una vez, que a sesenta veces por segundo son mil quinientas figuras—. Y anclada en el
- * p01 y no en la talla media, el que se queda sin miembros no es la mitad pequeña de la población,
- * que es precisamente la que hay que mirar de cerca para distinguirla.
- */
+/** Escala a la que la cámara sigue a un bicho: la que deja legible al más pequeño (p01 de talla). */
 export const ESCALA_SEGUIR = CUERPO_LEGIBLE / (2 * RECORRIDO.talla[0]);
 
-/**
- * La vista siguiendo a un bicho: el mundo a `ESCALA_SEGUIR`, él en el centro y la cámara frenada
- * en los bordes, que fuera del mundo no hay nada que enseñar.
- *
- * **Nunca aleja.** Si el lienzo ya daba de sobra, seguir a alguien no mueve la cámara: acercarse
- * cuando no hace falta solo quita de la vista lo que pasa alrededor, que en este mundo es la mitad
- * de lo que explica al que se está mirando.
- */
+/** La vista siguiendo a un bicho, frenada en los bordes. Si el mundo entero ya cabe, no acerca. */
 export function vistaSobre(
   W: number, H: number, ancho: number, alto: number, x: number, y: number, arriba = false, tope = 0,
 ): Vista {
   if (Math.min(W / ancho, (H - tope) / alto) >= ESCALA_SEGUIR) return vistaDe(W, H, ancho, alto, arriba, tope);
   const e = ESCALA_SEGUIR;
-  // Por el eje en el que el mundo cabe entero —maximizado, el lienzo puede ser más largo que él—
-  // no hay nada que seguir: se queda donde lo pone la vista entera. `ini` es donde empieza lo que
-  // se ve sin botones encima, que es donde se centra al que se sigue.
+  // En el eje en que el mundo cabe entero no hay nada que seguir. `ini`: donde empieza lo visible.
   const eje = (L: number, lado: number, foco: number, pegado: boolean, ini: number) => {
     const libre = L - ini;
     return lado * e <= libre
@@ -115,24 +54,14 @@ export function vistaSobre(
   return { escala: e, ox: eje(W, ancho, x, false, 0), oy: eje(H, alto, y, arriba, tope) };
 }
 
-/** La paleta de una partida: la del diseño que le toque a su semilla. */
+/** La paleta de una partida. */
 export const paletaDe = (semilla: string, tema: "light" | "dark"): Paleta =>
   designFor(semilla).paleta(tema);
 
-/**
- * El suelo y la casa, cocidos una sola vez en un lienzo aparte y pegados de un golpe.
- *
- * Son más de mil quinientas figuras entre el grano y el moteado: pintarlas sesenta veces por
- * segundo cuesta más que todos los bichos juntos, y **el grano regenerado por cuadro parpadearía
- * como nieve de televisión**.
- */
+/** Suelo y casa, cocidos una vez en un lienzo aparte: son más de mil figuras. */
 let cacheFondo: { clave: string; lienzo: HTMLCanvasElement } | null = null;
 
-/**
- * El mar: lo que queda fuera del mundo en las formas con mar, que no es ni campo ni casa. Pintarlo
- * de casa, como alrededor de la caja, prometería un refugio que no existe; y hundido a medias se
- * confunde con el campo, que en los temas oscuros ya vive en el suelo del rango.
- */
+/** El mar: fuera del mundo en las formas con mar, que no es ni campo ni casa. */
 const fueraDe = (p: Paleta) => (p.tema === "dark" ? mix(p.bg, "#000000", 0.55) : mix(p.bg, p.homeInk, 0.55));
 
 function fondoDe(
@@ -168,7 +97,6 @@ function fondoDe(
   d.suelo(c, ancho, alto, casa, escala, p);
   c.restore();
   d.borde(c, lazos(g, 2.2), casa, escala, p);
-  // Las paredes que no son casa, con la tinta de casa y a pleno: un muro se lee como muro.
   c.strokeStyle = p.homeInk;
   if (conMar(g)) {
     c.lineWidth = 2.5 * f;
@@ -188,16 +116,9 @@ function fondoDe(
 }
 
 // ─── Muestras de leyenda ──────────────────────────────────────────────────────
-//
-// La leyenda no dibuja bichos: los pide. Todo lo que enseña sale del diseño de la partida, así que
-// el día que cambie la forma del bicho, la leyenda cambia con él. Una silueta escrita aparte miente
-// en silencio en cuanto alguien toque el pintado del mundo.
 
-/**
- * Un bicho suelto, centrado y a la escala que se le diga. `escala` la fija quien pinta la fila
- * entera y es **la misma para las tres muestras**: si cada celda se ajustara a lo suyo, la fila de
- * la talla enseñaría tres bichos del mismo tamaño, que es justo lo contrario de lo que dice.
- */
+
+/** Un bicho suelto y centrado. `escala` es la misma para toda la fila, o la talla no se vería. */
 export function pintarMuestra(
   ctx: CanvasRenderingContext2D, d: Design, W: number, H: number, dpr: number, p: Paleta,
   b: Cuerpo, escala: number, vigor = 1,
@@ -210,15 +131,7 @@ export function pintarMuestra(
   d.cuerpo(ctx, { ...b, x: 0, y: 0, hx: 1, hy: 0 }, vigor, envejecer(p, b.edad ?? 0));
 }
 
-/**
- * La marca de quien se está mirando: **cuatro esquinas y no un aro**. Un aro alrededor del cuerpo
- * ya significa otra cosa —la despensa que rebosa—, y dos aros del mismo color a dos píxeles el uno
- * del otro no dicen dos cosas: dicen una borrosa. Las esquinas son de quien mira y no del bicho, y
- * por eso se quedan rectas mientras el cuerpo gira.
- *
- * La usan el mundo y la tira, y por eso vive suelta: el bicho marcado es el mismo en los dos, así
- * que dos marcas distintas obligarían a averiguar que lo son.
- */
+/** La marca del bicho que se mira, en el mundo y en la tira: cuatro esquinas rectas. */
 function esquinas(
   ctx: CanvasRenderingContext2D, x: number, y: number, rad: number, color: string, grosor: number,
 ) {
@@ -234,10 +147,7 @@ function esquinas(
   }
 }
 
-/**
- * El aspa del que se murió de hambre, sobre el cuerpo entero y recta aunque el cuerpo gire. La
- * pintan el mundo y la tira: es el mismo muerto en los dos.
- */
+/** El aspa del muerto de hambre, recta aunque el cuerpo gire. */
 function aspa(ctx: CanvasRenderingContext2D, x: number, y: number, radio: number, color: string) {
   const a = radio * 0.78;
   ctx.save();
@@ -254,18 +164,11 @@ function aspa(ctx: CanvasRenderingContext2D, x: number, y: number, radio: number
 /** Lo que le queda por verse a un cuerpo, de 1 recién caído a 0 disuelto. */
 export const opacidadResto = (restan: number): number => Math.min(1, restan / DISOLUCION);
 
-/**
- * El rojo de la presa según va la dentellada, desde el `restan` de quien la tiene en la boca.
- * **Satura donde empieza a hundirse**, no al final: el rojo entero tiene que verse un rato, y el
- * último tramo ya cuenta lo suyo encogiendo.
- */
+/** El rojo de la presa: satura donde empieza a hundirse, no al final. */
 const enBoca = (c: Config, dep: Bicho): number => (c.ticksPresa > 0 ? 1 - dep.restan / c.ticksPresa : 1);
 export const rojoDe = (c: Config, dep: Bicho): number => Math.min(1, enBoca(c, dep) / BOCA.trago);
 
-/**
- * El mundo entero, en un lienzo de `W`×`H` px CSS con `dpr` píxeles de dispositivo por cada uno.
- * El suelo y la casa vienen cocidos; encima solo lo que decide la partida.
- */
+/** El mundo entero en un lienzo de `W`×`H` px CSS. */
 export function pintar(
   ctx: CanvasRenderingContext2D, m: Mundo, d: Design, p: Paleta, v: Vista,
   W: number, H: number, dpr: number, noche = 1, sel: Bicho | null = null,
@@ -274,9 +177,7 @@ export function pintar(
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.fillStyle = p.bg;
   ctx.fillRect(0, 0, W, H);
-  // **Lo que el lienzo enseña más allá del mundo es casa**, en unidades de mundo: el sobrante entero
-  // por cada lado, que cubre el mundo centrado y el pegado arriba. Fuera de pantalla completa el
-  // lienzo mide lo que el mundo y no sobra nada.
+  // Lo que el lienzo enseña más allá del mundo es casa.
   const margen = (lienzo: number, lado: number) => {
     const m = lienzo / v.escala - lado;   // el redondeo del lienzo a píxeles deja décimas: eso no es sobrante
     return m >= 1 ? Math.ceil(m) : 0;
@@ -297,10 +198,7 @@ export function pintar(
     ctx.restore();
   }
 
-  // **La luz del día, sobre el suelo y sobre la comida y no sobre los bichos.** Es donde de verdad
-  // pasa: lo que el crepúsculo apaga es lo que hay que ver —`vision · luz` es el alcance del ojo,
-  // así que un bocado al ocaso ya no lo ve nadie— y el cuerpo, que es lo que se está mirando, no
-  // puede perder legibilidad tres veces al día.
+  // La luz, sobre suelo y comida y no sobre los bichos, que son lo que se mira.
   const sombra = 1 - luzDe(m.t, c);
   if (sombra > 0.01) {
     ctx.globalCompositeOperation = "multiply";
@@ -309,10 +207,7 @@ export function pintar(
     ctx.globalCompositeOperation = "source-over";
   }
 
-  // El zarpazo, debajo de los vivos: un anillo que se abre donde se comieron a alguien. Es la
-  // única muerte que se pinta sin cuerpo, porque el cuerpo se lo está llevando el otro; las otras
-  // dos dejan resto. El que se quedó fuera al anochecer no está aquí: no muere, así que se sigue
-  // pintando vivo donde le pilló la noche.
+  // El zarpazo, debajo de los vivos.
   for (const z of m.marcas) {
     const k = (m.t - z.t) / MARCA;
     if (k < 0 || k > 1) continue;
@@ -323,12 +218,7 @@ export function pintar(
     ctx.globalAlpha = 1;
   }
 
-  // Una cría no aparece hecha: durante la primera parte de la noche crece desde nada hasta su
-  // tamaño, con el anillo del parto abriéndose a su alrededor. Es lo único que se anima aquí, y se
-  // anima porque nacer es justo lo que no se veía.
-  // Las paletas encanecidas se reparten dentro del cuadro: la edad solo toma `vida + 1` valores, así
-  // que un mundo de treinta bichos pide once y no treinta. Muere con el cuadro — una caché que le
-  // sobreviviera habría que invalidarla al cambiar de tema y de diseño, y no vale lo que cuesta.
+  // Las paletas encanecidas, una por edad y por cuadro.
   const canas = new Map<number, Paleta>();
   const paletaCon = (edad: number): Paleta => {
     let q = canas.get(edad);
@@ -338,17 +228,7 @@ export function pintar(
 
   const brote = Math.min(1, noche / 0.6);
 
-  // **Los muertos se quedan donde cayeron y se van con el suelo.** Se pintan como andaban —el
-  // mismo cuerpo, el mismo rumbo, la misma carga— y solo pierden opacidad: el motor ya no los
-  // tiene, pero para el que mira siguen siendo ese bicho, y sustituirlos por un disco en el
-  // momento de morir era enseñar una mancha donde estaba la madre justo cuando salían de ella las
-  // crías. Debajo de los vivos, que el mundo es de quien anda.
-  //
-  // **El aspa va sobre el cuerpo entero y no sobre los ojos**, que es donde se pidió: el ojo mide
-  // dos píxeles en la vista de mundo entero —la única que hay en un móvil— y la mitad de los
-  // diseños no tiene ojos, que ven por antenas o por un arco de barrido. Sobre el cuerpo se lee a
-  // las cuatro escalas y sirve para los cuatro mundos. Y recta mientras el cuerpo gira, como las
-  // esquinas del marcado: no es anatomía, es lo que dice de qué murió este.
+  // Los muertos, donde cayeron y debajo de los vivos, perdiendo opacidad.
   for (const z of m.restos) {
     const b = z.b;
     ctx.globalAlpha = opacidadResto(z.restan);
@@ -365,19 +245,9 @@ export function pintar(
   }
   ctx.globalAlpha = 1;
 
-  // **Lo que alcanza a ver el que se está mirando, y solo él.** Un anillo por bicho con treinta a
-  // la vez es una maraña donde no se sabe de quién es cada arco; uno solo se lee, y es el único
-  // gen cuyo número no cabe en el cuerpo — la visión no es un órgano de tres píxeles, es media
-  // pantalla de radio. El radio es el del motor, `visión · luz · radio del otro`, con el bocado de
-  // vara: así encoge con el sol a la vez que el bicho deja de reaccionar a lo que tiene delante,
-  // y al anochecer no queda nada que pintar porque no queda nada que ver.
-  //
-  // Los dos aros van **debajo de los cuerpos y por fuera de lo dibujado**: pegados al disco
-  // taparían justo las púas y los dientes que el panel se ha abierto a mirar.
+  // Lo que alcanza a ver el marcado —con el bocado de vara— y sus esquinas, debajo de los cuerpos.
   if (sel) {
     ctx.save();
-    // El aro del ojo solo si sigue vivo: un cuerpo también se puede marcar —se pulsa mientras se
-    // disuelve— y lo que ve un muerto es nada. Las esquinas sí, que son de quien mira.
     const alcance = sel.vivo ? sel.g.vision * (1 - sombra) * RADIO_COMIDA : 0;
     if (alcance > 1) {
       ctx.strokeStyle = p.acc2;
@@ -392,30 +262,22 @@ export function pintar(
     ctx.restore();
   }
 
-  // Quién tiene a quién en la boca, indexado por la presa: la dentellada se pinta desde ella —es
-  // la que se mueve— y en el mundo el puntero va al revés.
+  // Quién tiene a quién en la boca, indexado por la presa.
   const bocas = new Map<number, Bicho>();
   for (const b of m.bichos) if (b.muerde) bocas.set(b.muerde, b);
 
-  /**
-   * En qué punto va la dentellada, 0 al morder y 1 al tragar. El sacudón es el mismo para los dos
-   * cuerpos —un solo vaivén que se va apagando—, que es lo que hace que se lea como un forcejeo y
-   * no como dos animaciones a la vez.
-   */
+  /** En qué punto va la dentellada y el vaivén común a los dos cuerpos. */
   const mordisco = (dep: Bicho) => {
     const k = enBoca(c, dep);
     return { k, sacudon: Math.sin((TAU * k * c.ticksPresa) / BOCA.ciclo) * (1 - k) };
   };
 
   for (const b of m.bichos) {
-    if (b.preso) continue;   // la presa va encima de todo, al final: se pinta con su verdugo
-    // La despensa llena va con la masa, así que el vigor de cada uno se mide contra la suya: un
-    // grande a medio gas y un pequeño a medio gas se pintan igual de apagados, que es lo justo.
+    if (b.preso) continue;   // la presa se pinta al final, en su boca
     const lleno = b.reserva / (c.capReserva * b.masa);
     const vigor = clamp(lleno, 0, 1);
-    // La edad va en el cuerpo y no en el `Bicho`: se deriva del día, así que guardarla obligaría a
-    // repasar la población entera cada amanecer para que no mintiera.
     const edad = edadDe(m, b);
+    // La cría crece durante la noche, con el anillo del parto.
     if (b.recien && m.noche) {
       if (brote > 0.02) d.cuerpo(ctx, { ...b, radio: b.radio * brote, edad }, vigor, paletaCon(edad));
       if (brote < 1) {
@@ -428,19 +290,13 @@ export function pintar(
       continue;
     }
     if (b.muerde) {
-      // El que muerde también se mueve, aunque el motor lo tenga anclado: el tirón va en su propio
-      // rumbo, que es hacia la presa, y es lo que enseña quién está zarandeando a quién.
+      // El tirón del que muerde, en su propio rumbo.
       const { sacudon } = mordisco(b);
       const tiron = sacudon * b.radio * 0.12;
       d.cuerpo(ctx, { ...b, x: b.x + b.hx * tiron, y: b.y + b.hy * tiron, edad }, vigor, paletaCon(edad));
     } else d.cuerpo(ctx, { ...b, edad }, vigor, paletaCon(edad));
 
-    // **La despensa no tiene techo, y sin esto no se veía**: quien lleva una semana ahorrando se
-    // pintaba igual que quien acaba de comer, y su camada de veintidós parecía salida de la nada.
-    // Lo que pasa del lleno se cuenta en un aro alrededor, **por duplicaciones**: el récord medido
-    // son cincuenta y nueve despensas y el aro mide once píxeles, así que en lineal la primera
-    // vuelta se comería las otras cincuenta y ocho. Topado en cuatro, que de ahí para arriba ya
-    // solo dice "riquísimo".
+    // Lo que pasa de la despensa llena, en un aro por duplicaciones y topado en cuatro vueltas.
     if (lleno > 1) {
       const vueltas = Math.min(4, 1 + Math.log2(lleno));
       const parcial = vueltas % 1;
@@ -454,47 +310,34 @@ export function pintar(
     }
   }
 
-  // **La presa, encima de todo y en la boca del otro.** Tres tramos: llega desde donde la
-  // alcanzaron, se la zarandea atravesada —de ahí que su rumbo sea el perpendicular al de su
-  // verdugo, y no el suyo— y al final se hunde y encoge hasta que el motor la mata y deja el
-  // anillo del zarpazo. Se pinta al final porque debajo del cuerpo grande no se vería el forcejeo,
-  // que es justo lo que había que poder mirar.
+  // La presa, encima de todo: llega a la boca, se la zarandea atravesada y se hunde.
   for (const b of m.bichos) {
     const dep = b.preso ? bocas.get(b.id) : undefined;
     if (!dep) continue;
     const { k, sacudon } = mordisco(dep);
     const trago = Math.max(0, (k - BOCA.trago) / (1 - BOCA.trago));
     const entrada = Math.min(1, k / BOCA.entrada);
-    // La boca es el borde del cuerpo en su rumbo; tragar es que ese punto se venga al centro.
     const hueco = (dep.radio + b.radio * 0.3) * (1 - 0.7 * trago);
     const px = -dep.hy, py = dep.hx;   // el través, que es donde se zarandea y hacia donde mira
     const vaiven = sacudon * b.radio * 0.4 * (1 - trago);
     const bx = dep.x + dep.hx * hueco + px * vaiven, by = dep.y + dep.hy * hueco + py * vaiven;
     const x = b.x + (bx - b.x) * entrada, y = b.y + (by - b.y) * entrada;
-    // Atravesada: el rumbo pintado es el través del verdugo, balanceándose con el mismo vaivén.
     const g = sacudon * 0.45 * (1 - trago);
     const hx = px + dep.hx * g, hy = py + dep.hy * g;
     const norma = Math.sqrt(hx * hx + hy * hy);
     const edad = edadDe(m, b);
     const vigor = clamp(b.reserva / (c.capReserva * b.masa), 0, 1);
-    // Y va poniéndose del color del zarpazo según se la comen: el forcejeo dura un segundo entre
-    // treinta cuerpos que se mueven, y la pose sola no lo saca de la escena.
     d.cuerpo(ctx, { ...b, x, y, hx: hx / norma, hy: hy / norma, radio: b.radio * (1 - 0.5 * trago), edad },
       vigor, enrojecer(paletaCon(edad), rojoDe(c, dep)));
   }
 
-  // De noche, lo único que se escribe encima del mundo: cuántas crías ha puesto cada madre, al lado
-  // del montón que acaba de aparecer a su alrededor.
+  // De noche, las crías de cada madre, muertas incluidas.
   if (m.noche) {
     ctx.font = "bold 9px ui-monospace, monospace";
     ctx.textBaseline = "middle";
     ctx.lineWidth = 2.5;
     ctx.lineJoin = "round";
     ctx.strokeStyle = p.bg;
-    // Las madres muertas esta noche llevan el suyo como las vivas: es la camada que acaban de
-    // poner, y es lo único que dice que criaron antes de morirse. El `hijos` de las vivas lo pone
-    // a cero el alba y el de un cuerpo ya no lo toca nadie, pero tampoco hace falta: para la noche
-    // siguiente hace mil ticks que se disolvió.
     for (const b of [...m.bichos, ...m.restos.map((z) => z.b)]) {
       if (b.hijos <= 0) continue;
       const t = `+${b.hijos}`, x = b.x + b.radio + 2, y = b.y - b.radio - 2;
@@ -505,66 +348,41 @@ export function pintar(
   }
 }
 
-/** Sin uso fuera de aquí, pero el mundo lo necesita para saber cuánto ocupa un bocado. */
-export { RADIO_COMIDA, azarFijo };
-
 // ─── La tira de población ─────────────────────────────────────────────────────
 
-/**
- * Los colores de la interfaz, que **no son los del mundo**: la tira es cromo de la página y vive
- * en el papel del tema terminal, mientras que los cuerpos que pinta encima llevan la paleta de su
- * partida. Se leen del CSS una vez por repintado en vez de escribirse aquí, que es lo que hace que
- * el tema oscuro no necesite una segunda tabla.
- */
+/** Los colores de la interfaz, leídos del CSS del tema: no son los del mundo. */
 export type Tinta = { papel: string; linea: string; linea2: string; ink: string; ink3: string; ink4: string; acento: string };
 
 /** Lo que hace falta para pintar la fila de un gen. */
 export type Fila = {
-  /** Dónde cae en el eje cada bicho vivo, ya en 0…1, y el cuerpo que le corresponde. Con el id
-   *  del bicho: aquí no se pinta una población, se pinta a cada uno, y al que se pulsa hay que
-   *  saber señalarlo en el mundo. */
+  /** Cada bicho en el eje, en 0…1. */
   cuerpos: Muestra[];
-  /** El fundador y la mediana de hoy, en el mismo 0…1. */
+  /** El fundador y la mediana de hoy, en 0…1. */
   eva: number;
   med: number | null;
-  /** El recorrido medido del gen en otros mundos, en el mismo 0…1, o `null` si el eje ya es ese
-   *  recorrido — ahí la banda saldría igual en las seis filas y no diría nada. */
+  /** El recorrido medido, o `null` si el eje ya es ese recorrido. */
   recorrido: [number, number] | null;
-  /** Px por unidad de mundo. **Una sola para la fila**: si cada cuerpo se ajustara a su celda,
-   *  la fila de la talla enseñaría a todo el mundo del mismo tamaño. */
+  /** Px por unidad de mundo, una para toda la fila. */
   escala: number;
-  /** Con el enjambre entero o con dos muestras: la fila que se mira y las cinco que no. */
+  /** La fila abierta pinta a todos; la cerrada, los dos extremos. */
   enjambre: boolean;
-  /** Quién va marcado, por id, o `0`. Lleva las mismas esquinas que en el mundo — es el mismo
-   *  bicho y la misma marca, que es lo que hace que pulsarlo aquí se entienda allí. */
+  /** El marcado, por id, o 0. */
   sel: number;
 };
 
-/**
- * Un bicho colocado en el eje de un gen. Los que se están muriendo llevan cómo, **con lo mismo que
- * en el mundo**: `rojo` la presa según se la comen, `resto` la opacidad del cuerpo que se disuelve
- * y `aspa` el muerto de hambre. Un resto ya no es población —ni curva, ni extremos—, pero sigue a
- * la vista donde estaba, como en el lienzo.
- */
+/** Un bicho en el eje y cómo se está muriendo: `rojo` la presa, `resto` el cuerpo, `aspa` el hambre. */
 export type Muestra = { id: number; t: number; c: Cuerpo; rojo?: number; resto?: number; aspa?: boolean };
 
-/** Dónde ha quedado pintado cada cuerpo de una fila, en px CSS: es con lo que se sabe a quién se
- *  ha pulsado. El montón se apila según lo junta que esté la población, así que esto no se puede
- *  recalcular fuera — sale de pintar. */
+/** Dónde quedó pintado cada cuerpo, en px CSS: sale de pintar, y es lo que se pulsa. */
 export type Puesto = { id: number; cx: number; cy: number; ancho: number };
 
 const CRESTA = 96;   // puntos de la curva de fondo; más son subpíxeles en una fila de 600 px
 
-/**
- * La curva de la población, suavizada. **Es el mismo bulto que el enjambre**, no un segundo dato:
- * está para que la fila siga diciendo algo cuando el censo es de cinco bichos y el enjambre es una
- * anécdota, y para que el hueco de una población partida en dos se vea también en la fila pequeña.
- */
+/** La curva de la población, suavizada: dice algo aunque el censo sea de cinco. */
 function cresta(ts: number[]): number[] {
   const h = new Float64Array(CRESTA);
   for (const t of ts) h[Math.min(CRESTA - 1, Math.floor(t * CRESTA))]++;
-  // Tres pasadas de media móvil de ±2: menos deja los dientes del censo y más se come el valle
-  // que separa dos montones, que es justo lo que la curva tiene que enseñar.
+  // Tres pasadas de ±2: menos deja dientes y más se come el valle entre dos montones.
   const v = Array.from(h);
   for (let k = 0; k < 3; k++) {
     const w = v.slice();
@@ -578,11 +396,7 @@ function cresta(ts: number[]): number[] {
   return max > 0 ? v.map((x) => x / max) : v;
 }
 
-/**
- * Una fila de la tira: la banda del recorrido, la curva de la población, las dos verticales y los
- * bichos encima. **Los bichos son los del mundo** —los pinta el diseño de la partida—, que es lo
- * que hace que el que se mira aquí y el que anda por el lienzo sean el mismo animal.
- */
+/** Una fila de la tira: banda del recorrido, curva, fundador, bichos y mediana, en ese orden. */
 export function pintarFila(
   ctx: CanvasRenderingContext2D, W: number, H: number, dpr: number,
   d: Design, p: Paleta, t: Tinta, f: Fila,
@@ -593,8 +407,6 @@ export function pintarFila(
 
   const x = (u: number) => u * W;
 
-  // La banda del recorrido medido va sin cifra ni etiqueta a propósito: es contexto —hasta dónde
-  // llega este gen en otros mundos—, y numerarla sería una segunda vara sobre el mismo eje.
   if (f.recorrido) {
     ctx.fillStyle = t.linea2;
     ctx.fillRect(x(f.recorrido[0]), 0, x(f.recorrido[1] - f.recorrido[0]), H);
@@ -617,20 +429,13 @@ export function pintarFila(
     ctx.fillRect(Math.round(x(u)) - ancho / 2, 0, ancho, H);
     ctx.globalAlpha = 1;
   };
-  // El fundador va debajo de los cuerpos: es la referencia quieta, y no pasa nada porque un bicho
-  // se le ponga delante. La mediana va encima, al final — es lo que se viene a mirar, y en la fila
-  // del enjambre el montón se la comía entera.
   vertical(f.eva, t.ink4, 1);
 
-  // Los restos, solo en la fila abierta: la cerrada son los dos extremos de los vivos, y un muerto
-  // ahí sería una tercera muestra que no es ninguno de los dos.
   const muestras = f.enjambre ? f.cuerpos : extremos(vivos);
   const puestos = colocar(muestras, W, H, d, f.escala);
-  // En el orden del mundo: los restos debajo de los vivos y la presa encima de todos.
+  // Restos debajo, presa encima.
   const capa = (s: Muestra) => (s.resto !== undefined ? 0 : s.rojo !== undefined ? 2 : 1);
   [...puestos].sort((a, b) => capa(a) - capa(b)).forEach(({ c, cx, cy, escala, rojo, resto, aspa: hambre }) => {
-    // El lienzo ya está en píxeles CSS por el `setTransform` de arriba, así que aquí no se vuelve
-    // a multiplicar por `dpr`: hacerlo colocaba a toda la población fuera del borde derecho.
     ctx.save();
     ctx.translate(cx, cy);
     ctx.scale(escala, escala);
@@ -641,12 +446,7 @@ export function pintarFila(
     ctx.restore();
   });
 
-  // El marcado, después de todos: en el montón el de al lado se le pinta encima, y una marca medio
-  // tapada señala a dos bichos a la vez.
-  //
-  // **Solo en la fila abierta**, que es donde está la población entera. En una cerrada el bicho
-  // marcado sale si resulta ser uno de los dos extremos y no sale si no lo es, así que la marca se
-  // enciende y se apaga sin querer decir nada — y en veintidós píxeles de alto no cabe entera.
+  // El marcado, solo en la fila abierta y encima de todos.
   const marcado = f.enjambre ? puestos.find((q) => q.id === f.sel) : undefined;
   if (marcado) esquinas(ctx, marcado.cx, marcado.cy, marcado.ancho / 2 + 2.5, t.ink, 1);
 
@@ -655,23 +455,14 @@ export function pintarFila(
   return puestos.map(({ id, cx, cy, ancho }) => ({ id, cx, cy, ancho }));
 }
 
-/**
- * Las dos muestras de una fila que no se mira: **el más flojo y el más fuerte de la población de
- * hoy**, no dos valores inventados. Con censo de uno sale uno solo, que es lo correcto — el primer
- * día del mundo hay una bicha y enseñar dos sería mentir sobre el censo.
- */
+/** El más bajo y el más alto de hoy. */
 function extremos(cs: Muestra[]): Muestra[] {
   if (cs.length <= 2) return cs;
   const s = [...cs].sort((a, b) => a.t - b.t);
   return [s[0], s[s.length - 1]];
 }
 
-/**
- * Dónde se pinta cada cuerpo. Se ordenan por el eje y cada uno busca **el primer nivel libre desde
- * abajo**, así que el montón crece donde se amontonan y el hueco de una población partida en dos
- * se queda vacío hasta arriba. Apilar por densidad calculada daría la misma silueta sin decir qué
- * bicho es cada bulto.
- */
+/** Cada cuerpo busca el primer nivel libre desde abajo: el montón es el reparto. */
 function colocar(cs: Muestra[], W: number, H: number, d: Design, escala: number) {
   const orden = [...cs].sort((a, b) => a.t - b.t);
   const niveles: number[] = [];
@@ -684,10 +475,7 @@ function colocar(cs: Muestra[], W: number, H: number, d: Design, escala: number)
     return { ...s, cx, n, ancho, escala };
   });
 
-  // **El montón se aprieta hasta caber, no se corta por arriba.** Cuántos niveles hacen falta no se
-  // sabe hasta haberlos repartido —depende de lo junta que esté la población ese día—, así que el
-  // paso vertical se decide después: con sitio de sobra los cuerpos no se tocan, y en el día que
-  // treinta caigan en la misma franja se solapan, que es lo que hace un montón de verdad.
+  // El paso vertical se decide después de repartir: el montón se aprieta hasta caber.
   const pisos = Math.max(...puestos.map((p) => p.n)) + 1;
   const alto = Math.max(...puestos.map((p) => p.ancho));
   const paso = pisos <= 1 ? 0 : Math.min(alto * 0.62, (H - 2 - alto) / (pisos - 1));
@@ -696,30 +484,22 @@ function colocar(cs: Muestra[], W: number, H: number, d: Design, escala: number)
 
 // ─── Los estratos: la partida entera ──────────────────────────────────────────
 
-/** Lo que hace falta para pintar la franja de un gen a lo largo del tiempo. */
+/** Lo que hace falta para pintar la franja de un gen en el tiempo. */
 export type Estrato = {
-  /** Una columna por trozo de partida, cada una con sus `bins` fracciones que suman 1. */
+  /** Una columna por trozo de partida; cada una suma 1. */
   columnas: Float64Array[];
-  /** La mediana de cada columna, ya en 0…1 de la escala del gen. */
   medianas: number[];
-  /** El reparto de hoy, para el perfil de la derecha. */
   hoy: Float64Array;
-  /** El fundador de la partida, en el mismo 0…1. */
   eva: number;
 };
 
-/** Ancho del perfil de hoy, pegado al borde derecho, y el aire que lo separa del mapa. */
+/** Ancho del perfil de hoy y su separación del mapa. */
 const PERFIL = 22, AIRE = 5;
 
-/**
- * Franjas a cada lado que se promedian antes de pintar. **Sin esto el mapa sale rayado**: con
- * veinte bichos repartidos en ciento veintiocho franjas, cada bicho es una raya negra suelta con
- * hueco a los lados, y lo que se lee es el censo y no la forma. Con ±3 la banda es continua y el
- * valle que separa dos montones —lo único que el panel está para enseñar— sigue estando.
- */
+/** Franjas que se promedian a cada lado: sin esto, cada bicho es una raya suelta. */
 const SUAVE = 3;
 
-/** Un histograma suavizado y normalizado a su propio máximo, en 0…1. */
+/** Un histograma suavizado y normalizado a su máximo. */
 function alisar(c: Float64Array): Float64Array {
   const n = c.length, v = new Float64Array(n);
   for (let i = 0; i < n; i++) {
@@ -734,14 +514,8 @@ function alisar(c: Float64Array): Float64Array {
 }
 
 /**
- * La franja de un gen: el tiempo a lo ancho, la escala del gen a lo alto y **la población como
- * tinta** —cuanto más oscuro, más gente en esa franja ese día—. Encima, la mediana en el tiempo y
- * la horizontal del fundador; a la derecha, el reparto de hoy de pie.
- *
- * **Cada columna se normaliza con su propio máximo** y no con el de la partida: si no, los primeros
- * días —cuando la población es de tres bichos y todos caen en la misma franja— salen negros y el
- * resto de la partida, gris claro. Lo que se lee aquí es la forma del reparto en cada momento, no
- * cuánta gente había: eso lo dice el censo.
+ * La franja de un gen: tiempo a lo ancho, escala a lo alto y la población como tinta. Cada columna
+ * se normaliza con su propio máximo: se lee la forma del reparto, no el censo.
  */
 export function pintarEstrato(
   ctx: CanvasRenderingContext2D, W: number, H: number, dpr: number, t: Tinta, e: Estrato,
@@ -754,16 +528,13 @@ export function pintarEstrato(
   const T = e.columnas.length;
   if (T === 0) return;
 
-  const tinta = rgb(t.ink);
+  const tinta = canales(t.ink);
   const img = ctx.createImageData(Math.round(mapa * dpr), Math.round(H * dpr));
   const px = img.data, iw = img.width, ih = img.height;
-  // Se alisa una vez por columna de datos y no una por columna de píxeles: con la partida
-  // comprimida a mil columnas, lo segundo es alisar mil veces lo mismo.
   const alisadas = e.columnas.map(alisar);
   for (let x = 0; x < iw; x++) {
     const col = alisadas[Math.min(T - 1, Math.floor((x / iw) * T))];
     for (let y = 0; y < ih; y++) {
-      // La escala del gen sube: la franja de arriba es el valor alto, como en cualquier eje.
       const bin = Math.min(col.length - 1, Math.max(0, Math.floor((1 - (y + 0.5) / ih) * col.length)));
       const a = Math.pow(col[bin], 0.85) * 0.95;
       if (a <= 0.01) continue;
@@ -785,8 +556,7 @@ export function pintarEstrato(
   ctx.stroke();
   ctx.restore();
 
-  // La mediana lleva un trazo del papel por debajo: sobre el negro de una franja llena, una línea
-  // fina de color se pierde entera y es la única curva que hay que poder seguir de un vistazo.
+  // La mediana, con un trazo de papel debajo para leerse sobre la banda.
   const linea = () => {
     ctx.beginPath();
     e.medianas.forEach((m, i) => {
@@ -811,9 +581,4 @@ export function pintarEstrato(
   ctx.moveTo(mapa + 0.5, 0);
   ctx.lineTo(mapa + 0.5, H);
   ctx.stroke();
-}
-
-/** `#rrggbb` a sus tres canales. Los tokens del tema vienen así del CSS. */
-function rgb(h: string): [number, number, number] {
-  return [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
 }

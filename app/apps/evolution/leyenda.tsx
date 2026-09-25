@@ -2,33 +2,17 @@
 
 import Asa from "./asa";
 import { useEffect, useRef } from "react";
-import { ESCALA, pintarMuestra, type Design, type Paleta } from "./render";
-import { CONFIG, type Genoma, type Rasgo } from "./engine";
+import { pintarMuestra } from "./render";
+import { ESCALA, type Design, type Paleta } from "./designs";
+import { CONFIG, RASGOS, TABLA, nombreDe, type Genoma, type Rasgo } from "./engine";
+import { usePanel } from "./panel";
 
 /**
- * La leyenda del mundo: qué gen es cada cosa que se ve, con qué genoma empezó la partida y dónde
- * está hoy la población de cada gen. **Los seis genes se ven**, que es por lo que son seis: uno
- * que solo existiera en la estadística no se podría poner aquí.
- *
- * **No hay máximo ni mínimo genético que enseñar**, y por eso esta leyenda no los enseña: la
- * mutación multiplica y divide sin techo, así que lo único que frena un gen es lo que cuesta. La
- * pregunta de verdad —«¿ya son lo más grandes que pueden?»— se contesta comparando la población
- * de ahora con el fundador del que salió, y eso es lo que pinta la barra de cada fila.
- *
- * **Aquí no se dice dónde está la población: eso lo dice la tira.** Las dos se abren a la vez y en
- * la misma pantalla, así que una barra con la mediana de cada gen repetía la cifra que la tira ya
- * tiene debajo, con la misma vara y a dos centímetros. La leyenda se queda con lo que la tira no
- * puede dar —qué es el gen, cómo se le ve en el cuerpo y qué paga por él— y se lee como lo que es:
- * el diccionario del bicho, no el estado de la partida.
- *
- * Todo lo dibujado sale de `render.ts` y de las constantes del motor. Una silueta pintada aquí
- * aparte empezaría a mentir el día que cambie la del mundo, sin que fallara nada.
+ * El diccionario del bicho: qué es cada gen, cómo se ve y qué paga. Dónde está la población lo
+ * dice la tira. Todo lo dibujado lo pinta el diseño de la partida, como en el mundo.
  */
 
-/** **Los seis genes se ven en el cuerpo**, así que los seis enseñan bichos y ninguno es un caso aparte. */
-
-/** Qué es cada gen, en una frase y sin fórmulas — la fórmula ya está en `TABLA`, debajo. */
-const QUE_ES: Record<string, string> = {
+const QUE_ES: Record<Rasgo, string> = {
   empuje: "La fuerza que le mete: cuanto más, más rápido va y más energía quema. Y con comida encima, menos corre.",
   talla: "Lo grande que es. El grande puede comerse al pequeño, pero gasta más, gira peor, se le ve desde más lejos y sus hijos cuestan más.",
   vision: "Hasta dónde ve. No mira hacia delante: ve en redondo, y lo grande lo detecta antes que lo pequeño.",
@@ -37,39 +21,21 @@ const QUE_ES: Record<string, string> = {
   retorno: "Las ganas de volver a casa en cuanto lleva comida encima. Solo lo que llega a casa se come y se convierte en hijos — pero volver pronto es dejar de buscar.",
 };
 
-// La escala de la barra es la de `posGen`: el fundador en el centro exacto y el recorrido medido
-// cerca de los bordes. **Una sola geometría para los seis genes**, así que dos barras se comparan de
-// un vistazo aunque midan cosas de unidades distintas — y el número que las acompaña deja de ser el
-// dato: lo que se lee es dónde cae respecto a donde nació todo el mundo.
+const CELDA = 54;   // lado de cada muestra, en px CSS
 
-// Sin pies bajo las muestras: los tres bichos ya son la escala, y la cifra de la derecha dice en
-// qué punto de ella está la población. Un rótulo que repite lo que ya se ve es ruido.
-
-const CELDA = 54;                  // lado de cada muestra de cuerpo, en px CSS
-
-/**
- * Los tres valores de una fila: los dos extremos de la **escala de pintado** y el fundador en medio.
- * Los del dibujo y no los del recorrido, porque pasados esos dos el cuerpo ya no cambia: la muestra
- * de la izquierda es literalmente el bicho más bajo que se va a ver y la de la derecha, el más alto.
- */
-const muestrasDe = (rasgo: string, eva: Record<string, number>): number[] =>
-  [ESCALA[rasgo as Rasgo][0], eva[rasgo], ESCALA[rasgo as Rasgo][1]];
-
-function Muestras({ rasgo, eva, paleta, diseno }: {
-  rasgo: string; eva: Record<string, number>; paleta: Paleta; diseno: Design;
-}) {
+/** Tres bichos por gen: los extremos de la escala de pintado y el fundador en medio. */
+function Muestras({ rasgo, eva, paleta, diseno }: { rasgo: Rasgo; eva: Genoma; paleta: Paleta; diseno: Design }) {
   const refs = useRef<(HTMLCanvasElement | null)[]>([]);
-  const valores = muestrasDe(rasgo, eva);
+  const valores = [ESCALA[rasgo][0], eva[rasgo], ESCALA[rasgo][1]];
 
   useEffect(() => {
     const dpr = window.devicePixelRatio || 1;
-    // Una sola escala para las tres, la que hace caber a la que más sobresale.
     const cuerpos = valores.map((v) => ({
       x: 0, y: 0, hx: 1, hy: 0, carga: 0,
-      g: { ...eva, [rasgo]: v } as unknown as Genoma,
+      g: { ...eva, [rasgo]: v },
       radio: rasgo === "talla" ? v : eva.talla,
     }));
-    // La celda es cuadrada, así que la escala la manda la dimensión que más sobresalga de las dos.
+    // Una sola escala para las tres, o la fila de la talla no enseñaría tallas.
     const alcance = Math.max(...cuerpos.flatMap((c) => diseno.extension(c.g, c.radio)));
     const escala = (CELDA / 2 - 3) / alcance;
     cuerpos.forEach((c, i) => {
@@ -82,48 +48,32 @@ function Muestras({ rasgo, eva, paleta, diseno }: {
   });
 
   return (
-    <div className="lg-muestras">
-      <div className="lg-celdas">
-        {valores.map((v, i) => (
-          <canvas key={i} ref={(el) => { refs.current[i] = el; }} style={{ width: CELDA, height: CELDA }} />
-        ))}
-      </div>
+    <div className="lg-celdas">
+      {valores.map((v, i) => (
+        <canvas key={i} ref={(el) => { refs.current[i] = el; }} style={{ width: CELDA, height: CELDA }} />
+      ))}
     </div>
   );
 }
 
-/**
- * Cuántos cuerpos enseña la rampa de la edad. **Cuatro, que es lo que cabe en el móvil**: la tira va
- * a lo ancho del panel y uno por día serían once celdas. No se pierde nada por el camino — la rampa
- * es continua, y lo que hay que ver es a dónde va el color, no cada escalón.
- */
+/** Cuerpos de la rampa de la edad: los que caben en el móvil. */
 const PASOS_EDAD = 4;
 const DIAS_EDAD = Array.from({ length: PASOS_EDAD }, (_, i) => Math.round((i * CONFIG.vida) / (PASOS_EDAD - 1)));
 
-/**
- * **La edad, que no es un gen** y es el canal más visible del bicho: el color del cuerpo son los
- * años y nada más. Va en tira aparte y **no de séptima fila** porque las seis prometen recorrido,
- * fundador y banda de población, y la edad no tiene ninguna de las tres — de fila diría que es un
- * gen, que es justo lo que no es.
- *
- * Los cuerpos son el fundador a distintas edades y los pinta el diseño como los del mundo, así
- * que la rampa que se ve aquí es la que se ve ahí.
- */
-function Vejez({ eva, paleta, diseno }: { eva: Record<string, number>; paleta: Paleta; diseno: Design }) {
+/** La edad, que no es un gen: el fundador a varias edades, en tira aparte. */
+function Vejez({ eva, paleta, diseno }: { eva: Genoma; paleta: Paleta; diseno: Design }) {
   const refs = useRef<(HTMLCanvasElement | null)[]>([]);
 
   useEffect(() => {
     const dpr = window.devicePixelRatio || 1;
-    const g = eva as unknown as Genoma;
-    // Un solo cuerpo a cuatro edades: la escala la manda él, y es la misma en las cuatro celdas.
-    const escala = (CELDA / 2 - 3) / Math.max(...diseno.extension(g, eva.talla));
+    const escala = (CELDA / 2 - 3) / Math.max(...diseno.extension(eva, eva.talla));
     DIAS_EDAD.forEach((dia, i) => {
       const cv = refs.current[i];
       const ctx = cv?.getContext("2d");
       if (!cv || !ctx) return;
       cv.width = cv.height = Math.round(CELDA * dpr);
       pintarMuestra(ctx, diseno, CELDA, CELDA, dpr, paleta,
-        { x: 0, y: 0, hx: 1, hy: 0, carga: 0, g, radio: eva.talla, edad: dia / CONFIG.vida }, escala);
+        { x: 0, y: 0, hx: 1, hy: 0, carga: 0, g: eva, radio: eva.talla, edad: dia / CONFIG.vida }, escala);
     });
   });
 
@@ -151,52 +101,55 @@ function Vejez({ eva, paleta, diseno }: { eva: Record<string, number>; paleta: P
   );
 }
 
-function Fila({ rasgo, eva, tabla, paleta, diseno }: {
-  rasgo: string; eva: Record<string, number>;
-  tabla: { paga: string; cobra: string }; paleta: Paleta; diseno: Design;
-}) {
-  return (
-    <div className="lg-fila">
-      <Muestras rasgo={rasgo} eva={eva} paleta={paleta} diseno={diseno} />
-      <div className="lg-datos">
-        <div className="lg-cab">
-          <b>{rasgo === "vision" ? "visión" : rasgo}</b>
-        </div>
-        <p className="lg-que">{QUE_ES[rasgo]}</p>
-        <div className="lg-nota">
-          <span className="lg-paga">paga</span> {tabla.paga} · <span className="lg-cobra">cobra</span> {tabla.cobra}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export default function Leyenda({ rasgos, tabla, eva, paleta, diseno, cerrar }: {
-  rasgos: readonly string[];
-  tabla: Record<string, { paga: string; cobra: string }>;
-  /** El fundador, el mismo en todas las semillas: de ahí salió todo el mundo, en todas. */
-  eva: Record<string, number>;
+export default function Leyenda({ eva, paleta, diseno, cerrar }: {
+  eva: Genoma;
   paleta: Paleta;
   diseno: Design;
   cerrar: () => void;
 }) {
-  useEffect(() => {
-    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") cerrar(); };
-    window.addEventListener("keydown", esc);
-    return () => window.removeEventListener("keydown", esc);
-  }, [cerrar]);
-
+  usePanel(cerrar);
 
   return (
-    <div className="lg-panel">
+    <div className="ev-panel lg-panel">
+      <style>{`
+        .lg-panel { border: 1px solid var(--border); border-radius: 6px; padding: 0.9rem 1rem 1.2rem; }
+        .lg-filas { margin-top: 0.5rem; }
+        .lg-fila { display: flex; gap: 0.8rem; align-items: flex-start; padding: 0.7rem 0; border-top: 1px solid var(--border); }
+        .lg-celdas { flex: 0 0 auto; display: flex; gap: 4px; }
+        .lg-celdas canvas, .lg-paso canvas { border-radius: 3px; display: block; }
+        .lg-edad { padding: 0.8rem 0 0.2rem; border-top: 1px solid var(--border); }
+        .lg-tira { display: flex; gap: 4px; margin-top: 0.5rem; }
+        .lg-paso { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+        .lg-paso span { font-size: 0.58rem; color: var(--t-ink3); font-variant-numeric: tabular-nums; }
+        .lg-datos { flex: 1 1 auto; min-width: 0; }
+        .lg-cab { display: flex; align-items: baseline; justify-content: space-between; gap: 0.6rem; font-size: 0.72rem; }
+        .lg-cab b { color: var(--t-ink); letter-spacing: 0.04em; }
+        .lg-cifra { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+        .lg-que { font-size: 0.68rem; line-height: 1.5; color: var(--t-ink); margin: 0.2rem 0 0; }
+        .lg-nota { font-size: 0.62rem; line-height: 1.5; color: var(--t-ink3); margin-top: 0.2rem; }
+        .lg-nota span { color: var(--t-ink2); }
+        @media (max-width: 620px) {
+          .lg-fila { flex-direction: column; gap: 0.4rem; }
+          .lg-datos { width: 100%; }
+        }
+      `}</style>
       <Asa cerrar={cerrar} />
-      <div className="lg-cabecera">
+      <div className="ev-cabecera">
         <b>leyenda</b>
         <button className="ev-btn muted ev-cerrar" onClick={cerrar}>cerrar</button>
       </div>
       <div className="lg-filas">
-        {rasgos.map((r) => (
-          <Fila key={r} rasgo={r} eva={eva} tabla={tabla[r]} paleta={paleta} diseno={diseno} />
+        {RASGOS.map((r) => (
+          <div key={r} className="lg-fila">
+            <Muestras rasgo={r} eva={eva} paleta={paleta} diseno={diseno} />
+            <div className="lg-datos">
+              <div className="lg-cab"><b>{nombreDe(r)}</b></div>
+              <p className="lg-que">{QUE_ES[r]}</p>
+              <div className="lg-nota">
+                <span>paga</span> {TABLA[r].paga} · <span>cobra</span> {TABLA[r].cobra}
+              </div>
+            </div>
+          </div>
         ))}
       </div>
       <Vejez eva={eva} paleta={paleta} diseno={diseno} />

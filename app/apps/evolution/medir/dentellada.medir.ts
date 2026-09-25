@@ -1,19 +1,10 @@
-// Qué le hace al mundo que comerse a otro tarde — `npx tsx app/apps/evolution/dentellada.medir.ts`.
+// Qué le hace al mundo que comer tarde — `npx tsx app/apps/evolution/medir/dentellada.medir.ts`.
+// No es un test: mide. Fuera del build.
 //
-// **No es un test: no falla, mide.** La cifra de `ticksPresa` la elige el ojo, así que lo que no
-// puede quedar sin medir es lo otro: mordiendo no se decide ni se anda, ni el que muerde ni el
-// mordido, y eso es jornada que se pierde. En 0 se come en el tick del contacto, que es como
-// estuvo el mundo hasta que la depredación se pudo mirar.
-//
-// Tres preguntas, y ninguna es «¿sale otra partida?» — eso ya se sabe: el mundo es determinista y
-// cambiar cualquier cosa lo bifurca desde el primer mordisco. Lo que se pregunta es si la ecología
-// se mueve.
-//
-// 1. ¿Cambian el censo, la depredación y los genes, y cambian **en el clima donde más se caza**?
-// 2. Emparejando por semilla —el clima y la Eva son la mayor fuente de ruido—, ¿hacia dónde se
-//    mueve cada mundo, o se reparten a un lado y a otro como el azar?
-// 3. ¿Cuánta jornada se va de verdad en morder? Es la magnitud de la que cuelgan las otras dos.
-import { CONFIG, correrDia, REFERENCIA, crearMundo, mediana, resumen, tick, anochecer, amanecer } from "./engine";
+// 1. ¿Cambian censo, depredación y genes, sobre todo en el clima donde más se caza?
+// 2. Emparejando por semilla, ¿hacia dónde se mueve cada mundo, o se reparten como el azar?
+// 3. ¿Cuánta jornada se va de verdad en morder?
+import { CONFIG, correrDia, REFERENCIA, crearMundo, mediana, resumen, tick, anochecer, amanecer } from "../engine";
 
 const SEMILLAS = ("hola pablo claudio mar brizna raiz sal duna ocho nueve diez once sur norte cal arena hoja rama polvo cima " +
   "vado junco era brea luna sol pino roble olmo haya sauce cedro").split(" ");
@@ -58,11 +49,7 @@ for (const comidas of CLIMAS) {
 }
 
 // ── 2. Semilla contra semilla ────────────────────────────────────────────────
-// **Emparejar es lo que le da sensibilidad a esto.** Entre semillas, el censo va de doce a treinta
-// y una mediana de treinta y dos mundos distintos tapa cualquier efecto pequeño; la misma semilla
-// con dos reglas comparte clima y fundador, así que lo que queda es lo que hace la regla — más el
-// caos, que es lo que se lee en el reparto de signos: si sube en la mitad y baja en la otra, no hay
-// efecto que contar por mucho que la mediana se mueva.
+// La misma semilla comparte clima y fundador; el reparto de signos dice si hay efecto o caos.
 console.log("\n\n## Semilla contra semilla, contra el mundo de 60 ticks\n");
 fila(["clima", "ticks", "pares", "Δcenso", "suben", "Δpresas/d", "suben", "Δtalla", "suben"]);
 for (const comidas of CLIMAS) {
@@ -82,10 +69,7 @@ for (const comidas of CLIMAS) {
   }
 }
 
-// ── 3. Cuánta jornada se va en morder ────────────────────────────────────────
-// Tick a tick y contando cuerpos: la fracción de la vida de la población que se pasa anclada, con
-// el que muerde y el mordido contando los dos. Es la magnitud que explica por qué lo de arriba
-// sale como sale.
+// ── 3. Cuánta jornada se va en morder: fracción de vida anclada, los dos cuentan ─
 console.log("\n\n## Jornada anclada (clima 55, el que más caza)\n");
 fila(["ticks", "anclado%", "presas/d", "censo"]);
 for (const ticksPresa of TICKS) {

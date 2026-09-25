@@ -1,23 +1,12 @@
-// Lo que cuesta una jornada y lo que tarda en verse — `npx tsx app/apps/evolution/ritmo.medir.ts`.
+// Lo que cuesta una jornada y lo que tarda en verse — `npx tsx app/apps/evolution/medir/ritmo.medir.ts`.
+// No es un test: mide. Fuera del build.
 //
-// **No es un test: no falla, mide.** Fuera del build, como el resto de medidores. Está para
-// contestar la pregunta que vuelve cada vez que una partida parece ir lenta: ¿se ha encarecido el
-// mundo, o es que la pantalla da lo que da?
-//
-// **La respuesta casi siempre es la pantalla, y el motor no es nunca el cuello.** El bucle de la
-// página da `vel` ticks por fotograma con un presupuesto de 12 ms, y en esos 12 ms caben miles:
-// hasta a ×64, los 64 ticks de un fotograma cuestan una fracción de milisegundo. Lo que llena el
-// fotograma es pintar. De ahí las dos consecuencias que hay que tener delante antes de salir a
-// cazar una regresión del motor:
-//
-// - **A ×1 el reloj de pared lo fija el refresco.** Un tick por fotograma son mil fotogramas por
-//   jornada: 16,7 s a 60 Hz y 8,3 s a 120 Hz, y no hay código que lo baje. Una jornada que tarde
-//   eso va tan rápido como puede ir. El motor pone centésimas de esos segundos.
-// - **A ×8 y ×64 lo que manda es cuántos cuerpos hay que pintar**, no cuántos ticks hay que dar.
-//   Por eso este medidor cuenta cuerpos por cuadro: es la cifra que de verdad puede crecer.
+// Para cuando una partida parece lenta. El motor no es el cuello: a ×1 el reloj lo fija el
+// refresco (mil fotogramas por jornada) y a ×8 y ×64, cuántos cuerpos hay que pintar.
 
-import { CONFIG, amanecer, anochecer, REFERENCIA, crearMundo, tick, type Mundo } from "./engine";
-import { designFor, paletaDe, pintar, vistaDe } from "./render";
+import { CONFIG, amanecer, anochecer, REFERENCIA, crearMundo, tick, type Mundo } from "../engine";
+import { paletaDe, pintar, vistaDe } from "../render";
+import { designFor } from "../designs";
 
 /** Lo que la página intenta por fotograma y el presupuesto que se da. Copiados de `page.tsx`. */
 const VELOCIDADES = [1, 8, 64];
@@ -34,8 +23,7 @@ const lienzoFalso = (): CanvasRenderingContext2D => new Proxy({ globalAlpha: 1 }
   set: (o, k, v) => ((o[String(k)] = v), true),
 }) as unknown as CanvasRenderingContext2D;
 
-// El pintado cuece el suelo en un lienzo aparte, así que aquí hace falta un `document` que sepa
-// devolver uno. Va antes de pintar nada y no lo mira nadie más.
+// El pintado cuece el suelo en un lienzo aparte: hace falta un `document` que lo dé.
 (globalThis as unknown as { document: unknown }).document = {
   createElement: () => ({ getContext: () => lienzoFalso(), width: 0, height: 0 }),
 };
@@ -83,9 +71,7 @@ for (const [nombre, dia] of [["día 0 · un bicho", 0], ["en régimen", MADURO]]
     ` · ${fmt((ms / mundos) * 1000 / CONFIG.ticksDia).padStart(5)} µs/tick · censo ${Math.round(censo / mundos)}`);
 }
 
-// ─── El pintado ───────────────────────────────────────────────────────────────
-// Cuerpos por cuadro, que es lo que crece cuando se añade algo al lienzo. No mide milisegundos:
-// `d.cuerpo` aquí es un contador, y lo que cuesta de verdad solo lo sabe el canvas del navegador.
+// ─── El pintado: cuerpos por cuadro, no milisegundos ───────────────────────────
 {
   const ctx = lienzoFalso();
   let cuerpos = 0, cuadros = 0, vivos = 0, maxQuietos = 0;
@@ -110,10 +96,7 @@ for (const [nombre, dia] of [["día 0 · un bicho", 0], ["en régimen", MADURO]]
     ` · ${fmt(vivos / cuadros)} vivos · hasta ${maxQuietos} cuerpos quietos a la vez`);
 }
 
-// ─── Lo que de eso se ve ──────────────────────────────────────────────────────
-// La cuenta que contesta «¿va lento?»: a cada velocidad, cuántos fotogramas pide una jornada y
-// cuánto tarda eso en cada refresco. El motor no aparece porque no pinta nada en esta tabla — y
-// esa **es** la conclusión.
+// ─── Cuántos fotogramas pide una jornada a cada velocidad y refresco ───────────
 console.log(`\nfotogramas por jornada, y lo que tardan (presupuesto ${PRESUPUESTO_MS} ms por fotograma):`);
 console.log(`  ${"".padEnd(6)}${"fotogramas".padStart(11)}${REFRESCOS.map((h) => `${h} Hz`.padStart(9)).join("")}`);
 for (const vel of VELOCIDADES) {
@@ -124,13 +107,11 @@ for (const vel of VELOCIDADES) {
 console.log(`\nSi una jornada tarda lo que dice su fila, va tan rápido como la pantalla deja.` +
   ` Si tarda más, mira los cuadros por segundo y los cuerpos por cuadro — no el motor.`);
 
-// **Lo que este medidor no puede medir es el navegador**, que es donde se nota. La tabla de arriba
-// dice lo que una jornada *debería* tardar; esto la cronometra de verdad. Va aquí y no en la
-// página porque es diagnóstico y no mundo: la partida no tiene por qué llevar un reloj encima.
+// El navegador no se mide aquí: esto se pega en su consola para cronometrarlo de verdad.
 console.log(`\nPara cronometrarla de verdad, pegar esto en la consola de /apps/evolution — mide la
 primera jornada completa que pase, de amanecer a anochecer, a la velocidad que esté puesta:
 
-  (()=>{const e=document.querySelector('.ev-estado');let f=0,t0=0;const i=setInterval(()=>{
+  (()=>{const e=document.querySelector('.be-elastico');let f=0,t0=0;const i=setInterval(()=>{
   const n=e.textContent.includes('anochece');
   if(f===0&&n)f=1; else if(f===1&&!n){f=2;t0=performance.now()}
   else if(f===2&&n){clearInterval(i);console.log(((performance.now()-t0)/1000).toFixed(2)+' s la jornada')}},8)})()

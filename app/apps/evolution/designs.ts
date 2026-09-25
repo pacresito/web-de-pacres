@@ -1,42 +1,19 @@
-// Los cuatro diseños de evolution: cuerpo, comida, suelo y paleta. **La semilla elige cuál**, así
-// que la palabra que escribes no solo define el mundo — define de qué están hechos sus bichos.
+// Los cuatro diseños de evolution: cuerpo, comida, suelo y paleta. La semilla elige cuál.
 //
-// Un diseño no puede inventarse nada: los cuatro comparten el **mismo contrato de genes** —qué gen
-// vive en qué parte, con qué umbral aparece cada órgano y qué estados se leen— y solo cambian el
-// material y el repertorio de formas. Lo que sí es común y no se duplica está aquí arriba: el
-// recorrido medido, la escala de pintado, la normalización y los umbrales. Si cada diseño tuviera su
-// escala, dos personas mirando la misma semilla verían genes distintos.
-//
-// Se llama `designs` y no `diseños` porque es un identificador ASCII (regla «Nombres»).
+// Los cuatro comparten el mismo contrato de genes —qué gen vive en qué parte y con qué umbral
+// aparece cada órgano— y la misma escala, que vive aquí arriba: solo cambian material y formas.
 
-import { FUNDADOR, RADIO_COMIDA, RASGOS, hashSemilla, signado, type Genoma, type Rasgo } from "./engine";
+import { azarFijo, hashSemilla } from "./azar";
+import { FUNDADOR, RADIO_COMIDA, RASGOS, signado, type Genoma, type Rasgo } from "./engine";
 import type { PuntoOrilla } from "./formas";
 
 const TAU = Math.PI * 2;
 export const clamp = (v: number, a: number, b: number) => (v < a ? a : v > b ? b : v);
 
 /**
- * **El recorrido medido de cada gen: el p01 y el p99 de una simulación de varios mundos.** Es lo que
- * ha llegado a existir, y está aquí para poder decir hasta dónde ha ido un linaje: de él sale el
- * medio ancho del eje de la tira (`SEMI_EJE`, abajo). **No para dibujar el cuerpo con él:** eso lo
- * hace `SEMI`, debajo, y por eso son dos tablas y no una.
- *
- * Mientras fueron la misma, la cola mandaba en el dibujo. La del `retorno` se mueve de una pasada a
- * otra —y la de la `fiereza` con ella—, así que cuatro bichos raros decidían con qué escala se
- * pintaba la población entera: los tres cuartos de abajo apretados en media escala y la otra media
- * para ellos. Separadas, el recorrido puede crecer con lo que aparezca sin estrechar el dibujo de
- * nadie.
- *
- * No son ÷2 y ×2 del fundador. El fundador no tiene por qué estar donde vive la población —y durante
- * mucho tiempo no lo estuvo—, así que anclar en él dejaba la mitad de cada rango sin visitar.
- * Anclando en la población, un extremo lo tiene el 1% de los bichos, que es lo que hace que verlo
- * signifique algo.
- *
- * Salen de la sección 7 de `convergencia.medir.ts` —48 mundos × 1000 días, 80.000 bichos
- * muestreados— y **se refrescan cada vez que se toca `tasa`**: bajarla encoge lo que un linaje llega
- * a recorrer, y no por igual en los seis. Al gen que la selección aprieta —empuje, talla, visión— le
- * fija el recorrido ella y encoge poco; al que deriva —fiereza, retorno— se lo fija la propia
- * mutación y encoge casi en proporción.
+ * El p01 y el p99 de cada gen en 48 mundos × 1000 días (`medir/convergencia.medir.ts`, sección 7):
+ * hasta dónde ha llegado un linaje. Da el eje de la tira; el cuerpo se dibuja con `SEMI`. Se
+ * remide al tocar `tasa`.
  */
 export const RECORRIDO: Record<Rasgo, [number, number]> = {
   empuje: [1.76, 3.54],
@@ -48,92 +25,52 @@ export const RECORRIDO: Record<Rasgo, [number, number]> = {
 };
 
 /**
- * **El medio ancho de la escala de pintado, en octavas** —unidades en la sociabilidad—: el radio
- * alrededor del fundador que deja dentro al 90% de los bichos, **de la misma población de la que
- * sale `RECORRIDO`**; si fueran dos poblaciones, "la escala recorta la cola" no querría decir nada.
- * Lo de fuera se recorta, y ese es el precio de que el resto se distinga: **una escala que quepa la
- * cola convierte a la población en un pegote**.
- *
- * Va **centrado en el fundador**, que es lo que le da el 0,5 exacto y por tanto lo que le hace nacer
- * liso. Y **simétrico**, no un medio ancho por lado: con dos varas, dos bichos igual de raros se
- * pintarían distinto según de qué lado del fundador cayeran, y lo que el cuerpo tiene que decir es
- * cuánto se ha ido de donde salió, no en qué percentil vive.
- *
- * Lo mide la sección 6 de `convergencia.medir.ts`, que de paso comprueba las dos cosas que la escala
- * tiene que conseguir. Que el cuerpo de la población quepa ancho: del p25 al p75 ocupa entre el 32%
- * y el 40% de ella, donde el `retorno` con la tabla compartida se quedaba en el 24%. Y que los
- * umbrales sigan diciendo algo: los que cuelgan de uno —pala, brazo, patas, púas, aletas y lo que le
- * sale al grande— los lleva del 17% al 47% de los bichos, y ninguno se ha vuelto universal ni
- * imposible. **Ese es el número que avisa cuando el fundador deja de vivir donde vive la
- * población:** clavándole la talla dos décimas por encima del centro medido, la pala se la ponía el
- * 67% —un adorno que ya no dice nada— y la mitad de arriba de su barra no la pisaba nadie.
+ * Medio ancho de la escala de pintado, en octavas (unidades en la sociabilidad), centrado en el
+ * fundador: deja dentro al 90% de los bichos de la misma población (sección 6). Lo de fuera se
+ * recorta para que el resto se distinga.
  */
 const SEMI: Record<Rasgo, number> = {
   empuje: 0.36, talla: 0.22, vision: 0.29, sociabilidad: 0.23, fiereza: 0.56, retorno: 0.8,
 };
 
-/**
- * La escala de pintado hecha extremos, `[lo, hi]`: el cuerpo más bajo y el más alto que se van a
- * ver, porque de ahí para fuera el dibujo ya no cambia. La usan la leyenda para sus dos muestras y
- * `designs.test.ts` para apretar los diseños; el cuerpo no la necesita — le basta contar octavas
- * desde el fundador.
- */
+/** La escala de pintado en valores de gen, `[lo, hi]`: más allá el dibujo ya no cambia. */
 export const ESCALA = Object.fromEntries(RASGOS.map((r) => [r, signado(r)
   ? [FUNDADOR[r] - SEMI[r], FUNDADOR[r] + SEMI[r]]
   : [FUNDADOR[r] / 2 ** SEMI[r], FUNDADOR[r] * 2 ** SEMI[r]],
 ])) as Record<Rasgo, [number, number]>;
 
-/**
- * De valor de gen a 0…1 en la escala de pintado. **En octavas**, porque los genes mutan
- * multiplicando y la distancia natural entre 1 y 4 es la misma que entre 4 y 16. Se cuenta desde el
- * fundador, así que él cae en el 0,5 por construcción y no por suerte.
- */
-const n01 = (r: Rasgo, v: number): number =>
-  clamp(0.5 + Math.log2(v / FUNDADOR[r]) / (2 * SEMI[r]), 0, 1);
+/** Octavas desde el fundador —los genes mutan multiplicando—; unidades en el que lleva signo. */
+const desdeEva = (r: Rasgo, v: number): number =>
+  signado(r) ? v - FUNDADOR[r] : Math.log2(v / FUNDADOR[r]);
+
+/** De valor de gen a 0…1 en la escala de pintado; el fundador cae en 0,5. */
+const n01 = (r: Rasgo, v: number): number => clamp(0.5 + desdeEva(r, v) / (2 * SEMI[r]), 0, 1);
 
 /**
- * La sociabilidad va en la misma vara, y **su cero deja de ser el cero físico para ser el
- * fundador**. Cuesta un matiz —un bicho pintado liso no es "me da igual la compañía", es "igual que
- * su tatarabuela"— y a cambio el gen se ve: su recorrido medido es de −0,65 a +0,33, así que a
- * escala de ±1 la población entera se pintaba idéntica.
- */
-const n01soc = (s: number): number =>
-  clamp(0.5 + (s - FUNDADOR.sociabilidad) / (2 * SEMI.sociabilidad), 0, 1);
-
-/**
- * **El fundador nace liso y todo adorno es una desviación de él.** Los umbrales están a la misma
- * distancia del centro por los dos lados, así que el bicho del primer día no tiene dientes, ni
- * miembro prensil, ni patas, ni púas, ni apéndices sociables: lo que se ve encima de un bicho es
- * exactamente lo que le ha pasado a su linaje.
- *
- * Es lo que convierte el cuerpo en un display de diferencia y no en una ficha de características, y
- * lo que hace que mirar el mundo dos veces con cien días de por medio cuente algo. **Vale para los
- * cuatro diseños**, y un diseño que no lo cumpla está roto: lo comprueba `designs.test.ts`.
+ * Distancia al centro a la que aparece un órgano, igual por los dos lados: el fundador nace liso
+ * y todo lo que se le ve encima a un bicho es lo que le ha pasado a su linaje. Lo comprueba
+ * `designs.test.ts`.
  */
 export const DESVIO = 0.12;
 const U_ALTO = 0.5 + DESVIO, U_BAJO = 0.5 - DESVIO;
 
-/** Los seis genes normalizados y los cuatro derivados, que es lo único que ve un diseño. */
+/** Los seis genes normalizados y los órganos que salen de ellos: lo único que ve un diseño. */
 export type Medidas = {
   ta: number; sp: number; vi: number; fi: number; re: number; so: number;
-  /** Miembro prensil, para robar. */ brazo: number;
-  /** Pala de recolector, del que no persigue. */ pala: number;
-  /** Patas. Acortan la propulsión principal. */ pata: number;
+  /** Miembro prensil del fiero. */ brazo: number;
+  /** Pala del manso: el otro lado de la fiereza. */ pala: number;
+  /** Patas: acortan la propulsión principal. */ pata: number;
   /** Púas del insociable. */ pincho: number;
   /** Apéndices del sociable. */ aleta: number;
 };
 
 export function medidas(g: Genoma): Medidas {
-  const so = n01soc(g.sociabilidad);
+  const so = n01("sociabilidad", g.sociabilidad);
   const fi = n01("fiereza", g.fiereza), re = n01("retorno", g.retorno);
   return {
     ta: n01("talla", g.talla), sp: n01("empuje", g.empuje), vi: n01("vision", g.vision),
     fi, re, so,
     brazo: Math.max(0, (fi - U_ALTO) / (1 - U_ALTO)),
-    // El otro lado de la fiereza. **Un gen que solo se viera por arriba no se ve:** con el tono
-    // fuera, sin esto la mitad plácida de la población salía idéntica al fundador y "más manso que
-    // su bisabuela" no se podía leer. Pala y brazo compiten por el mismo frente a propósito —el
-    // manso recoge, el fiero agarra— y nunca coinciden: el gen no puede estar a los dos lados.
     pala: Math.max(0, (U_BAJO - fi) / U_BAJO),
     pata: Math.max(0, (re - U_ALTO) / (1 - U_ALTO)),
     pincho: Math.max(0, (U_BAJO - so) / U_BAJO),
@@ -148,60 +85,39 @@ export type Paleta = {
   bg: string; bg2: string;
   home: string; homeInk: string;
   food: string;
-  /** Rampa de referencia del diseño. `mid` es de dónde sale un cuerpo recién nacido. */
+  /** Rampa del cuerpo: nace en `mid`; `hot` es el color del zarpazo. */
   cold: string; mid: string; hot: string;
-  /**
-   * A dónde va el cuerpo al envejecer. **El color del cuerpo es la edad y nada más**: cualquier
-   * otro gen que lo tocara competiría con ella, y un bicho a punto de morir tiene que leerse de un
-   * vistazo entre treinta. Lo que un gen pide es forma —un brazo, una púa, un ojo—, que se puede
-   * mirar de cerca; la edad pide el canal que se ve sin mirar.
-   */
+  /** A dónde va el cuerpo al envejecer: el color del cuerpo es la edad y nada más. */
   vejez: string;
-  /** A dónde se apaga un cuerpo sin energía. No es gris: es el fondo tragándoselo. */
+  /** A dónde se apaga un cuerpo sin energía. */
   dim: string;
   hi: string; line: string; maw: string;
   acc: string; acc2: string; jaw: string; belly: string; fin: string;
-  /** Para lo poco que se escribe encima del mundo: los hijos de cada madre al anochecer. */
+  /** Lo que se escribe encima del mundo. */
   tinta: string;
 };
 
-const hexa = (h: string): [number, number, number] => {
+/** `#rrggbb` a sus tres canales. */
+export const canales = (h: string): [number, number, number] => {
   const n = parseInt(h.slice(1), 16);
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 };
-/** Mezcla dos `#rrggbb`. No hay otro formato en la parte de la paleta que se mezcla. */
+
+/** Mezcla dos `#rrggbb`. */
 export function mix(a: string, b: string, t: number): string {
-  const A = hexa(a), B = hexa(b);
+  const A = canales(a), B = canales(b);
   const c = (i: number) => Math.round(clamp(A[i] + (B[i] - A[i]) * t, 0, 255)).toString(16).padStart(2, "0");
   return `#${c(0)}${c(1)}${c(2)}`;
 }
-export const canales = hexa;
 
-/**
- * El color del cuerpo: **la edad lo lleva de `mid` a `vejez`** y la energía lo apaga hacia el
- * fondo. Los dos ejes se distinguen porque no van al mismo sitio —el hambre te acerca al suelo,
- * los años te acercan a `vejez`— y porque el hambre se recupera comiendo y la edad no vuelve.
- */
+/** La edad lleva el cuerpo de `mid` a `vejez`; el hambre lo apaga hacia `dim`. */
 export const colorCuerpo = (p: Paleta, edad: number, e: number) =>
   mix(mix(p.mid, p.vejez, clamp(edad, 0, 1)), p.dim, (1 - e) * 0.42);
 
-/**
- * Cuánto del viaje del cuerpo hace lo que le cuelga. **Envejecer es del bicho entero, no de su
- * piel:** el Instrumento y el Cristal son casi todo apéndice —cuña, arco de visión, púas, quilla,
- * manos, boca—, y con la edad pintada solo en el relleno llegaban a los diez días igual que
- * nacieron. A medias y no del todo, que en blanco un apéndice deja de decir qué gen es.
- */
+/** Cuánto encanecen los apéndices respecto al cuerpo: del todo dejarían de decir qué gen son. */
 const CANAS = 0.45;
 
-/**
- * La paleta que ve un cuerpo de esa edad: la del mundo con sus tonos de bicho ya encanecidos.
- *
- * **Va por la paleta y no por cada dibujo** para que no se pueda olvidar: un diseño pinta con los
- * tonos que le den, así que uno nuevo envejece sin escribir una línea y a uno viejo no se le queda
- * una pieza joven sin que falle nada. Los del mundo —suelo, casa, comida, tinta— no entran: son la
- * escena, no el bicho. La rampa tampoco: `mid`, `vejez` y `dim` **son** de dónde y a dónde va el
- * cuerpo, y moverlas es mover la regla con la que se mide.
- */
+/** La paleta de un cuerpo de esa edad. Va por la paleta para que ningún dibujo pueda olvidarla. */
 export function envejecer(p: Paleta, edad: number): Paleta {
   const t = clamp(edad, 0, 1) * CANAS;
   if (t < 0.01) return p;
@@ -213,25 +129,10 @@ export function envejecer(p: Paleta, edad: number): Paleta {
   };
 }
 
-/**
- * Hasta dónde llega el rojo del que se están comiendo. **Casi entero y no del todo**: en 1 el
- * cuerpo se vuelve una mancha plana del color del zarpazo y deja de ser un bicho justo cuando hay
- * que ver que es uno.
- */
+/** Hasta dónde enrojece la presa: del todo sería una mancha y no un bicho. */
 const SANGRE = 0.9;
 
-/**
- * La paleta de quien se está comiendo otro: **el bicho entero virando a `hot`**, que es el color
- * con el que ya se pinta el zarpazo — así el cuerpo y el anillo que lo remata cuentan lo mismo, y
- * sale bien en las cuatro paletas y en los dos temas sin escribir un rojo en ningún sitio.
- *
- * Va por la paleta y no por cada dibujo, como `envejecer`, y a diferencia de ella **tiñe también
- * la rampa del cuerpo** (`mid`, `vejez`, `dim`): teñir solo la piel deja al bicho de su color con
- * los apéndices rojos, que se lee como otra especie y no como el que se está muriendo.
- *
- * Pisa el canal de la edad mientras dura el bocado, y es el único sitio donde eso vale: al que se
- * están comiendo no hay que poder leerle los años.
- */
+/** La paleta de la presa, entera hacia `hot`, rampa del cuerpo incluida. */
 export function enrojecer(p: Paleta, k: number): Paleta {
   const t = clamp(k, 0, 1) * SANGRE;
   if (t < 0.01) return p;
@@ -244,31 +145,16 @@ export function enrojecer(p: Paleta, k: number): Paleta {
   };
 }
 
-/** PRNG del pintado, de semilla fija. No toca el del motor: aquí nada decide nada. */
-export function azarFijo(s: number) {
-  return () => {
-    s |= 0; s = (s + 0x6d2b79f5) | 0;
-    let t = Math.imul(s ^ (s >>> 15), 1 | s);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
 // ─── El contrato de un diseño ─────────────────────────────────────────────────
 
-/** Lo que hace falta para pintar un bicho, venga del mundo o de una muestra de leyenda. */
+/** Lo que hace falta para pintar un bicho, del mundo o de una muestra. */
 export type Cuerpo = {
   x: number; y: number; hx: number; hy: number;
-  /** Radio dibujado. No es `g.talla`: una cría crece desde nada durante su primera noche. */
+  /** Radio dibujado: una cría crece desde nada su primera noche. */
   radio: number;
-  /**
-   * Bocados encima, que se pintan sobre el cuerpo. **Los cuatro diseños topan en tres, y el tope
-   * no se toca nunca:** medido en ocho semillas y ciento cincuenta días, el 99,4% de los ticks se
-   * llevan uno o ninguno, el 99,95% dos o menos, y el récord de toda la población son cinco. Se
-   * descarga bocado a bocado al llegar a casa, así que acumular encima no es una estrategia.
-   */
+  /** Bocados encima; los diseños pintan tres como mucho. */
   carga?: number;
-  /** Lo viejo que es, 0…1. El único canal de color del cuerpo. */
+  /** 0…1. */
   edad?: number;
   g: Genoma;
 };
@@ -277,36 +163,25 @@ export type Design = {
   id: string;
   nombre: string;
   paleta: (tema: "light" | "dark") => Paleta;
-  /** El bicho, con el morro en +x y el origen en el centro. Quien llama pone posición y rumbo. */
+  /** El bicho, con el morro en +x y el origen en el centro. */
   cuerpo: (ctx: CanvasRenderingContext2D, b: Cuerpo, vigor: number, p: Paleta) => void;
-  /** Hasta dónde llega lo dibujado, en unidades de mundo y por eje. Lo usa la leyenda para encajar. */
+  /** Hasta dónde llega lo dibujado, por eje y en unidades de mundo. */
   extension: (g: Genoma, radio: number) => [number, number];
-  /** Un bocado, centrado en el origen. `giro` es estable por bocado: sale de su posición. */
+  /** Un bocado centrado en el origen; `giro` es estable por bocado. */
   comida: (ctx: CanvasRenderingContext2D, p: Paleta, giro: number) => void;
-  /**
-   * El suelo, en unidades de mundo, se cuece una vez y no por cuadro, en tres capas que **no saben
-   * de la forma del mundo**: quien pinta las recorta y las pone en su sitio.
-   *
-   * `casa` es el material de casa sobre el rectángulo `x0,y0 → x1,y1`, que se sale del mundo: **todo
-   * lo que no es campo es casa**, así que el mundo no acaba en un marco sino en más casa.
-   */
+  /** Casa sobre el rectángulo dado, que se sale del mundo: lo que no es campo es casa. */
   casa: (c: CanvasRenderingContext2D, x0: number, y0: number, x1: number, y1: number, escala: number, p: Paleta) => void;
-  /** El suelo del campo sobre la caja del mundo entera; llega recortado a la forma. */
+  /** El suelo sobre la caja del mundo; quien pinta lo recorta a la forma. */
   suelo: (c: CanvasRenderingContext2D, ancho: number, alto: number, casa: number, escala: number, p: Paleta) => void;
-  /** La orilla entre el campo y casa, sobre sus lazos. La normal de cada punto mira a casa. */
+  /** La orilla entre campo y casa. La normal de cada punto mira a casa. */
   borde: (c: CanvasRenderingContext2D, lazos: PuntoOrilla[][], casa: number, escala: number, p: Paleta) => void;
 };
 
 // ─── Suelos ───────────────────────────────────────────────────────────────────
 //
-// **El grano y las motas se generan una sola vez**, con semilla fija: regenerarlos por cuadro los
-// haría parpadear como nieve de televisión, y son más de mil figuras — pintarlas sesenta veces por
-// segundo cuesta más que todos los bichos juntos.
+// Con semilla fija: regenerados por cuadro parpadearían.
 
-/**
- * Figuras de grano por unidad de área: las que tenía la caja de 288×200, que es la medida con la que
- * se eligieron. Por área y no por mundo, para que un mundo más pequeño no salga más granulado.
- */
+/** Densidad de grano: la de la caja de 288×200. */
 const POR_AREA = 1 / (288 * 200);
 const MOTAS = 1100, GRANO = 480, PUNTOS = 900;
 
@@ -333,7 +208,7 @@ const casaMoteada: Design["casa"] = (c, x0, y0, x1, y1, escala, p) => {
 /** El paso del rayado de la casa de cristal, en unidades de mundo. */
 const pasoRayado = (escala: number) => (7 / escala) * 2.7;
 
-/** Casa rayada en diagonal: rayas `x − y = d`, con `d` en una red que no se corta. */
+/** Casa rayada en diagonal. */
 const casaRayada: Design["casa"] = (c, x0, y0, x1, y1, escala, p) => {
   c.fillStyle = p.home; c.fillRect(x0, y0, x1 - x0, y1 - y0);
   c.strokeStyle = p.homeInk;
@@ -344,12 +219,12 @@ const casaRayada: Design["casa"] = (c, x0, y0, x1, y1, escala, p) => {
   }
 };
 
-/** La casa del instrumento es lisa: las marcas de regla son del borde, no del material. */
+/** Casa lisa: las marcas de regla son del borde. */
 const casaLisa: Design["casa"] = (c, x0, y0, x1, y1, _escala, p) => {
   c.fillStyle = p.home; c.fillRect(x0, y0, x1 - x0, y1 - y0);
 };
 
-/** Grano de papel: despega el suelo del color plano sin dibujar nada que signifique algo. */
+/** Grano de papel. */
 const sueloPapel: Design["suelo"] = (c, ancho, alto, _casa, escala, p) => {
   const azar = azarFijo(3);
   c.fillStyle = p.bg; c.fillRect(0, 0, ancho, alto);
@@ -362,7 +237,7 @@ const sueloPapel: Design["suelo"] = (c, ancho, alto, _casa, escala, p) => {
   c.globalAlpha = 1;
 };
 
-/** Una viñeta: el centro del mundo se aclara y los bordes se hunden. */
+/** Viñeta: el centro se aclara. */
 const sueloVineta: Design["suelo"] = (c, ancho, alto, _casa, _escala, p) => {
   c.fillStyle = p.bg; c.fillRect(0, 0, ancho, alto);
   const gr = c.createRadialGradient(ancho * 0.45, alto * 0.42, alto * 0.1, ancho * 0.5, alto * 0.5, ancho * 0.72);
@@ -380,7 +255,7 @@ const sueloMotas: Design["suelo"] = (c, ancho, alto, _casa, escala, p) => {
   for (let i = 0, n = Math.round(PUNTOS * POR_AREA * ancho * alto); i < n; i++) c.fillRect(azar() * ancho, azar() * alto, s, s);
 };
 
-/** Rejilla: el suelo de un instrumento se mide. Arranca en la orilla de casa. */
+/** Rejilla desde la orilla de casa. */
 const sueloRejilla: Design["suelo"] = (c, ancho, alto, casa, escala, p) => {
   c.fillStyle = p.bg; c.fillRect(0, 0, ancho, alto);
   c.strokeStyle = p.bg2; c.lineWidth = 1 / escala;
@@ -402,11 +277,7 @@ function trazarLazos(c: CanvasRenderingContext2D, lazos: PuntoOrilla[][], f: (s:
   }
 }
 
-/**
- * El borde de casa, ondulado. Es una orilla: se lee como algo del mundo y no como el marco de un
- * plano. **La línea media de la franja —donde de verdad se está a salvo— no se pinta:** quien juega
- * la aprende viendo que ahí dejan de cazarse.
- */
+/** El borde de casa, ondulado como una orilla. La línea media de la franja no se pinta. */
 const orilla: Design["borde"] = (c, lazos, _casa, escala, p) => {
   c.strokeStyle = p.homeInk;
   c.lineWidth = 2 / escala;
@@ -414,7 +285,7 @@ const orilla: Design["borde"] = (c, lazos, _casa, escala, p) => {
   c.stroke();
 };
 
-/** El mismo borde, recto. Los diseños de material duro lo quieren así: ahí la recta es el material. */
+/** El mismo borde, recto. */
 const canto: Design["borde"] = (c, lazos, _casa, escala, p) => {
   c.strokeStyle = p.homeInk;
   c.lineWidth = 2 / escala;
@@ -426,8 +297,7 @@ const canto: Design["borde"] = (c, lazos, _casa, escala, p) => {
 const regla: Design["borde"] = (c, lazos, casa, escala, p) => {
   const f = 1 / escala;
   c.strokeStyle = p.homeInk; c.lineWidth = f;
-  // Cada 8 unidades de orilla exactas, interpoladas entre los puntos del lazo: en el punto más
-  // cercano la regla saldría con los dientes desiguales.
+  // Cada 8 unidades exactas, interpoladas entre los puntos del lazo.
   for (const l of lazos) {
     let i = 0, acum = 0;
     for (let k = 0; k < l.length; k++) {
@@ -450,7 +320,7 @@ const regla: Design["borde"] = (c, lazos, casa, escala, p) => {
 
 // ─── Comidas ──────────────────────────────────────────────────────────────────
 
-/** Disco con halo. El halo es lo que lo despega del suelo sin engordarlo. */
+/** Disco con halo. */
 const discoCon = (factor: number): Design["comida"] => (ctx, p) => {
   const r = RADIO_COMIDA * factor;
   const gr = ctx.createRadialGradient(0, 0, r * 0.5, 0, 0, r * 1.35);
@@ -462,7 +332,7 @@ const discoCon = (factor: number): Design["comida"] => (ctx, p) => {
   ctx.beginPath(); ctx.arc(0, 0, r * 0.62, 0, TAU); ctx.fill();
 };
 
-/** Bacilo: cápsula tumbada con un brillo. Gira con el bocado para que el suelo no sea un peine. */
+/** Bacilo: cápsula con brillo, girada por bocado. */
 const bacilo: Design["comida"] = (ctx, p, giro) => {
   const r = RADIO_COMIDA, L = r * 0.98, w = r * 0.46;
   ctx.save();
@@ -502,16 +372,14 @@ const cruz: Design["comida"] = (ctx, p) => {
 
 // ─── 1 · Pez ──────────────────────────────────────────────────────────────────
 //
-// Recorte de papel plano con sombra desplazada. La sombra va **solidaria al cuerpo** —rota con él—,
-// así que no promete una luz global que este mundo no tiene.
-//
+// Recorte de papel con sombra solidaria al cuerpo.
 // · talla → cuerpo y boca, con dientes arriba · empuje → casco, de ladrillo a bala
 // · visión → ojos · fiereza → pala o brazo con mano · sociabilidad → púas o pectorales
 // · retorno → caudal, y patas que se la comen
 
 const COLA = 2.1;
 
-/** Las medidas del casco del pez, que necesitan a la vez el dibujo y quien calcula lo que ocupa. */
+/** El casco del pez, que comparten el dibujo y su extensión. */
 function pezCasco(m: Medidas, R: number, e: number) {
   return {
     fr: R * (0.95 + 0.80 * m.sp),
@@ -549,7 +417,7 @@ const pezCuerpo: Design["cuerpo"] = (ctx, b, e, p) => {
     ctx.closePath();
   };
 
-  // retorno · la caudal, que las patas acortan: no se puede nadar y andar con lo mismo
+  // retorno · la caudal, que las patas acortan
   const largo = R * (0.50 + COLA * 0.48 * m.re) * (1 - 0.55 * m.pata), abre = 0.40 + 0.72 * m.re;
   ctx.fillStyle = aleta;
   ctx.beginPath();
@@ -573,9 +441,7 @@ const pezCuerpo: Design["cuerpo"] = (ctx, b, e, p) => {
     }
   }
 
-  // sociabilidad − · la corona del huraño. **Ni en proa ni en popa, y con un hueco donde sale el
-  // brazo**: una corona cerrada borra hacia dónde mira el bicho, que a este tamaño es lo primero
-  // que hay que poder leer.
+  // sociabilidad − · la corona del huraño, abierta en proa y popa para que se lea el rumbo.
   if (m.pincho > 0.02) {
     const largoP = R * (0.10 + 0.66 * m.pincho);
     ctx.fillStyle = mix(bod, p.line, 0.35);
@@ -591,8 +457,7 @@ const pezCuerpo: Design["cuerpo"] = (ctx, b, e, p) => {
     }
   }
 
-  // sociabilidad + · las pectorales. Se retiran a popa cuando hay brazos con los que chocar y el
-  // hombro se adelanta: cada pieza cede solo cuando la otra existe.
+  // sociabilidad + · las pectorales, que se retiran a popa si hay brazos.
   if (m.aleta > 0.02) {
     const fl = R * (0.34 + 0.86 * m.aleta), atras = R * (0.10 + 0.55 * m.brazo);
     ctx.fillStyle = mix(aleta, p.acc, 0.55);
@@ -637,9 +502,7 @@ const pezCuerpo: Design["cuerpo"] = (ctx, b, e, p) => {
     }
   }
 
-  // fiereza − · la pala, por delante y bajo el morro: una hoja ancha y roma que barre en vez de
-  // agarrar. Va **detrás del cuerpo** en el orden de pintado para que la boca siga siendo lo
-  // primero que se ve — un pez grande y manso lleva las dos cosas y la que manda es la boca.
+  // fiereza − · la pala, bajo el morro y debajo de la boca en el orden de pintado.
   if (m.pala > 0.02) {
     const pl = R * (0.16 + 0.44 * m.pala), pw = W * (0.60 + 0.40 * m.pala);
     ctx.fillStyle = mix(bod, p.belly, 0.42);
@@ -668,9 +531,7 @@ const pezCuerpo: Design["cuerpo"] = (ctx, b, e, p) => {
     ctx.fill();
   }
 
-  // talla · la boca. **Se planta por delante de los ojos aunque sobresalga del contorno**:
-  // buscándole sitio dentro del morro, un bicho grande y rápido acababa con los dientes encima de
-  // los ojos y sin cara que mirar.
+  // talla · la boca, siempre por delante de los ojos aunque sobresalga del contorno.
   const er = R * (0.10 + 0.30 * m.vi), ex = fr * 0.34, ey = W * (0.36 + 0.06 * m.vi);
   const mw = R * (0.10 + 0.62 * m.ta);
   let mu = 0.88;
@@ -696,8 +557,7 @@ const pezCuerpo: Design["cuerpo"] = (ctx, b, e, p) => {
     }
   }
 
-  // visión · los ojos, con los párpados bajándose por debajo de 0,4 de reserva: el gesto que dice
-  // que a este le queda poco, y se lee antes que el color apagándose.
+  // visión · los ojos; los párpados bajan con poca reserva
   for (const sd of [-1, 1]) {
     ctx.fillStyle = p.hi;
     ctx.beginPath(); ctx.arc(ex, sd * ey, er, 0, TAU); ctx.fill();
@@ -729,11 +589,7 @@ const pezExtension: Design["extension"] = (g, R) => {
 
 // ─── 2 · Protozoo ─────────────────────────────────────────────────────────────
 //
-// Membrana blanda con degradado, un ojo y un flagelo. El lento es una ameba lobulada; el rápido,
-// una gota lanceolada.
-//
-// **Contrapartida conocida:** los lóbulos y las púas se pelean por el mismo borde, así que el bicho
-// lento e insociable tiene el contorno tan roto que la talla pierde legibilidad.
+// Membrana con degradado, un ojo y un flagelo: el lento es una ameba lobulada; el rápido, una gota.
 
 function protoCasco(m: Medidas, R: number, e: number) {
   return {
@@ -831,8 +687,7 @@ const protoCuerpo: Design["cuerpo"] = (ctx, b, e, p) => {
   ctx.lineWidth = lw * 0.65;
   ctx.stroke();
 
-  // fiereza − · la pala: un arco romo por delante, del ancho del cuerpo. En un diseño que ya es
-  // todo contorno, se lee por lo que abulta el borde y no por su relleno.
+  // fiereza − · la pala: un arco romo por delante.
   if (m.pala > 0.02) {
     const pl = R * (0.24 + 0.78 * m.pala), th = 0.72;
     const r0 = rad(0), ry = rad(th) * Math.sin(th);
@@ -892,10 +747,7 @@ const protoCuerpo: Design["cuerpo"] = (ctx, b, e, p) => {
     ctx.beginPath(); ctx.rect(ex - er * 1.1, -er * 1.15, er * 2.2, er * 0.95); ctx.fill();
   }
 
-  // talla · el citostoma, de poro a bocaza con peine de cilios. **Se planta por delante del ojo
-  // aunque sobresalga de la membrana**, igual que la boca del pez y por el mismo motivo: buscándole
-  // sitio dentro del cuerpo, un protozoo grande y rápido acababa con el citostoma encima del ojo —
-  // y aquí es peor que en el pez, porque el ojo es uno y va en el eje, justo donde la boca cruza.
+  // talla · el citostoma, siempre por delante del ojo, como la boca del pez.
   const mw = Math.min(R * (0.09 + 0.58 * m.ta), W * 0.78);
   let mu = 0.90;
   while (mu > 0.20) {
@@ -944,12 +796,7 @@ const protoExtension: Design["extension"] = (g, R) => {
 
 // ─── 3 · Cristal ──────────────────────────────────────────────────────────────
 //
-// Todo rectas y vértices: un dardo de seis vértices con la esquina de popa metida, en trazo que se
-// vacía con la energía. **No se redondea nada** — el rombo ancho del empuje bajo y la aguja del
-// empuje alto tienen que leerse como cristales, no como cuerpos.
-//
-// **Contrapartida conocida:** el fiero, insociable y con patas suma tantos apéndices rectos que se
-// convierte en una maraña.
+// Todo rectas: un dardo de seis vértices en trazo que se vacía con la energía.
 
 function cristalCasco(m: Medidas, R: number) {
   const L = (a: number, b: number) => a + (b - a) * m.sp;
@@ -1031,7 +878,7 @@ const cristalCuerpo: Design["cuerpo"] = (ctx, b, e, p) => {
     }
   }
 
-  // cuerpo · la carcasa se vacía con la energía, así que el hambre se ve en el relleno
+  // cuerpo · la carcasa se vacía con la energía
   contorno();
   if (e > 0.22) { ctx.fillStyle = mix(bod, p.bg, (1 - e) * 0.75); ctx.fill(); }
   ctx.strokeStyle = bod;
@@ -1043,7 +890,7 @@ const cristalCuerpo: Design["cuerpo"] = (ctx, b, e, p) => {
   ctx.lineWidth = Math.max(0.6, R * (0.05 + 0.19 * m.re));
   ctx.beginPath(); ctx.moveTo(-bk * 0.40, 0); ctx.lineTo(fr * 0.55, 0); ctx.stroke();
 
-  // fiereza − · la pala: una hoja recta por delante, en el idioma de rectas del cristal.
+  // fiereza − · la pala: una hoja recta por delante
   if (m.pala > 0.02) {
     const pl = R * (0.16 + 0.42 * m.pala), pw = W * (0.64 + 0.42 * m.pala);
     ctx.fillStyle = mix(bod, p.belly, 0.38);
@@ -1127,15 +974,10 @@ const cristalExtension: Design["extension"] = (g, R) => {
 
 // ─── 4 · Instrumento ──────────────────────────────────────────────────────────
 //
-// **El casco es SIEMPRE un círculo de radio R**, en cualquier valor de empuje: eso es deliberado y
-// no se "mejora". Todos los genes cuelgan del disco como piezas acopladas del mismo repertorio
-// geométrico, y el empuje vive en la cuña de popa. La energía es un aforo literal — un sector de
-// tarta que se vacía.
-//
-// **Contrapartida conocida:** con treinta a la vez, los arcos de visión y los anillos de
-// sociabilidad se superponen y no se sabe qué arco es de quién.
+// El casco es siempre un círculo de radio R, a propósito: los genes cuelgan de él como piezas, y
+// la energía es un aforo, un sector que se vacía.
 
-/** Cuánto se apaga la parte vacía del aforo respecto al cuerpo. Ver `dialCuerpo`. */
+/** Cuánto se apaga la parte vacía del aforo. */
 const VACIO = 0.86;
 
 const dialCuerpo: Design["cuerpo"] = (ctx, b, e, p) => {
@@ -1156,7 +998,7 @@ const dialCuerpo: Design["cuerpo"] = (ctx, b, e, p) => {
   ctx.moveTo(-R * 0.86, -R * 0.52); ctx.lineTo(-R * 0.86 - cuna, 0); ctx.lineTo(-R * 0.86, R * 0.52);
   ctx.closePath(); ctx.fill();
 
-  // visión · el arco de barrido. Macizo y nunca punteado: a R = 6 px un punteado se pierde.
+  // visión · el arco de barrido, macizo: punteado se pierde a R = 6 px
   const vr = R * (1.30 + 1.90 * m.vi);
   ctx.strokeStyle = p.acc2;
   ctx.lineWidth = Math.max(1.4, R * 0.16);
@@ -1182,22 +1024,8 @@ const dialCuerpo: Design["cuerpo"] = (ctx, b, e, p) => {
     }
   }
 
-  // cuerpo · el aforo: la energía es un sector, así que se cuenta en vez de estimarse.
-  //
-  // **El vacío sale del cuerpo, no del suelo.** Con `bg2` fijo, el sector se leía de maravilla en
-  // un recién nacido y desaparecía en un viejo: la rampa de la edad acaba en `vejez`, que en claro
-  // es el mismo tono que el fondo, así que a los diez días un lleno y un vacío se pintaban igual
-  // —medido: `#fbf8ef` contra `#e6e4d9`— y la energía dejaba de leerse justo en los bichos que más
-  // se miran. Saliendo de `bod` los dos tonos viajan juntos y su distancia no depende de la edad.
-  //
-  // **Y al suelo de la paleta, no a `dim`.** La rampa de la edad sube de `mid` a `vejez`, así que
-  // cualquier ancla que le quede en medio la cruza y el aforo se apaga un día concreto de la vida:
-  // con `dim` el agujero solo se mudaba del último día al quinto, donde está media población
-  // —Δluma 14 sobre 45 y 73 en los extremos—. `maw` es el negro de cada diseño y la rampa nunca
-  // baja hasta él, así que la distancia no se anula en ningún punto.
-  //
-  // Se llena de luz, que es como se leía ya en tema oscuro: antes el claro decía lo contrario que
-  // el oscuro con el mismo dibujo.
+  // cuerpo · el aforo. El vacío sale del propio cuerpo hacia `maw`, que la rampa de la edad no
+  // cruza nunca: así lleno y vacío se distinguen a cualquier edad.
   disco();
   ctx.fillStyle = mix(bod, p.maw, VACIO);
   ctx.fill();
@@ -1216,8 +1044,7 @@ const dialCuerpo: Design["cuerpo"] = (ctx, b, e, p) => {
   ctx.lineWidth = Math.max(0.7, R * 0.11);
   ctx.stroke();
 
-  // retorno · el travesaño. **Perpendicular a propósito:** colineal con la cuña, empuje y retorno
-  // se confundirían en un único apéndice trasero.
+  // retorno · el travesaño, perpendicular para no confundirse con la cuña del empuje.
   const cb = R * (0.30 + 1.95 * m.re);
   ctx.strokeStyle = p.line;
   ctx.lineWidth = Math.max(1.1, R * 0.17);
@@ -1227,8 +1054,7 @@ const dialCuerpo: Design["cuerpo"] = (ctx, b, e, p) => {
     ctx.beginPath(); ctx.moveTo(-R * 0.92, sd * cb); ctx.lineTo(-R * 0.92 + R * 0.30, sd * cb); ctx.stroke();
   }
 
-  // fiereza − · la pala: una barra por delante. **Es el espejo del travesaño de retorno**, que va
-  // detrás: mismo trazo y lado opuesto, así que no se confunden ni con la cuña del empuje.
+  // fiereza − · la pala: una barra por delante, espejo del travesaño.
   if (m.pala > 0.02) {
     const pb = R * (0.55 + 1.05 * m.pala), px = R * (0.96 + 0.42 * m.pala);
     ctx.strokeStyle = p.acc;
@@ -1301,19 +1127,12 @@ const dialExtension: Design["extension"] = (g, R) => {
   ];
 };
 
-// ─── El catálogo ──────────────────────────────────────────────────────────────
-//
-// **Cada diseño trae su mundo y su comida**, porque un bicho de cristal sobre suelo de papel no es
-// otro estilo: es un error de material. Dos salen de emparejarlos a mano —el pez nada en el agua
-// del esmalte y el protozoo vive en el papel que estrenó el pez—, y los otros dos se quedan con el
-// suyo, que es de rectas porque ellos son de rectas.
+// ─── El catálogo: cada diseño trae su suelo y su comida ───────────────────────
 
 export const DESIGNS: Design[] = [
   {
     id: "pez",
     nombre: "Pez",
-    // Agua fría y bicho de tierra: la rampa del cuerpo es verde oliva y el suelo, azul grisáceo.
-    // En verde sobre verde el bicho se hunde en el fondo, que es justo lo que la comida ya hace.
     paleta: (tema) => tema === "dark"
       ? { tema, bg: "#0b1a20", bg2: "#0f2329", home: "#15303a", homeInk: "#2f5764", food: "#efa53c",
           cold: "#69c1ab", mid: "#a8bd7e", hot: "#f0866a", dim: "#39443f", hi: "#f2f7f4", vejez: "#f2f7f4",
@@ -1328,8 +1147,6 @@ export const DESIGNS: Design[] = [
   {
     id: "protozoo",
     nombre: "Protozoo",
-    // El papel que estrenó el pez, con bocados naranjas y pequeños: el protozoo ya tiene el
-    // contorno lleno de lóbulos y púas, y un bocado grande le come el borde.
     paleta: (tema) => tema === "dark"
       ? { tema, bg: "#151f1d", bg2: "#1d2a27", home: "#233330", homeInk: "#41564f", food: "#e3a23a",
           cold: "#82a6c0", mid: "#c69a92", hot: "#e0594a", dim: "#4c454b", hi: "#f6ecdc", vejez: "#f6ecdc",
@@ -1371,70 +1188,28 @@ export const DESIGNS: Design[] = [
   },
 ];
 
-/**
- * Qué diseño le toca a una semilla. **Sale del mismo número que define el mundo**, así que la
- * palabra que escribes no solo decide qué pasa: decide de qué están hechos los que lo hacen. Y como
- * es el mismo hash, la promesa de la semilla sigue entera — la misma palabra da el mismo mundo con
- * los mismos bichos en cualquier pantalla.
- */
+/** El diseño de una semilla: sale del mismo hash que el mundo. */
 export function designFor(semilla: string): Design {
-  return DESIGNS[Math.abs(hashSemilla(semilla)) % DESIGNS.length];
+  return DESIGNS[hashSemilla(semilla) % DESIGNS.length];
 }
 
-/**
- * El giro de un bocado, estable y sin estado: sale de dónde está. Guardarlo en el mundo sería
- * meter en el motor un dato que solo mira el pintado; recalcularlo al azar cada cuadro lo haría
- * bailar. Los bocados que no giran simplemente lo ignoran.
- */
+/** El giro de un bocado, estable y sin estado: sale de dónde está. */
 export const giroDe = (x: number, y: number) => ((x * 7919 + y * 104729) % 628) / 100;
 
-/**
- * Dónde cae un valor en la barra de la leyenda, en 0…1. **El fundador en el centro exacto y el
- * recorrido medido bastante cerca de los extremos pero no en ellos**: fuera de él sigue habiendo
- * barra, que es donde se pinta el día que a alguien le dé por bajar del p01 o subir del p99. Sin ese
- * margen, un linaje que se saliera se quedaría pegado al borde diciendo lo mismo que otro que apenas
- * lo roza.
- *
- * Es una sola geometría para los seis genes —cada uno con su recorrido—, así que dos barras se
- * comparan de un vistazo aunque midan cosas de unidades distintas.
- */
-export const MARGEN = 0.12;
+/** Margen de la barra fuera del recorrido medido, para el linaje que se salga de él. */
+const MARGEN = 0.12;
 
-/** Octavas desde el fundador; unidades, en el gen que lleva signo. */
-const desdeEva = (r: Rasgo, v: number): number =>
-  signado(r) ? v - FUNDADOR[r] : Math.log2(v / FUNDADOR[r]);
-
-/**
- * El medio ancho del eje: lo que el fundador dista del extremo del recorrido que le queda **más
- * lejos**. Es lo que pone al fundador en el 0,5 exacto, y por construcción en vez de por medida: el
- * recorrido se remide cuando cambia la física y su punto medio nunca cae justo encima del fundador,
- * así que anclar el eje en él dejaba la referencia quieta descentrada hasta una décima de barra —y
- * la barra dice debajo que el centro es el fundador.
- *
- * **El mayor de los dos lados y no uno por lado.** Con dos varas, el 60% de una fila y el 60% de la
- * de al lado querrían decir distancias distintas y la vara única deja de serlo; el precio es que en
- * el lado corto sobra barra que nadie ha llegado a pisar, y eso es lo que tiene que sobrar.
- */
+/** Medio ancho del eje: lo que dista el fundador del extremo del recorrido más lejano. */
 const SEMI_EJE = Object.fromEntries(RASGOS.map((r) => [r,
   Math.max(-desdeEva(r, RECORRIDO[r][0]), desdeEva(r, RECORRIDO[r][1])),
 ])) as Record<Rasgo, number>;
 
-/**
- * Dónde cae un valor **en el eje**, en 0…1: 0,5 es el fundador y los extremos, lo más lejos que se
- * ha llegado a ir de él. Sin recortar, porque salirse es justo lo que hay que poder ver — un linaje
- * en 1,2 se ha ido más allá de lo que llegó a existir en cuarenta y ocho mundos, y eso es una
- * noticia.
- *
- * **No es la escala con la que se dibuja el cuerpo**, que recorta antes a propósito: aquí el
- * recorrido cabe entero porque de lo que se está hablando es de cuánto ha viajado un linaje.
- *
- * Es el número que la tira enseña en tanto por ciento, y el único de este mundo que se entiende sin
- * saber de qué va: «empujaba como el 50% y ahora como el 63%» dice algo, y «empuje 2,14» no.
- */
+/** Dónde cae un valor en el eje, sin recortar: 0,5 el fundador y 0 y 1 lo más lejos que se ha ido. */
 export function enEje(r: Rasgo, v: number): number {
   return 0.5 + desdeEva(r, v) / (2 * SEMI_EJE[r]);
 }
 
+/** Dónde cae un valor en la barra de la leyenda, la tira y el inspector, en 0…1. */
 export function posGen(r: Rasgo, v: number): number {
   return clamp(MARGEN + (1 - 2 * MARGEN) * enEje(r, v), 0, 1);
 }

@@ -1,25 +1,14 @@
-// Las cifras que fijan la escala del reparto — `npx tsx app/apps/evolution/reparto.medir.ts`.
+// La escala del reparto — `npx tsx app/apps/evolution/medir/reparto.medir.ts`.
+// No es un test: mide. Fuera del build.
 //
-// **No es un test: no falla, mide.** Fuera del build, como el resto de medidores. Tarda unos
-// minutos: la pregunta de la ventana solo se contesta con partidas largas, porque lo que decide
-// cuánta hace falta es hasta dónde llega un gen en mil días y no dónde está al centenar.
-//
-// Cuatro preguntas, y las cuatro son del instrumento y no del mundo:
-//
-// 1. ¿Se ven las seis bandas distintas entre sí? Es lo que decide si el panel cuenta seis cosas o
-//    una repetida seis veces, y es lo único que no se puede saber sin mirarlas.
-// 2. ¿Cabe cada gen en la ventana que tiene? La fija `RECORRIDO` en `designs.ts` —el p01 y el p99
-//    medidos— y la comparten la tira, la leyenda y esto. Hay que caber dos cosas que tiran en
-//    sentidos opuestos: **lejos**, hasta dónde se va la población del fundador —si no cabe, la
-//    banda se apelmaza contra la pared y deja de decir dónde está—, y **grosor**, lo ancha que es
-//    en un día — si sobra ventana, el cuerpo de la población es una rendija.
-// 3. ¿Cuántas franjas hacen falta para ese grosor? Fija `BINS`.
-// 4. ¿Qué se ve en los primeros días? Es lo primero que mira quien abre la página, y el panel
-//    tiene que aguantarlo: la población se desploma antes de recuperarse.
+// 1. ¿Se ven las seis bandas distintas?
+// 2. ¿Cabe cada gen en su ventana (`RECORRIDO`), en lejanía y en grosor?
+// 3. ¿Cuántas franjas pide ese grosor? Fija `BINS`.
+// 4. ¿Qué se ve en los primeros días, cuando la población se desploma?
 
-import { FUNDADOR, RASGOS, banda, correrDia, REFERENCIA, crearMundo, signado } from "./engine";
-import { RECORRIDO } from "./designs";
-import { BINS, columnas, crearHistoria, registrar, type Historia } from "./reparto";
+import { FUNDADOR, RASGOS, banda, correrDia, REFERENCIA, crearMundo, signado } from "../engine";
+import { RECORRIDO } from "../designs";
+import { BINS, columnas, crearHistoria, registrar, type Historia } from "../reparto";
 
 /** Lo que abarca la ventana de cada gen, en sus propias unidades: octavas, o unidades si lleva signo. */
 const VENTANA = Object.fromEntries(RASGOS.map((r) => {
@@ -41,8 +30,6 @@ const med = (xs: number[]) => { const s = [...xs].sort((a, b) => a - b); return 
 const col = (x: string | number, n = 9) => String(x).padStart(n);
 
 // ── Una pasada por semilla, que es lo caro ───────────────────────────────────
-// La historia y las distancias salen del mismo mundo: correrlo dos veces sería el doble de
-// minutos para las mismas cifras.
 type Medida = { grosor: number; lejos: number };
 const historias: Historia[] = [];
 const medidas: Record<string, Medida[]> = {};
@@ -81,8 +68,7 @@ function pintarBanda(h: Historia, gen: number): string[] {
     for (let j = 0; j < grupo; j++) s += c.densidad[gen * BINS + f * grupo + j];
     return s;
   };
-  // Una rampa por gen y no una común: lo que se compara dentro de una banda es su propia forma, y
-  // con una escala compartida la del gen más apretado se comería a las otras cinco.
+  // Una rampa por gen: se compara la forma de cada banda.
   let pico = 0;
   for (const c of cs) for (let f = 0; f < ALTO; f++) pico = Math.max(pico, celda(c, f));
   const filas: string[] = [];

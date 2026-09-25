@@ -1,16 +1,10 @@
-// Los tests del motor de evolution — `npx tsx app/apps/evolution/engine.test.ts`.
-// No es parte del build; verifica el mundo sin navegador.
+// Tests del motor — `npx tsx app/apps/evolution/engine.test.ts`. Fuera del build.
 //
-// **No comprueban código: comprueban predicciones evolutivas falsables.** Que una función
-// devuelva lo que devuelve no dice nada de si la simulación es honesta; que la escasez de comida
-// seleccione más ojo, sí. Y cuando uno falla, lo primero que hay que sospechar es el mundo y no
-// la predicción: la escasez midió el signo contrario durante un día entero, y no era ecología
-// —era una rejilla de suelo más ancha que el mundo, en la economía que se acabó archivando—.
-//
-// Por eso son caros —minutos, no milisegundos— y por eso cada escenario corre varias semillas y
-// compara **medianas**: una semilla sola dice tanto del azar que le tocó como del mundo.
+// Comprueban predicciones evolutivas falsables, no funciones: por eso tardan minutos y cada
+// escenario compara medianas de varias semillas. Si uno falla, sospechar antes del mundo.
+import { azarCon } from "./azar";
 import {
-  CONFIG, RASGOS, amanecer, anochecer, azarCon, copiar, correrDia, crearMundo, huella, mediana,
+  CONFIG, RASGOS, amanecer, anochecer, copiar, correrDia, crearMundo, huella, mediana,
   mutar, resumen, tick,
   type Config, type Genoma,
 } from "./engine";
@@ -26,12 +20,8 @@ const SEMILLAS = ["hola", "pablo", "claudio", "mar", "brizna", "raiz", "sal", "d
 const DIAS = 150;
 
 /**
- * Corre un escenario en todas las semillas y devuelve la mediana de las medianas.
- *
- * **El plazo es del escenario, no de la suite.** Cada mundo tiene su propia esperanza de vida y
- * medirlos todos a la misma fecha no es más justo: es medir a unos vivos y a otros muertos. El
- * plazo bueno es el más largo en el que **las dos mitades de la comparación siguen en pie**, que
- * es donde la mediana habla de selección y no de quién ha sobrevivido al sorteo.
+ * La mediana de las medianas de un escenario en todas las semillas. El plazo es el más largo en
+ * que las dos mitades de la comparación siguen vivas: si no, se mide quién sobrevivió.
  */
 function escenario(cfg: Partial<Config>, dias = DIAS) {
   const g = { talla: [] as number[], vision: [] as number[], retorno: [] as number[] };
@@ -47,24 +37,12 @@ function escenario(cfg: Partial<Config>, dias = DIAS) {
   return { vivas, talla: mediana(g.talla), vision: mediana(g.vision), retorno: mediana(g.retorno) };
 }
 
-// Seis escenarios y tres perillas, cada una separada por lo suficiente para salir del ruido: la
-// comida del día (×5,7), la depredación (encendida o apagada) y la despensa (×2,5). Todos están
-// **dentro de la ventana viable** —diez o más semillas de doce llegan al plazo de su escenario—,
-// que hay que respetar al elegirlos: una mediana de tres semillas no es una mediana, es una
-// anécdota.
-//
-// **La depredación se mide a 80 días y no a 150, y esa fecha es un resultado del mundo.** Sin
-// caza no hay quien se lleve el excedente ni quien castigue ser diminuto, así que la población
-// oscila entre treinta y mil sobre los mismos cien bocados hasta que un desplome se la lleva
-// entera: las doce semillas se extinguen entre el día 107 y el 117. A 80 las doce siguen en pie y
-// el margen de la talla es el mayor de todo el recorrido —3,74 contra 1,76, medido a 40, 60 y 80—,
-// porque la caída ya lleva setenta días en marcha y el derrumbe todavía no ha empezado.
+// Tres perillas, separadas lo bastante para salir del ruido y dentro de la ventana viable. La caza
+// se mide a 80 días porque sin ella la población acaba desplomándose hacia el día 110.
 const POBRE: Partial<Config> = { comidas: 70 };
 const RICO: Partial<Config> = { comidas: 400 };
 const SIN_CAZA: Partial<Config> = { caza: false };
-// La despensa se compara **contra la de casa** y no contra una corta: con una sola fundadora, una
-// despensa por debajo de la normal se lleva más de la mitad de las semillas antes del plazo —5 de
-// 12 con 0,6, 8 con 0,8, 11 con 1— y ahí el escenario ya no mide selección, mide quién sobrevivió.
+// La despensa, contra la normal: por debajo se extingue más de la mitad de las semillas.
 const DESPENSA_LARGA: Partial<Config> = { capReserva: 2.5 };
 
 console.log("Corriendo escenarios (esto tarda unos minutos)…\n");
@@ -78,49 +56,29 @@ for (const [n, e] of [["pobre", pobre], ["rico", rico], ["sin caza", sinCaza], [
                       ["despensa normal", normal], ["despensa larga", larga]] as const) console.log(cifras(n, e));
 console.log("");
 
-// 1. **La abundancia hace gigantes.** La despensa va con la masa y un hijo se lleva la suya llena,
-//    así que ser grande se paga dos veces —gastas más y tus hijos cuestan más— y solo se cobra si
-//    hay comida de sobra con la que llenar las dos. Con poca, ser grande es un lastre.
+// 1. La abundancia hace gigantes: ser grande se paga dos veces (gasto e hijos) y solo compensa con
+//    comida de sobra.
 check("comida abundante → sube la talla",
   pobre.vivas >= 5 && rico.vivas >= 5 && rico.talla > pobre.talla,
   `talla ${pobre.talla.toFixed(2)}→${rico.talla.toFixed(2)}`);
 
-// 2. **Y lo que las hace gigantes es poder comerse al vecino.** Apagada la caza, el tamaño no
-//    cobra nada y sigue pagándolo todo. Es la otra cara del test anterior y aísla el mecanismo:
-//    sin esto, "más comida, más grandes" podría ser simplemente que sobra para crecer.
-//    Se mide a `DIAS_CAZA`, por lo que ahí arriba está escrito.
+// 2. Y lo que los hace gigantes es poder comerse al vecino: sin caza, la talla no cobra nada.
 check("sin depredación → baja la talla",
   sinCaza.vivas >= 5 && conCaza.vivas >= 5 && sinCaza.talla < conCaza.talla,
   `talla ${conCaza.talla.toFixed(2)}→${sinCaza.talla.toFixed(2)}`);
 
-// 3. **La despensa larga encoge el cuerpo.** Un hijo nace con la suya llena, así que alargarla
-//    encarece a los grandes más que a los pequeños: es la misma cuenta del test 1 leída por el
-//    otro lado, y aísla el precio de la talla del de la comida. Medido en gradiente sobre
-//    doce semillas, la talla baja monótona con la despensa en todo su recorrido viable: 2,64 ·
-//    2,63 · 2,46 · 2,09 · 1,97 · 1,74 de 0,8 a 2,5.
-//
-//    **Lo que la despensa no mueve es el retorno**, que es lo que este test afirmaba antes: sobre
-//    ese mismo gradiente es ruido. Volver a casa lo decide el sol y no la autonomía — el gen tira
-//    porque anochece, no porque se acabe la despensa.
+// 3. La despensa larga encoge el cuerpo: un hijo nace con la suya llena, y el grande paga más.
 check("despensa más larga → baja la talla",
   normal.vivas >= 5 && larga.vivas >= 5 && larga.talla < normal.talla,
   `talla ${normal.talla.toFixed(2)}→${larga.talla.toFixed(2)}`);
 
-// 4. **La escasez paga el ojo.** Es el mismo par pobre/rico del test 1 leído en el otro gen, y
-//    solo dice algo desde que la luz existe: con la comida escasa hay que verla de lejos, y el
-//    ojo cuesta lo mismo la vea o no. Monótona en los seis puntos del gradiente —29,7 · 26,4 ·
-//    26,1 · 25,5 · 22,3 · 22,0 de 50 a 600 bocados—, que es lo que la separa del ruido en el que
-//    vivía este gen antes.
+// 4. La escasez paga el ojo: con poca comida hay que verla de lejos.
 check("comida abundante → baja la visión",
   pobre.vivas >= 5 && rico.vivas >= 5 && rico.vision < pobre.vision,
   `visión ${pobre.vision.toFixed(1)}→${rico.vision.toFixed(1)}`);
 
-// 5. Sin selección los genes derivan, pero **sin dirección**. Si se van sistemáticamente hacia el
-//    mismo lado, el sesgo está en la mutación — que es justo lo que la multiplicativa está puesta
-//    para no tener. Cuatrocientos linajes que no compiten entre sí y por tanto no coalescen: la
-//    mediana tiene que quedarse donde estaba. (Dentro de un mundo no valdría: a las doscientas
-//    generaciones casi todos descienden de un puñado de linajes, y esa mediana viaja como uno
-//    solo, un 15% por puro azar.)
+// 5. Sin selección los genes derivan sin dirección: si no, el sesgo está en la mutación. Linajes
+//    que no compiten, porque dentro de un mundo coalescen y la mediana viaja como uno solo.
 {
   const a = azarCon("deriva");
   const linajes: Genoma[] = [];
@@ -139,22 +97,16 @@ check("comida abundante → baja la visión",
     Math.abs(desvio) < 0.08, `el más desviado, ${peor}: ${(desvio * 100).toFixed(1)}%`);
 }
 
-// 6. La promesa de la semilla compartida: mismo mundo, mismo día, mismo estado. Se compara la
-//    huella entera —posiciones, rumbos, reservas, carga y genes— y no solo el censo, que
-//    coincidiría por casualidad.
+// 6. Misma semilla, mismo estado: la huella entera, no solo el censo.
 {
-  // **Comparar dos mundos extintos no prueba nada**, así que los tres determinismos de aquí abajo
-  // exigen que `raiz` llegue viva al día 150 — y lo exigen **en código**. Escrito solo en prosa, el
-  // día que una perilla del mundo se lleve por delante a esa semilla los tres pasan en verde
-  // comparando dos ceros, que es peor que fallar: la promesa deja de estar probada sin avisar.
+  // Dos mundos extintos no prueban nada: `raiz` tiene que llegar viva, y se exige en código.
   const a = crearMundo("raiz"), b = crearMundo("raiz");
   for (let d = 0; d < 150; d++) { correrDia(a); correrDia(b); }
   const enPie = !a.extinto && a.bichos.length >= 5;
   check("misma semilla → estado idéntico al día 150", enPie && huella(a) === huella(b),
     `censo=${a.bichos.length} día=${a.dia}`);
 
-  // Y que la página no altere el mundo por mirarlo: el bucle de pintado da los ticks de uno en
-  // uno y cierra el día a mano, en vez de llamar a `correrDia`. Los dos caminos son el mismo.
+  // La página da los ticks de uno en uno: tiene que ser lo mismo que `correrDia`.
   const c = crearMundo("raiz");
   for (let d = 0; d < 150 && !c.extinto; d++) {   // el mismo guardia que `correrDia` y que la página
     while (!tick(c));
@@ -163,10 +115,7 @@ check("comida abundante → baja la visión",
   }
   check("tick a tick = día de golpe", enPie && huella(a) === huella(c));
 
-  // Y volver atrás: una copia guardada en el día 100 y vuelta a correr tiene que reconstruir el
-  // mismo día 150, hasta el último bit. Si `copiar` se dejara algo —el estado del PRNG, sin ir más
-  // lejos— nada fallaría: el mundo restaurado se separaría del original en silencio, y ahí se
-  // acabaría la promesa de la semilla.
+  // Volver atrás: una copia del día 100, vuelta a correr, da el mismo día 150.
   const d = crearMundo("raiz");
   let foto = d;
   for (let k = 0; k < 150; k++) { if (k === 100) foto = copiar(d); correrDia(d); }
@@ -176,11 +125,8 @@ check("comida abundante → baja la visión",
     `día ${rebobinado.dia}, censo ${rebobinado.bichos.length}`);
 }
 
-// 7. La única indefinición numérica que el motor sí arregla: sin nada que ver y lejos del muro, el
-//    vector suma es exactamente cero. Eso no es un ángulo indefinido que propague NaN, es mantener
-//    el rumbo. (Que el bicho sea tonto no se arregla; que sea NaN, sí.)
+// 7. Sin nada que ver, el vector suma es cero: se mantiene el rumbo, nunca NaN.
 {
-  // Uno solo y sin comida: con dos se verían el uno al otro y girar dejaría de significar nada.
   const m = crearMundo("rumbo", { censoInicial: 1, comidas: 0 });
   const b = m.bichos[0];
   b.x = m.cfg.ancho / 2; b.y = m.cfg.alto / 2;
@@ -191,19 +137,8 @@ check("comida abundante → baja la visión",
     `rumbo=(${b.hx}, ${b.hy})`);
 }
 
-// 8. **Ningún gen es decorativo.** Se corren dos mundos con la misma semilla cambiando solo el
-//    valor inicial de un gen: la huella al final **tiene que diferir**. Si no difiere, ese gen no
-//    lo lee nadie y sobra del genoma.
-//
-//    Es la vara de medir qué significa que un gen «no haga nada», y distingue dos cosas que se
-//    confunden con facilidad: un gen **decorativo** —cambiarlo deja el mundo bit a bit idéntico— y
-//    uno **sin tendencia**, que sí cambia el mundo aunque la selección no lo empuje a ningún lado.
-//
-//    **El escenario solo vale si los dos mundos llegan vivos.** Las ventanas habitables son
-//    estrechas —el `empuje` vive entre 1 y 2— y un cambio que extinga una de las dos partidas hace
-//    pasar el test por el motivo equivocado: la huella difiere porque el mundo está muerto, no
-//    porque el gen se lea. Por eso se prueba el cambio más pequeño que deje vivas a las dos, y si
-//    ninguno lo consigue el test **falla**: sin escenario válido no hay nada que concluir.
+// 8. Ningún gen es decorativo: cambiar su valor inicial tiene que cambiar la huella. Con el cambio
+//    más pequeño que deje vivos los dos mundos, o la huella diferiría por la extinción.
 {
   const vivo = (m: ReturnType<typeof crearMundo>) => !m.extinto && m.bichos.length >= 5;
   for (const r of RASGOS) {
@@ -227,11 +162,7 @@ check("comida abundante → baja la visión",
   }
 }
 
-// 9. **La dentellada.** Comerse a otro dura `ticksPresa`, y en ese rato la presa está viva y en la
-//    boca de alguien: es el único estado del mundo que dura más de un tick y que se puede
-//    interrumpir. Lo que hay que garantizar es que **no mata antes de tiempo** y que **matar al
-//    que muerde suelta a quien tenía cogido** — sin eso, escaparse no existiría y la franja de
-//    casa dejaría de ser refugio a medio bocado.
+// 9. La dentellada no mata antes de tiempo, y matar al que muerde suelta a la presa.
 {
   const m = crearMundo("raiz");
   for (let d = 0; d < 30 && !m.extinto; d++) correrDia(m);
@@ -244,8 +175,7 @@ check("comida abundante → baja la visión",
   }
   if (!dep || !presa) check("la dentellada dura y no mata al morder", false, "sin dentellada en 400.000 ticks");
   else {
-    // Se sigue el mundo tick a tick con la copia por delante: mientras quede dentellada, la presa
-    // tiene que estar en el censo, y en el tick en que se acaba tiene que desaparecer de él.
+    // Mientras quede dentellada la presa sigue en el censo; al acabarse, desaparece.
     const vivos = copiar(m);
     const idPresa = presa.id, idDep = dep.id;
     const quedan = dep.restan;   // el tick del mordisco ya se ha cobrado el suyo
@@ -271,10 +201,7 @@ check("comida abundante → baja la visión",
   }
 }
 
-// 10. **Rebobinar es revivir**, que es lo único que puede hacer un motor irreversible: la página
-//     mira un tick anterior reconstruyéndolo desde el amanecer de su día. Aquí se comprueba que
-//     eso da el mundo que hubo, y no uno parecido — un estado que no saliera de `copiar` ni del
-//     tick partiría la marcha atrás sin que fallara nada.
+// 10. Rebobinar es revivir desde el amanecer: tiene que dar el mundo que hubo.
 {
   const m = crearMundo("pablo");
   for (let d = 0; d < 20; d++) correrDia(m);

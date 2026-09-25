@@ -1,39 +1,22 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { RASGOS, type Bicho, type Genoma, type Muerte, type Mundo, type Rasgo } from "./engine";
-import { enEje, posGen } from "./render";
+import { useCallback, useRef, useState } from "react";
+import { RASGOS, nombreDe, type Bicho, type Genoma, type Muerte, type Mundo, type Rasgo } from "./engine";
+import { enEje, posGen } from "./designs";
+import { usePanel } from "./panel";
 
-/**
- * Un bicho concreto, mientras la cámara lo sigue. **Va bajo el mundo y no encima**, al revés que
- * la leyenda y los estratos: lo que cuenta solo se entiende mirándolo a él andar, así que taparlo
- * sería taparse a sí mismo. Le quita alto al lienzo como la tira, y de ahí sale que la cámara
- * tenga que acercarse — ver el mundo entero en lo que queda deja al bicho en seis píxeles.
- *
- * **No hay aquí un solo número que el mundo no tenga ya.** Los hijos se cuentan del censo y no de
- * un contador en el `Bicho`: lo que el motor lleva es la camada de esta noche, y añadirle un total
- * de por vida sería tocar el mundo para pintar un panel.
- */
-
-/** Refresco, en ms. El mismo de la tira: la energía se mueve en días, no en fotogramas. */
-const REFRESCO = 333;
-
-const NOMBRE: Record<string, string> = { vision: "visión" };
+/** La ficha del bicho marcado, bajo el mundo: se lee mirándolo andar. */
 
 const num = (x: number) => x.toLocaleString("es-ES", { maximumSignificantDigits: 3 });
 const pct = (r: Rasgo, v: number) => Math.round(enEje(r, v) * 100);
 
-/**
- * Cómo se cuenta cada muerte. En pasado y con el bicho de sujeto, porque es su ficha la que lo
- * dice: aquí no hay nadie más de quien hablar.
- */
 const FINAL: Record<Muerte, string> = {
   vejez: "murió de viejo",
   hambre: "murió de hambre",
   comido: "se lo comieron",
 };
 
-/** Lo que se lee de un bicho en un momento dado. Se guarda copiado: el original muere. */
+/** Lo que se lee de un bicho en un momento dado, copiado: el original muere. */
 type Ficha = {
   id: number; gen: number;
   dias: number; vida: number;
@@ -48,13 +31,7 @@ function fichar(m: Mundo, b: Bicho): Ficha {
   for (const o of m.bichos) if (o.idMadre === b.id) vivas++;
   return {
     id: b.id, gen: b.gen,
-    // **Los días que lleva vividos, contando el de hoy**, que es lo que hace que el plazo se lea:
-    // en crudo, `dia - nacido` deja al que se muere hoy de viejo en «9 días de 10» —y la ficha se
-    // congela ahí, porque muere al cerrar el día—, así que la causa y la edad se contradicen. De
-    // noche no se suma: `dia` ya es el de mañana, y la cría que acaba de nacer no ha salido aún.
-    // Topado en el plazo porque **un muerto no cumple años**: su cuerpo se puede pulsar al día
-    // siguiente —se disuelve cruzando el alba— y `dia` ya ha corrido, así que el de viejo saldría
-    // con once días de diez, que es justo la contradicción que esto viene a quitar.
+    // Días vividos contando el de hoy (de noche `dia` ya es mañana), topados en el plazo.
     dias: Math.min(m.cfg.vida, m.dia - b.nacido + (m.noche ? 0 : 1)), vida: m.cfg.vida,
     despensa: b.reserva / (m.cfg.capReserva * b.masa),
     carga: b.carga,
@@ -64,55 +41,37 @@ function fichar(m: Mundo, b: Bicho): Ficha {
   };
 }
 
-/** La despensa pasa de llena sin techo, así que por encima del 100% se cuenta en veces. */
+/** Por encima de llena, en veces. */
 const despensaDe = (d: number) => (d > 1 ? `×${num(d)}` : `${Math.round(d * 100)}%`);
 
+/** Se monta con `key` por bicho: cambiar de bicho es empezar de cero. */
 export default function Inspector({ mundo, id, eva, cerrar, genes = true }: {
   mundo: () => Mundo | null;
   id: number;
   eva: Genoma;
   cerrar: () => void;
-  /** Con las seis barras o solo la línea de arriba. **Sin ellas con la tira puesta**: ahí los seis
-   *  genes ya están, y contra toda la población en vez de contra el fundador solo. */
+  /** Las seis barras; sin ellas cuando la tira ya los enseña. */
   genes?: boolean;
 }) {
-  /**
-   * La última ficha, y **se deja de refrescar en cuanto el bicho no está**: seguir leyéndola del
-   * mundo le echaría años y le mataría hijos a un muerto, porque el día sigue corriendo. Lo que
-   * queda en pantalla es la foto del último momento en que estuvo vivo, que es lo que se quiere
-   * mirar cuando desaparece de golpe.
-   */
+  /** La última ficha: deja de refrescarse cuando el bicho no está, que es cuando más se mira. */
   const [ficha, setFicha] = useState<Ficha | null>(null);
   const [vivo, setVivo] = useState(true);
-  /**
-   * Cómo acabó, o `null` si simplemente no está —que es lo que pasa al volver atrás, a un día en
-   * el que aún no había nacido—. Sale del propio bicho, que se lo apunta al morirse, **y no de sus
-   * marcas, que caducan con su animación**: a ×64 caben catorce ticks entre dos fotogramas, así
-   * que quien las mirara acertaría o no según la velocidad a la que fuera el mundo.
-   */
+  /** Cómo acabó, o `null` si no está porque se volvió a antes de que naciera. */
   const [muerte, setMuerte] = useState<Muerte | null>(null);
-  /** El último cuerpo visto, que el motor ya ha sacado de la lista. Es quien guarda la muerte. */
+  /** El último cuerpo visto, que guarda la muerte cuando el motor ya lo ha sacado de la lista. */
   const cuerpoRef = useRef<Bicho | null>(null);
 
-  useEffect(() => {
-    cuerpoRef.current = null;
-    const leer = () => {
-      const m = mundo();
-      if (!m) return;
-      const b = m.bichos.find((x) => x.id === id) ?? null;
-      // Se puede pulsar un cuerpo que todavía se disuelve, y entonces no hay ninguna foto anterior
-      // que enseñar: se saca de él, **una sola vez**, y desde ahí se congela como cualquier otra.
-      const cuerpo = b ?? (cuerpoRef.current ? null : m.restos.find((z) => z.b.id === id)?.b ?? null);
-      if (cuerpo) { cuerpoRef.current = cuerpo; setFicha(fichar(m, cuerpo)); }
-      setVivo(b !== null);
-      setMuerte(b ? null : cuerpoRef.current?.muerte ?? null);
-    };
-    leer();
-    const t = window.setInterval(leer, REFRESCO);
-    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") cerrar(); };
-    window.addEventListener("keydown", esc);
-    return () => { window.clearInterval(t); window.removeEventListener("keydown", esc); };
-  }, [mundo, id, cerrar]);
+  const leer = useCallback(() => {
+    const m = mundo();
+    if (!m) return;
+    const b = m.bichos.find((x) => x.id === id) ?? null;
+    // Un cuerpo que se disuelve se ficha una sola vez, y desde ahí se congela.
+    const cuerpo = b ?? (cuerpoRef.current ? null : m.restos.find((z) => z.b.id === id)?.b ?? null);
+    if (cuerpo) { cuerpoRef.current = cuerpo; setFicha(fichar(m, cuerpo)); }
+    setVivo(b !== null);
+    setMuerte(b ? null : cuerpoRef.current?.muerte ?? null);
+  }, [mundo, id]);
+  usePanel(cerrar, leer, 333);
 
   if (!ficha) return null;
   const f = ficha;
@@ -120,7 +79,34 @@ export default function Inspector({ mundo, id, eva, cerrar, genes = true }: {
 
   return (
     <div className={`in-panel${vivo ? "" : " ido"}`}>
-      {/* Identidad, estado y descendencia, en ese orden. */}
+      <style>{`
+        .in-panel { border-top: 1px solid var(--border); padding: 0.4rem 0 0.2rem; }
+        .in-panel.ido { opacity: 0.55; }
+        .in-cab {
+          display: flex; align-items: baseline; flex-wrap: wrap; gap: 0.2rem 0.7rem;
+          font-size: 0.62rem; color: var(--muted); font-variant-numeric: tabular-nums;
+        }
+        .in-cab b { font-size: 0.72rem; color: var(--t-accent); letter-spacing: 0.05em; }
+        .in-cab i { font-style: normal; color: var(--t-ink4); }
+        .in-ido { color: var(--rojo); }
+        .in-donde { color: var(--t-ink2); }
+        .in-cerrar { margin-left: auto; color: var(--muted); cursor: pointer; font-size: 0.7rem; }
+        .in-cerrar:hover, .in-cerrar:active { color: var(--t-accent); }
+        .in-genes { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.3rem 0.8rem; margin-top: 0.35rem; }
+        /* El nombre cede y la cifra no: las seis barras tienen que quedar a la misma altura. */
+        .in-gen-cab { display: flex; align-items: baseline; justify-content: space-between; gap: 0.3rem; font-size: 0.6rem; }
+        .in-gen-cab b {
+          color: var(--t-ink2); letter-spacing: 0.04em;
+          min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .in-gen-cab span { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+        .in-barra { position: relative; height: 6px; margin-top: 2px; border-bottom: 1px solid var(--t-rule2); }
+        .in-barra span { position: absolute; bottom: 0; transform: translateX(-50%); }
+        .in-eva-marca { width: 1px; height: 5px; background: var(--t-ink4); }
+        .in-aqui { width: 5px; height: 5px; border-radius: 50%; background: var(--t-accent); }
+        @media (max-width: 880px) { .in-genes { grid-template-columns: repeat(3, 1fr); } }
+        @media (max-width: 430px) { .in-genes { grid-template-columns: repeat(2, 1fr); } }
+      `}</style>
       <div className="in-cab">
         <b>#{f.id}</b>
         {!vivo && <span className="in-ido">{muerte ? FINAL[muerte] : "ya no está"}</span>}
@@ -134,27 +120,19 @@ export default function Inspector({ mundo, id, eva, cerrar, genes = true }: {
           despensa {despensaDe(f.despensa)}
         </span>
         {f.carga > 0 && <span>lleva {f.carga}</span>}
-        {/* Las que puso y las que le quedan, que no son lo mismo ni de lejos: es lo único que
-            contesta para qué sirvió este bicho. */}
-        <span className="in-prole">
+        <span>
           {f.crias === 0 ? "sin crías" : `${vivo ? "" : "dejó "}${cria(f.crias)}, ${f.vivas} ${f.vivas === 1 ? "viva" : "vivas"}`}
           {f.camada > 0 && <i> · {cria(f.camada)} esta noche</i>}
         </span>
-        {/* Una aspa y no un botón con marco: la cabecera es una sola línea de datos y un botón de
-            los de la barra no cabe en ella, así que se lleva un renglón entero del mundo. */}
         <button className="in-cerrar" onClick={cerrar} title="Soltar el bicho" aria-label="Soltar el bicho">✕</button>
       </div>
 
-      {/* Los seis genes en la misma vara que la leyenda y la tira —octavas desde el fundador, vía
-          `posGen`—, para que «63%» quiera decir lo mismo en los tres sitios. La marca del fundador
-          va en cada barra: sin ella el tanto por ciento no dice de dónde salió. **Y solo la marca,
-          sin la distancia en cifra**: el fundador está clavado en el 50, así que restárselo al
-          tanto por ciento es escribir dos veces el mismo número. */}
+      {/* Misma vara que la leyenda y la tira, con la marca del fundador en cada barra. */}
       {genes && <div className="in-genes">
         {RASGOS.map((r) => (
-          <div key={r} className="in-gen" title={`${NOMBRE[r] ?? r} ${num(f.g[r])}`}>
+          <div key={r} className="in-gen" title={`${nombreDe(r)} ${num(f.g[r])}`}>
             <div className="in-gen-cab">
-              <b>{NOMBRE[r] ?? r}</b>
+              <b>{nombreDe(r)}</b>
               <span>{pct(r, f.g[r])}%</span>
             </div>
             <div className="in-barra">

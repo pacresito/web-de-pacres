@@ -1,41 +1,24 @@
 "use client";
 
 import Asa from "./asa";
-import { useEffect, useRef, useState } from "react";
-import { pintarEstrato, posGen, type Estrato, type Tinta } from "./render";
-import { RASGOS, type Rasgo } from "./engine";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { pintarEstrato, type Estrato } from "./render";
+import { posGen } from "./designs";
+import { RASGOS, nombreDe, type Genoma, type Rasgo } from "./engine";
 import { BINS, columnas, type Columna, type Historia } from "./reparto";
 import { tintaDe } from "./tira";
+import { usePanel } from "./panel";
 
 /**
- * **Toda la partida de una vez**: por cada gen, el tiempo a lo ancho, la escala del gen a lo alto y
- * la población como tinta. Es lo que la tira no puede contestar —«¿cuándo pasó?»—, y por eso son
- * dos piezas y no una: la tira está siempre y esto se abre cuando se pregunta por el pasado.
- *
- * **La historia entera, nunca una ventana móvil.** Una partida de trescientos días se ve entera y
- * más apretada, no recortada por el final: el pasado es justo lo que se ha venido a mirar. Quien
- * comprime es `columnas`, que junta días sumando histogramas —exacto— y no promediando formas.
- *
- * Se abre encima del lienzo, como la leyenda, y por la misma razón: el alto de la página ya se lo
- * reparten el mundo y la tira, y seis franjas legibles no caben en lo que sobra.
+ * Toda la partida de una vez: por cada gen, el tiempo a lo ancho, la escala a lo alto y la
+ * población como tinta. Contesta «¿cuándo pasó?», que la tira no puede.
  */
 
-/** Alto de la franja de un gen, en px CSS. Menos y la mediana no se distingue de la banda. */
+/** Alto de la franja de un gen, en px CSS. */
 const ALTO = 64, ALTO_MOVIL = 46;
-/** Refresco, en ms. La historia crece un día cada diecisiete segundos a ×1 — no hay prisa. */
-const REFRESCO = 700;
 
-const NOMBRE: Record<string, string> = { vision: "visión" };
-
-/**
- * Una franja. **Las columnas le llegan hechas y no las pide**: `columnas` comprime los seis genes
- * de una vez, así que calcularlas aquí sería repetir seis veces el mismo recorrido de la partida
- * entera —y con el panel abierto eso se nota en el mundo, que comparte el presupuesto del
- * fotograma con esto.
- */
-function Franja({ rasgo, cs, eva }: {
-  rasgo: Rasgo; cs: Columna[]; eva: Record<string, number>;
-}) {
+/** Una franja. Las columnas le llegan hechas: `columnas` comprime los seis genes de una vez. */
+function Franja({ rasgo, cs, eva }: { rasgo: Rasgo; cs: Columna[]; eva: Genoma }) {
   const ref = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -60,12 +43,12 @@ function Franja({ rasgo, cs, eva }: {
       hoy: cs[cs.length - 1].densidad.slice(i * BINS, (i + 1) * BINS),
       eva: posGen(rasgo, eva[rasgo]),
     };
-    pintarEstrato(ctx, W, H, dpr, tintaDe(cv) as Tinta, e);
+    pintarEstrato(ctx, W, H, dpr, tintaDe(cv), e);
   }, [rasgo, cs, eva]);
 
   return (
     <div className="es-fila">
-      <div className="es-et"><b>{NOMBRE[rasgo] ?? rasgo}</b></div>
+      <div className="es-et"><b>{nombreDe(rasgo)}</b></div>
       <canvas ref={ref} className="es-lienzo" />
       {cs.length === 0 && <span className="es-nada">aún no hay partida que contar</span>}
     </div>
@@ -74,7 +57,7 @@ function Franja({ rasgo, cs, eva }: {
 
 export default function Estratos({ historia, eva, dia, cerrar }: {
   historia: () => Historia;
-  eva: Record<string, number>;
+  eva: Genoma;
   dia: () => number;
   cerrar: () => void;
 }) {
@@ -82,36 +65,51 @@ export default function Estratos({ historia, eva, dia, cerrar }: {
   const [cs, setCs] = useState<Columna[]>([]);
   const [hoy, setHoy] = useState(0);
 
-  useEffect(() => {
-    // Una columna por píxel de mapa y no más: comprimir a menos tira forma que sí cabría, y a más
-    // se pintaría un detalle que ningún píxel puede enseñar. El ancho es el mismo en las seis.
-    const leer = () => {
-      const cv = caja.current?.querySelector("canvas");
-      const ancho = Math.max(1, Math.round(cv?.clientWidth ?? 600));
-      setCs(columnas(historia(), ancho));
-      setHoy(dia());
-    };
-    leer();
-    const id = window.setInterval(leer, REFRESCO);
-    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") cerrar(); };
-    window.addEventListener("keydown", esc);
-    return () => { window.clearInterval(id); window.removeEventListener("keydown", esc); };
-  }, [historia, dia, cerrar]);
+  // Una columna por píxel de mapa.
+  const leer = useCallback(() => {
+    const cv = caja.current?.querySelector("canvas");
+    const ancho = Math.max(1, Math.round(cv?.clientWidth ?? 600));
+    setCs(columnas(historia(), ancho));
+    setHoy(dia());
+  }, [historia, dia]);
+  usePanel(cerrar, leer);
 
   return (
-    <div ref={caja} className="es-panel" style={{ "--es-alto": `${ALTO}px`, "--es-alto-movil": `${ALTO_MOVIL}px` } as React.CSSProperties}>
+    <div ref={caja} className="ev-panel es-panel">
+      <style>{`
+        .es-panel { padding: 0.65rem 1rem 0.6rem; }
+        .es-cabecera { padding-bottom: 0.35rem; }
+        .es-fila {
+          display: grid; grid-template-columns: 96px 1fr; gap: 0.6rem; align-items: center;
+          border-top: 1px solid var(--t-rule2); padding: 3px 0; position: relative;
+        }
+        .es-et b { font-size: 0.66rem; letter-spacing: 0.05em; color: var(--t-ink2); }
+        .es-lienzo { display: block; width: 100%; height: ${ALTO}px; }
+        .es-nada {
+          position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+          font-size: 0.62rem; color: var(--t-ink4);
+        }
+        .es-pie {
+          display: flex; gap: 0.6rem; font-size: 0.6rem; color: var(--t-ink3);
+          padding-top: 0.25rem; margin-left: calc(96px + 0.6rem); font-variant-numeric: tabular-nums;
+        }
+        .es-marcas { flex: 1 1 auto; display: flex; justify-content: space-between; }
+        .es-perfil { flex: 0 0 27px; text-align: right; }
+        @media (max-width: 500px) {
+          .es-fila { grid-template-columns: 76px 1fr; gap: 0.4rem; }
+          .es-lienzo { height: ${ALTO_MOVIL}px; }
+          .es-pie { margin-left: calc(76px + 0.4rem); }
+        }
+      `}</style>
       <Asa cerrar={cerrar} />
-      <div className="es-cabecera">
+      <div className="ev-cabecera es-cabecera">
         <b>toda la partida</b>
-        <span className="es-rango">día 1 → {hoy}</span>
+        <span className="ev-rango">día 1 → {hoy}</span>
         <button className="ev-btn muted ev-cerrar" onClick={cerrar}>cerrar</button>
       </div>
       {RASGOS.map((r) => (
         <Franja key={r} rasgo={r} cs={cs} eva={eva} />
       ))}
-      {/* Cuatro marcas y no dos: «día 1 → hoy» dice cuánto abarca, pero para contestar «¿cuándo
-          pasó?» hace falta poder señalar el sitio. Se reparten sobre el ancho del mapa, que acaba
-          donde empieza el perfil. */}
       <div className="es-pie">
         <div className="es-marcas">
           {[0, 1, 2, 3].map((k) => (

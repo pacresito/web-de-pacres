@@ -3,20 +3,9 @@
 import Asa from "./asa";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Diario as DiarioT, Evento } from "./narrador";
+import { usePanel } from "./panel";
 
-/**
- * La crónica de la partida, en un log de terminal. Lo que escribe lo decide `narrador.ts`; aquí
- * solo se pinta, y se pinta **en orden, la última abajo**, que es como se lee un log y lo que
- * permite que el ojo vuelva siempre al mismo sitio.
- *
- * Se abre encima del lienzo, como la leyenda y los estratos, y por lo mismo: el alto ya se lo
- * reparten el mundo y la tira. **La última línea no necesita el panel** —sale sola en la barra de
- * estado, que es donde se está mirando cuando pasa—: esto es para leer lo que uno se perdió.
- */
-
-/** Refresco, en ms. El diario escribe una línea cada muchos días: no hay prisa ninguna. */
-const REFRESCO = 700;
-
+/** La crónica de la partida, como un log: la última abajo. Lo que dice lo decide `narrador.ts`. */
 export default function Diario({ diario, dia, clima, cerrar }: {
   diario: () => DiarioT;
   dia: () => number;
@@ -27,19 +16,11 @@ export default function Diario({ diario, dia, clima, cerrar }: {
   const [lineas, setLineas] = useState<Evento[]>([]);
   const [hoy, setHoy] = useState(0);
 
-  useEffect(() => {
-    // Se copia la lista y no se guarda la del diario: es la misma que el bucle va reescribiendo
-    // cuando el mundo vuelve atrás, y React no repinta un array que muta bajo sus pies.
-    const leer = () => { setLineas(diario().eventos.slice()); setHoy(dia()); };
-    leer();
-    const id = window.setInterval(leer, REFRESCO);
-    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") cerrar(); };
-    window.addEventListener("keydown", esc);
-    return () => { window.clearInterval(id); window.removeEventListener("keydown", esc); };
-  }, [diario, dia, cerrar]);
+  // Copia y no la lista del diario, que el bucle muta al volver atrás.
+  const leer = useCallback(() => { setLineas(diario().eventos.slice()); setHoy(dia()); }, [diario, dia]);
+  usePanel(cerrar, leer);
 
-  // Al final del todo, que es donde está lo nuevo. Solo si ya estaba abajo: leyendo el principio
-  // de una partida larga, un salto al fondo cada vez que nace una línea es perder el sitio.
+  // Al fondo con cada línea nueva, solo si ya se estaba abajo.
   const pegado = useRef(true);
   const mirar = useCallback(() => {
     const el = fondo.current;
@@ -51,16 +32,22 @@ export default function Diario({ diario, dia, clima, cerrar }: {
   }, [lineas]);
 
   return (
-    <div className="dr-panel" ref={fondo} onScroll={mirar}>
+    <div className="ev-panel dr-panel" ref={fondo} onScroll={mirar}>
+      <style>{`
+        .dr-panel { padding: 0 1rem 0.8rem; }
+        /* El relleno de arriba lo pone la cabecera pegada: en el panel, las líneas pasarían por encima. */
+        .dr-cabecera { position: sticky; top: 0; z-index: 1; background: var(--t-paper); padding: 0.65rem 0 0.45rem; }
+        .dr-linea { font-size: 0.68rem; line-height: 1.75; color: var(--t-ink2); border-top: 1px solid var(--t-rule2); }
+        .dr-linea b { color: var(--t-accent); font-weight: 600; font-variant-numeric: tabular-nums; }
+        .dr-nada { font-size: 0.66rem; color: var(--t-ink3); padding-top: 0.6rem; }
+        @media (max-width: 640px) { .dr-cabecera { top: 28px; } }   /* debajo del asa */
+      `}</style>
       <Asa cerrar={cerrar} />
-      <div className="dr-cabecera">
+      <div className="ev-cabecera dr-cabecera">
         <b>el diario</b>
-        <span className="dr-rango">día 1 → {hoy}</span>
+        <span className="ev-rango">día 1 → {hoy}</span>
         <button className="ev-btn muted ev-cerrar" onClick={cerrar}>cerrar</button>
       </div>
-      {/* El clima primero y sin día: la comida que amanece es el techo de la población y la sortea
-          la semilla, así que sin ese número un censo de 17 no se distingue de un desastre. Es la
-          vara de todo lo que viene debajo, no algo que haya pasado. */}
       <p className="dr-linea"><b>clima</b> · {clima()} bocados al día</p>
       {lineas.length === 0 && <p className="dr-nada">Todavía no ha pasado nada que no pasara ya.</p>}
       {lineas.map((e) => (

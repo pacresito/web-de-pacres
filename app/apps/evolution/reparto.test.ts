@@ -1,11 +1,5 @@
-// Los tests del observador — `npx tsx app/apps/evolution/reparto.test.ts`.
-// No es parte del build; corre sin navegador y en segundos, no en minutos.
-//
-// **Estos no comprueban el mundo, comprueban que mirarlo no lo cambia ni lo pierde.** Los de
-// `engine.test.ts` son predicciones evolutivas falsables; aquí no hay nada que predecir: el
-// reparto es aritmética sobre una población que ya existe. Lo que sí hay son tres formas de
-// mentir en silencio —perder bichos por el camino, dejar futuro guardado de un mundo que ha
-// vuelto atrás, y comprimir la historia inventando forma— y ninguna de las tres falla sola.
+// Tests del reparto — `npx tsx app/apps/evolution/reparto.test.ts`. Comprueban que mirar el
+// mundo no lo cambia ni lo pierde.
 import { RASGOS, copiar, correrDia, crearMundo } from "./engine";
 import { BINS, columnas, crearHistoria, registrar, type Historia } from "./reparto";
 
@@ -18,7 +12,7 @@ function check(nombre: string, ok: boolean, detalle = "") {
 const SEMILLA = "raiz";
 const DIAS = 60;
 
-/** Corre una partida registrando cada amanecer, que es donde la página llamará. */
+/** Una partida registrada en cada amanecer, como en la página. */
 function partida(dias: number) {
   const m = crearMundo(SEMILLA);
   const h = crearHistoria();
@@ -26,14 +20,12 @@ function partida(dias: number) {
   return { m, h };
 }
 
-/** La historia entera en una cadena, para comparar dos de un vistazo. */
+/** La historia en una cadena, para comparar. */
 const firma = (h: Historia) => h.dias.filter(Boolean).map((d) =>
   `${d.dia}:${d.censo}:${[...d.cuentas].join("")}:${[...d.med].map((x) => x.toFixed(9)).join(",")}`
 ).join("|");
 
-// 1. Ningún bicho se queda fuera de la escala. Las franjas de los extremos son abiertas —«÷8 o
-//    menos»—, así que un gen que se dispare tiene que acabar contado en la última y no perdido:
-//    perder bichos por arriba dejaría una banda que se estrecha sin que nadie haya muerto.
+// 1. Ningún bicho se queda fuera de la escala: las franjas de los extremos son abiertas.
 {
   const { h } = partida(DIAS);
   let mal = 0;
@@ -47,11 +39,8 @@ const firma = (h: Historia) => h.dias.filter(Boolean).map((d) =>
   check("cada franja cuenta a todos y solo a los vivos", mal === 0, `${h.dias.length} días`);
 }
 
-// 2. Volver atrás y revivir da la misma historia que no haber vuelto nunca. El mundo es
-//    determinista, así que los días revividos son los mismos días — pero solo si el observador
-//    **corta el futuro** al volver. Por eso se revive **menos de lo que se había guardado**: si
-//    se reviviera lo mismo, los días nuevos taparían a los viejos uno a uno y el test pasaría
-//    igual sin cortar nada, que es la forma de no comprobar nada y creer que sí.
+// 2. Volver atrás y revivir da la misma historia. Se revive menos de lo guardado: si no, los
+//    días nuevos taparían a los viejos y pasaría sin cortar nada.
 {
   const largo = partida(DIAS);
   const corto = partida(DIAS - 20);
@@ -64,10 +53,7 @@ const firma = (h: Historia) => h.dias.filter(Boolean).map((d) =>
     `${largo.h.dias.length} guardados, ${corto.h.dias.length} tras volver`);
 }
 
-// 3. Comprimir no inventa ni pierde forma. Una columna de cuatro días tiene que ser la misma
-//    banda que la de esos cuatro días juntos —sumar histogramas es exacto—, así que la
-//    comprobación es que cada fila sigue sumando uno y que las columnas cubren la partida entera
-//    sin solaparse ni dejar hueco.
+// 3. Comprimir no inventa ni pierde forma: cada fila suma uno y las columnas cubren la partida.
 {
   const { h } = partida(DIAS);
   for (const n of [DIAS, 17, 7, 1]) {

@@ -1,18 +1,12 @@
-// Las formas del mundo contra la caja — `npx tsx app/apps/evolution/formas.medir.ts [forma=ancho,…]`.
+// Las formas contra la caja — `npx tsx app/apps/evolution/medir/formas.medir.ts [forma=ancho,…]`.
+// No es un test: mide. Fuera del build.
 //
-// **No es un test: no falla, mide.** Las mismas semillas en cada forma, con el clima que les toque,
-// y lo que se compara es lo que fijó el tamaño de la caja: cuánta comida sobra al anochecer y cuántas
-// noches queda el suelo limpio. Además, si la población aguanta y a dónde lleva cada forma los genes.
-//
-// Y **si la población se parte**. Cada forma se corta en sus salas —las dos mitades, las tres del
-// trébol, cada isla— y se mide cuántos bichos cambian de sala al día y cuánto se separan los centros
-// de las salas, en unidades de lo que se dispersa cada sala por dentro: por encima de 1, las salas son
-// más distintas entre sí que un bicho corriente de la suya.
-//
-// Con argumentos se prueban medidas: `donut=210,islas=280` corre esas dos con ese ancho.
+// Comida sobrante, noches de suelo limpio, supervivencia y genes. Y si la población se parte: cada
+// forma se corta en sus salas y se mide cuánto cruzan y cuánto se separan sus centros, en unidades
+// de su dispersión interna. Con argumentos se prueban medidas: `donut=210,islas=280`.
 
-import { FUNDADOR, RASGOS, anochecer, amanecer, crearMundo, distancia, mediana, signado, tick, type Bicho, type Genoma } from "./engine";
-import { FORMAS, MEDIDAS, type Forma, type Geometria } from "./formas";
+import { FUNDADOR, RASGOS, anochecer, amanecer, crearMundo, distancia, mediana, signado, tick, type Bicho, type Genoma } from "../engine";
+import { FORMAS, MEDIDAS, type Forma, type Geometria } from "../formas";
 
 const SEMILLAS = Array.from({ length: 24 }, (_, i) => `forma${i}`);
 const DIAS = 300;
