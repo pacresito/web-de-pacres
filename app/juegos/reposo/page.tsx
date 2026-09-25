@@ -8,13 +8,10 @@ import TerminalShell from "../../components/TerminalShell";
 import WhyFooter from "../../components/WhyFooter";
 import BarraEstado, { Dato } from "../../components/BarraEstado";
 import { IconoPantallaCompleta } from "../../components/Iconos";
-import { diferencia, escena, snapshot, type NivelObjeto, type Snapshot } from "./escena";
-import { LIENZO, vistaDe, type Vista } from "./render";
+import { SEMILLA, diferencia, escena, snapshot, type NivelObjeto, type Snapshot } from "./escena";
+import { LIENZO, calendarioDe, horaSolar, vistaDe, type Vista } from "./render";
 import { componer, pintarCapas, type Capas } from "./calle/animar";
 import { agenda } from "./calle/vida";
-
-/** Una sola calle para todos: cambiar la semilla cambia la calle. */
-const SEMILLA = "reposo";
 
 /** El ancho de la calle. En una ventana estrecha se desplaza en vez de encoger, o lo pequeño
  *  dejaría de verse; maximizada crece hasta llenar la pantalla. */
@@ -72,6 +69,8 @@ const horaLocal = (t: number) => {
   const d = new Date(t * 1000);
   return d.getHours() + d.getMinutes() / 60;
 };
+/** La del sol, para lo que depende de si hay luz: los pájaros, las estrellas, la tele. */
+const horaDeLuz = (t: number) => horaSolar(horaLocal(t), calendarioDe(new Date(t * 1000)).dia);
 
 export default function Reposo() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -94,7 +93,7 @@ export default function Reposo() {
     dibujar.current = (t: number) => {
       const ctx = canvasRef.current?.getContext("2d");
       if (!ctx || !capas.current || !vista.current) return;
-      componer(ctx, vista.current, capas.current, { t, hora: horaLocal(t), sucesos: agenda(t, horaLocal) });
+      componer(ctx, vista.current, capas.current, { t, hora: horaLocal(t), sucesos: agenda(t, horaDeLuz) });
     };
     let id = 0, ultimo = -1;
     const vuelta = (real: number) => {
@@ -122,8 +121,8 @@ export default function Reposo() {
   const dias = visita ? Math.max(0, Math.floor((ahora - visita.t) / MS_DIA)) : 0;
   const cuando = dias === 0 ? "hoy" : dias === 1 ? "ayer" : `hace ${dias} días`;
 
-  // Lo quieto, una vez por minuto. La calle de antes se pinta con la luz de ahora: con la suya
-  // cambiaría todo y no se vería qué cambió.
+  // Lo quieto, una vez por minuto. La calle de antes se pinta con la luz y la estación de ahora:
+  // con las suyas cambiaría todo y no se vería qué cambió.
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || ahora === 0) return;
@@ -132,7 +131,7 @@ export default function Reposo() {
       ? ahoraMismo.map((o) => ({ ...o, nivel: visita.niveles[o.id] ?? o.nivel }))
       : ahoraMismo;
     vista.current = vistaDe(canvas, ancho, window.devicePixelRatio || 1);
-    capas.current = pintarCapas(niveles, hora);
+    capas.current = pintarCapas(niveles, hora, new Date(ahora));
     // Redimensionar el canvas lo borra: se repinta ya, sin esperar al siguiente fotograma.
     dibujar.current(Date.now() / 1000);
   }, [ahora, hora, ancho, antes, visita]);

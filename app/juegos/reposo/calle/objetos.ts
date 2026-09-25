@@ -1,8 +1,9 @@
 // Los objetos de la calle con dibujo propio (el grafiti, en `grafiti.ts`) y el local de la tienda.
 //
 // **Cada nivel cambia algo que se nombra** —la persiana baja, hay otra bici, han pegado otro
-// cartel—, no un tamaño: un tamaño que cambia se lee como que el dibujo respira.
-import { apoyo, px, tramar, type Caja, type Ctx, type Pieza, type Rampa } from "./paleta";
+// cartel encima—, no un tamaño: un tamaño que cambia se lee como que el dibujo respira.
+import { SEMILLA, fechasDe } from "../escena";
+import { apoyo, azar, estacionDe, px, tramar, type Caja, type Ctx, type Oklch, type Pieza, type Rampa } from "./paleta";
 import type { Mano, Pincel } from "./pincel";
 import { grafiti } from "./grafiti";
 
@@ -29,16 +30,18 @@ function linea(ctx: Ctx, x0: number, y0: number, x1: number, y1: number, color: 
 const nivel = (p: Pieza, n: number) => ((n % p.variantes) + p.variantes) % p.variantes;
 const fraccion = (p: Pieza, n: number) => nivel(p, n) / (p.variantes - 1);
 
-/** Letras de 3×5 (la N es de 4), para el letrero: solo las que usan sus nombres. */
+/** Letras de 3×5 (la N es de 4), para el letrero y los carteles: solo las que usan. */
 const LETRAS: Record<string, string[]> = {
   A: [".#.", "#.#", "###", "#.#", "#.#"], B: ["##.", "#.#", "##.", "#.#", "##."],
   C: [".##", "#..", "#..", "#..", ".##"], D: ["##.", "#.#", "#.#", "#.#", "##."],
   E: ["###", "#..", "##.", "#..", "###"], F: ["###", "#..", "##.", "#..", "#.."],
   G: [".##", "#..", "#.#", "#.#", ".##"],
-  I: ["###", ".#.", ".#.", ".#.", "###"], L: ["#..", "#..", "#..", "#..", "###"],
+  I: ["###", ".#.", ".#.", ".#.", "###"], J: ["..#", "..#", "..#", "#.#", ".#."],
+  L: ["#..", "#..", "#..", "#..", "###"],
   N: ["#..#", "##.#", "#.##", "#..#", "#..#"], O: [".#.", "#.#", "#.#", "#.#", ".#."],
   P: ["##.", "#.#", "##.", "#..", "#.."], R: ["##.", "#.#", "##.", "#.#", "#.#"],
   S: [".##", "#..", ".#.", "..#", "##."], T: ["###", ".#.", ".#.", ".#.", ".#."],
+  V: ["#.#", "#.#", "#.#", "#.#", ".#."], Z: ["###", "..#", ".#.", "#..", "###"],
   " ": ["..", "..", "..", "..", ".."],
 };
 function texto(ctx: Ctx, s: string, x: number, y: number, esc: number, color: string) {
@@ -121,6 +124,218 @@ export function tienda(ctx: Ctx, m: Mano, b: Caja) {
   }
 }
 
+// ── Los carteles ────────────────────────────────────────────────────────────
+//
+// **Cada cartel es de la temporada en que lo pegaron, y se pega encima del anterior:** asoma
+// el de debajo, roto y descolorido. Enero y febrero no tienen fiesta, y cualquier mes
+// cuela a veces uno del barrio —se busca gato, se alquila piso—, con sus tiras para arrancar.
+
+type Temporada = "navidad" | "primavera" | "verano" | "otoño" | "barrio";
+
+interface Tema {
+  palabra: string;
+  papel: Oklch;
+  /** El recuadro del dibujo. */
+  fondo: Oklch;
+  /** Centrado en (cx, cy), en un recuadro de 22×15. */
+  dibujo: (ctx: Ctx, m: Mano, cx: number, cy: number) => void;
+  /** Tiras con el teléfono en vez de letra pequeña. */
+  tiras?: boolean;
+}
+
+const NOCHE: Oklch = { l: 0.32, c: 0.07, h: 265 }, BLANCO: Oklch = { l: 0.95, c: 0.01, h: 95 };
+const CREMA: Oklch = { l: 0.92, c: 0.04, h: 88 };
+
+function estrella(ctx: Ctx, cx: number, cy: number, color: string) {
+  px(ctx, cx, cy - 3, 1, 7, color);
+  px(ctx, cx - 3, cy, 7, 1, color);
+  px(ctx, cx - 1, cy - 1, 3, 3, color);
+  for (const [dx, dy] of [[-2, -2], [2, -2], [-2, 2], [2, 2]]) px(ctx, cx + dx, cy + dy, 1, 1, color);
+}
+function nota(ctx: Ctx, x: number, y: number, color: string) {
+  px(ctx, x, y + 4, 2, 2, color);
+  px(ctx, x + 1, y, 1, 5, color);
+  px(ctx, x + 2, y, 1, 2, color);
+}
+function estallido(ctx: Ctx, cx: number, cy: number, r: number, color: string) {
+  for (let a = 0; a < 8; a++) {
+    const dx = Math.cos((a * Math.PI) / 4), dy = Math.sin((a * Math.PI) / 4);
+    for (const d of [r - 2, r]) px(ctx, R(cx + dx * d), R(cy + dy * d), 1, 1, color);
+  }
+  px(ctx, cx, cy, 1, 1, color);
+}
+
+const TEMAS: Record<Temporada, Tema[]> = {
+  navidad: [
+    { palabra: "CORO", papel: CREMA, fondo: NOCHE, dibujo: (ctx, m, cx, cy) => {
+      estrella(ctx, cx - 5, cy - 2, m.P.luz[5]);
+      nota(ctx, cx + 1, cy - 4, m.P.piedra[5]);
+      nota(ctx, cx + 5, cy - 1, m.P.piedra[5]);
+    } },
+    { palabra: "FERIA", papel: BLANCO, fondo: { l: 0.5, c: 0.14, h: 25 }, dibujo: (ctx, m, cx, cy) => {
+      for (let j = 0; j < 11; j++) px(ctx, cx - (j >> 1), cy - 5 + j, (j >> 1) * 2 + 1, 1, m.P.hoja[j % 3 ? 2 : 3]);   // el abeto
+      px(ctx, cx - 1, cy + 6, 3, 2, m.P.madera[2]);
+      px(ctx, cx, cy - 7, 1, 2, m.P.luz[5]);
+      for (const [dx, dy] of [[-1, -2], [1, 0], [-3, 2], [2, 3], [-1, 4]]) px(ctx, cx + dx, cy + dy, 1, 1, m.P.luz[5]);
+    } },
+  ],
+  primavera: [
+    { palabra: "FLORES", papel: BLANCO, fondo: { l: 0.82, c: 0.07, h: 135 }, dibujo: (ctx, m, cx, cy) => {
+      const petalo = m.tono({ l: 0.7, c: 0.14, h: 350 });
+      px(ctx, cx, cy - 2, 1, 9, m.P.hoja[2]);
+      px(ctx, cx + 1, cy + 3, 3, 1, m.P.hoja[3]);
+      px(ctx, cx - 3, cy + 1, 3, 1, m.P.hoja[3]);
+      for (const [dx, dy] of [[-2, -3], [2, -3], [0, -5], [0, -1]]) circulo(ctx, cx + dx, cy + dy, 1, petalo[4]);
+      px(ctx, cx, cy - 3, 1, 1, m.P.luz[5]);
+    } },
+    { palabra: "TEATRO", papel: CREMA, fondo: { l: 0.25, c: 0.04, h: 20 }, dibujo: (ctx, m, cx, cy) => {
+      for (let j = 0; j < 13; j++) {                                              // el telón, recogido
+        const w = Math.max(2, 7 - Math.abs(j - 7));
+        px(ctx, cx - 10, cy - 6 + j, w, 1, m.P.tela[j % 2 ? 3 : 4]);
+        px(ctx, cx + 11 - w, cy - 6 + j, w, 1, m.P.tela[j % 2 ? 3 : 4]);
+      }
+      px(ctx, cx - 10, cy - 7, 21, 2, m.P.luz[3]);
+      circulo(ctx, cx, cy + 4, 2, m.P.luz[4]);
+    } },
+  ],
+  verano: [
+    { palabra: "BAILE", papel: CREMA, fondo: NOCHE, dibujo: (ctx, m, cx, cy) => {
+      const cable = (dx: number) => cy - 5 + R(3 * Math.sin((Math.PI * (dx + 10)) / 20));
+      for (let dx = -10; dx <= 10; dx++) px(ctx, cx + dx, cable(dx), 1, 1, m.P.metal[3]);
+      [m.P.tela, m.P.luz, m.P.hoja].forEach((C, i) => {                           // los farolillos
+        const dx = -6 + i * 6, y = cable(dx) + 1;
+        px(ctx, cx + dx - 1, y, 3, 5, C[4]);
+        px(ctx, cx + dx - 1, y, 3, 1, C[2]);
+        px(ctx, cx + dx - 1, y + 4, 3, 1, C[2]);
+      });
+    } },
+    { palabra: "CINE", papel: BLANCO, fondo: NOCHE, dibujo: (ctx, m, cx, cy) => {
+      circulo(ctx, cx - 7, cy - 4, 2, m.P.luz[5]);
+      px(ctx, cx - 3, cy - 4, 12, 7, m.P.piedra[5]);
+      px(ctx, cx - 2, cy + 3, 1, 4, m.P.metal[3]);
+      px(ctx, cx + 7, cy + 3, 1, 4, m.P.metal[3]);
+    } },
+    { palabra: "FIESTA", papel: BLANCO, fondo: NOCHE, dibujo: (ctx, m, cx, cy) => {
+      estallido(ctx, cx - 4, cy - 2, 4, m.P.tela[5]);
+      estallido(ctx, cx + 5, cy + 1, 3, m.P.luz[5]);
+      px(ctx, cx + 1, cy + 4, 1, 3, m.P.luz[4]);
+    } },
+  ],
+  otoño: [
+    { palabra: "SETAS", papel: CREMA, fondo: { l: 0.74, c: 0.08, h: 75 }, dibujo: (ctx, m, cx, cy) => {
+      px(ctx, cx - 1, cy, 3, 6, m.P.piedra[5]);
+      [[-5, -1, 11], [-4, -2, 9], [-3, -3, 7], [-2, -4, 5]].forEach(([dx, dy, w]) => px(ctx, cx + dx, cy + dy, w, 1, m.P.tela[3]));
+      for (const [dx, dy] of [[-3, -2], [1, -3], [3, -1]]) px(ctx, cx + dx, cy + dy, 1, 1, m.P.piedra[5]);
+    } },
+    { palabra: "JAZZ", papel: BLANCO, fondo: { l: 0.35, c: 0.09, h: 300 }, dibujo: (ctx, m, cx, cy) => {
+      px(ctx, cx - 5, cy + 2, 3, 2, m.P.luz[5]);
+      px(ctx, cx + 2, cy + 1, 3, 2, m.P.luz[5]);
+      px(ctx, cx - 3, cy - 5, 1, 8, m.P.luz[5]);
+      px(ctx, cx + 4, cy - 6, 1, 8, m.P.luz[5]);
+      linea(ctx, cx - 3, cy - 5, cx + 4, cy - 6, m.P.luz[5], 2);
+    } },
+    { palabra: "VINO", papel: CREMA, fondo: { l: 0.86, c: 0.04, h: 80 }, dibujo: (ctx, m, cx, cy) => {
+      const uva = m.tono({ l: 0.4, c: 0.12, h: 320 });
+      px(ctx, cx, cy - 7, 1, 3, m.P.madera[2]);
+      px(ctx, cx + 1, cy - 6, 3, 2, m.P.hoja[3]);
+      [4, 3, 2, 1].forEach((cuantas, fila) => {
+        for (let i = 0; i < cuantas; i++) circulo(ctx, cx - (cuantas - 1) * 1.5 + i * 3, cy - 3 + fila * 3, 1, uva[i % 2 ? 3 : 4]);
+      });
+    } },
+  ],
+  barrio: [
+    { palabra: "GATO", papel: BLANCO, fondo: { l: 0.72, c: 0.01, h: 250 }, tiras: true, dibujo: (ctx, m, cx, cy) => {
+      const pelo = m.tono({ l: 0.28, c: 0.01, h: 250 })[2];
+      circulo(ctx, cx, cy + 1, 4, pelo);
+      px(ctx, cx - 4, cy - 4, 2, 2, pelo);
+      px(ctx, cx + 3, cy - 4, 2, 2, pelo);
+      px(ctx, cx - 2, cy, 1, 1, m.P.luz[5]);
+      px(ctx, cx + 2, cy, 1, 1, m.P.luz[5]);
+    } },
+    { palabra: "PISO", papel: { l: 0.92, c: 0.08, h: 95 }, fondo: BLANCO, tiras: true, dibujo: (ctx, m, cx, cy) => {
+      for (let j = 0; j < 4; j++) px(ctx, cx - 1 - j * 2, cy - 5 + j, 3 + j * 4, 1, m.P.ladrillo[3]);   // el tejado
+      px(ctx, cx - 5, cy - 1, 11, 7, m.P.piedra[3]);
+      px(ctx, cx - 1, cy + 2, 2, 4, m.P.madera[2]);
+      px(ctx, cx + 2, cy + 1, 2, 2, m.P.metal[4]);
+      px(ctx, cx - 4, cy + 1, 2, 2, m.P.metal[4]);
+    } },
+    { palabra: "CLASES", papel: BLANCO, fondo: { l: 0.86, c: 0.05, h: 60 }, tiras: true, dibujo: (ctx, m, cx, cy) => {
+      linea(ctx, cx - 1, cy, cx + 6, cy - 6, m.P.madera[1]);                      // el mástil
+      circulo(ctx, cx - 4, cy + 3, 3, m.P.madera[3]);
+      circulo(ctx, cx - 1, cy, 2, m.P.madera[3]);
+      px(ctx, cx - 3, cy + 2, 2, 2, m.F.tinta);                                    // la boca
+    } },
+  ],
+};
+
+function temporadaDe(t: number, k: number): Temporada {
+  const mes = new Date(t).getUTCMonth();
+  const colado = azar(k * 17 + 5) < 0.1;
+  if (mes === 11) return colado ? "barrio" : "navidad";
+  const est = estacionDe(mes);
+  return est === "invierno" || colado ? "barrio" : est;
+}
+
+/** El tema de cada cartel pegado, del primero al último. Nunca dos seguidos iguales: el nuevo
+ *  taparía al viejo y no cambiaría nada. */
+const pegados: Tema[] = [];
+function temaDe(k: number): Tema {
+  if (pegados.length < k) {
+    const fechas = fechasDe(SEMILLA, "cartel", k);
+    for (let i = pegados.length + 1; i <= k; i++) {
+      const lista = TEMAS[temporadaDe(fechas[i - 1], i)];
+      let tema = lista[Math.floor(azar(i * 17 + 6) * lista.length)];
+      if (tema === pegados[i - 2]) tema = lista[(lista.indexOf(tema) + 1) % lista.length];
+      if (tema === pegados[i - 2]) tema = TEMAS.barrio[i % TEMAS.barrio.length];
+      pegados.push(tema);
+    }
+  }
+  return pegados[k - 1];
+}
+
+/** Dónde cae cada cartel respecto al centro, por turnos: dos seguidos nunca caen cerca, o el
+ *  nuevo taparía entero al de debajo. */
+const SITIOS = [[-7, -4], [6, 3], [-5, 4], [7, -4], [0, -5], [-1, 5]];
+
+/** El cartel `k`; si `edad` es 1, el de debajo, roto y desteñido. */
+function cartelPegado(ctx: Ctx, m: Mano, b: Caja, k: number, edad: number) {
+  const tema = temaDe(k);
+  const w = 26, h = 34, [dx, dy] = SITIOS[k % SITIOS.length];
+  const x = b.x + R((b.w - w) / 2) + dx, y = b.y + R((b.h - h) / 2) + dy;
+  ctx.save();
+  if (edad > 0) {                                                               // le falta una esquina
+    const esquina = Math.floor(azar(k * 13 + 3) * 4), c = 6 + edad * 4;
+    ctx.beginPath();
+    for (let i = 0; i <= w; i++) {
+      const d = esquina % 2 ? w - i : i;
+      const corte = Math.max(0, c - d + Math.floor(azar(k * 31 + i) * 3) - 1);
+      ctx.rect(x + i, esquina < 2 ? y + corte : y, 1, h + 1 - corte);
+    }
+    ctx.clip();
+  }
+  const P = m.tono(tema.papel), alto = tema.tiras ? h - 6 : h;
+  px(ctx, x + 1, y + 1, w, alto, m.P.muro[1]);                                 // sombra
+  px(ctx, x, y, w, alto, P[3]);
+  px(ctx, x + 2, y + 2, w - 4, 15, m.tono(tema.fondo)[3]);
+  tema.dibujo(ctx, m, x + R(w / 2), y + 9);
+  texto(ctx, tema.palabra, x + R((w - anchoTexto(tema.palabra, 1)) / 2), y + 20, 1, m.F.tinta);
+  if (tema.tiras) {
+    px(ctx, x + 3, y + 26, w - 6, 1, m.P.metal[2]);
+    const arrancada = 1 + 3 * Math.floor(azar(k * 13 + 4) * 8);
+    for (let i = 1; i + 2 <= w - 1; i += 3) {
+      if (i === arrancada) continue;
+      px(ctx, x + i, y + alto, 2, 6, P[3]);
+      px(ctx, x + i, y + alto + 1, 1, 4, m.P.metal[2]);
+    }
+  } else {
+    px(ctx, x + 3, y + 27, w - 6, 1, m.P.metal[2]);
+    px(ctx, x + 5, y + 30, w - 10, 1, m.P.metal[2]);
+  }
+  if (edad > 0) tramar(ctx, x, y, w, h, m.P.piedra[5], 0.22 * edad);
+  else for (const cx of [x - 1, x + w - 3]) px(ctx, cx, y - 1, 4, 2, m.P.piedra[4]);   // el celo
+  ctx.restore();
+}
+
 // ── Los objetos ─────────────────────────────────────────────────────────────
 
 export const OBJETOS: Record<string, Pincel> = {
@@ -154,25 +369,9 @@ export const OBJETOS: Record<string, Pincel> = {
     tramar(ctx, x0, v.y - 2 + largo - 3, ancho, 3, m.P.tela[1], 0.3);
   },
   grafiti,
-  // Un cartel pegado: papel con una ilustración, dos líneas de texto, celo y una esquina rota.
+  // Los carteles pegados en la pared, el último encima.
   cartel: (ctx, m, b, _p, n) => {
-    if (n === 0) return;
-    const w = Math.min(22, b.w - 6), h = Math.min(30, b.h - 6);
-    const x = b.x + R((b.w - w) / 2), y = b.y + R((b.h - h) / 2);
-    const T = [m.P.tela, m.P.luz, m.P.hoja, m.tono({ l: 0.55, c: 0.12, h: 250 })][n % 4];
-    px(ctx, x + 1, y + 1, w, h, m.P.muro[1]);                                    // sombra
-    px(ctx, x, y, w, h, m.P.piedra[5]);
-    px(ctx, x + 2, y + 2, w - 4, R(h * 0.55), T[3]);
-    const cx = x + R(w / 2), cy = y + 2 + R(h * 0.27);
-    if (n % 3 === 0) circulo(ctx, cx, cy, 4, T[5]);                              // un sol
-    else if (n % 3 === 1) { px(ctx, cx - 5, cy + 2, 10, 4, T[1]); px(ctx, cx - 2, cy - 3, 4, 5, T[1]); }   // una guitarra, o casi
-    else for (let k = 0; k < 3; k++) circulo(ctx, cx - 4 + k * 4, cy + (k % 2) * 2, 2, T[5]);
-    px(ctx, x + 3, y + R(h * 0.62), w - 6, 2, m.F.tinta);
-    px(ctx, x + 3, y + R(h * 0.62) + 4, w - 10, 1, m.P.metal[2]);
-    px(ctx, x + 3, y + R(h * 0.62) + 7, w - 8, 1, m.P.metal[2]);
-    px(ctx, x - 1, y - 1, 4, 2, m.P.piedra[4]);                                  // celo
-    px(ctx, x + w - 3, y + h - 1, 4, 2, m.P.piedra[4]);
-    for (let k = 0; k < 4; k++) px(ctx, x + w - 4 + k, y, 4 - k, 1, m.P.muro[3]);   // la esquina arrancada
+    for (let k = Math.max(1, n - 1); k <= n; k++) cartelPegado(ctx, m, b, k, n - k);
   },
   // El buzón amarillo de correos, con su boca; con el tiempo, pegatinas y una firma.
   buzon: (ctx, m, b, p, n) => {

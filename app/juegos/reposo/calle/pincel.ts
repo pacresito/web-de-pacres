@@ -4,10 +4,11 @@
 // las cajas y qué hay detrás lo decide la escena (`alzado.ts`, `ventana.ts`).
 import type { NivelObjeto } from "../escena";
 import {
-  apoyo, azar, caja, enEscena, fino, fondo, luzDe, paleta, px, rampa, trama, tramar, volcar,
-  type Caja, type Cajas, type Ctx, type Fondo, type Material, type Paleta, type Pieza, type Rampa, type Vista,
+  apoyo, azar, caja, calendarioDe, enEscena, fino, fondo, horaSolar, luzDe, paleta, px, rampa, trama, tramar, volcar,
+  type Caja, type Cajas, type Calendario, type Ctx, type Fondo, type Material, type Paleta, type Pieza, type Rampa,
+  type Vista,
 } from "./paleta";
-import { edificioObra } from "./edificios";
+import { edificioObra, pinturaObra } from "./edificios";
 import { OBJETOS } from "./objetos";
 
 export const ESC = 2.5;
@@ -25,6 +26,10 @@ export interface Mano {
   suelo: number;
   /** La rampa de un material que no está en la paleta, bajo la luz de la hora. */
   tono: (m: Material) => Rampa;
+  /** La estación y la Navidad: visten la calle sin tocar ningún nivel. */
+  cal: Calendario;
+  /** La hora del sol, que es la de la luz: en diciembre anochece a las seis. */
+  solar: number;
 }
 
 /** Una composición: dónde va cada objeto y qué hay detrás. */
@@ -41,13 +46,16 @@ export interface Escena {
   recorte?: { x: number; y: number; w: number; h: number };
 }
 
-export function manoDe(hora: number, suelo: number): Mano {
-  const L = luzDe(hora);
+/** `hora` es la del reloj; la luz sale de la del sol en ese día del año. */
+export function manoDe(hora: number, suelo: number, cal: Calendario): Mano {
+  const solar = horaSolar(hora, cal.dia);
+  const L = luzDe(solar);
   return {
     P: paleta(L, CORTE, N), F: fondo(L, CORTE, 9), noche: L.noche,
-    luzDesde: ((hora % 24) + 24) % 24 < 13 ? 1 : -1,
+    luzDesde: solar < 13 ? 1 : -1,
     suelo,
     tono: (m) => rampa(m, L, CORTE, N),
+    cal, solar,
   };
 }
 
@@ -110,6 +118,93 @@ export function cielo(ctx: Ctx, m: Mano, hora: number, horizonte: number, conNub
   if (!dia) disco(ctx, cx, cy, r - 2, m.F.cielo[1], 5, -2);
 }
 
+// ── El árbol ────────────────────────────────────────────────────────────────
+
+/** El color de la copa según la estación. En otoño, además, motas rojizas por encima. */
+function follaje(m: Mano, est: Calendario["estacion"]): Rampa {
+  if (est === "primavera") return m.tono({ l: 0.56, c: 0.14, h: 135 });
+  if (est === "otoño") return m.tono({ l: 0.58, c: 0.12, h: 68 });
+  return m.P.hoja;
+}
+
+/** El tronco desde el suelo hasta `arranque`, ensanchándose al bajar. Devuelve su grosor. */
+function fuste(ctx: Ctx, m: Mano, b: Caja, cx: number, arranque: number): number {
+  const tronco = Math.max(2, Math.round(b.w * 0.09)), pie = b.y + b.h, lado = m.luzDesde;
+  for (let j = arranque; j < pie; j++) {
+    const ancho = tronco + Math.floor((j - arranque) / 18) + (j > pie - 3 ? 2 : 0);
+    const x0 = cx - Math.floor(ancho / 2);
+    px(ctx, x0, j, ancho, 1, m.P.madera[2]);
+    px(ctx, lado > 0 ? x0 : x0 + ancho - 1, j, 1, 1, m.P.madera[3]);
+    px(ctx, lado > 0 ? x0 + ancho - 1 : x0, j, 1, 1, m.P.madera[1]);
+    if ((j * 7) % 11 === 0) px(ctx, x0 + 1, j, 1, 2, m.P.madera[1]);              // corteza
+  }
+  return tronco;
+}
+
+/** Un trazo de `grueso` píxeles de un punto a otro. */
+function trazo(ctx: Ctx, x0: number, y0: number, x1: number, y1: number, grueso: number, color: string) {
+  const pasos = Math.max(1, Math.ceil(Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0))));
+  for (let s = 0; s <= pasos; s++)
+    px(ctx, Math.round(x0 + ((x1 - x0) * s) / pasos), Math.round(y0 + ((y1 - y0) * s) / pasos), grueso, grueso, color);
+}
+
+/** Las luces de Navidad, que de noche parpadean. `k` las distingue. */
+function bombilla(ctx: Ctx, m: Mano, x: number, y: number, k: number, vivo?: Vivo) {
+  const color = [m.P.tela, m.P.luz, m.P.hoja, m.tono({ l: 0.6, c: 0.12, h: 250 })][k % 4];
+  const apagada = m.noche && vivo && Math.sin(vivo.t * 1.7 + k * 2.3) < -0.6;
+  px(ctx, x, y, 1, 1, m.noche && !apagada ? color[5] : color[3]);
+}
+
+/** El árbol sin hoja: las ramas se abren en horquillas, cada vez más finas, hasta las
+ *  puntas. Por Navidad, con luces. */
+function ramaje(ctx: Ctx, m: Mano, cx: number, arranque: number, r: number, vivo?: Vivo) {
+  const puntas: [number, number][] = [];
+  const rama = (x: number, y: number, ang: number, largo: number, prof: number, k: number) => {
+    const x1 = x + Math.cos(ang) * largo, y1 = y + Math.sin(ang) * largo;
+    trazo(ctx, x, y, x1, y1, prof >= 3 ? 2 : 1, prof >= 2 ? m.P.madera[2] : m.P.madera[1]);
+    if (prof === 0) { puntas.push([Math.round(x1), Math.round(y1)]); return; }
+    const abre = 0.28 + azar(k * 7 + 1) * 0.3;
+    rama(x1, y1, ang - abre, largo * 0.74, prof - 1, k * 2 + 1);
+    rama(x1, y1, ang + abre * 0.8, largo * 0.7, prof - 1, k * 2 + 2);
+  };
+  [-2.35, -1.95, -1.57, -1.2, -0.8].forEach((ang, i) =>
+    rama(cx + (i - 2), arranque, ang + (azar(i + 90) - 0.5) * 0.2, r * 0.42, 4, i + 1));
+  if (m.cal.navidad) puntas.forEach(([x, y], i) => i % 2 === 0 && bombilla(ctx, m, x, y, i, vivo));
+}
+
+/** Recién podado: el tronco y los muñones, y en cuanto no es invierno, los brotes. */
+function podado(ctx: Ctx, m: Mano, b: Caja, est: Calendario["estacion"], vivo?: Vivo) {
+  const cx = b.x + Math.round(b.w / 2), arranque = b.y + Math.round(b.h * 0.5);
+  const tronco = fuste(ctx, m, b, cx, arranque);
+  const brote = follaje(m, est);
+  [-2.4, -1.95, -1.2, -0.75].forEach((ang, i) => {
+    const largo = b.w * (0.14 + azar(i + 70) * 0.05);
+    const x0 = cx + Math.round((i - 1.5) * (tronco / 3));
+    const x1 = Math.round(x0 + Math.cos(ang) * largo), y1 = Math.round(arranque + Math.sin(ang) * largo);
+    trazo(ctx, x0, arranque, x1, y1, 2, m.P.madera[2]);
+    disco(ctx, x1, y1, 2, m.P.madera[2]);                                             // el muñón
+    px(ctx, x1 - 1, y1 - 2, 2, 1, m.P.madera[3]);
+    if (est === "invierno") { if (m.cal.navidad) bombilla(ctx, m, x1, y1 - 3, i, vivo); return; }
+    for (let k = 0; k < 6; k++) {                                                     // las varas nuevas
+      const a = -Math.PI / 2 + (azar(i * 9 + k) - 0.5) * 1.3, l = 5 + Math.round(azar(i * 9 + k + 4) * 7);
+      const xt = x1 + Math.cos(a) * l, yt = y1 - 2 + Math.sin(a) * l;
+      trazo(ctx, x1, y1 - 2, xt, yt, 1, brote[2]);
+      for (let h = 2; h < l; h += 3) px(ctx, Math.round(x1 + Math.cos(a) * h) + (h % 2 ? 1 : -1), Math.round(y1 - 2 + Math.sin(a) * h), 1, 1, brote[4]);
+    }
+  });
+  apoyo(ctx, { ...b, x: cx - tronco * 2, w: tronco * 4 }, m.F.tinta);
+  if (est === "otoño") hojarasca(ctx, m, cx, b.y + b.h, b.w * 0.3);
+}
+
+/** Las hojas caídas en la acera, al pie del árbol. */
+function hojarasca(ctx: Ctx, m: Mano, cx: number, pie: number, r: number) {
+  const colores = [m.P.ladrillo[4], m.tono({ l: 0.62, c: 0.12, h: 72 })[3], m.P.ladrillo[3]];
+  for (let k = 0; k < 26; k++) {
+    const x = Math.round(cx + (azar(k + 500) - 0.5) * r * 2.6), y = pie - 2 + Math.round(azar(k + 520) * 4);
+    px(ctx, x, y, 2, 1, colores[k % 3]);
+  }
+}
+
 // ── Los arquetipos ──────────────────────────────────────────────────────────
 
 /** Lo que mueve a un objeto sin cambiarlo de nivel: el viento, el parpadeo de la farola. */
@@ -125,21 +220,21 @@ export interface Vivo {
 export type Pincel = (ctx: Ctx, m: Mano, b: Caja, p: Pieza, n: number, vivo?: Vivo) => void;
 
 export const PINCELES: Record<string, Pincel> = {
+  // La copa, o el árbol entero si `caduca`: su nivel 0 es el recién podado, y a partir de ahí
+  // crece. La estación le cambia el color, y en invierno lo deja en las ramas.
   planta: (ctx, m, b, p, n, vivo) => {
-    const v = Math.min(n, p.variantes - 1) / (p.variantes - 1);
+    const est = p.caduca ? m.cal.estacion : "verano";
+    if (p.caduca && n === 0) return podado(ctx, m, b, est, vivo);
+    const v = p.caduca ? (n - 1) / (p.variantes - 2) : Math.min(n, p.variantes - 1) / (p.variantes - 1);
     const cx = b.x + Math.round(b.w / 2), cy = b.y + Math.round(b.h * 0.42), pie = b.y + b.h;
     const r = Math.max(3, Math.round((b.w / 2) * (0.45 + 0.55 * v)));
     const lado = m.luzDesde;
-    // El tronco, que se ensancha al bajar y se abre en ramas.
-    const tronco = Math.max(2, Math.round(b.w * 0.09));
     const arranque = cy + Math.round(r * 0.35);
-    for (let j = arranque; j < pie; j++) {
-      const ancho = tronco + Math.floor((j - arranque) / 18) + (j > pie - 3 ? 2 : 0);
-      const x0 = cx - Math.floor(ancho / 2);
-      px(ctx, x0, j, ancho, 1, m.P.madera[2]);
-      px(ctx, lado > 0 ? x0 : x0 + ancho - 1, j, 1, 1, m.P.madera[3]);
-      px(ctx, lado > 0 ? x0 + ancho - 1 : x0, j, 1, 1, m.P.madera[1]);
-      if ((j * 7) % 11 === 0) px(ctx, x0 + 1, j, 1, 2, m.P.madera[1]);              // corteza
+    const tronco = fuste(ctx, m, b, cx, arranque);
+    if (est === "invierno") {
+      ramaje(ctx, m, cx, arranque, r, vivo);
+      apoyo(ctx, { ...b, x: cx - tronco * 2, w: tronco * 4 }, m.F.tinta);
+      return;
     }
     for (const [dx, dy] of [[-0.5, -0.15], [0.45, -0.3], [0.05, -0.5]])
       for (let s = 0; s <= 10; s++) {
@@ -161,24 +256,37 @@ export const PINCELES: Record<string, Pincel> = {
       const my = cy + Math.round(dy * r * 0.9);
       return { x: cx + Math.round(dx * r) + mecer(i, my), y: my, r: Math.max(2, Math.round(dr * r)) };
     });
-    for (const q of pos) disco(ctx, q.x, q.y, q.r + 1, m.P.hoja[1]);
+    const H = follaje(m, est);
+    pos.forEach((q) => disco(ctx, q.x, q.y, q.r + 1, H[1]));
     // El borde deshilachado: hojas sueltas alrededor de cada racimo.
     pos.forEach((q, i) => {
       for (let k = 0; k < 10; k++) {
         const a = azar(i * 40 + k) * Math.PI * 2;
-        px(ctx, Math.round(q.x + Math.cos(a) * (q.r + 2)), Math.round(q.y + Math.sin(a) * (q.r + 2)), 1, 1, m.P.hoja[azar(i * 40 + k + 7) > 0.5 ? 1 : 2]);
+        px(ctx, Math.round(q.x + Math.cos(a) * (q.r + 2)), Math.round(q.y + Math.sin(a) * (q.r + 2)), 1, 1, H[azar(i * 40 + k + 7) > 0.5 ? 1 : 2]);
       }
     });
-    for (const q of pos) disco(ctx, q.x + lado, q.y - 1, Math.max(1, q.r - 1), m.P.hoja[2]);
-    for (const q of pos) if (q.y < cy + r * 0.2) disco(ctx, q.x + lado * Math.round(q.r * 0.35), q.y - Math.round(q.r * 0.35), Math.max(1, Math.round(q.r * 0.5)), m.P.hoja[3]);
+    for (const q of pos) disco(ctx, q.x + lado, q.y - 1, Math.max(1, q.r - 1), H[2]);
+    for (const q of pos) if (q.y < cy + r * 0.2) disco(ctx, q.x + lado * Math.round(q.r * 0.35), q.y - Math.round(q.r * 0.35), Math.max(1, Math.round(q.r * 0.5)), H[3]);
     pos.forEach((q, i) => {                                                           // brillos sueltos
       if (q.y > cy) return;
       for (let k = 0; k < 4; k++)
-        px(ctx, q.x + lado * Math.round(azar(i * 9 + k) * q.r * 0.7), q.y - Math.round(azar(i * 9 + k + 3) * q.r * 0.7), 1, 1, m.P.hoja[4]);
+        px(ctx, q.x + lado * Math.round(azar(i * 9 + k) * q.r * 0.7), q.y - Math.round(azar(i * 9 + k + 3) * q.r * 0.7), 1, 1, H[4]);
     });
     // Dos huecos oscuros: sin ellos la copa es una piedra.
-    disco(ctx, cx + Math.round(r * 0.35), cy + Math.round(r * 0.3), Math.max(1, Math.round(r * 0.1)), m.P.hoja[0]);
-    disco(ctx, cx - Math.round(r * 0.45), cy - Math.round(r * 0.05), Math.max(1, Math.round(r * 0.08)), m.P.hoja[0]);
+    disco(ctx, cx + Math.round(r * 0.35), cy + Math.round(r * 0.3), Math.max(1, Math.round(r * 0.1)), H[0]);
+    disco(ctx, cx - Math.round(r * 0.45), cy - Math.round(r * 0.05), Math.max(1, Math.round(r * 0.08)), H[0]);
+    if (est === "primavera" || est === "otoño") {                                     // en flor, o virando al rojo
+      const motas = est === "primavera"
+        ? [m.tono({ l: 0.68, c: 0.17, h: 350 })[3], m.tono({ l: 0.68, c: 0.17, h: 350 })[4]]
+        : [m.tono({ l: 0.5, c: 0.14, h: 38 })[2], m.tono({ l: 0.5, c: 0.14, h: 38 })[3]];
+      pos.forEach((q, i) => {
+        for (let k = 0; k < 7; k++) {
+          const a = azar(i * 50 + k + 300) * Math.PI * 2, d = azar(i * 50 + k + 301) * q.r;
+          px(ctx, Math.round(q.x + Math.cos(a) * d), Math.round(q.y + Math.sin(a) * d), 1, 1, motas[k % 3 ? 0 : 1]);
+        }
+      });
+    }
+    if (est === "otoño") hojarasca(ctx, m, cx, pie, r);
   },
   // La farola, un modelo por nivel: brazo curvo, fernandina o LED. Las tres tienen la cabeza en
   // (cx + 4 … cx + 18, b.y), donde se posa el pájaro.
@@ -234,22 +342,35 @@ export const PINCELES: Record<string, Pincel> = {
       }
     }
   },
+  // La rehabilitación, en ciclos de tres: andamio sobre la fachada vieja, lona sobre la nueva
+  // y el edificio acabado de otro color.
   andamio: (ctx, m, b, p, n) => {
-    const fase = Math.min(n, p.variantes - 1);
-    if (fase === p.variantes - 1) {
-      edificioObra(ctx, m, b);
-      return;
+    const v = ((n % p.variantes) + p.variantes) % p.variantes, fase = v % 3;
+    if (fase === 2) return edificioObra(ctx, m, b, pinturaObra(v));
+    edificioObra(ctx, m, b, pinturaObra(fase === 0 ? (v + 8) % 9 : v + 1));
+    const x0 = b.x + 8, x1 = b.x + b.w - 8, arriba = b.y + 6, abajo = b.y + b.h;
+    const paso = Math.round((x1 - x0) / 6);
+    if (fase === 1) {                                                         // la lona, casi opaca
+      const malla = m.tono({ l: 0.5, c: 0.07, h: 160 });
+      tramar(ctx, x0, arriba, x1 - x0, abajo - arriba, malla[2], 0.8);
+      tramar(ctx, x0, arriba, x1 - x0, abajo - arriba, malla[3], 0.35);
+      const cartel = { x: x0 + Math.round((x1 - x0) / 2) - 26, y: arriba + 30, w: 52, h: 16 };
+      px(ctx, cartel.x, cartel.y, cartel.w, cartel.h, m.P.piedra[5]);
+      px(ctx, cartel.x, cartel.y, cartel.w, 4, m.tono({ l: 0.45, c: 0.12, h: 255 })[3]);
+      px(ctx, cartel.x + 4, cartel.y + 7, cartel.w - 8, 2, m.F.tinta);
+      px(ctx, cartel.x + 4, cartel.y + 11, cartel.w - 20, 1, m.P.metal[2]);
     }
-    const alto = Math.round(b.h * (fase / (p.variantes - 1)));
-    if (alto > 6) tramar(ctx, b.x + 10, b.y + b.h - alto, b.w - 18, alto, m.P.hoja[2], 0.45);
-    for (let x = b.x + 12; x < b.x + b.w - 8; x += Math.max(14, Math.round(b.w / 5))) {
-      px(ctx, x, b.y + b.h - alto, 2, alto, m.P.luz[3]);
-      px(ctx, x, b.y + b.h - alto, 1, alto, m.P.luz[4]);
+    for (let x = x0; x <= x1; x += paso) {                                    // los pies derechos
+      px(ctx, x, arriba, 2, abajo - arriba, m.P.luz[3]);
+      px(ctx, x, arriba, 1, abajo - arriba, m.P.luz[4]);
     }
-    for (let y = b.y + b.h - 2; y > b.y + b.h - alto; y -= 34) {
-      px(ctx, b.x + 12, y, b.w - 20, 2, m.P.luz[3]);
-      px(ctx, b.x + 12, y - 2, b.w - 20, 2, m.P.madera[3]);
-      px(ctx, b.x + 12, y - 3, b.w - 20, 1, m.P.madera[4]);
+    for (let y = abajo - 2; y > arriba; y -= 34) {                            // las plataformas
+      px(ctx, x0, y, x1 - x0 + 2, 2, m.P.luz[3]);
+      px(ctx, x0, y - 2, x1 - x0 + 2, 2, m.P.madera[3]);
+      px(ctx, x0, y - 3, x1 - x0 + 2, 1, m.P.madera[4]);
+      if (fase === 0)                                                         // las cruces, que la lona tapa
+        for (let x = x0; x + paso <= x1; x += paso * 2)
+          for (let k = 0; k < paso; k++) px(ctx, x + k, y - 3 - Math.round((k * 30) / paso), 1, 1, m.P.luz[2]);
     }
   },
   tendal: (ctx, m, b, p, n, vivo) => {
@@ -423,11 +544,11 @@ export function pintarObjeto(ctx: Ctx, m: Mano, id: string, b: Caja, p: Pieza, n
   DETALLE[id]?.(ctx, m, b, p, n, vivo);
 }
 
-/** Pinta una escena entera. */
-export function pintarEscena(ctx: Ctx, vista: Vista, niveles: NivelObjeto[], hora: number, escena: Escena) {
-  const m = manoDe(hora, escena.suelo);
+/** Pinta una escena entera. `hora` es la del reloj, y `fecha` pone la estación. */
+export function pintarEscena(ctx: Ctx, vista: Vista, niveles: NivelObjeto[], hora: number, fecha: Date, escena: Escena) {
+  const m = manoDe(hora, escena.suelo, calendarioDe(fecha));
   const f = fino(ESC);
-  escena.fondo(f.ctx, m, hora);
+  escena.fondo(f.ctx, m, m.solar);
   if (escena.recorte) {
     f.ctx.save();
     f.ctx.beginPath();
@@ -441,6 +562,6 @@ export function pintarEscena(ctx: Ctx, vista: Vista, niveles: NivelObjeto[], hor
     pintarObjeto(f.ctx, m, id, b, p, n);
   }
   if (escena.recorte) f.ctx.restore();
-  escena.primerPlano?.(f.ctx, m, hora);
+  escena.primerPlano?.(f.ctx, m, m.solar);
   volcar(ctx, vista, f);
 }

@@ -12,10 +12,10 @@
 // El perro pasa por detrás del contenedor porque se pinta antes que él; el gato, igual con la taza.
 import type { NivelObjeto } from "../escena";
 import {
-  PIEZAS, azar, caja, enEscena, fino, px, trama, volcar, type Caja, type Ctx, type Vista,
+  PIEZAS, azar, caja, calendarioDe, enEscena, fino, px, trama, volcar, type Caja, type Ctx, type Vista,
 } from "./paleta";
 import { ESC, manoDe, pintarObjeto, type Mano, type Vivo } from "./pincel";
-import { vanosObra } from "./edificios";
+import { obraAcabada, vanosObra } from "./edificios";
 import { HUECO, PARTES, REPISA, TAZA, aVentana, calleVentana, cieloVentana, escena, marco } from "./ventana";
 import { farolaLuz, viento, type Suceso } from "./vida";
 import {
@@ -41,10 +41,11 @@ export interface Capas {
   nivel: Record<string, number>;
 }
 
-export function pintarCapas(niveles: NivelObjeto[], hora: number): Capas {
-  const m = manoDe(hora, escena.suelo);
+/** `hora` es la del reloj, que decide qué objetos están; `fecha`, la estación y la luz. */
+export function pintarCapas(niveles: NivelObjeto[], hora: number, fecha: Date): Capas {
+  const m = manoDe(hora, escena.suelo, calendarioDe(fecha));
   const cielo = fino(ESC, "capa-cielo");
-  cieloVentana(cielo.ctx, m, hora);
+  cieloVentana(cielo.ctx, m, m.solar);
   const calle = fino(ESC, "capa-calle");
   calleVentana(calle.ctx, m);
 
@@ -123,7 +124,7 @@ export function componer(ctx: Ctx, vista: Vista, c: Capas, mo: Momento) {
   });
   g.drawImage(c.calle, 0, 0);
   enHueco(g, () => {
-    humo(g, m, t, v);
+    humo(g, m, t, v, m.cal.estacion === "invierno" || m.cal.estacion === "otoño");
   });
 
   enHueco(g, () => {
@@ -139,7 +140,8 @@ export function componer(ctx: Ctx, vista: Vista, c: Capas, mo: Momento) {
     }
     const te = hay("tele"); if (te && m.noche) tele(g, m, fase(te), te, c);
     const pa = hay("pajaro"); if (pa) pajaro(g, m, fase(pa), pa.variante, mo.hora, c.cajas);
-    const ho = hay("hoja"); if (ho) hoja(g, m, fase(ho), ho.variante, c.cajas.arbol);
+    const ho = hay("hoja");
+    if (ho && (m.cal.estacion === "otoño" || m.cal.estacion === "verano")) hoja(g, m, fase(ho), ho.variante, c.cajas.arbol);
   });
   g.drawImage(c.marco, 0, 0);
   if (!m.noche) polvo(g, m, t);
@@ -239,13 +241,15 @@ function fugaz(g: Ctx, m: Mano, s: number, su: Suceso) {
   }
 }
 
-/** Una chimenea en el tejado del bloque del medio, y su humo, que se va con el viento. */
-function humo(g: Ctx, m: Mano, t: number, v: number) {
+/** Una chimenea en el tejado del bloque del medio, y su humo, que se va con el viento. Humea
+ *  cuando hace frío. */
+function humo(g: Ctx, m: Mano, t: number, v: number, frio: boolean) {
   const base = aVentana(372, 76);
   const x = Math.round(base.x), y = Math.round(base.y);
   px(g, x, y - 7, 5, 7, m.P.ladrillo[2]);
   px(g, x, y - 7, 1, 7, m.P.ladrillo[3]);
   px(g, x - 1, y - 8, 7, 2, m.P.metal[1]);
+  if (!frio) return;
   const color = m.noche ? m.P.metal[2] : m.P.piedra[4];
   const cada = 1.1, vida = 16;
   for (let i = Math.floor((t - vida) / cada) + 1; i * cada <= t; i++) {
@@ -307,10 +311,9 @@ function perroContenedor(g: Ctx, m: Mano, s: number, variante: number, b: Caja) 
 }
 
 /** Una ventana encendida del edificio de la obra con la tele puesta o una luz que tiembla.
- *  Cuáles están encendidas no cambia nunca; sin la obra acabada, no hay tele. */
+ *  Cuáles están encendidas no cambia nunca; en obras, no hay tele. */
 function tele(g: Ctx, m: Mano, s: number, su: Suceso, c: Capas) {
-  const obra = PIEZAS.obra;
-  if ((c.nivel.obra ?? 0) < obra.variantes - 1) return;
+  if (!obraAcabada(c.nivel.obra ?? 0)) return;
   const f = c.cajas.farola;
   // Las que no tapa la farola ni la cortina de la derecha.
   const libres = vanosObra(c.cajas.obra).filter((v) => v.encendida

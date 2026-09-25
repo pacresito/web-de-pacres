@@ -3,11 +3,11 @@
 // **Los ids no se tocan:** son lo que guarda cada visita. El dibujo se puede rehacer entero;
 // al hacerlo, repasar las visibilidades de `escena.ts`.
 import type { NivelObjeto } from "../escena";
-import { CAJAS, LIENZO, PIEZAS, TIENDA, css, esNoche, luzDe, mezcla, tenir } from "../render";
-import type { Cajas, Luz, Oklch, Vista } from "../render";
+import { CAJAS, LIENZO, PIEZAS, TIENDA, calendarioDe, css, esNoche, estacionDe, horaSolar, luzDe, mezcla, tenir } from "../render";
+import type { Cajas, Calendario, Estacion, Luz, Oklch, Vista } from "../render";
 
-export { CAJAS, LIENZO, PIEZAS, TIENDA, css, esNoche, luzDe, mezcla, tenir };
-export type { Cajas, Luz, Oklch, Vista };
+export { CAJAS, LIENZO, PIEZAS, TIENDA, calendarioDe, css, esNoche, estacionDe, horaSolar, luzDe, mezcla, tenir };
+export type { Cajas, Calendario, Estacion, Luz, Oklch, Vista };
 
 export type Pieza = (typeof PIEZAS)[string];
 export type Ctx = CanvasRenderingContext2D;

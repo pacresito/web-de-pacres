@@ -110,6 +110,45 @@ export function tenir(propio: Oklch, luz: Luz, fuerza = 0.34): Oklch {
   };
 }
 
+// ── El calendario ────────────────────────────────────────────────────────────
+//
+// **La estación es escenografía, como la luz:** viste la calle y no cuenta como cambio, así
+// que la calle de antes se pinta con la estación de ahora. Si contara, diciembre daría un
+// cambio seguro y sería una cita.
+
+export type Estacion = "invierno" | "primavera" | "verano" | "otoño";
+
+export interface Calendario {
+  estacion: Estacion;
+  /** Del 1 de diciembre al 6 de enero: las luces de la calle. */
+  navidad: boolean;
+  /** Día del año, 0..365. */
+  dia: number;
+}
+
+export function estacionDe(mes: number): Estacion {
+  return mes === 11 || mes < 2 ? "invierno" : mes < 5 ? "primavera" : mes < 8 ? "verano" : "otoño";
+}
+
+export function calendarioDe(fecha: Date): Calendario {
+  const mes = fecha.getMonth(), d = fecha.getDate();
+  const dia = Math.floor((Date.UTC(fecha.getFullYear(), mes, d) - Date.UTC(fecha.getFullYear(), 0, 1)) / 864e5);
+  return { estacion: estacionDe(mes), navidad: mes === 11 || (mes === 0 && d <= 6), dia };
+}
+
+/** La hora en el día de las claves, que amanece a las 7 y anochece a las 20:30. En junio el
+ *  sol sale a las 6:35 y se pone a las 21:30; en diciembre, a las 8:10 y a las 17:55, en hora
+ *  oficial de la costa mediterránea. Se estira el día y la noche encoge, o al revés. */
+export function horaSolar(hora: number, dia: number): number {
+  const onda = Math.cos((2 * Math.PI * (dia - 172)) / 365);
+  const sale = 7.4 - 0.8 * onda, pone = 19.7 + 1.8 * onda;
+  const S = 7, P = 20.5;
+  const h = ((hora % 24) + 24) % 24;
+  if (h >= sale && h < pone) return S + ((h - sale) * (P - S)) / (pone - sale);
+  const desde = (h - pone + 24) % 24;
+  return (P + (desde * (24 - (P - S))) / (24 - (pone - sale))) % 24;
+}
+
 /** Si es de noche: gobierna lo que se enciende o no, como las ventanas y las luces. */
 export function esNoche(hora: number): boolean {
   const h = ((hora % 24) + 24) % 24;
@@ -145,6 +184,8 @@ interface Pieza {
   /** Horas en las que se pinta. Fuera de ellas su nivel sigue corriendo: quien entra siempre
    *  a la misma hora no lo ve cambiar. */
   franja?: [number, number];
+  /** Pierde la hoja en invierno y cambia de color con la estación. */
+  caduca?: boolean;
 }
 
 /** Sitio y forma de cada objeto de escena.ts, en orden de profundidad. */
@@ -154,7 +195,7 @@ export const PIEZAS: Record<string, Pieza> = {
   cortina:    { x: 232,  y: 300, w: 92,  h: 108, arquetipo: "banda",   variantes: 5 },
   ropa:       { x: 360,  y: 316, w: 132, h: 76,  arquetipo: "tendal",  variantes: 4, franja: [8, 21] },
   grafiti:    { x: 96,   y: 494, w: 150, h: 90,  arquetipo: "mancha",  variantes: 8 },
-  cartel:     { x: 300,  y: 486, w: 86,  h: 110, arquetipo: "mancha",  variantes: 4 },
+  cartel:     { x: 296,  y: 478, w: 118, h: 124, arquetipo: "mancha",  variantes: 4 },
   buzon:      { x: 430,  y: 584, w: 40,  h: 56,  arquetipo: "bulto",   variantes: 3 },
 
   // La tienda (su local es decorado: `TIENDA`)
@@ -166,13 +207,13 @@ export const PIEZAS: Record<string, Pieza> = {
   terraza:    { x: 900,  y: 580, w: 104, h: 60,  arquetipo: "bulto",   variantes: 5, franja: [11, 24] },
 
   // Fachada derecha y la obra
-  obra:       { x: 1040, y: 180, w: 500, h: 460, arquetipo: "andamio", variantes: 6 },
+  obra:       { x: 1040, y: 180, w: 500, h: 460, arquetipo: "andamio", variantes: 9 },
   macetero:   { x: 1064, y: 566, w: 70,  h: 74,  arquetipo: "planta",  variantes: 5 },
   puesto:     { x: 1170, y: 568, w: 180, h: 112, arquetipo: "bulto",   variantes: 3, franja: [6, 14] },
   papelera:   { x: 1392, y: 570, w: 40,  h: 70,  arquetipo: "bulto",   variantes: 3 },
 
   // Acera y calzada
-  arbol:      { x: 470,  y: 300, w: 200, h: 340, arquetipo: "planta",  variantes: 8 },
+  arbol:      { x: 470,  y: 300, w: 200, h: 340, arquetipo: "planta",  variantes: 8, caduca: true },
   farola:     { x: 1010, y: 250, w: 60,  h: 390, arquetipo: "poste",   variantes: 3 },
   banco:      { x: 90,   y: 586, w: 150, h: 54,  arquetipo: "bulto",   variantes: 3 },
   // Atada a la farola.

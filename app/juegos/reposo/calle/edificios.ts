@@ -92,8 +92,10 @@ function cristal(ctx: Ctx, m: Mano, x: number, y: number, w: number, h: number, 
   if (!m.noche) for (let j = 0; j < Math.min(w, h) - 2; j++) px(ctx, x + w - 2 - j, y + 1 + j, 1, 1, m.P.metal[4]);
 }
 
-/** Una maceta en el alféizar: geranios, cactus, hierbas o hiedra. */
+/** Una maceta en el alféizar: geranios, cactus, hierbas o hiedra. Los geranios, con flor de
+ *  primavera a verano. */
 export function maceta(ctx: Ctx, m: Mano, x: number, y: number, w: number, semilla: number) {
+  const florece = m.cal.estacion === "primavera" || m.cal.estacion === "verano";
   const tipo = Math.floor(azar(semilla * 3 + 1) * 6);
   const tiesto = [m.P.ladrillo, m.tono({ l: 0.5, c: 0.09, h: 245 }), m.P.piedra][Math.floor(azar(semilla * 3 + 2) * 3)];
   const ancho = Math.max(3, Math.min(w, 4 + Math.floor(azar(semilla * 3 + 3) * (w - 3))));
@@ -110,7 +112,7 @@ export function maceta(ctx: Ctx, m: Mano, x: number, y: number, w: number, semil
     for (let k = x0; k < x0 + ancho; k += 2) px(ctx, k, y + 2, 1, 2 + ((k * 5) % 4), m.P.hoja[3]);
   } else {                                                                     // geranios
     px(ctx, x0, y - 3, ancho, 3, m.P.hoja[2]);
-    for (let k = x0; k < x0 + ancho; k += 2) px(ctx, k, y - 4 - (k % 3 === 0 ? 1 : 0), 1, 1, flor);
+    if (florece) for (let k = x0; k < x0 + ancho; k += 2) px(ctx, k, y - 4 - (k % 3 === 0 ? 1 : 0), 1, 1, flor);
   }
   px(ctx, x0, y, ancho, 2, tiesto[3]);
   px(ctx, x0, y, ancho, 1, tiesto[4]);
@@ -140,6 +142,24 @@ function ventana(ctx: Ctx, m: Mano, x: number, y: number, w: number, h: number, 
     for (let k = x - 3; k < x + w + 3; k += 2) px(ctx, k, b - 5, 1, 5, m.F.tinta);
   }
   if (azar(semilla * 5 + 12) < 0.45) maceta(ctx, m, x, y + h - 1, w, semilla);
+}
+
+/** Las guirnaldas de Navidad bajo el alero, en festones: de día se ven las bombillas y de
+ *  noche lucen. Las bombillas son de 2×2 porque el alzado se pega encogido y uno de cada ocho
+ *  píxeles se pierde. */
+export function festones(ctx: Ctx, m: Mano, x0: number, x1: number, y: number) {
+  const vano = 36, cae = 6;
+  const colores = [m.P.tela, m.P.luz, m.P.hoja, m.tono({ l: 0.6, c: 0.12, h: 250 })];
+  for (let x = x0, k = 0; x < x1; x++) {
+    const u = ((x - x0) % vano) / vano;
+    const yy = y + R(cae * Math.sin(Math.PI * u));
+    px(ctx, x, yy, 1, 1, m.F.tinta);
+    if ((x - x0) % 5 === 2) {
+      const C = colores[k++ % 4];
+      px(ctx, x, yy + 1, 2, 2, m.noche ? C[5] : C[3]);
+      if (m.noche) tramar(ctx, x - 1, yy, 4, 4, C[4], 0.3);
+    }
+  }
 }
 
 /** Un portal: puerta de madera con montante y escalón. */
@@ -181,6 +201,7 @@ export function fachadas(ctx: Ctx, m: Mano) {
   portal(ctx, m, 102, 208, 14, 48);
   cantos(ctx, m, I.x, I.y, I.w, SUELO - I.y, rosa);
   alero(ctx, m, I.x, I.y, I.w);
+  if (m.cal.navidad) festones(ctx, m, I.x + 2, I.x + I.w - 2, I.y + 4);
 
   const C = bloque(1);
   tejado(ctx, m, C.x, C.y - 4, C.w, ["antena", "chimenea"], 83);
@@ -188,6 +209,7 @@ export function fachadas(ctx: Ctx, m: Mano) {
   rejilla(C.x + 13, 6, 30, [88, 122], 11, 18, (x, y, f, c) => ventana(ctx, m, x, y, 11, 18, 100 + f * 10 + c, azul, 0.45));
   cantos(ctx, m, C.x, C.y, C.w, SUELO - C.y, ocre);
   alero(ctx, m, C.x, C.y, C.w);
+  if (m.cal.navidad) festones(ctx, m, C.x + 2, C.x + C.w - 2, C.y + 4);
 }
 
 /** El edificio de la obra: tres plantas y bajo, con la rejilla de huecos de `vanosObra`. */
@@ -207,15 +229,28 @@ function medidasObra(b: Caja) {
 
 export const vanosObra = (b: Caja) => medidasObra(b).vanos;
 
-export function edificioObra(ctx: Ctx, m: Mano, b: Caja) {
+/** El nivel de la obra con el edificio acabado: los otros son andamio o lona. */
+export const obraAcabada = (n: number) => n % 3 === 2;
+/** Qué pintura lleva el edificio acabado en ese nivel: 8 blanco, 2 terracota, 5 azul. */
+export const pinturaObra = (n: number) => ((n + 1) / 3) % 3;
+
+/** Fachada, zócalo y postigos de cada pintura. */
+const PINTURAS = [
+  [{ l: 0.9, c: 0.012, h: 95 }, { l: 0.5, c: 0.09, h: 245 }, { l: 0.5, c: 0.09, h: 245 }],
+  [{ l: 0.64, c: 0.11, h: 40 }, { l: 0.48, c: 0.03, h: 60 }, { l: 0.45, c: 0.08, h: 150 }],
+  [{ l: 0.84, c: 0.035, h: 230 }, { l: 0.55, c: 0.02, h: 250 }, { l: 0.9, c: 0.012, h: 95 }],
+];
+
+export function edificioObra(ctx: Ctx, m: Mano, b: Caja, pintura: number) {
   const E = medidasObra(b);
-  const blanco = m.tono({ l: 0.9, c: 0.012, h: 95 }), azul = m.tono({ l: 0.5, c: 0.09, h: 245 });
+  const [fachada, zocalo, postigo] = PINTURAS[pintura].map((c) => m.tono(c));
   tejado(ctx, m, E.x, E.y - 4, E.w, ["chimenea", "antena", "chimenea"], 91);
-  estuco(ctx, E.x, E.y, E.w, E.h, blanco, 24);
-  px(ctx, E.x, E.y + E.h - E.bajo, E.w, E.bajo, azul[4]);                      // zócalo añil
-  px(ctx, E.x, E.y + E.h - E.bajo, E.w, 1, azul[3]);
-  E.vanos.forEach((v, i) => ventana(ctx, m, v.x, v.y, v.w, v.h, 900 + i, azul, 0.4, v.encendida));
+  estuco(ctx, E.x, E.y, E.w, E.h, fachada, 24);
+  px(ctx, E.x, E.y + E.h - E.bajo, E.w, E.bajo, zocalo[4]);
+  px(ctx, E.x, E.y + E.h - E.bajo, E.w, 1, zocalo[3]);
+  E.vanos.forEach((v, i) => ventana(ctx, m, v.x, v.y, v.w, v.h, 900 + i, postigo, 0.4, v.encendida));
   portal(ctx, m, E.x + R(E.w / 2) - 6, E.y + E.h - 26, 12, 26);
-  cantos(ctx, m, E.x, E.y, E.w, E.h, blanco);
+  cantos(ctx, m, E.x, E.y, E.w, E.h, fachada);
   alero(ctx, m, E.x, E.y, E.w);
+  if (m.cal.navidad) festones(ctx, m, E.x + 2, E.x + E.w - 2, E.y + 4);
 }

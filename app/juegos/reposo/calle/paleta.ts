@@ -11,9 +11,10 @@ import {
 } from "./comun";
 
 export {
-  ACERA, CAJAS, LIENZO, PIEZAS, SUELO, TIENDA, azar, css, enEscena, esNoche, luzDe, mezcla, tenir, trama,
+  ACERA, CAJAS, LIENZO, PIEZAS, SUELO, TIENDA, azar, calendarioDe, css, enEscena, esNoche, estacionDe, horaSolar, luzDe,
+  mezcla, tenir, trama,
 } from "./comun";
-export type { Cajas, Ctx, Luz, Oklch, Pieza, Vista } from "./comun";
+export type { Cajas, Calendario, Ctx, Estacion, Luz, Oklch, Pieza, Vista } from "./comun";
 
 // ── El lienzo fino ───────────────────────────────────────────────────────────
 

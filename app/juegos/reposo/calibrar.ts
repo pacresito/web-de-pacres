@@ -3,7 +3,7 @@
 // objetivo: ~2 en un día, ~10 en un mes, y que siga creciendo con el hueco. Cada cifra sale de
 // muchos puntos de partida, porque cada objeto tiene su fase.
 
-import { CATALOGO, diferencia, escena, evidentes, ORIGEN_MS, snapshot } from "./escena";
+import { CATALOGO, diferencia, escena, evidentes, ORIGEN_MS, SEMILLA, snapshot } from "./escena";
 
 /** PRNG del jitter. Tres rondas de mezcla: con una, los índices 0..300 salen apiñados y el
  *  jitter tira a huecos cortos. */
@@ -15,10 +15,9 @@ function rngDe(i: number): number {
   return (h >>> 0) / 4294967296;
 }
 
-const SEMILLA = "reposo";
 const DIA = 24 * 60 * 60 * 1000;
 const MUESTRAS = 300;
-// Desde el origen, donde la obra está activa; los años siguientes los mide la última tabla.
+// Desde el origen; los años siguientes los mide la última tabla.
 const t0 = ORIGEN_MS;
 
 const mediana = (xs: number[]): number => {
@@ -84,7 +83,7 @@ console.log("\nA leer: qué fracción de los puntos de partida ve cambiado a ese
 console.log("Un cíclico de n escalones no puede superar (n-1)/n por grande que sea el hueco.");
 
 // ── ¿Envejece la calle? ──────────────────────────────────────────────────────
-// Lo que un monótono con techo aporta se consume: lo que cuenta es la calle a los veinte años.
+// Lo que solo crece se consume: lo que cuenta es la calle a los veinte años.
 console.log("\n## La misma calle, medida desde distintos años de su vida (media de evidentes)\n");
 fila(["arranca en", "1 día", "1 mes", "1 año", "¿mes < año?"]);
 // Tres años por fila: con diferencias espaciadas años, uno solo lo decidiría el azar.

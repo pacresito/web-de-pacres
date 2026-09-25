@@ -4,24 +4,31 @@
 // Cada objeto tiene un tipo (cómo cambia), un reloj (cada cuánto) y una visibilidad (cuánto
 // se nota el cambio), independientes entre sí. El diff compara niveles enteros: lo que no
 // cruza un escalón no cuenta.
+//
+// **Nada crece para siempre:** lo que solo crece llega a su último dibujo y a partir de ahí el
+// diff contaría cambios que no se ven. El árbol se poda y la obra se repite.
 
 const MS_HORA = 60 * 60 * 1000;
 const MS_DIA = 24 * MS_HORA;
-const MS_ESTACION = 91 * MS_DIA;
+
+/** Una sola calle para todos: cambiar la semilla cambia la calle. */
+export const SEMILLA = "reposo";
 
 /** Arranque de todos los relojes, anterior a la publicación para que la calle se estrene ya
  *  crecida. **No se mueve nunca:** moverlo cambia la calle a todo el que ya la ha mirado. */
 export const ORIGEN_MS = Date.UTC(2026, 0, 1);
 
-export type Tipo = "monótono" | "cíclico" | "único";
+export type Tipo = "cíclico" | "único";
 
 export interface Slot {
   id: string;
   tipo: Tipo;
-  /** Monótono: ms por escalón. Cíclico: ms del ciclo completo. Único: tiempo medio entre diferencias. */
+  /** Cíclico: ms del ciclo completo. Único: tiempo medio entre diferencias. */
   periodoMs: number;
-  /** Monótono: techo de escalones (Infinity si no lo tiene). Cíclico: escalones del ciclo. Único: Infinity. */
+  /** Cíclico: escalones del ciclo. Único: Infinity. */
   escalones: number;
+  /** Cíclico: cuánto dura cada escalón respecto a los demás. Sin él, todos igual. */
+  pesos?: number[];
   /** 0..1, cuánto canta el cambio una vez ocurrido. */
   visibilidad: number;
 }
@@ -56,18 +63,19 @@ export const CATALOGO: Slot[] = [
   { id: "sombrilla",  tipo: "cíclico",  periodoMs: 60.7 * MS_DIA,  escalones: 5, visibilidad: 0.65 },
   { id: "letrero",    tipo: "cíclico",  periodoMs: 68.9 * MS_DIA,  escalones: 5, visibilidad: 0.60 },
 
-  // La obra avanza por fases y termina para siempre: su último estado tiene que leerse como
-  // edificio acabado, no como una obra parada.
-  { id: "obra",       tipo: "monótono", periodoMs: 17.3 * MS_DIA,    escalones: 6, visibilidad: 0.70 },
+  // Lentos y evidentes: lo que premia volver tras meses. La obra es una rehabilitación que se
+  // repite —andamio, lona y el edificio de otro color—, casi siempre acabada; el árbol crece
+  // unos tres años y lo podan.
+  { id: "obra",       tipo: "cíclico",  periodoMs: 1290 * MS_DIA,  escalones: 9, visibilidad: 0.70,
+    pesos: [1.3, 1.3, 8, 1.3, 1.3, 8, 1.3, 1.3, 8] },
+  { id: "arbol",      tipo: "cíclico",  periodoMs: 1150 * MS_DIA,  escalones: 8, visibilidad: 0.80 },
 
-  // Únicos: diferencias sueltas a intervalos irregulares; el periodo es el tiempo medio.
-  { id: "cartel",     tipo: "único",    periodoMs: 200 * MS_DIA,  escalones: Infinity, visibilidad: 0.35 },
+  // Únicos: diferencias sueltas a intervalos irregulares; el periodo es el tiempo medio. El
+  // cartel, lo bastante a menudo para que se vean pasar las temporadas.
+  { id: "cartel",     tipo: "único",    periodoMs: 75 * MS_DIA,   escalones: Infinity, visibilidad: 0.45 },
   { id: "grafiti",    tipo: "único",    periodoMs: 500 * MS_DIA,  escalones: Infinity, visibilidad: 0.50 },
   { id: "farola",     tipo: "único",    periodoMs: 550 * MS_DIA,  escalones: Infinity, visibilidad: 0.30 },
   { id: "banco",      tipo: "único",    periodoMs: 800 * MS_DIA,  escalones: Infinity, visibilidad: 0.60 },
-
-  // Lento y evidente: lo que premia volver tras meses.
-  { id: "arbol",      tipo: "monótono", periodoMs: MS_ESTACION * 1.5, escalones: Infinity, visibilidad: 0.80 },
 ];
 
 function hash32(s: string): number {
@@ -90,7 +98,7 @@ function mulberry32(seed: number) {
 }
 
 export interface Objeto extends Slot {
-  /** Cíclico: offset de fase dentro del periodo. Monótono: offset de arranque. Único: instante del primero. */
+  /** Cíclico: offset de fase dentro del periodo. Único: instante del primero. */
   faseMs: number;
   /** El hash de (semilla, id): la fuente de todo lo aleatorio de este objeto. */
   semillaHash: number;
@@ -115,33 +123,35 @@ export function construirCalle(semilla: string): Objeto[] {
   return objetos;
 }
 
-/** Cuántas diferencias de este objeto han pasado ya. La semilla da los instantes uno tras
- *  otro, sin fin; el espaciado es irregular porque uno regular sería un cíclico. */
-function diferenciasHasta(obj: Objeto, tMs: number): { n: number; ultimo: number } {
+/** Los instantes de las diferencias de un único, uno tras otro y sin fin. El espaciado es
+ *  irregular porque uno regular sería un cíclico. */
+function* instantes(obj: Objeto): Generator<number> {
   const rng = mulberry32(obj.semillaHash);
-  let t = obj.faseMs, n = 0, ultimo = -Infinity;
-  while (t <= tMs) {
-    n++;
-    ultimo = t;
-    t += obj.periodoMs * (0.45 + rng() * 1.1);
-  }
-  return { n, ultimo };
+  for (let t = obj.faseMs; ; t += obj.periodoMs * (0.45 + rng() * 1.1)) yield t;
 }
 
 export function nivelDe(obj: Objeto, tMs: number): number {
-  switch (obj.tipo) {
-    case "monótono": {
-      const n = Math.max(0, Math.floor((tMs - ORIGEN_MS + obj.faseMs) / obj.periodoMs));
-      return Number.isFinite(obj.escalones) ? Math.min(n, obj.escalones - 1) : n;
-    }
-    case "cíclico": {
-      const paso = obj.periodoMs / obj.escalones;
-      const mod = (((tMs - obj.faseMs) % obj.periodoMs) + obj.periodoMs) % obj.periodoMs;
-      return Math.floor(mod / paso);
-    }
-    case "único":
-      return diferenciasHasta(obj, tMs).n;
+  if (obj.tipo === "único") {
+    let n = 0;
+    for (const t of instantes(obj)) { if (t > tMs) break; n++; }
+    return n;
   }
+  const mod = (((tMs - obj.faseMs) % obj.periodoMs) + obj.periodoMs) % obj.periodoMs;
+  if (!obj.pesos) return Math.floor(mod / (obj.periodoMs / obj.escalones));
+  const total = obj.pesos.reduce((a, b) => a + b, 0);
+  let x = (mod / obj.periodoMs) * total;
+  const i = obj.pesos.findIndex((p) => (x -= p) < 0);
+  return i < 0 ? obj.escalones - 1 : i;
+}
+
+/** Cuándo ocurrieron las `n` primeras diferencias de un único: el cartel elige su tema por la
+ *  fecha en que lo pegaron. */
+export function fechasDe(semilla: string, id: string, n: number): number[] {
+  const obj = construirCalle(semilla).find((o) => o.id === id);
+  const salida: number[] = [];
+  if (!obj || obj.tipo !== "único") return salida;
+  for (const t of instantes(obj)) { if (salida.length >= n) break; salida.push(t); }
+  return salida;
 }
 
 export interface NivelObjeto {
