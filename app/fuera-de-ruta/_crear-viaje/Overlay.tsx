@@ -2,13 +2,10 @@
 
 import { useEscape } from "../useEscape";
 
-// El overlay que comparten el drawer de ficha y el comparador: velo que cierra al clicar
-// fuera, diálogo que no propaga el clic, botón de cerrar y Esc. El modal de «¿Qué es
-// esto?» de la cabecera NO pasa por aquí: es otra pieza con su propio CSS, y meterla
-// costaría más props de las que ahorra.
+// Diálogo sobre velo del drawer de ficha y el comparador: cierra con clic fuera, × o Esc.
 export default function Overlay({ etiqueta, ancho, onCerrar, children }: {
-  etiqueta: string;   // aria-label del diálogo
-  ancho?: boolean;    // variante ancha (comparador)
+  etiqueta: string;   // aria-label
+  ancho?: boolean;
   onCerrar: () => void;
   children: React.ReactNode;
 }) {

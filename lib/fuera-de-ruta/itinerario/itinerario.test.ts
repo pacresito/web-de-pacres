@@ -2,7 +2,9 @@
 // Sobre los datos reales de Navarra: cronología encadenada, estancia por ritmo, ancla en
 // alojamiento (salida/regreso), nocturnas al final y comida intercalada.
 import assert from "assert";
-import { generarItinerario, estanciaPorRitmo, SALIDA_DEFECTO, fmtHora } from "./itinerario";
+import { generarItinerario, SALIDA_DEFECTO } from "./itinerario";
+import { estanciaPorRitmo } from "../presupuesto";
+import { fmtHora } from "../formato";
 import type { OpcionesItinerario } from "./itinerario";
 import { resumenMiViaje } from "../viaje/mi-viaje";
 import { zonasAlojamiento } from "../alojamiento/alojamiento";
@@ -124,9 +126,8 @@ assert.strictEqual(sinAncla.dias[0].alojamiento, undefined, "base sin ancla → 
 assert.strictEqual(sinAncla.dias[0].regreso, undefined, "y sin regreso, como antes de las bases");
 assert.strictEqual(sinAncla.dias[0].paradas.length, 1, "pero el día se planifica igual");
 
-// Cambio de base: el caso que destapó el fallo (Baztán + Urbasa en 2 días)
-// El día que se muda sale de la base vieja y termina en la nueva: sin hoteles huérfanos y
-// sin el regreso de 93 km que provocaba anclar cada día por su cuenta.
+// Cambio de base (Baztán + Urbasa en 2 días): el día que se muda sale de la base anterior
+// y termina en la nueva, sin regreso a la de partida.
 const dosBases = itinerarioDe(
   ["ruta-bunkers-de-otsondo", "cascada-de-xorroxin", "nacedero-del-urederra", "ojo-de-iturmendi"], opts, 2,
 );

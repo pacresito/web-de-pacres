@@ -4,8 +4,7 @@ import type { Destino } from "@/lib/fuera-de-ruta/tipos";
 import { filtrarDestinos, type Filtros } from "@/lib/fuera-de-ruta/filtrar";
 import type { FiltroActivo } from "@/lib/fuera-de-ruta/resumen";
 
-// Estado 0 (compartido escritorio/móvil): explica el porqué en lenguaje natural y
-// ofrece un chip por filtro con cuántos resultados devuelve al quitarlo (en vivo).
+// Sin resultados: la frase de los filtros y un chip por filtro con lo que devolvería quitarlo.
 export default function EstadoVacio({ resumen, hayTipo, activos, todos, onFiltros }: {
   resumen: string;
   hayTipo: boolean;

@@ -4,14 +4,8 @@ import { datosDe, PROVINCIAS_CON_DATOS } from "@/lib/fuera-de-ruta/datos";
 import { provinciaDeSlug } from "@/lib/fuera-de-ruta/provincias";
 import ExploradorCliente from "./ExploradorCliente";
 
-// Explorador de una provincia: la lista filtrable con su mapa. Solo existe donde hay
-// destinos; una provincia de escaparate se queda en su paso de zonas (su CTA está
-// desactivado, así que aquí no se llega desde la UI).
-//
-// Se monta sin SSR (ver ExploradorCliente): elige árbol móvil/escritorio por el ancho
-// de ventana y lee sus filtros de la URL — las dos cosas solo tienen respuesta en el
-// navegador, y pre-renderizarlas daría un árbol que no coincide al hidratar. No se
-// pierde nada indexable: el contenido son las fichas, que sí son Server Components.
+// Sin SSR: el árbol depende del ancho de ventana y los filtros de la URL, que solo existen
+// en el navegador. Lo indexable son las fichas.
 type Props = { params: Promise<{ provincia: string }> };
 
 export function generateStaticParams() {

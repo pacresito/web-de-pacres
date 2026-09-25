@@ -15,7 +15,8 @@ const dest = (slug: string, tipo: string): Destino => ({ slug, nombre: slug, zon
 // Desvíos resultantes: C 0, F 2, D 8 (pero misma tipo que A), E 60 (lejos).
 const min = (m: Record<string, Record<string, number>>): MatrizViajes => {
   const ids = Object.keys(m);
-  return { ids, segundos: ids.map((i) => ids.map((j) => (m[i][j] ?? m[j][i] ?? 0) * 60)) };
+  const segundos = ids.map((i) => ids.map((j) => (m[i][j] ?? m[j][i] ?? 0) * 60));
+  return { ids, segundos, metros: segundos };
 };
 const M = min({
   A: { B: 10, C: 5, D: 4, E: 30, F: 6 },

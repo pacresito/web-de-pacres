@@ -2,9 +2,7 @@
 
 import { useEffect } from "react";
 
-// Esc cierra el overlay de turno (modal de la cabecera, drawer de ficha, comparador).
-// `activo` existe para los que viven montados con el overlay cerrado: sin overlay a la
-// vista no hay listener que escuche.
+// Esc cierra el overlay abierto. `activo` es para los que siguen montados con el overlay cerrado.
 export function useEscape(onEscape: () => void, activo = true) {
   useEffect(() => {
     if (!activo) return;

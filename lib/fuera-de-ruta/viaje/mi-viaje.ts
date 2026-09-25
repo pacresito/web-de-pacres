@@ -1,77 +1,66 @@
-// Panel «Mi viaje»: a partir de la selección del usuario calcula el
-// reparto en días, el tiempo total, los km y qué días van justos. NUNCA descarta una
-// actividad —esa es la regla del flujo—: si no caben, el día se marca `apretado` y el
-// panel avisa, pero todas se colocan. Estimación honesta para el panel; la cronología
-// real (horas, pivote de comida) la construye `itinerario.ts`. Puro. Test al lado.
+// Panel «Mi viaje»: reparto de la selección en días, con tiempo, km y qué días van justos.
+// NUNCA descarta una actividad: si no cabe, marca el día `apretado`. La cronología fina
+// la monta `itinerario.ts`.
 import type { Comida, Destino, Ritmo } from "../tipos";
-import { tiempoCoche, kmCoche, seg2min, centroDe, SALTO_ZONA_MIN, type MatrizViajes } from "../geo";
+import { tiempoCoche, kmCoche, seg2min, centroDe, vecinoMasCercano, SALTO_ZONA_MIN, type MatrizViajes } from "../geo";
 import { horasDeLuz } from "../sol";
-import { RITMO_MIN, COMIDA_MIN, visitaMin } from "../presupuesto";
+import { RITMO_MIN, COMIDA_MIN, estanciaPorRitmo } from "../presupuesto";
 
 export type OpcionesViaje = { dias: number; ritmo: Ritmo; comida: Comida; fecha: Date };
 
 export type DiaViaje = {
   numero: number;
   slugs: string[];
-  min: number;       // visitas + coche intradía + comida (0 si el día queda libre)
-  km: number;        // coche intradía (0 si la matriz no trae distancias)
-  apretado: boolean; // el día no cabe en el presupuesto del ritmo elegido
+  min: number;       // visitas + coche + comida
+  km: number;
+  apretado: boolean; // no cabe en el presupuesto del ritmo
 };
 
 export type ResumenViaje = {
-  dias: DiaViaje[];    // siempre `opts.dias` días (los sobrantes, libres)
+  dias: DiaViaje[];    // siempre `opts.dias`; los sobrantes, libres
   totalMin: number;
   totalKm: number;
   totalParadas: number;
-  desbordado: boolean; // el trabajo total no cabe en los días con este ritmo (aviso global)
+  desbordado: boolean; // el total no cabe ni repartido a partes iguales
 };
 
-// Minutos activos que caben en un día: el menor entre el ritmo elegido y la luz de la
-// fecha menos la comida. La luz se calcula en el centro de la selección (apenas varía
-// dentro de una comunidad); sin selección con GPS, solo manda el ritmo.
+// Minutos activos por día: lo que pida el ritmo, sin pasar de la luz menos la comida.
 export function presupuestoDia(seleccion: Destino[], opts: OpcionesViaje): number {
   const centro = centroDe(seleccion);
   const luz = centro ? horasDeLuz(opts.fecha, centro[0], centro[1]).minutosLuz : Infinity;
   return Math.min(RITMO_MIN[opts.ritmo], luz - COMIDA_MIN[opts.comida]);
 }
 
-// Selección → reparto en días + totales. Las actividades se encadenan por cercanía
-// (vecino más próximo en coche) y la cadena se corta primero por geografía —en los saltos
-// de coche grandes, los mismos que hacen cambiar de base— y solo dentro de cada bloque se
-// reparte por carga; los destinos sin GPS (no rutables) se cuelgan del día más corto,
-// contando su visita.
+// Encadena la selección por cercanía, la corta primero por geografía (los saltos de coche
+// grandes) y reparte cada bloque por carga. Los destinos sin GPS van al día más corto.
 export function resumenMiViaje(seleccion: Destino[], matriz: MatrizViajes, opts: OpcionesViaje): ResumenViaje {
   const presupuesto = presupuestoDia(seleccion, opts);
   const comidaMin = COMIDA_MIN[opts.comida];
+  const visita = (d: Destino) => estanciaPorRitmo(d, opts.ritmo);
   const enRuta = seleccion.filter((d) => d.gps && matriz.ids.includes(d.slug));
   const sinGps = seleccion.filter((d) => !enRuta.includes(d));
   const porSlug = new Map(seleccion.map((d) => [d.slug, d]));
 
-  // Coste de ruta de un tramo de cadena: coche desde la parada anterior + visita de cada
-  // una. Mide la carga de un bloque y marca sus fronteras proporcionales internas.
   const costeRuta = (tramo: string[]) => tramo.reduce((s, slug, i) => {
     const coche = i > 0 ? seg2min(tiempoCoche(matriz, tramo[i - 1], slug)) : 0;
-    return s + coche + visitaMin(porSlug.get(slug)!);
+    return s + coche + visita(porSlug.get(slug)!);
   }, 0);
 
-  const cadena = cadenaVecinos(enRuta.map((d) => d.slug), matriz);
+  const cadena = vecinoMasCercano(matriz, enRuta.map((d) => d.slug)).orden;
   const zonas = repartoPorZonas(cadena, matriz, opts.dias, costeRuta);
 
   const dias: DiaViaje[] = [];
   zonas.forEach((z) => repartirBloque(z.bloque, z.dias, costeRuta(z.bloque)));
 
-  // Un bloque en sus `nDias` días: la cuota proporcional de siempre, ahora solo dentro de
-  // la zona. Con un único bloque (ningún salto grande) el reparto es el de antes.
+  // Reparto proporcional dentro del bloque: cierra el día al cruzar su cuota en vez de
+  // llenar cada uno al tope y volcar el resto en el último.
   function repartirBloque(bloque: string[], nDias: number, carga: number) {
-    const abiertos = dias.length; // días ya cerrados por los bloques anteriores
+    const abiertos = dias.length;
     let dia = nuevoDia();
     let prev: string | null = null;
-    let acum = 0; // coste colocado del bloque, para cruzar sus fronteras proporcionales
+    let acum = 0;
 
     for (const slug of bloque) {
-      // Antes de colocar, cierra el día si ya cruzó su cuota proporcional y aún quedan días
-      // por abrir. Reparte parejo en lugar de llenar cada día al tope y volcar el resto en
-      // el último. El coche que quedaría al inicio del nuevo día no cuenta (prev = null).
       const cerrados = dias.length - abiertos;
       const frontera = (carga * (cerrados + 1)) / nDias;
       if (dia.slugs.length > 0 && acum >= frontera && cerrados < nDias - 1) {
@@ -81,10 +70,10 @@ export function resumenMiViaje(seleccion: Destino[], matriz: MatrizViajes, opts:
         prev = null;
       }
       const coche = prev ? seg2min(tiempoCoche(matriz, prev, slug)) : 0;
-      const vis = visitaMin(porSlug.get(slug)!);
+      const vis = visita(porSlug.get(slug)!);
       dia.slugs.push(slug);
       dia.min += coche + vis;
-      dia.km += prev ? kmCoche(matriz, prev, slug) / 1000 : 0;
+      dia.km += prev ? kmCoche(matriz, prev, slug) : 0;
       acum += coche + vis;
       prev = slug;
     }
@@ -92,25 +81,20 @@ export function resumenMiViaje(seleccion: Destino[], matriz: MatrizViajes, opts:
     dias.push(dia);
   }
 
-  // Días vacíos hasta completar el viaje (quedaron libres) y renumerado final.
   while (dias.length < opts.dias) dias.push(nuevoDia());
-  // Los sin-GPS al día más corto (por minutos), sumando su visita.
   for (const d of sinGps) {
     const corto = [...dias].sort((a, b) => a.min - b.min)[0];
-    if (corto.slugs.length === 0) corto.min += comidaMin; // estrena día: reserva comida
+    if (corto.slugs.length === 0) corto.min += comidaMin;
     corto.slugs.push(d.slug);
-    corto.min += visitaMin(d);
+    corto.min += visita(d);
   }
-  // `apretado` en un único sitio: un día aprieta si el trabajo (visitas + coche, sin la
-  // comida, que el presupuesto ya descontó de la luz) no cabe en el presupuesto.
+  // La comida no cuenta para `apretado`: el presupuesto ya la descontó de la luz.
   dias.forEach((d, i) => {
     d.numero = i + 1;
     d.km = Math.round(d.km);
     d.apretado = d.slugs.length > 0 && d.min - comidaMin > presupuesto;
   });
 
-  // Desbordado: el trabajo total (sin comidas) no cabe ni repartido a partes iguales.
-  // Distingue "un día justo" de "no cabe en X días": dispara el aviso global.
   const trabajoTotal = dias.reduce((s, d) => s + (d.slugs.length > 0 ? d.min - comidaMin : 0), 0);
 
   return {
@@ -124,18 +108,14 @@ export function resumenMiViaje(seleccion: Destino[], matriz: MatrizViajes, opts:
   function nuevoDia(): DiaViaje {
     return { numero: dias.length + 1, slugs: [], min: 0, km: 0, apretado: false };
   }
-  // Al cerrar el día, suma la comida al total (para mostrar); `apretado` se decide luego.
   function cerrar(d: DiaViaje) {
     if (d.slugs.length > 0) d.min += comidaMin;
   }
 }
 
-// La cadena troceada en zonas, con los días que le tocan a cada una. Se corta donde el
-// salto de coche entre dos paradas consecutivas supera el umbral —el mismo con el que se
-// cambia de base de alojamiento, o días y bases discreparían— y los días se reparten
-// **por carga**, no por número de zonas: dar un día fijo a cada una dejaba días de 17 h
-// junto a días de 4 h. Una zona que no da ni para un día se fusiona con su vecina (por el
-// menor de los saltos) y se vuelve a repartir; así nunca sobran días vacíos.
+// Corta la cadena donde el salto de coche supera SALTO_ZONA_MIN y reparte los días por
+// carga, no uno por zona. Una zona que no da ni para un día se fusiona con su vecina por
+// el menor salto y se reparte de nuevo, así nunca sobran días vacíos.
 function repartoPorZonas(
   cadena: string[], matriz: MatrizViajes, dias: number, carga: (tramo: string[]) => number,
 ): { bloque: string[]; dias: number }[] {
@@ -164,8 +144,7 @@ function trocear(cadena: string[], cortes: number[]): string[][] {
   return bloques;
 }
 
-// Reparto de los días proporcional a la carga de cada zona, por mayores restos. Un 0
-// significa que esa zona no da ni para un día: quien llama la fusiona y reparte de nuevo.
+// Días proporcionales a la carga, por mayores restos. Un 0 = la zona no da para un día.
 function diasPorCarga(cargas: number[], dias: number): number[] {
   const total = cargas.reduce((s, c) => s + c, 0);
   if (total === 0) return cargas.map((_, i) => (i === 0 ? dias : 0));
@@ -179,10 +158,8 @@ function diasPorCarga(cargas: number[], dias: number): number[] {
   return reparto;
 }
 
-// «Prefiero que la IA decida»: pre-selecciona un conjunto equilibrado —las mejor
-// puntuadas que llenan los días sin desbordarlos, encadenadas por cercanía— como borrador
-// editable. Único heredero de las 3 propuestas. Reusa el mismo cálculo que el panel para
-// que "lo que la IA propone" y "lo que el panel dice que cabe" no se contradigan.
+// «Que elija Cris por mí»: las mejor puntuadas que llenan los días sin desbordarlos,
+// medidas con el mismo cálculo que el panel para que no se contradigan.
 export function elegirEquilibrado(
   candidatas: Destino[], matriz: MatrizViajes, opts: OpcionesViaje,
 ): string[] {
@@ -194,27 +171,4 @@ export function elegirEquilibrado(
     elegidas.push(c);
   }
   return elegidas.map((d) => d.slug);
-}
-
-// Cadena por vecino más cercano (coche): arranca en el primero de la selección y salta
-// siempre al más próximo sin visitar. Da días con paradas geográficamente contiguas sin
-// el coste del TSP exacto (el panel es una estimación; el orden fino lo pone `itinerario.ts`).
-// La exporta también F3 (oportunidades) para medir desvíos contra la misma ruta.
-export function cadenaVecinos(slugs: string[], matriz: MatrizViajes): string[] {
-  if (slugs.length <= 1) return [...slugs];
-  const restantes = new Set(slugs);
-  let actual = slugs[0];
-  restantes.delete(actual);
-  const cadena = [actual];
-  while (restantes.size) {
-    let mejor = "", mejorT = Infinity;
-    for (const s of restantes) {
-      const t = tiempoCoche(matriz, actual, s);
-      if (t < mejorT) { mejorT = t; mejor = s; }
-    }
-    cadena.push(mejor);
-    restantes.delete(mejor);
-    actual = mejor;
-  }
-  return cadena;
 }

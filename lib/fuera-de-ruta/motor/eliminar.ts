@@ -1,13 +1,10 @@
-// Fase 1 del motor (briefing §4A): elimina SOLO por incompatibilidad objetiva. Una
-// preferencia no marcada como imprescindible NUNCA llega aquí (esa es la Fase 2). Y
-// "ausente = no consta", no "no": solo elimina la incompatibilidad EXPLÍCITA
-// (carrito===false), jamás el dato que falta — así ninguna preferencia vacía el resultado.
-import type { Destino } from "../tipos";
-import type { Acceso, Eliminada, Perfil } from "./tipos";
+// Fase 1: elimina solo la incompatibilidad EXPLÍCITA (carrito === false), nunca el dato
+// que falta, para que ninguna respuesta vacíe el resultado.
+import type { Acceso, Destino } from "../tipos";
+import type { Eliminada, Perfil } from "./tipos";
 
-const ACCESOS: Acceso[] = ["asfalto", "pista buena", "pista"];  // de mejor a peor
+const ACCESOS: Acceso[] = ["asfalto", "pista buena", "pista"];
 
-// Motivo de incompatibilidad, o null si el destino es compatible con el perfil.
 function incompatibilidad(d: Destino, p: Perfil): string | null {
   if (p.zonas?.length && !p.zonas.includes(d.zona)) return "fuera de las zonas elegidas";
   if (p.carritoImprescindible && d.carrito === false) return "no es apta para carrito";

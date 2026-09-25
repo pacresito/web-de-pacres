@@ -10,17 +10,13 @@ import type { ZonaAlojamiento } from "@/lib/fuera-de-ruta/alojamiento/alojamient
 import { guardarViaje } from "@/lib/fuera-de-ruta/viaje/guardados";
 import { duracion } from "@/lib/fuera-de-ruta/formato";
 
-// Panel «Mi viaje»: lo seleccionado, tiempo total, km y reparto por días,
-// recalculado en vivo. Nunca descarta: si un día no cabe en el ritmo, lo marca y avisa.
-// Guarda perfil + selección (el viaje se replanifica al abrir, no se congela).
-
-// Rango de días de una zona de alojamiento: "Día 2" o "Días 1-3" (el tramo es contiguo).
+// "Día 2" o "Días 1-3": los días de una base son contiguos.
 const fmtDias = (dias: number[]) =>
   dias.length === 1 ? `Día ${dias[0]}` : `Días ${dias[0]}-${dias[dias.length - 1]}`;
 
 const ICONO_AUD: Record<Hallazgo["nivel"], string> = { ok: "✅", aviso: "⚠️", idea: "💡" };
 
-export default function PanelViaje({ resumen, auditoria, oportunidades, zonas, porSlug, provincia, respuestas, seleccion, onQuitar, onAnadir, onQueDecidaLaIA, onVerItinerario, onComparar }: {
+export default function PanelViaje({ resumen, auditoria, oportunidades, zonas, porSlug, provincia, respuestas, seleccion, onQuitar, onAnadir, onQueElijaCris, onVerItinerario, onComparar }: {
   resumen: ResumenViaje;
   auditoria: Hallazgo[];
   oportunidades: Oportunidad[];
@@ -31,15 +27,13 @@ export default function PanelViaje({ resumen, auditoria, oportunidades, zonas, p
   seleccion: Set<string>;
   onQuitar: (slug: string) => void;
   onAnadir: (slug: string) => void;
-  onQueDecidaLaIA: () => void;
+  onQueElijaCris: () => void;
   onVerItinerario: () => void;
   onComparar: () => void;
 }) {
   const vacio = seleccion.size === 0;
 
-  // «Guardado» se deriva, no se almacena: guardo la firma de la selección guardada y la
-  // comparo con la actual. Así al cambiar la selección el botón se reactiva solo —cada
-  // selección distinta es una entrada nueva en «Mis viajes»— sin un efecto que resetee.
+  // «Guardado» se deriva de la firma de lo guardado: cambiar la selección reactiva el botón.
   const [firmaGuardada, setFirmaGuardada] = useState<string | null>(null);
   const firma = [...seleccion].sort().join(",");
   const guardado = !vacio && firmaGuardada === firma;
@@ -72,7 +66,12 @@ export default function PanelViaje({ resumen, auditoria, oportunidades, zonas, p
               {auditoria.map((h, i) => (
                 <li key={i} className={h.nivel === "aviso" ? "fr-d-aviso" : "fr-d-aud-linea"}>
                   <span aria-hidden>{ICONO_AUD[h.nivel]}</span>
-                  <span>{h.texto}</span>
+                  <span>
+                    {h.texto}
+                    {h.accion === "comparar" && seleccion.size >= 2 && (
+                      <> <button className="fr-s5-link" onClick={onComparar}>Comparar actividades</button></>
+                    )}
+                  </span>
                 </li>
               ))}
             </ul>
@@ -152,7 +151,7 @@ export default function PanelViaje({ resumen, auditoria, oportunidades, zonas, p
             ⚖️ Comparar actividades
           </button>
         )}
-        <button className="fr-btn fr-d-ia" onClick={onQueDecidaLaIA}>
+        <button className="fr-btn fr-d-ia" onClick={onQueElijaCris}>
           ✨ Que elija Cris por mí
         </button>
         {!vacio && (

@@ -3,15 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import type { Destino } from "@/lib/fuera-de-ruta/tipos";
-import { duracion, mapsHref } from "@/lib/fuera-de-ruta/formato";
-import { fmtHora, type ComidaItin, type DiaItin } from "@/lib/fuera-de-ruta/itinerario/itinerario";
+import { duracion, fmtHora, mapsHref } from "@/lib/fuera-de-ruta/formato";
+import type { ComidaItin, DiaItin } from "@/lib/fuera-de-ruta/itinerario/itinerario";
 import { consejosDelDia, type Alternativa } from "@/lib/fuera-de-ruta/guia/guia";
 
-// Guía A: el día a día
-// cada día con su resumen (luz, coche, estancia, alojamiento) y su cronología —hora de
-// llegada, inicio, estancia, salida y conducción a la siguiente, con la comida intercalada y
-// el regreso—, más los consejos del día y la alternativa de lluvia por actividad. La hora de
-// salida es editable y todo se recalcula. Enlace a Maps por parada (el parking).
+// Un día de la guía: resumen, cronología con la comida intercalada, consejos y
+// alternativa de lluvia. La hora de salida es editable y todo se recalcula.
 export default function DiaItinerario({ dia, porSlug, provincia, alternativas, onHoraSalida }: {
   dia: DiaItin;
   porSlug: Map<string, Destino>;
@@ -20,17 +17,6 @@ export default function DiaItinerario({ dia, porSlug, provincia, alternativas, o
   onHoraSalida: (dia: number, min: number) => void;
 }) {
   const consejos = consejosDelDia(dia, porSlug);
-  // Índice de la parada ante la que se intercala la comida, o -1 si no cae entre dos
-  // paradas (día de una sola, o comida que se va al final): entonces se pinta tras la
-  // última. Se calcula **una vez**: el mismo predicado escrito en dos sitios se
-  // desincroniza al tocarlo y la comida acaba duplicada o desaparecida.
-  const idxComida = dia.comida
-    ? dia.paradas.findIndex((p, i) => {
-        const finAnterior = i > 0 ? dia.paradas[i - 1].horaSalida : dia.horaSalida;
-        return dia.comida!.horaInicio >= finAnterior && dia.comida!.horaInicio <= p.horaLlegada;
-      })
-    : -1;
-
   if (dia.paradas.length === 0) {
     return (
       <section className="fr-it-dia fr-tarjeta fr-it-dia--libre">
@@ -78,7 +64,7 @@ export default function DiaItinerario({ dia, porSlug, provincia, alternativas, o
           const gps = porSlug.get(p.slug)?.gps;
           return (
             <li key={p.slug} className="fr-it-parada-wrap">
-              {i === idxComida && <BloqueComida comida={dia.comida!} />}
+              {dia.comida && i === dia.comidaAntesDe && <BloqueComida comida={dia.comida} />}
               <div className="fr-it-parada">
                 <span className="fr-it-hora">{fmtHora(p.horaLlegada)}</span>
                 <div className="fr-it-txt">
@@ -119,8 +105,7 @@ export default function DiaItinerario({ dia, porSlug, provincia, alternativas, o
           );
         })}
 
-        {/* Comida que no partió el recorrido (día de una sola parada): va tras la última. */}
-        {dia.comida && idxComida < 0 && (
+        {dia.comida && dia.comidaAntesDe === undefined && (
           <li className="fr-it-parada-wrap"><BloqueComida comida={dia.comida} /></li>
         )}
 
@@ -162,10 +147,7 @@ function BloqueComida({ comida }: { comida: ComidaItin }) {
   );
 }
 
-// Guía B: la lluvia
-// la alternativa ya está calculada; el botón solo la enseña. No reorganiza el viaje ni
-// consulta la previsión —decide el usuario, y solo si llueve—. En el PDF sale desplegada
-// (`@media print`): en papel no hay botón que pulsar.
+// En el PDF sale desplegada: en papel no hay botón que pulsar.
 function BloqueLluvia({ alternativa: a, porSlug, provincia }: {
   alternativa: Alternativa;
   porSlug: Map<string, Destino>;

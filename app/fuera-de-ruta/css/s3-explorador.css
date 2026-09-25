@@ -279,7 +279,6 @@
   font: 700 11px var(--fr-font-dm), sans-serif;
   color: var(--fr-tinta);
 }
-.fr-s3-dato--si { background: var(--fr-lima); }
 .fr-s3-dato--no { background: var(--fr-rosa); }
 .fr-s3-cta {
   position: sticky;

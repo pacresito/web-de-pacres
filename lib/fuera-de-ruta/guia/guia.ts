@@ -1,18 +1,16 @@
-// Guías finales. Cuatro vistas de los MISMOS datos —el itinerario cronológico—,
-// no cuatro procesos: aquí solo vive lo que hay que derivar para
-// ellas —totales del viaje, consejos del día y las alternativas de lluvia precalculadas—.
-// Determinista, IA cero. Puro. Test: `npx tsx lib/fuera-de-ruta/guia/guia.test.ts`.
+// Lo que las vistas de la guía derivan del itinerario: totales, consejos del día y
+// alternativas de lluvia.
 import type { Destino, Ritmo } from "../tipos";
 import { tiempoCoche, kmCoche, seg2min, type MatrizViajes } from "../geo";
-import { estanciaPorRitmo, type DiaItin, type Itinerario } from "../itinerario/itinerario";
+import { estanciaPorRitmo } from "../presupuesto";
+import type { ComidaItin, DiaItin, Itinerario } from "../itinerario/itinerario";
 
-// Frase de cierre obligatoria de las guías: no garantizamos datos de terceros.
+// Cierre obligatorio: no garantizamos datos de terceros.
 export const CIERRE =
   "La guía se genera con la información disponible en el momento de su creación. Por este motivo, " +
   "antes de realizar el viaje se recomienda comprobar posibles cambios que dependan de terceros, " +
   "como horarios, reservas o condiciones de acceso.";
 
-// Totales del viaje
 export type TotalesViaje = {
   dias: number;
   diasConPlan: number;
@@ -20,7 +18,7 @@ export type TotalesViaje = {
   conduccionMin: number;
   km: number;
   estanciaMin: number;
-  zonas: string[]; // ids de zona visitadas, en orden de viaje
+  zonas: string[]; // ids, en orden de viaje
 };
 
 export function totalesViaje(it: Itinerario): TotalesViaje {
@@ -38,11 +36,12 @@ export function totalesViaje(it: Itinerario): TotalesViaje {
   };
 }
 
-// Consejos del día
-// «Solo consejos realmente útiles»: los que cambian algo que haces ANTES de salir
-// —qué metes en la mochila, qué reservas, con qué coche vas—. Todos se derivan del dato de
-// las paradas del día; nada genérico ("lleva agua" no depende del día, así que no entra).
-// Orden = prioridad: si hay más de MAX_CONSEJOS, se quedan los primeros.
+// Todas las comidas del día: la del mediodía y la que parte una actividad.
+export const comidasDe = (dia: DiaItin): ComidaItin[] =>
+  [dia.comida, ...dia.paradas.map((p) => p.pausaComida)].filter((c) => c !== undefined);
+
+// Solo lo que cambia algo que se hace ANTES de salir, derivado de las paradas del día.
+// El orden es la prioridad.
 const MAX_CONSEJOS = 5;
 
 export function consejosDelDia(dia: DiaItin, porSlug: Map<string, Destino>): string[] {
@@ -57,15 +56,12 @@ export function consejosDelDia(dia: DiaItin, porSlug: Map<string, Destino>): str
   const material = [...new Set(paradas.flatMap((d) => d.material ?? []))];
   if (material.length) consejos.push(`Llevar: ${material.slice(0, 4).join(" · ")}`);
 
-  // La comida solo se compra antes si el día no pasa por ningún restaurante.
-  const comidas = [dia.comida, ...dia.paradas.map((p) => p.pausaComida)].filter((c) => c !== undefined);
+  const comidas = comidasDe(dia);
   if (comidas.length > 0 && comidas.every((c) => !c.restaurante)) {
     consejos.push("Comprar la comida antes de salir: hoy no hay parada en restaurante");
   }
 
-  // Frontal: solo si el día se alarga más allá del anochecer. Que una parada sea `nocturna`
-  // no basta —significa que no depende de la luz, y una cueva a las 11:00 sigue siendo de
-  // día—; la linterna que pida por sí misma ya viene en su `material`.
+  // Por la hora, no por `nocturna`: una cueva a las 11:00 sigue siendo de día.
   const finDia = dia.paradas.at(-1)!.horaSalida;
   if (dia.atardecer > 0 && finDia > dia.atardecer) {
     consejos.push("Llevar frontal o linterna: el día acaba sin luz");
@@ -85,35 +81,24 @@ export function consejosDelDia(dia: DiaItin, porSlug: Map<string, Destino>): str
   return consejos.slice(0, MAX_CONSEJOS);
 }
 
-// Guía B: lluvia
-// Alternativa precalculada por actividad: NO se reorganiza el viaje ni se consulta
-// meteorología — a cada parada que la lluvia estropea se le busca de antemano el refugio
-// más cercano que no está ya en el viaje. Decide el usuario, y solo si llueve.
-//
-// «Refugio» sobre el dato que hay: sitios donde la lluvia no cancela el plan (pueblo que se
-// pasea, cueva, balneario, bodega, museo) y que no exijan una caminata larga para llegar
-// —una alternativa de lluvia que empieza con 5 km de sendero no es una alternativa—.
-const TIPOS_REFUGIO = new Set(["pueblo", "cueva"]);
-const ACTIVIDADES_REFUGIO = new Set(["balneario", "spa", "bodega", "museo"]);
+// Lluvia: a cada parada que la lluvia estropea se le precalcula el refugio más cercano
+// fuera del viaje —por tipo o actividad, y sin caminata larga—. No consulta la previsión.
+const MOTIVO_REFUGIO = new Map([
+  ["pueblo", "Un pueblo se pasea igual con lluvia y siempre hay dónde resguardarse."],
+  ["cueva", "Bajo tierra la lluvia da lo mismo."],
+  ["balneario", "Bajo techo, y con lluvia hasta mejor."],
+  ["spa", "Bajo techo, y con lluvia hasta mejor."],
+  ["bodega", "Visita bajo techo."],
+  ["museo", "Visita bajo techo."],
+]);
 const MAX_PASEO_KM = 2;
-// Una hora de coche: el refugio sustituye a la actividad del día entero, no a un rato, así
-// que aguanta más viaje que una parada normal (con 45 min, Tudela —el plan de lluvia obvio
-// de las Bardenas— se quedaba fuera por un minuto).
+// Sustituye a la actividad del día entero, así que aguanta más coche que una parada.
 const MAX_COCHE_MIN = 60;
 
-const MOTIVO: Record<string, string> = {
-  pueblo: "Un pueblo se pasea igual con lluvia y siempre hay dónde resguardarse.",
-  cueva: "Bajo tierra la lluvia da lo mismo.",
-  balneario: "Bajo techo, y con lluvia hasta mejor.",
-  spa: "Bajo techo, y con lluvia hasta mejor.",
-  bodega: "Visita bajo techo.",
-  museo: "Visita bajo techo.",
-};
+const categoria = (d: Destino) => d.actividad ?? d.tipo;
 
 export function esRefugio(d: Destino): boolean {
-  const categoria = d.actividad ?? d.tipo;
-  const cubierto = TIPOS_REFUGIO.has(d.tipo) || ACTIVIDADES_REFUGIO.has(categoria);
-  return cubierto && !!d.gps && (!d.distanciaKm || d.distanciaKm[1] <= MAX_PASEO_KM);
+  return MOTIVO_REFUGIO.has(categoria(d)) && !!d.gps && (!d.distanciaKm || d.distanciaKm[1] <= MAX_PASEO_KM);
 }
 
 export type Alternativa = {
@@ -126,11 +111,11 @@ export type Alternativa = {
   motivo: string;
 };
 
-// Clave: slug de la parada del itinerario a la que sustituye. Las paradas que ya son
-// refugio no la necesitan (la lluvia no las estropea) y no aparecen en el mapa.
+// Por slug de la parada a la que sustituye. Las que ya son refugio no tienen.
 export function alternativasLluvia(
-  it: Itinerario, porSlug: Map<string, Destino>, destinos: Destino[], matriz: MatrizViajes, ritmo: Ritmo,
+  it: Itinerario, destinos: Destino[], matriz: MatrizViajes, ritmo: Ritmo,
 ): Map<string, Alternativa> {
+  const porSlug = new Map(destinos.map((d) => [d.slug, d]));
   const enViaje = new Set(it.dias.flatMap((d) => d.paradas.map((p) => p.slug)));
   const refugios = destinos.filter((d) => !enViaje.has(d.slug) && esRefugio(d) && matriz.ids.includes(d.slug));
   const alternativas = new Map<string, Alternativa>();
@@ -152,9 +137,9 @@ export function alternativasLluvia(
         nombre: cerca.r.nombre,
         queEs: cerca.r.queEs,
         cocheMin: cerca.min,
-        km: Math.round(kmCoche(matriz, parada.slug, cerca.r.slug) / 1000),
+        km: Math.round(kmCoche(matriz, parada.slug, cerca.r.slug)),
         estanciaMin: estanciaPorRitmo(cerca.r, ritmo),
-        motivo: MOTIVO[cerca.r.actividad ?? cerca.r.tipo] ?? "Se disfruta igual con mal tiempo.",
+        motivo: MOTIVO_REFUGIO.get(categoria(cerca.r))!,
       });
     }
   }

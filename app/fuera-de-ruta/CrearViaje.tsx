@@ -6,25 +6,21 @@ import type { DatosViajes } from "@/lib/fuera-de-ruta/tipos";
 import type { MatrizViajes } from "@/lib/fuera-de-ruta/geo";
 import type { Filtros } from "@/lib/fuera-de-ruta/filtrar";
 import { filtrosAQuery } from "@/lib/fuera-de-ruta/url-filtros";
-import { BLOQUES, camposDe, type Bloque, type Campo, type Respuestas } from "@/lib/fuera-de-ruta/cuestionario/preguntas";
+import { BLOQUES, bloque, camposDe, type Bloque, type Campo, type Respuestas } from "@/lib/fuera-de-ruta/cuestionario/preguntas";
 import { serializarViaje } from "@/lib/fuera-de-ruta/cuestionario/viaje-url";
 import { tomarParaAbrir } from "@/lib/fuera-de-ruta/viaje/guardados";
 import { PasoBloque, Resumen } from "./_crear-viaje/Cuestionario";
 import Resultado from "./_crear-viaje/Resultado";
 
-// S5 «Crear mi viaje»: el cuestionario de Cris sustituye al formulario plano.
-// Tres pasos —el viajero, el viaje y el resumen editable— y al confirmar lanza el motor
-// de dos fases. El viajero se guarda en localStorage (reutilizable); el viaje viaja en la
-// URL. Aquí se decide qué pantalla toca y quién guarda las respuestas; pintarlas es cosa
-// de `_crear-viaje/` (carpeta privada: el `_` la deja fuera del enrutado de Next).
+// «Crear mi viaje»: viajero, viaje, resumen y resultado. Aquí se decide qué paso toca y
+// dónde se guardan las respuestas; pintarlas es cosa de `_crear-viaje/`.
 
 const CLAVE_VIAJERO = "fr:viajero";
 const CLAVE_VIAJE = "fr:viaje";
 type Paso = "viajero" | "viaje" | "resumen" | "resultado";
 
-// --- Persistencia en localStorage, defensiva en ambos sentidos. El viajero (bloque 1) es
-// reutilizable; el viaje (bloque 2) va sobre todo a la URL (compartible), pero se espeja
-// aquí también para que sobreviva al entrar sin query —un enlace con viaje gana al espejo—.
+// El viaje va a la URL, pero se espeja aquí para sobrevivir a una entrada sin query; si
+// la URL lo trae, gana ella.
 function leerBloque(clave: string, id: Bloque["id"]): Respuestas {
   try {
     const obj = JSON.parse(localStorage.getItem(clave) ?? "{}") as Respuestas;
@@ -47,8 +43,7 @@ const recortar = (r: Respuestas, campos: Campo[]): Respuestas => {
 };
 
 // Quita las respuestas de preguntas ocultas: si dejas de viajar en familia, el carrito
-// que marcaste no debe seguir eliminando destinos. El orden de BLOQUES basta (una
-// condicional siempre depende de una pregunta anterior).
+// no debe seguir eliminando destinos. Una condicional siempre depende de una anterior.
 function podar(r: Respuestas): Respuestas {
   const out = { ...r };
   for (const p of BLOQUES.flatMap((b) => b.preguntas)) {
@@ -57,7 +52,6 @@ function podar(r: Respuestas): Respuestas {
   return out;
 }
 
-// Cambia un campo (o lo borra al deseleccionar) y vuelve a podar las condicionales.
 function conCampo(r: Respuestas, campo: Campo, valor: string | string[] | undefined): Respuestas {
   const out = { ...r };
   if (valor === undefined || (Array.isArray(valor) && valor.length === 0)) delete out[campo];
@@ -67,13 +61,12 @@ function conCampo(r: Respuestas, campo: Campo, valor: string | string[] | undefi
 
 export default function CrearViaje({ datos, matriz, provincia, filtros, viajeInicial }: {
   datos: DatosViajes;
-  matriz: MatrizViajes;    // tiempos y km de coche precalculados, para el panel «Mi viaje»
-  provincia: string;       // slug de URL, para los enlaces
-  filtros: Filtros;        // filtros heredados del explorador (de aquí salen las zonas)
-  viajeInicial?: Respuestas; // bloque viaje llegado por la URL (recarga o enlace)
+  matriz: MatrizViajes;
+  provincia: string;       // slug de URL
+  filtros: Filtros;        // heredados del explorador; de aquí salen las zonas
+  viajeInicial?: Respuestas; // bloque viaje llegado por la URL
 }) {
-  // Reabrir un viaje de «Mis viajes» (handoff por localStorage, de un solo uso): arranca
-  // directo en el resultado con el perfil y la selección guardados.
+  // Un viaje reabierto desde «Mis viajes» arranca directo en el resultado.
   const [abrir] = useState(() => tomarParaAbrir(provincia));
   const [respuestas, setRespuestas] = useState<Respuestas>(() =>
     abrir
@@ -82,11 +75,8 @@ export default function CrearViaje({ datos, matriz, provincia, filtros, viajeIni
   const [paso, setPaso] = useState<Paso>(abrir ? "resultado" : "viajero");
   const [seleccion, setSeleccion] = useState<Set<string>>(() => new Set(abrir?.seleccion ?? []));
 
-  // El viajero se recuerda; el viaje se refleja en la URL (sobre los filtros heredados,
-  // que no chocan de clave). replaceState, no router: no queremos re-render del servidor.
-  // OJO (Next ≥14.1): replaceState **sincroniza con useSearchParams**, y como los filtros
-  // llegan de ahí, escribir en cada render realimentaba render→escribe→render (cuelgue al
-  // marcar una opción). Por eso solo se escribe si la URL cambia de verdad: idempotente.
+  // replaceState sincroniza con useSearchParams, de donde llegan los filtros: escribir
+  // siempre realimentaría el render. Solo se escribe si la URL cambia.
   useEffect(() => {
     guardarBloque(CLAVE_VIAJERO, "viajero", respuestas);
     guardarBloque(CLAVE_VIAJE, "viaje", respuestas);
@@ -99,8 +89,7 @@ export default function CrearViaje({ datos, matriz, provincia, filtros, viajeIni
     }
   }, [respuestas, filtros, provincia]);
 
-  // Cada paso sustituye al anterior sin navegar, así que hereda su scroll y se abre por
-  // la mitad (el botón «Seguir» vive abajo). Mismo arreglo que en la guía.
+  // Cada paso sustituye al anterior sin navegar y heredaría su scroll.
   useEffect(() => { window.scrollTo(0, 0); }, [paso]);
 
   const cambiar = (campo: Campo, valor: string | string[] | undefined) =>
@@ -109,13 +98,10 @@ export default function CrearViaje({ datos, matriz, provincia, filtros, viajeIni
   const qsFiltros = filtrosAQuery(filtros);
   const hrefSitios = `/fuera-de-ruta/${provincia}/sitios${qsFiltros ? `?${qsFiltros}` : ""}`;
 
-  const bloqueViajero = BLOQUES.find((b) => b.id === "viajero")!;
-  const bloqueViaje = BLOQUES.find((b) => b.id === "viaje")!;
-
   if (paso === "viajero") {
     return (
       <PasoBloque
-        bloque={bloqueViajero}
+        bloque={bloque("viajero")}
         numero={1}
         respuestas={respuestas}
         onCambiar={cambiar}
@@ -129,7 +115,7 @@ export default function CrearViaje({ datos, matriz, provincia, filtros, viajeIni
   if (paso === "viaje") {
     return (
       <PasoBloque
-        bloque={bloqueViaje}
+        bloque={bloque("viaje")}
         numero={2}
         respuestas={respuestas}
         onCambiar={cambiar}

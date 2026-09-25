@@ -1,7 +1,5 @@
-// Amanecer y atardecer por fecha y coordenadas, con la ecuación solar (NOAA),
-// sin dependencias. Devuelve minutos desde la medianoche local en la zona horaria
-// dada (por defecto, la peninsular española). Lo usa el planificador para el
-// presupuesto de horas de luz. Test: `npx tsx lib/fuera-de-ruta/sol.test.ts`.
+// Amanecer y atardecer con la ecuación solar de la NOAA, en minutos desde la medianoche
+// local de la zona horaria dada.
 
 const rad = Math.PI / 180;
 
@@ -14,8 +12,7 @@ export type Luz = {
 const julianDe = (fecha: Date) => fecha.getTime() / 86400000 + 2440587.5;
 const julianAFecha = (j: number) => new Date((j - 2440587.5) * 86400000);
 
-// Minutos desde la medianoche del instante, leídos en la zona horaria tz (aplica
-// automáticamente el horario de verano de esa zona: no calculamos el offset a mano).
+// Leído con Intl para que el horario de verano lo aplique la zona, no un offset a mano.
 function minutosLocales(instante: Date, tz: string): number {
   const partes = new Intl.DateTimeFormat("en-GB", {
     timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false,
@@ -37,7 +34,7 @@ export function horasDeLuz(fecha: Date, lat: number, lon: number, tz = "Europe/M
   const cosOmega =
     (Math.sin(-0.833 * rad) - Math.sin(lat * rad) * Math.sin(delta)) /
     (Math.cos(lat * rad) * Math.cos(delta));
-  // Fuera de [-1, 1]: sol de medianoche o noche polar (no aplica a España; lo acotamos).
+  // Fuera de [-1, 1]: sol de medianoche o noche polar.
   const omega = Math.acos(Math.max(-1, Math.min(1, cosOmega))) / rad; // ángulo horario (grados)
   const amanecer = minutosLocales(julianAFecha(Jtransit - omega / 360), tz);
   const atardecer = minutosLocales(julianAFecha(Jtransit + omega / 360), tz);

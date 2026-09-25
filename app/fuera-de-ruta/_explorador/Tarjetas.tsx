@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import type { Destino } from "@/lib/fuera-de-ruta/tipos";
-import { rango } from "@/lib/fuera-de-ruta/formato";
+import { desnivel, rango } from "@/lib/fuera-de-ruta/formato";
 
 export function Tarjeta({ destino: d, zona, num, href, activa, onActivo }: {
   destino: Destino;
@@ -14,16 +14,14 @@ export function Tarjeta({ destino: d, zona, num, href, activa, onActivo }: {
   activa: boolean;
   onActivo: (slug: string | null) => void;
 }) {
-  // 2-4 chips: solo lo que distingue a este sitio. Los "sí" de niños y perros están
-  // en casi todos los destinos, y un chip repetido en 19 de 20 tarjetas no ayuda a
-  // elegir — para buscar por eso están los toggles del filtro, y el dato completo,
-  // en la ficha. "te puedes bañar" sí va, de sticker, porque solo lo son dos.
-  const chips: { texto: string; tono?: "si" | "no" }[] = [];
+  // Solo lo que distingue: el "sí" de niños o perros se repite en casi todas y no ayuda
+  // a elegir. El baño va de sticker.
+  const chips: { texto: string; no?: boolean }[] = [];
   if (d.distanciaKm) chips.push({ texto: rango(d.distanciaKm, "km") });
-  if (d.desnivelM) chips.push({ texto: d.desnivelM[1] === 0 ? "llano" : `+${rango(d.desnivelM, "m")}` });
-  if (d.ninos === false) chips.push({ texto: "niños no", tono: "no" });
-  if (d.perros === false) chips.push({ texto: "perros no", tono: "no" });
-  if (d.bano === false) chips.push({ texto: "baño no", tono: "no" });
+  if (d.desnivelM) chips.push({ texto: desnivel(d.desnivelM) });
+  if (d.ninos === false) chips.push({ texto: "niños no", no: true });
+  if (d.perros === false) chips.push({ texto: "perros no", no: true });
+  if (d.bano === false) chips.push({ texto: "baño no", no: true });
 
   return (
     <Link
@@ -53,7 +51,7 @@ export function Tarjeta({ destino: d, zona, num, href, activa, onActivo }: {
         {chips.length > 0 && (
           <span className="fr-s3-card-chips">
             {chips.slice(0, 4).map((c) => (
-              <span key={c.texto} className={`fr-s3-dato${c.tono ? ` fr-s3-dato--${c.tono}` : ""}`}>{c.texto}</span>
+              <span key={c.texto} className={`fr-s3-dato${c.no ? " fr-s3-dato--no" : ""}`}>{c.texto}</span>
             ))}
           </span>
         )}
@@ -62,16 +60,14 @@ export function Tarjeta({ destino: d, zona, num, href, activa, onActivo }: {
   );
 }
 
-// Tarjeta compacta horizontal (lista móvil): foto 112px con pin + meta/nombre/chips.
-// Mismo criterio de chips que la de escritorio, con una diferencia: aquí "baño sí"
-// sí va en chip, porque no hay sticker donde ponerlo.
+// Lista móvil. Mismo criterio de chips, pero el baño va en chip: no hay sticker.
 export function TarjetaCompacta({ destino: d, zona, num, href }: { destino: Destino; zona: string; num: number; href: string }) {
   const chips: { texto: string; tono?: "si" | "no" }[] = [];
   if (d.distanciaKm) chips.push({ texto: rango(d.distanciaKm, "km") });
   if (d.bano !== undefined) chips.push({ texto: `baño ${d.bano ? "sí" : "no"}`, tono: d.bano ? "si" : "no" });
   if (d.ninos === false) chips.push({ texto: "niños no", tono: "no" });
   if (d.perros === false) chips.push({ texto: "perros no", tono: "no" });
-  if (d.desnivelM) chips.push({ texto: d.desnivelM[1] === 0 ? "llano" : `+${rango(d.desnivelM, "m")}` });
+  if (d.desnivelM) chips.push({ texto: desnivel(d.desnivelM) });
 
   return (
     <Link href={href} className="fr-m3-card">
@@ -94,10 +90,8 @@ export function TarjetaCompacta({ destino: d, zona, num, href }: { destino: Dest
   );
 }
 
-// Carrusel de mini-tarjetas (modo mapa), sincronizado con los pins: al deslizar,
-// la tarjeta centrada activa su pin; al tocar un pin, su tarjeta se centra. El
-// umbral de "ya centrada" corta la pelea scroll↔activo (si el cambio vino del
-// propio swipe, no se reposiciona).
+// Carrusel del modo mapa, sincronizado con los pins en los dos sentidos. El umbral de
+// "ya centrada" evita que el scroll y el pin activo se persigan.
 export function CarruselMovil({ destinos, activo, onActivo, hrefDestino }: {
   destinos: Destino[];
   activo: string | null;
@@ -132,8 +126,7 @@ export function CarruselMovil({ destinos, activo, onActivo, hrefDestino }: {
     const el = cont.querySelector<HTMLElement>(`[data-slug="${activo}"]`);
     if (!el) return;
     if (Math.abs(cont.scrollLeft + cont.clientWidth / 2 - (el.offsetLeft + el.offsetWidth / 2)) < 40) return;
-    // Scroll instantáneo, no smooth: con scroll-snap mandatory Chromium cancela el
-    // scroll suave programático (el snap lo interrumpe). El salto directo es fiable.
+    // Sin smooth: con scroll-snap mandatory, Chromium cancela el scroll suave programático.
     cont.scrollTo({ left: el.offsetLeft - (cont.clientWidth - el.offsetWidth) / 2 });
   }, [activo]);
 
@@ -160,6 +153,6 @@ export function CarruselMovil({ destinos, activo, onActivo, hrefDestino }: {
 function miniStat(d: Destino): string {
   const p: string[] = [];
   if (d.distanciaKm) p.push(rango(d.distanciaKm, "km"));
-  if (d.desnivelM) p.push(d.desnivelM[1] === 0 ? "llano" : `+${rango(d.desnivelM, "m")}`);
+  if (d.desnivelM) p.push(desnivel(d.desnivelM));
   return p.join(" · ");
 }

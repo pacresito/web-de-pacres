@@ -69,7 +69,7 @@ assert.ok(!esRefugio(bySlug("cascada-de-xorroxin")), "una cascada no lo es");
 assert.ok(!esRefugio(bySlug("cueva-de-arpea")), "una cueva a 3 km de sendero no es alternativa de lluvia");
 
 // Alternativas: precalculadas, cercanas y nunca ya en el viaje
-const alt = alternativasLluvia(it, porSlug, datos.destinos, m, "medio");
+const alt = alternativasLluvia(it, datos.destinos, m, "medio");
 const enViaje = new Set(it.dias.flatMap((d) => d.paradas.map((p) => p.slug)));
 for (const [origen, a] of alt) {
   assert.ok(enViaje.has(origen), "la clave es una parada del viaje");
@@ -82,13 +82,13 @@ assert.ok(!alt.has("elizondo"), "una parada que ya es refugio no necesita altern
 
 // Con el refugio de la zona libre (Elizondo fuera del viaje), la cascada sí tiene alternativa.
 const altBaztan = alternativasLluvia(
-  itinerarioDe(["cascada-de-xorroxin", "infernuko-errota"], opts, 1), porSlug, datos.destinos, m, "medio",
+  itinerarioDe(["cascada-de-xorroxin", "infernuko-errota"], opts, 1), datos.destinos, m, "medio",
 );
 assert.strictEqual(altBaztan.get("cascada-de-xorroxin")?.slug, "elizondo", "el refugio más cercano del Baztán es Elizondo");
 
 // Sin refugio a menos de una hora no se inventa ninguno (Peña Izaga: Ujué a 67 min).
 const altLejos = alternativasLluvia(
-  itinerarioDe(["pena-izaga"], opts, 1), porSlug, datos.destinos, m, "medio",
+  itinerarioDe(["pena-izaga"], opts, 1), datos.destinos, m, "medio",
 );
 assert.strictEqual(altLejos.size, 0, "sin refugio cerca, sin alternativa");
 

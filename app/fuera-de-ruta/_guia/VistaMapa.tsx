@@ -3,16 +3,14 @@
 import { useMemo } from "react";
 import dynamic from "next/dynamic";
 import type { DatosViajes, Destino } from "@/lib/fuera-de-ruta/tipos";
-import { mapsHref } from "@/lib/fuera-de-ruta/formato";
-import { fmtHora, type Itinerario } from "@/lib/fuera-de-ruta/itinerario/itinerario";
+import { fmtHora, mapsHref } from "@/lib/fuera-de-ruta/formato";
+import type { Itinerario } from "@/lib/fuera-de-ruta/itinerario/itinerario";
 import type { PuntoViaje } from "../MapaViaje";
 
 const MapaViaje = dynamic(() => import("../MapaViaje"), { ssr: false });
 
-// Mapa del viaje
-// las paradas en el orden de la planificación, con el alojamiento y los restaurantes
-// del plan, y Google Maps a un clic desde cada punto. La lista de al lado repite el orden
-// para quien prefiera leerlo (y para que el mapa no sea la única forma de llegar al enlace).
+// Las paradas en el orden del plan, con bases y restaurantes. La lista repite el mapa para
+// que no sea la única forma de llegar a cada enlace.
 export default function VistaMapa({ itinerario, datos, porSlug }: {
   itinerario: Itinerario;
   datos: DatosViajes;
@@ -23,8 +21,7 @@ export default function VistaMapa({ itinerario, datos, porSlug }: {
     const lista: PuntoViaje[] = [];
     let n = 0;
     for (const dia of itinerario.dias) {
-      // Dentro del día, orden de reloj (el trazo del mapa es el recorrido real, comida
-      // incluida); el alojamiento va delante porque es de donde se sale.
+      // Orden de reloj, comida incluida: el trazo es el recorrido real.
       const delDia: (PuntoViaje & { hora: number })[] = [];
       for (const p of dia.paradas) {
         const gps = porSlug.get(p.slug)?.gps;
@@ -36,8 +33,7 @@ export default function VistaMapa({ itinerario, datos, porSlug }: {
       if (rest?.gps) {
         delDia.push({ slug: rest.nombre, nombre: rest.nombre, gps: rest.gps, etiqueta: "🍴", dia: dia.numero, detalle: `Día ${dia.numero} · ${fmtHora(dia.comida!.horaInicio)}`, hora: dia.comida!.horaInicio });
       }
-      // La base de la que se sale abre el día; si esa noche se duerme en otra, la nueva lo
-      // cierra —y abre el siguiente—, que es lo que une el mapa de punta a punta.
+      // La base de salida abre el día; si esa noche se duerme en otra, la nueva lo cierra.
       const salida = dia.salidaDesde ?? dia.alojamiento;
       const alojSalida = salida ? porSlug.get(salida.slug) : undefined;
       if (alojSalida?.gps) lista.push({ slug: alojSalida.slug, nombre: alojSalida.nombre, gps: alojSalida.gps, etiqueta: "🏨", dia: dia.numero, base: true, detalle: `Día ${dia.numero} · ${dia.salidaDesde ? "salida con el equipaje" : "salida y regreso"}` });

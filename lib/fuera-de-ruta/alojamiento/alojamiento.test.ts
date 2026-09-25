@@ -22,7 +22,8 @@ const resumen = (...dias: ReturnType<typeof dia>[]): ResumenViaje =>
 // Matriz sintética simétrica (minutos → segundos).
 const mat = (m: Record<string, Record<string, number>>): MatrizViajes => {
   const ids = Object.keys(m);
-  return { ids, segundos: ids.map((i) => ids.map((j) => (m[i][j] ?? m[j][i] ?? 0) * 60)) };
+  const segundos = ids.map((i) => ids.map((j) => (m[i][j] ?? m[j][i] ?? 0) * 60));
+  return { ids, segundos, metros: segundos };
 };
 
 // Salto grande entre días → dos bases; la segunda anota lo que ahorra mudarse
@@ -48,7 +49,7 @@ assert.strictEqual(zonasAlojamiento(r4, ps4, M4, { max: 3 }).length, 3, "`max` e
 
 // La mudanza se decide por lo que ahorra, no por lo grande que sea el salto
 // Dos días con un salto enorme entre ellos (100), pero un solo hotel a 5 min de ambos:
-// mudarse no ahorraría nada, así que no se parte pese a superar de sobra el umbral viejo.
+// mudarse no ahorraría nada, así que no se parte aunque el salto supere SALTO_ZONA_MIN.
 const Mcerca = mat({ A: { B: 100, h: 5 }, B: { h: 5 }, h: {} });
 const psCerca = new Map([dest("A", ["p"]), dest("B", ["p"]), hotel("h")].map((d) => [d.slug, d]));
 z = zonasAlojamiento(resumen(dia(1, ["A"]), dia(2, ["B"])), psCerca, Mcerca);
@@ -66,7 +67,7 @@ assert.strictEqual(
   zonasAlojamiento(resumen(dia(1, ["A"]), dia(2, ["B"])), psLejos, Mlejos, { ahorroMin: 200 }).length, 1,
   "por debajo del listón la mudanza no se hace");
 
-// `cocheDiaMin`: lo que se conduce cada día desde la base, para que lo audite F4
+// `cocheDiaMin`: lo que se conduce cada día desde la base
 z = zonasAlojamiento(resumen(dia(1, ["A"]), dia(2, ["B"])), psCerca, Mcerca);
 assert.deepStrictEqual(z[0].cocheDiaMin, [10, 10], "ida + vuelta de cada día, paralelo a `dias`");
 

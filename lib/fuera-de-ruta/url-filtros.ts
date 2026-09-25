@@ -1,14 +1,5 @@
-// Filtros del explorador ↔ querystring, para que un explorador filtrado sea una URL
-// compartible. Puro, sin React. Test: `npx tsx lib/fuera-de-ruta/url-filtros.test.ts`.
-//
-// Forma: los categóricos (multi) repiten clave —`?tipo=cascada&tipo=ibon`—; los
-// umbrales y booleanos van una vez. Solo se escribe lo que filtra: sin filtros, la
-// query queda vacía y la URL limpia.
-//
-// El parseo es defensivo (la URL no es de fiar) pero NO invalida el conjunto entero
-// como hace `parsearEncargo`: aquí un valor raro se ignora y el resto de filtros
-// sigue en pie. Un filtro de menos enseña más sitios; un encargo a medias monta un
-// viaje falso.
+// Filtros del explorador ↔ querystring. Los multi repiten clave (`?tipo=a&tipo=b`).
+// Un valor inválido se ignora sin tumbar el resto: un filtro de menos solo enseña más sitios.
 import type { Desnivel, Filtros } from "./filtrar";
 
 const MULTI = ["zona", "tipo", "dificultad", "epoca", "agua"] as const;
@@ -41,7 +32,6 @@ export function queryAFiltros(p: URLSearchParams): Filtros {
   return f;
 }
 
-// Umbral válido = número finito y positivo; cualquier otra cosa, sin tope.
 function numero(raw: string | null): number | undefined {
   if (!raw) return undefined;
   const n = Number(raw);

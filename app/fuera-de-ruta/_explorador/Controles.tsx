@@ -1,20 +1,16 @@
 "use client";
 
-// Los controles de filtro del explorador, sin estado propio: el dropdown-chip de
-// escritorio, la opción multi-selección que comparten panel y hoja móvil, y los
-// interruptores y segmentados. Quién guarda los filtros es el Explorador.
+// Controles de filtro sin estado propio; los filtros los guarda el Explorador.
 
-// Dropdown-chip de la fila 1 (escritorio): chip (Lima con valor cuando filtra) +
-// panel flotante con opciones, "Limpiar <dimensión>" y "Listo". Cierra al clicar fuera.
 export function Desplegable({ etiqueta, valor, titulo, abierto, onToggle, onCerrar, onLimpiar, alinear, children }: {
   etiqueta: string;
-  valor?: string;            // resumen en el chip ("2", "‹ 5 km"); presente = activo
+  valor?: string;            // resumen en el chip; presente = activo
   titulo: string;
   abierto: boolean;
   onToggle: () => void;
   onCerrar: () => void;
   onLimpiar: () => void;
-  alinear?: "der";           // panel alineado a la derecha (chips junto al borde)
+  alinear?: "der";           // para los chips junto al borde derecho
   children: React.ReactNode;
 }) {
   return (
@@ -39,8 +35,7 @@ export function Desplegable({ etiqueta, valor, titulo, abierto, onToggle, onCerr
   );
 }
 
-// Opción multi-selección (panel escritorio y hoja móvil). Sin resultados (y sin
-// marcar) = deshabilitada con "· 0".
+// Sin resultados y sin marcar, deshabilitada con "· 0".
 export function Opcion({ texto, on, n, onClick }: { texto: string; on: boolean; n: number; onClick: () => void }) {
   const off = !on && n === 0;
   return (
@@ -54,7 +49,6 @@ export function Opcion({ texto, on, n, onClick }: { texto: string; on: boolean; 
   );
 }
 
-// Toggle de la fila 2 escritorio (track 38×22, knob Tinta; on = track Lima, knob a la derecha).
 export function Interruptor({ on, onClick, children }: { on: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button type="button" className="fr-s3-toggle" data-on={on} aria-pressed={on} onClick={onClick}>
@@ -64,7 +58,6 @@ export function Interruptor({ on, onClick, children }: { on: boolean; onClick: (
   );
 }
 
-// Grupo de la hoja de filtros: micro-etiqueta mono + contenido (chips o segmentado).
 export function Grupo({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="fr-m3-grupo">
@@ -74,7 +67,7 @@ export function Grupo({ label, children }: { label: string; children: React.Reac
   );
 }
 
-// Umbral como segmentado de valor único: cada opción alterna, "da igual" = sin filtro.
+// Umbral de valor único: "da igual" = sin filtro.
 export function Segmentado<T extends string | number>({ opciones, valor, onElegir }: {
   opciones: { v: T; etq: string }[];
   valor: T | undefined;
@@ -90,7 +83,6 @@ export function Segmentado<T extends string | number>({ opciones, valor, onElegi
   );
 }
 
-// Fila de extra en la hoja: etiqueta + toggle grande (44×26).
 export function ExtraSwitch({ label, on, onClick }: { label: string; on: boolean; onClick: () => void }) {
   return (
     <div className="fr-m3-extra">

@@ -1,25 +1,19 @@
-// Los viajes que el botón «Guardar» del panel «Mi viaje» deja en este navegador, y que
-// lee la pantalla `/fuera-de-ruta/guardados`. Solo se llama desde el cliente.
-//
-// Un viaje guardado es el **perfil** (las respuestas del cuestionario) + la **selección**
-// de actividades; no el plan calculado, que se vuelve a montar al abrir (la pantalla lo
-// dice). La provincia va aparte: la lista es de todas las provincias, y el perfil no la
-// lleva (viaja en la ruta). `id` y `guardadoEn` son para borrar y ordenar.
+// «Mis viajes» en localStorage. Se guarda perfil + selección, no el plan: al abrir se
+// vuelve a planificar. Solo cliente.
 import type { Respuestas } from "../cuestionario/preguntas";
 
 const CLAVE = "fr:guardados";
-const CLAVE_ABRIR = "fr:abrir"; // handoff «Mis viajes» → crear-viaje al reabrir un viaje
+const CLAVE_ABRIR = "fr:abrir"; // handoff «Mis viajes» → crear-viaje
 
 export type ViajeGuardado = {
   id: string;
   provincia: string;    // slug de URL ("navarra")
-  guardadoEn: string;   // ISO; ordena la lista
-  perfil: Respuestas;   // respuestas del cuestionario (bloques viajero + viaje)
-  seleccion: string[];  // slugs de las actividades añadidas al viaje
+  guardadoEn: string;   // ISO
+  perfil: Respuestas;
+  seleccion: string[];  // slugs
 };
 
-// Lo guardado con el modelo viejo (encargo del planificador) no tiene esta forma: la
-// validación lo descarta y el primer `guardarViaje` reescribe la lista ya limpia.
+// Lo que no tenga esta forma se descarta, y el siguiente guardado limpia la lista.
 const esGuardado = (v: unknown): v is ViajeGuardado => {
   const g = v as Partial<ViajeGuardado> | null;
   return !!g && typeof g === "object"
@@ -40,8 +34,7 @@ export function leerGuardados(): ViajeGuardado[] {
   }
 }
 
-// Guardar el mismo viaje (mismo perfil y misma selección) dos veces lo refresca, no lo
-// duplica. Compara por el par serializado; lo construye siempre el mismo código.
+// Guardar dos veces el mismo viaje lo refresca, no lo duplica.
 export function guardarViaje(provincia: string, perfil: Respuestas, seleccion: string[]): ViajeGuardado {
   const clave = huella(perfil, seleccion);
   const nuevo: ViajeGuardado = {
@@ -62,9 +55,8 @@ export function borrarGuardado(id: string): void {
   escribir(leerGuardados().filter((g) => g.id !== id));
 }
 
-// Reabrir un viaje: handoff por localStorage (no por URL)
-// «Mis viajes» es local; reabrir es una acción local, no un enlace compartible. Dejamos
-// el perfil + selección en una clave y crear-viaje los recoge (y borra) al montar.
+// Reabrir es local, no un enlace compartible: se deja el viaje en una clave que
+// crear-viaje recoge y borra al montar.
 export function marcarParaAbrir(v: ViajeGuardado): void {
   localStorage.setItem(CLAVE_ABRIR, JSON.stringify({ provincia: v.provincia, perfil: v.perfil, seleccion: v.seleccion }));
 }
@@ -82,10 +74,8 @@ export function tomarParaAbrir(provincia: string): { perfil: Respuestas; selecci
   }
 }
 
-// Huella estable de un viaje (perfil + selección ordenada) para deduplicar.
 const huella = (perfil: Respuestas, seleccion: string[]) =>
   JSON.stringify(perfil) + "|" + [...seleccion].sort().join(",");
 
-// Sin try/catch a propósito: si el navegador no deja escribir (cuota, modo privado),
-// quien llama necesita enterarse para decírselo al usuario.
+// Sin try/catch: el fallo al escribir lo gestiona quien llama.
 const escribir = (lista: ViajeGuardado[]) => localStorage.setItem(CLAVE, JSON.stringify(lista));

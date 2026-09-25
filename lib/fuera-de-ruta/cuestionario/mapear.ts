@@ -1,37 +1,31 @@
-// Traduce las Respuestas del cuestionario a lo que consumen el motor (Perfil) y el
-// planificador (Viaje). Los mapeos son tablas explícitas, no lógica lista-para-lucirse:
-// se leen de un vistazo y se ajustan sin miedo. Puro, con test al lado.
-import type { Acceso, Perfil } from "../motor/tipos";
-import type { Comida, Ritmo } from "../tipos";
+// Respuestas del cuestionario → Perfil del motor y Viaje del planificador, por tablas.
+import type { Perfil } from "../motor/tipos";
+import type { Acceso, Comida, Ritmo } from "../tipos";
 import { uno, varios, type Respuestas } from "./preguntas";
 
 export type Viaje = { dias: number; fecha: string; ritmo: Ritmo; comida: Comida };
 
-// Tablas de traducción (valor del cuestionario → dato del motor)
+// Una opción sin entrada en su tabla no filtra ni puntúa.
 const ACCESO: Record<string, Acceso> = {
   asfalto: "asfalto",
   "pista-buena": "pista buena",
   turismo: "pista",
-  // "sin-preferencia" no está: sin entrada = sin tope de acceso.
 };
 
-// Cada tipo de ruta abre una franja de dificultades (niveles de nivelesDificultad()).
 const DIFICULTAD: Record<string, string[]> = {
   paseos: ["fácil"],
   comodas: ["fácil", "media"],
   "varias-horas": ["media", "difícil"],
   exigentes: ["difícil"],
-  // "adapto" no acota nada.
 };
 
-// Prioridades (Cris) → dimensiones del destino. Una opción puede alimentar varias.
 const PRIORIDAD: Record<string, Partial<Pick<Perfil, "experiencias" | "paisajes" | "tipos">>> = {
   naturaleza: { experiencias: ["naturaleza"] },
   senderismo: { experiencias: ["senderismo"] },
   gastronomia: { experiencias: ["gastronomia"] },
   fotografia: { experiencias: ["fotografia"] },
   historia: { experiencias: ["historia"] },
-  fauna: { experiencias: ["naturaleza"] },   // sin vocab propio: lo más cercano
+  fauna: { experiencias: ["naturaleza"] },   // sin vocabulario propio
   cascadas: { paisajes: ["cascada"], tipos: ["cascada"] },
   ibones: { paisajes: ["embalse"] },
   bosques: { paisajes: ["bosque"] },
@@ -43,7 +37,6 @@ const RITMO: Record<string, Ritmo> = {
   bastante: "medio",
   tranquilo: "relajado",
   relax: "relajado",
-  // "ia" (que decida) → sin entrada → cae al medio por defecto en aViaje.
 };
 
 const COMIDA: Record<string, Comida> = {
@@ -53,7 +46,6 @@ const COMIDA: Record<string, Comida> = {
   marcha: "da-igual",
 };
 
-// Mes (0-11) → estación, para puntuar la época del destino desde la fecha del viaje.
 export function estacionDe(fecha: string): string | undefined {
   const mes = new Date(`${fecha}T00:00`).getMonth();
   if (Number.isNaN(mes)) return undefined;
@@ -63,16 +55,14 @@ export function estacionDe(fecha: string): string | undefined {
   return "invierno";
 }
 
-// Une los valores de varias dimensiones sin duplicados y en orden estable.
 const unir = (valores: string[]): string[] => [...new Set(valores)];
 
-// Respuestas → Perfil del motor. `zonas` viene del mapa (filtros de la URL), no del
-// cuestionario. Solo se rellena lo respondido: lo vacío no elimina ni puntúa.
+// `zonas` viene del mapa (filtros de la URL), no del cuestionario.
 export function aPerfil(r: Respuestas, zonas: string[] | undefined): Perfil {
   const perfil: Perfil = {};
   if (zonas?.length) perfil.zonas = zonas;
 
-  // Eliminación (solo incompatibilidad explícita)
+  // Fase 1
   if (uno(r, "carrito") === "imprescindible") perfil.carritoImprescindible = true;
   if (uno(r, "perro") === "si") perfil.conPerro = true;
   if (uno(r, "vertigo") === "evitar") perfil.conVertigo = true;
@@ -81,7 +71,7 @@ export function aPerfil(r: Respuestas, zonas: string[] | undefined): Perfil {
   const acceso = ACCESO[uno(r, "carreteras") ?? ""];
   if (acceso) perfil.accesoMax = acceso;
 
-  // Puntuación (nunca elimina, solo ordena)
+  // Fase 2
   const dificultades = unir(varios(r, "tiposRuta").flatMap((v) => DIFICULTAD[v] ?? []));
   if (dificultades.length) perfil.dificultades = dificultades;
 
@@ -106,8 +96,7 @@ export function aPerfil(r: Respuestas, zonas: string[] | undefined): Perfil {
   return perfil;
 }
 
-// Respuestas → Viaje (lo que necesita el planificador). Con valores por defecto
-// sensatos para lo no respondido: sin días, un fin de semana; sin ritmo, medio.
+// Lo no respondido: un fin de semana, desde hoy, a ritmo medio.
 export function aViaje(r: Respuestas): Viaje {
   const dias = Number(uno(r, "dias"));
   return {

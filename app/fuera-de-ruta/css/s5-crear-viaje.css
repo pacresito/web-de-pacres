@@ -105,7 +105,7 @@
   font: 500 12.5px/1.45 var(--fr-font-dm), sans-serif; color: var(--fr-tinta);
   background: var(--fr-rosa); border: 2px solid var(--fr-tinta); border-radius: 12px; padding: 9px 11px;
 }
-/* Auditoría del viaje: hallazgos ✅/⚠️/💡. Los ⚠️ reusan la caja de.fr-d-aviso; los ✅/💡, línea plana. */
+/* Auditoría: los ⚠️ reusan la caja de .fr-d-aviso; los ✅/💡 van en línea plana. */
 .fr-d-aud { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .fr-d-aud-linea { font: 500 12.5px/1.45 var(--fr-font-dm), sans-serif; color: var(--fr-tinta); }
 .fr-d-aud li { display: flex; gap: 7px; align-items: baseline; }

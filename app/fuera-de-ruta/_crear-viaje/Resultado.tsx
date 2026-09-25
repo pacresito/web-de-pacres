@@ -19,12 +19,8 @@ import PanelViaje from "./PanelViaje";
 import FichaDrawer from "./FichaDrawer";
 import Comparador from "./Comparador";
 
-// Listado + panel «Mi viaje»: el cuestionario alimenta al motor; sus
-// candidatas se pintan como tarjetas puntuadas (listado reducido por días) y el usuario las
-// añade a un panel que recalcula en vivo tiempo, km y reparto por días. El motor es
-// instantáneo: la pantalla de transición cuenta —con números reales— lo que de verdad hizo.
+// Las candidatas del motor como tarjetas, y el panel «Mi viaje» con lo elegido.
 
-// Tope de tarjetas según duración del viaje (nunca cientos).
 const topePorDias = (dias: number) => (dias <= 2 ? 20 : dias <= 5 ? 35 : 50);
 
 export default function Resultado({ datos, matriz, provincia, filtros, respuestas, seleccion, setSeleccion, onEditar }: {
@@ -38,17 +34,13 @@ export default function Resultado({ datos, matriz, provincia, filtros, respuesta
   onEditar: () => void;
 }) {
   const viaje = useMemo(() => aViaje(respuestas), [respuestas]);
-  const opts = useMemo(
-    () => ({ dias: viaje.dias, ritmo: viaje.ritmo, comida: viaje.comida, fecha: new Date(`${viaje.fecha}T00:00`) }),
-    [viaje],
-  );
+  const opts = useMemo(() => ({ ...viaje, fecha: new Date(`${viaje.fecha}T00:00`) }), [viaje]);
 
   const { candidatas, eliminadas } = useMemo(() => {
     const visitables = filtrarDestinos(datos.destinos, filtros).filter((d) => d.tipo !== "alojamiento");
     return recomendar(visitables, aPerfil(respuestas, filtros.zona));
   }, [datos.destinos, filtros, respuestas]);
 
-  // Listado reducido: las mejor puntuadas hasta el tope según los días.
   const listado = useMemo(() => candidatas.slice(0, topePorDias(viaje.dias)), [candidatas, viaje.dias]);
   const porSlug = useMemo(() => new Map(datos.destinos.map((d) => [d.slug, d])), [datos.destinos]);
   const zonaNombre = useMemo(
@@ -57,9 +49,8 @@ export default function Resultado({ datos, matriz, provincia, filtros, respuesta
 
   const [listo, setListo] = useState(false);
   const [verItinerario, setVerItinerario] = useState(false);
-  const [comparando, setComparando] = useState(false); // modal comparador abierto
-  const [fichaAbierta, setFichaAbierta] = useState<string | null>(null); // slug del destino en el drawer
-  // Hora de salida por día, configurable; sin valor, el generador usa la del ritmo.
+  const [comparando, setComparando] = useState(false);
+  const [fichaAbierta, setFichaAbierta] = useState<string | null>(null); // slug
   const [horaSalida, setHoraSalida] = useState<Record<number, number>>({});
 
   const alternar = (slug: string) =>
@@ -69,32 +60,23 @@ export default function Resultado({ datos, matriz, provincia, filtros, respuesta
       return n;
     });
 
-  // «Prefiero que la IA decida»: vuelca al panel un conjunto equilibrado, editable.
-  const queDecidaLaIA = () =>
+  const queElijaCris = () =>
     setSeleccion(new Set(elegirEquilibrado(listado.map((c) => c.destino), matriz, opts)));
 
   const destinosSel = useMemo(
-    () => [...seleccion].map((s) => porSlug.get(s)!).filter(Boolean),
+    () => [...seleccion].flatMap((s) => porSlug.get(s) ?? []),
     [seleccion, porSlug],
   );
   const resumen = useMemo(() => resumenMiViaje(destinosSel, matriz, opts), [destinosSel, matriz, opts]);
-  // Zonas de alojamiento: dónde dormir, sobre el reparto en días.
   const zonasViaje = useMemo(() => zonasAlojamiento(resumen, porSlug, matriz), [resumen, porSlug, matriz]);
-  // Auditoría: revisión viva del viaje sobre el reparto ya calculado.
   const auditoria = useMemo(() => auditar(resumen, destinosSel, zonasViaje), [resumen, destinosSel, zonasViaje]);
-  // Comparador: compara las actividades ya en «Mi viaje».
   const comparativa = useMemo(() => comparar(destinosSel), [destinosSel]);
-  // Oportunidades: compatibles no elegidas que pasan cerca de la ruta y
-  // aportan algo distinto. Sugerencia, nunca cambio automático del plan.
   const oportunidadesViaje = useMemo(
     () => oportunidades(destinosSel, candidatas.map((c) => c.destino), matriz),
     [destinosSel, candidatas, matriz],
   );
 
-  // Itinerario cronológico: sobre el mismo reparto del panel, para no contradecirlo.
-  // Perezoso: solo se calcula al abrirlo, no en cada añadido de la selección (el panel ya
-  // recalcula su reparto en vivo; generar el itinerario cronológico entero cada vez era
-  // trabajo tirado y en móvil, con muchos destinos, podía tumbar el render).
+  // Solo al abrirlo: generarlo en cada cambio de la selección puede tumbar el render en móvil.
   const itinerario = useMemo(
     () => (verItinerario ? generarItinerario(resumen.dias, datos, matriz, { ...opts, horaSalida }, zonasViaje) : null),
     [verItinerario, resumen.dias, datos, matriz, opts, horaSalida, zonasViaje],
@@ -160,7 +142,7 @@ export default function Resultado({ datos, matriz, provincia, filtros, respuesta
           seleccion={seleccion}
           onQuitar={alternar}
           onAnadir={alternar}
-          onQueDecidaLaIA={queDecidaLaIA}
+          onQueElijaCris={queElijaCris}
           onVerItinerario={() => setVerItinerario(true)}
           onComparar={() => setComparando(true)}
         />
@@ -189,8 +171,7 @@ export default function Resultado({ datos, matriz, provincia, filtros, respuesta
   );
 }
 
-// Pantalla de transición: honesta —el motor ya corrió— con los números reales
-// del análisis. Los pasos aparecen encadenados y al terminar revela el listado.
+// El motor ya corrió: la transición cuenta sus números reales.
 function Transicion({ candidatas, eliminadas, onListo }: {
   candidatas: number;
   eliminadas: number;
@@ -227,11 +208,7 @@ function Transicion({ candidatas, eliminadas, onListo }: {
   );
 }
 
-// Tarjeta de actividad: foto, nombre, tipo, duración, dificultad, iconos que
-// distinguen (baño, y los "no" de niños/perros), «Ver más» y «Añadir a mi viaje».
-// «Ver más» abre un drawer superpuesto en vez de navegar: preserva la selección en curso
-// (que vive en estado de React y se perdería al salir de la página) y no confunde con una
-// pestaña nueva en móvil.
+// «Ver más» abre un drawer en vez de navegar: la selección vive en el estado y se perdería.
 function TarjetaActividad({ destino: d, zona, elegida, onAlternar, onVerMas }: {
   destino: Destino;
   zona: string;

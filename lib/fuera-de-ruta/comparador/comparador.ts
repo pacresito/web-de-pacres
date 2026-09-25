@@ -1,10 +1,7 @@
-// Comparador Inteligente: ayuda a elegir entre 2+ actividades similares
-// enseñando sus campos lado a lado. NUNCA dice «esta es mejor» —esa es la regla del
-// briefing—: las frases son condicionales por plantilla («si buscas X, esta encaja
-// mejor»), y la restricción vive en la plantilla por construcción, no en un juicio que
-// se pueda colar. Puro; los datos son los del catálogo de destinos. Test al lado.
+// Comparador: campos lado a lado y frases condicionales («si buscas X, esta encaja
+// mejor»). Nunca dice «esta es mejor»: la regla vive en las plantillas.
 import type { Destino } from "../tipos";
-import { rango } from "../formato";
+import { enumerar, rango } from "../formato";
 import { nivelesDificultad } from "../filtrar";
 
 export type Fila = { etiqueta: string; valores: (string | null)[] };
@@ -12,8 +9,7 @@ export type Comparativa = { nombres: string[]; filas: Fila[]; frases: string[] }
 
 const boolTxt = (b?: boolean): string | null => (b === true ? "Sí" : b === false ? "No" : null);
 
-// Una fila por campo El valor de cada destino se formatea o queda null si no
-// consta (dato ausente = "no consta", nunca "no"); una fila que nadie tiene no se pinta.
+// null = no consta. La fila que nadie tiene no se pinta.
 const CAMPOS: { etiqueta: string; valor: (d: Destino) => string | null }[] = [
   { etiqueta: "Distancia", valor: (d) => (d.distanciaKm ? rango(d.distanciaKm, "km") : null) },
   { etiqueta: "Duración", valor: (d) => d.duracion ?? (d.duracionHoras ? rango(d.duracionHoras, "h") : null) },
@@ -31,8 +27,7 @@ const CAMPOS: { etiqueta: string; valor: (d: Destino) => string | null }[] = [
 ];
 
 const NIVEL: Record<string, number> = { "fácil": 1, media: 2, "difícil": 3 };
-// Ordinal de dificultad para comparar: el nivel más alto que el texto abarca ("fácil
-// media" → media). Null si no consta.
+// El nivel más alto que abarca el texto: "fácil media" → media.
 const dificultadOrd = (d: Destino): number | null => {
   const n = nivelesDificultad(d.dificultad).map((x) => NIVEL[x]);
   return n.length ? Math.max(...n) : null;
@@ -40,9 +35,7 @@ const dificultadOrd = (d: Destino): number | null => {
 const duracionMed = (d: Destino): number | null =>
   d.duracionHoras ? (d.duracionHoras[0] + d.duracionHoras[1]) / 2 : null;
 
-// Reglas numéricas: si hay diferencia real (min ≠ max entre los que traen el dato), una
-// frase apunta al extremo bajo («menos») y otra al alto («más»). Ambas condicionales:
-// nombran a quién encaja según una preferencia, nunca decretan un ganador.
+// Si hay diferencia real, una frase para cada extremo.
 const REGLAS_NUM: {
   valor: (d: Destino) => number | null;
   menos: (n: string) => string;
@@ -60,17 +53,13 @@ const REGLAS_NUM: {
   },
 ];
 
-// Reglas booleanas: solo discriminan cuando alguno cumple y otro NO lo cumple de forma
-// explícita (los "no consta" no cuentan, no inventamos). La frase nombra al/los que sí.
+// Solo discriminan si alguno cumple y otro NO de forma explícita; "no consta" no cuenta.
 const REGLAS_BOOL: { valor: (d: Destino) => boolean | undefined; frase: (n: string) => string }[] = [
   { valor: (d) => d.bano, frase: (n) => `Si te apetece poder bañarte, ${n} lo permite.` },
   { valor: (d) => d.ninos, frase: (n) => `Si viajáis con niños, ${n} es la apta.` },
   { valor: (d) => d.carrito, frase: (n) => `Si vais con carrito, ${n} es apta.` },
   { valor: (d) => d.perros, frase: (n) => `Si viajáis con perro, ${n} lo permite.` },
 ];
-
-const juntar = (nombres: string[]): string =>
-  nombres.length <= 1 ? nombres[0] ?? "" : `${nombres.slice(0, -1).join(", ")} y ${nombres.at(-1)}`;
 
 export function comparar(destinos: Destino[]): Comparativa {
   const nombres = destinos.map((d) => d.nombre);
@@ -93,7 +82,7 @@ export function comparar(destinos: Destino[]): Comparativa {
     const vals = destinos.map(r.valor);
     const aptos = destinos.filter((_, i) => vals[i] === true).map((d) => d.nombre);
     const algunoNo = vals.some((v) => v === false);
-    if (aptos.length && algunoNo) frases.push(r.frase(juntar(aptos)));
+    if (aptos.length && algunoNo) frases.push(r.frase(enumerar(aptos)));
   }
 
   return { nombres, filas, frases };

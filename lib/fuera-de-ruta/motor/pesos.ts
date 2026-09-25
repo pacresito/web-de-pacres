@@ -1,6 +1,4 @@
-// Pesos del motor de puntuación (Fase B, briefing §4). Objeto de configuración: se
-// ajusta aquí para re-ponderar el ORDEN del listado sin tocar la lógica del motor —y
-// nunca cambia qué destinos aparecen, eso lo decide solo la fase de eliminación.
+// Pesos de la fase 2: cambian el ORDEN del listado, nunca qué destinos aparecen.
 export type Pesos = {
   paisaje: number;         // por cada paisaje del destino que el usuario quiere
   experiencia: number;     // por cada experiencia que coincide
@@ -19,6 +17,6 @@ export const PESOS: Pesos = {
   dificultad: 2,
   epoca: 1,
   bano: 2,
-  imprescindible: 20,  // domina: lo que el usuario marca a mano manda sobre las afinidades
+  imprescindible: 20,  // domina sobre cualquier suma de afinidades
   favoritoDeCris: 1,
 };

@@ -4,8 +4,6 @@ import Link from "next/link";
 import { useState } from "react";
 import { useEscape } from "./useEscape";
 
-// Cabecera común a todas las pantallas de Fuera de Ruta: wordmark "Fuera de Ruta"
-// (el "de" en píldora Lima rotada), tagline mono y "¿Qué es esto?" → modal.
 export default function Cabecera() {
   const [abierto, setAbierto] = useState(false);
 

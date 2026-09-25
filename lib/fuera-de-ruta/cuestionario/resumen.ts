@@ -1,6 +1,5 @@
-// "Así es el viaje que vamos a preparar…": frases legibles del perfil detectado, para
-// el cierre editable del cuestionario (spec cap. 3). Solo frasea lo respondido; lo que
-// se omite no aparece. Puro: devuelve las líneas, las pinta la UI.
+// Frases del resumen editable del cuestionario. Solo frasea lo respondido.
+import { enumerar } from "../formato";
 import { etiqueta, uno, varios, type Respuestas } from "./preguntas";
 
 const GRUPO: Record<string, string> = {
@@ -35,8 +34,7 @@ const AGUA: Record<string, string> = {
   no: "",
 };
 
-// Frase propia para los días: la etiqueta del chip es compacta ("3", "6-7") y quedaría
-// coja en prosa ("El viaje dura 3.").
+// Frase propia: la etiqueta del chip ("3", "6-7") no se sostiene en prosa.
 const DIAS: Record<string, string> = {
   "1": "Es una excursión de un día.",
   "2": "El viaje dura 2 días.",
@@ -53,10 +51,6 @@ const COMIDA: Record<string, string> = {
   restaurante: "Comeréis en restaurante.",
   marcha: "",
 };
-
-// Une una lista en lenguaje natural: "a, b y c".
-const enumerar = (v: string[]) =>
-  v.length <= 1 ? v.join("") : `${v.slice(0, -1).join(", ")} y ${v[v.length - 1]}`;
 
 export function resumen(r: Respuestas): string[] {
   const lineas: string[] = [];

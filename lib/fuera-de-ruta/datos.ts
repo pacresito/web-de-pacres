@@ -1,7 +1,5 @@
-// Datos por provincia, indexados por su slug de URL. Punto único donde se carga un
-// JSON de destinos: para dar datos a una provincia del mapa basta añadir su línea
-// aquí (y su matriz), sin tocar las páginas. Una provincia del mapa sin entrada es
-// escaparate: mismas pantallas, sin sitios.
+// Datos y matriz de cada provincia, por slug de URL. Dar datos a una provincia es añadir
+// aquí sus dos líneas; sin ellas es escaparate: mismas pantallas, sin sitios.
 import type { DatosViajes } from "./tipos";
 import type { MatrizViajes } from "./geo";
 import navarra from "@/data/fuera-de-ruta/navarra.json";
@@ -18,5 +16,4 @@ const MATRICES: Record<string, MatrizViajes> = {
 export const datosDe = (slug: string): DatosViajes | undefined => DATOS[slug];
 export const matrizDe = (slug: string): MatrizViajes | undefined => MATRICES[slug];
 
-// Provincias con destinos cargados (las demás son escaparate).
 export const PROVINCIAS_CON_DATOS = Object.keys(DATOS);

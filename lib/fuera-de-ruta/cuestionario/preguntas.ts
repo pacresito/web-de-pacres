@@ -1,8 +1,5 @@
-// Config del cuestionario "Crear mi viaje". Solo las preguntas que el motor
-// puntúa hoy: cada respuesta cambia el
-// resultado. Dos bloques —el viajero (reutilizable, va a localStorage) y el viaje
-// concreto (va a la URL)—. Ninguna pregunta es obligatoria; las condicionales
-// (`visible`) aparecen solo cuando tienen sentido. Sin React: es dato, lo pinta la UI.
+// Preguntas de «Crear mi viaje», en dos bloques: el viajero (reutilizable, va a
+// localStorage) y el viaje (va a la URL). Solo entran preguntas que cambian el resultado.
 
 export type Campo =
   | "grupo" | "ninos" | "edades" | "carrito" | "perro" | "vertigo" | "carreteras"
@@ -17,17 +14,16 @@ export type Opcion = { valor: string; etiqueta: string };
 export type Pregunta = {
   campo: Campo;
   titulo: string;
-  ayuda?: string;                        // el 💡 de Cris, cuando aporta
-  multi?: boolean;                       // default false (respuesta única)
+  ayuda?: string;
+  multi?: boolean;
   max?: number;                          // tope de la multi-selección
-  control?: "fecha";                     // default: chips de opciones
-  opciones?: Opcion[];                   // no aplica al control "fecha"
-  visible?: (r: Respuestas) => boolean;  // condicional; ausente = siempre visible
+  control?: "fecha";                     // sin él, chips de opciones
+  opciones?: Opcion[];
+  visible?: (r: Respuestas) => boolean;  // ausente = siempre visible
 };
 
 export type Bloque = { id: "viajero" | "viaje"; titulo: string; intro: string; preguntas: Pregunta[] };
 
-// Helpers de lectura tipada (la UI y el mapeo no tocan r[campo] a pelo)
 export const uno = (r: Respuestas, c: Campo): string | undefined =>
   typeof r[c] === "string" ? (r[c] as string) : undefined;
 export const varios = (r: Respuestas, c: Campo): string[] =>
@@ -241,17 +237,15 @@ export const BLOQUES: Bloque[] = [
   },
 ];
 
-// Campos de cada bloque (para el reparto localStorage ↔ URL). Derivado de la config:
-// no hay una segunda lista que mantener.
-export const camposDe = (id: Bloque["id"]): Campo[] =>
-  BLOQUES.find((b) => b.id === id)!.preguntas.map((p) => p.campo);
+export const bloque = (id: Bloque["id"]): Bloque => BLOQUES.find((b) => b.id === id)!;
 
-// Valores válidos de un campo de opciones (para validar lo que llega por la URL).
-export const opcionesDe = (campo: Campo): string[] =>
-  BLOQUES.flatMap((b) => b.preguntas)
-    .find((p) => p.campo === campo)?.opciones?.map((o) => o.valor) ?? [];
+export const camposDe = (id: Bloque["id"]): Campo[] => bloque(id).preguntas.map((p) => p.campo);
 
-// Etiqueta legible de un valor (para el resumen). El valor crudo si no se encuentra.
+const pregunta = (campo: Campo) => BLOQUES.flatMap((b) => b.preguntas).find((p) => p.campo === campo);
+
+export const esMulti = (campo: Campo): boolean => !!pregunta(campo)?.multi;
+
+export const opcionesDe = (campo: Campo): string[] => pregunta(campo)?.opciones?.map((o) => o.valor) ?? [];
+
 export const etiqueta = (campo: Campo, valor: string): string =>
-  BLOQUES.flatMap((b) => b.preguntas)
-    .find((p) => p.campo === campo)?.opciones?.find((o) => o.valor === valor)?.etiqueta ?? valor;
+  pregunta(campo)?.opciones?.find((o) => o.valor === valor)?.etiqueta ?? valor;

@@ -5,18 +5,15 @@ import Image from "next/image";
 import type { ReactNode } from "react";
 import { lineaCredito, type Credito } from "@/lib/fuera-de-ruta/creditos";
 
-// Portada de la ficha: la foto grande y el título. Es cliente (y no la ficha entera)
-// solo por el estado de qué foto se está mirando: al pulsar una miniatura pasa a
-// grande. La foto grande son dos elementos excluyentes por media query — el hero
-// full-bleed en móvil y `galeria-principal` en escritorio —, así que ambos leen
-// `activa`. La cabecera móvil va aquí dentro porque en móvil se pinta entre el hero
-// y las miniaturas, y sacarla la dejaría debajo de la tira.
+// Fotos y título de la ficha; es cliente solo por la foto activa. La foto grande son dos
+// elementos excluyentes por media query (hero en móvil, galería en escritorio). La
+// cabecera móvil vive aquí porque se pinta entre el hero y las miniaturas.
 type Props = {
   fotos: string[];
-  creditos: (Credito | undefined)[]; // en paralelo a `fotos`; hueco = foto de Cris
+  creditos: (Credito | undefined)[]; // paralelo a `fotos`
   nombre: string;
   queEs: string;
-  overlay: ReactNode; // «‹» y badges que solapan el hero en móvil
+  overlay: ReactNode; // lo que solapa el hero en móvil
 };
 
 export default function Portada({ fotos, creditos, nombre, queEs, overlay }: Props) {
@@ -25,8 +22,6 @@ export default function Portada({ fotos, creditos, nombre, queEs, overlay }: Pro
   const credito = creditos[activa];
   const sinFoto = <div className="fr-s4-hero-fallback"><span>foto en camino</span></div>;
 
-  // El crédito acompaña a la foto que se está mirando, así que va bajo cada una de las
-  // dos grandes — y son excluyentes por media query, igual que ellas.
   const pieDeFoto = (clase: string) =>
     credito && (
       <p className={`fr-s4-credito ${clase}`}>
@@ -39,8 +34,7 @@ export default function Portada({ fotos, creditos, nombre, queEs, overlay }: Pro
 
   return (
     <>
-      {/* El «‹» y los badges van fuera de `hero-img`: su `overflow: hidden` recortaba
-          por la mitad los badges, que asoman por debajo del borde de la foto. */}
+      {/* El overlay va fuera de `hero-img`, cuyo overflow recortaría los badges. */}
       <div className="fr-s4-hero--movil">
         <div className="fr-s4-hero-img">
           {foto ? <Image src={foto} alt={nombre} fill sizes="100vw" priority /> : sinFoto}

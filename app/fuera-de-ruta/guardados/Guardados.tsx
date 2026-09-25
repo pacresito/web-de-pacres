@@ -8,10 +8,6 @@ import { aViaje } from "@/lib/fuera-de-ruta/cuestionario/mapear";
 import { resumen as resumenPerfil } from "@/lib/fuera-de-ruta/cuestionario/resumen";
 import { borrarGuardado, leerGuardados, marcarParaAbrir, type ViajeGuardado } from "@/lib/fuera-de-ruta/viaje/guardados";
 
-// «Mis viajes»: lo que dejó el botón Guardar del panel «Mi viaje», en este navegador.
-// Lo monta GuardadosCliente sin SSR, así que la lista se lee ya en el primer render.
-// Guardamos el perfil + la selección, no el plan: al abrir uno se vuelve a montar.
-
 const guardadoFmt = new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "short" });
 
 export default function Guardados() {
@@ -49,6 +45,7 @@ export default function Guardados() {
 function Tarjeta({ viaje, onBorrar }: { viaje: ViajeGuardado; onBorrar: () => void }) {
   const router = useRouter();
   const { provincia, perfil, seleccion } = viaje;
+  const nombre = provinciaDeSlug(provincia) ?? provincia;
   const viajeDatos = aViaje(perfil);
   const lineas = resumenPerfil(perfil).slice(0, 3);
 
@@ -60,7 +57,7 @@ function Tarjeta({ viaje, onBorrar }: { viaje: ViajeGuardado; onBorrar: () => vo
   return (
     <li className="fr-tarjeta fr-guardados-item">
       <div className="fr-guardados-item-head">
-        <span className="fr-guardados-provincia">{provinciaDeSlug(provincia) ?? provincia}</span>
+        <span className="fr-guardados-provincia">{nombre}</span>
         <span className="fr-guardados-propuesta">{seleccion.length} {seleccion.length === 1 ? "sitio" : "sitios"}</span>
         <button type="button" className="fr-btn--terciario fr-guardados-borrar" onClick={onBorrar}>
           Borrar
@@ -68,7 +65,7 @@ function Tarjeta({ viaje, onBorrar }: { viaje: ViajeGuardado; onBorrar: () => vo
       </div>
 
       <h2 className="fr-guardados-item-titulo">
-        {viajeDatos.dias} {viajeDatos.dias === 1 ? "día" : "días"} por {provinciaDeSlug(provincia) ?? provincia}
+        {viajeDatos.dias} {viajeDatos.dias === 1 ? "día" : "días"} por {nombre}
       </h2>
 
       {lineas.length > 0 && <p className="fr-guardados-item-resumen">{lineas.join(" ")}</p>}

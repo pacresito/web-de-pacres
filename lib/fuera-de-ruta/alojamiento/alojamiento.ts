@@ -1,43 +1,30 @@
-// Zonas de alojamiento: sobre el viaje ya repartido en días, propone
-// DÓNDE dormir —localidades base, nunca un establecimiento ni Booking—. El reparto por
-// días de `mi-viaje` ya es un clustering geográfico (cadena por cercanía); aquí se agrupan
-// días consecutivos en una misma base y se corta donde mudarse ahorra más coche del que
-// cuesta la mudanza. La localidad sale de `pueblosAlojamiento` —dato ya curado y ordenado
-// por cercanía—, nunca de un GPS inventado. Puro. Test al lado.
+// Dónde dormir: agrupa días consecutivos en una base y corta donde mudarse ahorra más
+// coche del que cuesta. Propone localidades (de `pueblosAlojamiento`), nunca un hotel.
 import type { Destino } from "../tipos";
 import type { ResumenViaje } from "../viaje/mi-viaje";
 import { tiempoCoche, seg2min, SALTO_ZONA_MIN, type MatrizViajes } from "../geo";
 
-// Una base de alojamiento: la localidad, los días que cubre, las paradas que quedan a mano
-// (para el porqué) y —si mudarse aquí desde la zona anterior evita un trayecto largo— los
-// minutos de coche que ahorra. `pueblo` es siempre una localidad, jamás un hotel: es lo
-// que se le enseña al usuario. El `ancla` es lo contrario: un alojamiento real con GPS que
-// el itinerario usa para rutar (salir por la mañana, volver por la noche), nunca una
-// recomendación. Falta cuando el tramo no tiene ningún alojamiento rutable cerca, y con
-// ella falta `cocheDiaMin`, que es lo que se conduce desde esa base cada día.
+// `pueblo` es lo que ve el usuario. `ancla` es un alojamiento real con GPS con el que el
+// itinerario ruta, nunca una recomendación; falta si el tramo no tiene ninguno rutable.
 export type ZonaAlojamiento = {
   pueblo: string;
   dias: number[];
   paradas: string[];
-  ahorroMin?: number;
+  ahorroMin?: number;               // coche que ahorra mudarse aquí desde la base anterior
   ancla?: { slug: string; nombre: string };
-  cocheDiaMin?: (number | null)[];  // ida + vuelta a la base, paralelo a `dias` (null: día sin paradas rutables)
+  cocheDiaMin?: (number | null)[];  // ida + vuelta a la base, paralelo a `dias`
 };
 
 export type OpcionesAlojamiento = {
-  ahorroMin?: number;  // coche que debe ahorrar una mudanza para que compense hacerla
-  max?: number;        // red de seguridad opcional: nunca más de N bases
-  saltoMin?: number;   // salto de coche que justifica mudarse, solo sin alojamientos que medir
+  ahorroMin?: number;  // coche que debe ahorrar una mudanza para compensar
+  max?: number;        // tope de bases
+  saltoMin?: number;   // salto que justifica mudarse, cuando no hay alojamientos que medir
 };
 
-// Lo que cuesta mudarse, en minutos: deshacer y rehacer maletas, check-out y check-in, no
-// poder dejar nada tirado. Una base más solo se añade si ahorra más coche que esto. Es el
-// número que sustituye al viejo tope de 3 bases: el tope cortaba justo antes de la mudanza
-// más rentable en viajes que cruzan la provincia, y no cortaba nada en los cortos.
+// Lo que cuesta mudarse (maletas, check-out, check-in). Una base más solo entra si ahorra
+// más coche que esto.
 const AHORRO_MUDANZA_MIN = 90;
 
-// Viaje repartido en días → zonas de alojamiento. Vacío si no hay nada rutable que dormir
-// cerca. Se corta donde mudarse compensa; con `max`, nunca más de esas zonas.
 export function zonasAlojamiento(
   resumen: ResumenViaje,
   porSlug: Map<string, Destino>,
@@ -48,14 +35,11 @@ export function zonasAlojamiento(
   const anclas = [...porSlug.values()].filter((d) => d.tipo === "alojamiento" && d.gps && matriz.ids.includes(d.slug));
   if (dias.every((d) => rutables(d, matriz).length === 0)) return [];
 
-  // Con alojamientos que medir se corta por lo que ahorra la mudanza; sin ellos no hay
-  // coche base↔día que calcular, así que queda el salto entre días como única señal.
+  // Sin alojamientos no hay coche base↔día que medir: solo queda el salto entre días.
   const cortes = anclas.length > 0
     ? cortesPorAhorro(dias, anclas, matriz, opts)
     : cortesPorSalto(dias, matriz, opts);
 
-  // Recorre los días agrupándolos en tramos; un corte cierra el tramo y abre el siguiente,
-  // que arranca anotando lo que ahorra mudarse.
   const zonas: ZonaAlojamiento[] = [];
   let tramo: DiaViajeMin[] = [];
   let ahorro: number | undefined;
@@ -75,10 +59,8 @@ type DiaViajeMin = ResumenViaje["dias"][number];
 
 const rutables = (dia: DiaViajeMin, matriz: MatrizViajes) => dia.slugs.filter((s) => matriz.ids.includes(s));
 
-// Cortes por rentabilidad: se arranca con una sola base y se añade la mudanza que más
-// coche ahorra, mientras ahorre más de lo que cuesta mudarse. Se para sola —cuando ninguna
-// compensa— y por eso no necesita tope; `max` queda solo de red de seguridad. Devuelve
-// frontera (índice del día tras el que se corta) → minutos que ahorra esa mudanza.
+// Añade la mudanza que más coche ahorra mientras compense. Devuelve índice del día tras
+// el que se corta → minutos que ahorra.
 function cortesPorAhorro(
   dias: DiaViajeMin[], anclas: Destino[], matriz: MatrizViajes, opts: OpcionesAlojamiento,
 ): Map<number, number> {
@@ -103,9 +85,7 @@ function cortesPorAhorro(
   return elegidos;
 }
 
-// Cortes sin alojamientos que medir: los saltos de coche entre días que superan el umbral,
-// los mayores primero si hay tope. Es la regla vieja, y aquí sigue por ser la única que no
-// necesita una base real con la que medir.
+// Los saltos de coche entre días que superan el umbral, los mayores primero si hay tope.
 function cortesPorSalto(
   dias: DiaViajeMin[], matriz: MatrizViajes, opts: OpcionesAlojamiento,
 ): Map<number, number> {
@@ -132,10 +112,8 @@ function trocear(dias: DiaViajeMin[], cortes: number[]): DiaViajeMin[][] {
   return tramos;
 }
 
-// Lo que de verdad se conduce durmiendo en un tramo: ida a la primera parada de cada día y
-// vuelta desde la última. Gana el alojamiento rutable que menos sume —se elige por las
-// paradas, no por el pueblo: el pueblo no tiene GPS y los alojamientos de los datos no
-// cubren todos—. `undefined` si no hay alojamientos o el tramo no tiene nada rutable.
+// Coche de dormir en el tramo (ida a la primera parada y vuelta desde la última) con el
+// alojamiento rutable que menos sume. Se elige por las paradas: el pueblo no tiene GPS.
 function costeBase(tramo: DiaViajeMin[], anclas: Destino[], matriz: MatrizViajes) {
   const paradas = tramo.map((d) => rutables(d, matriz));
   if (anclas.length === 0 || paradas.every((p) => p.length === 0)) return undefined;
@@ -165,9 +143,8 @@ function cerrarTramo(
   };
 }
 
-// Localidad base del tramo: la más votada en los `pueblosAlojamiento` de sus destinos, con
-// peso por posición (el primero de cada lista es el más cercano, así que pesa más). Sin
-// ningún pueblo en los datos, cae a la zona de la provincia —nunca queda sin nombre—.
+// La localidad más votada en los `pueblosAlojamiento` del tramo; el primero de cada lista
+// es el más cercano y pesa más. Sin ninguno, la zona.
 function puebloBase(destinos: Destino[]): string {
   const votos = new Map<string, number>();
   for (const d of destinos) {

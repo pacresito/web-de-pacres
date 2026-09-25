@@ -3,17 +3,15 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Destino, Restaurante } from "@/lib/fuera-de-ruta/tipos";
-import { duracion, mapsHref, rango } from "@/lib/fuera-de-ruta/formato";
-import { tiempoCoche } from "@/lib/fuera-de-ruta/geo";
+import { desnivel, duracion, mapsHref, rango } from "@/lib/fuera-de-ruta/formato";
+import { seg2min, tiempoCoche } from "@/lib/fuera-de-ruta/geo";
 import { datosDe, matrizDe, PROVINCIAS_CON_DATOS } from "@/lib/fuera-de-ruta/datos";
 import { creditoDe } from "@/lib/fuera-de-ruta/creditos";
 import Portada from "./Portada";
 
-// Ficha de destino (Server Component): URL propia y compartible, colgando de su
-// provincia. Todas las rutas salen del JSON en build; un slug desconocido da 404.
-// Río pop: toda sección sin dato no se renderiza, sin huecos.
+// Ficha de destino, generada en build desde el JSON. Una sección sin dato no se pinta.
 
-// Restaurantes: uno por categoría, en este orden, máx. 3 (spec de Cris).
+// Un restaurante por categoría, en este orden.
 const CATEGORIAS = ["economico", "calidad-precio", "especial"] as const;
 const ETIQUETA_CAT: Record<string, string> = {
   economico: "Económico",
@@ -21,7 +19,6 @@ const ETIQUETA_CAT: Record<string, string> = {
   especial: "Especial",
 };
 
-// Etiquetas de cara al usuario de los valores estructurados.
 const RECORRIDO_TEXTO: Record<string, string> = {
   circular: "circular",
   "ida-vuelta": "ida y vuelta",
@@ -33,7 +30,6 @@ const ACCESO_TEXTO: Record<string, string> = {
   pista: "pista sin asfaltar",
 };
 
-// El rango estancia mínima–ideal se muestra como una sola fila.
 function estancia(min?: number, ideal?: number): string | undefined {
   if (min === undefined && ideal === undefined) return undefined;
   if (min !== undefined && ideal !== undefined && min !== ideal)
@@ -70,25 +66,21 @@ export default async function FichaDestino({ params }: Props) {
     .map((cat) => datos.restaurantes.find((r) => r.zona === d.zona && r.categoria === cat))
     .filter((r): r is Restaurante => r !== undefined);
 
-  // Destinos cercanos: resolver slugs a fichas reales (descartar rotos y el propio)
-  // y adjuntar el tiempo de coche desde la matriz cuando ambos están en ella.
   const cercanos = (d.cerca ?? [])
     .map((slug) => datos.destinos.find((x) => x.slug === slug))
     .filter((x): x is Destino => x !== undefined && x.slug !== d.slug)
     .map((c) => {
       const enMatriz = matriz.ids.includes(d.slug) && matriz.ids.includes(c.slug);
-      const minutos = enMatriz ? Math.round(tiempoCoche(matriz, d.slug, c.slug) / 60) : undefined;
+      const minutos = enMatriz ? seg2min(tiempoCoche(matriz, d.slug, c.slug)) : undefined;
       return { destino: c, minutos };
     });
 
-  const galeria = d.imagenes ?? (d.imagen ? [d.imagen] : []); // sin foto → fallback "foto en camino"
+  const galeria = d.imagenes ?? (d.imagen ? [d.imagen] : []);
 
-  // Ficha técnica (nivel 2): toda fila sin dato se omite, así una ficha con pocos
-  // campos no deja huecos y una completa los pinta todos.
   const siNo = (v: boolean) => (v ? "sí" : "no");
   const filasTexto: [string, string][] = [];
   if (d.distanciaKm) filasTexto.push(["A pie", rango(d.distanciaKm, "km")]);
-  if (d.desnivelM) filasTexto.push(["Desnivel", d.desnivelM[1] === 0 ? "llano" : `+${rango(d.desnivelM, "m")}`]);
+  if (d.desnivelM) filasTexto.push(["Desnivel", desnivel(d.desnivelM)]);
   if (d.duracion) filasTexto.push(["Duración", d.duracion]);
   if (d.dificultad) filasTexto.push(["Dificultad", d.dificultad]);
   if (d.recorrido) filasTexto.push(["Recorrido", RECORRIDO_TEXTO[d.recorrido] ?? d.recorrido]);
@@ -112,7 +104,7 @@ export default async function FichaDestino({ params }: Props) {
   if (d.bano !== undefined) filasBool.push(["Baño", d.bano]);
   if (d.vertigo !== undefined) filasBool.push(["Pasarelas / vértigo", d.vertigo]);
 
-  const contactos: [string, string, string][] = []; // [etiqueta, texto, href]
+  const contactos: [etiqueta: string, texto: string, href: string][] = [];
   if (d.contacto?.web) contactos.push(["Web oficial", "abrir web ↗", d.contacto.web]);
   if (d.contacto?.tel) contactos.push(["Teléfono", d.contacto.tel, `tel:${d.contacto.tel}`]);
   if (d.contacto?.email) contactos.push(["Email", d.contacto.email, `mailto:${d.contacto.email}`]);
@@ -136,14 +128,12 @@ export default async function FichaDestino({ params }: Props) {
 
         <div className="fr-s4-grid">
           <div className="fr-s4-col">
-            {/* Cabecera — escritorio: badges + título antes de la galería */}
             <div className="fr-s4-cabecera--desktop">
               {badges}
               <h1 className="fr-s4-h1">{d.nombre}</h1>
               <p className="fr-s4-lead">{d.queEs}</p>
             </div>
 
-            {/* Hero móvil + galería: la foto grande cambia al pulsar una miniatura */}
             <Portada
               fotos={galeria}
               creditos={galeria.map(creditoDe)}

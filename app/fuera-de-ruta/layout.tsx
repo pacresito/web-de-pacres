@@ -3,17 +3,13 @@ import { Baloo_2, DM_Sans, IBM_Plex_Mono } from "next/font/google";
 import Cabecera from "./Cabecera";
 import "./fuera-de-ruta.css";
 
-// Layout propio y aislado: /fuera-de-ruta no lleva el chrome del sitio (TerminalShell ni
-// paleta terminal), tiene estilo propio. El root layout ya pone noindex por
-// defecto; lo reforzamos aquí mientras es prototipo (plan /fuera-de-ruta).
+// Sin el chrome del sitio: Fuera de Ruta tiene su propio estilo. Prototipo: ni indexa ni sigue enlaces.
 export const metadata: Metadata = {
   title: "Fuera de Ruta",
   robots: { index: false, follow: false },
 };
 
-// Identidad «Río pop»: tres fuentes vía next/font expuestas como variables
-// CSS que consume fuera-de-ruta.css. Baloo 2 títulos/cifras/botones, DM Sans cuerpo,
-// IBM Plex Mono micro-etiquetas.
+// Baloo 2 para títulos, cifras y botones; DM Sans para el cuerpo; Plex Mono para micro-etiquetas.
 const baloo = Baloo_2({ subsets: ["latin"], weight: ["700", "800"], variable: "--fr-font-baloo", display: "swap" });
 const dmSans = DM_Sans({ subsets: ["latin"], weight: ["400", "500", "700"], variable: "--fr-font-dm", display: "swap" });
 const plexMono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--fr-font-mono", display: "swap" });

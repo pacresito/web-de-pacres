@@ -3,12 +3,11 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { Destino } from "@/lib/fuera-de-ruta/tipos";
+import { desnivel, rango } from "@/lib/fuera-de-ruta/formato";
 import Overlay from "./Overlay";
 
-// Drawer superpuesto de «Ver más»: una vista breve de la ficha sobre la propia
-// pantalla, sin navegar. Muestra lo esencial —foto, qué es, datos, lo mejor y avisos— y
-// deja añadir/quitar sin cerrar; el enlace a la ficha completa sí abre pestaña (acción
-// deliberada de profundizar). Pinta solo lo que hay: todos los campos son opcionales.
+// «Ver más»: lo esencial de la ficha sin salir de la pantalla. La ficha completa abre
+// pestaña para no perder la selección.
 export default function FichaDrawer({ destino: d, zona, provincia, elegida, onAlternar, onCerrar }: {
   destino: Destino;
   zona: string;
@@ -20,8 +19,8 @@ export default function FichaDrawer({ destino: d, zona, provincia, elegida, onAl
   const datos: string[] = [];
   if (d.duracion) datos.push(`🕒 ${d.duracion}`);
   if (d.dificultad) datos.push(`🥾 ${d.dificultad}`);
-  if (d.distanciaKm) datos.push(`📏 ${d.distanciaKm[0]}–${d.distanciaKm[1]} km`);
-  if (d.desnivelM) datos.push(`⛰ ${d.desnivelM[0]}–${d.desnivelM[1]} m`);
+  if (d.distanciaKm) datos.push(`📏 ${rango(d.distanciaKm, "km")}`);
+  if (d.desnivelM) datos.push(`⛰ ${desnivel(d.desnivelM)}`);
   if (d.bano) datos.push("💧 baño");
   if (d.ninos === false) datos.push("👶 no apto");
   if (d.perros === false) datos.push("🐕 no apto");

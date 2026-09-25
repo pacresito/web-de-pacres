@@ -2,21 +2,18 @@
 
 import { useState } from "react";
 import type { Destino } from "@/lib/fuera-de-ruta/tipos";
-import { duracion, mapsHref } from "@/lib/fuera-de-ruta/formato";
-import { fmtHora, type DiaItin, type Itinerario } from "@/lib/fuera-de-ruta/itinerario/itinerario";
-import { consejosDelDia } from "@/lib/fuera-de-ruta/guia/guia";
+import { duracion, fmtHora, mapsHref } from "@/lib/fuera-de-ruta/formato";
+import type { DiaItin, Itinerario } from "@/lib/fuera-de-ruta/itinerario/itinerario";
+import { comidasDe, consejosDelDia } from "@/lib/fuera-de-ruta/guia/guia";
 
-// Icono por tipo de destino, solo para la guía de bolsillo: ahí el icono sustituye a la
-// palabra («🥾 Ruta de los hórreos»), que es lo que la hace legible de un vistazo.
+// Aquí el icono sustituye a la palabra del tipo, para leerse de un vistazo.
 const ICONO_TIPO: Record<string, string> = {
   ruta: "🥾", cascada: "💧", pueblo: "🏘️", mirador: "🌅", cueva: "🕳️",
   parque: "🌲", monumento: "🏛️", alojamiento: "🏨", actividad: "✨",
 };
 const icono = (tipo: string) => ICONO_TIPO[tipo] ?? "📍";
 
-// Guía de bolsillo
-// el día en una pantalla de móvil, para consultarlo en menos de un minuto durante el
-// viaje. Un día cada vez —si hubiera que hacer scroll entre días ya no cabe en la pantalla—.
+// Un día por pantalla de móvil, para consultarlo en marcha.
 export default function VistaBolsillo({ itinerario, porSlug }: { itinerario: Itinerario; porSlug: Map<string, Destino> }) {
   const conPlan = itinerario.dias.filter((d) => d.paradas.length > 0);
   const [numero, setNumero] = useState(conPlan[0]?.numero ?? 1);
@@ -59,9 +56,7 @@ export default function VistaBolsillo({ itinerario, porSlug }: { itinerario: Iti
   );
 }
 
-// Las líneas del día en **orden de reloj**: actividades, comida y regreso mezclados. En la
-// guía A la comida va intercalada en su sitio del recorrido; aquí, donde solo se leen horas,
-// lo único que se entiende es el orden cronológico puro.
+// Actividades, comidas y regreso en orden de reloj: aquí solo se leen horas.
 type FilaBolsillo = { clave: string; hora: number; icono: string; nombre: string; cola: string; gps?: [number, number] };
 
 function filasBolsillo(dia: DiaItin, porSlug: Map<string, Destino>): FilaBolsillo[] {
@@ -73,8 +68,7 @@ function filasBolsillo(dia: DiaItin, porSlug: Map<string, Destino>): FilaBolsill
     cola: ` · ${duracion(p.estanciaMin)}`,
     gps: porSlug.get(p.slug)?.gps,
   }));
-  const comidas = [dia.comida, ...dia.paradas.map((p) => p.pausaComida)].filter((c) => c !== undefined);
-  for (const [i, c] of comidas.entries()) {
+  for (const [i, c] of comidasDe(dia).entries()) {
     filas.push({ clave: `comida-${i}`, hora: c.horaInicio, icono: "🍴", nombre: c.restaurante ?? "Parada para comer", cola: "" });
   }
   if (dia.regreso && dia.alojamiento) {

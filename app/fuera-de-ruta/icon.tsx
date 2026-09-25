@@ -1,9 +1,6 @@
 import { ImageResponse } from "next/og";
 
-// Favicon propio de /fuera-de-ruta/*: brújula plana azul río (--fr-rio) sobre caja blanca. Misma idea
-// (y misma caja blanca redondeada) que el corazón de app/icon.tsx y la cruz de
-// farma, pero brújula porque esta ruta es la agencia de destinos. Next aplica este
-// icon.tsx solo a /fuera-de-ruta/*.
+// Brújula en azul río (--fr-rio) sobre la caja blanca de los demás favicons del sitio.
 export const size = { width: 32, height: 32 };
 export const contentType = "image/png";
 

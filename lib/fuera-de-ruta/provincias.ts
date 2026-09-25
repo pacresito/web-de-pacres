@@ -1,15 +1,10 @@
-// Provincias de Fuera de Ruta: puente entre el nombre con el que viven en los datos
-// ("Navarra") y el slug con el que viven en la URL ("navarra"). Las provincias que
-// existen son las del mapa de zonas generado, así que no hay una segunda lista que
-// mantener: ZONAS_MAPA manda. Puro, sin React.
+// Puente entre el nombre de una provincia ("Navarra") y su slug de URL ("navarra"). Las
+// provincias que existen son las del mapa de zonas generado: ZONAS_MAPA manda.
 import { ZONAS_MAPA } from "@/data/fuera-de-ruta/zonas-mapa";
 
-// Rutas que no son destino y cuelgan de /fuera-de-ruta/<provincia>/. Un destino con
-// uno de estos slugs quedaría inaccesible (Next resuelve la ruta estática antes que
-// [destino]); `datos.test.ts` lo comprueba.
+// Rutas estáticas que ganan a [destino] y a [provincia]: un slug así quedaría inaccesible.
 export const RUTAS_RESERVADAS = ["sitios", "crear-viaje"];
 
-// El mismo choque un nivel arriba: cuelgan de /fuera-de-ruta/ y ganan a [provincia].
 export const RUTAS_RESERVADAS_RAIZ = ["guardados"];
 
 export const PROVINCIAS = Object.keys(ZONAS_MAPA);

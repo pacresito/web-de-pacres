@@ -7,9 +7,8 @@ import type { MatrizViajes } from "@/lib/fuera-de-ruta/geo";
 import { queryAFiltros } from "@/lib/fuera-de-ruta/url-filtros";
 import { parsearViaje } from "@/lib/fuera-de-ruta/cuestionario/viaje-url";
 
-// El cuestionario, solo en el navegador: `ssr: false` no se puede pedir desde un Server
-// Component, así que este envoltorio existe para eso y para leer la URL (que además deja
-// leer localStorage en el inicializador del estado, ver PROJECT.md).
+// `ssr: false` no se puede pedir desde un Server Component: este envoltorio existe para
+// eso y para leer la URL. Sin SSR, el estado puede inicializarse desde localStorage.
 const CrearViaje = dynamic(() => import("../../CrearViaje"), { ssr: false });
 
 export default function CrearViajeCliente({ datos, matriz, provincia }: {
@@ -17,10 +16,8 @@ export default function CrearViajeCliente({ datos, matriz, provincia }: {
   matriz: MatrizViajes;
   provincia: string;
 }) {
-  // Una sola query, dos lecturas de claves disjuntas: los filtros del explorador (de
-  // donde salen las zonas) y el viaje concreto (días, ritmo…). Se lee con
-  // `useSearchParams`, no de `window.location`: al llegar por un `<Link>` el envoltorio
-  // renderiza antes de que el navegador actualice la URL.
+  // Filtros y viaje comparten query con claves disjuntas. `useSearchParams` y no
+  // `window.location`: tras un `<Link>`, esto renderiza antes de que cambie la URL.
   const params = useSearchParams();
 
   return (

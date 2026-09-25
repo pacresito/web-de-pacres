@@ -18,11 +18,7 @@ const VISTAS: { id: Vista; texto: string }[] = [
   { id: "mapa", texto: "Mapa" },
 ];
 
-// La guía del viaje: **cuatro vistas de los mismos datos**,
-// no cuatro documentos que haya que mantener sincronizados. Todas leen el mismo itinerario:
-// la guía A lo pinta entero con sus consejos, la de bolsillo lo resume a una
-// pantalla, el mapa lo recorre en el mismo orden y la alternativa de lluvia (guía B) cuelga
-// de cada parada, ya calculada. El PDF es la guía A impresa (ver `@media print`).
+// Vistas del mismo itinerario, nada que sincronizar. El PDF es el día a día impreso.
 
 export default function Guia({ itinerario, datos, porSlug, matriz, ritmo, provincia, onAtras, onHoraSalida }: {
   itinerario: Itinerario;
@@ -35,14 +31,12 @@ export default function Guia({ itinerario, datos, porSlug, matriz, ritmo, provin
   onHoraSalida: (dia: number, min: number) => void;
 }) {
   const [vista, setVista] = useState<Vista>("itinerario");
-  // La guía sustituye a la pantalla anterior sin navegar, así que hereda su scroll y se
-  // abre por la mitad (o por el final en móvil, donde el botón vive abajo del todo).
+  // Sustituye a la pantalla anterior sin navegar y heredaría su scroll.
   useEffect(() => { window.scrollTo(0, 0); }, []);
   const totales = useMemo(() => totalesViaje(itinerario), [itinerario]);
-  // Guía B: precalculada al abrir la guía, no al pulsar el botón (es un plan ya hecho).
   const alternativas = useMemo(
-    () => alternativasLluvia(itinerario, porSlug, datos.destinos, matriz, ritmo),
-    [itinerario, porSlug, datos.destinos, matriz, ritmo],
+    () => alternativasLluvia(itinerario, datos.destinos, matriz, ritmo),
+    [itinerario, datos.destinos, matriz, ritmo],
   );
   const zonaNombre = useMemo(() => new Map(datos.zonas.map((z) => [z.id, z.nombre])), [datos.zonas]);
 
@@ -54,8 +48,7 @@ export default function Guia({ itinerario, datos, porSlug, matriz, ritmo, provin
         <button className="fr-s5-link fr-g-no-print" onClick={() => window.print()}>⬇ Descargar en PDF</button>
       </div>
 
-      {/* Los totales son del viaje, no del día: en la guía de bolsillo estorban y le roban
-          la pantalla que necesita. Se ocultan por clase, para que el PDF los lleve. */}
+      {/* Ocultos por clase en la de bolsillo, para que el PDF los lleve. */}
       <ul className={`fr-g-totales${vista === "bolsillo" ? " fr-g-oculto" : ""}`}>
         <li>🗓️ <b>{totales.diasConPlan}</b> {totales.diasConPlan === 1 ? "día" : "días"} con plan{totales.dias > totales.diasConPlan ? ` de ${totales.dias}` : ""}</li>
         <li>📷 <b>{totales.actividades}</b> actividades</li>
@@ -76,7 +69,7 @@ export default function Guia({ itinerario, datos, porSlug, matriz, ritmo, provin
         ))}
       </nav>
 
-      {/* La guía A queda siempre montada aunque no sea la vista activa: es la que se imprime. */}
+      {/* Siempre montada: es la que se imprime. */}
       <div className={vista === "itinerario" ? undefined : "fr-g-oculto"}>
         <p className="fr-d-sub fr-it-nota">
           Horarios orientativos, calculados con las horas de luz reales y los tiempos de coche.

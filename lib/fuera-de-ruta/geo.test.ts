@@ -13,6 +13,12 @@ const linea: MatrizViajes = {
     [2, 1, 0, 1],
     [3, 2, 1, 0],
   ],
+  metros: [
+    [0, 1, 2, 3],
+    [1, 0, 1, 2],
+    [2, 1, 0, 1],
+    [3, 2, 1, 0],
+  ],
 };
 
 // Lookup
@@ -47,8 +53,7 @@ assert.deepStrictEqual(desdeB.orden, ["a", "d"], "primero 'a' (a 1) y luego 'd'"
 // Matriz real de Navarra: forma y coherencia
 const real = matrizNavarra as MatrizViajes;
 
-// --- Más de 8 paradas: no lanza; cae a vecino más cercano y las coloca todas (un día
-// sobrecargado antes petaba con "≤8 paradas") ---
+// --- Más de 8 paradas: no lanza; cae a vecino más cercano y las coloca todas ---
 const muchas = real.ids.slice(0, 12);
 const r12 = ordenarDia(real, muchas, real.ids[15]); // inicio externo, como el alojamiento del día
 assert.strictEqual(r12.orden.length, muchas.length, "coloca las 12 sin descartar ni lanzar");

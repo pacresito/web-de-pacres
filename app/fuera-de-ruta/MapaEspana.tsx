@@ -5,19 +5,11 @@ import { useRouter } from "next/navigation";
 import { MAPA_ESPANA } from "@/data/fuera-de-ruta/espana-mapa";
 import { slugProvincia } from "@/lib/fuera-de-ruta/provincias";
 
-// S1 · Portada «España como hoja de pegatinas» (Río pop, F2).
-// El SVG real de provincias con tratamiento pegatina: las disponibles despegadas
-// (Lima, trazo Tinta, sombra dura con el mismo path desplazado +6,+7) y clicables
-// con el mismo peso; el resto en papel con trazo discontinuo y tooltip "próximamente".
-// Geometría en data/fuera-de-ruta/espana-mapa.ts (generada, no a mano). Las tarjetas de
-// provincia (fr-s1-provcard) son las que dan nombre y tap; el mapa es el escaparate.
-//
-// Las tarjetas son enlaces de verdad (crawlables, abribles en pestaña nueva); los
-// paths del SVG navegan con el router, que un <path> no es un enlace y el escaparate
-// no tiene por qué serlo.
+// Portada: España como hoja de pegatinas. Las tarjetas son los enlaces de verdad; los
+// paths del SVG navegan con el router, porque un <path> no es un enlace.
 
 export default function MapaEspana({ disponibles }: {
-  disponibles: string[];               // provincias clicables (mismo peso), por name
+  disponibles: string[];               // por `name`
 }) {
   const router = useRouter();
   const { viewBox, inset, provincias } = MAPA_ESPANA;
@@ -56,7 +48,7 @@ export default function MapaEspana({ disponibles }: {
               ))}
             </g>
 
-            {/* Sombras primero (todas) para que ninguna se cuele sobre una provincia vecina */}
+            {/* Todas las sombras primero, para que ninguna tape a una vecina. */}
             {provincias.filter((p) => activa.has(p.name)).map((p) => (
               <path key={p.name} d={p.d} className="fr-prov-sombra" transform="translate(6,7)" />
             ))}

@@ -5,8 +5,6 @@ import { datosDe, PROVINCIAS_CON_DATOS } from "@/lib/fuera-de-ruta/datos";
 import { PROVINCIAS, provinciaDeSlug, slugProvincia } from "@/lib/fuera-de-ruta/provincias";
 import PasoZonas from "./PasoZonas";
 
-// Paso de zonas de una provincia (Server Component). Existe para las 4 del mapa;
-// las que aún no tienen destinos son escaparate (mismo mapa, sin recuentos).
 type Props = { params: Promise<{ provincia: string }> };
 
 export function generateStaticParams() {
@@ -24,7 +22,6 @@ export default async function ProvinciaPage({ params }: Props) {
   const nombre = provinciaDeSlug(provincia);
   if (!nombre) notFound();
 
-  // Otras provincias que sí tienen datos, para redirigir desde una de escaparate.
   const otrasConDatos = PROVINCIAS_CON_DATOS
     .filter((slug) => slug !== provincia)
     .map((slug) => ({ slug, nombre: provinciaDeSlug(slug)! }));

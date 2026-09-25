@@ -14,32 +14,32 @@ import { CarruselMovil, Tarjeta, TarjetaCompacta } from "./_explorador/Tarjetas"
 // Leaflet toca `window`: solo en cliente, sin SSR.
 const Mapa = dynamic(() => import("./Mapa"), { ssr: false });
 
-// Explorador de /fuera-de-ruta/<provincia>/sitios (S3, Río pop). Escritorio:
-// filtros en dos filas (dropdowns-chip + toggles), grid de tarjetas y mapa sticky.
-// Móvil: overlay a pantalla completa con dos modos —lista y mapa— y los filtros
-// en hoja inferior. El componente elige árbol según el ancho (`useEsMovil`); ambos
-// comparten TODA la lógica de filtros y recuentos, que re-ejecuta filtrar.ts (lógica
-// pura ya testada). La página lo monta sin SSR: elegir árbol por ancho y leer los
-// filtros de la URL solo tienen respuesta en el navegador.
-//
-// Los filtros se reflejan en la URL con `history.replaceState`, NO con el router: un
-// `router.replace` por clic re-renderizaría el Server Component y reinicializaría
-// Leaflet (parpadeo y encuadre perdido). Así la URL queda compartible sin tocar el
-// árbol de React. El precio, asumido: el «atrás» del navegador no deshace filtros de
-// uno en uno, sale del explorador — que es lo que la gente espera de un panel así.
+// Explorador de una provincia. Móvil y escritorio son dos árboles con la misma lógica de
+// filtros. Los filtros van a la URL con `history.replaceState`, no con el router, que
+// re-renderizaría el Server Component y reiniciaría Leaflet; a cambio, el «atrás» sale
+// del explorador en vez de deshacer filtros.
 
-// Umbrales (valor único, no categoría): un tope acumulativo no admite multi-selección.
 const DISTANCIAS = [5, 10, 15, 20, 25];
 const DURACIONES = [1, 2, 3, 4, 6];
 const DESNIVELES = Object.keys(DESNIVEL_TEXTO) as Desnivel[];
 const DIFICULTADES = ["fácil", "media", "difícil"];
+const EXTRAS = [
+  { clave: "ninos", texto: "apto niños" },
+  { clave: "perros", texto: "apto perros" },
+  { clave: "parkingGratuito", texto: "parking gratis" },
+  { clave: "sinReserva", texto: "sin reserva" },
+] as const;
 
-// Salta a un árbol u otro sin parpadeo: en cliente ya sabe el ancho en el primer
-// render (el Explorador solo se monta tras navegar, nunca en SSR).
+type Multi = "zona" | "tipo" | "dificultad" | "epoca" | "agua";
+type Booleano = "ninos" | "perros" | "bano" | "parkingGratuito" | "sinReserva";
+
+const MOVIL = "(max-width: 899px)";
+
+// Sin SSR, el ancho ya se conoce en el primer render: no hay salto de árbol.
 function useEsMovil() {
-  const [esMovil, setEsMovil] = useState(() => typeof window !== "undefined" && window.matchMedia("(max-width: 899px)").matches);
+  const [esMovil, setEsMovil] = useState(() => window.matchMedia(MOVIL).matches);
   useEffect(() => {
-    const mq = window.matchMedia("(max-width: 899px)");
+    const mq = window.matchMedia(MOVIL);
     const on = () => setEsMovil(mq.matches);
     mq.addEventListener("change", on);
     on();
@@ -50,21 +50,16 @@ function useEsMovil() {
 
 export default function Explorador({ datos, provincia }: {
   datos: DatosViajes;
-  provincia: string;             // slug de URL ("navarra"), para los enlaces
+  provincia: string;             // slug
 }) {
-  // Los filtros arrancan de la URL: así un enlace compartido abre el explorador tal
-  // cual lo dejó quien lo mandó, y el paso de zonas entra con su `?zona=`.
-  const [filtros, setFiltros] = useState<Filtros>(
-    () => queryAFiltros(new URLSearchParams(typeof window === "undefined" ? "" : window.location.search)),
-  );
+  const [filtros, setFiltros] = useState<Filtros>(() => queryAFiltros(new URLSearchParams(window.location.search)));
   const [verRestaurantes, setVerRestaurantes] = useState(false);
-  const [abierto, setAbierto] = useState<string | null>(null); // dropdown desplegado (escritorio)
-  const [activo, setActivo] = useState<string | null>(null);   // slug resaltado pin↔tarjeta
+  const [abierto, setAbierto] = useState<string | null>(null); // desplegable de escritorio
+  const [activo, setActivo] = useState<string | null>(null);   // slug resaltado en mapa y lista
   const [modoMovil, setModoMovil] = useState<"lista" | "mapa">("lista");
   const [hojaAbierta, setHojaAbierta] = useState(false);
   const esMovil = useEsMovil();
 
-  // Filtros → URL, sin pasar por el router (ver cabecera).
   useEffect(() => {
     const q = filtrosAQuery(filtros);
     window.history.replaceState(null, "", `${window.location.pathname}${q ? `?${q}` : ""}`);
@@ -76,7 +71,7 @@ export default function Explorador({ datos, provincia }: {
   const hrefDestino = (slug: string) => `/fuera-de-ruta/${provincia}/${slug}`;
   const hrefZonas = `/fuera-de-ruta/${provincia}`;
 
-  // Opciones categóricas presentes en los datos: solo se ofrece lo que filtra.
+  // Solo se ofrecen los valores presentes en los datos.
   const tipos = useMemo(() => [...new Set(datos.destinos.map((d) => d.tipo))].sort(), [datos.destinos]);
   const dificultades = useMemo(() => presentes(DIFICULTADES, datos.destinos.flatMap((d) => nivelesDificultad(d.dificultad))), [datos.destinos]);
   const epocas = useMemo(() => presentes(Object.keys(EPOCA_TEXTO), datos.destinos.flatMap((d) => d.epoca ?? [])), [datos.destinos]);
@@ -86,10 +81,8 @@ export default function Explorador({ datos, provincia }: {
   const activos = filtrosActivos(filtros, zona);
   const resumen = resumenFiltros(filtros, zona);
 
-  // Recuento en vivo con una variación de los filtros.
   const cuenta = (parcial: Partial<Filtros>) => filtrarDestinos(datos.destinos, { ...filtros, ...parcial }).length;
 
-  // Pins R del mapa: restaurantes de las zonas filtradas que tienen GPS.
   const restaurantes = useMemo(
     () => (verRestaurantes
       ? datos.restaurantes.filter((r) => r.gps && (!filtros.zona?.length || filtros.zona.includes(r.zona)))
@@ -98,38 +91,45 @@ export default function Explorador({ datos, provincia }: {
   );
 
   const set = (parcial: Partial<Filtros>) => setFiltros((f) => ({ ...f, ...parcial }));
-  // Alterna un valor en una dimensión multi-selección. Vacía = `undefined`, para
-  // que la clave no cuente como filtro activo (se miran valores, no claves).
-  const toggle = (clave: "zona" | "tipo" | "dificultad" | "epoca" | "agua", valor: string) =>
+  const alternarBool = (clave: Booleano) => set({ [clave]: filtros[clave] ? undefined : true });
+  // Vacía = `undefined`, para que la dimensión no cuente como filtro activo.
+  const toggle = (clave: Multi, valor: string) =>
     setFiltros((f) => {
       const actual = f[clave] ?? [];
       const nueva = actual.includes(valor) ? actual.filter((v) => v !== valor) : [...actual, valor];
       return { ...f, [clave]: nueva.length ? nueva : undefined };
     });
 
-  // Un solo dropdown abierto a la vez (escritorio).
+  // Las opciones de una dimensión, iguales en el panel de escritorio y en la hoja móvil.
+  const opciones = (clave: Multi, valores: string[], texto: (v: string) => string = (v) => v) =>
+    valores.map((v) => (
+      <Opcion key={v} texto={texto(v)} on={!!filtros[clave]?.includes(v)} n={cuenta({ [clave]: [v] })}
+        onClick={() => toggle(clave, v)} />
+    ));
+  const opcionBano = (
+    <Opcion texto="te puedes bañar" on={!!filtros.bano} n={cuenta({ bano: true })} onClick={() => alternarBool("bano")} />
+  );
+  const idsZona = datos.zonas.map((z) => z.id);
+
   const desp = (id: string) => ({
     abierto: abierto === id,
     onToggle: () => setAbierto(abierto === id ? null : id),
     onCerrar: () => setAbierto(null),
   });
 
-  // Click en un pin (escritorio): resalta y lleva a su tarjeta.
   const irATarjeta = (slug: string) => {
     setActivo(slug);
     document.getElementById(`fr-card-${slug}`)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   };
 
-  // El planificador hereda los filtros por la URL, que es como los hereda también un
-  // enlace compartido: una sola forma de entrar, sin estado escondido.
+  // El planificador hereda los filtros por la URL, igual que un enlace compartido.
   const queryActual = filtrosAQuery(filtros);
   const hrefCrearViaje = `/fuera-de-ruta/${provincia}/crear-viaje${queryActual ? `?${queryActual}` : ""}`;
 
   const nBano = (filtros.bano ? 1 : 0) + (filtros.agua?.length ?? 0);
 
-  // MÓVIL
   if (esMovil) {
-    // Con 0 resultados no se puede ir al mapa: se muestra el estado 0 en la lista.
+    // Con 0 resultados no hay mapa al que ir.
     const modoEfectivo = destinos.length === 0 ? "lista" : modoMovil;
     const zonasSel = filtros.zona?.length ? filtros.zona.map(zona).join(" + ") : "";
 
@@ -170,7 +170,7 @@ export default function Explorador({ datos, provincia }: {
             )}
           </div>
 
-          {/* Mapa: siempre montado (no reinicializar Leaflet al cambiar de modo) */}
+          {/* Siempre montado, para no reiniciar Leaflet al cambiar de modo. */}
           <div className="fr-m3-mapa-capa">
             <Mapa destinos={destinos} restaurantes={restaurantes} activo={activo} onActivo={setActivo} onPin={setActivo} />
             {destinos.length > 0 && (
@@ -184,8 +184,6 @@ export default function Explorador({ datos, provincia }: {
           </div>
         </div>
 
-        {/* Barra de acción fija: el CTA principal siempre visible (antes solo al final de
-            la lista) + acceso al mapa. Sustituye a la píldora suelta «Mapa · N». */}
         {modoEfectivo === "lista" && destinos.length > 0 && (
           <div className="fr-m3-barra">
             <button className="fr-m3-barra-mapa" onClick={() => setModoMovil("mapa")}>
@@ -206,47 +204,26 @@ export default function Explorador({ datos, provincia }: {
                 </div>
 
                 <Grupo label="Zona">
-                  <div className="fr-m3-grupo-chips">
-                    {datos.zonas.map((z) => (
-                      <Opcion key={z.id} texto={z.nombre} on={!!filtros.zona?.includes(z.id)} n={cuenta({ zona: [z.id] })} onClick={() => toggle("zona", z.id)} />
-                    ))}
-                  </div>
+                  <div className="fr-m3-grupo-chips">{opciones("zona", idsZona, zona)}</div>
                 </Grupo>
 
                 <Grupo label="Tipo de destino">
-                  <div className="fr-m3-grupo-chips">
-                    {tipos.map((t) => (
-                      <Opcion key={t} texto={t} on={!!filtros.tipo?.includes(t)} n={cuenta({ tipo: [t] })} onClick={() => toggle("tipo", t)} />
-                    ))}
-                  </div>
+                  <div className="fr-m3-grupo-chips">{opciones("tipo", tipos)}</div>
                 </Grupo>
 
                 {dificultades.length > 0 && (
                   <Grupo label="Dificultad">
-                    <div className="fr-m3-grupo-chips">
-                      {dificultades.map((d) => (
-                        <Opcion key={d} texto={d} on={!!filtros.dificultad?.includes(d)} n={cuenta({ dificultad: [d] })} onClick={() => toggle("dificultad", d)} />
-                      ))}
-                    </div>
+                    <div className="fr-m3-grupo-chips">{opciones("dificultad", dificultades)}</div>
                   </Grupo>
                 )}
 
                 <Grupo label="Agua y baño">
-                  <div className="fr-m3-grupo-chips">
-                    <Opcion texto="te puedes bañar" on={!!filtros.bano} n={cuenta({ bano: true })} onClick={() => set({ bano: filtros.bano ? undefined : true })} />
-                    {aguas.map((a) => (
-                      <Opcion key={a} texto={AGUA_TEXTO[a]} on={!!filtros.agua?.includes(a)} n={cuenta({ agua: [a] })} onClick={() => toggle("agua", a)} />
-                    ))}
-                  </div>
+                  <div className="fr-m3-grupo-chips">{opcionBano}{opciones("agua", aguas, (a) => AGUA_TEXTO[a])}</div>
                 </Grupo>
 
                 {epocas.length > 0 && (
                   <Grupo label="Época">
-                    <div className="fr-m3-grupo-chips">
-                      {epocas.map((e) => (
-                        <Opcion key={e} texto={EPOCA_TEXTO[e]} on={!!filtros.epoca?.includes(e)} n={cuenta({ epoca: [e] })} onClick={() => toggle("epoca", e)} />
-                      ))}
-                    </div>
+                    <div className="fr-m3-grupo-chips">{opciones("epoca", epocas, (e) => EPOCA_TEXTO[e])}</div>
                   </Grupo>
                 )}
 
@@ -264,10 +241,10 @@ export default function Explorador({ datos, provincia }: {
 
                 <div className="fr-m3-grupo">
                   <span className="fr-m3-grupo-lab">Extras</span>
-                  <ExtraSwitch label="Apto niños" on={!!filtros.ninos} onClick={() => set({ ninos: filtros.ninos ? undefined : true })} />
-                  <ExtraSwitch label="Apto perros" on={!!filtros.perros} onClick={() => set({ perros: filtros.perros ? undefined : true })} />
-                  <ExtraSwitch label="Parking gratis" on={!!filtros.parkingGratuito} onClick={() => set({ parkingGratuito: filtros.parkingGratuito ? undefined : true })} />
-                  <ExtraSwitch label="Sin reserva" on={!!filtros.sinReserva} onClick={() => set({ sinReserva: filtros.sinReserva ? undefined : true })} />
+                  {EXTRAS.map((e) => (
+                    <ExtraSwitch key={e.clave} label={e.texto[0].toUpperCase() + e.texto.slice(1)}
+                      on={!!filtros[e.clave]} onClick={() => alternarBool(e.clave)} />
+                  ))}
                   <div className="fr-m3-restos-fila">
                     <span><span className="fr-m3-restos-r">R</span>Restaurantes en el mapa</span>
                     <button className="fr-m3-sw" aria-pressed={verRestaurantes} aria-label="Restaurantes en el mapa" onClick={() => setVerRestaurantes((v) => !v)} />
@@ -285,7 +262,6 @@ export default function Explorador({ datos, provincia }: {
     );
   }
 
-  // ESCRITORIO
   return (
     <>
       <div className="fr-s3-crumbs">
@@ -299,51 +275,35 @@ export default function Explorador({ datos, provincia }: {
             <Desplegable etiqueta="Zona" titulo="zona — marca varias" {...desp("zona")}
               valor={filtros.zona?.length ? String(filtros.zona.length) : undefined}
               onLimpiar={() => set({ zona: undefined })}>
-              {datos.zonas.map((z) => (
-                <Opcion key={z.id} texto={z.nombre} on={!!filtros.zona?.includes(z.id)}
-                  n={cuenta({ zona: [z.id] })} onClick={() => toggle("zona", z.id)} />
-              ))}
+              {opciones("zona", idsZona, zona)}
             </Desplegable>
 
             <Desplegable etiqueta="Tipo" titulo="tipo de destino — marca varios" {...desp("tipo")}
               valor={filtros.tipo?.length ? String(filtros.tipo.length) : undefined}
               onLimpiar={() => set({ tipo: undefined })}>
-              {tipos.map((t) => (
-                <Opcion key={t} texto={t} on={!!filtros.tipo?.includes(t)}
-                  n={cuenta({ tipo: [t] })} onClick={() => toggle("tipo", t)} />
-              ))}
+              {opciones("tipo", tipos)}
             </Desplegable>
 
             {dificultades.length > 0 && (
               <Desplegable etiqueta="Dificultad" titulo="dificultad — marca varias" {...desp("dificultad")}
                 valor={filtros.dificultad?.length ? String(filtros.dificultad.length) : undefined}
                 onLimpiar={() => set({ dificultad: undefined })}>
-                {dificultades.map((d) => (
-                  <Opcion key={d} texto={d} on={!!filtros.dificultad?.includes(d)}
-                    n={cuenta({ dificultad: [d] })} onClick={() => toggle("dificultad", d)} />
-                ))}
+                {opciones("dificultad", dificultades)}
               </Desplegable>
             )}
 
             <Desplegable etiqueta="Baño" titulo="agua y baño — marca varios" {...desp("bano")}
               valor={nBano ? String(nBano) : undefined}
               onLimpiar={() => set({ bano: undefined, agua: undefined })}>
-              <Opcion texto="te puedes bañar" on={!!filtros.bano} n={cuenta({ bano: true })}
-                onClick={() => set({ bano: filtros.bano ? undefined : true })} />
-              {aguas.map((a) => (
-                <Opcion key={a} texto={AGUA_TEXTO[a]} on={!!filtros.agua?.includes(a)}
-                  n={cuenta({ agua: [a] })} onClick={() => toggle("agua", a)} />
-              ))}
+              {opcionBano}
+              {opciones("agua", aguas, (a) => AGUA_TEXTO[a])}
             </Desplegable>
 
             {epocas.length > 0 && (
               <Desplegable etiqueta="Época" titulo="época — marca varias" {...desp("epoca")}
                 valor={filtros.epoca?.length ? String(filtros.epoca.length) : undefined}
                 onLimpiar={() => set({ epoca: undefined })}>
-                {epocas.map((e) => (
-                  <Opcion key={e} texto={EPOCA_TEXTO[e]} on={!!filtros.epoca?.includes(e)}
-                    n={cuenta({ epoca: [e] })} onClick={() => toggle("epoca", e)} />
-                ))}
+                {opciones("epoca", epocas, (e) => EPOCA_TEXTO[e])}
               </Desplegable>
             )}
 
@@ -384,10 +344,9 @@ export default function Explorador({ datos, provincia }: {
           </div>
 
           <div className="fr-s3-fila fr-s3-fila--extras">
-            <Interruptor on={!!filtros.ninos} onClick={() => set({ ninos: filtros.ninos ? undefined : true })}>apto niños</Interruptor>
-            <Interruptor on={!!filtros.perros} onClick={() => set({ perros: filtros.perros ? undefined : true })}>apto perros</Interruptor>
-            <Interruptor on={!!filtros.parkingGratuito} onClick={() => set({ parkingGratuito: filtros.parkingGratuito ? undefined : true })}>parking gratis</Interruptor>
-            <Interruptor on={!!filtros.sinReserva} onClick={() => set({ sinReserva: filtros.sinReserva ? undefined : true })}>sin reserva</Interruptor>
+            {EXTRAS.map((e) => (
+              <Interruptor key={e.clave} on={!!filtros[e.clave]} onClick={() => alternarBool(e.clave)}>{e.texto}</Interruptor>
+            ))}
             <button className={`fr-s3-restos${verRestaurantes ? " fr-s3-restos--on" : ""}`}
               aria-pressed={verRestaurantes} onClick={() => setVerRestaurantes((v) => !v)}>
               <span className="fr-s3-restos-r">R</span>Restaurantes
@@ -430,7 +389,6 @@ export default function Explorador({ datos, provincia }: {
   );
 }
 
-// Deja de `todas` las opciones en su orden solo las que aparecen en los datos.
 function presentes(todas: string[], valores: string[]): string[] {
   const hay = new Set(valores);
   return todas.filter((v) => hay.has(v));

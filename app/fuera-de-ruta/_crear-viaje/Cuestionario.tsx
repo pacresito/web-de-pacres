@@ -4,16 +4,13 @@ import type { Bloque, Campo, Pregunta, Respuestas } from "@/lib/fuera-de-ruta/cu
 import { uno, varios } from "@/lib/fuera-de-ruta/cuestionario/preguntas";
 import { resumen as resumenPerfil } from "@/lib/fuera-de-ruta/cuestionario/resumen";
 
-// Los tres pasos del cuestionario de Cris: el viajero, el viaje y el resumen
-// editable. Solo pintan y avisan del cambio — quién guarda las respuestas y qué paso toca
-// lo decide CrearViaje.
+// Los tres pasos del cuestionario. Solo pintan y avisan del cambio; el estado es de CrearViaje.
 
 const fechaFmt = new Intl.DateTimeFormat("es-ES", { weekday: "long", day: "numeric", month: "long" });
 const legibleFecha = (iso?: string) => (iso ? fechaFmt.format(new Date(`${iso}T00:00`)) : "Elegir fecha");
 
 export type AlCambiar = (campo: Campo, valor: string | string[] | undefined) => void;
 
-// Un paso = un bloque
 export function PasoBloque({ bloque, numero, respuestas, onCambiar, atras, onSiguiente, textoSiguiente }: {
   bloque: Bloque;
   numero: number;
@@ -46,7 +43,6 @@ export function PasoBloque({ bloque, numero, respuestas, onCambiar, atras, onSig
   );
 }
 
-// Una pregunta: chips de opciones (única o multi con tope) o el selector de fecha.
 function PreguntaCampo({ pregunta: p, respuestas: r, onCambiar }: {
   pregunta: Pregunta;
   respuestas: Respuestas;
@@ -107,7 +103,6 @@ function ChipsOpciones({ pregunta: p, respuestas: r, onCambiar }: {
   );
 }
 
-// Resumen editable
 export function Resumen({ respuestas, onEditar, onEmpezar, onAtras }: {
   respuestas: Respuestas;
   onEditar: () => void;

@@ -7,15 +7,11 @@ import type { Destino } from "@/lib/fuera-de-ruta/tipos";
 import { filtrosAQuery } from "@/lib/fuera-de-ruta/url-filtros";
 import MapaZonas from "../MapaZonas";
 
-// S2 · Elegir zonas sobre el mapa de la provincia. Común a las 4: las que no tienen
-// destinos (`destinos === null`) enseñan las mismas pantallas y copys sin recuentos y
-// con el CTA desactivado — se leen como producto real aunque no haya nada que ver.
-//
-// La selección es estado local y se confirma al pulsar «Ver sitios»: es entonces
-// cuando se vuelca a la URL del explorador (`?zona=…`). Marcar zonas no es navegar.
+// Elegir zonas de una provincia. Sin datos (`destinos === null`) es escaparate: mismas
+// pantallas, sin recuentos y con el CTA desactivado. La selección solo pasa a la URL al
+// pulsar «Ver sitios».
 
-// El CTA es enlace cuando lleva a algún sitio y botón muerto cuando no: un <a>
-// deshabilitado no existe, y un enlace a ninguna parte confunde al teclado.
+// Un <a> deshabilitado no existe: sin destino, el CTA es un botón desactivado.
 function BotonVer({ href, texto, activo, className }: {
   href: string;
   texto: string;
@@ -28,8 +24,6 @@ function BotonVer({ href, texto, activo, className }: {
     : <button className={clase} disabled>{texto}</button>;
 }
 
-// Provincia de escaparate (sin datos): explica que Cris aún la prepara y enlaza a las
-// que sí se pueden visitar. Se pinta bajo el CTA «Ver sitios» (desactivado en esos casos).
 function MensajeEscaparate({ nombre, otras, className }: {
   nombre: string;
   otras: { slug: string; nombre: string }[];
@@ -51,11 +45,11 @@ function MensajeEscaparate({ nombre, otras, className }: {
 }
 
 export default function PasoZonas({ provincia, nombre, mapa, destinos, otrasConDatos }: {
-  provincia: string;              // slug de URL ("navarra")
-  nombre: string;                 // nombre para mostrar ("Navarra")
+  provincia: string;              // slug
+  nombre: string;
   mapa: ProvinciaMapa;
-  destinos: Destino[] | null;     // null = provincia de escaparate (sin datos)
-  otrasConDatos: { slug: string; nombre: string }[]; // adonde redirigir si es escaparate
+  destinos: Destino[] | null;     // null = escaparate
+  otrasConDatos: { slug: string; nombre: string }[];
 }) {
   const [seleccion, setSeleccion] = useState<string[]>([]);
 
