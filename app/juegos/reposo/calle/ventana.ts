@@ -1,11 +1,10 @@
-// Escena «ventana», la que se publica: el alzado pintado aparte y pegado al 87 % dentro del
-// hueco de una ventana, con el marco, la repisa y las cortinas delante.
-import { TIENDA, fino, px, tramar, type Ctx } from "./paleta";
+// La ventana: el alzado pintado aparte y pegado al 87 % dentro del hueco, con el marco, la
+// repisa y las cortinas delante.
+import { PIEZAS, TIENDA, type Caja } from "../render";
+import { ALTO, ANCHO, ESC, disco, fino, px, tramar, type Ctx, type Mano } from "./paleta";
 import { tienda } from "./objetos";
-import { ANCHO, ESC, disco, type Escena, type Mano } from "./pincel";
-import { escena as alzado, cieloQuieto, sinCielo } from "./alzado";
+import { cieloQuieto, sinCielo } from "./alzado";
 
-const ALTO = 360;
 /** El hueco de la ventana, en píxeles finos, y la transformación que mete la calle dentro. */
 export const HUECO = { x: 40, y: 20, w: 560, h: 252 };
 const ESCALA = HUECO.w / ANCHO;          // 0,875
@@ -37,7 +36,7 @@ const dentro = (x: number, y: number, w: number, h: number) => {
 // El alzado se pinta aparte y se pega escalado sin suavizado: los pinceles trabajan en píxeles
 // enteros, y escalando las coordenadas cada detalle caería entre dos.
 function pegar(ctx: Ctx, clave: string, pintar: (aux: Ctx) => void) {
-  const aux = fino(ESC, clave);
+  const aux = fino(clave);
   pintar(aux.ctx);
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(aux.lienzo, 0, RECORTE_Y, ANCHO, HUECO.h / ESCALA, HUECO.x, HUECO.y, HUECO.w, HUECO.h);
@@ -50,24 +49,12 @@ const LOCAL = (() => {
   return { x: Math.round(c.x / ESC), y: Math.round(c.y / ESC), w: Math.round(c.w / ESC), h: Math.round(c.h / ESC) };
 })();
 
-function fondo(ctx: Ctx, m: Mano, hora: number) {
-  px(ctx, 0, 0, ANCHO, ALTO, m.noche ? m.P.madera[0] : m.P.madera[1]);
-  pegar(ctx, "ventana", (aux) => alzado.fondo(aux, m, hora));
-  tienda(ctx, m, LOCAL);
-}
-
 /** Las capas de la escena animada: el cielo, y la calle sobre transparente para que lo que
  *  cruza el cielo pase por detrás de los tejados. */
 export const cieloVentana = (ctx: Ctx, m: Mano, hora: number) => pegar(ctx, "ventana-cielo", (aux) => cieloQuieto(aux, m, hora));
 export function calleVentana(ctx: Ctx, m: Mano) {
   pegar(ctx, "ventana", (aux) => sinCielo(aux, m));
   tienda(ctx, m, LOCAL);
-}
-
-/** El marco, la repisa y lo que hay en ella, pintados después de los objetos. */
-function primerPlano(ctx: Ctx, m: Mano) {
-  marco(ctx, m);
-  for (const parte of Object.values(PARTES)) parte(ctx, m);
 }
 
 /** Pared, marco, cristal y repisa. Lo de encima de la repisa va en `PARTES`, para que el gato
@@ -116,7 +103,7 @@ export function marco(ctx: Ctx, m: Mano) {
   if (!m.noche) tramar(ctx, 0, repisa + 10, ANCHO, ALTO - repisa - 10, madera[2], 0.25);
 }
 
-/** Lo que vive sobre la repisa y la cortina, en el orden en que se tapan. */
+/** La cortina y lo que vive sobre la repisa. */
 export const PARTES: Record<"cortina" | "planta" | "taza", (ctx: Ctx, m: Mano) => void> = {
   // Dos cortinas recogidas con un lazo. Los pliegues se calculan sobre el ancho de cada fila,
   // así que convergen solos en el lazo.
@@ -194,22 +181,19 @@ export const PARTES: Record<"cortina" | "planta" | "taza", (ctx: Ctx, m: Mano) =
 };
 
 /** Dónde está lo de la repisa, para el gato y el vapor. */
-export const MACETA = { x: 96, y: REPISA - 22, w: 26, h: 22 };
+const MACETA = { x: 96, y: REPISA - 22, w: 26, h: 22 };
 export const TAZA = { x: ANCHO - 120, y: REPISA - 14, w: 18, h: 14 };
 
-export const escena: Escena = {
-  id: "ventana",
-  suelo: 280,
-  recorte: HUECO,
-  cajas: Object.fromEntries(
-    Object.entries(alzado.cajas).map(([id, c]) => {
-      const caja = dentro(c.x / ESC, c.y / ESC, c.w / ESC, c.h / ESC), r = RECOLOCAR[id] ?? {};
-      return [id, {
-        x: r.x !== undefined ? r.x * ESC : caja.x, y: r.y !== undefined ? r.y * ESC : caja.y + (r.dy ?? 0) * ESC,
-        w: r.w !== undefined ? r.w * ESC : caja.w, h: r.h !== undefined ? r.h * ESC : caja.h,
-      }];
-    }),
-  ),
-  fondo,
-  primerPlano,
-};
+/** Dónde va cada objeto en la ventana, en el lienzo virtual. */
+export const CAJAS_VENTANA: Record<string, Caja> = Object.fromEntries(
+  Object.entries(PIEZAS).map(([id, c]) => {
+    const caja = dentro(c.x / ESC, c.y / ESC, c.w / ESC, c.h / ESC), r = RECOLOCAR[id] ?? {};
+    return [id, {
+      x: r.x !== undefined ? r.x * ESC : caja.x, y: r.y !== undefined ? r.y * ESC : caja.y + (r.dy ?? 0) * ESC,
+      w: r.w !== undefined ? r.w * ESC : caja.w, h: r.h !== undefined ? r.h * ESC : caja.h,
+    }];
+  }),
+);
+
+/** El suelo de la calle en la ventana, en píxeles finos: hasta donde llegan los charcos de luz. */
+export const SUELO_VENTANA = 280;

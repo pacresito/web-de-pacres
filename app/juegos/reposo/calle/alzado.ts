@@ -1,19 +1,35 @@
-// Escena «alzado»: la calle de frente, todo a la misma distancia. Es lo que la ventana enmarca.
-import { ACERA, CAJAS, SUELO, TEJADOS, px, tramar, type Ctx } from "./paleta";
+// El alzado: la calle de frente, todo a la misma distancia. Es lo que la ventana enmarca.
+import { ACERA, ALTO, ANCHO, ESC, SUELO, disco, fundir, px, resplandor, tramar, type Ctx, type Mano } from "./paleta";
 import { fachadas } from "./edificios";
-import { ANCHO, ESC, cielo, fundir, type Escena, type Mano } from "./pincel";
 
-const ALTO = 360;
 const CIELO = ACERA / ESC, CALLE = SUELO / ESC;
 
-function fondo(ctx: Ctx, m: Mano, hora: number) {
-  cielo(ctx, m, hora, CIELO);
-  sinCielo(ctx, m);
-}
+/** Las alturas de los tejados del fondo, en dos filas. */
+const TEJADOS = {
+  lejos: [140, 92, 178, 118, 152, 84, 126, 164, 104, 146],
+  cerca: [110, 66, 142, 88, 124, 58, 100],
+};
 
-/** El cielo solo, sin nubes ni estrellas: lo que la escena animada deja quieto por detrás. */
+/** El cielo con el astro de la hora, sin nubes ni estrellas: lo que la escena animada deja
+ *  quieto por detrás. */
 export function cieloQuieto(ctx: Ctx, m: Mano, hora: number) {
-  cielo(ctx, m, hora, CIELO, false);
+  const n = m.F.cielo.length;
+  for (let y = 0; y < CIELO; y++) {
+    const v = (y / (CIELO - 1)) * (n - 1);
+    const i = Math.min(n - 2, Math.floor(v)), f = v - i;
+    px(ctx, 0, y, ANCHO, 1, m.F.cielo[i]);
+    if (f > 0.25) tramar(ctx, 0, y, ANCHO, 1, m.F.cielo[i + 1], (f - 0.25) / 0.75);
+  }
+
+  const h = ((hora % 24) + 24) % 24;
+  const dia = h > 6.5 && h < 20.5;
+  const t = dia ? (h - 6.5) / 14 : ((h + 24 - 20.5) % 24) / 10;
+  const cx = Math.round(24 + t * (ANCHO - 48));
+  const cy = Math.round(CIELO - 30 - Math.sin(Math.PI * t) * (CIELO * 0.6));
+  const r = dia ? 13 : 11;
+  resplandor(ctx, cx, cy, r + 26, m.P.luz[5], dia ? 0.5 : 0.35);
+  disco(ctx, cx, cy, r, m.P.luz[dia ? 5 : 4]);
+  if (!dia) disco(ctx, cx, cy, r - 2, m.F.cielo[1], 5, -2);
 }
 
 /** Todo lo que no es cielo, sobre transparente: lo que se mueva en el cielo pasa por detrás. */
@@ -54,10 +70,3 @@ export function sinCielo(ctx: Ctx, m: Mano) {
   }
   for (let j = 0; j < 8; j++) px(ctx, 291 + j, CALLE + 22 + Math.abs(j - 4), 18 - j * 2, 1, m.P.metal[2]);
 }
-
-export const escena: Escena = {
-  id: "alzado",
-  cajas: CAJAS,
-  suelo: CALLE,
-  fondo,
-};

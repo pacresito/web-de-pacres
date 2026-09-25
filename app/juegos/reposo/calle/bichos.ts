@@ -2,14 +2,13 @@
 //
 // **Todo bicho lleva contorno:** cada forma se pinta primero en tinta desplazada un píxel a los
 // cuatro lados y después en su color. Sin él, se funden con la fachada.
-import { px, type Ctx } from "./paleta";
-import type { Mano } from "./pincel";
+import { px, type Ctx, type Mano } from "./paleta";
 
 const R = Math.round;
 
 type Forma = (ctx: Ctx, dx: number, dy: number, color?: string) => void;
 
-export function elipse(ctx: Ctx, cx: number, cy: number, rx: number, ry: number, color: string) {
+function elipse(ctx: Ctx, cx: number, cy: number, rx: number, ry: number, color: string) {
   cx = R(cx); cy = R(cy);
   for (let j = -ry; j <= ry; j++) {
     const w = R(rx * Math.sqrt(Math.max(0, 1 - (j / (ry + 0.5)) ** 2)));

@@ -1,8 +1,9 @@
 // El grafiti del zócalo: ocho, uno por diferencia, en orden. **Cada uno de otro género que el
 // anterior** —letras gordas, firma, plantilla, corazón, tapado—: dos del mismo seguidos solo se
 // distinguirían por el matiz.
-import { azar, px, type Caja, type Ctx } from "./paleta";
-import type { Mano, Pincel } from "./pincel";
+import { azar } from "../escena";
+import type { Caja } from "../render";
+import { px, type Ctx, type Mano, type Pincel } from "./paleta";
 
 const R = Math.round;
 /** El rosa del zócalo, el de `fachadas()`. */
@@ -90,7 +91,8 @@ const TRAZOS: Record<string, [number, number][][]> = {
   N: [[[0, 1], [0.05, 0], [0.95, 1], [1, 0]]],
 };
 
-function linea(ctx: Ctx, x0: number, y0: number, x1: number, y1: number, color: string, g = 1) {
+/** Un trazo de rotulador biselado: `g` píxeles de ancho y uno de alto. */
+function biselado(ctx: Ctx, x0: number, y0: number, x1: number, y1: number, color: string, g = 1) {
   const pasos = Math.max(1, Math.ceil(Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0))));
   for (let s = 0; s <= pasos; s++) px(ctx, R(x0 + ((x1 - x0) * s) / pasos), R(y0 + ((y1 - y0) * s) / pasos), g, 1, color);
 }
@@ -103,12 +105,12 @@ function firma(ctx: Ctx, b: Caja, nombre: string, color: string, semilla: number
     const lx = x0 + i * paso, ly = arriba + R(azar(semilla + i) * 2);
     for (const trazo of TRAZOS[l]) {
       const p = trazo.map(([u, v]) => [lx + u * w + (1 - v) * incl, ly + v * h] as const);
-      for (let k = 1; k < p.length; k++) linea(ctx, p[k - 1][0], p[k - 1][1], p[k][0], p[k][1], color, 2);
+      for (let k = 1; k < p.length; k++) biselado(ctx, p[k - 1][0], p[k - 1][1], p[k][0], p[k][1], color, 2);
     }
   });
   const fin = x0 + nombre.length * paso;
-  linea(ctx, fin, abajo + 1, x0 + 2, abajo + 4, color, 2);
-  linea(ctx, x0 + 2, abajo + 4, x0 - 1, abajo + 1, color);
+  biselado(ctx, fin, abajo + 1, x0 + 2, abajo + 4, color, 2);
+  biselado(ctx, x0 + 2, abajo + 4, x0 - 1, abajo + 1, color);
   for (const [dx, dy] of [[0, 0], [2, -3], [4, 0], [6, -3], [8, 0]]) px(ctx, x0 + incl + dx, arriba - 4 + dy, 1, 1, color);
   for (let d = 0; d < 2; d++) px(ctx, R(x0 + 4 + azar(semilla * 5 + d) * (fin - x0 - 8)), abajo + 3, 1, 2 + R(azar(semilla + d * 7) * 3), color);
 }
@@ -163,7 +165,7 @@ function corazon(ctx: Ctx, m: Mano, b: Caja) {
   let ix = x + R((w - 11) / 2);
   for (const l of "P+C") { pintar(ctx, mapa(MENUDAS[l], ix, y + 7, 1), m.F.tinta); ix += 4; }
   // La flecha que lo atraviesa.
-  linea(ctx, x - 5, y + h - 4, x + w + 4, y + 2, m.F.tinta);
+  biselado(ctx, x - 5, y + h - 4, x + w + 4, y + 2, m.F.tinta);
   px(ctx, x + w + 2, y + 1, 3, 1, m.F.tinta); px(ctx, x + w + 4, y + 1, 1, 3, m.F.tinta);
   px(ctx, x - 6, y + h - 5, 1, 2, m.F.tinta); px(ctx, x - 4, y + h - 3, 1, 2, m.F.tinta);
 }

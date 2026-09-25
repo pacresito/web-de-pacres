@@ -1,23 +1,26 @@
-// Los edificios: los dos bloques del fondo y el que deja la obra al terminarse. Estuco de color,
-// aleros de teja, postigos y macetas.
+// Los edificios: los dos bloques del fondo y el de la obra, con su andamio y su lona. Estuco de
+// color, aleros de teja, postigos y macetas.
 //
 // Las ventanas se abren donde no pisan a los objetos de la fachada (`libre`), y cuáles se
 // encienden y qué lleva cada una sale de su posición: no puede cambiar entre repintados.
 //
 // En píxeles finos del alzado (640×360), salvo la obra, que se pinta en su caja de la ventana.
-import { BLOQUES, CAJAS, TIENDA, azar, px, tramar, type Caja, type Ctx, type Rampa } from "./paleta";
-import type { Mano } from "./pincel";
+import { azar } from "../escena";
+import { PIEZAS, TIENDA, type Caja } from "../render";
+import { ACERA, ESC, px, tramar, type Ctx, type Mano, type Pincel, type Rampa } from "./paleta";
 
-const ESC = 2.5;
-const SUELO = 256;                                       // pie de las fachadas: la acera
+const SUELO = ACERA / ESC;                               // pie de las fachadas: la acera
 const R = Math.round;
+
+/** Los tres bloques de la calle, en coordenadas del lienzo virtual. */
+const BLOQUES: [number, number, number][] = [[40, 210, 500], [560, 190, 470], [1040, 180, 520]];
 
 export interface Vano { x: number; y: number; w: number; h: number; encendida: boolean }
 
 // ── Dónde no se puede abrir una ventana ─────────────────────────────────────
 
 const EN_FACHADA = ["persiana", "cortina", "grafiti", "cartel", "buzon", "escaparate", "letrero", "toldo"];
-const OCUPADO: Caja[] = [...EN_FACHADA.map((id) => CAJAS[id]), TIENDA].map((c) => (
+const OCUPADO: Caja[] = [...EN_FACHADA.map((id) => PIEZAS[id]), TIENDA].map((c) => (
   { x: c.x / ESC, y: c.y / ESC, w: c.w / ESC, h: c.h / ESC }
 ));
 const libre = (x: number, y: number, w: number, h: number) =>
@@ -94,7 +97,7 @@ function cristal(ctx: Ctx, m: Mano, x: number, y: number, w: number, h: number, 
 
 /** Una maceta en el alféizar: geranios, cactus, hierbas o hiedra. Los geranios, con flor de
  *  primavera a verano. */
-export function maceta(ctx: Ctx, m: Mano, x: number, y: number, w: number, semilla: number) {
+function maceta(ctx: Ctx, m: Mano, x: number, y: number, w: number, semilla: number) {
   const florece = m.cal.estacion === "primavera" || m.cal.estacion === "verano";
   const tipo = Math.floor(azar(semilla * 3 + 1) * 6);
   const tiesto = [m.P.ladrillo, m.tono({ l: 0.5, c: 0.09, h: 245 }), m.P.piedra][Math.floor(azar(semilla * 3 + 2) * 3)];
@@ -147,7 +150,7 @@ function ventana(ctx: Ctx, m: Mano, x: number, y: number, w: number, h: number, 
 /** Las guirnaldas de Navidad bajo el alero, en festones: de día se ven las bombillas y de
  *  noche lucen. Las bombillas son de 2×2 porque el alzado se pega encogido y uno de cada ocho
  *  píxeles se pierde. */
-export function festones(ctx: Ctx, m: Mano, x0: number, x1: number, y: number) {
+function festones(ctx: Ctx, m: Mano, x0: number, x1: number, y: number) {
   const vano = 36, cae = 6;
   const colores = [m.P.tela, m.P.luz, m.P.hoja, m.tono({ l: 0.6, c: 0.12, h: 250 })];
   for (let x = x0, k = 0; x < x1; x++) {
@@ -232,7 +235,7 @@ export const vanosObra = (b: Caja) => medidasObra(b).vanos;
 /** El nivel de la obra con el edificio acabado: los otros son andamio o lona. */
 export const obraAcabada = (n: number) => n % 3 === 2;
 /** Qué pintura lleva el edificio acabado en ese nivel: 8 blanco, 2 terracota, 5 azul. */
-export const pinturaObra = (n: number) => ((n + 1) / 3) % 3;
+const pinturaObra = (n: number) => ((n + 1) / 3) % 3;
 
 /** Fachada, zócalo y postigos de cada pintura. */
 const PINTURAS = [
@@ -241,7 +244,7 @@ const PINTURAS = [
   [{ l: 0.84, c: 0.035, h: 230 }, { l: 0.55, c: 0.02, h: 250 }, { l: 0.9, c: 0.012, h: 95 }],
 ];
 
-export function edificioObra(ctx: Ctx, m: Mano, b: Caja, pintura: number) {
+function edificioObra(ctx: Ctx, m: Mano, b: Caja, pintura: number) {
   const E = medidasObra(b);
   const [fachada, zocalo, postigo] = PINTURAS[pintura].map((c) => m.tono(c));
   tejado(ctx, m, E.x, E.y - 4, E.w, ["chimenea", "antena", "chimenea"], 91);
@@ -254,3 +257,35 @@ export function edificioObra(ctx: Ctx, m: Mano, b: Caja, pintura: number) {
   alero(ctx, m, E.x, E.y, E.w);
   if (m.cal.navidad) festones(ctx, m, E.x + 2, E.x + E.w - 2, E.y + 4);
 }
+
+/** La rehabilitación, en ciclos de tres: andamio sobre la fachada vieja, lona sobre la nueva
+ *  y el edificio acabado de otro color. */
+export const obra: Pincel = (ctx, m, b, p, n) => {
+  const v = ((n % p.variantes) + p.variantes) % p.variantes, fase = v % 3;
+  if (fase === 2) return edificioObra(ctx, m, b, pinturaObra(v));
+  edificioObra(ctx, m, b, pinturaObra(fase === 0 ? (v + 8) % 9 : v + 1));
+  const x0 = b.x + 8, x1 = b.x + b.w - 8, arriba = b.y + 6, abajo = b.y + b.h;
+  const paso = Math.round((x1 - x0) / 6);
+  if (fase === 1) {                                                         // la lona, casi opaca
+    const malla = m.tono({ l: 0.5, c: 0.07, h: 160 });
+    tramar(ctx, x0, arriba, x1 - x0, abajo - arriba, malla[2], 0.8);
+    tramar(ctx, x0, arriba, x1 - x0, abajo - arriba, malla[3], 0.35);
+    const cartel = { x: x0 + Math.round((x1 - x0) / 2) - 26, y: arriba + 30, w: 52, h: 16 };
+    px(ctx, cartel.x, cartel.y, cartel.w, cartel.h, m.P.piedra[5]);
+    px(ctx, cartel.x, cartel.y, cartel.w, 4, m.tono({ l: 0.45, c: 0.12, h: 255 })[3]);
+    px(ctx, cartel.x + 4, cartel.y + 7, cartel.w - 8, 2, m.F.tinta);
+    px(ctx, cartel.x + 4, cartel.y + 11, cartel.w - 20, 1, m.P.metal[2]);
+  }
+  for (let x = x0; x <= x1; x += paso) {                                    // los pies derechos
+    px(ctx, x, arriba, 2, abajo - arriba, m.P.luz[3]);
+    px(ctx, x, arriba, 1, abajo - arriba, m.P.luz[4]);
+  }
+  for (let y = abajo - 2; y > arriba; y -= 34) {                            // las plataformas
+    px(ctx, x0, y, x1 - x0 + 2, 2, m.P.luz[3]);
+    px(ctx, x0, y - 2, x1 - x0 + 2, 2, m.P.madera[3]);
+    px(ctx, x0, y - 3, x1 - x0 + 2, 1, m.P.madera[4]);
+    if (fase === 0)                                                         // las cruces, que la lona tapa
+      for (let x = x0; x + paso <= x1; x += paso * 2)
+        for (let k = 0; k < paso; k++) px(ctx, x + k, y - 3 - Math.round((k * 30) / paso), 1, 1, m.P.luz[2]);
+  }
+};

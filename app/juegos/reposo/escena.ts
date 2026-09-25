@@ -87,6 +87,16 @@ function hash32(s: string): number {
   return h >>> 0;
 }
 
+/** Aleatorio determinista a partir de un entero. Nunca `Math.random()`: la calle y lo que pasa
+ *  en ella son funciones del tiempo, y lo que cambiara al repintar se tomaría por un cambio. */
+export function azar(n: number): number {
+  let h = Math.imul(n ^ 0x9e3779b9, 2654435761);
+  h ^= h >>> 15;
+  h = Math.imul(h, 2246822507);
+  h ^= h >>> 13;
+  return (h >>> 0) / 4294967296;
+}
+
 function mulberry32(seed: number) {
   let a = seed;
   return function () {
@@ -174,27 +184,12 @@ export function snapshot(niveles: NivelObjeto[]): Snapshot {
   return Object.fromEntries(niveles.map((n) => [n.id, n.nivel]));
 }
 
-export interface Cambio {
-  id: string;
-  tipo: Tipo;
-  visibilidad: number;
-  nivelAntes: number;
-  nivelAhora: number;
-}
-
-/** Contra lo que se vio de verdad, no contra un pasado recalculado: retocar un reloj del
- *  catálogo cambia también el pasado de la calle. */
-export function diferencia(anterior: Snapshot, actual: NivelObjeto[]): Cambio[] {
-  const cambios: Cambio[] = [];
-  for (const obj of actual) {
-    const antes = anterior[obj.id];
-    if (antes !== undefined && antes !== obj.nivel) {
-      cambios.push({ id: obj.id, tipo: obj.tipo, visibilidad: obj.visibilidad, nivelAntes: antes, nivelAhora: obj.nivel });
-    }
-  }
-  return cambios;
+/** Los objetos cuyo nivel ha cambiado. Contra lo que se vio de verdad, no contra un pasado
+ *  recalculado: retocar un reloj del catálogo cambia también el pasado de la calle. */
+export function diferencia(anterior: Snapshot, actual: NivelObjeto[]): NivelObjeto[] {
+  return actual.filter((o) => anterior[o.id] !== undefined && anterior[o.id] !== o.nivel);
 }
 
 // La vara con la que calibrar.ts mide el ritmo: lo sutil satura pronto y lo taparía.
-export const UMBRAL_EVIDENTE = 0.6;
-export const evidentes = (cambios: Cambio[]): Cambio[] => cambios.filter((c) => c.visibilidad >= UMBRAL_EVIDENTE);
+const UMBRAL_EVIDENTE = 0.6;
+export const evidentes = (cambios: NivelObjeto[]) => cambios.filter((c) => c.visibilidad >= UMBRAL_EVIDENTE);

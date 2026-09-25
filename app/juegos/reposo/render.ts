@@ -97,8 +97,6 @@ export function luzDe(hora: number): Luz {
   return { color, crudo, noche: esNoche(h) };
 }
 
-export const paletaDe = (hora: number): Paleta => luzDe(hora).color;
-
 /** Tiñe el color de un objeto con la luz del momento, solo un tercio para que dos colores
  *  sigan siendo dos. De noche baja también el croma. */
 export function tenir(propio: Oklch, luz: Luz, fuerza = 0.34): Oklch {
@@ -160,7 +158,11 @@ export function esNoche(hora: number): boolean {
 // Las cajas van en un lienzo virtual de 1600×900 que se escala al canvas real.
 export const LIENZO = { ancho: 1600, alto: 900 };
 
-export interface Vista { ancho: number; alto: number; escala: number; dpr: number }
+/** El ancho de la calle en la página. En una ventana estrecha se desplaza en vez de encoger, o
+ *  lo pequeño dejaría de verse; maximizada crece hasta llenar la pantalla. */
+export const ANCHO_CSS = 960;
+
+export interface Vista { ancho: number; alto: number; dpr: number }
 
 /** Ajusta el canvas a su tamaño en pantalla y al `dpr` real, sin el que se ve borroso. */
 export function vistaDe(canvas: HTMLCanvasElement, anchoCSS: number, dpr: number): Vista {
@@ -170,65 +172,60 @@ export function vistaDe(canvas: HTMLCanvasElement, anchoCSS: number, dpr: number
   canvas.height = Math.round(alto * dpr);
   canvas.style.width = `${anchoCSS}px`;
   canvas.style.height = `${alto}px`;
-  return { ancho: anchoCSS, alto, escala, dpr };
+  return { ancho: anchoCSS, alto, dpr };
 }
 
-type Arquetipo = "hueco" | "banda" | "bulto" | "planta" | "mancha" | "poste" | "andamio" | "tendal";
+export interface Caja { x: number; y: number; w: number; h: number }
 
-interface Pieza {
-  x: number; y: number; w: number; h: number;
-  arquetipo: Arquetipo;
+export interface Pieza extends Caja {
   /** Dibujos distintos; el nivel entra módulo esto. Si el objeto tiene estados contados, uno
    *  por estado. */
   variantes: number;
   /** Horas en las que se pinta. Fuera de ellas su nivel sigue corriendo: quien entra siempre
    *  a la misma hora no lo ve cambiar. */
   franja?: [number, number];
-  /** Pierde la hoja en invierno y cambia de color con la estación. */
-  caduca?: boolean;
 }
 
 /** Sitio y forma de cada objeto de escena.ts, en orden de profundidad. */
 export const PIEZAS: Record<string, Pieza> = {
   // Fachada izquierda (portal y viviendas)
-  persiana:   { x: 96,   y: 300, w: 92,  h: 108, arquetipo: "hueco",   variantes: 5 },
-  cortina:    { x: 232,  y: 300, w: 92,  h: 108, arquetipo: "banda",   variantes: 5 },
-  ropa:       { x: 360,  y: 316, w: 132, h: 76,  arquetipo: "tendal",  variantes: 4, franja: [8, 21] },
-  grafiti:    { x: 96,   y: 494, w: 150, h: 90,  arquetipo: "mancha",  variantes: 8 },
-  cartel:     { x: 296,  y: 478, w: 118, h: 124, arquetipo: "mancha",  variantes: 4 },
-  buzon:      { x: 430,  y: 584, w: 40,  h: 56,  arquetipo: "bulto",   variantes: 3 },
+  persiana:   { x: 96,   y: 300, w: 92,  h: 108, variantes: 5 },
+  cortina:    { x: 232,  y: 300, w: 92,  h: 108, variantes: 5 },
+  ropa:       { x: 360,  y: 316, w: 132, h: 76,  variantes: 4, franja: [8, 21] },
+  grafiti:    { x: 96,   y: 494, w: 150, h: 90,  variantes: 8 },
+  cartel:     { x: 296,  y: 478, w: 118, h: 124, variantes: 4 },
+  buzon:      { x: 430,  y: 584, w: 40,  h: 56,  variantes: 3 },
 
   // La tienda (su local es decorado: `TIENDA`)
-  escaparate: { x: 620,  y: 470, w: 160, h: 150, arquetipo: "hueco",   variantes: 5 },
-  letrero:    { x: 596,  y: 386, w: 398, h: 44,  arquetipo: "banda",   variantes: 5 },
-  toldo:      { x: 596,  y: 430, w: 398, h: 52,  arquetipo: "banda",   variantes: 5 },
-  mesas:      { x: 700,  y: 576, w: 190, h: 64,  arquetipo: "bulto",   variantes: 5, franja: [11, 24] },
-  sombrilla:  { x: 830,  y: 470, w: 130, h: 170, arquetipo: "banda",   variantes: 5, franja: [11, 24] },
-  terraza:    { x: 900,  y: 580, w: 104, h: 60,  arquetipo: "bulto",   variantes: 5, franja: [11, 24] },
+  escaparate: { x: 620,  y: 470, w: 160, h: 150, variantes: 5 },
+  letrero:    { x: 596,  y: 386, w: 398, h: 44,  variantes: 5 },
+  toldo:      { x: 596,  y: 430, w: 398, h: 52,  variantes: 5 },
+  mesas:      { x: 700,  y: 576, w: 190, h: 64,  variantes: 5, franja: [11, 24] },
+  sombrilla:  { x: 830,  y: 470, w: 130, h: 170, variantes: 5, franja: [11, 24] },
+  terraza:    { x: 900,  y: 580, w: 104, h: 60,  variantes: 5, franja: [11, 24] },
 
   // Fachada derecha y la obra
-  obra:       { x: 1040, y: 180, w: 500, h: 460, arquetipo: "andamio", variantes: 9 },
-  macetero:   { x: 1064, y: 566, w: 70,  h: 74,  arquetipo: "planta",  variantes: 5 },
-  puesto:     { x: 1170, y: 568, w: 180, h: 112, arquetipo: "bulto",   variantes: 3, franja: [6, 14] },
-  papelera:   { x: 1392, y: 570, w: 40,  h: 70,  arquetipo: "bulto",   variantes: 3 },
+  obra:       { x: 1040, y: 180, w: 500, h: 460, variantes: 9 },
+  macetero:   { x: 1064, y: 566, w: 70,  h: 74,  variantes: 5 },
+  puesto:     { x: 1170, y: 568, w: 180, h: 112, variantes: 3, franja: [6, 14] },
+  papelera:   { x: 1392, y: 570, w: 40,  h: 70,  variantes: 3 },
 
   // Acera y calzada
-  arbol:      { x: 470,  y: 300, w: 200, h: 340, arquetipo: "planta",  variantes: 8, caduca: true },
-  farola:     { x: 1010, y: 250, w: 60,  h: 390, arquetipo: "poste",   variantes: 3 },
-  banco:      { x: 90,   y: 586, w: 150, h: 54,  arquetipo: "bulto",   variantes: 3 },
+  arbol:      { x: 470,  y: 300, w: 200, h: 340, variantes: 8 },
+  farola:     { x: 1010, y: 250, w: 60,  h: 390, variantes: 3 },
+  banco:      { x: 90,   y: 586, w: 150, h: 54,  variantes: 3 },
   // Atada a la farola.
-  bici:       { x: 992,  y: 588, w: 96,  h: 52,  arquetipo: "bulto",   variantes: 5 },
-  coche:      { x: 180,  y: 706, w: 330, h: 122, arquetipo: "bulto",   variantes: 5 },
-  contenedor: { x: 1110, y: 700, w: 190, h: 116, arquetipo: "bulto",   variantes: 5 },
+  bici:       { x: 992,  y: 588, w: 96,  h: 52,  variantes: 5 },
+  coche:      { x: 180,  y: 706, w: 330, h: 122, variantes: 5 },
+  contenedor: { x: 1110, y: 700, w: 190, h: 116, variantes: 5 },
 };
 
 /** El local de la tienda: decorado fijo, siempre abierto. */
 export const TIENDA = { x: 580, y: 430, w: 430, h: 210 };
 
-/** Dónde vive cada objeto en una composición: es lo único que una escena puede mover. */
-export type Cajas = Record<string, { x: number; y: number; w: number; h: number }>;
-
-/** Las cajas del catálogo, que son también las del alzado. */
-export const CAJAS: Cajas = Object.fromEntries(
-  Object.entries(PIEZAS).map(([id, p]) => [id, { x: p.x, y: p.y, w: p.w, h: p.h }]),
-);
+/** Si la pieza se pinta a esta hora. */
+export function visible(p: Pieza, hora: number): boolean {
+  if (!p.franja) return true;
+  const h = ((hora % 24) + 24) % 24;
+  return h >= p.franja[0] && h < p.franja[1];
+}

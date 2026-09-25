@@ -1,5 +1,5 @@
-// La ventana con vida: la misma escena que `pintarEscena`, partida en capas para que lo que se
-// mueve pueda pasar por detrás de lo que no.
+// La ventana con vida: la calle partida en capas para que lo que se mueve pueda pasar por detrás
+// de lo que no.
 //
 // **Lo quieto se pinta una vez por minuto; lo vivo, en cada fotograma:** cielo, calle, objetos y
 // marco se guardan en lienzos, y cada fotograma los apila y dibuja entre ellos lo que se mueve.
@@ -10,13 +10,16 @@
 //   marco · gato, maceta, taza, vapor
 //
 // El perro pasa por detrás del contenedor porque se pinta antes que él; el gato, igual con la taza.
-import type { NivelObjeto } from "../escena";
+import { azar, type NivelObjeto } from "../escena";
+import { PIEZAS, calendarioDe, visible, type Caja, type Pieza, type Vista } from "../render";
 import {
-  PIEZAS, azar, caja, calendarioDe, enEscena, fino, px, trama, volcar, type Caja, type Ctx, type Vista,
+  caja, enEscena, fino, manoDe, px, trama, volcar, type Ctx, type Fino, type Mano, type Vivo,
 } from "./paleta";
-import { ESC, manoDe, pintarObjeto, type Mano, type Vivo } from "./pincel";
 import { obraAcabada, vanosObra } from "./edificios";
-import { HUECO, PARTES, REPISA, TAZA, aVentana, calleVentana, cieloVentana, escena, marco } from "./ventana";
+import { OBJETOS } from "./objetos";
+import {
+  CAJAS_VENTANA, HUECO, PARTES, REPISA, SUELO_VENTANA, TAZA, aVentana, calleVentana, cieloVentana, marco,
+} from "./ventana";
 import { farolaLuz, viento, type Suceso } from "./vida";
 import {
   gatoAndando, gatoCabeza, gatoCola, gatoDormido, gatoSentado, pajaroPosado, pajaroVuela, perro,
@@ -27,7 +30,7 @@ const EN_VIVO = new Set(["ropa", "arbol", "farola"]);
 
 type Paso =
   | { tipo: "lienzo"; lienzo: HTMLCanvasElement }
-  | { tipo: "vivo"; id: string; p: (typeof PIEZAS)[string]; n: number; b: Caja }
+  | { tipo: "vivo"; id: string; p: Pieza; n: number; b: Caja }
   | { tipo: "perro"; donde: "acera" | "contenedor" };
 
 export interface Capas {
@@ -43,18 +46,18 @@ export interface Capas {
 
 /** `hora` es la del reloj, que decide qué objetos están; `fecha`, la estación y la luz. */
 export function pintarCapas(niveles: NivelObjeto[], hora: number, fecha: Date): Capas {
-  const m = manoDe(hora, escena.suelo, calendarioDe(fecha));
-  const cielo = fino(ESC, "capa-cielo");
+  const m = manoDe(hora, SUELO_VENTANA, calendarioDe(fecha));
+  const cielo = fino("capa-cielo");
   cieloVentana(cielo.ctx, m, m.solar);
-  const calle = fino(ESC, "capa-calle");
+  const calle = fino("capa-calle");
   calleVentana(calle.ctx, m);
 
   const cajas: Record<string, Caja> = {};
-  for (const [id, p] of Object.entries(PIEZAS)) cajas[id] = caja({ ...p, ...escena.cajas[id] }, ESC);
+  for (const id of Object.keys(PIEZAS)) cajas[id] = caja(CAJAS_VENTANA[id]);
 
   const nivel: Record<string, number> = Object.fromEntries(niveles.map((x) => [x.id, x.nivel]));
   const pasos: Paso[] = [];
-  let tramo: ReturnType<typeof fino> | null = null, k = 0;
+  let tramo: Fino | null = null, k = 0;
   const cerrar = () => {
     if (!tramo) return;
     tramo.ctx.restore();
@@ -73,14 +76,14 @@ export function pintarCapas(niveles: NivelObjeto[], hora: number, fecha: Date): 
       continue;
     }
     if (!tramo) {
-      tramo = fino(ESC, `capa-objetos-${k++}`);
+      tramo = fino(`capa-objetos-${k++}`);
       recortar(tramo.ctx);
     }
-    pintarObjeto(tramo.ctx, m, id, b, p, n);
+    OBJETOS[id](tramo.ctx, m, b, p, n);
   }
   cerrar();
 
-  const primer = fino(ESC, "capa-marco");
+  const primer = fino("capa-marco");
   marco(primer.ctx, m);
   return { m, cielo: cielo.lienzo, calle: calle.lienzo, pasos, marco: primer.lienzo, cajas, nivel };
 }
@@ -106,7 +109,7 @@ export interface Momento {
 
 /** Un fotograma: apila las capas y pinta entre ellas lo que se mueve. */
 export function componer(ctx: Ctx, vista: Vista, c: Capas, mo: Momento) {
-  const f = fino(ESC, "capa-final");
+  const f = fino("capa-final");
   const g = f.ctx;
   const { m } = c;
   const t = mo.t;
@@ -131,7 +134,8 @@ export function componer(ctx: Ctx, vista: Vista, c: Capas, mo: Momento) {
     const vivo: Vivo = { t, viento: v, luz: farolaLuz(t) };
     for (const paso of c.pasos) {
       if (paso.tipo === "lienzo") g.drawImage(paso.lienzo, 0, 0);
-      else if (paso.tipo === "vivo") pintarObjeto(g, m, paso.id, paso.b, paso.p, paso.n, vivo); else if (paso.donde === "acera") {
+      else if (paso.tipo === "vivo") OBJETOS[paso.id](g, m, paso.b, paso.p, paso.n, vivo);
+      else if (paso.donde === "acera") {
         const a = hay("perro-acera"); if (a) perroAcera(g, m, fase(a), a.variante);
         const s = hay("perro-sentado"); if (s) perroSentado(g, m, fase(s), s.variante, c.cajas);
       } else {
@@ -339,7 +343,7 @@ function tele(g: Ctx, m: Mano, s: number, su: Suceso, c: Capas) {
 }
 
 function pajaro(g: Ctx, m: Mano, s: number, variante: number, hora: number, cajas: Record<string, Caja>) {
-  const hayRopa = hora >= 8 && hora < 21;
+  const hayRopa = visible(PIEZAS.ropa, hora);
   let px0: number, py0: number;
   if (variante === 0 && hayRopa) {
     const b = cajas.ropa;

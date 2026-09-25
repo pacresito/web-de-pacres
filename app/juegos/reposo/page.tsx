@@ -9,13 +9,9 @@ import WhyFooter from "../../components/WhyFooter";
 import BarraEstado, { Dato } from "../../components/BarraEstado";
 import { IconoPantallaCompleta } from "../../components/Iconos";
 import { SEMILLA, diferencia, escena, snapshot, type NivelObjeto, type Snapshot } from "./escena";
-import { LIENZO, calendarioDe, horaSolar, vistaDe, type Vista } from "./render";
+import { ANCHO_CSS, LIENZO, PIEZAS, calendarioDe, horaSolar, visible, vistaDe, type Vista } from "./render";
 import { componer, pintarCapas, type Capas } from "./calle/animar";
 import { agenda } from "./calle/vida";
-
-/** El ancho de la calle. En una ventana estrecha se desplaza en vez de encoger, o lo pequeño
- *  dejaría de verse; maximizada crece hasta llenar la pantalla. */
-const ANCHO = 960;
 
 // La hora, releída cada minuto. En el servidor es 0, o la hidratación traería otra luz; y fija
 // entre lecturas, porque un valor que cambia en cada lectura renderiza sin parar.
@@ -33,7 +29,7 @@ function suscribirVentana(avisar: () => void) {
   return () => window.removeEventListener("resize", avisar);
 }
 const leerPantalla = () => Math.floor(Math.min(window.innerWidth, (window.innerHeight * LIENZO.ancho) / LIENZO.alto));
-const pantallaDelServidor = () => ANCHO;
+const pantallaDelServidor = () => ANCHO_CSS;
 
 /** Los de un pixel art: a más, se mueve igual de píxel en píxel y gasta el triple. */
 const FPS = 12;
@@ -65,6 +61,7 @@ const leerAnterior = () => {
 const anteriorDelServidor = () => null;
 const sinSuscripcion = () => () => {};
 
+/** La hora del reloj, decimal. `t` en segundos, como la animación. */
 const horaLocal = (t: number) => {
   const d = new Date(t * 1000);
   return d.getHours() + d.getMinutes() / 60;
@@ -77,12 +74,11 @@ export default function Reposo() {
   const ahora = useSyncExternalStore(suscribirReloj, leerReloj, relojDelServidor);
   const [maximizada, setMaximizada] = useState(false);
   const pantalla = useSyncExternalStore(suscribirVentana, leerPantalla, pantallaDelServidor);
-  const ancho = maximizada ? Math.max(ANCHO, pantalla) : ANCHO;
+  const ancho = maximizada ? Math.max(ANCHO_CSS, pantalla) : ANCHO_CSS;
   const visita = useSyncExternalStore(sinSuscripcion, leerAnterior, anteriorDelServidor);
   const [antes, setAntes] = useState(false);
 
-  const fecha = new Date(ahora);
-  const hora = fecha.getHours() + fecha.getMinutes() / 60;
+  const hora = horaLocal(ahora / 1000);
 
   // Lo que el bucle lee en cada fotograma.
   const capas = useRef<Capas | null>(null);
@@ -116,8 +112,9 @@ export default function Reposo() {
     return () => { clearInterval(id); anterior = undefined; };
   }, []);
 
+  // Solo cuenta lo que se pinta a esta hora: lo que tiene franja sigue cambiando fuera de ella.
   const calle = ahora === 0 ? [] : escena(SEMILLA, ahora);
-  const cambios = visita ? diferencia(visita.niveles, calle).length : 0;
+  const cambios = visita ? diferencia(visita.niveles, calle).filter((o) => visible(PIEZAS[o.id], hora)).length : 0;
   const dias = visita ? Math.max(0, Math.floor((ahora - visita.t) / MS_DIA)) : 0;
   const cuando = dias === 0 ? "hoy" : dias === 1 ? "ayer" : `hace ${dias} días`;
 
@@ -136,7 +133,15 @@ export default function Reposo() {
     dibujar.current(Date.now() / 1000);
   }, [ahora, hora, ancho, antes, visita]);
 
-  const hhmm = fecha.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
+  // Escape también sale de la pantalla completa.
+  useEffect(() => {
+    if (!maximizada) return;
+    const salir = (e: KeyboardEvent) => { if (e.key === "Escape") setMaximizada(false); };
+    window.addEventListener("keydown", salir);
+    return () => window.removeEventListener("keydown", salir);
+  }, [maximizada]);
+
+  const hhmm = new Date(ahora).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
 
   return (
     <TerminalShell
@@ -213,7 +218,7 @@ export default function Reposo() {
       <style jsx>{`
         /* Una columna del ancho de la calle, centrada: texto y barra alinean con el dibujo. */
         .rp {
-          width: 100%; max-width: calc(${ANCHO}px + 56px); margin: 0 auto; padding: 28px;
+          width: 100%; max-width: calc(${ANCHO_CSS}px + 56px); margin: 0 auto; padding: 28px;
           display: flex; flex-direction: column; gap: 14px;
         }
         .rp-pista { margin: 0; color: var(--t-ink3); font-size: 12px; }

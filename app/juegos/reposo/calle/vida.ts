@@ -7,7 +7,7 @@
 // **Como mucho un suceso a la vez, con calma a los lados.** El tiempo va en tramos agrupados en
 // rondas, y en cada ronda cada familia —gato, perro, pájaros, cielo, calle— tiene un solo
 // turno. La siesta del gato ocupa el turno del gato de su ronda entera.
-import { azar } from "./paleta";
+import { azar } from "../escena";
 
 type Familia = "gato" | "perro" | "pajaros" | "cielo" | "calle";
 

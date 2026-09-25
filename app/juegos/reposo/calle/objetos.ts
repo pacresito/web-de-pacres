@@ -1,16 +1,22 @@
-// Los objetos de la calle con dibujo propio (el grafiti, en `grafiti.ts`) y el local de la tienda.
+// Los objetos de la calle, cada uno con su dibujo, y el local de la tienda. Tienen archivo propio
+// el grafiti (`grafiti.ts`), la obra (`edificios.ts`) y lo que se mueve sin cambiar de nivel
+// (`vivos.ts`).
 //
 // **Cada nivel cambia algo que se nombra** —la persiana baja, hay otra bici, han pegado otro
 // cartel encima—, no un tamaño: un tamaño que cambia se lee como que el dibujo respira.
-import { SEMILLA, fechasDe } from "../escena";
-import { apoyo, azar, estacionDe, px, tramar, type Caja, type Ctx, type Oklch, type Pieza, type Rampa } from "./paleta";
-import type { Mano, Pincel } from "./pincel";
+import { SEMILLA, azar, fechasDe } from "../escena";
+import { estacionDe, type Caja, type Oklch, type Pieza } from "../render";
+import { apoyo, disco, linea, px, tramar, type Ctx, type Mano, type Pincel, type Rampa } from "./paleta";
+import { obra } from "./edificios";
 import { grafiti } from "./grafiti";
+import { arbol, farola, macetero, ropa } from "./vivos";
 
 const R = Math.round;
 
 // ── Utilidades ──────────────────────────────────────────────────────────────
 
+/** Un círculo lleno con un píxel de punta arriba y abajo, que `disco` no pinta: a radio 1 es
+ *  una cruz y no una raya. */
 function circulo(ctx: Ctx, cx: number, cy: number, r: number, color: string) {
   for (let j = -r; j <= r; j++) {
     const w = Math.floor(Math.sqrt(Math.max(0, r * r - j * j)));
@@ -22,10 +28,6 @@ function anillo(ctx: Ctx, cx: number, cy: number, r: number, color: string) {
     const t = (a / 64) * Math.PI * 2;
     px(ctx, R(cx + Math.cos(t) * r), R(cy + Math.sin(t) * r), 1, 1, color);
   }
-}
-function linea(ctx: Ctx, x0: number, y0: number, x1: number, y1: number, color: string, g = 1) {
-  const pasos = Math.max(1, Math.ceil(Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0))));
-  for (let s = 0; s <= pasos; s++) px(ctx, R(x0 + ((x1 - x0) * s) / pasos), R(y0 + ((y1 - y0) * s) / pasos), g, g, color);
 }
 const nivel = (p: Pieza, n: number) => ((n % p.variantes) + p.variantes) % p.variantes;
 const fraccion = (p: Pieza, n: number) => nivel(p, n) / (p.variantes - 1);
@@ -338,7 +340,9 @@ function cartelPegado(ctx: Ctx, m: Mano, b: Caja, k: number, edad: number) {
 
 // ── Los objetos ─────────────────────────────────────────────────────────────
 
+/** El dibujo de cada objeto del catálogo, por su id. */
 export const OBJETOS: Record<string, Pincel> = {
+  ropa, arbol, macetero, farola, obra,
   // Persiana alicantina, cada nivel un poco más bajada.
   persiana: (ctx, m, b, p, n) => {
     const f = fraccion(p, n);
@@ -637,6 +641,126 @@ export const OBJETOS: Record<string, Pincel> = {
       px(ctx, x, suelo - 8, w, 2, m.P.piedra[4]);
       px(ctx, x, suelo - 8, w, 1, m.P.piedra[5]);
       px(ctx, x + 2, suelo - 2, w - 4, 2, m.P.piedra[2]);
+    }
+  },
+  // Cada nivel es otro vehículo, con su forma: turismo, furgoneta, plaza vacía, ranchera, taxi.
+  coche: (ctx, m, b, p, n) => {
+    const v = n % p.variantes;
+    if (v === 2) return;
+    // alto: de las ruedas al techo · chapa: qué parte del alto es carrocería · capo y maletero:
+    // lo que sobresale de la cabina por delante y por detrás · luna y zaga: cuánto se inclinan
+    // el parabrisas y la luna trasera (píxeles por fila).
+    const forma = [
+      { alto: 24, largo: 0.8, chapa: 0.5, capo: 0.27, maletero: 0.17, luna: 1.3, zaga: 0.9 },  // turismo
+      { alto: 37, largo: 0.7, chapa: 0.5, capo: 0.12, maletero: 0.01, luna: 0.35, zaga: 0 },    // furgoneta
+      { alto: 0, largo: 0, chapa: 0, capo: 0, maletero: 0, luna: 0, zaga: 0 },
+      { alto: 26, largo: 0.92, chapa: 0.52, capo: 0.22, maletero: 0.04, luna: 1.1, zaga: 0.2 }, // ranchera
+      { alto: 24, largo: 0.78, chapa: 0.5, capo: 0.27, maletero: 0.17, luna: 1.3, zaga: 0.9 },  // taxi
+    ][v];
+    const R = [m.P.tela, m.P.metal, m.P.tela, m.P.hoja, m.P.piedra][v];
+    const esc = b.h / 43;
+    const L = Math.round(b.w * forma.largo), x0 = b.x + Math.round((b.w - L) / 2);
+    const suelo = b.y + b.h - 1, alto = Math.round(forma.alto * esc);
+    const chapa = Math.round(alto * forma.chapa), cabina = alto - chapa;
+    const rueda = Math.max(3, Math.round(5 * esc));
+    const base = suelo - Math.round(rueda * 0.7);          // bajo de la carrocería
+    // La silueta como filas [y, desde, hasta]: así el contorno sale de dilatarla un píxel.
+    const filas: [number, number, number][] = [];
+    for (let j = 0; j < chapa; j++) {
+      const hueco = j === 0 ? 2 : j === 1 || j === chapa - 1 ? 1 : 0;
+      filas.push([base - chapa + j, x0 + hueco, x0 + L - 1 - hueco]);
+    }
+    const c0 = x0 + Math.round(L * forma.maletero), c1 = x0 + L - 1 - Math.round(L * forma.capo);
+    for (let k = 0; k < cabina; k++) {
+      const desdeAbajo = cabina - k;
+      filas.push([base - chapa - cabina + k, c0 + Math.round(forma.zaga * desdeAbajo), c1 - Math.round(forma.luna * desdeAbajo)]);
+    }
+    tramar(ctx, x0 - 2, suelo - 1, L + 4, 2, m.F.tinta, 0.55);                // sombra en el suelo
+    for (const [y, a, z] of filas) px(ctx, a - 1, y - 1, z - a + 3, 3, m.F.tinta);
+    const ruedas = [x0 + Math.round(L * 0.2), x0 + Math.round(L * 0.8)];
+    for (const cx of ruedas) disco(ctx, cx, suelo - rueda, rueda + 1, m.F.tinta);
+    for (const [y, a, z] of filas) px(ctx, a, y, z - a + 1, 1, R[3]);
+    // Luz en el hombro de la chapa y en el techo, sombra en los bajos.
+    px(ctx, x0 + 2, base - chapa, L - 4, 1, R[5]);
+    px(ctx, x0 + 1, base - chapa + 1, L - 2, 1, R[4]);
+    px(ctx, x0 + 1, base - 2, L - 2, 2, R[1]);
+    const techo = filas[chapa];
+    px(ctx, techo[1], techo[0], techo[2] - techo[1] + 1, 1, R[4]);
+    // Las ventanillas: la cabina por dentro, con el montante en medio. La furgoneta solo
+    // lleva cristal delante: detrás es carga.
+    const cristal = m.noche ? m.P.metal[1] : m.P.metal[4];
+    const medio = Math.round((c0 + c1) / 2);
+    for (let k = 1; k < cabina - 1; k++) {
+      const [y, a, z] = filas[chapa + k];
+      const desde = v === 1 ? Math.round(a + (z - a) * 0.62) : a + 1;
+      if (z - 1 > desde) px(ctx, desde, y, z - desde - 1, 1, cristal);
+    }
+    if (!m.noche) for (let k = 1; k < cabina - 1; k++) {                       // reflejo en diagonal
+      const [y, , z] = filas[chapa + k];
+      px(ctx, z - 3 - k, y, 1, 1, m.P.metal[5]);
+    }
+    if (v !== 1) px(ctx, medio, base - chapa - cabina + 1, 2, cabina, R[3]);
+    // Puerta, tirador y las ruedas con su tapacubos.
+    px(ctx, medio, base - chapa + 2, 1, chapa - 4, R[1]);
+    px(ctx, medio + 3, base - chapa + 3, 2, 1, R[5]);
+    px(ctx, medio - 5, base - chapa + 3, 2, 1, R[5]);
+    for (const cx of ruedas) {
+      disco(ctx, cx, suelo - rueda, rueda, m.P.asfalto[0]);
+      disco(ctx, cx, suelo - rueda, Math.max(1, rueda - 2), m.P.metal[3]);
+    }
+    // Faros: delante claro, detrás rojo. Sin halo tramado: de noche basta con que luzcan.
+    px(ctx, x0 + L - 2, base - chapa + 2, 2, 2, m.noche ? m.P.luz[5] : m.P.luz[3]);
+    px(ctx, x0, base - chapa + 2, 1, 2, m.P.tela[m.noche ? 5 : 4]);
+    if (v === 4) {                                                             // el taxi
+      px(ctx, medio - 3, base - chapa - cabina - 3, 7, 3, m.F.tinta);
+      px(ctx, medio - 2, base - chapa - cabina - 2, 5, 2, m.P.luz[m.noche ? 5 : 4]);
+      px(ctx, x0 + 2, base - Math.round(chapa / 2), L - 4, 1, m.P.tela[4]);
+    }
+  },
+  // El contenedor: el nivel es el color —vidrio, papel, orgánico, plástico— y el último, el de
+  // plástico con bolsas al lado. Casi tan alto como ancho: más bajo parece una maceta.
+  contenedor: (ctx, m, b, p, n) => {
+    const v = n % p.variantes;
+    const R = [m.P.hoja, m.tono({ l: 0.5, c: 0.12, h: 250 }), m.P.madera, m.tono({ l: 0.74, c: 0.15, h: 92 }), m.tono({ l: 0.74, c: 0.15, h: 92 })][v];
+    const suelo = b.y + b.h - 1;
+    const alto = Math.round(b.h * (0.88 + 0.03 * v)), w = Math.min(b.w - 6, Math.round(alto * 1.25));
+    const x0 = b.x + Math.round((b.w - w) / 2), y0 = suelo - alto;
+    const tapa = 5, pie = 4;                              // lo que ocupan la tapa y las ruedas
+    const cuba = alto - tapa - pie;
+    tramar(ctx, x0 - 2, suelo - 1, w + 4, 2, m.F.tinta, 0.55);
+    // Ruedas, por debajo de la cuba.
+    for (const cx of [x0 + 5, x0 + w - 6]) {
+      disco(ctx, cx, suelo - 2, 2, m.F.tinta);
+      px(ctx, cx, suelo - 2, 1, 1, m.P.metal[2]);
+    }
+    // La cuba: contorno, color, luz a un lado y sombra al otro; se estrecha un píxel abajo.
+    const yc = y0 + tapa;
+    px(ctx, x0 - 1, yc, w + 2, cuba + 1, m.F.tinta);
+    for (let j = 0; j < cuba; j++) {
+      const a = j > cuba - 4 ? 1 : 0;
+      px(ctx, x0 + a, yc + j, w - 2 * a, 1, R[3]);
+    }
+    px(ctx, x0 + 1, yc, 2, cuba - 1, R[4]);
+    px(ctx, x0 + w - 3, yc, 2, cuba - 1, R[1]);
+    px(ctx, x0, yc, w, 2, R[1]);                                                 // sombra de la tapa
+    px(ctx, x0, yc + cuba - 3, w, 2, R[2]);
+    for (let x = x0 + 6; x < x0 + w - 5; x += 7) px(ctx, x, yc + 4, 1, cuba - 8, R[2]);
+    px(ctx, x0 + Math.round(w / 2) - 4, yc + cuba - 1, 8, 2, m.F.tinta);         // pedal
+    // Asas a los lados.
+    px(ctx, x0 - 3, yc + 3, 3, 2, m.F.tinta);
+    px(ctx, x0 + w, yc + 3, 3, 2, m.F.tinta);
+    // La tapa, abombada: cada fila un poco más corta que la de debajo.
+    const filas = [[3, 0], [1, 1], [0, 2], [-1, 3], [-2, 4]];
+    for (const [hueco, j] of filas) px(ctx, x0 + hueco - 1, y0 + j - 1, w - 2 * hueco + 2, 1, m.F.tinta);
+    for (const [hueco, j] of filas) px(ctx, x0 + hueco, y0 + j, w - 2 * hueco, 1, j === 0 ? R[4] : j === 4 ? R[1] : R[2]);
+    px(ctx, x0 - 3, y0 + 4, w + 6, 1, m.F.tinta);
+    if (v === 4) {                                                               // las bolsas
+      for (const [bx, r] of [[x0 - 3, 4], [x0 + 3, 3], [x0 + w + 1, 4]] as const) {
+        disco(ctx, bx, suelo - r, r + 1, m.F.tinta);
+        disco(ctx, bx, suelo - r, r, m.P.asfalto[1]);
+        px(ctx, bx - 1, suelo - r * 2 - 1, 2, 2, m.P.asfalto[2]);                 // el nudo
+        px(ctx, bx - 1, suelo - r - 1, 1, 1, m.P.metal[3]);                       // el brillo del plástico
+      }
     }
   },
 };

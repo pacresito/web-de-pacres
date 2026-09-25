@@ -3,17 +3,7 @@
 // objetivo: ~2 en un día, ~10 en un mes, y que siga creciendo con el hueco. Cada cifra sale de
 // muchos puntos de partida, porque cada objeto tiene su fase.
 
-import { CATALOGO, diferencia, escena, evidentes, ORIGEN_MS, SEMILLA, snapshot } from "./escena";
-
-/** PRNG del jitter. Tres rondas de mezcla: con una, los índices 0..300 salen apiñados y el
- *  jitter tira a huecos cortos. */
-function rngDe(i: number): number {
-  let h = Math.imul(i ^ 0x9e3779b9, 0x85ebca6b);
-  h ^= h >>> 13;
-  h = Math.imul(h, 0xc2b2ae35);
-  h ^= h >>> 16;
-  return (h >>> 0) / 4294967296;
-}
+import { CATALOGO, ORIGEN_MS, SEMILLA, azar, diferencia, escena, evidentes, snapshot } from "./escena";
 
 const DIA = 24 * 60 * 60 * 1000;
 const MUESTRAS = 300;
@@ -35,7 +25,7 @@ const PARTIDAS = Array.from({ length: MUESTRAS }, (_, i) => t0 + Math.floor((i /
 /** Nadie vuelve al segundo exacto: el hueco varía un ±15 %. Exacto, caería siempre en la misma
  *  fase de cada ciclo y mediría una resonancia. */
 function jitter(ms: number, i: number): number {
-  return Math.floor(ms * (0.85 + rngDe(i) * 0.3));
+  return Math.floor(ms * (0.85 + azar(i) * 0.3));
 }
 
 function medir(huecoMs: number, partidas: number[] = PARTIDAS) {
